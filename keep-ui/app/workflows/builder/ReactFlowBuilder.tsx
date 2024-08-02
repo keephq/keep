@@ -1,5 +1,5 @@
 import React from "react";
-import { ReactFlow, Background, Controls } from "@xyflow/react";
+import { ReactFlow, Background, Controls, EdgeTypes as EdgeTypesType } from "@xyflow/react";
 import CustomNode from "./CustomNode";
 import CustomEdge from "./CustomEdge";
 import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
@@ -8,9 +8,8 @@ import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "app/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 
-
 const nodeTypes = { custom: CustomNode };
-const edgeTypes = { "custom-edge": CustomEdge };
+const edgeTypes: EdgeTypesType = { "custom-edge": CustomEdge as React.ComponentType<any> };
 
 const ReactFlowBuilder = ({
   workflow,
@@ -19,7 +18,7 @@ const ReactFlowBuilder = ({
   toolboxConfiguration,
 }: {
   workflow: string | undefined;
-  loadedAlertFile: string;
+  loadedAlertFile: string | null;
   providers: Provider[];
   toolboxConfiguration?: Record<string, any>;
 }) => {
@@ -34,10 +33,9 @@ const ReactFlowBuilder = ({
     onDrop,
   } = useWorkflowInitialization(workflow, loadedAlertFile, providers);
 
-
   return (
     <div className="relative flex w-full h-full gap-2">
-      <DragAndDropSidebar toolboxConfiguration={toolboxConfiguration}/>
+      <DragAndDropSidebar toolboxConfiguration={toolboxConfiguration} />
       {!isLoading && (
         <ReactFlow
           nodes={nodes}

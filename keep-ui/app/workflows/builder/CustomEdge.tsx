@@ -1,19 +1,24 @@
-import React from 'react';
-import {
-  BaseEdge,
-  EdgeLabelRenderer,
-  getSmoothStepPath,
-} from '@xyflow/react';
-import type { EdgeProps } from '@xyflow/react';
-import useStore from './builder-store';
+import React from "react";
+import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
+import type { Edge, EdgeProps } from "@xyflow/react";
+import useStore from "./builder-store";
 
 interface CustomEdgeProps extends EdgeProps {
   label?: string;
   type?: string;
 }
 
-const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, label }: CustomEdgeProps) => {
-  const { deleteEdges } = useStore();
+const CustomEdge:React.FC<CustomEdgeProps> = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  label,
+  source,
+  target,
+}: CustomEdgeProps) => {
+  const { deleteEdges, getNodeById, edges, updateEdge } = useStore();
 
   // Calculate the path and midpoint
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -33,6 +38,26 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, label }: CustomEdg
     deleteEdges(id);
   };
 
+  const sourceNode = getNodeById(source);
+  const targetNode = getNodeById(target);
+
+  let dynamicLabel = label;
+  const componentType = sourceNode?.data?.componentType || "";
+  if (!dynamicLabel && sourceNode && targetNode && componentType == "switch") {
+    const existEdge = edges?.find(
+      ({ source, id: edgeId }: Edge) =>
+        edgeId !== id && source === sourceNode.id
+    );
+
+    if (!existEdge) {
+      dynamicLabel = "True";
+      updateEdge(id, "label", dynamicLabel);
+    }
+    if (existEdge && existEdge.label) {
+      dynamicLabel = existEdge.label === "True" ? "False" : "True";
+      updateEdge(id, "label", dynamicLabel);
+    }
+  }
   return (
     <>
       <BaseEdge
@@ -64,22 +89,22 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, label }: CustomEdg
         style={{ markerEnd: `url(#arrow-${id})` }} // Add arrowhead
       />
       <EdgeLabelRenderer>
-        {!!label && (
+        {!!dynamicLabel && (
           <div
             className="absolute bg-orange-500 text-white rounded px-3 py-1 border border-orange-300"
             style={{
               transform: `translate(${midpointX}px, ${midpointY}px)`,
-              pointerEvents: 'none',
+              pointerEvents: "none",
             }}
           >
-            {label}
+            {dynamicLabel}
           </div>
         )}
         <button
           style={{
-            position: 'absolute',
+            position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            pointerEvents: 'all',
+            pointerEvents: "all",
           }}
           className="text-red-500 hover:text-red-700 focus:outline-none"
           onClick={handleDelete}

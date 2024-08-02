@@ -5,19 +5,19 @@ import {
   useRef,
   useCallback,
 } from "react";
-import { Connection, Edge, Node, Position, useReactFlow } from "@xyflow/react";
+import { Edge, Position, useReactFlow } from "@xyflow/react";
 import dagre from "dagre";
 import { parseWorkflow, generateWorkflow } from "app/workflows/builder/utils";
 import { v4 as uuidv4 } from "uuid";
 import { useSearchParams } from "next/navigation";
 import useStore from "../../app/workflows/builder/builder-store";
 import { FlowNode } from "../../app/workflows/builder/builder-store";
-import { Properties } from 'sequential-workflow-designer';
+import { Provider } from "app/providers/providers";
 
 const useWorkflowInitialization = (
-  workflow: string,
-  loadedAlertFile: string,
-  providers: any[]
+  workflow: string | undefined,
+  loadedAlertFile: string | null | undefined,
+  providers: Provider[]
 ) => {
   const {
     nodes,
@@ -48,7 +48,7 @@ const useWorkflowInitialization = (
   const { screenToFlowPosition } = useReactFlow();
 
   const handleDrop = useCallback(
-    (event) => {
+    (event: React.DragEvent<HTMLDivElement>) => {
       onDrop(event, screenToFlowPosition);
     },
     [screenToFlowPosition]
@@ -103,7 +103,6 @@ const useWorkflowInitialization = (
         parsedWorkflow = parseWorkflow(loadedAlertFile, providers);
       }
 
-      console.log("parsedWorkflow=======>", parsedWorkflow);
       setV2Properties(parsedWorkflow?.properties ?? {});
       let newNodes = processWorkflow(parsedWorkflow.sequence);
       let newEdges = newEdgesFromNodes(newNodes);
@@ -239,6 +238,25 @@ const useWorkflowInitialization = (
       }
 
       newNodes = [...newNodes, ...trueSubflowNodes, ...falseSubflowNodes];
+    } else if (step.componentType === "container" && step.type === "foreach") {
+      const forEachhNode = {
+        id: nodeId,
+        type: "custom",
+        position: { x: 0, y: 0 },
+        data: {
+          label: step.name,
+          ...step,
+        },
+        prevStepId: prevStepId,
+        // extent: 'parent',
+      } as FlowNode;
+      newNodes.push(forEachhNode);
+
+      const sequences: FlowNode[] = processWorkflow(
+        step?.sequence || [],
+        nodeId
+      );
+      newNodes = [...newNodes, ...sequences];
     } else {
       newNode = {
         id: nodeId,
