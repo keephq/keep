@@ -198,11 +198,11 @@ class ElasticClient:
             # change severity to number so we can sort by it
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
-            alert = alert.dict()
-            alert["dismissed"] = bool(alert["dismissed"])
+            alert_dict = alert.dict()
+            alert_dict["dismissed"] = bool(alert_dict["dismissed"])
             self._client.index(
                 index=self.alerts_index,
-                body=alert.dict(),
+                body=alert_dict,
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
                 refresh="true",
             )
