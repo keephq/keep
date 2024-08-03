@@ -30,7 +30,7 @@
     setNoteModalAlert: (alert: AlertDto | null) => void;
     setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
     setDismissModalAlert: (alert: AlertDto[] | null) => void;
-    setChangeStatusAlert: (alert: AlertDto | null) => void;
+    setChangeStatusAlert: (alert: AlertDto[] | null) => void;
   }
 
   export default function AlertTableTabPanel({
@@ -88,6 +88,7 @@
           alerts={sortedPresetAlerts}
           columns={alertTableColumns}
           setDismissedModalAlert={setDismissModalAlert}
+          setChangeStatusAlert={setChangeStatusAlert}
           isAsyncLoading={isAsyncLoading}
           presetName={preset.name}
           presetPrivate={preset.is_private}

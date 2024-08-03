@@ -108,7 +108,7 @@ interface GenerateAlertTableColsArg {
   setTicketModalAlert?: (alert: AlertDto) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
-  setChangeStatusAlert?: (alert: AlertDto) => void;
+  setChangeStatusAlert?: (alert: AlertDto[]) => void;
   presetName: string;
   presetNoisy?: boolean;
 }

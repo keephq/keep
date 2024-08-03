@@ -51,6 +51,7 @@ interface Props {
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
+  setChangeStatusAlert?: (alerts: AlertDto[] | null) => void;
 }
 
 export function AlertTable({
@@ -65,6 +66,7 @@ export function AlertTable({
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
+  setChangeStatusAlert,
 }: Props) {
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
@@ -184,8 +186,10 @@ export function AlertTable({
           <AlertActions
             selectedRowIds={selectedRowIds}
             alerts={alerts}
+            presetName={presetName}
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
+            setChangeStatusAlert={setChangeStatusAlert}
           />
         ) : (
           <AlertPresets
