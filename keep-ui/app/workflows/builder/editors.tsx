@@ -7,6 +7,7 @@ import {
   Subtitle,
   Icon,
   Button,
+  Switch,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Properties } from "sequential-workflow-designer";
@@ -23,7 +24,7 @@ import {
   HandRaisedIcon,
 } from "@heroicons/react/24/outline";
 import useStore, { V2Properties } from "./builder-store";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
@@ -51,7 +52,6 @@ export function GlobalEditor() {
 export function GlobalEditorV2() {
   const { v2Properties:properties, updateV2Properties: setProperty } = useStore();
 
-  console.log("properties========>", properties)
   return (
     <EditorLayout>
       <Title>Keep Workflow Editor</Title>
@@ -417,16 +417,16 @@ export function StepEditorV2({
 }: {
   installedProviders?: Provider[] | undefined | null;
 }) {
+  const [useGlobalEditor, setGlobalEditor] = useState(false);
   const { 
     selectedNode,
     updateSelectedNodeData,
+    setOpneGlobalEditor
   } = useStore()
 
-  console.log("selectedNode======>in editor", selectedNode); 
   const {data} = selectedNode || {};
   const {name, type, properties} = data || {};
 
-  console.log("properties======>in step editor", properties)  
   function onNameChanged(e: any) {
       updateSelectedNodeData( "name", e.target.value);
   }
@@ -443,8 +443,27 @@ export function StepEditorV2({
     </EditorLayout>
   }
 
+  const handleSwitchChange = (value:boolean)=>{
+    setGlobalEditor(value);
+    setOpneGlobalEditor(true);
+  }
+
   return (
     <EditorLayout>
+      <div className="flex items-center space-x-3 mb-2">
+        <Switch
+          id="switch"
+          name="switch"
+          checked={useGlobalEditor}
+          onChange={handleSwitchChange}
+        />
+        <label
+          htmlFor="switch"
+          className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+        >
+          Switch to Global Editor
+          </label>
+      </div>
       <Title className="capitalize">{providerType} Editor</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
@@ -493,7 +512,6 @@ export default function StepEditor({
     setName(e.target.value);
   }
 
-  console.log("properties======>in step editor", properties)  
 
   const providerType = type.split("-")[1];
 
