@@ -76,6 +76,7 @@ export interface Preset {
   is_noisy: boolean;
   should_do_noise_now: boolean;
   alerts_count: number;
+  created_by?: string;
 }
 
 export function getTabsFromPreset(preset: Preset): any[] {
