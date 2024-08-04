@@ -3,7 +3,6 @@ import Image from "next/image";
 import "./error.css";
 import {useEffect} from "react";
 import {Button, Text} from "@tremor/react";
-import {useSWRConfig} from "swr";
 export default function ErrorComponent({
   error,
   reset,
@@ -12,11 +11,8 @@ export default function ErrorComponent({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
     console.error(error)
   }, [error])
-
-  const { mutate } = useSWRConfig()
 
   return (
     <div className="error-container">
@@ -28,7 +24,10 @@ export default function ErrorComponent({
         <Image src="/keep.svg" alt="Keep" width={150} height={150} />
       </div>
       <Button
-          onClick={reset}
+          onClick={() => {
+            console.log("Refreshing...")
+            window.location.reload();
+          }}
           color="orange"
           variant="secondary"
           className="mt-4 border border-orange-500 text-orange-500">
