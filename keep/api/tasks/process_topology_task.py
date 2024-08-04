@@ -16,19 +16,21 @@ TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failur
 def process_topology(
     tenant_id: str, topology_data: list[TopologyServiceInDto], provider_id: str
 ):
+    extra = {"provider_id": provider_id, "tenant_id": tenant_id}
     if not topology_data:
         logger.info(
             "No topology data to process",
-            extra={"provider_id": provider_id, "tenant_id": tenant_id},
+            extra=extra,
         )
         return
 
+    logger.info("Processing topology data", extra=extra)
     session = get_session_sync()
 
     try:
         logger.info(
             "Deleting existing topology data",
-            extra={"provider_id": provider_id, "tenant_id": tenant_id},
+            extra=extra,
         )
         session.query(TopologyService).filter(
             TopologyService.source_provider_id == provider_id,
@@ -37,14 +39,14 @@ def process_topology(
         session.commit()
         logger.info(
             "Deleted existing topology data",
-            extra={"provider_id": provider_id, "tenant_id": tenant_id},
+            extra=extra,
         )
-    except Exception as e:
+    except Exception:
         logger.exception(
-            "Failed to delete TopologyService",
-            extra={"provider_id": provider_id, "error": str(e)},
+            "Failed to delete existing topology data",
+            extra=extra,
         )
-        return
+        raise
 
     logger.info(
         "Creating new topology data",
@@ -72,11 +74,19 @@ def process_topology(
             )
 
     session.commit()
+
+    try:
+        session.close()
+    except Exception as e:
+        logger.warning(
+            "Failed to close session",
+            extra={**extra, "error": str(e)},
+        )
+
     logger.info(
         "Created new topology data",
-        extra={"provider_id": provider_id, "tenant_id": tenant_id},
+        extra=extra,
     )
-    return True
 
 
 async def async_process_topology(*args, **kwargs):
