@@ -50,7 +50,8 @@ export function BuilderCard({
   if (error) {
     throw new KeepApiError(
       "The builder has failed to load providers",
-      `${apiUrl}/providers`
+      `${apiUrl}/providers`,
+        `Failed to query ${apiUrl}/providers, is Keep API up?`
     );
   }
 
