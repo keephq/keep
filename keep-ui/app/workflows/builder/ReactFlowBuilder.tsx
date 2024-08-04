@@ -34,26 +34,28 @@ const ReactFlowBuilder = ({
   } = useWorkflowInitialization(workflow, loadedAlertFile, providers);
 
   return (
-    <div className="relative flex w-full h-full gap-2">
-      <DragAndDropSidebar toolboxConfiguration={toolboxConfiguration} />
-      {!isLoading && (
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-        >
-          <Controls />
-          <Background />
-        </ReactFlow>
-      )}
-      <ReactFlowEditor />
+    <div className="sqd-designer-react">
+      <div className="sqd-designer sqd-theme-light sqd-layout-desktop">
+        <DragAndDropSidebar toolboxConfiguration={toolboxConfiguration}/>
+        {!isLoading && (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+          > 
+            <Controls orientation="horizontal"/>
+            <Background/>
+          </ReactFlow>
+        )}
+        <ReactFlowEditor />
+      </div>
     </div>
   );
 };

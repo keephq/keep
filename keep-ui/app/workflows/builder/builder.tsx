@@ -354,7 +354,7 @@ function Builder({
         <>
          {getworkflowStatus()}
           {useReactFlow && (
-            <div className="w-full h-full">
+            <div className="h-[90%]">
               <ReactFlowProvider>
                 <ReactFlowBuilder
                   workflow={workflow}
