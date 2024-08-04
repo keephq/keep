@@ -1,4 +1,52 @@
 ALERTS = {
+    "database_connection_failure": {
+        "severity": "critical",
+        "title": "Database Connection Failure",
+        "alerts": [
+            {
+                "condition": "A",
+                "data": [
+                    {
+                        "datasourceUid": "datasource1",
+                        "model": {
+                            "conditions": [
+                                {
+                                    "evaluator": {"params": [1], "type": "gt"},
+                                    "operator": {"type": "and"},
+                                    "query": {"params": ["A", "5m", "now"]},
+                                    "reducer": {"params": [], "type": "last"},
+                                    "type": "query",
+                                }
+                            ],
+                            "datasource": {"type": "grafana", "uid": "datasource1"},
+                            "expression": "",
+                            "hide": False,
+                            "intervalMs": 1000,
+                            "maxDataPoints": 100,
+                            "refId": "A",
+                            "type": "classic_conditions",
+                        },
+                        "queryType": "",
+                        "refId": "A",
+                        "relativeTimeRange": {"from": 300, "to": 0},
+                    }
+                ],
+                "execErrState": "Alerting",
+                "folderUID": "keep_alerts",
+                "for_": "5m",
+                "isPaused": False,
+                "labels": {"severity": "critical", "monitor": "database"},
+                "noDataState": "NoData",
+                "orgID": 1,
+                "ruleGroup": "keep_group_1",
+                "title": "Database Connection Failure",
+                "parameters": {
+                    "labels.monitor": ["database1", "database2", "database3"],
+                    "for_": ["5m", "10m", "15m"],
+                },
+            },
+        ],
+    },
     "high_memory_usage": {
         "payload": {
             "condition": "B",
