@@ -212,6 +212,8 @@ const useWorkflowInitialization = (
           label: step.name,
           ...step,
         },
+        isDraggable: false,
+        dragHandle: '.custom-drag-handle',
         prevStepId: prevStepId,
         // extent: 'parent',
       } as FlowNode;
@@ -242,11 +244,13 @@ const useWorkflowInitialization = (
       const forEachhNode = {
         id: nodeId,
         type: "custom",
+        dragHandle: '.custom-drag-handle',
         position: { x: 0, y: 0 },
         data: {
           label: step.name,
           ...step,
         },
+        isDraggable: false,
         prevStepId: prevStepId,
         // extent: 'parent',
       } as FlowNode;
@@ -261,11 +265,13 @@ const useWorkflowInitialization = (
       newNode = {
         id: nodeId,
         type: "custom",
+        dragHandle: '.custom-drag-handle',
         position,
         data: {
           label: step.name,
           ...step,
         },
+        isDraggable: false,
         prevStepId: prevStepId,
         // parentId: parentId,
       } as FlowNode;

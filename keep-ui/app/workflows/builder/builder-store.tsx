@@ -31,6 +31,7 @@
     prevStepId?: string;
     edge_label?: string;
     data: NodeData;
+    isDraggable?: boolean;
   };
 
   const initialNodes: FlowNode[] = [
@@ -92,7 +93,7 @@
     // updateNodeData: (nodeId: string, key: string, value: any) => void;
     updateSelectedNodeData: (key: string, value: any) => void;
     updateV2Properties: (key: string, value: any) => void;
-    setStepEditorOpenForNode: (nodeId: string, open: boolean) => void;
+    setStepEditorOpenForNode: (nodeId: string) => void;
     updateEdge: (id: string, key: string, value: any) => void;
   };
 
@@ -157,13 +158,23 @@
         if (sourceType === 'foreach' || sourceNode?.data?.type==='foreach') {
           return true;
         }
-        return get().edges.filter(edge => edge.source === source).length === 0;
+        return  (get().edges.filter(edge => edge.source === source).length === 0 &&
+        get().edges.filter(edge => edge.target === target).length === 0);
       };
   
       // Check if the connection is allowed
       if (canConnect(sourceNode, targetNode)) {
         const edge = { ...connection, type: "custom-edge" };
         set({ edges: addEdge(edge, get().edges) });
+        set({nodes: get().nodes.map(node =>{
+          if(node.id === target){
+            return { ...node, prevStepId: source,  isDraggable: false};
+          }
+          if(node.id === source){
+            return { ...node,  isDraggable: false};
+          }
+          return node;
+        })});
       } else {
         console.warn('Connection not allowed based on node types');
       }
@@ -194,8 +205,10 @@
           data: {
             label: step.name! as string,
             ...step,
-            id: newUuid,
+            id: newUuid 
           },
+          isDraggable: true,
+          dragHandle: '.custom-drag-handle',
         };
 
         set({ nodes: [...get().nodes, newNode] });
@@ -228,9 +241,12 @@
       const newUuid = uuidv4();
       const newNode: FlowNode = {
         ...node,
-        data: { ...data, id: newUuid },
+        data: { ...data, id: newUuid,
+         },
+         isDraggable: true,
         id: newUuid,
         position: { x: position.x + 100, y: position.y + 100 },
+        dragHandle: '.custom-drag-handle'
       };
       set({ nodes: [...get().nodes, newNode] });
     },

@@ -14,8 +14,7 @@ function IconUrlProvider(data: FlowNode["data"]) {
     ?.replace("condition-", "")}-icon.png`;
 }
 
-function CustomNode({ data, id }: { data: FlowNode["data"]; id: string }) {
-  console.log("entering this CustomNode", data, id);
+function CustomNode({ id, data}: FlowNode) {
   const { getNodeById, selectedNode, setSelectedNode } = useStore();
   const currentNode = getNodeById(id);
   const type = data?.type
@@ -24,10 +23,7 @@ function CustomNode({ data, id }: { data: FlowNode["data"]; id: string }) {
     ?.replace("condition-", "");
 
   if (!currentNode) return null;
-
-  console.log("selectedNode", selectedNode);
-  console.log("currentNode", currentNode);
-
+  const isDraggable =  currentNode?.isDraggable;
 
   return (
     <>
@@ -37,10 +33,9 @@ function CustomNode({ data, id }: { data: FlowNode["data"]; id: string }) {
             currentNode?.id === selectedNode?.id
               ? "border-orange-500"
               : "border-stone-400"
-          }`}
+          }${isDraggable ? " custom-drag-handle" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
-            console.log("before setting", currentNode);
             setSelectedNode(currentNode);
           }}
         >
