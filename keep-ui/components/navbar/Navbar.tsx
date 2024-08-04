@@ -19,8 +19,8 @@ export default async function NavbarInner() {
       <Menu>
         <Search />
         <div className="pt-6 space-y-4 flex-1 overflow-auto">
+          <IncidentsLinks session={session} />
           <AlertsLinks session={session} />
-          <IncidentsLinks session={session}/>
           <NoiseReductionLinks session={session} />
           <DashboardLinks session={session} />
         </div>

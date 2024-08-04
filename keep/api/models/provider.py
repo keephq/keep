@@ -38,6 +38,8 @@ class Provider(BaseModel):
     installed_by: str | None = None
     installation_time: datetime | None = None
     docs: str | None = None
-    tags: list[Literal["alert", "ticketing", "messaging", "data", "queue"]] = []
+    tags: list[
+        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+    ] = []
     alertsDistribution: dict[str, int] | None = None
     alertExample: dict | None = None
