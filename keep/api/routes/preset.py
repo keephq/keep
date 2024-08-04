@@ -1,4 +1,5 @@
 import logging
+import os
 import uuid
 
 from fastapi import (
@@ -41,6 +42,10 @@ def pull_data_from_providers(
 
     "Get or create logics".
     """
+    if os.environ.get("KEEP_PULL_DATA_ENABLED", "true") != "true":
+        logger.debug("Pull data from providers is disabled")
+        return
+
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=None,
