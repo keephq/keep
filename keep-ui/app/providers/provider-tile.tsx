@@ -14,6 +14,7 @@ import {
   CircleStackIcon,
   QueueListIcon,
   TicketIcon,
+  MapIcon,
 } from "@heroicons/react/20/solid";
 import "./provider-tile.css";
 import moment from "moment";
@@ -197,6 +198,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
                     ? TicketIcon
                     : tag === "queue"
                     ? QueueListIcon
+                    : tag === "topology"
+                    ? MapIcon
                     : ChatBubbleBottomCenterIcon;
                 return (
                   <Badge

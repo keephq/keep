@@ -112,7 +112,14 @@ export const CustomPresetAlertLinks = ({
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
   // Check for noisy presets and control sound playback
-  const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
+  const anyNoisyNow = presets.some((preset) => preset.should_do_noise_now);
+
+  const checkValidPreset = (preset: Preset) => {
+    if (!preset.is_private) {
+      return true;
+    }
+    return preset && preset.created_by == session?.user?.email;
+  };
 
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
@@ -120,11 +127,11 @@ export const CustomPresetAlertLinks = ({
     );
 
     // Combine live presets and local storage order
-    const combinedOrder = presets.reduce<Preset[]>((acc, preset) => {
-      if (!acc.find(p => p.id === preset.id)) {
+    const combinedOrder = presets.reduce<Preset[]>((acc, preset: Preset) => {
+      if (!acc.find((p) => p.id === preset.id)) {
         acc.push(preset);
       }
-      return acc;
+      return acc.filter((preset) => checkValidPreset(preset));
     }, [...filteredLS]);
 
     // Only update state if there's an actual change to prevent infinite loops

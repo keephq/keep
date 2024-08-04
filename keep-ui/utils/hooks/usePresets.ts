@@ -43,7 +43,9 @@ export const usePresets = () => {
           updatedPresets.set(newPresetId, {
             ...currentPreset,
             alerts_count: currentPreset.alerts_count + newPreset.alerts_count,
-          });
+            created_by: newPreset.created_by,
+            is_private: newPreset.is_private
+          }); 
         } else {
           // If the preset is not in the current presets, add it
           updatedPresets.set(newPresetId, {
