@@ -51,6 +51,7 @@ export default function ProvidersLayout({
             icon={TagIcon}
           >
             <MultiSelectItem value="alert">Alert</MultiSelectItem>
+            <MultiSelectItem value="topology">Topology</MultiSelectItem>
             <MultiSelectItem value="messaging">Messaging</MultiSelectItem>
             <MultiSelectItem value="ticketing">Ticketing</MultiSelectItem>
             <MultiSelectItem value="data">Data</MultiSelectItem>
