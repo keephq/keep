@@ -9,8 +9,6 @@
 </br>
 
 <div align="center">
-    <a href="https://github.com/keephq/keep/blob/main/LICENSE">
-        <img src="https://img.shields.io/github/license/keephq/keep" /></a>
     <a href="https://slack.keephq.dev">
       <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
     <a href="https://codecov.io/gh/keephq/keep" >
