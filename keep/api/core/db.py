@@ -37,6 +37,7 @@ from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-impor
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
@@ -2268,3 +2269,46 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
             return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
                 tzinfo=timezone.utc
             )
+
+
+# Fetch all topology data
+def get_all_topology_data(
+    tenant_id: str,
+    provider_id: Optional[str] = None,
+    service: Optional[str] = None,
+    environment: Optional[str] = None,
+) -> List[TopologyServiceDtoOut]:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+
+        # @tb: let's filter by service only for now and take care of it when we handle multilpe
+        # services and environments and cmdbs
+        # the idea is that we show the service topology regardless of the underlying provider/env
+        # if provider_id is not None and service is not None and environment is not None:
+        if service is not None:
+            query = query.where(
+                TopologyService.service == service,
+                # TopologyService.source_provider_id == provider_id,
+                # TopologyService.environment == environment,
+            )
+
+            service_instance = session.exec(query).first()
+            if not service_instance:
+                return []
+
+            services = session.exec(
+                select(TopologyServiceDependency)
+                .where(
+                    TopologyServiceDependency.depends_on_service_id
+                    == service_instance.id
+                )
+                .options(joinedload(TopologyServiceDependency.service))
+            ).all()
+            services = [service_instance, *[service.service for service in services]]
+        else:
+            # Fetch services for the tenant
+            services = session.exec(query).all()
+
+        service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
+
+        return service_dtos

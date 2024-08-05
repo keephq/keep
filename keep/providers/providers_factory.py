@@ -21,7 +21,7 @@ from keep.api.core.db import (
 )
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -224,7 +224,7 @@ class ProvidersFactory:
         logger = logging.getLogger(__name__)
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
-            logger.info("Using cached providers")
+            logger.debug("Using cached providers")
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -312,9 +312,12 @@ class ProvidersFactory:
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
+                can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
 
                 provider_tags = []
                 provider_tags.extend(provider_class.PROVIDER_TAGS)
+                if can_fetch_topology:
+                    provider_tags.append("topology")
                 if can_query and "data" not in provider_tags:
                     provider_tags.append("data")
                 if (

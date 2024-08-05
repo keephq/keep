@@ -85,7 +85,7 @@ export interface Provider {
   scopes?: ProviderScope[];
   validatedScopes: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
-  tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
+  tags: ("alert" | "ticketing" | "messaging" | "data" | "queue" | "topology")[];
   alertsDistribution?: AlertDistritbuionData[];
   alertExample?: { [key: string]: string };
 }
