@@ -136,6 +136,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         """
         self.logger.debug("Extracting the fingerprint from the alert")
+        event = None
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         elif self.context_manager.foreach_context.get("value", {}):
@@ -145,11 +146,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
             if isinstance(foreach_context, tuple):
                 # This is when we are in a foreach context that is zipped
                 foreach_context: dict = foreach_context[0]
+                event = foreach_context
             fingerprint = foreach_context.get("fingerprint")
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
             #       and remove this if statement
+            event = self.context_manager.event_context
             if isinstance(self.context_manager.event_context, dict):
                 fingerprint = self.context_manager.event_context.get("fingerprint")
             # Alert DTO
@@ -170,15 +173,20 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # enrich only the requested fields
         for enrichment in enrichments:
             try:
-                if enrichment["value"].startswith("results."):
+                value = enrichment["value"]
+                if value.startswith("results."):
                     val = enrichment["value"].replace("results.", "")
                     parts = val.split(".")
                     r = copy.copy(results)
                     for part in parts:
                         r = r[part]
-                    _enrichments[enrichment["key"]] = r
-                else:
-                    _enrichments[enrichment["key"]] = enrichment["value"]
+                    value = r
+                _enrichments[enrichment["key"]] = value
+                if event is not None:
+                    if isinstance(event, dict):
+                        event[enrichment["key"]] = value
+                    else:
+                        setattr(event, enrichment["key"], value)
             except Exception:
                 self.logger.error(
                     f"Failed to enrich alert - enrichment: {enrichment}",

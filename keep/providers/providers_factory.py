@@ -224,7 +224,7 @@ class ProvidersFactory:
         logger = logging.getLogger(__name__)
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
-            logger.info("Using cached providers")
+            logger.debug("Using cached providers")
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -400,6 +400,7 @@ class ProvidersFactory:
             provider_copy.id = p.id
             provider_copy.installed_by = p.installed_by
             provider_copy.installation_time = p.installation_time
+            provider_copy.last_pull_time = p.last_pull_time
             try:
                 provider_auth = {"name": p.name}
                 if include_details:
