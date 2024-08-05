@@ -493,6 +493,31 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     return workflow.workflow_raw
 
 
+def update_provider_last_pull_time(tenant_id: str, provider_id: str):
+    extra = {"tenant_id": tenant_id, "provider_id": provider_id}
+    logger.info("Updating provider last pull time", extra=extra)
+    with Session(engine) as session:
+        provider = session.exec(
+            select(Provider).where(
+                Provider.tenant_id == tenant_id, Provider.id == provider_id
+            )
+        ).first()
+
+        if not provider:
+            logger.warning(
+                "Could not update provider last pull time since provider does not exist",
+                extra=extra,
+            )
+
+        try:
+            provider.last_pull_time = datetime.now(tz=timezone.utc)
+            session.commit()
+        except Exception:
+            logger.exception("Failed to update provider last pull time", extra=extra)
+            raise
+    logger.info("Successfully updated provider last pull time", extra=extra)
+
+
 def get_installed_providers(tenant_id: str) -> List[Provider]:
     with Session(engine) as session:
         providers = session.exec(
