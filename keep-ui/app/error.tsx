@@ -22,6 +22,7 @@ export default function ErrorComponent({
   return (
     <div className="error-container">
       <div className="error-message">{error.toString()}</div>
+      <div className={"error-url"}>ERROR_TYPE: {error.name}</div>
       {error instanceof KeepApiError && error.proposedResolution && (<div className="error-url">
         {error.proposedResolution}
       </div>)
