@@ -13,7 +13,7 @@ from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import get_provider_distribution, get_session, count_alerts
+from keep.api.core.db import count_alerts, get_provider_distribution, get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
@@ -673,9 +673,6 @@ async def install_provider_oauth2(
 ):
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
-    # Extract parameters from the provider_info dictionary
-    provider_name = f"{provider_type}-oauth2"
-
     provider_unique_id = uuid.uuid4().hex
     logger.info(
         "Installing provider",
@@ -688,6 +685,10 @@ async def install_provider_oauth2(
     try:
         provider_class = ProvidersFactory.get_provider_class(provider_type)
         provider_info = provider_class.oauth2_logic(**provider_info)
+        provider_name = provider_info.pop(
+            "provider_name", f"{provider_unique_id}-oauth2"
+        )
+        provider_name = provider_name.lower().replace(" ", "").replace("_", "-")
         provider_config = {
             "authentication": provider_info,
             "name": provider_name,
