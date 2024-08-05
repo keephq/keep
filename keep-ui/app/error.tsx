@@ -1,3 +1,8 @@
+// The error.js file convention allows you to gracefully handle unexpected runtime errors.
+// The way it does this is by automatically wrap a route segment and its nested children in a React Error Boundary.
+// https://nextjs.org/docs/app/api-reference/file-conventions/error
+// https://nextjs.org/docs/app/building-your-application/routing/error-handling#how-errorjs-works
+
 "use client";
 import Image from "next/image";
 import "./error.css";
@@ -7,7 +12,7 @@ export default function ErrorComponent({
   error,
   reset,
 }: {
-  error: KeepApiError
+  error: Error | KeepApiError
   reset: () => void
 }) {
   useEffect(() => {
@@ -17,9 +22,11 @@ export default function ErrorComponent({
   return (
     <div className="error-container">
       <div className="error-message">{error.toString()}</div>
-        <div className="error-url">
-          {error.proposedResolution}
-        </div>
+      {error instanceof KeepApiError && error.proposedResolution && (<div className="error-url">
+        {error.proposedResolution}
+      </div>)
+      }
+
       <div className="error-image">
         <Image src="/keep.svg" alt="Keep" width={150} height={150} />
       </div>
