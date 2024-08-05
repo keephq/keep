@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -64,11 +64,16 @@ def pull_data_from_providers(
         }
 
         if provider.last_pull_time is not None:
-            now = datetime.now(tz=timezone.utc)
-            if (now - provider.last_pull_time).days <= PROVIDER_PULL_INTERVAL_DAYS:
+            now = datetime.now()
+            days_passed = (now - provider.last_pull_time).days
+            if days_passed <= PROVIDER_PULL_INTERVAL_DAYS:
                 logger.info(
-                    "Skipping provider data pull",
-                    extra=extra,
+                    "Skipping provider data pulling since not enough time has passed",
+                    extra={
+                        **extra,
+                        "days_passed": days_passed,
+                        "provider_last_pull_time": str(provider.last_pull_time),
+                    },
                 )
                 continue
 
@@ -105,6 +110,9 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
+        # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
+        update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+
         for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
             process_event(
                 {},
@@ -117,7 +125,6 @@ def pull_data_from_providers(
                 alert,
                 notify_client=False,
             )
-        update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
 
 
 @router.get(
