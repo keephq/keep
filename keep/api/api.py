@@ -4,8 +4,8 @@ import os
 from importlib import metadata
 
 import jwt
-import uvicorn
 import requests
+import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -25,6 +25,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     actions,
+    ai,
     alerts,
     dashboard,
     extraction,
@@ -38,11 +39,10 @@ from keep.api.routes import (
     rules,
     settings,
     status,
+    topology,
     users,
     whoami,
     workflows,
-    incidents,
-    ai
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
@@ -68,9 +68,11 @@ POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
 # Monkey patch requests to disable redirects
 original_request = requests.Session.request
 
+
 def no_redirect_request(self, method, url, **kwargs):
-    kwargs['allow_redirects'] = False
+    kwargs["allow_redirects"] = False
     return original_request(self, method, url, **kwargs)
+
 
 requests.Session.request = no_redirect_request
 
@@ -187,6 +189,7 @@ def get_app(
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
     app.include_router(groups.router, prefix="/groups", tags=["groups"])
     app.include_router(users.router, prefix="/users", tags=["users"])
+    app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
     )

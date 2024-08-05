@@ -11,6 +11,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.host": ["host1", "host2", "host3"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
             "labels.instance": ["instance1", "instance2", "instance3"],
         },
     },
@@ -23,6 +24,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.queue": ["queue1", "queue2", "queue3"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
             "labels.mq_manager": ["mq_manager1", "mq_manager2", "mq_manager3"],
         },
     },
@@ -35,6 +37,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.host": ["host1", "host2", "host3"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
             "labels.instance": ["instance1", "instance2", "instance3"],
         },
     },
@@ -47,6 +50,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.host": ["host1", "host2", "host3"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
             "labels.instance": ["instance1", "instance2", "instance3"],
         },
     },
