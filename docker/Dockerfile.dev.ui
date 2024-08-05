@@ -19,7 +19,7 @@ COPY ./keep-ui/ /app
 RUN npm install
 # Install next globally and create a symlink
 RUN npm install -g next
-RUN ln -s /usr/local/lib/node_modules/next/dist/bin/next /usr/local/bin/next
+RUN ln -s /usr/local/lib/node_modules/next/dist/bin/next /usr/local/bin/next || echo "next binary already linked to bin"
 # Ensure port 3000 is accessible to our system
 EXPOSE 3000
 
