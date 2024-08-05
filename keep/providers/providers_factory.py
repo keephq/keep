@@ -224,7 +224,7 @@ class ProvidersFactory:
         logger = logging.getLogger(__name__)
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
-            logger.info("Using cached providers")
+            logger.debug("Using cached providers")
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
