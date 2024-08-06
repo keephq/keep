@@ -1,13 +1,14 @@
-import React, {FormEvent, useState} from "react";
-import { useSession } from "next-auth/react";
-import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
-import { useIncidents } from "../../utils/hooks/useIncidents";
+import { Button, Divider, Select, SelectItem, Title } from "@tremor/react";
+import CreateOrUpdateIncident from "app/incidents/create-or-update-incident";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import { getApiURL } from "../../utils/apiUrl";
+import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
-import {Button, Divider, Select, SelectItem, Title} from "@tremor/react";
-import {useRouter} from "next/navigation";
-import {getApiURL} from "../../utils/apiUrl";
-import {toast} from "react-toastify";
+import { AlertDto } from "./models";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -22,8 +23,11 @@ const AlertAssociateIncidentModal = ({
   handleClose,
   alerts,
 }: AlertAssociateIncidentModalProps) => {
+  const [createIncident, setCreateIncident] = useState(false)
 
   const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
+  usePollIncidents(mutate)
+
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   // get the token
   const { data: session } = useSession();
@@ -54,6 +58,22 @@ const AlertAssociateIncidentModal = ({
     }
   }
 
+  const showIncidentForm = useCallback(() => setCreateIncident(true), [])
+  const hideIncidentForm = useCallback(() => setCreateIncident(false), [])
+
+  const onIncidentCreated = useCallback((incidentId: string) => {
+    hideIncidentForm()
+    setSelectedIncident(incidentId)
+  }, [])
+
+
+  // reset modal state after closing
+  useEffect(() => {
+    if (!isOpen) {
+      hideIncidentForm()
+      setSelectedIncident(null)
+    }
+  }, [isOpen])
 
   return (
     <Modal
@@ -64,17 +84,23 @@ const AlertAssociateIncidentModal = ({
     >
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
-            <Loading />
-          ) : incidents && incidents.items.length > 0 ? (
+          <Loading />
+        ) : createIncident ? (
+          <CreateOrUpdateIncident
+            incidentToEdit={null}
+            createCallback={onIncidentCreated}
+            exitCallback={hideIncidentForm}
+          />
+        ): incidents && incidents.items.length > 0 ? (
             <div className="h-full justify-center">
               <Select
                 className="my-2.5"
                 placeholder={`Select incident`}
+                value={selectedIncident}
                 onValueChange={(value) => setSelectedIncident(value)}
               >
                 {
                   incidents.items?.map((incident) => {
-
                     return (
                       <SelectItem
                         key={incident.id}
@@ -87,31 +113,50 @@ const AlertAssociateIncidentModal = ({
                 }
               </Select>
               <Divider />
-              <div className="right">
+              <div className="flex items-center justify-between gap-6">
                 <Button
+                  className="flex-1"
                   color="orange"
                   onClick={handleAssociateAlerts}
                   disabled={selectedIncident === null}
                 >
                   Associate {alerts.length} alert{alerts.length > 1 ? "s" : ""}
                 </Button>
-              </div>
 
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-y-8 h-full">
+                <Button 
+                  className="flex-1"
+                  color="green"
+                  onClick={showIncidentForm}
+                >
+                  Create a new incident
+                </Button>
+              </div>
+          </div>
+        ): (
+          <div className="flex flex-col items-center justify-center gap-y-8 h-full">
               <div className="text-center space-y-3">
                 <Title className="text-2xl">No Incidents Yet</Title>
               </div>
-              <Button
-                className="mb-10"
-                color="orange"
-                onClick={() => router.push("/incidents")}
-              >
-                Register Incident
-              </Button>
+
+              <div className="flex items-center justify-between w-full gap-6">
+                <Button
+                  className="flex-1"
+                  color="orange"
+                  onClick={() => router.push("/incidents")}
+                >
+                  Incidents page
+                </Button>
+
+                <Button
+                  className="flex-1"
+                  color="green"
+                  onClick={showIncidentForm}
+                >
+                  Create a new incident
+                </Button>
+              </div>
             </div>
-          )}
+        )}
       </div>
     </Modal>
   );
