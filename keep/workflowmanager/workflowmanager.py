@@ -107,9 +107,15 @@ class WorkflowManager:
                         filter_key = filter.get("key")
                         filter_val = filter.get("value")
                         event_val = self._get_event_value(event, filter_key)
-                        if not event_val:
+                        if event_val is None:
                             self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow."
+                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                                extra={
+                                    "tenant_id": tenant_id,
+                                    "filter_key": filter_key,
+                                    "filter_val": filter_val,
+                                    "workflow_id": workflow_model.id,
+                                },
                             )
                             should_run = False
                             continue
