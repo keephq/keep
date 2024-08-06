@@ -2,7 +2,7 @@ import React, {FormEvent, useState} from "react";
 import { useSession } from "next-auth/react";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
-import { useIncidents } from "../../utils/hooks/useIncidents";
+import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
 import {Button, Divider, Select, SelectItem, Title} from "@tremor/react";
 import {useRouter} from "next/navigation";
@@ -23,7 +23,8 @@ const AlertAssociateIncidentModal = ({
   alerts,
 }: AlertAssociateIncidentModalProps) => {
 
-  const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
+  const { data: incidents, isLoading, mutate: mutateIncidents } = useIncidents(true, 100);
+  usePollIncidents(mutateIncidents);
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   // get the token
   const { data: session } = useSession();
@@ -61,7 +62,7 @@ const AlertAssociateIncidentModal = ({
       onClose={handleClose}
       title="Choose Incident"
       className="w-[600px]"
-    >
+    >{console.log(incidents)}
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
             <Loading />
@@ -87,7 +88,7 @@ const AlertAssociateIncidentModal = ({
                 }
               </Select>
               <Divider />
-              <div className="right">
+              <div className="right flex justify-between">
                 <Button
                   color="orange"
                   onClick={handleAssociateAlerts}
@@ -95,8 +96,13 @@ const AlertAssociateIncidentModal = ({
                 >
                   Associate {alerts.length} alert{alerts.length > 1 ? "s" : ""}
                 </Button>
+                <Button
+                  color="orange"
+                  onClick={() => router.push("/incidents")}
+                >
+                  Register Incident
+                </Button>
               </div>
-
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-y-8 h-full">
