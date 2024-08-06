@@ -355,7 +355,6 @@ class WorkflowScheduler:
                             "Collision with workflow execution! will retry next time",
                             extra={
                                 "workflow_id": workflow_id,
-                                "workflow_execution_id": execution_id,
                                 "tenant_id": tenant_id,
                             },
                         )
@@ -379,7 +378,6 @@ class WorkflowScheduler:
                             "Collision with workflow execution! will not retry",
                             extra={
                                 "workflow_id": workflow_id,
-                                "workflow_execution_id": execution_id,
                                 "tenant_id": tenant_id,
                             },
                         )
