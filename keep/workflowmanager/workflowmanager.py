@@ -48,7 +48,7 @@ class WorkflowManager:
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
-        if filter_val.startswith('r"'):
+        if isinstance(filter_val, str) and filter_val.startswith('r"'):
             try:
                 # remove the r" and the last "
                 pattern = re.compile(filter_val[2:-1])
@@ -60,6 +60,9 @@ class WorkflowManager:
                 )
                 return False
         else:
+            # For cases like `dismissed`
+            if isinstance(filter_val, bool) and isinstance(value, str):
+                return value == str(filter_val)
             return value == filter_val
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto]):
