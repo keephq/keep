@@ -3,12 +3,14 @@ import { Dialog, Transition } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
 import { Text, Button, TextInput, Callout, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
+import { getApiURL } from "utils/apiUrl";
+import { Role } from "app/settings/models";
 
 interface RoleSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
   accessToken: string;
-  selectedRole: any;
+  selectedRole: Role | null;
   resources: string[];
   mutateRoles: () => void;
 }
@@ -21,10 +23,10 @@ const RoleSidebar = ({
   resources,
   mutateRoles,
 }: RoleSidebarProps) => {
-  const { control, handleSubmit, setValue, reset: resetForm, setError, formState: { errors }, clearErrors } = useForm({
+  const { control, handleSubmit, setValue, reset, setError, formState: { errors }, clearErrors } = useForm({
     defaultValues: {
-      name: "",
-      description: "",
+      name: selectedRole?.name || "",
+      description: selectedRole?.description || "",
     },
   });
 
@@ -32,7 +34,7 @@ const RoleSidebar = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (selectedRole) {
+    if (isOpen && selectedRole) {
       setValue("name", selectedRole.name);
       setValue("description", selectedRole.description);
       const roleScopes = selectedRole.scopes.reduce((acc: any, scope: string) => {
@@ -42,11 +44,25 @@ const RoleSidebar = ({
         return acc;
       }, {});
       setNewRoleScopes(roleScopes);
-    } else {
-      resetForm();
+    }
+  }, [selectedRole, setValue, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && !selectedRole) {
+      reset({
+        name: "",
+        description: "",
+      });
       setNewRoleScopes({});
     }
-  }, [selectedRole, setValue, resetForm]);
+  }, [isOpen, selectedRole, reset]);
+
+  const handleToggle = () => {
+    if (isOpen) {
+      clearErrors();
+    }
+    toggle();
+  };
 
   const prepopulateScopes = () => {
     return resources.map((resource) => (
@@ -99,8 +115,11 @@ const RoleSidebar = ({
               .map(([action, _]) => `${action}:${resource}`)
           ),
       };
-
-      const response = await fetch(`${apiUrl}/auth/roles`, {
+      const apiUrl = getApiURL();
+      // url includes the role id if it is an edit operation
+      const url = selectedRole ? `${apiUrl}/auth/roles/${selectedRole.id}` : `${apiUrl}/auth/roles`;
+      // add id to the body if it is an edit operation
+      const response = await fetch(url, {
         method: selectedRole ? "PUT" : "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -111,8 +130,8 @@ const RoleSidebar = ({
 
       if (response.ok) {
         console.log("Role saved:", newRole);
-        resetForm();
-        toggle();
+        reset();
+        handleToggle();
         await mutateRoles();
       } else {
         const errorData = await response.json();
@@ -127,7 +146,7 @@ const RoleSidebar = ({
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog onClose={toggle}>
+      <Dialog onClose={handleToggle}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -226,9 +245,10 @@ const RoleSidebar = ({
                 <Button
                   color="orange"
                   variant="secondary"
-                  onClick={() => {
-                    resetForm();
-                    toggle();
+                  onClick={(e) => {
+                    e.preventDefault(); // Prevent form submission
+                    reset();
+                    handleToggle();
                   }}
                   className="border border-orange-500 text-orange-500"
                 >

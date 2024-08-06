@@ -14,7 +14,6 @@ from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
 from keep.api.core.db import count_alerts, get_provider_distribution, get_session
-from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings

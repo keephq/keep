@@ -20,6 +20,7 @@ for name, obj in inspect.getmembers(rbac_module):
     ):
         PREDEFINED_ROLES.append(
             Role(
+                id=obj.get_name(),
                 name=obj.get_name(),
                 description=obj.DESCRIPTION,
                 scopes=obj.SCOPES,
@@ -240,7 +241,12 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             role_name = role.get("name")
             _role = get_role_by_role_name(role_name)
             roles_dto.append(
-                Role(name=role_name, description=_role.DESCRIPTION, scopes=_role.SCOPES)
+                Role(
+                    id=role_name,
+                    name=role_name,
+                    description=_role.DESCRIPTION,
+                    scopes=_role.SCOPES,
+                )
             )
         return roles_dto
 

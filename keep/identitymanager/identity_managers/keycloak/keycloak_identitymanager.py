@@ -51,6 +51,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             )
             self.keycloak_uma = KeycloakUMA(connection=self.keycloak_id_connection)
             self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
+            self.admin_url_without_client = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}'
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -60,13 +61,17 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
     def on_start(self, app) -> None:
         for scope in get_all_scopes():
+            self.logger.info("Creating scope: %s", scope)
             self.create_scope(scope)
+            self.logger.info("Scope created: %s", scope)
         for resource in ALL_RESOURCES:
+            self.logger.info("Creating resource: %s", resource)
             self.create_resource(resource)
+            self.logger.info("Resource created: %s", resource)
         for role in PREDEFINED_ROLES:
-            role_id = self.create_role(role, predefined=True)
-            policy_id = self.create_role_policy(role_id, role.name, role.description)
-            self.create_scope_based_permission(role, policy_id)
+            self.logger.info("Creating role: %s", role)
+            self.create_role(role, predefined=True)
+            self.logger.info("Role created: %s", role)
 
     def _scope_name_to_id(self, all_scopes, scope_name: str) -> str:
         # if its ":*":
@@ -146,6 +151,10 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 skip_exists=True,
             )
             role_id = self.keycloak_admin.get_client_role_id(self.client_id, role_name)
+            # create the role policy
+            policy_id = self.create_role_policy(role_id, role.name, role.description)
+            # create the scope based permission
+            self.create_scope_based_permission(role, policy_id)
             return role_id
         except KeycloakPostError as e:
             if "already exists" in str(e):
@@ -155,6 +164,36 @@ class KeycloakIdentityManager(BaseIdentityManager):
             else:
                 self.logger.error("Failed to create roles in Keycloak: %s", str(e))
                 raise HTTPException(status_code=500, detail="Failed to create roles")
+
+    def update_role(self, role_id: str, role: Role) -> str:
+        # just update the policy
+        role_id = self.keycloak_admin.get_client_role_id(self.client_id, role.name)
+        scopes = role.scopes
+        all_scopes = self.keycloak_admin.get_client_authz_scopes(self.client_id)
+        scopes_ids = set()
+        for scope in scopes:
+            scope_ids = self._scope_name_to_id(all_scopes, scope)
+            scopes_ids.update(scope_ids)
+        # get the scope-based permission
+        permissions = self.keycloak_admin.get_client_authz_permissions(self.client_id)
+        permission = next(
+            (
+                permission
+                for permission in permissions
+                if permission["name"] == f"Permission for {role.name}"
+            ),
+            None,
+        )
+        if not permission:
+            raise HTTPException(status_code=404, detail="Permission not found")
+        permission_id = permission["id"]
+        permission["scopes"] = list(scopes_ids)
+        resp = self.keycloak_admin.connection.raw_put(
+            f"{self.admin_url}/authz/resource-server/permission/scope/{permission_id}",
+            data=json.dumps(permission),
+        )
+        resp.raise_for_status()
+        return role_id
 
     def create_role_policy(self, role_id: str, role_name: str, role_description) -> str:
         try:
@@ -720,6 +759,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             roles = [role for role in roles if role["name"] != "uma_protection"]
             roles_dto = {
                 role.get("id"): Role(
+                    id=role.get("id"),
                     name=role["name"],
                     description=role["description"],
                     scopes=set([]),  # will populate this later
@@ -751,8 +791,40 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     f"{self.admin_url}/authz/resource-server/policy/{dependentPoliciesId}/scopes",
                 ).json()
                 scope_names = [scope["name"] for scope in scopes]
+                # happens only when delete role fails from some resaon
+                if role_id not in roles_dto:
+                    self.logger.warning("Role not found for policy, skipping")
+                    continue
                 roles_dto[role_id].scopes.update(scope_names)
             return list(roles_dto.values())
         except KeycloakGetError as e:
             self.logger.error("Failed to fetch roles from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch roles")
+
+    def delete_role(self, role_id: str) -> None:
+        try:
+            # delete the role
+            resp = self.keycloak_admin.connection.raw_delete(
+                f"{self.admin_url_without_client}/roles-by-id/{role_id}",
+            )
+            resp.raise_for_status()
+            # delete the policy
+            policies = self.get_policies()
+            for policy in policies:
+                roles = json.loads(policy.get("config", {}).get("roles", "{}"))
+                if roles and roles[0].get("id") == role_id:
+                    policy_id = policy.get("id")
+                    break
+
+            if not policy_id:
+                self.logger.warning("Policy not found for role deletion, skipping")
+            else:
+                self.logger.info("Deleteing policy id")
+                self.keycloak_admin.delete_client_authz_policy(
+                    self.client_id, policy_id
+                )
+                self.logger.info("Policy id deleted")
+            # permissions gets deleted impliclty when we delete the policy
+        except KeycloakDeleteError as e:
+            self.logger.error("Failed to delete role from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to delete role")

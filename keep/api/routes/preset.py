@@ -22,7 +22,6 @@ from keep.api.core.db import (
     update_preset_options,
     update_provider_last_pull_time,
 )
-from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 from keep.api.tasks.process_event_task import process_event

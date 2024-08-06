@@ -23,10 +23,17 @@ class User(BaseModel, extra=Extra.ignore):
 
 
 class Role(BaseModel):
+    id: str
     name: str
     description: str
     scopes: Set[str]
     predefined: bool = True
+
+
+class CreateOrUpdateRole(BaseModel):
+    name: Optional[str]
+    description: Optional[str]
+    scopes: Optional[Set[str]]
 
 
 class PermissionEntity(BaseModel):
