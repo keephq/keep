@@ -1,5 +1,7 @@
 import logging
+import os
 import uuid
+from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -12,16 +14,23 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.consts import STATIC_PRESETS
+from keep.api.consts import PROVIDER_PULL_INTERVAL_DAYS, STATIC_PRESETS
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
-from keep.api.core.db import get_session, update_preset_options
+from keep.api.core.db import (
+    get_session,
+    update_preset_options,
+    update_provider_last_pull_time,
+)
+from keep.api.core.dependencies import AuthenticatedEntity
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -31,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 # SHAHAR: this function runs as background tasks as a seperate thread
 #         DO NOT ADD async HERE as it will run in the main thread and block the whole server
-def pull_alerts_from_providers(
+def pull_data_from_providers(
     tenant_id: str,
     trace_id: str,
 ) -> list[AlertDto]:
@@ -40,29 +49,72 @@ def pull_alerts_from_providers(
 
     "Get or create logics".
     """
+    if os.environ.get("KEEP_PULL_DATA_ENABLED", "true") != "true":
+        logger.debug("Pull data from providers is disabled")
+        return
+
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=None,
     )
 
     for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
+        extra = {
+            "provider_type": provider.type,
+            "provider_id": provider.id,
+            "tenant_id": tenant_id,
+        }
+
+        if provider.last_pull_time is not None:
+            now = datetime.now()
+            days_passed = (now - provider.last_pull_time).days
+            if days_passed <= PROVIDER_PULL_INTERVAL_DAYS:
+                logger.info(
+                    "Skipping provider data pulling since not enough time has passed",
+                    extra={
+                        **extra,
+                        "days_passed": days_passed,
+                        "provider_last_pull_time": str(provider.last_pull_time),
+                    },
+                )
+                continue
+
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
             provider_id=provider.id,
             provider_type=provider.type,
             provider_config=provider.details,
         )
+
         logger.info(
             f"Pulling alerts from provider {provider.type} ({provider.id})",
-            extra={
-                "provider_type": provider.type,
-                "provider_id": provider.id,
-                "tenant_id": tenant_id,
-            },
+            extra=extra,
         )
         sorted_provider_alerts_by_fingerprint = (
             provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
         )
+
+        try:
+            if isinstance(provider_class, BaseTopologyProvider):
+                logger.info("Getting topology data", extra=extra)
+                topology_data = provider_class.pull_topology()
+                logger.info("Got topology data, processing", extra=extra)
+                process_topology(tenant_id, topology_data, provider.id)
+                logger.info("Processed topology data", extra=extra)
+        except NotImplementedError:
+            logger.warning(
+                f"Provider {provider.type} ({provider.id}) does not support topology data",
+                extra=extra,
+            )
+        except Exception:
+            logger.error(
+                f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
+                extra=extra,
+            )
+
+        # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
+        update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+
         for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
             process_event(
                 {},
@@ -241,7 +293,7 @@ async def get_preset_alerts(
     # In the worst case, gathered alerts will be pulled in the next request.
 
     bg_tasks.add_task(
-        pull_alerts_from_providers,
+        pull_data_from_providers,
         authenticated_entity.tenant_id,
         request.state.trace_id,
     )

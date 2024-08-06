@@ -69,13 +69,14 @@ readonly value: string;
 }
 
 export interface Preset {
-id: string;
-name: string;
-options: Option[];
-is_private: boolean;
-is_noisy: boolean;
-should_do_noise_now: boolean;
-alerts_count: number;
+  id: string;
+  name: string;
+  options: Option[];
+  is_private: boolean;
+  is_noisy: boolean;
+  should_do_noise_now: boolean;
+  alerts_count: number;
+  created_by?: string;
 }
 
 export function getTabsFromPreset(preset: Preset): any[] {

@@ -13,7 +13,7 @@ git clone https://github.com/keephq/keep.git && cd keep
 
 Next, run
 ```
-docker-compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up
 ```
 
 ### Testing
@@ -52,6 +52,7 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
         "program": "keep/cli/cli.py",
         "console": "integratedTerminal",
         "justMyCode": false,
+        "python": "venv/bin/python",
         "args": ["--json", "api","--multi-tenant"],
         "env": {
             "PYDEVD_DISABLE_FILE_VALIDATION": "1",
@@ -72,6 +73,7 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
         "program": "scripts/simulate_alerts.py",
         "console": "integratedTerminal",
         "justMyCode": false,
+        "python": "venv/bin/python",
         "env": {
           "PYDEVD_DISABLE_FILE_VALIDATION": "1",
           "PYTHONPATH": "${workspaceFolder}/",
@@ -92,9 +94,17 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
 
 Install dependencies:
 ```
+python3.11 -m venv venv;
+source venv/bin/activate;
 pip install poetry;
 poetry install;
-cd keep-ui && npm i;
+cd keep-ui && npm i && cd ..;
+```
+
+Set frontend envs:
+```
+cp keep-ui/.env.local.example keep-ui/.env.local;
+echo "\n\n\n\nNEXTAUTH_SECRET="$(openssl rand -hex 32) >> keep-ui/.env.local;
 ```
 
 Launch Pusher ([soketi](https://soketi.app/)) container in parallel:
