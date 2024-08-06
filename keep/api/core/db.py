@@ -84,6 +84,7 @@ def create_workflow_execution(
     execution_number: int = 1,
     event_id: str = None,
     fingerprint: str = None,
+    execution_id: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
@@ -91,7 +92,7 @@ def create_workflow_execution(
                 triggered_by = triggered_by[:255]
 
             workflow_execution = WorkflowExecution(
-                id=str(uuid4()),
+                id=execution_id or str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
@@ -792,13 +793,22 @@ def count_alerts(
             )
 
 
-def get_enrichment(tenant_id, fingerprint):
+def get_enrichment(tenant_id, fingerprint, refresh=False):
     with Session(engine) as session:
         alert_enrichment = session.exec(
             select(AlertEnrichment)
             .where(AlertEnrichment.tenant_id == tenant_id)
             .where(AlertEnrichment.alert_fingerprint == fingerprint)
         ).first()
+
+        if refresh:
+            try:
+                session.refresh(alert_enrichment)
+            except Exception:
+                logger.exception(
+                    "Failed to refresh enrichment",
+                    extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+                )
     return alert_enrichment
 
 
