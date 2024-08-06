@@ -1840,16 +1840,6 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def get_incident_by_id(incident_id: UUID) -> Incident:
-    with Session(engine) as session:
-        incident = session.exec(
-            select(Incident)
-            .options(selectinload(Incident.alerts))
-            .where(Incident.id == incident_id)
-        ).first()
-    return incident
-
-
 def assign_alert_to_incident(
     alert_id: UUID, incident_id: UUID, tenant_id: str
 ) -> AlertToIncident:
