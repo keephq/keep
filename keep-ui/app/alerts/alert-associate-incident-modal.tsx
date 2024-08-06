@@ -62,7 +62,7 @@ const AlertAssociateIncidentModal = ({
       onClose={handleClose}
       title="Choose Incident"
       className="w-[600px]"
-    >{console.log(incidents)}
+    >
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
             <Loading />
