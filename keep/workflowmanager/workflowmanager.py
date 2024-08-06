@@ -128,11 +128,7 @@ class WorkflowManager:
                                     break
                                 should_run = False
                         # elif the filter is string/int/float, compare them:
-                        elif type(event_val) in [
-                            int,
-                            str,
-                            float,
-                        ]:
+                        elif type(event_val) in [int, str, float, bool]:
                             if not self._apply_filter(filter_val, event_val):
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
