@@ -43,9 +43,13 @@ export default function GroupsTab({ accessToken }: Props) {
         };
         return acc;
       }, {} as { [key: string]: { members: string[], roles: string[] } });
-      setGroupStates(initialGroupStates);
+
+      // Compare new state with current state before updating
+      if (JSON.stringify(initialGroupStates) !== JSON.stringify(groupStates)) {
+        setGroupStates(initialGroupStates);
+      }
     }
-  }, [groups]);
+  }, [groups, groupStates]);
 
   if (groupsLoading || usersLoading || rolesLoading) return <Loading />;
 

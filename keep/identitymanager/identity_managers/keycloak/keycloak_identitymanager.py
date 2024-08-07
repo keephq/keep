@@ -281,7 +281,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to fetch users from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch users")
 
-    def create_user(self, user_email: str, password: str, role: str) -> dict:
+    def create_user(self, user_email: str, password: str, role: list[str]) -> dict:
         try:
             user_data = {
                 "username": user_email,
@@ -294,6 +294,12 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 ]
 
             user_id = self.keycloak_admin.create_user(user_data)
+            self.keycloak_admin.assign_client_role(
+                client_id=self.client_id,
+                user_id=user_id,
+                roles=[role],
+            )
+
             return {
                 "status": "success",
                 "message": "User created successfully",
@@ -303,10 +309,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to create user in Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to create user")
 
+    # def update_user()
+
     def delete_user(self, user_email: str) -> dict:
         try:
             user_id = self.keycloak_admin.get_user_id(username=user_email)
             self.keycloak_admin.delete_user(user_id)
+            # delete the policy for the user (if not implicitly deleted?)
             return {"status": "success", "message": "User deleted successfully"}
         except KeycloakDeleteError as e:
             self.logger.error("Failed to delete user from Keycloak: %s", str(e))
@@ -506,6 +515,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return policy_id
 
     def create_permissions(self, permissions: list[ResourcePermission]) -> None:
+        # create or update
         try:
             existing_permissions = self.keycloak_admin.get_client_authz_permissions(
                 self.client_id,
@@ -573,15 +583,16 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     existing_permission_id = existing_permissions["id"]
                     # if no new policies, continue
                     if not policies:
-                        continue
-                    # add the new policies
-                    associated_policies = self.keycloak_admin.get_client_authz_permission_associated_policies(
-                        self.client_id, existing_permission_id
-                    )
-                    existing_permissions["policies"] = [
-                        policy["id"] for policy in associated_policies
-                    ]
-                    existing_permissions["policies"].extend(policies)
+                        existing_permissions["policies"] = []
+                    else:
+                        # add the new policies
+                        associated_policies = self.keycloak_admin.get_client_authz_permission_associated_policies(
+                            self.client_id, existing_permission_id
+                        )
+                        existing_permissions["policies"] = [
+                            policy["id"] for policy in associated_policies
+                        ]
+                        existing_permissions["policies"].extend(policies)
                     # update the policy to include the new policy
                     resp = self.keycloak_admin.connection.raw_put(
                         f"{self.admin_url}/authz/resource-server/permission/resource/{existing_permission_id}",

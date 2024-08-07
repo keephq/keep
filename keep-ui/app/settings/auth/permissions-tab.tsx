@@ -34,11 +34,10 @@ export default function PermissionsTab({ accessToken }: Props) {
   const [filter, setFilter] = useState("");
 
   const { useAllPresets } = usePresets();
-  const { data: presets, error: presetsError, isValidating: presetsLoading } = useAllPresets();
-
-  const { data: groups, error: groupsError, isValidating: groupsLoading } = useGroups();
-  const { data: users, error: usersError, isValidating: usersLoading } = useUsers();
-  const { data: permissions, error: permissionsError, isValidating: permissionsLoading } = usePermissions();
+  const { data: presets = [], error: presetsError, isValidating: presetsLoading } = useAllPresets();
+  const { data: groups = [], error: groupsError, isValidating: groupsLoading } = useGroups();
+  const { data: users = [], error: usersError, isValidating: usersLoading } = useUsers();
+  const { data: permissions = [], error: permissionsError, isValidating: permissionsLoading } = usePermissions();
 
   const displayPermissions = useMemo(() => {
     const groupPermissions = (groups || []).map(group => ({ id: group.id, name: group.name, type: 'group' as const }));
@@ -70,7 +69,14 @@ export default function PermissionsTab({ accessToken }: Props) {
 
   const savePermissions = async () => {
     try {
-      const resourcePermissions = Object.entries(selectedPermissions).map(([presetId, permissions]) => ({
+      const changedPermissions = Object.entries(selectedPermissions).reduce((acc, [presetId, permissions]) => {
+        if (JSON.stringify(permissions) !== JSON.stringify(initialPermissions[presetId])) {
+          acc[presetId] = permissions;
+        }
+        return acc;
+      }, {} as { [key: string]: string[] });
+
+      const resourcePermissions = Object.entries(changedPermissions).map(([presetId, permissions]) => ({
         resource_id: presetId,
         resource_name: presets?.find(preset => preset.id === presetId)?.name || "",
         resource_type: "preset",
@@ -78,10 +84,15 @@ export default function PermissionsTab({ accessToken }: Props) {
           const permission = displayPermissions.find(p => p.id === permissionId);
           return {
             id: permissionId,
-            type: permission.type
+            type: permission?.type
           };
         })
       }));
+
+      if (resourcePermissions.length === 0) {
+        console.log("No changes to save");
+        return;
+      }
 
       const response = await fetch(`${getApiURL()}/auth/permissions`, {
         method: "POST",

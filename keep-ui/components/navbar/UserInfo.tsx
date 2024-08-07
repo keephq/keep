@@ -15,7 +15,7 @@ import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
 import { Icon, Subtitle } from "@tremor/react";
 
-const getInitials = (name: string) =>
+export const getInitials = (name: string) =>
   ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
     .join("")
     .toUpperCase();

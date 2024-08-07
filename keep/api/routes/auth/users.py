@@ -15,7 +15,18 @@ logger = logging.getLogger(__name__)
 class CreateUserRequest(BaseModel):
     email: str = Field(alias="username")
     password: Optional[str] = None  # auth0 does not need password
-    role: str
+    role: Optional[str] = (
+        None  # user can be assigned to group and get its roles from groups
+    )
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class UpdateUserRequest(BaseModel):
+    email: Optional[str] = Field(alias="username")
+    password: Optional[str] = None
+    role: Optional[str] = None
 
     class Config:
         allow_population_by_field_name = True
@@ -64,3 +75,26 @@ async def create_user(
 
     identity_manager = IdentityManagerFactory.get_identity_manager(tenant_id)
     return identity_manager.create_user(user_email, password, role)
+
+
+@router.put("/{user_email}", description="Update a user")
+async def update_user(
+    user_email: str,
+    request_data: UpdateUserRequest,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:settings"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    identity_manager = IdentityManagerFactory.get_identity_manager(tenant_id)
+
+    update_data = request_data.dict(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+
+    try:
+        updated_user = identity_manager.update_user(user_email, update_data)
+        return updated_user
+    except Exception as e:
+        logger.error(f"Error updating user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update user")
