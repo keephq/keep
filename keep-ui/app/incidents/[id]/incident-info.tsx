@@ -1,10 +1,10 @@
-import {Button, Title} from "@tremor/react";
+import { Button, Title } from "@tremor/react";
 import { IncidentDto } from "../model";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import React, {useState} from "react";
-import {MdModeEdit} from "react-icons/md";
-import {useIncident} from "../../../utils/hooks/useIncidents";
+import React, { useState } from "react";
+import { MdModeEdit } from "react-icons/md";
+import { useIncident } from "../../../utils/hooks/useIncidents";
 // import { RiSparkling2Line } from "react-icons/ri";
 
 interface Props {
@@ -12,7 +12,6 @@ interface Props {
 }
 
 export default function IncidentInformation({ incident }: Props) {
-
   const { mutate } = useIncident(incident.id);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -48,7 +47,7 @@ export default function IncidentInformation({ incident }: Props) {
         </div>
         <div className="prose-2xl">{incident.name}</div>
         <p>Description: {incident.description}</p>
-        <p>Started at: {incident.start_time?.toISOString() ?? "N/A"}</p>
+        <p>Started at: {incident.start_time?.toString() ?? "N/A"}</p>
         {/* <Callout
           title="AI Summary"
           color="gray"

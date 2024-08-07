@@ -90,11 +90,11 @@ class AlertStatus(Enum):
 
 
 class IncidentSeverity(Enum):
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+    P4 = "P4"
+    P5 = "P5"
 
 
 class AlertDto(BaseModel):
@@ -364,6 +364,10 @@ class IncidentDto(IncidentDtoIn):
 
     is_predicted: bool
 
+    source_provider_id: str | None
+    source_provider_type: str | None
+    source_unique_identifier: str
+
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
         model_dict = self.dict()
@@ -386,9 +390,19 @@ class IncidentDto(IncidentDtoIn):
         unique_sources_list = list(
             set([source for alert_dto in alerts_dto for source in alert_dto.source])
         )
+
+        if (
+            db_incident.source_provider_type
+            and db_incident.source_provider_type not in unique_sources_list
+        ):
+            unique_sources_list.append(db_incident.source_provider_type)
+
         unique_service_list = list(
             set([alert.service for alert in alerts_dto if alert.service is not None])
         )
+
+        # tb: we can add a lot more information from the source provider here,
+        #   for example, a link to the source provider original incident page
 
         return cls(
             id=db_incident.id,
@@ -400,7 +414,8 @@ class IncidentDto(IncidentDtoIn):
             end_time=db_incident.end_time,
             number_of_alerts=len(db_incident.alerts),
             alert_sources=unique_sources_list,
-            severity=IncidentSeverity.CRITICAL,
+            severity=IncidentSeverity.P1,
             assignee=db_incident.assignee,
             services=unique_service_list,
+            source_unique_identifier=db_incident.source_unique_identifier,
         )

@@ -26,9 +26,10 @@ from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import Preset, PresetDto, PresetOption
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_incidents_task import process_incidents
 from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -109,6 +110,23 @@ def pull_data_from_providers(
                 f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
                 extra=extra,
             )
+
+        try:
+            if isinstance(provider_class, BaseIncidentProvider):
+                logger.info("Getting incidents from provider", extra=extra)
+                incidents = provider_class.pull_incidents()
+                logger.info("Got incidents, processing", extra=extra)
+                process_incidents(tenant_id, incidents)
+                logger.info("Processed incidents", extra=extra)
+        except NotImplementedError:
+            logger.warning(
+                f"Provider {provider.type} ({provider.id}) does not support incidents",
+                extra=extra,
+            )
+        except Exception as e:
+            logger.error(
+                f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
+                extra={**extra, "error": str(e)},
 
         # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
         update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
