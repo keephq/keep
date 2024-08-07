@@ -5,6 +5,7 @@ Datadog Provider is a class that allows to ingest/digest data from Datadog.
 import dataclasses
 import datetime
 import json
+import logging
 import os
 import time
 from typing import Optional
@@ -40,6 +41,8 @@ from keep.providers.datadog_provider.datadog_alert_format_description import (
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -790,7 +793,15 @@ class DatadogProvider(BaseTopologyProvider):
     ) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")
-        tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
+
+        try:
+            tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
+        except Exception as e:
+            logger.error(
+                "Failed to parse tags", extra={"error": str(e), "tags": tags_list}
+            )
+            tags = {}
+
         event_time = datetime.datetime.fromtimestamp(
             int(event.get("last_updated")) / 1000, tz=datetime.timezone.utc
         )
@@ -933,7 +944,7 @@ class DatadogProvider(BaseTopologyProvider):
         ).hexdigest()
         return simulated_alert
 
-    def get_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> list[TopologyServiceInDto]:
         services = {}
         with ApiClient(self.configuration) as api_client:
             api_instance = ServiceDefinitionApi(api_client)
@@ -1007,5 +1018,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.get_topology()
+    result = provider.pull_topology()
     print(result)
