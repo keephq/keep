@@ -34,11 +34,11 @@ const AlertAssociateIncidentModal = ({
   const router = useRouter();
   // if this modal should not be open, do nothing
   if (!alerts) return null;
-  const handleAssociateAlerts = async (e: FormEvent) => {
-    e.preventDefault();
+
+  const associateAlertsHandler = async (incidentId: string) => {
     const apiUrl = getApiURL();
     const response = await fetch(
-      `${apiUrl}/incidents/${selectedIncident}/alerts`,
+      `${apiUrl}/incidents/${incidentId}/alerts`,
       {
         method: "POST",
         headers: {
@@ -58,19 +58,25 @@ const AlertAssociateIncidentModal = ({
     }
   }
 
-  const showIncidentForm = useCallback(() => setCreateIncident(true), [])
-  const hideIncidentForm = useCallback(() => setCreateIncident(false), [])
+  const handleAssociateAlerts = (e: FormEvent) => {
+    e.preventDefault();
+    associateAlertsHandler(selectedIncident)
+  }
+
+  const showCreateIncidentForm = useCallback(() => setCreateIncident(true), [])
+
+  const hideCreateIncidentForm = useCallback(() => setCreateIncident(false), [])
 
   const onIncidentCreated = useCallback((incidentId: string) => {
-    hideIncidentForm()
-    setSelectedIncident(incidentId)
+    hideCreateIncidentForm()
+    handleClose()
+    associateAlertsHandler(incidentId)
   }, [])
-
 
   // reset modal state after closing
   useEffect(() => {
     if (!isOpen) {
-      hideIncidentForm()
+      hideCreateIncidentForm()
       setSelectedIncident(null)
     }
   }, [isOpen])
@@ -89,7 +95,7 @@ const AlertAssociateIncidentModal = ({
           <CreateOrUpdateIncident
             incidentToEdit={null}
             createCallback={onIncidentCreated}
-            exitCallback={hideIncidentForm}
+            exitCallback={hideCreateIncidentForm}
           />
         ): incidents && incidents.items.length > 0 ? (
             <div className="h-full justify-center">
@@ -126,7 +132,7 @@ const AlertAssociateIncidentModal = ({
                 <Button 
                   className="flex-1"
                   color="green"
-                  onClick={showIncidentForm}
+                  onClick={showCreateIncidentForm}
                 >
                   Create a new incident
                 </Button>
@@ -150,7 +156,7 @@ const AlertAssociateIncidentModal = ({
                 <Button
                   className="flex-1"
                   color="green"
-                  onClick={showIncidentForm}
+                  onClick={showCreateIncidentForm}
                 >
                   Create a new incident
                 </Button>

@@ -71,7 +71,7 @@ export default function CreateOrUpdateIncident({
       toast.success("Incident created successfully");
 
       const created = await response.json()
-      createCallback?.(created.id)
+      createCallback?.(created.id) // close the modal and associate the alert incident
     } else {
       toast.error(
         "Failed to create incident, please contact us if this issue persists."
