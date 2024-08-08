@@ -363,7 +363,6 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
-    generated_summary: str | None
 
     generated_summary: str | None
 
