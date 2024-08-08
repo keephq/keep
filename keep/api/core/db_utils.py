@@ -11,6 +11,7 @@ import os
 import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
+from sqlalchemy import func
 from sqlmodel import create_engine
 
 # This import is required to create the tables
@@ -150,3 +151,13 @@ def create_db_engine():
             echo=DB_ECHO,
         )
     return engine
+
+
+def get_json_extract_field(session, base_field, key):
+
+    if session.bind.dialect.name == "postgresql":
+        return func.json_extract_path_text(base_field, key)
+    elif session.bind.dialect.name == "mysql":
+        return func.json_unquote(func.json_extract(base_field, '$.{}'.format(key)))
+    else:
+        return func.json_extract(base_field, '$.{}'.format(key))
