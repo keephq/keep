@@ -12,7 +12,6 @@ interface Props {
 }
 
 export default function IncidentInformation({ incident }: Props) {
-
   const { mutate } = useIncident(incident.id);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -72,7 +71,7 @@ export default function IncidentInformation({ incident }: Props) {
       >
         <CreateOrUpdateIncident
           incidentToEdit={incident}
-          editCallback={handleFinishEdit}
+          exitCallback={handleFinishEdit}
         />
       </Modal>
     </div>
