@@ -122,7 +122,7 @@ export default function Incident() {
       >
         <CreateOrUpdateIncident
           incidentToEdit={incidentToEdit}
-          exitCallback={handleFinishEdit}
+          editCallback={handleFinishEdit}
         />
       </Modal>
     </div>

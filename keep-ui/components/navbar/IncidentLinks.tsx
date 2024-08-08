@@ -8,7 +8,7 @@ import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
-import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
+import { useIncidents } from "utils/hooks/useIncidents";
 import { MdNearbyError } from "react-icons/md";
 
 type IncidentsLinksProps = { session: Session | null };
@@ -16,8 +16,7 @@ const SHOW_N_INCIDENTS = 3;
 
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
-  const { data: incidents, mutate } = useIncidents();
-  usePollIncidents(mutate)
+  const { data: incidents } = useIncidents();
   const currentPath = usePathname();
 
   if (isNOCRole) {

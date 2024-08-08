@@ -1,14 +1,13 @@
-import Modal from "@/components/ui/Modal";
-import { Button, Divider, Select, SelectItem, Title } from "@tremor/react";
-import CreateOrUpdateIncident from "app/incidents/create-or-update-incident";
+import React, {FormEvent, useState} from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import { getApiURL } from "../../utils/apiUrl";
-import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
-import Loading from "../loading";
 import { AlertDto } from "./models";
+import Modal from "@/components/ui/Modal";
+import { useIncidents } from "../../utils/hooks/useIncidents";
+import Loading from "../loading";
+import {Button, Divider, Select, SelectItem, Title} from "@tremor/react";
+import {useRouter} from "next/navigation";
+import {getApiURL} from "../../utils/apiUrl";
+import {toast} from "react-toastify";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -23,22 +22,19 @@ const AlertAssociateIncidentModal = ({
   handleClose,
   alerts,
 }: AlertAssociateIncidentModalProps) => {
-  const [createIncident, setCreateIncident] = useState(false)
 
   const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
-  usePollIncidents(mutate)
-
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   // get the token
   const { data: session } = useSession();
   const router = useRouter();
   // if this modal should not be open, do nothing
   if (!alerts) return null;
-
-  const associateAlertsHandler = async (incidentId: string) => {
+  const handleAssociateAlerts = async (e: FormEvent) => {
+    e.preventDefault();
     const apiUrl = getApiURL();
     const response = await fetch(
-      `${apiUrl}/incidents/${incidentId}/alerts`,
+      `${apiUrl}/incidents/${selectedIncident}/alerts`,
       {
         method: "POST",
         headers: {
@@ -58,28 +54,6 @@ const AlertAssociateIncidentModal = ({
     }
   }
 
-  const handleAssociateAlerts = (e: FormEvent) => {
-    e.preventDefault();
-    associateAlertsHandler(selectedIncident)
-  }
-
-  const showCreateIncidentForm = useCallback(() => setCreateIncident(true), [])
-
-  const hideCreateIncidentForm = useCallback(() => setCreateIncident(false), [])
-
-  const onIncidentCreated = useCallback((incidentId: string) => {
-    hideCreateIncidentForm()
-    handleClose()
-    associateAlertsHandler(incidentId)
-  }, [])
-
-  // reset modal state after closing
-  useEffect(() => {
-    if (!isOpen) {
-      hideCreateIncidentForm()
-      setSelectedIncident(null)
-    }
-  }, [isOpen])
 
   return (
     <Modal
@@ -90,23 +64,17 @@ const AlertAssociateIncidentModal = ({
     >
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
-          <Loading />
-        ) : createIncident ? (
-          <CreateOrUpdateIncident
-            incidentToEdit={null}
-            createCallback={onIncidentCreated}
-            exitCallback={hideCreateIncidentForm}
-          />
-        ): incidents && incidents.items.length > 0 ? (
+            <Loading />
+          ) : incidents && incidents.items.length > 0 ? (
             <div className="h-full justify-center">
               <Select
                 className="my-2.5"
                 placeholder={`Select incident`}
-                value={selectedIncident}
                 onValueChange={(value) => setSelectedIncident(value)}
               >
                 {
                   incidents.items?.map((incident) => {
+
                     return (
                       <SelectItem
                         key={incident.id}
@@ -119,50 +87,31 @@ const AlertAssociateIncidentModal = ({
                 }
               </Select>
               <Divider />
-              <div className="flex items-center justify-between gap-6">
+              <div className="right">
                 <Button
-                  className="flex-1"
                   color="orange"
                   onClick={handleAssociateAlerts}
                   disabled={selectedIncident === null}
                 >
                   Associate {alerts.length} alert{alerts.length > 1 ? "s" : ""}
                 </Button>
-
-                <Button 
-                  className="flex-1"
-                  color="green"
-                  onClick={showCreateIncidentForm}
-                >
-                  Create a new incident
-                </Button>
               </div>
-          </div>
-        ): (
-          <div className="flex flex-col items-center justify-center gap-y-8 h-full">
+
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-y-8 h-full">
               <div className="text-center space-y-3">
                 <Title className="text-2xl">No Incidents Yet</Title>
               </div>
-
-              <div className="flex items-center justify-between w-full gap-6">
-                <Button
-                  className="flex-1"
-                  color="orange"
-                  onClick={() => router.push("/incidents")}
-                >
-                  Incidents page
-                </Button>
-
-                <Button
-                  className="flex-1"
-                  color="green"
-                  onClick={showCreateIncidentForm}
-                >
-                  Create a new incident
-                </Button>
-              </div>
+              <Button
+                className="mb-10"
+                color="orange"
+                onClick={() => router.push("/incidents")}
+              >
+                Register Incident
+              </Button>
             </div>
-        )}
+          )}
       </div>
     </Modal>
   );
