@@ -2082,7 +2082,7 @@ def get_incidents_count(
         )
 
 
-def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List[Alert]:
+def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str, limit: int, offset: int) -> (List[Alert], int):
     with Session(engine) as session:
         query = (
             session.query(
@@ -2096,7 +2096,9 @@ def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str) -> List
             )
         )
 
-    return query.all()
+    total_count = query.count()
+
+    return query.limit(limit).offset(offset).all(), total_count
 
 
 def get_alerts_data_for_incident(
