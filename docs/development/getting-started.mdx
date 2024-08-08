@@ -33,7 +33,7 @@ poetry run coverage run --branch -m pytest -s tests/e2e_tests/
 
 Migrations are automatically executed on a server startup. To create a migration:
 ```bash
-cd keep && alembic revision --autogenerate -m "Your message"
+alembic -c keep/alembic.ini revision --autogenerate -m "Your message"
 ```
 
 Hint: make sure your models are imported at `./api/models/db/migrations/env.py` for autogenerator to pick them up.
