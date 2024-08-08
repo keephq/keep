@@ -8,6 +8,7 @@ import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
 import { AILink } from "./AILink";
+import { TbTopologyRing } from "react-icons/tb";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -39,34 +40,31 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
       <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon href="/rules" icon={Rules}>
-            <Subtitle>
-              Alert Groups
-            </Subtitle>
+            <Subtitle>Alert Groups</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/workflows" icon={Workflows}>
-            <Subtitle>
-            Workflows
-            </Subtitle>
+            <Subtitle>Workflows</Subtitle>
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/topology" icon={TbTopologyRing} isBeta={true}>
+            <Subtitle>Service Topology</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/mapping" icon={Mapping}>
-            <Subtitle>
-              Mapping
-            </Subtitle>
+            <Subtitle>Mapping</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/extraction" icon={ExportIcon}>
-            <Subtitle>
-            Extraction
-            </Subtitle>
+            <Subtitle>Extraction</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
-         <AILink></AILink>
+          <AILink></AILink>
         </li>
       </Disclosure.Panel>
     </Disclosure>

@@ -16,6 +16,7 @@ from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
+from keep.api.models.db.topology import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
 

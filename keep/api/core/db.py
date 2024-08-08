@@ -37,6 +37,7 @@ from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-impor
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ def create_workflow_execution(
     execution_number: int = 1,
     event_id: str = None,
     fingerprint: str = None,
+    execution_id: str = None,
 ) -> WorkflowExecution:
     with Session(engine) as session:
         try:
@@ -90,7 +92,7 @@ def create_workflow_execution(
                 triggered_by = triggered_by[:255]
 
             workflow_execution = WorkflowExecution(
-                id=str(uuid4()),
+                id=execution_id or str(uuid4()),
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
                 started=datetime.now(tz=timezone.utc),
@@ -492,6 +494,31 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     return workflow.workflow_raw
 
 
+def update_provider_last_pull_time(tenant_id: str, provider_id: str):
+    extra = {"tenant_id": tenant_id, "provider_id": provider_id}
+    logger.info("Updating provider last pull time", extra=extra)
+    with Session(engine) as session:
+        provider = session.exec(
+            select(Provider).where(
+                Provider.tenant_id == tenant_id, Provider.id == provider_id
+            )
+        ).first()
+
+        if not provider:
+            logger.warning(
+                "Could not update provider last pull time since provider does not exist",
+                extra=extra,
+            )
+
+        try:
+            provider.last_pull_time = datetime.now(tz=timezone.utc)
+            session.commit()
+        except Exception:
+            logger.exception("Failed to update provider last pull time", extra=extra)
+            raise
+    logger.info("Successfully updated provider last pull time", extra=extra)
+
+
 def get_installed_providers(tenant_id: str) -> List[Provider]:
     with Session(engine) as session:
         providers = session.exec(
@@ -766,13 +793,22 @@ def count_alerts(
             )
 
 
-def get_enrichment(tenant_id, fingerprint):
+def get_enrichment(tenant_id, fingerprint, refresh=False):
     with Session(engine) as session:
         alert_enrichment = session.exec(
             select(AlertEnrichment)
             .where(AlertEnrichment.tenant_id == tenant_id)
             .where(AlertEnrichment.alert_fingerprint == fingerprint)
         ).first()
+
+        if refresh:
+            try:
+                session.refresh(alert_enrichment)
+            except Exception:
+                logger.exception(
+                    "Failed to refresh enrichment",
+                    extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+                )
     return alert_enrichment
 
 
@@ -1804,16 +1840,6 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def get_incident_by_id(incident_id: UUID) -> Incident:
-    with Session(engine) as session:
-        incident = session.exec(
-            select(Incident)
-            .options(selectinload(Incident.alerts))
-            .where(Incident.id == incident_id)
-        ).first()
-    return incident
-
-
 def assign_alert_to_incident(
     alert_id: UUID, incident_id: UUID, tenant_id: str
 ) -> AlertToIncident:
@@ -2268,3 +2294,46 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
             return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
                 tzinfo=timezone.utc
             )
+
+
+# Fetch all topology data
+def get_all_topology_data(
+    tenant_id: str,
+    provider_id: Optional[str] = None,
+    service: Optional[str] = None,
+    environment: Optional[str] = None,
+) -> List[TopologyServiceDtoOut]:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+
+        # @tb: let's filter by service only for now and take care of it when we handle multilpe
+        # services and environments and cmdbs
+        # the idea is that we show the service topology regardless of the underlying provider/env
+        # if provider_id is not None and service is not None and environment is not None:
+        if service is not None:
+            query = query.where(
+                TopologyService.service == service,
+                # TopologyService.source_provider_id == provider_id,
+                # TopologyService.environment == environment,
+            )
+
+            service_instance = session.exec(query).first()
+            if not service_instance:
+                return []
+
+            services = session.exec(
+                select(TopologyServiceDependency)
+                .where(
+                    TopologyServiceDependency.depends_on_service_id
+                    == service_instance.id
+                )
+                .options(joinedload(TopologyServiceDependency.service))
+            ).all()
+            services = [service_instance, *[service.service for service in services]]
+        else:
+            # Fetch services for the tenant
+            services = session.exec(query).all()
+
+        service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
+
+        return service_dtos

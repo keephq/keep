@@ -48,7 +48,7 @@ class WorkflowManager:
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
-        if filter_val.startswith('r"'):
+        if isinstance(filter_val, str) and filter_val.startswith('r"'):
             try:
                 # remove the r" and the last "
                 pattern = re.compile(filter_val[2:-1])
@@ -60,6 +60,9 @@ class WorkflowManager:
                 )
                 return False
         else:
+            # For cases like `dismissed`
+            if isinstance(filter_val, bool) and isinstance(value, str):
+                return value == str(filter_val)
             return value == filter_val
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto]):
@@ -104,9 +107,15 @@ class WorkflowManager:
                         filter_key = filter.get("key")
                         filter_val = filter.get("value")
                         event_val = self._get_event_value(event, filter_key)
-                        if not event_val:
+                        if event_val is None:
                             self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow."
+                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                                extra={
+                                    "tenant_id": tenant_id,
+                                    "filter_key": filter_key,
+                                    "filter_val": filter_val,
+                                    "workflow_id": workflow_model.id,
+                                },
                             )
                             should_run = False
                             continue
@@ -119,11 +128,7 @@ class WorkflowManager:
                                     break
                                 should_run = False
                         # elif the filter is string/int/float, compare them:
-                        elif type(event_val) in [
-                            int,
-                            str,
-                            float,
-                        ]:
+                        elif type(event_val) in [int, str, float, bool]:
                             if not self._apply_filter(filter_val, event_val):
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
