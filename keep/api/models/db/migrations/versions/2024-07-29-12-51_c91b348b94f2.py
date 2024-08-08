@@ -7,9 +7,7 @@ Create Date: 2024-07-29 12:51:24.496126
 """
 
 import sqlalchemy as sa
-import sqlmodel
 from alembic import op
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
 from keep.api.models.db.alert import Incident
