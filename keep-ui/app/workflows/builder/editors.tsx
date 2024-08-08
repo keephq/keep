@@ -421,10 +421,13 @@ export function StepEditorV2({
   const { 
     selectedNode,
     updateSelectedNodeData,
-    setOpneGlobalEditor
+    setOpneGlobalEditor,
+    getNodeById
   } = useStore()
+  
+  
 
-  const {data} = selectedNode || {};
+  const {data} = getNodeById(selectedNode) || {};
   const {name, type, properties} = data || {};
 
   function onNameChanged(e: any) {
