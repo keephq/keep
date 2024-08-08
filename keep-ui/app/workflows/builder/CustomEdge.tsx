@@ -22,6 +22,8 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   source,
   target,
   data,
+  style,
+  s
 }: CustomEdgeProps) => {
   const { deleteEdges, edges, setSelectedEdge, selectedEdge } = useStore();
 
@@ -44,8 +46,10 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   // };
 
 
-  let dynamicLabel = label;
+  let dynamicLabel = label; 
   const isLayouted = !!data?.isLayouted;
+
+  console.log("style=======>", id, style)
 
   const color = dynamicLabel === "True" ? "left-0 bg-green-500" : dynamicLabel === "False" ? "bg-red-500" : "bg-orange-500";
   return (
@@ -53,15 +57,18 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
       <BaseEdge
         id={id}
         path={edgePath}
-        className="stroke-gray-700 stroke-2" // Tailwind class for edge color and thickness
-        style={{ opacity: isLayouted ? 1 : 0 }}
+        // className="stroke-gray-700 stroke-2" // Tailwind class for edge color and thickness
+        style={{ opacity: isLayouted ? 1 : 0,
+          ...style,
+          strokeWidth: 2,
+         }}
 
       />
       <defs>
         <marker
           id={`arrow-${id}`}
-          markerWidth="10"
-          markerHeight="10"
+          markerWidth="15"
+          markerHeight="15"
           refX="10"
           refY="5"
           orient="auto"

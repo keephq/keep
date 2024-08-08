@@ -130,40 +130,47 @@ const DragAndDropSidebar = ({ isDraggable }: {
 
   return (
     <div
-      className={`absolute top-0 left-0 rounded border-2 border-gray-200 bg-white transition-transform duration-300 z-50 overflow-y-auto ${isVisible ? ' h-full' : 'shadow-lg'}`}
-
+      className={`absolute top-0 left-0 rounded border-2 border-gray-200 bg-white transition-transform duration-300 z-50 ${isVisible ? 'h-full' : 'shadow-lg'}`}
       style={{ width: '280px' }} // Set a fixed width
     >
-      <h1 className="p-2 font-bold">Toolbox</h1>
-      <div className="flex items-center justify-between p-2 pt-0 border-b border-gray-200">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="p-2 border border-gray-300 rounded w-full"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <button
-          className="p-2 text-gray-500"
-          onClick={() => { setIsVisible(!isVisible); setSearchTerm(''); }}
-        >
-          {(isVisible || checkForSearchResults) ? <IoClose size={20} /> : <IoIosArrowDown size={20} />}
-        </button>
-      </div>
-      {(isVisible || checkForSearchResults) && <div className="pt-6 space-y-4">
-        {filteredGroups.length > 0 &&
-          filteredGroups.map((group: Record<string, any>) => (
-            <GroupedMenu
-              key={group.name}
-              name={group.name}
-              steps={group.steps}
-              searchTerm={searchTerm}
-              isDraggable={isDraggable}
+      <div className="relative h-full flex flex-col">
+        {/* Sticky header */}
+        <div className="sticky top-0 left-0 z-10 bg-white border-b border-gray-200">
+          <h1 className="p-2 font-bold">Toolbox</h1>
+          <div className="flex items-center justify-between p-2 pt-0 border-b border-gray-200 bg-white">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="p-2 border border-gray-300 rounded w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          ))}
-      </div>}
+            <button
+              className="p-2 text-gray-500"
+              onClick={() => { setIsVisible(!isVisible); setSearchTerm(''); }}
+            >
+              {(isVisible || checkForSearchResults) ? <IoClose size={20} /> : <IoIosArrowDown size={20} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable list */}
+        {(isVisible || checkForSearchResults) && <div className="flex-1 overflow-y-auto pt-6 space-y-4 overflow-hidden">
+          {filteredGroups.length > 0 &&
+            filteredGroups.map((group: Record<string, any>) => (
+              <GroupedMenu
+                key={group.name}
+                name={group.name}
+                steps={group.steps}
+                searchTerm={searchTerm}
+                isDraggable={isDraggable}
+              />
+            ))}
+        </div>}
+      </div>
     </div>
-  );
+
+  )
 };
 
 export default DragAndDropSidebar;

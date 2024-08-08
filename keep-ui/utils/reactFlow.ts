@@ -88,7 +88,7 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId)
         processWorkflowV2(trueBranches, truePostion) || {};
     let { nodes: falseSubflowNodes, edges: falseSubflowEdges } =
         processWorkflowV2(falseBranches, falsePostion) || {};
-        
+
     function _adjustEdgeConnectionsAndLabelsForSwitch(type: string) {
         if (!type) {
             return;
@@ -115,13 +115,7 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId)
             ...trueSubflowEdges,
             ...falseSubflowEdges,
             //handling the switch end edge
-            {
-                id: `e${switchEndNode.id}-${nextNodeId}`,
-                source: switchEndNode.id,
-                target: nextNodeId || "",
-                type: "custom-edge",
-                label: "",
-            }
+            createCustomEdgeMeta(switchEndNode.id, nextNodeId)
         ]
     };
 
@@ -148,6 +142,25 @@ export const createDefaultNodeV2 = (
     prevNodeId,
 } as FlowNode);
 
+const getRandomColor = () => {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+};
+
+export function createCustomEdgeMeta(source: string, target: string, label?: string, color?: string, type?: string) {
+    return {
+        id: `e${source}-${target}`,
+        source: source ?? "",
+        target: target ?? "",
+        type: type || "custom-edge",
+        label,
+        style: { stroke: color || getRandomColor() }
+    }
+}
 export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId) {
     const nodes = [];
     const edges = [];
@@ -163,29 +176,9 @@ export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId
     }
     // Handle edge for default nodes
     if (newNode.id !== "end" && !step.edgeNotNeeded) {
-        edges.push({
-            id: `e${newNode.id}-${nextNodeId}`,
-            source: newNode.id ?? "",
-            target: nextNodeId ?? "",
-            type: "custom-edge",
-            label: "",
-        });
+        edges.push(createCustomEdgeMeta(newNode.id, nextNodeId, step.edgeLabel, step.edgeColor));
     }
     return { nodes, edges };
-}
-
-
-export function handleNextEdge(step, nodes, edges, nextNodeId) {
-    if (nodes?.length && step?.needNextEdge) {
-        const lastNode = nodes[nodes.length - 1];
-        edges.push({
-            id: `e${lastNode.id}-${nextNodeId}`,
-            source: lastNode.id ?? "",
-            target: nextNodeId ?? "",
-            type: "custom-edge",
-            label: "",
-        });
-    }
 }
 
 export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, parents = []) {
@@ -252,10 +245,8 @@ export const processStepV2 = (
     prevNodeId?: string | null,
 ) => {
     const nodeId = step.id;
-    let newNode: FlowNode;
     let newNodes: FlowNode[] = [];
     let newEdges: Edge[] = [];
-    console.log("nodeId=======>", nodeId, position);
     switch (true) {
         case step?.componentType === "switch":
             {

@@ -9,14 +9,14 @@ export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: str
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
-  const isEmptyNode = data?.type?.includes("empty")
+  const isEmptyOrEndNode = data?.type?.includes("empty") || id?.includes('end')
 
 
   const { deleteNodes, duplicateNode, setSelectedNode, setStepEditorOpenForNode } = useStore();
 
   return (
     <>
-      {data && !isEmptyNode && (
+      {data && !isEmptyOrEndNode && (
         <Menu as="div" className="relative inline-block text-left">
           <div>
             <Menu.Button

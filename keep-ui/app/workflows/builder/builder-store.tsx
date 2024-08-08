@@ -138,7 +138,8 @@ function addNodeBetween(nodeOrEdge: string|null, step: any, type: string, set: S
   const newNodeId = uuidv4();
   const newStep = { ...step, id: newNodeId }
   let { nodes, edges } = processWorkflowV2([
-    { id: sourceId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node' },
+    { id: sourceId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node',
+       edgeLabel: edge.label, edgeColor:edge?.style?.stroke},
     newStep,
     { id: targetId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node', edgeNotNeeded: true }
   ], { x: 0, y: 0 }, true);
@@ -172,7 +173,7 @@ const useStore = create<FlowState>((set, get) => ({
   toolboxConfiguration: {} as Record<string, any>,
   isLayouted: false,
   selectedEdge: null,
-  setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null }),
+  setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor:true }),
   setIsLayouted: (isLayouted) => set({ isLayouted }),
   getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
   addNodeBetween: (nodeOrEdge: string|null, step: any, type: string) => {
@@ -265,6 +266,10 @@ const useStore = create<FlowState>((set, get) => ({
 
     try {
       let step: any = event.dataTransfer.getData("application/reactflow");
+      if(!step){
+        return;
+      }
+      console.log("step", step);
       step = JSON.parse(step);
       if (!step) return;
       // Use the screenToFlowPosition function to get flow coordinates
@@ -316,6 +321,7 @@ const useStore = create<FlowState>((set, get) => ({
       edges: finalEdges,
       nodes: get().nodes.filter((node) => !idArray.includes(node.id)),
       selectedNode: null,
+      isLayouted: false
     });
   },
   updateEdge: (id: string, key: string, value: any) => {

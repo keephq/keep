@@ -4,14 +4,13 @@ import {
   useRef,
   useCallback,
 } from "react";
-import { Edge, EdgeProps, MarkerType, Position, useReactFlow } from "@xyflow/react";
+import { Edge, useReactFlow } from "@xyflow/react";
 import dagre from "dagre";
 import {
   parseWorkflow,
   generateWorkflow,
   buildAlert,
 } from "app/workflows/builder/utils";
-import { v4 as uuidv4 } from "uuid";
 import { useSearchParams } from "next/navigation";
 import useStore from "../../app/workflows/builder/builder-store";
 import { FlowNode } from "../../app/workflows/builder/builder-store";
@@ -25,27 +24,41 @@ import { processWorkflowV2 } from "utils/reactFlow";
 const layoutOptions = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
   "elk.algorithm": "layered",
-  "elk.direction": "BOTTOM",
-  "org.eclipse.elk.layered.layering.strategy": "INTRACTIVE",
-  "org.eclipse.elk.edgeRouting": "ORTHOGONAL",
-  "elk.layered.unnecessaryBendpoints": "true",
-  "elk.layered.spacing.edgeNodeBetweenLayers": "50",
-  "org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
-  "org.eclipse.elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
-  "org.eclipse.elk.insideSelfLoops.activate": true,
-  "separateConnectedComponents": "false",
-  "spacing.componentComponent": "70",
-  "spacing": "75",
-  "elk.spacing.nodeNodeBetweenLayers": "70",
-  "elk.spacing.nodeNode": "8",
-  "elk.layered.spacing.nodeNodeBetweenLayers": "75",
-  "portConstraints": "FIXED_ORDER",
-  "nodeSize.constraints": "[MINIMUM_SIZE]",
-  "elk.alignment": "CENTER",
-  "elk.spacing.edgeNodeBetweenLayers": "50.0",
-  "org.eclipse.elk.layoutAncestors": "true",
+  "elk.direction": "BOTTOM",                          // Direction of layout
+  "org.eclipse.elk.layered.layering.strategy": "INTERACTIVE", // Interactive layering strategy
+  "org.eclipse.elk.edgeRouting": "ORTHOGONAL",       // Use orthogonal routing
+  "elk.layered.unnecessaryBendpoints": "true",        // Allow bend points if necessary
+  "elk.layered.spacing.edgeNodeBetweenLayers": "50",  // Spacing between edges and nodes
+  "org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED", // Balanced node placement
+  "org.eclipse.elk.layered.cycleBreaking.strategy": "DEPTH_FIRST", // Strategy for cycle breaking
+  "elk.insideSelfLoops.activate": true,               // Handle self-loops inside nodes
+  "separateConnectedComponents": "false",             // Do not separate connected components
+  "spacing.componentComponent": "70",                 // Spacing between components
+  "spacing": "75",                                    // General spacing
+  "elk.spacing.nodeNodeBetweenLayers": "70",          // Spacing between nodes in different layers
+  "elk.spacing.nodeNode": "8",                        // Spacing between nodes
+  "elk.layered.spacing.nodeNodeBetweenLayers": "75",  // Spacing between nodes between layers
+  "portConstraints": "FIXED_ORDER",                   // Fixed order for ports
+  "nodeSize.constraints": "[MINIMUM_SIZE]",            // Minimum size constraints for nodes
+  "elk.alignment": "CENTER",                          // Center alignment
+  "elk.spacing.edgeNodeBetweenLayers": "50.0",        // Spacing between edges and nodes
+  "org.eclipse.elk.layoutAncestors": "true",          // Layout ancestors
+  "elk.edgeRouting": "ORTHOGONAL",                    // Ensure orthogonal edge routing
+  "elk.layered.edgeRouting": "ORTHOGONAL",            // Ensure orthogonal edge routing in layered layout
+  "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF", // Node placement strategy for symmetry
+  "elk.layered.nodePlacement.outerSpacing": "20",    // Spacing around nodes to prevent overlap
+  "elk.layered.nodePlacement.outerPadding": "20",    // Padding around nodes
+  "elk.layered.edgeRouting.orthogonal": true
 }
 
+const getRandomColor = () => {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+};
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -57,17 +70,24 @@ const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => 
   const graph = {
     id: 'root',
     layoutOptions: options,
-    children: nodes.map((node) => ({
-      ...node,
-      // Adjust the target and source handle positions based on the layout
-      // direction.
-      targetPosition: isHorizontal ? 'left' : 'top',
-      sourcePosition: isHorizontal ? 'right' : 'bottom',
+    children: nodes.map((node) => {
+      const type = node?.data?.type
+        ?.replace("step-", "")
+        ?.replace("action-", "")
+        ?.replace("condition-", "")
+        ?.replace("__end", "");
+      return ({
+        ...node,
+        // Adjust the target and source handle positions based on the layout
+        // direction.
+        targetPosition: isHorizontal ? 'left' : 'top',
+        sourcePosition: isHorizontal ? 'right' : 'bottom',
 
-      // Hardcode a width and height for elk to use when layouting.
-      width: 250,
-      height: 80,
-    })),
+        // Hardcode a width and height for elk to use when layouting.
+        width: ['start', 'end'].includes(type) ? 80 : 280,
+        height: 80,
+      })
+    }),
     edges: edges,
   };
 
@@ -273,4 +293,3 @@ const useWorkflowInitialization = (
 };
 
 export default useWorkflowInitialization;
-

@@ -4,6 +4,9 @@ import NodeMenu from "./NodeMenu";
 import useStore, { FlowNode } from "./builder-store";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
+import { MdNotStarted } from "react-icons/md";
+import { GoSquareFill } from "react-icons/go";
+import { PiSquareLogoFill } from "react-icons/pi";
 
 
 function IconUrlProvider(data: FlowNode["data"]) {
@@ -16,7 +19,7 @@ function IconUrlProvider(data: FlowNode["data"]) {
 }
 
 function CustomNode({ id, data }: FlowNode) {
-  const { selectedNode, setSelectedNode } = useStore();
+  const { selectedNode, setSelectedNode, setOpneGlobalEditor } = useStore();
   const type = data?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -25,24 +28,35 @@ function CustomNode({ id, data }: FlowNode) {
   const isEmptyNode = !!data?.type?.includes("empty");
   const isLayouted = !!data?.isLayouted;
 
+  const specialNodeCheck = ['start', 'end'].includes(type)
+
+
   return (
     <>
-      <div
+      {!specialNodeCheck && <div
         className={`p-2  py-4 shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
-            ? "border-orange-500"
-            : "border-stone-400"
+          ? "border-orange-500"
+          : "border-stone-400"
           // } custom-drag-handle`}
-        //to make the node draggale uncomment above line and 
-        }`}
+          //to make the node draggale uncomment above line and 
+          }`}
         onClick={(e) => {
           e.stopPropagation();
+          if (type === 'start' || type === 'end' || id?.includes('end')) {
+            setSelectedNode(null);
+            setOpneGlobalEditor(true);
+            return;
+          }
           setSelectedNode(id);
         }}
-        style={{ opacity: data.isLayouted ? 1 : 0 }}
+        style={{
+          opacity: data.isLayouted ? 1 : 0
+        }}
       >
         {isEmptyNode && <div className="flex flex-col items-center justify-center"
         >
           <GoPlus className="w-8 h-8 text-gray-600 font-bold" />
+          {selectedNode === id && <div className="text-gray-600 font-bold">Go to Toolbox</div>}
         </div>}
         {!isEmptyNode && data?.type !== "sub_flow" && (
           <div className="flex flex-row items-center justify-between gap-2 flex-wrap">
@@ -68,14 +82,61 @@ function CustomNode({ id, data }: FlowNode) {
         <Handle
           type="target"
           position={Position.Top}
-          className="w-5 h-5 rounded-full border-3 border-[#b0c1d4] bg-[#e7ecf1] cursor-pointer relative left-1/2 top-[-10px] transform -translate-x-1/2"
+          className="w-32"
         />
         <Handle
           type="source"
           position={Position.Bottom}
           className="w-32"
         />
-      </div>
+      </div>}
+
+      {specialNodeCheck && <div
+        style={{
+          opacity: data.isLayouted ? 1 : 0
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (type === 'start' || type === 'end' || id?.includes('end')) {
+            setSelectedNode(null);
+            return;
+          }
+          setSelectedNode(id);
+        }}
+      >
+        <div className={`flex flex-col items-center justify-center`}>
+          {type === 'start' && <MdNotStarted className="size-20 bg-orange-500 text-white rounded-full font-bold mb-2" />}
+          {type === 'end' && <GoSquareFill className="size-20 bg-orange-500 text-white rounded-full font-bold mb-2" />}
+          {['threshold', 'assert', 'foreach'].includes(type) &&
+            <div className={`border-2 ${id === selectedNode
+          ? "border-orange-500"
+          : "border-stone-400"}`}>
+            {id.includes('end') ? <PiSquareLogoFill className="size-20 rounded bg-white-400 p-2" /> :
+              <Image
+                src={IconUrlProvider(data) || "/keep.png"}
+                alt={data?.type}
+                className="object-contain size-20 rounded bg-white-400 p-2"
+                width={32}
+                height={32}
+              />}
+              </div>
+          }
+
+          {['start', 'threshold', 'assert', 'foreach'].includes(type) && <Handle
+            type="source"
+            position={Position.Bottom}
+            className="w-32"
+          />}
+
+          {['end', 'threshold', 'assert', 'foreach'].includes(type) && <Handle
+            type="target"
+            position={Position.Top}
+            className="w-32"
+          />}
+
+
+        </div>
+      </div>}
 
     </>
   );

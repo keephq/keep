@@ -424,6 +424,8 @@ export function StepEditorV2({
     setOpneGlobalEditor,
     getNodeById
   } = useStore()
+
+  if (!selectedNode) return null;
   
   
 
