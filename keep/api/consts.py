@@ -3,6 +3,9 @@ import os
 from keep.api.models.db.preset import PresetDto, StaticPresetsId
 
 RUNNING_IN_CLOUD_RUN = os.environ.get("K_SERVICE") is not None
+PROVIDER_PULL_INTERVAL_DAYS = int(
+    os.environ.get("KEEP_PULL_INTERVAL", 7)
+)  # maximum once a week
 STATIC_PRESETS = {
     "feed": PresetDto(
         id=StaticPresetsId.FEED_PRESET_ID.value,

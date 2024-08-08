@@ -120,6 +120,10 @@ class Incident(SQLModel, table=True):
     is_predicted: bool = Field(default=False)
     is_confirmed: bool = Field(default=False)
 
+    alerts_count: int = Field(default=0)
+    affected_services: list = Field(sa_column=Column(JSON), default_factory=list)
+    sources: list = Field(sa_column=Column(JSON), default_factory=list)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if "alerts" not in kwargs:
