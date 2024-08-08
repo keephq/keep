@@ -68,7 +68,7 @@ class SlackProvider(BaseProvider):
         pass
 
     @staticmethod
-    def oauth2_logic(**payload):
+    def oauth2_logic(**payload) -> dict:
         """
         Logic for handling oauth2 callback.
 
@@ -95,7 +95,13 @@ class SlackProvider(BaseProvider):
             raise Exception(
                 response_json.get("error"),
             )
-        return {"access_token": response_json.get("access_token")}
+        new_provider_info = {"access_token": response_json.get("access_token")}
+
+        team_name = response_json.get("team", {}).get("name")
+        if team_name:
+            new_provider_info["provider_name"] = team_name
+
+        return new_provider_info
 
     def _notify(self, message="", blocks=[], channel="", **kwargs: dict):
         """

@@ -136,14 +136,15 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
               )): <Text className="text-xs">Dashboards will appear here when saved.</Text> }
           </SortableContext>
         </DndContext>
+        <div className="flex flex-col justify-center items-center">
         <Button
           size="xs"
           color="orange"
           variant="secondary"
-          className="w-full h-5"
+          className="h-5"
           onClick={handleCreateDashboard}
           icon={PlusIcon}
-        ></Button>
+        /></div>
       </Disclosure.Panel>
     </Disclosure>
   );
