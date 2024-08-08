@@ -360,6 +360,8 @@ function Builder({
                   workflow={workflow}
                   loadedAlertFile={loadedAlertFile}
                   providers={providers}
+                  definition={definition}
+                  onDefinitionChange={(def: any) => setDefinition(wrapDefinition(def))}
                   toolboxConfiguration={getToolboxConfiguration(providers)}
                 />
               </ReactFlowProvider>

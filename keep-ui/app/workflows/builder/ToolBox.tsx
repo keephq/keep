@@ -5,15 +5,32 @@ import { Subtitle } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
 import Image from "next/image";
 import { IoIosArrowDown } from "react-icons/io";
+import useStore, { V2Step } from "./builder-store";
 
-const GroupedMenu = ({ name, steps, searchTerm }:{name:string, steps:any[], searchTerm:string}) => {
-  const [isOpen, setIsOpen] = useState(!!searchTerm);
+const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
+  name: string,
+  steps: any[],
+  searchTerm: string;
+  isDraggable?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(!!searchTerm || isDraggable);
+  const { selectedNode, selectedEdge, addNodeBetween } = useStore();
+
 
   useEffect(() => {
-    setIsOpen(!!searchTerm);
-  }, [searchTerm]);
+    setIsOpen(!!searchTerm || !isDraggable);
+  }, [searchTerm, isDraggable]);
 
-  function IconUrlProvider(data:any) {
+  const handleAddNode = (e: React.MouseEvent<HTMLLIElement>, step: V2Step) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (isDraggable) {
+      return;
+    }
+    addNodeBetween(selectedNode || selectedEdge, step, selectedNode ? 'node' : 'edge');
+  }
+
+  function IconUrlProvider(data: any) {
     const { type } = data || {};
     if (type === "alert" || type === "workflow") return "/keep.png";
     return `/icons/${type
@@ -22,13 +39,17 @@ const GroupedMenu = ({ name, steps, searchTerm }:{name:string, steps:any[], sear
       ?.replace("condition-", "")}-icon.png`;
   }
 
-  const handleDragStart = (event:React.DragEvent<HTMLLIElement>, step:any) => {
+  const handleDragStart = (event: React.DragEvent<HTMLLIElement>, step: any) => {
+    if (!isDraggable) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     event.dataTransfer.setData("application/reactflow", JSON.stringify(step));
     event.dataTransfer.effectAllowed = "move";
   };
 
   return (
-    <Disclosure as="div" className="space-y-1" defaultOpen={isOpen}>
+    <Disclosure as="div" className="space-y-1">
       {({ open }) => (
         <>
           <Disclosure.Button className="w-full flex justify-between items-center p-2">
@@ -42,19 +63,20 @@ const GroupedMenu = ({ name, steps, searchTerm }:{name:string, steps:any[], sear
               )}
             />
           </Disclosure.Button>
-          {open && (
+          {(open || !isDraggable) && (
             <Disclosure.Panel
               as="ul"
               className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
             >
               {steps.length > 0 &&
-                steps.map((step:any) => (
+                steps.map((step: any) => (
                   <li
                     key={step.type}
                     className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center"
                     onDragStart={(event) => handleDragStart(event, { ...step })}
-                    draggable
+                    draggable={isDraggable}
                     title={step.name}
+                    onClick={(e) => handleAddNode(e, step)}
                   >
                     <Image
                       src={IconUrlProvider(step) || "/keep.png"}
@@ -74,9 +96,23 @@ const GroupedMenu = ({ name, steps, searchTerm }:{name:string, steps:any[], sear
   );
 };
 
-const DragAndDropSidebar = ({ toolboxConfiguration }: { toolboxConfiguration?: Record<string, any> }) => {
+const DragAndDropSidebar = ({ isDraggable }: {
+  isDraggable?: boolean;
+}) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+  const [open, setOpen] = useState(false);
+  const { toolboxConfiguration, selectedNode, selectedEdge } = useStore();
+
+  useEffect(() => {
+
+    setOpen(
+      !!selectedNode && selectedNode.includes('empty') ||
+      !!selectedEdge
+    )
+    setIsVisible(!isDraggable)
+  }, [selectedNode, selectedEdge, isDraggable]);
+
 
   const filteredGroups =
     toolboxConfiguration?.groups?.map((group: any) => ({
@@ -86,45 +122,55 @@ const DragAndDropSidebar = ({ toolboxConfiguration }: { toolboxConfiguration?: R
       ),
     })) || [];
 
-  const checkForSearchResults =  searchTerm && !!filteredGroups?.find((group:any) => group?.steps?.length>0);
+  const checkForSearchResults = searchTerm && !!filteredGroups?.find((group: any) => group?.steps?.length > 0);
 
+  if (!open) {
+    return null;
+  }
 
   return (
     <div
-      className={`absolute top-0 left-0 rounded border-2 border-gray-200 bg-white transition-transform duration-300 z-50 overflow-y-auto ${isVisible ? ' h-full' : 'shadow-lg'}`}
-  
+      className={`absolute top-0 left-0 rounded border-2 border-gray-200 bg-white transition-transform duration-300 z-50 ${isVisible ? 'h-full' : 'shadow-lg'}`}
       style={{ width: '280px' }} // Set a fixed width
     >
-            <div className="flex items-center justify-between p-2 border-b border-gray-200">
-
-      
-        <input
-          type="text"
-          placeholder="Search..."
-          className="p-2 border border-gray-300 rounded w-full"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-         <button
-          className="p-2 text-gray-500"
-          onClick={() => {setIsVisible(!isVisible); setSearchTerm('');}}
-        >
-          {(isVisible || checkForSearchResults) ? <IoClose size={20} /> : <IoIosArrowDown size={20} />}
-        </button>
-      </div>
-      {(isVisible || checkForSearchResults) &&<div className="pt-6 space-y-4">
-        {filteredGroups.length > 0 &&
-          filteredGroups.map((group:Record<string,any>) => (
-            <GroupedMenu
-              key={group.name}
-              name={group.name}
-              steps={group.steps}
-              searchTerm={searchTerm}
+      <div className="relative h-full flex flex-col">
+        {/* Sticky header */}
+        <div className="sticky top-0 left-0 z-10 bg-white border-b border-gray-200">
+          <h1 className="p-2 font-bold">Toolbox</h1>
+          <div className="flex items-center justify-between p-2 pt-0 border-b border-gray-200 bg-white">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="p-2 border border-gray-300 rounded w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-          ))}
-      </div>}
+            <button
+              className="p-2 text-gray-500"
+              onClick={() => { setIsVisible(!isVisible); setSearchTerm(''); }}
+            >
+              {(isVisible || checkForSearchResults) ? <IoClose size={20} /> : <IoIosArrowDown size={20} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable list */}
+        {(isVisible || checkForSearchResults) && <div className="flex-1 overflow-y-auto pt-6 space-y-4 overflow-hidden">
+          {filteredGroups.length > 0 &&
+            filteredGroups.map((group: Record<string, any>) => (
+              <GroupedMenu
+                key={group.name}
+                name={group.name}
+                steps={group.steps}
+                searchTerm={searchTerm}
+                isDraggable={isDraggable}
+              />
+            ))}
+        </div>}
+      </div>
     </div>
-  );
+
+  )
 };
 
 export default DragAndDropSidebar;

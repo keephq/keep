@@ -3,23 +3,20 @@ import { Fragment } from "react";
 import { CiSquareChevDown } from "react-icons/ci";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import useStore, { FlowNode } from "./builder-store";
-import { HiOutlineDuplicate } from "react-icons/hi";
 import { IoMdSettings } from "react-icons/io";
 
-interface NodeMenuProps {
-  node: FlowNode;
-}
-
-export default function NodeMenu({ node }: NodeMenuProps) {
+export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: string }) {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
+  const isEmptyOrEndNode = data?.type?.includes("empty") || id?.includes('end')
+
 
   const { deleteNodes, duplicateNode, setSelectedNode, setStepEditorOpenForNode } = useStore();
 
   return (
     <>
-      {node && (
+      {data && !isEmptyOrEndNode && (
         <Menu as="div" className="relative inline-block text-left">
           <div>
             <Menu.Button
@@ -45,23 +42,22 @@ export default function NodeMenu({ node }: NodeMenuProps) {
                     <button
                       onClick={(e) => {
                         stopPropagation(e);
-                        deleteNodes(node.id);
+                        deleteNodes(id);
                       }}
-                      className={`${
-                        active ? "bg-slate-200" : "text-gray-900"
-                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      className={`${active ? "bg-slate-200" : "text-gray-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     >
                       <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                       Delete
                     </button>
                   )}
                 </Menu.Item>
-                <Menu.Item>
+                {/* <Menu.Item>
                   {({ active }) => (
                     <button
                       onClick={(e) => {
                         stopPropagation(e);
-                        duplicateNode(node);
+                        // duplicateNode(node);
                       }}
                       className={`${
                         active ? "bg-slate-200" : "text-gray-900"
@@ -74,18 +70,17 @@ export default function NodeMenu({ node }: NodeMenuProps) {
                       Duplicate
                     </button>
                   )}
-                </Menu.Item>
+                </Menu.Item> */}
                 <Menu.Item>
                   {({ active }) => (
                     <button
                       onClick={(e) => {
                         stopPropagation(e);
-                        setSelectedNode(node);
-                        setStepEditorOpenForNode(node.id);
+                        setSelectedNode(id);
+                        setStepEditorOpenForNode(id);
                       }}
-                      className={`${
-                        active ? "bg-slate-200" : "text-gray-900"
-                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      className={`${active ? "bg-slate-200" : "text-gray-900"
+                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     >
                       <IoMdSettings
                         className="mr-2 h-4 w-4"
