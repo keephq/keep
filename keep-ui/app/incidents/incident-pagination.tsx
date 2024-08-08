@@ -11,9 +11,10 @@ import { StylesConfig, SingleValueProps, components, GroupBase } from 'react-sel
 import Select from 'react-select';
 import { Table } from "@tanstack/react-table";
 import {IncidentDto} from "./model";
+import {AlertDto} from "../alerts/models";
 
 interface Props {
-  table: Table<IncidentDto>;
+  table: Table<IncidentDto> | Table<AlertDto>;
   isRefreshAllowed: boolean;
 }
 
@@ -22,36 +23,36 @@ interface OptionType {
   label: string;
 }
 
-  const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
-    control: (provided, state) => ({
-      ...provided,
-      borderColor: state.isFocused ? 'orange' : provided.borderColor,
-      '&:hover': { borderColor: 'orange' },
-      boxShadow: state.isFocused ? '0 0 0 1px orange' : provided.boxShadow,
-    }),
-    singleValue: (provided) => ({
-      ...provided,
-      display: 'flex',
-      alignItems: 'center',
-    }),
-    menu: (provided) => ({
-      ...provided,
-      color: 'orange',
-    }),
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? 'orange' : provided.backgroundColor,
-      '&:hover': { backgroundColor: state.isSelected ? 'orange' : '#f5f5f5' },
-      color: state.isSelected ? 'white' : provided.color,
-    }),
-  };
+const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
+  control: (provided, state) => ({
+    ...provided,
+    borderColor: state.isFocused ? 'orange' : provided.borderColor,
+    '&:hover': { borderColor: 'orange' },
+    boxShadow: state.isFocused ? '0 0 0 1px orange' : provided.boxShadow,
+  }),
+  singleValue: (provided) => ({
+    ...provided,
+    display: 'flex',
+    alignItems: 'center',
+  }),
+  menu: (provided) => ({
+    ...provided,
+    color: 'orange',
+  }),
+  option: (provided, state) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? 'orange' : provided.backgroundColor,
+    '&:hover': { backgroundColor: state.isSelected ? 'orange' : '#f5f5f5' },
+    color: state.isSelected ? 'white' : provided.color,
+  }),
+};
 
-  const SingleValue = ({ children, ...props }: SingleValueProps<OptionType, false, GroupBase<OptionType>>) => (
-    <components.SingleValue {...props}>
-      {children}
-      <TableCellsIcon className="w-4 h-4 ml-2" />
-    </components.SingleValue>
-  );
+const SingleValue = ({ children, ...props }: SingleValueProps<OptionType, false, GroupBase<OptionType>>) => (
+  <components.SingleValue {...props}>
+    {children}
+    <TableCellsIcon className="w-4 h-4 ml-2" />
+  </components.SingleValue>
+);
 
 
 export default function IncidentPagination({  table, isRefreshAllowed }: Props) {
