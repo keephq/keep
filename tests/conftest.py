@@ -368,40 +368,51 @@ def setup_alerts(elastic_client, db_session, request):
 
 
 @pytest.fixture
-def setup_stress_alerts(elastic_client, db_session, request):
+def setup_stress_alerts_no_elastic(db_session):
+
+    def _setup_stress_alerts_no_elastic(num_alerts):
+        alert_details = [
+            {
+                "source": [
+                    "source_{}".format(i % 10)
+                ],  # Cycle through 10 different sources
+                "service": "service_{}".format(i % 10),  # Random of 10 different services
+                "severity": random.choice(
+                    ["info", "warning", "critical"]
+                ),  # Alternate between 'critical' and 'warning'
+                "fingerprint": f"test-{i}",
+            }
+            for i in range(num_alerts)
+        ]
+        alerts = []
+        for i, detail in enumerate(alert_details):
+            random_timestamp = datetime.utcnow() - timedelta(days=random.uniform(0, 7))
+            alerts.append(
+                Alert(
+                    timestamp=random_timestamp,
+                    tenant_id=SINGLE_TENANT_UUID,
+                    provider_type=detail['source'][0],
+                    provider_id="test_{}".format(
+                        i % 5
+                    ),  # Cycle through 5 different provider_ids
+                    event=_create_valid_event(detail, lastReceived=random_timestamp),
+                    fingerprint="fingerprint_{}".format(i),
+                )
+            )
+        db_session.add_all(alerts)
+        db_session.commit()
+
+        return alerts
+    return _setup_stress_alerts_no_elastic
+
+
+@pytest.fixture
+def setup_stress_alerts(elastic_client, db_session, request, setup_stress_alerts_no_elastic):
     num_alerts = request.param.get(
         "num_alerts", 1000
     )  # Default to 1000 alerts if not specified
-    alert_details = [
-        {
-            "source": [
-                "source_{}".format(i % 10)
-            ],  # Cycle through 10 different sources
-            "severity": random.choice(
-                ["info", "warning", "critical"]
-            ),  # Alternate between 'critical' and 'warning'
-            "fingerprint": f"test-{i}",
-        }
-        for i in range(num_alerts)
-    ]
-    alerts = []
-    for i, detail in enumerate(alert_details):
-        random_timestamp = datetime.utcnow() - timedelta(days=random.uniform(0, 7))
-        alerts.append(
-            Alert(
-                timestamp=random_timestamp,
-                tenant_id=SINGLE_TENANT_UUID,
-                provider_type="test",
-                provider_id="test_{}".format(
-                    i % 5
-                ),  # Cycle through 5 different provider_ids
-                event=_create_valid_event(detail, lastReceived=random_timestamp),
-                fingerprint="fingerprint_{}".format(i),
-            )
-        )
-    db_session.add_all(alerts)
-    db_session.commit()
 
+    alerts = setup_stress_alerts_no_elastic(num_alerts)
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
@@ -409,17 +420,19 @@ def setup_stress_alerts(elastic_client, db_session, request):
 
 @pytest.fixture
 def create_alert(db_session):
-    def _create_alert(fingerprint, status, timestamp):
+    def _create_alert(fingerprint, status, timestamp, details=None):
+        details = details or {}
         alert = Alert(
             tenant_id=SINGLE_TENANT_UUID,
-            provider_type="test",
+            provider_type=details["source"][0] if details and "source" in details else "test",
             provider_id="test",
-            event={"fingerprint": fingerprint, "status": status.value},
+            event={"fingerprint": fingerprint, "status": status.value, **details},
             fingerprint=fingerprint,
             alert_hash="test_hash",
             timestamp=timestamp.replace(tzinfo=pytz.utc),
         )
         db_session.add(alert)
         db_session.commit()
+        return alert
 
     return _create_alert
