@@ -1,5 +1,5 @@
 import { AlertDto } from "app/alerts/models";
-import { IncidentDto, PaginatedIncidentsDto } from "app/incidents/model";
+import {IncidentDto, PaginatedIncidentAlertsDto, PaginatedIncidentsDto} from "app/incidents/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
@@ -33,14 +33,16 @@ export const useIncidents = (
 
 export const useIncidentAlerts = (
   incidentId: string,
+  limit: number = 20,
+  offset: number = 0,
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
-  return useSWR<AlertDto[]>(
-    () => (session ? `${apiUrl}/incidents/${incidentId}/alerts` : null),
+  return useSWR<PaginatedIncidentAlertsDto>(
+    () => (session ? `${apiUrl}/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

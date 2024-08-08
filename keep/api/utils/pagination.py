@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from keep.api.models.alert import IncidentDto
+from keep.api.models.alert import IncidentDto, AlertDto
 
 
 class PaginatedResultsDto(BaseModel):
@@ -14,3 +14,7 @@ class PaginatedResultsDto(BaseModel):
 
 class IncidentsPaginatedResultsDto(PaginatedResultsDto):
     items: list[IncidentDto]
+
+
+class AlertPaginatedResultsDto(PaginatedResultsDto):
+    items: list[AlertDto]

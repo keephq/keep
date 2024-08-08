@@ -1,3 +1,5 @@
+import {AlertDto} from "../alerts/models";
+
 export interface IncidentDto {
   id: string;
   name: string;
@@ -18,3 +20,11 @@ export interface PaginatedIncidentsDto {
   count: number;
   items: IncidentDto[];
 }
+
+export interface PaginatedIncidentAlertsDto {
+  limit: number;
+  offset: number;
+  count: number;
+  items: AlertDto[];
+}
+

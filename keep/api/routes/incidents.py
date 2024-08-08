@@ -29,7 +29,7 @@ from keep.api.core.dependencies import (
 )
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
-from keep.api.utils.pagination import IncidentsPaginatedResultsDto
+from keep.api.utils.pagination import IncidentsPaginatedResultsDto, AlertPaginatedResultsDto
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -229,8 +229,10 @@ def delete_incident(
 )
 def get_incident_alerts(
     incident_id: str,
+    limit: int = 25,
+    offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-) -> List[AlertDto]:
+) -> AlertPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching incident",
@@ -250,7 +252,12 @@ def get_incident_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_incident_alerts_by_incident_id(tenant_id, incident_id)
+    db_alerts, total_count = get_incident_alerts_by_incident_id(
+        tenant_id=tenant_id,
+        incident_id=incident_id,
+        limit=limit,
+        offset=offset,
+    )
 
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
@@ -260,7 +267,7 @@ def get_incident_alerts(
         },
     )
 
-    return enriched_alerts_dto
+    return AlertPaginatedResultsDto(limit=limit, offset=offset, count=total_count, items=enriched_alerts_dto)
 
 
 @router.post(
