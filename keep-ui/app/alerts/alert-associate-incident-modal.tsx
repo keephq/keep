@@ -28,7 +28,7 @@ const AlertAssociateIncidentModal = ({
   const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
   usePollIncidents(mutate);
 
-  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<string | undefined>();
   // get the token
   const { data: session } = useSession();
   const router = useRouter();
@@ -79,7 +79,7 @@ const AlertAssociateIncidentModal = ({
   useEffect(() => {
     if (!isOpen) {
       hideCreateIncidentForm();
-      setSelectedIncident(null);
+      setSelectedIncident(undefined);
     }
   }, [hideCreateIncidentForm, isOpen]);
 
