@@ -374,7 +374,7 @@ const ProviderForm = ({
 
   console.log("ProviderForm component loaded");
   return (
-    <div className="flex flex-col h-full justify-between p-5">
+    <div className="flex flex-col justify-between p-5">
       <div>
         <div className="flex flex-row">
           <Title>Connect to {provider.display_name}</Title>

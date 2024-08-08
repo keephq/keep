@@ -229,7 +229,7 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
   };
 
   return (
-    <div className="p-6">
+    <div className="mt-10">
       <Title>SMTP Settings</Title>
       <Subtitle>Configure your SMTP server to send emails</Subtitle>
       <Card className="mt-4 p-4">

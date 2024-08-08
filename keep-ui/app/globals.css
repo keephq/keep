@@ -22,6 +22,20 @@
   animation: spin 2s linear infinite;
 }
 
+.page-container {
+  @apply p-4 mx-auto w-full;
+  @screen xl {
+    @apply p-10;
+  }
+}
+
+.card-container {
+  @apply p-4 mx-auto;
+  @screen xl {
+    @apply p-10;
+  }
+}
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);

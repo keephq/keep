@@ -26,7 +26,7 @@ export const CorrelationSubmission = ({
   const isRuleBeingEdited = searchParams ? searchParams.get("id") : null;
 
   return (
-    <div className="col-span-2 flex justify-between items-end">
+    <div className="xl:col-span-2 flex justify-between items-end">
       <div>
         {alertsFound.length > 0 && (
           <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} />

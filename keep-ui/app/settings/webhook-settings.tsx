@@ -86,8 +86,7 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
     {
       title: "Python",
       language: "python",
-      code: `
-import requests
+      code: `import requests
 
 response = requests.post("https://api.keephq.dev/alerts/event",
 headers={
@@ -101,8 +100,7 @@ json=${exampleJson})
     {
       title: "Node",
       language: "javascript",
-      code: `
-const https = require('https');
+      code: `const https = require('https');
 
 const data = JSON.stringify(${exampleJson});
 
@@ -185,7 +183,7 @@ req.end();
             </div>
           </div>
           <TabGroup
-            className="flex-1 pl-2"
+            className="flex-1 min-w-0 pl-2"
             index={codeTabIndex}
             onIndexChange={setCodeTabIndex}
           >

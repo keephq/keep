@@ -15,7 +15,7 @@ export default function Mapping() {
   const [editRule, setEditRule] = useState<MappingRule | null>(null);
 
   return (
-    <Card className="p-4 md:p-10 mx-auto">
+    <Card className="card-container">
       <div className="flex divide-x p-2">
         <div className="w-1/3 pr-2.5">
           <h2 className="text-lg">Configure</h2>
