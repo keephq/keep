@@ -14,7 +14,7 @@ class Group(BaseModel, extra=Extra.ignore):
 class User(BaseModel, extra=Extra.ignore):
     email: str
     name: str
-    role: str
+    role: Optional[str] = None
     picture: Optional[str]
     created_at: str
     last_login: Optional[str]

@@ -87,7 +87,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         )
 
     @abc.abstractmethod
-    def create_user(self, user_email, password, role) -> None:
+    def create_user(self, user_email, user_name, password, role, groups=[]) -> None:
         """
         Create a user in the identity manager.
 

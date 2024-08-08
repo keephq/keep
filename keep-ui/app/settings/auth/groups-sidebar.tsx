@@ -1,84 +1,75 @@
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { Text, Subtitle, Button, TextInput, SearchSelect, SearchSelectItem, MultiSelect, MultiSelectItem, Callout } from "@tremor/react";
+import { Text, Subtitle, Button, TextInput, MultiSelect, MultiSelectItem, Callout } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
 import { useRoles } from "utils/hooks/useRoles";
-import { useGroups } from "utils/hooks/useGroups";
+import { useUsers } from "utils/hooks/useUsers";
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
-import { User, Group } from "app/settings/models";
-import { AuthenticationType } from "utils/authenticationType";
-import { useConfig } from "utils/hooks/useConfig";
 
-interface UserSidebarProps {
+interface GroupSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  user: User;
-  isNewUser: boolean;
-  mutateUsers: (data?: any, shouldRevalidate?: boolean) => Promise<any>;
+  group: any;
+  isNewGroup: boolean;
+  mutateGroups: (data?: any, shouldRevalidate?: boolean) => Promise<any>;
+  accessToken: string;
 }
 
-const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSidebarProps) => {
+const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, accessToken }: GroupSidebarProps) => {
   const { control, handleSubmit, setValue, reset, formState: { errors, isDirty }, clearErrors, setError } = useForm({
     defaultValues: {
-      email: "",
       name: "",
-      role: "",
-      groups: [],
-      password: ""
+      members: [],
+      roles: [],
     },
   });
 
   const { data: session } = useSession();
   const { data: roles = [] } = useRoles();
-  const { data: groups = [] } = useGroups();
+  const { data: users = [] } = useUsers();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: configData } = useConfig();
-
-  const authType = configData?.AUTH_TYPE as AuthenticationType;
 
   useEffect(() => {
     if (isOpen) {
-      if (user) {
-        setValue("email", user.email);
-        setValue("name", user.name);
-        setValue("role", user.role || "");
-        setValue("groups", user.groups?.map((group: Group) => group.id) || []);
+      if (group) {
+        setValue("name", group.name);
+        setValue("members", group.members || []);
+        setValue("roles", group.roles || []);
       } else {
         reset({
-          email: "",
           name: "",
-          role: "",
-          groups: [],
+          members: [],
+          roles: [],
         });
       }
-      clearErrors();  // Clear errors when the modal is opened
+      clearErrors();
     }
-  }, [user, setValue, isOpen, reset, clearErrors]);
+  }, [group, setValue, isOpen, reset, clearErrors]);
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     setIsSubmitting(true);
     clearErrors("apiError");
 
-    const method = isNewUser ? "POST" : "PUT";
-    const url = isNewUser ? `${getApiURL()}/auth/users` : `${getApiURL()}/auth/users/${user.email}`;
+    const method = isNewGroup ? "POST" : "PUT";
+    const url = isNewGroup ? `${getApiURL()}/auth/groups` : `${getApiURL()}/auth/groups/${group.id}`;
     try {
       const response = await fetch(url, {
         method: method,
         headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (response.ok) {
-        await mutateUsers();
+        await mutateGroups();
         handleClose();
       } else {
         const errorData = await response.json();
-        setError("apiError", { type: "manual", message: errorData.detail || errorData.message || "Failed to save user" });
+        setError("apiError", { type: "manual", message: errorData.detail || errorData.message || "Failed to save group" });
       }
     } catch (error) {
       setError("apiError", {
@@ -92,12 +83,12 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
 
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
-    clearErrors();  // Clear errors on each submit click
+    clearErrors();
     handleSubmit(onSubmit)();
   };
 
   const handleClose = () => {
-    setIsSubmitting(false);  // Ensure isSubmitting is reset when closing the modal
+    setIsSubmitting(false);
     clearErrors("apiError");
     reset();
     toggle();
@@ -129,7 +120,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {isNewUser ? "Create User" : "User Details"}
+                {isNewGroup ? "Create Group" : "Group Details"}
               </Dialog.Title>
               <Button onClick={handleClose} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
@@ -139,39 +130,12 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
               <div className="flex-grow">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
-                  <Controller
-                    name="email"
-                    control={control}
-                    rules={{
-                      required: "Email is required",
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: "Invalid email address",
-                      },
-                    }}
-                    render={({ field }) => (
-                      <TextInput
-                        {...field}
-                        error={!!errors.email}
-                        errorMessage={errors.email?.message}
-                        disabled={!isNewUser}
-                        className={`${
-                            isNewUser ? "" : "bg-gray-200"
-                          }`}
-                      />
-                    )}
-                  />
-                </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Name
+                    Group Name
                   </label>
                   <Controller
                     name="name"
                     control={control}
-                    rules={{ required: "Name is required" }}
+                    rules={{ required: "Group name is required" }}
                     render={({ field }) => (
                       <TextInput
                         {...field}
@@ -181,70 +145,44 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
                     )}
                   />
                 </div>
-                {/* Password Field */}
-                {(authType === AuthenticationType.SINGLE_TENANT || authType === AuthenticationType.KEYCLOAK) && isNewUser && (
-                <div className="mt-4">
-                    <Subtitle>Password</Subtitle>
-                    <Controller
-                    name="password"
-                    control={control}
-                    rules={{ required: "Password is required" }}
-                    render={({ field }) => (
-                        <TextInput
-                        type="password"
-                        {...field}
-                        error={!!errors.password}
-                        errorMessage={
-                            errors.password &&
-                            typeof errors.password.message === "string"
-                            ? errors.password.message
-                            : undefined
-                        }
-                        />
-                    )}
-                    />
-                </div>
-                )}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Role
+                    Members
                   </label>
                   <Controller
-                    name="role"
-                    control={control}
-                    render={({ field }) => (
-                      <SearchSelect
-                        {...field}
-                        onValueChange={(value) => field.onChange(value)}
-                        value={field.value}
-                        className="custom-search-select"
-                      >
-                        {roles.map((role) => (
-                          <SearchSelectItem key={role.id} value={role.name}>
-                            {role.name}
-                          </SearchSelectItem>
-                        ))}
-                      </SearchSelect>
-                    )}
-                  />
-                </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Groups
-                  </label>
-                  <Controller
-                    name="groups"
+                    name="members"
                     control={control}
                     render={({ field }) => (
                       <MultiSelect
                         {...field}
                         onValueChange={(value) => field.onChange(value)}
                         value={field.value as string[]}
-                        className="custom-multiselect"
                       >
-                        {groups.map((group) => (
-                          <MultiSelectItem key={group.id} value={group.id}>
-                            {group.name}
+                        {users.map((user) => (
+                          <MultiSelectItem key={user.email} value={user.email}>
+                            {user.email}
+                          </MultiSelectItem>
+                        ))}
+                      </MultiSelect>
+                    )}
+                  />
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Roles
+                  </label>
+                  <Controller
+                    name="roles"
+                    control={control}
+                    render={({ field }) => (
+                      <MultiSelect
+                        {...field}
+                        onValueChange={(value) => field.onChange(value)}
+                        value={field.value as string[]}
+                      >
+                        {roles.map((role) => (
+                          <MultiSelectItem key={role.id} value={role.name}>
+                            {role.name}
                           </MultiSelectItem>
                         ))}
                       </MultiSelect>
@@ -252,9 +190,8 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
                   />
                 </div>
               </div>
-              {/* Display API Error */}
               {errors.apiError && (
-                <Callout className="mt-4" title="Error while saving user" color="rose">
+                <Callout className="mt-4" title="Error while saving group" color="rose">
                   {errors.apiError.message}
                 </Callout>
               )}
@@ -273,9 +210,9 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
                 <Button
                   color="orange"
                   type="submit"
-                  disabled={isSubmitting || (isNewUser ? false : !isDirty)}
+                  disabled={isSubmitting || (isNewGroup ? false : !isDirty)}
                 >
-                  {isSubmitting ? "Saving..." : isNewUser ? "Create User" : "Save"}
+                  {isSubmitting ? "Saving..." : isNewGroup ? "Create Group" : "Save"}
                 </Button>
               </div>
             </form>
@@ -286,4 +223,4 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
   );
 };
 
-export default UsersSidebar;
+export default GroupsSidebar;

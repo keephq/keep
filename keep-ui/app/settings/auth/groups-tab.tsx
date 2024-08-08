@@ -10,78 +10,87 @@ import {
   TableRow,
   Text,
   Button,
-  MultiSelect,
-  MultiSelectItem,
+  Badge,
+  TextInput,
 } from "@tremor/react";
 import Loading from "app/loading";
-import { getApiURL } from "utils/apiUrl";
 import { useGroups } from "utils/hooks/useGroups";
 import { useUsers } from "utils/hooks/useUsers";
 import { useRoles } from "utils/hooks/useRoles";
-import { useState, useEffect } from "react";
-import "./multiselect.css";
+import { useState, useEffect, useMemo } from "react";
+import GroupsSidebar from "./groups-sidebar";
+import { getApiURL } from "utils/apiUrl";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   accessToken: string;
 }
 
 export default function GroupsTab({ accessToken }: Props) {
-  const apiUrl = getApiURL();
-  const { data: groups = [], isLoading: groupsLoading, error: groupsError, mutate: mutateGroups } = useGroups();
-  const { data: users = [], isLoading: usersLoading, error: usersError } = useUsers();
-  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useRoles();
+  const { data: groups = [], isLoading: groupsLoading, mutate: mutateGroups } = useGroups();
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: roles = [] } = useRoles();
 
   const [groupStates, setGroupStates] = useState<{ [key: string]: { members: string[], roles: string[] } }>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [filter, setFilter] = useState("");
+  const [isNewGroup, setIsNewGroup] = useState(false);
 
   useEffect(() => {
     if (groups) {
       const initialGroupStates = groups.reduce((acc, group) => {
         acc[group.id] = {
           members: group.members || [],
-          roles: group.roles || []
+          roles: group.roles || [],
         };
         return acc;
       }, {} as { [key: string]: { members: string[], roles: string[] } });
+      setGroupStates(initialGroupStates);
+    }
+  }, [groups]);
 
-      // Compare new state with current state before updating
-      if (JSON.stringify(initialGroupStates) !== JSON.stringify(groupStates)) {
-        setGroupStates(initialGroupStates);
+  const filteredGroups = useMemo(() => {
+    return groups?.filter(group =>
+      group.name.toLowerCase().includes(filter.toLowerCase())
+    ) || [];
+  }, [groups, filter]);
+
+  if (groupsLoading || usersLoading || !roles) return <Loading />;
+
+  const handleRowClick = (group: any) => {
+    setSelectedGroup(group);
+    setIsNewGroup(false);
+    setIsSidebarOpen(true);
+  };
+
+  const handleAddGroupClick = () => {
+    setSelectedGroup(null);
+    setIsNewGroup(true);
+    setIsSidebarOpen(true);
+  };
+
+  const handleDeleteGroup = async (groupId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this group?")) {
+      try {
+        const url = `${getApiURL()}/auth/groups/${groupId}`;
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          await mutateGroups();
+        } else {
+          console.error("Failed to delete group");
+        }
+      } catch (error) {
+        console.error("Error deleting group:", error);
       }
     }
-  }, [groups, groupStates]);
-
-  if (groupsLoading || usersLoading || rolesLoading) return <Loading />;
-
-  const handleMemberChange = (groupId: string, newMembers: string[]) => {
-    setGroupStates(prevStates => ({
-      ...prevStates,
-      [groupId]: {
-        ...prevStates[groupId],
-        members: newMembers
-      }
-    }));
-    setHasChanges(true);
-  };
-
-  const handleRoleChange = (groupId: string, newRoles: string[]) => {
-    setGroupStates(prevStates => ({
-      ...prevStates,
-      [groupId]: {
-        ...prevStates[groupId],
-        roles: newRoles
-      }
-    }));
-    setHasChanges(true);
-  };
-
-  const updateGroups = async () => {
-    // Implement the logic to update group members and roles
-    // This might involve calling an API endpoint
-    console.log('Updating group states:', groupStates);
-    // After successful update, you might want to refresh the groups data
-    await mutateGroups();
-    setHasChanges(false);
   };
 
   return (
@@ -91,55 +100,77 @@ export default function GroupsTab({ accessToken }: Props) {
           <Title>Groups Management</Title>
           <Subtitle>Manage user groups</Subtitle>
         </div>
-        <Button
-          color="orange"
-          variant="secondary"
-          size="md"
-          onClick={updateGroups}
-          disabled={!hasChanges}
-        >
-          Update Groups
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            color="orange"
+            size="md"
+            onClick={handleAddGroupClick}
+          >
+            Create Group
+          </Button>
+        </div>
       </div>
+      <TextInput
+        placeholder="Search by group name"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className="mb-4"
+      />
       <Card className="flex-grow overflow-auto h-full">
         <div className="h-full w-full overflow-auto">
           <Table className="h-full">
             <TableHead>
               <TableRow>
-                <TableHeaderCell className="w-2/16">Group Name</TableHeaderCell>
-                <TableHeaderCell className="w-7/16">Members</TableHeaderCell>
-                <TableHeaderCell className="w-7/16">Roles</TableHeaderCell>
+                <TableHeaderCell className="w-3/24">Group Name</TableHeaderCell>
+                <TableHeaderCell className="w-5/12">Members</TableHeaderCell>
+                <TableHeaderCell className="w-5/12">Roles</TableHeaderCell>
+                <TableHeaderCell className="w-1/24"></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {groups.map((group) => (
-                <TableRow key={group.id}>
-                  <TableCell className="w-2/16">{group.name}</TableCell>
-                  <TableCell className="w-7/16">
-                    <MultiSelect
-                      value={groupStates[group.id]?.members || []}
-                      onValueChange={(value) => handleMemberChange(group.id, value)}
-                      className="custom-multiselect"
-                    >
-                      {users.map((user) => (
-                        <MultiSelectItem key={user.email} value={user.email}>
-                          {user.email}
-                        </MultiSelectItem>
+              {filteredGroups.map((group) => (
+                <TableRow
+                  key={group.id}
+                  className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
+                  onClick={() => handleRowClick(group)}
+                >
+                  <TableCell className="w-2/12">{group.name}</TableCell>
+                  <TableCell className="w-4/12">
+                    <div className="flex flex-wrap gap-1">
+                      {group.members.slice(0, 4).map((member, index) => (
+                        <Badge key={index} color="orange" className="text-xs">
+                          {member}
+                        </Badge>
                       ))}
-                    </MultiSelect>
+                      {group.members.length > 4 && (
+                        <Badge color="orange" className="text-xs">
+                          +{group.members.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
-                  <TableCell className="w-7/16">
-                    <MultiSelect
-                      value={groupStates[group.id]?.roles || []}
-                      onValueChange={(value) => handleRoleChange(group.id, value)}
-                      className="custom-multiselect"
-                    >
-                      {roles.map((role) => (
-                        <MultiSelectItem key={role.id} value={role.name}>
-                          {role.name}
-                        </MultiSelectItem>
+                  <TableCell className="w-4/12">
+                    <div className="flex flex-wrap gap-1">
+                      {group.roles.slice(0, 4).map((role, index) => (
+                        <Badge key={index} color="orange" className="text-xs">
+                          {role}
+                        </Badge>
                       ))}
-                    </MultiSelect>
+                      {group.roles.length > 4 && (
+                        <Badge color="orange" className="text-xs">
+                          +{group.roles.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-1/24">
+                    <Button
+                      icon={TrashIcon}
+                      variant="light"
+                      color="orange"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => handleDeleteGroup(group.id, e)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -147,6 +178,14 @@ export default function GroupsTab({ accessToken }: Props) {
           </Table>
         </div>
       </Card>
+      <GroupsSidebar
+        isOpen={isSidebarOpen}
+        toggle={() => setIsSidebarOpen(false)}
+        group={selectedGroup}
+        isNewGroup={!selectedGroup}
+        mutateGroups={mutateGroups}
+        accessToken={accessToken}
+      />
     </div>
   );
 }

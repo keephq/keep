@@ -52,6 +52,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.keycloak_uma = KeycloakUMA(connection=self.keycloak_id_connection)
             self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
             self.admin_url_without_client = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}'
+            self.realm = os.environ["KEYCLOAK_REALM"]
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -262,7 +263,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     }
                     for group in groups
                 ]
-                role = user.get("attributes", {}).get("keep_role", ["admin"])[0]
+                role = self.get_user_current_role(user_id=user.get("id"))
                 user_dto = User(
                     email=user["email"],
                     name=user["firstName"],
@@ -281,12 +282,20 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to fetch users from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch users")
 
-    def create_user(self, user_email: str, password: str, role: list[str]) -> dict:
+    def create_user(
+        self,
+        user_email: str,
+        user_name: str,
+        password: str,
+        role: list[str],
+        groups: list[str],
+    ) -> dict:
         try:
             user_data = {
                 "username": user_email,
+                "email": user_email,
                 "enabled": True,
-                "attributes": {"keep_role": [role]},
+                "firstName": user_name,
             }
             if password:
                 user_data["credentials"] = [
@@ -294,11 +303,15 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 ]
 
             user_id = self.keycloak_admin.create_user(user_data)
-            self.keycloak_admin.assign_client_role(
-                client_id=self.client_id,
-                user_id=user_id,
-                roles=[role],
-            )
+            if role:
+                role_id = self.keycloak_admin.get_client_role_id(self.client_id, role)
+                self.keycloak_admin.assign_client_role(
+                    client_id=self.client_id,
+                    user_id=user_id,
+                    roles=[{"id": role_id, "name": role}],
+                )
+            for group in groups:
+                self.add_user_to_group(user_id=user_id, group=group)
 
             return {
                 "status": "success",
@@ -306,14 +319,115 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 "user_id": user_id,
             }
         except KeycloakPostError as e:
+            if "User exists" in str(e):
+                self.logger.error(
+                    "Failed to create user - user %s already exists", user_email
+                )
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Failed to create user - user {user_email} already exists",
+                )
             self.logger.error("Failed to create user in Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to create user")
 
-    # def update_user()
+    def get_user_id_by_email(self, user_email: str) -> str:
+        user_id = self.keycloak_admin.get_users(query={"email": user_email})
+        if not user_id:
+            self.logger.error("User does not exists")
+            raise HTTPException(status_code=404, detail="User does not exists")
+        elif len(user_id) > 1:
+            self.logger.error("Multiple users found")
+            raise HTTPException(
+                status_code=500, detail="Multiple users found, please contact admin"
+            )
+        user_id = user_id[0]["id"]
+        return user_id
+
+    def get_user_current_role(self, user_id: str) -> str:
+        current_role = (
+            self.keycloak_admin.connection.raw_get(
+                self.admin_url_without_client + f"/users/{user_id}/role-mappings"
+            )
+            .json()
+            .get("clientMappings", {})
+            .get(self.realm, {})
+            .get("mappings")
+        )
+
+        if current_role:
+            # remove uma protection
+            current_role = [
+                role for role in current_role if role["name"] != "uma_protection"
+            ]
+            return current_role[0]["name"]
+        else:
+            return None
+
+    def add_user_to_group(self, user_id: str, group: str):
+        resp = self.keycloak_admin.connection.raw_put(
+            f"{self.admin_url_without_client}/users/{user_id}/groups/{group}",
+            data=json.dumps({}),
+        )
+        resp.raise_for_status()
+
+    def update_user(self, user_email: str, update_data: dict) -> dict:
+        try:
+            user_id = self.get_user_id_by_email(user_email)
+            if "role" in update_data:
+                role = update_data["role"]
+                # get current role and understand if needs to be updated:
+                current_role = self.get_user_current_role(user_id)
+                # update the role only if its different than current
+                # TODO: more than one role
+                if current_role != role:
+                    role_id = self.keycloak_admin.get_client_role_id(
+                        self.client_id, role
+                    )
+                    if not role_id:
+                        self.logger.error("Role does not exists")
+                        raise HTTPException(
+                            status_code=404, detail="Role does not exists"
+                        )
+                    self.keycloak_admin.assign_client_role(
+                        client_id=self.client_id,
+                        user_id=user_id,
+                        roles=[{"id": role_id, "name": role}],
+                    )
+            if "groups" in update_data:
+                # get the current groups
+                groups = self.keycloak_admin.get_user_groups(user_id)
+                groups_ids = [g.get("id") for g in groups]
+                # calc with groups needs to be removed and which to be added
+                groups_to_remove = [
+                    group_id
+                    for group_id in groups_ids
+                    if group_id not in update_data["groups"]
+                ]
+
+                groups_to_add = [
+                    group for group in update_data["groups"] if group not in groups_ids
+                ]
+                # remove
+                for group in groups_to_remove:
+                    self.logger.info("Leaving group")
+                    resp = self.keycloak_admin.connection.raw_delete(
+                        f"{self.admin_url_without_client}/users/{user_id}/groups/{group}"
+                    )
+                    resp.raise_for_status()
+                    self.logger.info("Left group")
+                # add
+                for group in groups_to_add:
+                    self.logger.info("Joining group")
+                    self.add_user_to_group(user_id=user_id, group=group)
+                    self.logger.info("Joined group")
+            return {"status": "success", "message": "User updated successfully"}
+        except KeycloakPostError as e:
+            self.logger.error("Failed to update user in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to update user")
 
     def delete_user(self, user_email: str) -> dict:
         try:
-            user_id = self.keycloak_admin.get_user_id(username=user_email)
+            user_id = self.get_user_id_by_email(user_email)
             self.keycloak_admin.delete_user(user_id)
             # delete the policy for the user (if not implicitly deleted?)
             return {"status": "success", "message": "User deleted successfully"}

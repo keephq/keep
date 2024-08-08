@@ -14,10 +14,12 @@ logger = logging.getLogger(__name__)
 
 class CreateUserRequest(BaseModel):
     email: str = Field(alias="username")
+    name: Optional[str] = None
     password: Optional[str] = None  # auth0 does not need password
     role: Optional[str] = (
         None  # user can be assigned to group and get its roles from groups
     )
+    groups: Optional[list[str]] = None
 
     class Config:
         allow_population_by_field_name = True
@@ -27,6 +29,7 @@ class UpdateUserRequest(BaseModel):
     email: Optional[str] = Field(alias="username")
     password: Optional[str] = None
     role: Optional[str] = None
+    groups: Optional[list[str]] = None
 
     class Config:
         allow_population_by_field_name = True
@@ -67,14 +70,22 @@ async def create_user(
 ):
     tenant_id = authenticated_entity.tenant_id
     user_email = request_data.email
+    user_name = request_data.name
     password = request_data.password
     role = request_data.role
+    groups = request_data.groups
 
     if not user_email:
         raise HTTPException(status_code=400, detail="Email is required")
 
     identity_manager = IdentityManagerFactory.get_identity_manager(tenant_id)
-    return identity_manager.create_user(user_email, password, role)
+    return identity_manager.create_user(
+        user_email=user_email,
+        user_name=user_name,
+        password=password,
+        role=role,
+        groups=groups,
+    )
 
 
 @router.put("/{user_email}", description="Update a user")

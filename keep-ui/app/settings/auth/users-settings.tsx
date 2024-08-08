@@ -16,7 +16,7 @@ import {
 import Loading from "app/loading";
 import Image from "next/image";
 import { User as AuthUser } from "next-auth";
-import { UserPlusIcon } from "@heroicons/react/24/outline";
+import { UserPlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useState, useEffect, useMemo } from "react";
 import { AuthenticationType } from "utils/authenticationType";
 import { useUsers } from "utils/hooks/useUsers";
@@ -26,6 +26,7 @@ import { useConfig } from "utils/hooks/useConfig";
 import UsersSidebar from "./users-sidebar";
 import { getInitials } from "components/navbar/UserInfo";
 import { User } from "app/settings/models";
+import { getApiURL } from "utils/apiUrl";
 
 interface Props {
   accessToken: string;
@@ -47,7 +48,7 @@ export default function UsersSettings({
   const { data: groups } = useGroups();
   const { data: configData } = useConfig();
 
-  const [userStates, setUserStates] = useState<{ [key: string]: { roles: string[], groups: string[] } }>({});
+  const [userStates, setUserStates] = useState<{ [key: string]: { role: string, groups: string[] } }>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User>(null);
   const [filter, setFilter] = useState("");
@@ -55,16 +56,17 @@ export default function UsersSettings({
 
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE as AuthenticationType;
+  const apiUrl = getApiURL();
 
   useEffect(() => {
     if (users) {
       const initialUserStates = users.reduce((acc, user) => {
         acc[user.email] = {
-          roles: [user.role],
+          role: user.role,
           groups: user.groups ? user.groups.map(group => group.name) : [],
         };
         return acc;
-      }, {} as { [key: string]: { roles: string[], groups: string[] } });
+      }, {} as { [key: string]: { role: string, groups: string[] } });
       setUserStates(initialUserStates);
     }
   }, [users]);
@@ -87,6 +89,29 @@ export default function UsersSettings({
     setSelectedUser(null);
     setIsNewUser(true);
     setIsSidebarOpen(true);
+  };
+
+  const handleDeleteUser = async (userEmail: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      try {
+        const url = `${getApiURL()}/auth/users/${userEmail}`;
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          await mutateUsers();
+        } else {
+          console.error("Failed to delete user");
+        }
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      }
+    }
   };
 
   return (
@@ -127,6 +152,7 @@ export default function UsersSettings({
                 <TableHeaderCell className="w-2/12">Name</TableHeaderCell>
                 <TableHeaderCell className="w-3/12">Role</TableHeaderCell>
                 <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>
+                <TableHeaderCell className="w-1/12"></TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -170,14 +196,9 @@ export default function UsersSettings({
                   </TableCell>
                   <TableCell className="w-2/12">
                     <div className="flex flex-wrap gap-1">
-                      {userStates[user.email]?.roles.slice(0, 4).map((role, index) => (
-                        <Badge key={index} color="orange" className="text-xs">
-                          {role}
-                        </Badge>
-                      ))}
-                      {userStates[user.email]?.roles.length > 4 && (
+                      {userStates[user.email]?.role && (
                         <Badge color="orange" className="text-xs">
-                          +{userStates[user.email].roles.length - 4} more
+                          {userStates[user.email].role}
                         </Badge>
                       )}
                     </div>
@@ -197,6 +218,15 @@ export default function UsersSettings({
                     </div>
                   </TableCell>
                   <TableCell className="w-1/12">
+                    {user.email !== currentUser?.email && !user.ldap && (
+                      <Button
+                        icon={TrashIcon}
+                        variant="light"
+                        color="orange"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => handleDeleteUser(user.email, e)}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
