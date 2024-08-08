@@ -46,7 +46,6 @@
       "group": "Development",
       "pages": [
         "development/getting-started",
-        "development/authentication",
         "development/external-url"
       ]
     },
