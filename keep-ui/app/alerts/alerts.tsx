@@ -72,7 +72,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [dismissModalAlert, setDismissModalAlert] = useState<
     AlertDto[] | null
   >();
-  const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
+  const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto[] | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
@@ -147,7 +147,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         handleClose={() => setDismissModalAlert(null)}
       />
       <AlertChangeStatusModal
-        alert={changeStatusAlert}
+        alerts={changeStatusAlert}
         presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
       />

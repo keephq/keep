@@ -20,6 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { useAlertActions } from "utils/hooks/useAlertActions";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
@@ -64,13 +65,13 @@ const customSelectStyles = {
 };
 
 interface Props {
-  alert: AlertDto | null | undefined;
+  alerts: AlertDto[] | null | undefined;
   handleClose: () => void;
   presetName: string;
 }
 
 export default function AlertChangeStatusModal({
-  alert,
+  alerts,
   handleClose,
   presetName,
 }: Props) {
@@ -82,11 +83,17 @@ export default function AlertChangeStatusModal({
   const { mutate: alertsMutator } = useAllAlerts(presetName, {
     revalidateOnMount: false,
   });
+  const { changeAlertStatusRequest } = useAlertActions();
 
-  if (!alert) return null;
+  if (!alerts) return null;
 
   const statusOptions = Object.values(Status)
-    .filter((status) => status !== alert.status) // Exclude current status
+    .filter((status) => {
+      // Exclude status that exists in all alerts
+      return alerts?.filter((a) => {
+        return a.status !== status;
+      }).length === alerts?.length;
+    })
     .map((status) => ({
       value: status,
       label: (
@@ -96,6 +103,12 @@ export default function AlertChangeStatusModal({
         </div>
       ),
     }));
+
+  let currentCommonStatus = "mixed";
+  const uniqueStatuses = new Set(alerts.map((alert) => alert.status));
+  if (uniqueStatuses.size === 1) {
+    currentCommonStatus = uniqueStatuses.values().next().value;
+  }
 
   const clearAndClose = () => {
     setSelectedStatus(null);
@@ -109,27 +122,32 @@ export default function AlertChangeStatusModal({
     }
 
     try {
-      const response = await fetch(`${getApiURL()}/alerts/enrich?dispose_on_new_alert=true`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
-          enrichments: {
-            status: selectedStatus,
-          },
-          fingerprint: alert.fingerprint,
-        }),
-      });
+      const responses = [];
+      for (const alert of alerts) {
+        let currentResponse = await changeAlertStatusRequest(alert, selectedStatus);
+        responses.push(currentResponse);
+      }
+      const areAllOk = responses.every((response) => response.ok);
 
-      if (response.ok) {
-        toast.success("Alert status changed successfully!");
+      let message;
+      if (areAllOk) {
+        if (alerts.length === 1) {
+          message = `Alert status changed successfully!`;
+        } else {
+          message = `Successfully changed status for ${alerts.length} alerts!`;
+        }
+        toast.success(message);
         clearAndClose();
         await alertsMutator();
         await presetsMutator();
       } else {
-        toast.error("Failed to change alert status.");
+        if (alerts.length === 1) {
+          message = `Failed to change alert status.`;
+        } else {
+          const failCount = responses.filter((response) => !response.ok).length;
+          message = `Failed to change status for ${failCount} alerts.`;
+        }
+        toast.error(message);
       }
     } catch (error) {
       toast.error("An error occurred while changing alert status.");
@@ -137,10 +155,10 @@ export default function AlertChangeStatusModal({
   };
 
   return (
-    <Modal onClose={handleClose} isOpen={!!alert}>
+    <Modal onClose={handleClose} isOpen={!!alerts}>
       <Title>Change Alert Status</Title>
       <Subtitle className="flex items-center">
-        Change status from <strong className="mx-2">{alert.status}</strong> to:
+        Change status from <strong className="mx-2">{currentCommonStatus}</strong> to:
         <div className="flex-1">
           <Select
             options={statusOptions}
