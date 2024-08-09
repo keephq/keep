@@ -963,7 +963,7 @@ def get_last_alerts(
                 .subquery()
             )
             
-        if upper_timestamp and lower_timestamp:
+        if upper_timestamp is not None and lower_timestamp is not None:
             subquery = (
                 session.query(subquery)
                 .filter(
@@ -972,7 +972,7 @@ def get_last_alerts(
                 )
                 .subquery()
             )
-        elif upper_timestamp:
+        elif upper_timestamp is not None:
             subquery = (
                 session.query(subquery)
                 .filter(
@@ -980,7 +980,7 @@ def get_last_alerts(
                 )
                 .subquery()
             )
-        elif lower_timestamp:
+        elif lower_timestamp is not None:
             subquery = (
                 session.query(subquery)
                 .filter(
@@ -1561,14 +1561,6 @@ def update_key_last_used(
         tenant_api_key_entry.last_used = datetime.utcnow()
         session.add(tenant_api_key_entry)
         session.commit()
-
-
-def get_all_tenants():
-    with Session(engine) as session:
-        tenants = session.exec(
-            select(Tenant)
-        ).all()
-    return tenants
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
