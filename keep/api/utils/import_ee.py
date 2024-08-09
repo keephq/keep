@@ -3,7 +3,7 @@ import sys
 import pathlib
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
-if ee_enabled or 1:
+if ee_enabled:
     path_with_ee = (
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
