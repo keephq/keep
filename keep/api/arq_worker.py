@@ -84,5 +84,5 @@ class WorkerSettings:
     )
     functions: list = FUNCTIONS
     cron_jobs = [
-        cron(process_background_ai_task, minute=at_every_x_minutes(3), run_at_startup=True, unique=True, timeout=1500, max_tries=5)
+        cron(process_background_ai_task, minute=at_every_x_minutes(3), unique=True, timeout=1500, max_tries=5)
     ]
