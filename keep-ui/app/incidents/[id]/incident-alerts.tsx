@@ -28,9 +28,10 @@ import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
 import IncidentPagination from "../incident-pagination";
 import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
+import {IncidentDto} from "../model";
 
 interface Props {
-  incidentId: string;
+  incident: IncidentDto;
 }
 
 interface Pagination {
@@ -41,13 +42,13 @@ interface Pagination {
 
 const columnHelper = createColumnHelper<AlertDto>();
 
-export default function IncidentAlerts({ incidentId }: Props) {
+export default function IncidentAlerts({ incident }: Props) {
   const [alertsPagination, setAlertsPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
   });
 
-  const { data: alerts, isLoading } = useIncidentAlerts(incidentId, alertsPagination.limit, alertsPagination.offset);
+  const { data: alerts, isLoading } = useIncidentAlerts(incident.id, alertsPagination.limit, alertsPagination.offset);
 
   const [pagination, setTablePagination] = useState({
     pageIndex: alerts? Math.ceil(alerts.offset / alerts.limit) : 0,
@@ -69,7 +70,7 @@ export default function IncidentAlerts({ incidentId }: Props) {
       })
     }
   }, [pagination])
-  usePollIncidentAlerts(incidentId);
+  usePollIncidentAlerts(incident.id);
 
   const columns = [
     columnHelper.accessor("severity", {
@@ -128,10 +129,11 @@ export default function IncidentAlerts({ incidentId }: Props) {
       id: "remove",
       header: "",
       cell: (context) => (
-        <IncidentAlertMenu
-          alert={context.row.original}
-          incidentId={incidentId}
-        />
+        incident.is_confirmed &&
+          <IncidentAlertMenu
+            alert={context.row.original}
+            incidentId={incident.id}
+          />
       ),
     }),
   ];
