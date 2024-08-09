@@ -111,14 +111,14 @@ async def mine_incidents_and_create_objects(
                     update_incident_summary(incident.Incident.id, summary)
                     
             if not alerts_appended:
-                incident_id = create_incident_from_dict(tenant_id, {"name": "Mined using algorithm", "description": "Candidate", "is_predicted": True}).id
-                ids.append(incident_id)
+                incident = create_incident_from_dict(tenant_id, {"name": "New Incident", "description": "Summorization is Disabled", "is_predicted": True})
+                ids.append(incident.id)
                 for alert in [alert for alert in alerts if alert.fingerprint in component]:
-                    if not is_alert_assigned_to_incident(alert.id, incident_id, tenant_id):
-                        assign_alert_to_incident(alert.id, incident_id, tenant_id)
+                    if not is_alert_assigned_to_incident(alert.id, incident.id, tenant_id):
+                        assign_alert_to_incident(alert.id, incident.id, tenant_id)
                     
-                summary = generate_incident_summary(incident.Incident)
-                update_incident_summary(incident.Incident.id, summary)
+                summary = generate_incident_summary(incident)
+                update_incident_summary(incident.id, summary)
                 
 
     return {"incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]}
