@@ -1,10 +1,140 @@
+import os
+import logging
+
 import numpy as np
 import pandas as pd
 import networkx as nx
 
 from typing import List
+from openai import OpenAI
 
-from keep.api.models.db.alert import Alert
+from datetime import datetime, timedelta
+
+from fastapi import Depends
+
+from ee.experimental.note_utils import NodeCandidateQueue, NodeCandidate
+from ee.experimental.graph_utils import create_graph
+from ee.experimental.statistical_utils import get_alert_pmi_matrix
+
+from pusher import Pusher
+
+from keep.api.models.db.alert import Alert, Incident
+from keep.api.core.db import (
+    assign_alert_to_incident,
+    is_alert_assigned_to_incident,
+    get_last_alerts,
+    create_incident_from_dict,
+    update_incident_summary,
+)
+
+from keep.api.core.dependencies import (
+    AuthenticatedEntity,
+    AuthVerifier,
+    get_pusher_client,
+)
+
+from keep.api.core.db import (
+    assign_alert_to_incident,
+    create_incident_from_dict,
+    get_incident_by_id,
+    get_last_alerts,
+    get_last_incidents,
+    write_pmi_matrix_to_db,
+)
+
+logger = logging.getLogger(__name__)
+
+ALGORITHM_VERBOSE_NAME = "Basic correlation alrithm v0.2"
+
+
+def calculate_pmi_matrix(
+    ctx: dict | None,  # arq context
+    tenant_id: str,
+    upper_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60),
+    use_n_historical_alerts: int = 10e10,
+    sliding_window: int = 4 * 60 * 60,
+    stride: int = 60 * 60,
+) -> dict:
+    logger.info(
+        "Calculating PMI coefficients for alerts",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
+    pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
+    write_pmi_matrix_to_db(tenant_id, pmi_matrix)
+    
+    return {"status": "success"}
+
+
+async def mine_incidents_and_create_objects(
+        ctx: dict | None,  # arq context
+        tenant_id: str,
+        alert_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60 * 60),
+        alert_upper_timestamp: datetime = datetime.now(),
+        use_n_historical_alerts: int = 10e10,
+        incident_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 4 * 60 * 60),
+        incident_upper_timestamp: datetime = datetime.now(),
+        use_n_hist_incidents: int = 10e10,
+        pmi_threshold: float = 0.0,
+        knee_threshold: float = 0.8,
+        min_incident_size: int = 5,
+        incident_similarity_threshold: float = 0.8,
+    ):
+
+    calculate_pmi_matrix(ctx, tenant_id)
+
+    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
+    incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
+    nc_queue = NodeCandidateQueue()
+    
+    for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
+        nc_queue.push_candidate(candidate)
+    candidates = nc_queue.get_candidates()          
+    
+    graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
+    ids = []
+    
+    for component in nx.connected_components(graph):
+        if len(component) > min_incident_size:            
+            alerts_appended = False
+            for incident in incidents:
+                incident_fingerprints = set([alert.fingerprint for alert in incident.Incident.alerts])        
+                intersection = incident_fingerprints.intersection(component)
+        
+                if len(intersection) / len(component) >= incident_similarity_threshold:
+                    alerts_appended = True
+                    for alert in [alert for alert in alerts if alert.fingerprint in component]:
+                        if not is_alert_assigned_to_incident(alert.id, incident.Incident.id, tenant_id):
+                            assign_alert_to_incident(alert.id, incident.Incident.id, tenant_id)
+                    
+                    summary = generate_incident_summary(incident.Incident)
+                    update_incident_summary(incident.Incident.id, summary)
+                    
+            if not alerts_appended:
+                incident = create_incident_from_dict(tenant_id, {"name": "New Incident", "description": "Summorization is Disabled", "is_predicted": True})
+                ids.append(incident.id)
+                for alert in [alert for alert in alerts if alert.fingerprint in component]:
+                    if not is_alert_assigned_to_incident(alert.id, incident.id, tenant_id):
+                        assign_alert_to_incident(alert.id, incident.id, tenant_id)
+                    
+                summary = generate_incident_summary(incident)
+                update_incident_summary(incident.id, summary)
+    
+    pusher_client = get_pusher_client()
+    pusher_client.trigger(
+        f"private-{tenant_id}",
+        "ai-logs-change",
+        {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
+    )
+    logger.info(
+        "Client notified on new AI log",
+        extra={"tenant_id": tenant_id},
+    )
+                
+
+    return {"incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]}
 
 
 def mine_incidents(alerts: List[Alert], incident_sliding_window_size: int=6*24*60*60, statistic_sliding_window_size: int=60*60, 
@@ -146,3 +276,51 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
             })
 
     return incidents
+
+
+def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1) -> str:
+    if "OPENAI_API_KEY" not in os.environ:
+        return "OpenAI API key is not set. Incident summary generation is not available."
+    
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    
+    prompt_addition = ''
+    if incident.user_summary:
+        prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
+
+    # description_strings = [
+    #     f'{alert.timestamp} source: {alert.provider_type} description: {alert.event["name"]} message: {alert.event["message"]}' for alert in incident.alerts]
+    
+    description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
+    
+    if use_n_alerts_for_summary > 0:
+        incident_description = "\n".join(description_strings[:use_n_alerts_for_summary])
+    else:
+        incident_description = "\n".join(description_strings)
+
+    timestamps = [alert.timestamp for alert in incident.alerts]
+    incident_start = min(timestamps).replace(microsecond=0)
+    incident_end = max(timestamps).replace(microsecond=0)
+
+    summary = client.chat.completions.create(model="gpt-4o-mini", messages=[
+        {
+            "role": "system",
+            "content": """You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions. 
+            When provided with information, summarize it in a 2-3 sentences explaining what happened and when. 
+            ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
+             
+            EXAMPLE:
+            An incident occurred between 2022-11-17 14:11:04.955070 and 2022-11-22 22:19:04.837526, involving a 
+            total of 200 alerts. The alerts indicated critical and warning issues such as high CPU and memory 
+            usage in pods and nodes, as well as stuck Kubernetes Daemonset rollout. Potential incident scenario: 
+            Kubernetes Daemonset rollout stuck due to high CPU and memory usage in pods and nodes. This caused a
+            long tail of alerts on various topics."""
+        },
+        {
+            "role": "user",
+            "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
+            {incident_start}, ended on {incident_end}, included {len(description_strings)} alerts. {prompt_addition}"""
+        }
+    ]).choices[0].message.content
+    
+    return summary

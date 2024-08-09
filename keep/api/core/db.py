@@ -9,6 +9,9 @@ import json
 import logging
 import random
 import uuid
+
+import pandas as pd
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
@@ -39,6 +42,7 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
@@ -922,7 +926,7 @@ def get_alerts_with_filters(
 
 
 def get_last_alerts(
-    tenant_id, provider_id=None, limit=1000, timeframe=None
+    tenant_id, provider_id=None, limit=1000, timeframe=None, upper_timestamp=None, lower_timestamp=None
 ) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
@@ -955,6 +959,32 @@ def get_last_alerts(
                 .filter(
                     subquery.c.max_timestamp
                     >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+                )
+                .subquery()
+            )
+            
+        if upper_timestamp is not None and lower_timestamp is not None:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp < upper_timestamp,
+                    subquery.c.max_timestamp >= lower_timestamp
+                )
+                .subquery()
+            )
+        elif upper_timestamp is not None:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp < upper_timestamp
+                )
+                .subquery()
+            )
+        elif lower_timestamp is not None:
+            subquery = (
+                session.query(subquery)
+                .filter(
+                    subquery.c.max_timestamp >= lower_timestamp
                 )
                 .subquery()
             )
@@ -1845,6 +1875,16 @@ def assign_alert_to_incident(
 ):
     return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id])
 
+def is_alert_assigned_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str) -> bool:
+    with Session(engine) as session:
+        assignment = session.exec(
+            select(AlertToIncident)
+            .where(AlertToIncident.alert_id == alert_id)
+            .where(AlertToIncident.incident_id == incident_id)
+            .where(AlertToIncident.tenant_id == tenant_id)
+        ).first()
+    return bool(assignment)
+
 
 def get_incidents(tenant_id) -> List[Incident]:
     with Session(engine) as session:
@@ -1930,8 +1970,10 @@ def get_last_incidents(
     limit: int = 25,
     offset: int = 0,
     timeframe: int = None,
+    upper_timestamp: datetime = None,
+    lower_timestamp: datetime = None,
     is_confirmed: bool = False,
-) -> (list[Incident], int):
+) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
 
@@ -1946,12 +1988,25 @@ def get_last_incidents(
         List[Incident]: A list of Incident objects.
     """
     with Session(engine) as session:
+        subquery = (
+            select(
+                AlertToIncident.incident_id,
+                func.max(Alert.timestamp).label('last_updated_time')
+            )
+            .join(Alert, Alert.id == AlertToIncident.alert_id)
+            .group_by(AlertToIncident.incident_id)
+            .subquery()
+        )
+
         query = (
             session.query(
                 Incident,
+                subquery.c.last_updated_time
             )
+            .join(subquery, subquery.c.incident_id == Incident.id)
             .filter(Incident.tenant_id == tenant_id)
             .filter(Incident.is_confirmed == is_confirmed)
+            .options(joinedload(Incident.alerts))
             .order_by(desc(Incident.creation_time))
         )
 
@@ -1961,9 +2016,22 @@ def get_last_incidents(
                 >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
             )
 
+        if upper_timestamp and lower_timestamp:
+            query = query.filter(
+                subquery.c.last_updated_time.between(lower_timestamp, upper_timestamp)
+            )
+        elif upper_timestamp:
+            query = query.filter(
+                subquery.c.last_updated_time <= upper_timestamp
+            )
+        elif lower_timestamp:
+            query = query.filter(
+                subquery.c.last_updated_time >= lower_timestamp
+            )
+
         total_count = query.count()
 
-        # Order by timestamp in descending order and limit the results
+        # Order by start_time in descending order and limit the results
         query = query.order_by(desc(Incident.start_time)).limit(limit).offset(offset)
         # Execute the query
         incidents = query.all()
@@ -2028,7 +2096,7 @@ def update_incident_from_dto_by_id(
         ).update(
             {
                 "name": updated_incident_dto.name,
-                "description": updated_incident_dto.description,
+                "user_summary": updated_incident_dto.user_summary,
                 "assignee": updated_incident_dto.assignee,
             }
         )
@@ -2334,6 +2402,37 @@ def confirm_predicted_incident_by_id(
         session.refresh(incident)
 
         return incident
+    
+    
+def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
+    # TODO: add handlers for sequential launches
+    with Session(engine) as session:
+        for fingerprint_i in pmi_matrix_df.index:
+            for fingerprint_j in pmi_matrix_df.columns:
+                pmi = pmi_matrix_df.at[fingerprint_i, fingerprint_j]
+
+                pmi_entry = PMIMatrix(
+                    tenant_id=tenant_id,
+                    fingerprint_i=fingerprint_i,
+                    fingerprint_j=fingerprint_j,
+                    pmi=pmi
+                )
+                session.merge(pmi_entry)
+                
+        session.commit()
+        
+    return True
+
+def get_pmi_value(tenant_id: str, fingerprint_i: str, fingerprint_j: str) -> Optional[float]:
+    with Session(engine) as session:
+        pmi_entry = session.exec(
+            select(PMIMatrix)
+            .where(PMIMatrix.tenant_id == tenant_id)
+            .where(PMIMatrix.fingerprint_i == fingerprint_i)
+            .where(PMIMatrix.fingerprint_j == fingerprint_j)
+        ).first()
+        
+    return pmi_entry.pmi if pmi_entry else None
 
 
 def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
@@ -2398,6 +2497,21 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
                 tzinfo=timezone.utc
             )
 
+def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .where(Incident.id == incident_id)
+        ).first()
+
+        if not incident:
+            return None
+
+        incident.generated_summary = summary
+        session.commit()
+        session.refresh(incident)
+
+        return incident
 
 # Fetch all topology data
 def get_all_topology_data(

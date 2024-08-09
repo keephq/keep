@@ -54,6 +54,7 @@ def shoot_tenants_alerts(file, tenant_id):
                     session=session,
                     raw_events=raw_event,
                     formatted_events=[alert],
+                    timestamp_forced=alert.lastReceived
                 )
     session.close()
 
