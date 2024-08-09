@@ -14,8 +14,8 @@ import {
   wrapDefinition,
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
-import StepEditor, { GlobalEditor } from "./editors";
-import { Callout, Card } from "@tremor/react";
+import StepEditor, { GlobalEditor, GlobalEditorV2 } from "./editors";
+import { Callout, Card, Switch } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
@@ -38,6 +38,9 @@ import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
+import ReactFlowBuilder from "./ReactFlowBuilder";
+import { ReactFlowProvider } from "@xyflow/react";
+import BuilderChanagesTracker from "./BuilderChanagesTracker";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -51,7 +54,7 @@ interface Props {
   workflowId?: string;
   accessToken?: string;
   installedProviders?: Provider[] | undefined | null;
-  isPreview?:boolean;
+  isPreview?: boolean;
 }
 
 function Builder({
@@ -68,6 +71,8 @@ function Builder({
   installedProviders,
   isPreview,
 }: Props) {
+  const [useReactFlow, setUseReactFlow] = useState(true);
+
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
   );
@@ -86,6 +91,8 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
+
+  console.log("definition", definition);
 
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
@@ -282,8 +289,51 @@ function Builder({
     setRunningWorkflowExecution(null);
   };
 
+  const handleSwitchChange = (value: boolean) => {
+    setUseReactFlow(value);
+  };
+
+  const getworkflowStatus = () => {
+    return stepValidationError || globalValidationError ? (
+      <Callout
+        className="mt-2.5 mb-2.5"
+        title="Validation Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        {stepValidationError || globalValidationError}
+      </Callout>
+    ) : (
+      <Callout
+        className="mt-2.5 mb-2.5"
+        title="Schema Valid"
+        icon={CheckCircleIcon}
+        color="teal"
+      >
+        Alert can be generated successfully
+      </Callout>
+    );
+  };
+
   return (
     <>
+      <div className="flex items-center justify-between">
+        <div className="pl-4 flex items-center space-x-3">
+          <Switch
+            id="switch"
+            name="switch"
+            checked={useReactFlow}
+            onChange={handleSwitchChange}
+          />
+          <label
+            htmlFor="switch"
+            className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+          >
+            Switch to New Builder
+          </label>
+        </div>
+        {useReactFlow && <BuilderChanagesTracker />}
+      </div>
       <Modal
         onRequestClose={closeGenerateModal}
         isOpen={generateModalIsOpen}
@@ -306,36 +356,40 @@ function Builder({
       </Modal>
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
-          {stepValidationError || globalValidationError ? (
-            <Callout
-              className="mt-2.5 mb-2.5"
-              title="Validation Error"
-              icon={ExclamationCircleIcon}
-              color="rose"
-            >
-              {stepValidationError || globalValidationError}
-            </Callout>
-          ) : (
-            <Callout
-              className="mt-2.5 mb-2.5"
-              title="Schema Valid"
-              icon={CheckCircleIcon}
-              color="teal"
-            >
-              Alert can be generated successfully
-            </Callout>
+          {getworkflowStatus()}
+          {useReactFlow && (
+            <div className="h-[90%]">
+              <ReactFlowProvider>
+                <ReactFlowBuilder
+                  workflow={workflow}
+                  loadedAlertFile={loadedAlertFile}
+                  providers={providers}
+                  definition={definition}
+                  onDefinitionChange={(def: any) =>
+                    setDefinition(wrapDefinition(def))
+                  }
+                  toolboxConfiguration={getToolboxConfiguration(providers)}
+                />
+              </ReactFlowProvider>
+            </div>
           )}
-          <SequentialWorkflowDesigner
-            definition={definition}
-            onDefinitionChange={setDefinition}
-            stepsConfiguration={stepsConfiguration}
-            validatorConfiguration={validatorConfiguration}
-            toolboxConfiguration={getToolboxConfiguration(providers)}
-            undoStackSize={10}
-            controlBar={true}
-            globalEditor={<GlobalEditor />}
-            stepEditor={<StepEditor installedProviders={installedProviders} />}
-          />
+          {!useReactFlow && (
+            <>
+              <SequentialWorkflowDesigner
+                definition={definition}
+                onDefinitionChange={setDefinition}
+                stepsConfiguration={stepsConfiguration}
+                validatorConfiguration={validatorConfiguration}
+                toolboxConfiguration={getToolboxConfiguration(providers)}
+                undoStackSize={10}
+                controlBar={true}
+                globalEditor={<GlobalEditor />}
+                stepEditor={
+                  <StepEditor installedProviders={installedProviders} />
+                }
+              />
+            </>
+          )}
         </>
       )}
     </>

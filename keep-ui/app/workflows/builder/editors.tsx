@@ -7,6 +7,7 @@ import {
   Subtitle,
   Icon,
   Button,
+  Switch,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Properties } from "sequential-workflow-designer";
@@ -22,13 +23,35 @@ import {
   FunnelIcon,
   HandRaisedIcon,
 } from "@heroicons/react/24/outline";
+import useStore, { V2Properties } from "./builder-store";
+import { useEffect, useState } from "react";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
 }
 
 export function GlobalEditor() {
-  const { properties, setProperty } = useGlobalEditor();
+  const { properties, setProperty } = useGlobalEditor()
+  return (
+    <EditorLayout>
+      <Title>Keep Workflow Editor</Title>
+      <Text>
+        Use this visual workflow editor to easily create or edit existing Keep
+        workflow YAML specifications.
+      </Text>
+      <Text className="mt-5">
+        Use the toolbox to add steps, conditions and actions to your workflow
+        and click the `Generate` button to compile the workflow / `Deploy`
+        button to deploy the workflow to Keep.
+      </Text>
+      {WorkflowEditor(properties, setProperty)}
+    </EditorLayout>
+  );
+}
+
+export function GlobalEditorV2() {
+  const { v2Properties:properties, updateV2Properties: setProperty } = useStore();
+
   return (
     <EditorLayout>
       <Title>Keep Workflow Editor</Title>
@@ -48,10 +71,11 @@ export function GlobalEditor() {
 
 interface keepEditorProps {
   properties: Properties;
-  updateProperty: (key: string, value: any) => void;
+  updateProperty: ((key: string, value: any) => void);
   installedProviders?: Provider[] | null | undefined;
   providerType?: string;
   type?: string;
+  isV2?:boolean
 }
 
 function KeepStepEditor({
@@ -387,6 +411,100 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
   );
 }
 
+
+export function StepEditorV2({
+  installedProviders,
+}: {
+  installedProviders?: Provider[] | undefined | null;
+}) {
+  const [useGlobalEditor, setGlobalEditor] = useState(false);
+  const { 
+    selectedNode,
+    updateSelectedNodeData,
+    setOpneGlobalEditor,
+    getNodeById
+  } = useStore()
+
+  if (!selectedNode) return null;
+  
+  
+
+  const {data} = getNodeById(selectedNode) || {};
+  const {name, type, properties} = data || {};
+
+  function onNameChanged(e: any) {
+      updateSelectedNodeData( "name", e.target.value);
+  }
+
+  const setProperty = (key:string, value:any) => {
+    updateSelectedNodeData('properties', {...properties, [key]: value })
+  }
+
+  const providerType = type?.split("-")[1];
+
+  if(!selectedNode){
+    return <EditorLayout>
+      <Title className="capitalize text-red-500">Node not found!</Title>
+    </EditorLayout>
+  }
+
+  const handleSwitchChange = (value:boolean)=>{
+    setGlobalEditor(value);
+    setOpneGlobalEditor(true);
+  }
+
+  return (
+    <EditorLayout>
+      <div className="flex items-center space-x-3 mb-2">
+        <Switch
+          id="switch"
+          name="switch"
+          checked={useGlobalEditor}
+          onChange={handleSwitchChange}
+        />
+        <label
+          htmlFor="switch"
+          className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+        >
+          Switch to Global Editor
+          </label>
+      </div>
+      <Title className="capitalize">{providerType} Editor</Title>
+      <Text className="mt-1">Unique Identifier</Text>
+      <TextInput
+        className="mb-2.5"
+        icon={KeyIcon}
+        value={name}
+        onChange={onNameChanged}
+      />
+      {type.includes("step-") || type.includes("action-") ? (
+        <KeepStepEditor
+          properties={properties}
+          updateProperty={setProperty}
+          installedProviders={installedProviders}
+          providerType={providerType}
+          type={type}
+        />
+      ) : type === "condition-threshold" ? (
+        <KeepThresholdConditionEditor
+          properties={properties}
+          updateProperty={setProperty}
+        />
+      ) : type.includes("foreach") ? (
+        <KeepForeachEditor
+          properties={properties}
+          updateProperty={setProperty}
+        />
+      ) : type === "condition-assert" ? (
+        <KeepAssertConditionEditor
+          properties={properties}
+          updateProperty={setProperty}
+        />
+      ) : null}
+    </EditorLayout>
+  );
+}
+
 export default function StepEditor({
   installedProviders,
 }: {
@@ -398,6 +516,7 @@ export default function StepEditor({
   function onNameChanged(e: any) {
     setName(e.target.value);
   }
+
 
   const providerType = type.split("-")[1];
 
