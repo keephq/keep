@@ -116,16 +116,21 @@ def __save_to_db(
                         tz=datetime.timezone.utc
                     ).isoformat()
 
-            alert = Alert(
-                tenant_id=tenant_id,
-                provider_type=(
+            alert_args = {
+                "tenant_id": tenant_id,
+                "provider_type": (
                     provider_type if provider_type else formatted_event.source[0]
                 ),
-                event=formatted_event.dict(),
-                provider_id=provider_id,
-                fingerprint=formatted_event.fingerprint,
-                alert_hash=formatted_event.alert_hash,
-                timestamp=timestamp_forced
+                "event": formatted_event.dict(),
+                "provider_id": provider_id,
+                "fingerprint": formatted_event.fingerprint,
+                "alert_hash": formatted_event.alert_hash,
+            }
+            if timestamp_forced is not None:
+                alert_args['timestamp'] = timestamp_forced
+
+            alert = Alert(
+                **alert_args
             )
             session.add(alert)
             audit = AlertAudit(
