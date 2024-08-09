@@ -13,3 +13,4 @@ if ee_enabled:
 else:
     mine_incidents_and_create_objects = NotImplemented
     ALGORITHM_VERBOSE_NAME = NotImplemented
+    
