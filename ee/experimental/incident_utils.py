@@ -16,6 +16,8 @@ from ee.experimental.note_utils import NodeCandidateQueue, NodeCandidate
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
 
+from pusher import Pusher
+
 from keep.api.models.db.alert import Alert, Incident
 from keep.api.core.db import (
     assign_alert_to_incident,
@@ -28,6 +30,7 @@ from keep.api.core.db import (
 from keep.api.core.dependencies import (
     AuthenticatedEntity,
     AuthVerifier,
+    get_pusher_client,
 )
 
 from keep.api.core.db import (
@@ -40,6 +43,8 @@ from keep.api.core.db import (
 )
 
 logger = logging.getLogger(__name__)
+
+ALGORITHM_VERBOSE_NAME = "Basic correlation alrithm v0.2"
 
 
 def calculate_pmi_matrix(
@@ -119,6 +124,17 @@ async def mine_incidents_and_create_objects(
                     
                 summary = generate_incident_summary(incident)
                 update_incident_summary(incident.id, summary)
+    
+    pusher_client = get_pusher_client()
+    pusher_client.trigger(
+        f"private-{tenant_id}",
+        "ai-logs-change",
+        {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
+    )
+    logger.info(
+        "Client notified on new AI log",
+        extra={"tenant_id": tenant_id},
+    )
                 
 
     return {"incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]}
