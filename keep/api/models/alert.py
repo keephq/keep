@@ -363,6 +363,7 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
+    is_confirmed: bool
 
     generated_summary: str | None
 
@@ -389,6 +390,7 @@ class IncidentDto(IncidentDtoIn):
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
+            is_confirmed=db_incident.is_confirmed,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
             end_time=db_incident.end_time,
