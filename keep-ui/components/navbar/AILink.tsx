@@ -13,7 +13,6 @@ export const AILink = () => {
 
   const mutateAILogs = (logs: any) => {
     setNewText("AI iterated 🎉")
-    // setNewText(logs.log);
   }
 
   usePollAILogs(mutateAILogs);

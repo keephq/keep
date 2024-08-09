@@ -138,7 +138,7 @@ export default function Ai() {
 
                   <div className="mt-4">
                     <Subtitle>Log:</Subtitle>
-                    {basicAlgorithmLog && (<p>No recent logs found.</p>)}
+                    {!basicAlgorithmLog && (<p>No recent logs found.</p>)}{basicAlgorithmLog}
                   </div>
 
                   <button

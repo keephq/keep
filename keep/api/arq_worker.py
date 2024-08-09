@@ -10,7 +10,7 @@ from starlette.datastructures import CommaSeparatedStrings
 
 # internals
 from keep.api.core.config import config
-from keep.api.utils.import_ee import mine_incidents_and_create_objects
+from keep.api.tasks.process_background_ai_task import process_background_ai_task
 
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
@@ -19,6 +19,7 @@ ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     default=[
         "keep.api.tasks.process_event_task.async_process_event",
         "keep.api.tasks.process_topology_task.async_process_topology",
+        "keep.api.tasks.process_background_ai_task.process_background_ai_task",
     ],
 )
 FUNCTIONS: list = (
@@ -63,7 +64,8 @@ def get_worker() -> Worker:
         WorkerSettings, keep_result=keep_result, expires_extra_ms=expires
     )
 
-
+def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
+    return {*list(range(start, end, x))}
 class WorkerSettings:
     """
     Settings for the ARQ worker.
@@ -81,7 +83,6 @@ class WorkerSettings:
         conn_retry_delay=10,
     )
     functions: list = FUNCTIONS
-    if mine_incidents_and_create_objects is not NotImplemented:
-        cron_jobs = [
-            cron(mine_incidents_and_create_objects, minute=1, run_at_startup=True, unique=True)
-        ]
+    cron_jobs = [
+        cron(process_background_ai_task, minute=at_every_x_minutes(3), run_at_startup=True, unique=True, timeout=1500, max_tries=5)
+    ]

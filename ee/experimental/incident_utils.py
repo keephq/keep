@@ -49,14 +49,12 @@ ALGORITHM_VERBOSE_NAME = "Basic correlation alrithm v0.2"
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    tenant_id: str,
     upper_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60),
     use_n_historical_alerts: int = 10e10,
     sliding_window: int = 4 * 60 * 60,
     stride: int = 60 * 60,
 ) -> dict:
-    
-    tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Calculating PMI coefficients for alerts",
         extra={
@@ -72,7 +70,7 @@ def calculate_pmi_matrix(
 
 async def mine_incidents_and_create_objects(
         ctx: dict | None,  # arq context
-        authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+        tenant_id: str,
         alert_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60 * 60),
         alert_upper_timestamp: datetime = datetime.now(),
         use_n_historical_alerts: int = 10e10,
@@ -85,9 +83,8 @@ async def mine_incidents_and_create_objects(
         incident_similarity_threshold: float = 0.8,
     ):
 
-    calculate_pmi_matrix(ctx, authenticated_entity)
+    calculate_pmi_matrix(ctx, tenant_id)
 
-    tenant_id = authenticated_entity.tenant_id
     alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
     nc_queue = NodeCandidateQueue()
