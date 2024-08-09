@@ -331,53 +331,72 @@ class JiraProvider(BaseProvider):
 
     def _notify(
         self,
-        summary: str,
-        description: str = "",
-        issue_type: str = "",
+        summary: str = None,
+        description: str = None,
+        issue_type: str = "Task",
         project_key: str = "",
         board_name: str = "",
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
+        issue_key: str = None,
+        priority: str = None,
         **kwargs: dict,
     ):
-        """
-        Notify jira by creating an issue.
-        """
-        # if the user didn't provider a project_key, try to extract it from the board name
-        if not project_key:
-            project_key = self._extract_project_key_from_board_name(board_name)
-        issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
-        if not project_key or not summary or not issue_type or not description:
-            raise ProviderException(
-                f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
-            )
-        if labels and isinstance(labels, str):
-            labels = json.loads(labels.replace("'", '"'))
-        try:
-            self.logger.info("Notifying jira...")
-            result = self.__create_issue(
-                project_key=project_key,
-                summary=summary,
-                description=description,
-                issue_type=issue_type,
-                labels=labels,
-                components=components,
-                custom_fields=custom_fields,
-                **kwargs,
-            )
-            result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
-            self.logger.info("Notified jira!")
+            """
+            Notify JIRA by creating or updating an issue.
+            """
+            if issue_key:
+                return self._notify_update(
+                    issue_key=issue_key,
+                    summary=summary,
+                    description=description,
+                    priority=priority,
+                    labels=labels,
+                    components=components,
+                    custom_fields=custom_fields,
+                    **kwargs,
+                )
 
-            return result
-        except Exception as e:
-            context = {
-                "summary": summary,
-                "description": description,
-                "issue_type": issue_type,
-                "project_key": project_key,
-            }
-            raise ProviderException(f"Failed to notify jira: {e} - Params: {context}")
+            # if the user didn't provide a project_key, try to extract it from the board name
+            if not project_key:
+                project_key = self._extract_project_key_from_board_name(board_name)
+
+            issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
+
+            if not project_key or not summary or not issue_type or not description:
+                raise ProviderException(
+                    f"Project key, summary, issue type, and description are required! - {project_key}, {summary}, {issue_type}, {description}"
+                )
+
+            if labels and isinstance(labels, str):
+                labels = json.loads(labels.replace("'", '"'))
+
+            try:
+                self.logger.info("Notifying JIRA by creating a new issue...")
+                result = self.__create_issue(
+                    project_key=project_key,
+                    summary=summary,
+                    description=description,
+                    issue_type=issue_type,
+                    labels=labels,
+                    components=components,
+                    custom_fields=custom_fields,
+                    **kwargs,
+                )
+                result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
+                self.logger.info("Created a new issue in JIRA!")
+
+                return result
+            except Exception as e:
+                context = {
+                    "summary": summary,
+                    "description": description,
+                    "issue_type": issue_type,
+                    "project_key": project_key,
+                }
+                raise ProviderException(f"Failed to notify JIRA: {e} - Params: {context}")
+
 
     def _query(self, ticket_id="", board_id="", **kwargs: dict):
         """
@@ -407,6 +426,41 @@ class JiraProvider(BaseProvider):
                 )
             issue = response.json()
             return {"issue": issue}
+    
+    def _notify_update(self, issue_key: str, summary: str = None, description: str = None,priority: str = None, labels: List[str] = None, components: List[str] = None, custom_fields: dict = None, **kwargs: dict):
+            if not issue_key:
+                raise ProviderException("Issue key is required for updating an issue.")
+
+            url = self.__get_url(paths=["issue", issue_key])
+
+            fields = {}
+            if summary:
+                fields["summary"] = summary
+            if description:
+                fields["description"] = description
+            if priority:
+                fields["priority"] = {"name": priority}
+            if labels:
+                fields["labels"] = labels
+            if components:
+                fields["components"] = [{"name": component} for component in components]
+            if custom_fields:
+                fields.update(custom_fields)
+
+            request_body = {"fields": fields}
+
+            try:
+                self.logger.info(f"Updating issue {issue_key}...")
+                response = requests.put(
+                    url=url, json=request_body, auth=self.__get_auth(), verify=False
+                )
+                response.raise_for_status()
+                self.logger.info(f"Issue {issue_key} updated successfully!")
+                return {"issue": response.json()}
+            except Exception as e:
+                self.logger.exception(f"Failed to update issue {issue_key}", extra=response.json())
+                raise ProviderException(f"Failed to update issue {issue_key}: {e}")
+
 
 
 if __name__ == "__main__":
