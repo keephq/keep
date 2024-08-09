@@ -11,7 +11,7 @@ import {
   Node,
 } from "@xyflow/react";
 
-import { processStepV2, handleNextEdge, processWorkflowV2 } from "utils/reactFlow";
+import { createCustomEdgeMeta, processWorkflowV2 } from "utils/reactFlow";
 
 export type V2Properties = Record<string, any>;
 
@@ -41,10 +41,11 @@ export type FlowNode = Node & {
   nextStep?: NodeStepMeta[] | NodeStepMeta | null;
   prevNodeId?: string | null;
   nextNodeId?: string | null;
-  id:string;
+  id: string;
+  isNested: boolean;
 };
 
-const initialNodes: FlowNode[] = [
+const initialNodes: Partial<FlowNode>[] = [
   {
     id: "a",
     position: { x: 0, y: 0 },
@@ -121,7 +122,7 @@ export type FlowState = {
 export type StoreGet = () => FlowState
 export type StoreSet = (state: FlowState | Partial<FlowState> | ((state: FlowState) => FlowState | Partial<FlowState>)) => void
 
-function addNodeBetween(nodeOrEdge: string|null, step: any, type: string, set: StoreSet, get: StoreGet) {
+function addNodeBetween(nodeOrEdge: string | null, step: any, type: string, set: StoreSet, get: StoreGet) {
   if (!nodeOrEdge || !step) return;
   let edge = {} as Edge;
   if (type === 'node') {
@@ -135,11 +136,19 @@ function addNodeBetween(nodeOrEdge: string|null, step: any, type: string, set: S
   const { source: sourceId, target: targetId } = edge || {};
   if (!sourceId || !targetId) return;
 
+  const nodes = get().nodes;
+  const targetIndex = nodes.findIndex(node => node.id === targetId);
+  const sourceIndex = nodes.findIndex(node => node.id === sourceId);
+  if (targetIndex == -1) {
+    return;
+  }
   const newNodeId = uuidv4();
   const newStep = { ...step, id: newNodeId }
-  let { nodes, edges } = processWorkflowV2([
-    { id: sourceId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node',
-       edgeLabel: edge.label, edgeColor:edge?.style?.stroke},
+  let { nodes: newNodes, edges } = processWorkflowV2([
+    {
+      id: sourceId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node',
+      edgeLabel: edge.label, edgeColor: edge?.style?.stroke
+    },
     newStep,
     { id: targetId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node', edgeNotNeeded: true }
   ], { x: 0, y: 0 }, true);
@@ -148,9 +157,14 @@ function addNodeBetween(nodeOrEdge: string|null, step: any, type: string, set: S
     ...edges,
     ...(get().edges.filter(edge => !(edge.source == sourceId && edge.target == targetId)) || []),
   ];
+
+  const isNested = !!(nodes[targetIndex]?.isNested || nodes[sourceIndex]?.isNested);
+  newNodes = newNodes.map((node) => ({ ...node, isNested }));
+  newNodes = [...nodes.slice(0, targetIndex), ...newNodes, ...nodes.slice(targetIndex)];
+
   set({
     edges: newEdges,
-    nodes: [...get().nodes, ...nodes],
+    nodes: newNodes,
     isLayouted: false,
   });
   if (type == 'edge') {
@@ -173,10 +187,10 @@ const useStore = create<FlowState>((set, get) => ({
   toolboxConfiguration: {} as Record<string, any>,
   isLayouted: false,
   selectedEdge: null,
-  setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor:true }),
+  setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
   setIsLayouted: (isLayouted) => set({ isLayouted }),
   getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
-  addNodeBetween: (nodeOrEdge: string|null, step: any, type: string) => {
+  addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
     addNodeBetween(nodeOrEdge, step, type, set, get);
   },
   setToolBoxConfig: (config) => set({ toolboxConfiguration: config }),
@@ -184,11 +198,14 @@ const useStore = create<FlowState>((set, get) => ({
   updateSelectedNodeData: (key, value) => {
     const currentSelectedNode = get().selectedNode;
     if (currentSelectedNode) {
-      const updatedNodes = get().nodes.map((node) =>
-        node.id === currentSelectedNode
-          ? { ...node, data: { ...node.data, [key]: value } }
-          : node
-      );
+      const updatedNodes = get().nodes.map((node) => {
+        if (node.id === currentSelectedNode) {
+          //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
+          node.data[key] = value;
+          return {...node}
+        }
+        return node;
+      });
       set({
         nodes: updatedNodes
       });
@@ -266,7 +283,7 @@ const useStore = create<FlowState>((set, get) => ({
 
     try {
       let step: any = event.dataTransfer.getData("application/reactflow");
-      if(!step){
+      if (!step) {
         return;
       }
       console.log("step", step);
@@ -309,17 +326,45 @@ const useStore = create<FlowState>((set, get) => ({
     if (typeof ids !== 'string') {
       return;
     }
-    const idArray = Array.isArray(ids) ? ids : [ids];
-    let finalEdges = get().edges.filter((edge) => !idArray.includes(edge.source) && !idArray.includes(edge.target));
-    const sources = [...new Set(get().edges.filter((edge) => idArray.includes(edge.target)))];
-    const targets = [...new Set(get().edges.filter((edge) => idArray.includes(edge.source)))];
+    const nodes = get().nodes
+    const nodeStartIndex = nodes.findIndex((node) => ids == node.id);
+    if (nodeStartIndex === -1) {
+      return;
+    }
+    let idArray = Array.isArray(ids) ? ids : [ids];
+
+    console.log("nodes", nodes);
+
+    const startNode = nodes[nodeStartIndex];
+    console.log("startNode", startNode);
+    const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
+    console.log("customIdentifier", customIdentifier);
+
+    let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
+    endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
+    console.log("endIndex", endIndex);
+
+    const endNode = nodes[endIndex];
+    console.log("endNode", endNode);
+
+    const edges = get().edges;
+    let finalEdges = edges;
+    idArray = nodes.slice(nodeStartIndex, endIndex + 1).map((node) => node.id);
+    console.log("idArray", idArray);
+    finalEdges = edges.filter((edge) => !(idArray.includes(edge.source) || idArray.includes(edge.target)));
+
+    const sources = [...new Set(edges.filter((edge) => startNode.id === edge.target))];
+    const targets = [...new Set(edges.filter((edge) => endNode.id === edge.source))];
     targets.forEach((edge) => {
-      finalEdges = [...finalEdges, ...sources.map((source) => ({ ...edge, source: source.source, id: `e${source.source}-${edge.target}` }))];
+      finalEdges = [...finalEdges, ...sources.map((source) => createCustomEdgeMeta(source.source, edge.target, source.label)
+      )];
     });
+
+    const newNodes = [...nodes.slice(0, nodeStartIndex), ...nodes.slice(endIndex + 1)];
 
     set({
       edges: finalEdges,
-      nodes: get().nodes.filter((node) => !idArray.includes(node.id)),
+      nodes: newNodes,
       selectedNode: null,
       isLayouted: false
     });

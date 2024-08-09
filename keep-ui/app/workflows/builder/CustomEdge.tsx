@@ -23,7 +23,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   target,
   data,
   style,
-  s
 }: CustomEdgeProps) => {
   const { deleteEdges, edges, setSelectedEdge, selectedEdge } = useStore();
 
@@ -49,7 +48,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   let dynamicLabel = label; 
   const isLayouted = !!data?.isLayouted;
 
-  console.log("style=======>", id, style)
 
   const color = dynamicLabel === "True" ? "left-0 bg-green-500" : dynamicLabel === "False" ? "bg-red-500" : "bg-orange-500";
   return (

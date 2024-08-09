@@ -40,6 +40,7 @@ import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
+import BuilderChanagesTracker from "./BuilderChanagesTracker";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -316,19 +317,22 @@ function Builder({
 
   return (
     <>
-      <div className="pl-4 flex items-center space-x-3">
-        <Switch
-          id="switch"
-          name="switch"
-          checked={useReactFlow}
-          onChange={handleSwitchChange}
-        />
-        <label
-          htmlFor="switch"
-          className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
-        >
-          Switch to New Builder
-        </label>
+      <div className="flex items-center justify-between">
+        <div className="pl-4 flex items-center space-x-3">
+          <Switch
+            id="switch"
+            name="switch"
+            checked={useReactFlow}
+            onChange={handleSwitchChange}
+          />
+          <label
+            htmlFor="switch"
+            className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+          >
+            Switch to New Builder
+          </label>
+        </div>
+        {useReactFlow && <BuilderChanagesTracker />}
       </div>
       <Modal
         onRequestClose={closeGenerateModal}
@@ -352,7 +356,7 @@ function Builder({
       </Modal>
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
-         {getworkflowStatus()}
+          {getworkflowStatus()}
           {useReactFlow && (
             <div className="h-[90%]">
               <ReactFlowProvider>
@@ -361,11 +365,13 @@ function Builder({
                   loadedAlertFile={loadedAlertFile}
                   providers={providers}
                   definition={definition}
-                  onDefinitionChange={(def: any) => setDefinition(wrapDefinition(def))}
+                  onDefinitionChange={(def: any) =>
+                    setDefinition(wrapDefinition(def))
+                  }
                   toolboxConfiguration={getToolboxConfiguration(providers)}
                 />
               </ReactFlowProvider>
-              </div>
+            </div>
           )}
           {!useReactFlow && (
             <>

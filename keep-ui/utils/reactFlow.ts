@@ -1,25 +1,68 @@
 import { v4 as uuidv4 } from "uuid";
 import { FlowNode, V2Step } from "app/workflows/builder/builder-store";
 import { Edge } from "@xyflow/react";
+import { CorrelationForm as CorrelationFormType } from '.';
 
 
+
+function getKeyBasedSquence(step:any, id:string,  type:string) {
+    return `${step.type}__${id}__empty_${type}`;
+}
+
+export function reConstructWorklowToDefinition({
+    nodes,
+    edges, isNested = false}:{
+        nodes: FlowNode[],
+        edges: Edge[]
+        isNested?:boolean
+    }) {
+        const seuqences = [];
+        //ingoring the start node
+        const [first, ...rest] = nodes;
+        //poping the end node
+        rest.pop();
+        const edgeMap: Record<string, string[]> = {};
+        const nodeMap: Record<string, FlowNode> = {};
+        edges.forEach((edge) => {
+          const { source, target } = edge;
+      
+          if (edgeMap[source]) {
+            edgeMap[source].push(target);
+          } else {
+            edgeMap[source] = [target];
+          }
+        });
+
+        nodes.forEach((node) => {
+          nodeMap[node.id] = node;
+        });
+
+        const sequences = nodes.filter((node) => !node.isNested && !node.id.includes('end')).map((node) => node.data);
+        console.log("sequences in recontructWorklowToDefinition", sequences)
+
+}
 
 export function createSwitchNodeV2(
     step: any,
     nodeId: string,
     position: { x: number; y: number },
     nextNodeId?: string | null,
-    prevNodeId?: string | null
+    prevNodeId?: string | null,
+    isNested?: boolean,
 ): FlowNode[] {
     const customIdentifier = `${step.type}__end__${nodeId}`;
+    const { name, type, componentType, properties} = step;
     return [
         {
             id: nodeId,
             type: "custom",
             position: { x: 0, y: 0 },
             data: {
-                label: step.name,
-                ...step,
+                label: name,
+                type,
+                componentType,
+                id: nodeId,
+                properties,
             },
             isDraggable: false,
             prevNodeId,
@@ -27,7 +70,8 @@ export function createSwitchNodeV2(
             dragHandle: ".custom-drag-handle",
             style: {
                 margin: "0px 20px 0px 20px",
-            }
+            },
+            isNested: !!isNested
         },
         {
             id: customIdentifier,
@@ -42,13 +86,14 @@ export function createSwitchNodeV2(
             prevNodeId: nodeId,
             nextNodeId: nextNodeId,
             dragHandle: ".custom-drag-handle",
+            isNested: !!isNested
         },
     ];
 };
 
 
 
-export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId) {
+export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId, isNested) {
     if (step.componentType !== "switch") {
         return { nodes: [], edges: [] };
     }
@@ -64,10 +109,11 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId)
             componentType: key,
             name: "empty",
             properties: {},
+            isNested: true,
         }
     }
 
-    let [switchStartNode, switchEndNode] = createSwitchNodeV2(step, nodeId, position, nextNodeId, prevNodeId);
+    let [switchStartNode, switchEndNode] = createSwitchNodeV2(step, nodeId, position, nextNodeId, prevNodeId, isNested);
     trueBranches = [
         { ...switchStartNode.data, type: 'temp_node', componentType: "temp_node" },
         ...trueBranches,
@@ -85,9 +131,9 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId)
     let falsePostion = { x: position.x + 200, y: position.y - 100 };
 
     let { nodes: trueBranchNodes, edges: trueSubflowEdges } =
-        processWorkflowV2(trueBranches, truePostion) || {};
+        processWorkflowV2(trueBranches, truePostion, false, true) || {};
     let { nodes: falseSubflowNodes, edges: falseSubflowEdges } =
-        processWorkflowV2(falseBranches, falsePostion) || {};
+        processWorkflowV2(falseBranches, falsePostion, false, true) || {};
 
     function _adjustEdgeConnectionsAndLabelsForSwitch(type: string) {
         if (!type) {
@@ -126,7 +172,8 @@ export const createDefaultNodeV2 = (
     nodeId: string,
     position: { x: number; y: number },
     nextNodeId?: string | null,
-    prevNodeId?: string | null
+    prevNodeId?: string | null,
+    isNested?: boolean,
 ): FlowNode =>
 ({
     id: nodeId,
@@ -140,6 +187,7 @@ export const createDefaultNodeV2 = (
     isDraggable: false,
     nextNodeId,
     prevNodeId,
+    isNested: !!isNested
 } as FlowNode);
 
 const getRandomColor = () => {
@@ -161,7 +209,7 @@ export function createCustomEdgeMeta(source: string, target: string, label?: str
         style: { stroke: color || getRandomColor() }
     }
 }
-export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId) {
+export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId, isNested) {
     const nodes = [];
     const edges = [];
     const newNode = createDefaultNodeV2(
@@ -169,7 +217,8 @@ export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId
         nodeId,
         position,
         nextNodeId,
-        prevNodeId
+        prevNodeId,
+        isNested
     );
     if (step.type !== 'temp_node') {
         nodes.push(newNode);
@@ -181,7 +230,7 @@ export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId
     return { nodes, edges };
 }
 
-export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, parents = []) {
+export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, isNested) {
     const { sequence, ...rest } = step;
     const customIdentifier = `${step.type}__end__${nodeId}`;
 
@@ -194,7 +243,8 @@ export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, p
             isDraggable: false,
             dragHandle: ".custom-drag-handle",
             prevNodeId: prevNodeId,
-            nextNodeId: nextNodeId
+            nextNodeId: nextNodeId,
+            isNested: !!isNested,
         },
         {
             id: customIdentifier,
@@ -205,14 +255,15 @@ export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, p
             dragHandle: ".custom-drag-handle",
             prevNodeId: prevNodeId,
             nextNodeId: nextNodeId,
+            isNested: !!isNested
         },
     ];
 }
 
 
-export function handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId) {
+export function handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId, isNested) {
 
-    const [forEachStartNode, forEachEndNode] = getForEachNode(step, position, nodeId, prevNodeId, nextNodeId);
+    const [forEachStartNode, forEachEndNode] = getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, isNested);
 
     function _getEmptyNode(type: string) {
         const key = `empty_${type}`
@@ -222,7 +273,7 @@ export function handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId
             componentType: key,
             name: "empty",
             properties: {},
-            parents: [nodeId]
+            isNested: true,
         }
     }
     const sequences = [
@@ -233,7 +284,7 @@ export function handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId
         { id: forEachEndNode.id, type: "temp_node", componentType: "temp_node", name: "temp_node", properties: {} },
         { id: nextNodeId, type: "temp_node", componentType: "temp_node", name: "temp_node", properties: {}, edgeNotNeeded: true },
     ];
-    const { nodes, edges } = processWorkflowV2(sequences, position);
+    const { nodes, edges } = processWorkflowV2(sequences, position, false, true);
     return { nodes: [forEachStartNode, ...nodes, forEachEndNode], edges: edges };
 }
 
@@ -243,6 +294,7 @@ export const processStepV2 = (
     position: { x: number; y: number },
     nextNodeId?: string | null,
     prevNodeId?: string | null,
+    isNested?: boolean
 ) => {
     const nodeId = step.id;
     let newNodes: FlowNode[] = [];
@@ -250,21 +302,21 @@ export const processStepV2 = (
     switch (true) {
         case step?.componentType === "switch":
             {
-                const { nodes, edges } = handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId);
+                const { nodes, edges } = handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId, isNested);
                 newEdges = [...newEdges, ...edges];
                 newNodes = [...newNodes, ...nodes];
                 break;
             }
         case step?.componentType === "container" && step?.type === "foreach":
             {
-                const { nodes, edges } = handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId);
+                const { nodes, edges } = handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId, isNested);
                 newEdges = [...newEdges, ...edges];
                 newNodes = [...newNodes, ...nodes];
                 break;
             }
         default:
             {
-                const { nodes, edges } = handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId);
+                const { nodes, edges } = handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId, isNested);
                 newEdges = [...newEdges, ...edges];
                 newNodes = [...newNodes, ...nodes];
                 break;
@@ -274,7 +326,7 @@ export const processStepV2 = (
     return { nodes: newNodes, edges: newEdges };
 };
 
-export const processWorkflowV2 = (sequence: any, position: { x: number, y: number }, isFirstRender = false) => {
+export const processWorkflowV2 = (sequence: any, position: { x: number, y: number }, isFirstRender = false, isNested = false) => {
     let newNodes: FlowNode[] = [];
     let newEdges: Edge[] = [];
 
@@ -286,7 +338,8 @@ export const processWorkflowV2 = (sequence: any, position: { x: number, y: numbe
             step,
             position,
             nextNodeId,
-            prevNodeId
+            prevNodeId,
+            isNested,
         );
         newNodes = [...newNodes, ...nodes];
         newEdges = [...newEdges, ...edges];
