@@ -2,7 +2,7 @@ import enum
 import hashlib
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey
@@ -95,7 +95,26 @@ class AlertToIncident(SQLModel, table=True):
 
 
 class Incident(SQLModel, table=True):
+    __tablename__ = 'incident'
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+
+    # 3 below fields are used for single purpose -
+    # they let us support tree-like structures,
+    # where some incidents may have children
+    parent_id: Optional[UUID] = Field(
+        foreign_key='incident.id',
+        default=None,
+        nullable=True
+    )
+    parent: Optional['Incident'] = Relationship(
+        back_populates='children',
+        sa_relationship_kwargs=dict(
+            remote_side='Incident.id'
+        )
+    )
+    children: list['Incident'] = Relationship(back_populates='parent')
+
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
     name: str

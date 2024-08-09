@@ -110,3 +110,18 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     assert len(incident.sources) == 8
     assert sorted(incident.sources) == sorted(["source_{}".format(i) for i in range(2, 10)])
+
+
+class TestIncidentCreate:
+    def test_parent(self, db_session, setup_stress_alerts_no_elastic):
+        parent = create_incident_from_dict(
+            "keep",
+            {"name": "parent", "description": "parent"}
+        )
+        assert parent.parent_id is None
+
+        child = create_incident_from_dict(
+            "keep",
+            {"name": "child", "description": "child", "parent_id": parent.id}
+        )
+        assert child.parent_id == parent.id
