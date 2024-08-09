@@ -16,7 +16,8 @@ import {
 import Loading from "app/loading";
 import Image from "next/image";
 import { User as AuthUser } from "next-auth";
-import { UserPlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { TiUserAdd } from "react-icons/ti";
 import { useState, useEffect, useMemo } from "react";
 import { AuthenticationType } from "utils/authenticationType";
 import { useUsers } from "utils/hooks/useUsers";
@@ -50,7 +51,7 @@ export default function UsersSettings({
 
   const [userStates, setUserStates] = useState<{ [key: string]: { role: string, groups: string[] } }>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [filter, setFilter] = useState("");
   const [isNewUser, setIsNewUser] = useState(false);
 
@@ -125,7 +126,7 @@ export default function UsersSettings({
           <Button
             color="orange"
             size="md"
-            icon={UserPlusIcon}
+            icon={TiUserAdd}
             onClick={handleAddUserClick}
           >
             Add User
@@ -194,7 +195,7 @@ export default function UsersSettings({
                   <TableCell className="w-2/12">
                     <Text>{user.name}</Text>
                   </TableCell>
-                  <TableCell className="w-2/12">
+                  <TableCell className="w-3/12">
                     <div className="flex flex-wrap gap-1">
                       {userStates[user.email]?.role && (
                         <Badge color="orange" className="text-xs">
@@ -203,7 +204,7 @@ export default function UsersSettings({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="w-2/12">
+                  <TableCell className="w-3/12">
                     <div className="flex flex-wrap gap-1">
                       {userStates[user.email]?.groups.slice(0, 4).map((group, index) => (
                         <Badge key={index} color="orange" className="text-xs">
@@ -219,13 +220,15 @@ export default function UsersSettings({
                   </TableCell>
                   <TableCell className="w-1/12">
                     {user.email !== currentUser?.email && !user.ldap && (
-                      <Button
-                        icon={TrashIcon}
-                        variant="light"
-                        color="orange"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => handleDeleteUser(user.email, e)}
-                      />
+                      <div className="flex justify-end">
+                        <Button
+                          icon={TrashIcon}
+                          variant="light"
+                          color="orange"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleDeleteUser(user.email, e)}
+                        />
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
@@ -238,7 +241,7 @@ export default function UsersSettings({
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
         user={selectedUser}
-        isNewUser={!selectedUser}
+        isNewUser={isNewUser}
         mutateUsers={mutateUsers}
       />
     </div>

@@ -7,6 +7,7 @@ import { useRoles } from "utils/hooks/useRoles";
 import { useUsers } from "utils/hooks/useUsers";
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
+import "./multiselect.css";
 
 interface GroupSidebarProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
 
   const { data: session } = useSession();
   const { data: roles = [] } = useRoles();
-  const { data: users = [] } = useUsers();
+  const { data: users = [], mutate: mutateUsers } = useUsers();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -66,6 +67,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
 
       if (response.ok) {
         await mutateGroups();
+        await mutateUsers();
         handleClose();
       } else {
         const errorData = await response.json();
@@ -141,6 +143,10 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                         {...field}
                         error={!!errors.name}
                         errorMessage={errors.name?.message}
+                        disabled={!isNewGroup}
+                        className={`${
+                            isNewGroup ? "" : "bg-gray-200"
+                        }`}
                       />
                     )}
                   />
@@ -157,6 +163,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                         {...field}
                         onValueChange={(value) => field.onChange(value)}
                         value={field.value as string[]}
+                        className="custom-multiselect"
                       >
                         {users.map((user) => (
                           <MultiSelectItem key={user.email} value={user.email}>
@@ -179,6 +186,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                         {...field}
                         onValueChange={(value) => field.onChange(value)}
                         value={field.value as string[]}
+                        className="custom-multiselect"
                       >
                         {roles.map((role) => (
                           <MultiSelectItem key={role.id} value={role.name}>

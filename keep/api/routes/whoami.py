@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 )
 def get_tenant_id(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["read:settings"])
     ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id

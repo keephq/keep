@@ -6,7 +6,6 @@ import {
   EnvelopeIcon,
   KeyIcon,
   UsersIcon,
-  UserIcon,
   ShieldCheckIcon,
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
@@ -72,9 +71,9 @@ export default function SettingsPage() {
     const userSubTabIndex =
       newUserSubTab === "users"
         ? 0
-        : newUserSubTab === "api-keys"
-        ? 1
         : newUserSubTab === "groups"
+        ? 1
+        : newUserSubTab === "api-keys"
         ? 2
         : newUserSubTab === "roles"
         ? 3
@@ -111,11 +110,11 @@ export default function SettingsPage() {
                 <Tab icon={UsersIcon} onClick={() => handleUserSubTabChange("users")}>
                   Users
                 </Tab>
-                <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
-                  API Keys
-                </Tab>
                 <Tab icon={UserGroupIcon} onClick={() => handleUserSubTabChange("groups")}>
                   Groups
+                </Tab>
+                <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
+                  API Keys
                 </Tab>
                 <Tab icon={ShieldCheckIcon} onClick={() => handleUserSubTabChange("roles")}>
                   Roles
@@ -132,11 +131,11 @@ export default function SettingsPage() {
                   <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} />
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
-                  <APIKeysTab accessToken={session?.accessToken!} />
-                </TabPanel>
-                <TabPanel className="h-full mt-6">
                   <GroupsTab accessToken={session?.accessToken!} />
               </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  <APIKeysTab accessToken={session?.accessToken!} />
+                </TabPanel>
                 <TabPanel className="h-full mt-6">
                   <RolesTab accessToken={session?.accessToken!} />
                 </TabPanel>

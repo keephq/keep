@@ -78,7 +78,7 @@ export default function RolesTab({ accessToken }: Props) {
       <div className="flex justify-between mb-4">
         <div className="flex flex-col">
           <Title>Roles Management</Title>
-          <Subtitle>Manage user roles</Subtitle>
+          <Subtitle>Manage roles</Subtitle>
         </div>
         <div className="flex space-x-2">
           <Button

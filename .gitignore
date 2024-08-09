@@ -200,3 +200,4 @@ scripts/automatic_extraction_rules.py
 
 playwright_dump_*.html
 playwright_dump_*.png
+ldap_generated.ldif

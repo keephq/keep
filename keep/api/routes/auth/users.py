@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from keep.api.models.user import User
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -28,11 +28,17 @@ class CreateUserRequest(BaseModel):
 class UpdateUserRequest(BaseModel):
     email: Optional[str] = Field(alias="username")
     password: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[str] = Field(default=None)
     groups: Optional[list[str]] = None
 
     class Config:
         allow_population_by_field_name = True
+
+    @validator("role")
+    def empty_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
 
 
 @router.get("", description="Get all users")

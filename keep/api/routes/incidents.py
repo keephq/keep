@@ -341,7 +341,7 @@ def delete_alerts_from_incident(
 )
 def mine(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["write:incidents"])
     ),
     use_n_historical_alerts: int = 10000,
     incident_sliding_window_size: int = 6 * 24 * 60 * 60,

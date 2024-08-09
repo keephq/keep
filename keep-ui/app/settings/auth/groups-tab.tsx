@@ -21,6 +21,7 @@ import { useState, useEffect, useMemo } from "react";
 import GroupsSidebar from "./groups-sidebar";
 import { getApiURL } from "utils/apiUrl";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { MdGroupAdd } from "react-icons/md";
 
 interface Props {
   accessToken: string;
@@ -28,7 +29,7 @@ interface Props {
 
 export default function GroupsTab({ accessToken }: Props) {
   const { data: groups = [], isLoading: groupsLoading, mutate: mutateGroups } = useGroups();
-  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: users = [], isLoading: usersLoading, mutate: mutateUsers } = useUsers();
   const { data: roles = [] } = useRoles();
 
   const [groupStates, setGroupStates] = useState<{ [key: string]: { members: string[], roles: string[] } }>({});
@@ -70,11 +71,11 @@ export default function GroupsTab({ accessToken }: Props) {
     setIsSidebarOpen(true);
   };
 
-  const handleDeleteGroup = async (groupId: string, event: React.MouseEvent) => {
+  const handleDeleteGroup = async (groupName: string, event: React.MouseEvent) => {
     event.stopPropagation();
     if (window.confirm("Are you sure you want to delete this group?")) {
       try {
-        const url = `${getApiURL()}/auth/groups/${groupId}`;
+        const url = `${getApiURL()}/auth/groups/${groupName}`;
         const response = await fetch(url, {
           method: 'DELETE',
           headers: {
@@ -84,6 +85,7 @@ export default function GroupsTab({ accessToken }: Props) {
 
         if (response.ok) {
           await mutateGroups();
+          await mutateUsers();
         } else {
           console.error("Failed to delete group");
         }
@@ -105,8 +107,9 @@ export default function GroupsTab({ accessToken }: Props) {
             color="orange"
             size="md"
             onClick={handleAddGroupClick}
+            icon={MdGroupAdd}
           >
-            Create Group
+            Add Group
           </Button>
         </div>
       </div>
@@ -169,7 +172,7 @@ export default function GroupsTab({ accessToken }: Props) {
                       variant="light"
                       color="orange"
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleDeleteGroup(group.id, e)}
+                      onClick={(e) => handleDeleteGroup(group.name, e)}
                     />
                   </TableCell>
                 </TableRow>

@@ -4,8 +4,9 @@ from fastapi import Depends, HTTPException
 
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_scheme
-from keep.identitymanager.rbac import get_role_by_role_name
-from keycloak import KeycloakOpenID
+from keycloak import KeycloakOpenID, KeycloakOpenIDConnection
+from keycloak.keycloak_uma import KeycloakUMA
+from keycloak.uma_permissions import UMAPermission
 
 
 class KeycloakAuthVerifier(AuthVerifierBase):
@@ -30,12 +31,17 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             server_url=self.keycloak_url,
             realm_name=self.keycloak_realm,
             client_id=self.keycloak_client_id,
+            client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET"),
         )
-        self.keycloak_public_key = (
-            "-----BEGIN PUBLIC KEY-----\n"
-            + self.keycloak_client.public_key()
-            + "\n-----END PUBLIC KEY-----"
+        self.keycloak_openid_connection = KeycloakOpenIDConnection(
+            server_url=self.keycloak_url,
+            realm_name=self.keycloak_realm,
+            client_id=self.keycloak_client_id,
+            client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET"),
         )
+        self.keycloak_uma = KeycloakUMA(connection=self.keycloak_openid_connection)
+        # will be populated in on_start of the identity manager
+        self.protected_resource = None
 
     def _verify_bearer_token(
         self, token: str = Depends(oauth2_scheme)
@@ -43,27 +49,46 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         # verify keycloak token
         try:
             payload = self.keycloak_client.decode_token(token, validate=True)
-            tenant_id = payload.get("keep_tenant_id")
-            email = payload.get("preferred_username")
-            org_id = payload.get("active_organization", {}).get("id")
-            org_realm = payload.get("active_organization", {}).get("name")
-            role_name = "admin"
-            # TODO: add groups
-            # role_name = payload.get("keep_role")
-            # if not role_name:
-            #    raise HTTPException(
-            #        status_code=401, detail="Invalid Keycloak token - no role in token"
-            #    )
-            role = get_role_by_role_name(role_name)
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid Keycloak token")
-
-        # validate scopes
-        if not role.has_scopes(self.scopes):
-            raise HTTPException(
-                status_code=403,
-                detail="You don't have the required permissions to access this resource",
-            )
-        return AuthenticatedEntity(
-            tenant_id, email, None, role_name, org_id=org_id, org_realm=org_realm
+        tenant_id = payload.get("keep_tenant_id")
+        email = payload.get("preferred_username")
+        org_id = payload.get("active_organization", {}).get("id")
+        org_realm = payload.get("active_organization", {}).get("name")
+        role = (
+            payload.get("resource_access", {})
+            .get(self.keycloak_client_id, {})
+            .get("roles", [])
         )
+        # filter out uma_protection
+        role = [r for r in role if not r.startswith("uma_protection")]
+        if not role:
+            raise HTTPException(
+                status_code=401, detail="Invalid Keycloak token - no role"
+            )
+
+        role = role[0]
+        return AuthenticatedEntity(
+            tenant_id,
+            email,
+            None,
+            role,
+            org_id=org_id,
+            org_realm=org_realm,
+            token=token,
+        )
+
+    def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:
+        # use Keycloak's UMA to authorize
+        try:
+            permission = UMAPermission(
+                resource=self.protected_resource,
+                scope=self.scopes[0],  # todo: handle multiple scopes per resource
+            )
+            allowed = self.keycloak_uma.permissions_check(
+                token=authenticated_entity.token, permissions=[permission]
+            )
+        # secure fallback
+        except Exception:
+            raise HTTPException(status_code=401, detail="Permission check failed")
+        return allowed

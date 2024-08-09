@@ -134,7 +134,7 @@ def pull_data_from_providers(
 )
 def get_presets(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["read:preset"])
     ),
     session: Session = Depends(get_session),
 ) -> list[PresetDto]:
@@ -149,7 +149,6 @@ def get_presets(
         resource_type="preset",
         authenticated_entity=authenticated_entity,
     )
-
     # both global and private presets
     presets = get_presets_db(
         tenant_id=tenant_id,
@@ -182,7 +181,7 @@ class CreateOrUpdatePresetDto(BaseModel):
 def create_preset(
     body: CreateOrUpdatePresetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
     ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
@@ -218,7 +217,7 @@ def create_preset(
 def delete_preset(
     uuid: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["delete:presets"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -244,7 +243,7 @@ def update_preset(
     uuid: str,
     body: CreateOrUpdatePresetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
     ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
@@ -284,7 +283,7 @@ async def get_preset_alerts(
     preset_name: str,
     response: Response,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["read:presets"])
     ),
 ) -> list[AlertDto]:
 
@@ -329,7 +328,7 @@ def create_preset_tab(
     preset_id: str,
     body: CreatePresetTab,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
     ),
     session: Session = Depends(get_session),
 ):
@@ -380,7 +379,7 @@ def delete_tab(
     preset_id: str,
     tab_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["delete:presets"])
     ),
     session: Session = Depends(get_session),
 ):

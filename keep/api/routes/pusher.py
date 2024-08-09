@@ -13,7 +13,7 @@ def pusher_authentication(
     channel_name=Form(...),
     socket_id=Form(...),
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier()
+        IdentityManagerFactory.get_auth_verifier(["read:pusher"])
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict:

@@ -11,7 +11,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-class CreateGroupRequest(BaseModel):
+class CreateOrUpdateGroupRequest(BaseModel):
     name: str
     roles: list[str]
     members: list[str]
@@ -35,36 +35,36 @@ def get_groups(
 
 @router.post("", description="Create a group")
 def create_group(
-    group: CreateGroupRequest,
+    group: CreateOrUpdateGroupRequest,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["create:settings"])
+        IdentityManagerFactory.get_auth_verifier(["write:settings"])
     ),
 ):
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
-    return identity_manager.create_group(group)
+    return identity_manager.create_group(group.name, group.members, group.roles)
 
 
 @router.put("/{group_name}", description="Update a group")
 def update_group(
     group_name: str,
-    group: CreateGroupRequest,
+    group: CreateOrUpdateGroupRequest,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["create:settings"])
+        IdentityManagerFactory.get_auth_verifier(["write:settings"])
     ),
 ):
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
-    return identity_manager.update_group(group)
+    return identity_manager.update_group(group.name, group.members, group.roles)
 
 
 @router.delete("/{group_name}", description="Delete a group")
 def delete_group(
     group_name: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["create:settings"])
+        IdentityManagerFactory.get_auth_verifier(["write:settings"])
     ),
 ):
     identity_manager = IdentityManagerFactory.get_identity_manager(

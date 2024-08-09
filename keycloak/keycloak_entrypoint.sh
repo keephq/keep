@@ -2,7 +2,7 @@
 
 # Start Keycloak in the background
 echo "Starting Keycloak"
-/opt/keycloak/bin/kc.sh start-dev --import-realm -Dkeycloak.migration.strategy=OVERWRITE_EXISTIN &
+/opt/keycloak/bin/kc.sh start-dev --features=preview --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTIN &
 echo "Keycloak started"
 # Try to connect to Keycloak - wait until Keycloak is ready or timeout
 echo "Waiting for Keycloak to be ready"
@@ -36,3 +36,5 @@ tail -f /dev/null
 
 # command to run this container with mount to this directory:
 # docker run -v $(pwd):/mnt -it --entrypoint /bin/sh quay.io/keycloak/keycloak:latest
+# keep->realm settings -> security defenses -> Content-Security-Policy -> frame-src 'self' http://localhost:3000; frame-ancestors 'self' http://localhost:3000; object-src 'none';
+# keep->realm settings -> security defenses -> X-Frame-Options -> Allow

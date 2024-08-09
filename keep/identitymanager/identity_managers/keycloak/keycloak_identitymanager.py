@@ -3,23 +3,20 @@ import os
 
 import requests
 from fastapi import HTTPException
-from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
-from keycloak.openid_connection import KeycloakOpenIDConnection
-from keycloak.uma_permissions import UMAPermission
+from fastapi.routing import APIRoute
+from starlette.routing import Route
 
 from keep.api.models.user import Group, PermissionEntity, ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
-from keep.identitymanager.authverifierbase import (
-    ALL_RESOURCES,
-    AuthVerifierBase,
-    get_all_scopes,
-)
+from keep.identitymanager.authverifierbase import AuthVerifierBase, get_all_scopes
 from keep.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
     KeycloakAuthVerifier,
 )
 from keep.identitymanager.identitymanager import PREDEFINED_ROLES, BaseIdentityManager
-from keycloak import KeycloakAdmin, KeycloakUMA
+from keycloak import KeycloakAdmin
+from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError
+from keycloak.openid_connection import KeycloakOpenIDConnection
 
 # Some good sources on this topic:
 # 1. https://stackoverflow.com/questions/42186537/resources-scopes-permissions-and-policies-in-keycloak
@@ -49,7 +46,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 realm_name=os.environ["KEYCLOAK_REALM"],
                 client_secret_key=os.environ["KEYCLOAK_CLIENT_SECRET"],
             )
-            self.keycloak_uma = KeycloakUMA(connection=self.keycloak_id_connection)
+
             self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
             self.admin_url_without_client = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}'
             self.realm = os.environ["KEYCLOAK_REALM"]
@@ -61,14 +58,40 @@ class KeycloakIdentityManager(BaseIdentityManager):
         self.logger.info("Keycloak Identity Manager initialized")
 
     def on_start(self, app) -> None:
+        # if the on start process is disabled:
+        if os.environ.get("SKIP_KEYCLOAK_ONSTART", "false") == "true":
+            self.logger.info("Skipping keycloak on start")
+            return
+        # first, create all the scopes
         for scope in get_all_scopes():
             self.logger.info("Creating scope: %s", scope)
             self.create_scope(scope)
             self.logger.info("Scope created: %s", scope)
-        for resource in ALL_RESOURCES:
-            self.logger.info("Creating resource: %s", resource)
-            self.create_resource(resource)
-            self.logger.info("Resource created: %s", resource)
+        # create resource for each route
+        for route in app.routes:
+            self.logger.info("Creating resource for route %s", route.path)
+            # fetch the scopes for this route from the auth dependency
+            if isinstance(route, Route) and not isinstance(route, APIRoute):
+                self.logger.info("Skipping route: %s", route.path)
+                continue
+            if not route.dependant.dependencies:
+                self.logger.warning("Skipping unprotected route: %s", route.path)
+                continue
+
+            scopes = []
+            for dep in route.dependant.dependencies:
+                # for routes that have other dependencies
+                if not isinstance(dep.cache_key[0], KeycloakAuthVerifier):
+                    continue
+                scopes = dep.cache_key[0].scopes
+                dep.cache_key[0].protected_resource = route.path
+
+            # protected route but without scopes
+            if not scopes:
+                self.logger.warning("Route without scopes: %s", route.path)
+
+            self.create_resource(route.path, scopes=scopes, resource_type="keep_route")
+            self.logger.info("Resource created for route: %s", route.path)
         for role in PREDEFINED_ROLES:
             self.logger.info("Creating role: %s", role)
             self.create_role(role, predefined=True)
@@ -90,6 +113,18 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 None,
             )
             return [scope["id"]]
+
+    def get_permission_by_name(self, permission_name):
+        permissions = self.keycloak_admin.get_client_authz_permissions(self.client_id)
+        permission = next(
+            (
+                permission
+                for permission in permissions
+                if permission["name"] == permission_name
+            ),
+            None,
+        )
+        return permission
 
     def create_scope_based_permission(self, role: Role, policy_id: str) -> None:
         try:
@@ -113,9 +148,32 @@ class KeycloakIdentityManager(BaseIdentityManager):
             )
             return resp
         except KeycloakPostError as e:
+            # if the permissions already exists, just update it
             if "already exists" in str(e):
                 self.logger.info("Scope based permission already exists in Keycloak")
-                pass
+                # let's try to update
+                try:
+                    permission = self.get_permission_by_name(
+                        f"Permission for {role.name}"
+                    )
+                    permission_id = permission.get("id")
+                    resp = self.keycloak_admin.connection.raw_put(
+                        path=f"{self.admin_url}/authz/resource-server/permission/scope/{permission_id}",
+                        client_id=self.client_id,
+                        data=json.dumps(
+                            {
+                                "name": f"Permission for {role.name}",
+                                "scopes": list(scopes_ids),
+                                "policies": [policy_id],
+                                "resources": [],
+                                "decisionStrategy": "Affirmative".upper(),
+                                "type": "scope",
+                                "logic": "POSITIVE",
+                            }
+                        ),
+                    )
+                except Exception:
+                    pass
             else:
                 self.logger.error(
                     "Failed to create scope based permission in Keycloak: %s", str(e)
@@ -265,8 +323,8 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 ]
                 role = self.get_user_current_role(user_id=user.get("id"))
                 user_dto = User(
-                    email=user["email"],
-                    name=user["firstName"],
+                    email=user.get("email", ""),
+                    name=user.get("firstName", ""),
                     role=role,
                     created_at=user.get("createdTimestamp", ""),
                     ldap=(
@@ -359,7 +417,11 @@ class KeycloakIdentityManager(BaseIdentityManager):
             current_role = [
                 role for role in current_role if role["name"] != "uma_protection"
             ]
-            return current_role[0]["name"]
+            # if uma_protection is the only role, then the user has no role
+            if current_role:
+                return current_role[0]["name"]
+            else:
+                return None
         else:
             return None
 
@@ -438,11 +500,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
     def get_auth_verifier(self, scopes: list) -> AuthVerifierBase:
         return KeycloakAuthVerifier(scopes)
 
-    def create_resource(self, resource_name: str, scopes: list[str] = []) -> None:
+    def create_resource(
+        self, resource_name: str, scopes: list[str] = [], resource_type="keep_generic"
+    ) -> None:
         resource = {
             "name": resource_name,
             "displayName": f"Resource for {resource_name}",
-            "type": "urn:keep:resources:" + resource_name,
+            "type": "urn:keep:resources:" + resource_type,
             "scopes": [{"name": scope} for scope in scopes],
         }
         try:
@@ -468,66 +532,6 @@ class KeycloakIdentityManager(BaseIdentityManager):
         except KeycloakDeleteError as e:
             self.logger.error("Failed to delete resource from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to delete resource")
-
-    def check_permissions(
-        self,
-        resource_ids: list[str],
-        scope: str,
-        authenticated_entity: AuthenticatedEntity,
-    ) -> None:
-        try:
-            permissions = [
-                UMAPermission(resource=resource_id, scope=scope)
-                for resource_id in resource_ids
-            ]
-            has_permission = self.keycloak_uma.permissions_check(
-                token=authenticated_entity.access_token,
-                permissions=permissions,
-            )
-
-            if not has_permission:
-                self.logger.info(
-                    "Permission denied for resource_ids: %s, scope: %s",
-                    resource_ids,
-                    scope,
-                )
-                raise HTTPException(status_code=403, detail="Permission denied")
-
-            self.logger.info(
-                "Permission check successful for resource_ids: %s, scope: %s",
-                resource_ids,
-                scope,
-            )
-        except Exception as e:
-            self.logger.error("Failed to check permissions in Keycloak: %s", str(e))
-            raise HTTPException(status_code=500, detail="Failed to check permissions")
-
-    def check_permission(
-        self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
-    ) -> None:
-        try:
-            permission = UMAPermission(resource=resource_id, scope=scope)
-            has_permission = self.keycloak_uma.permissions_check(
-                token=authenticated_entity.access_token, permissions=[permission]
-            )
-
-            if not has_permission:
-                self.logger.info(
-                    "Permission denied for resource_id: %s, scope: %s",
-                    resource_id,
-                    scope,
-                )
-                raise HTTPException(status_code=403, detail="Permission denied")
-
-            self.logger.info(
-                "Permission check successful for resource_id: %s, scope: %s",
-                resource_id,
-                scope,
-            )
-
-        except Exception as e:
-            self.logger.error("Failed to check permissions in Keycloak: %s", str(e))
-            raise HTTPException(status_code=500, detail="Failed to check permissions")
 
     def get_groups(self) -> list[dict]:
         try:
@@ -802,6 +806,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.logger.error("Failed to fetch permissions from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch permissions")
 
+    # TODO: this should use UMA and not evaluation since evaluation needs admin access
     def get_user_permission_on_resource_type(
         self, resource_type: str, authenticated_entity: AuthenticatedEntity
     ) -> list[ResourcePermission]:
@@ -953,3 +958,106 @@ class KeycloakIdentityManager(BaseIdentityManager):
         except KeycloakDeleteError as e:
             self.logger.error("Failed to delete role from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to delete role")
+
+    def create_group(
+        self, group_name: str, members: list[str], roles: list[str]
+    ) -> None:
+        try:
+            # create it
+            group_id = self.keycloak_admin.create_group(
+                {
+                    "name": group_name,
+                }
+            )
+            # add members
+            for member in members:
+                user_id = self.get_user_id_by_email(member)
+                self.keycloak_admin.group_user_add(user_id=user_id, group_id=group_id)
+            # assign roles
+            for role in roles:
+                role_id = self.keycloak_admin.get_client_role_id(self.client_id, role)
+                self.keycloak_admin.assign_group_client_roles(
+                    client_id=self.client_id,
+                    group_id=group_id,
+                    roles=[{"id": role_id, "name": role}],
+                )
+        except KeycloakPostError as e:
+            if "already exists" in str(e):
+                self.logger.info("Group already exists in Keycloak")
+                pass
+            else:
+                self.logger.error("Failed to create group in Keycloak: %s", str(e))
+                raise HTTPException(status_code=500, detail="Failed to create group")
+
+    def update_group(
+        self, group_name: str, members: list[str], roles: list[str]
+    ) -> None:
+        try:
+            # get the group id
+            groups = self.keycloak_admin.get_groups(query={"search": group_name})
+            if not groups:
+                self.logger.error("Group not found")
+                raise HTTPException(status_code=404, detail="Group not found")
+            group_id = groups[0]["id"]
+            # check what members needs to be added and which to be removed
+            existing_members = self.keycloak_admin.get_group_members(group_id)
+            existing_members = [member.get("email") for member in existing_members]
+            members_to_add = [
+                member for member in members if member not in existing_members
+            ]
+            members_to_remove = [
+                member for member in existing_members if member not in members
+            ]
+            # remove members
+            for member in members_to_remove:
+                user_id = self.get_user_id_by_email(member)
+                self.keycloak_admin.group_user_remove(
+                    user_id=user_id, group_id=group_id
+                )
+
+            # add members
+            for member in members_to_add:
+                user_id = self.get_user_id_by_email(member)
+                self.keycloak_admin.group_user_add(user_id=user_id, group_id=group_id)
+
+            # check what roles needs to be added and which to be removed
+            existing_roles = self.keycloak_admin.get_group_client_roles(
+                client_id=self.client_id, group_id=group_id
+            )
+            existing_roles = [role["name"] for role in existing_roles]
+            roles_to_add = [role for role in roles if role not in existing_roles]
+            roles_to_remove = [role for role in existing_roles if role not in roles]
+            # remove roles
+            for role in roles_to_remove:
+                role_id = self.keycloak_admin.get_client_role_id(self.client_id, role)
+                self.keycloak_admin.connection.raw_delete(
+                    f"{self.admin_url_without_client}/groups/{group_id}/role-mappings/clients/{self.client_id}",
+                    payload={
+                        "client": self.client_id,
+                        "group": group_id,
+                        "roles": [{"id": role_id, "name": role}],
+                    },
+                )
+            # assign roles
+            for role in roles_to_add:
+                role_id = self.keycloak_admin.get_client_role_id(self.client_id, role)
+                self.keycloak_admin.assign_group_client_roles(
+                    client_id=self.client_id,
+                    group_id=group_id,
+                    roles=[{"id": role_id, "name": role}],
+                )
+        except KeycloakPostError as e:
+            self.logger.error("Failed to update group in Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to update group")
+
+    def delete_group(self, group_name: str) -> None:
+        try:
+            groups = self.keycloak_admin.get_groups(query={"search": group_name})
+            if not groups:
+                self.logger.error("Group not found")
+                raise HTTPException(status_code=404, detail="Group not found")
+            group_id = groups[0]["id"]
+            self.keycloak_admin.delete_group(group_id)
+        except KeycloakDeleteError as e:
+            self.logger.error("Failed to delete group from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to delete group")
