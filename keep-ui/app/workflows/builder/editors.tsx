@@ -418,40 +418,50 @@ export function StepEditorV2({
   installedProviders?: Provider[] | undefined | null;
 }) {
   const [useGlobalEditor, setGlobalEditor] = useState(false);
+  const [formData, setFormData] = useState<{ name?: string; properties?: any }>({});
   const { 
     selectedNode,
     updateSelectedNodeData,
     setOpneGlobalEditor,
     getNodeById
-  } = useStore()
+  } = useStore();
+
+  useEffect(() => {
+    if (selectedNode) {
+      const { data } = getNodeById(selectedNode) || {};
+      const { name, type, properties } = data || {};
+      setFormData({ name, type , properties });
+    }
+  }, [selectedNode, getNodeById]);
 
   if (!selectedNode) return null;
-  
-  
 
-  const {data} = getNodeById(selectedNode) || {};
-  const {name, type, properties} = data || {};
+  const providerType = formData?.type?.split("-")[1];
 
-  function onNameChanged(e: any) {
-      updateSelectedNodeData( "name", e.target.value);
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-  const setProperty = (key:string, value:any) => {
-    updateSelectedNodeData('properties', {...properties, [key]: value })
-  }
+  const handlePropertyChange = (key: string, value: any) => {
+    setFormData({
+      ...formData,
+      properties: { ...formData.properties, [key]: value },
+    });
+  };
 
-  const providerType = type?.split("-")[1];
-
-  if(!selectedNode){
-    return <EditorLayout>
-      <Title className="capitalize text-red-500">Node not found!</Title>
-    </EditorLayout>
-  }
-
-  const handleSwitchChange = (value:boolean)=>{
+  const handleSwitchChange = (value: boolean) => {
     setGlobalEditor(value);
     setOpneGlobalEditor(true);
-  }
+  };
+
+  const handleSubmit = () => {
+    // Finalize the changes before saving
+    updateSelectedNodeData('name', formData.name);
+    updateSelectedNodeData('properties', formData.properties);
+
+    // Perform any additional save logic, such as API calls
+    console.log('Final data saved:', formData);
+  };
 
   return (
     <EditorLayout>
@@ -467,40 +477,47 @@ export function StepEditorV2({
           className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
         >
           Switch to Global Editor
-          </label>
+        </label>
       </div>
       <Title className="capitalize">{providerType} Editor</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
         icon={KeyIcon}
-        value={name}
-        onChange={onNameChanged}
+        name="name"
+        value={formData.name || ''}
+        onChange={handleInputChange}
       />
-      {type.includes("step-") || type.includes("action-") ? (
+      {formData.type?.includes("step-") || formData.type?.includes("action-") ? (
         <KeepStepEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
           installedProviders={installedProviders}
           providerType={providerType}
-          type={type}
+          type={formData.type}
         />
-      ) : type === "condition-threshold" ? (
+      ) : formData.type === "condition-threshold" ? (
         <KeepThresholdConditionEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
         />
-      ) : type.includes("foreach") ? (
+      ) : formData.type?.includes("foreach") ? (
         <KeepForeachEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
         />
-      ) : type === "condition-assert" ? (
+      ) : formData.type === "condition-assert" ? (
         <KeepAssertConditionEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
         />
       ) : null}
+      <button
+        className="mt-4 bg-orange-500 text-white p-2 rounded"
+        onClick={handleSubmit}
+      >
+        Save
+      </button>
     </EditorLayout>
   );
 }
