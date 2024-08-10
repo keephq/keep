@@ -15,6 +15,7 @@ function IconUrlProvider(data: FlowNode["data"]) {
   return `/icons/${type
     ?.replace("step-", "")
     ?.replace("action-", "")
+    ?.replace("__end", "")
     ?.replace("condition-", "")}-icon.png`;
 }
 
@@ -23,13 +24,13 @@ function CustomNode({ id, data }: FlowNode) {
   const type = data?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
-    ?.replace("condition-", "");
+    ?.replace("condition-", "")
+    ?.replace("__end", "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
   const isLayouted = !!data?.isLayouted;
 
   const specialNodeCheck = ['start', 'end'].includes(type)
-
 
   return (
     <>
