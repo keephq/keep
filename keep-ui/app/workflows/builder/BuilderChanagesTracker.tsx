@@ -11,8 +11,6 @@ export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitio
     const [lastSavedChanges, setLastSavedChanges] = useState<{nodes:FlowNode[], edges:Edge[]}>({nodes: nodes, edges: edges});
     const [firstInitilisationDone, setFirstInitilisationDone] = useState(false);
 
-    console.log("isLayouted", isLayouted);
-
     useEffect(()=>{
         if(isLayouted && firstInitilisationDone) {
             setChanges((prev)=>prev+1);

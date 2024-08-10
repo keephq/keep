@@ -92,8 +92,6 @@ function Builder({
 
   const searchParams = useSearchParams();
 
-  console.log("definition", definition);
-
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
     const url = `${apiUrl}/workflows/${workflowId}`;

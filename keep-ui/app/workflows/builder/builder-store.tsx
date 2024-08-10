@@ -152,7 +152,6 @@ function addNodeBetween(nodeOrEdge: string | null, step: any, type: string, set:
     newStep,
     { id: targetId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node', edgeNotNeeded: true }
   ], { x: 0, y: 0 }, true);
-  console.log("new nodes, edges", nodes, edges);
   const newEdges = [
     ...edges,
     ...(get().edges.filter(edge => !(edge.source == sourceId && edge.target == targetId)) || []),
@@ -286,7 +285,6 @@ const useStore = create<FlowState>((set, get) => ({
       if (!step) {
         return;
       }
-      console.log("step", step);
       step = JSON.parse(step);
       if (!step) return;
       // Use the screenToFlowPosition function to get flow coordinates
@@ -333,24 +331,17 @@ const useStore = create<FlowState>((set, get) => ({
     }
     let idArray = Array.isArray(ids) ? ids : [ids];
 
-    console.log("nodes", nodes);
-
     const startNode = nodes[nodeStartIndex];
-    console.log("startNode", startNode);
     const customIdentifier = `${startNode?.data?.type}__end__${startNode?.id}`;
-    console.log("customIdentifier", customIdentifier);
 
     let endIndex = nodes.findIndex((node) => node.id === customIdentifier);
     endIndex = endIndex === -1 ? nodeStartIndex : endIndex;
-    console.log("endIndex", endIndex);
 
     const endNode = nodes[endIndex];
-    console.log("endNode", endNode);
 
     const edges = get().edges;
     let finalEdges = edges;
     idArray = nodes.slice(nodeStartIndex, endIndex + 1).map((node) => node.id);
-    console.log("idArray", idArray);
     finalEdges = edges.filter((edge) => !(idArray.includes(edge.source) || idArray.includes(edge.target)));
 
     const sources = [...new Set(edges.filter((edge) => startNode.id === edge.target))];
