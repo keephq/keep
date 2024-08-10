@@ -4,13 +4,12 @@ import { Button } from '@tremor/react';
 import { Edge } from '@xyflow/react';
 import { reConstructWorklowToDefinition } from 'utils/reactFlow';
 
-export default function BuilderChanagesTracker() {
+export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitionChange:(def: WrappedDefinition<Definition>) => void}) {
     const {nodes, edges,setEdges, setNodes, isLayouted, setIsLayouted, v2Properties} = useStore();
     const [changes, setChanges] = useState(0);
     const [savedChanges, setSavedChanges] = useState(0);
     const [lastSavedChanges, setLastSavedChanges] = useState<{nodes:FlowNode[], edges:Edge[]}>({nodes: nodes, edges: edges});
     const [firstInitilisationDone, setFirstInitilisationDone] = useState(false);
-    const [proprtiesUpdated, setPropertiesUpdated] = useState(false);
 
     console.log("isLayouted", isLayouted);
 
@@ -20,14 +19,11 @@ export default function BuilderChanagesTracker() {
         }
         if(isLayouted && !firstInitilisationDone) {
           setFirstInitilisationDone(true);
+          setChanges(0);
           setLastSavedChanges({nodes: nodes, edges: edges});
         }
     },[isLayouted])
 
-
-    useEffect(()=>{
-        reConstructWorklowToDefinition(lastSavedChanges);
-    }, [lastSavedChanges])
 
 
    const handleDiscardChanges = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -35,17 +31,17 @@ export default function BuilderChanagesTracker() {
     setEdges(lastSavedChanges.edges || []);
     setNodes(lastSavedChanges.nodes || []);
     setChanges(0);
-    setFirstInitilisationDone(false);
     setIsLayouted(false);
    } 
 
    const handleSaveChanges = (e: React.MouseEvent<HTMLButtonElement>) =>{
     e.preventDefault();
     e.stopPropagation();
+    setChanges(0);
     setSavedChanges((prev)=>(prev+1 || 0));
     setLastSavedChanges({nodes: nodes, edges: edges});
-    setChanges(0);
-    setPropertiesUpdated(false);
+    const value = reConstructWorklowToDefinition({nodes: nodes, edges: edges, properties: v2Properties});
+    onDefinitionChange(value);
    }
 
 
@@ -59,7 +55,7 @@ export default function BuilderChanagesTracker() {
        >Discard{changes ? `(${changes})`: ""}</Button>
       <Button
        onClick={handleSaveChanges}
-       disabled={proprtiesUpdated ? false : !isLayouted || changes === 0}
+       disabled={!isLayouted || changes === 0}
        >Save{savedChanges ? `(${savedChanges})`: ""}</Button>
     </div>
   )

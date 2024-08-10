@@ -332,7 +332,11 @@ function Builder({
             Switch to New Builder
           </label>
         </div>
-        {useReactFlow && <BuilderChanagesTracker />}
+        {useReactFlow && <BuilderChanagesTracker 
+          onDefinitionChange={(def: any) =>
+          setDefinition(wrapDefinition(def))
+        }
+        />}
       </div>
       <Modal
         onRequestClose={closeGenerateModal}
