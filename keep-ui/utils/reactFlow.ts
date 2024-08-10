@@ -25,7 +25,7 @@ export function reConstructWorklowToDefinition({
           
             for (let i = startIdx; i < endIdx; i++) {
               const currentNode = originalNodes[i];
-              const nodeData = currentNode?.data;
+              const {isLayOuted, ...nodeData} = currentNode?.data;
               const nodeType = nodeData?.type;
               if (currentNode.id === foreachEmptyId) {
                 foreachNode.sequence = tempSequence;
@@ -57,16 +57,14 @@ export function reConstructWorklowToDefinition({
           
             const trueBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_true`;
             const falseBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_false`;
-            let tempSeqs = [];
             let trueCaseAdded = false;
             let falseCaseAdded = false;
             let tempSequence = [];
             let i = startIdx;
             for (; i < endIdx; i++) {
               const currentNode = originalNodes[i];
-              const nodeData = currentNode?.data;
+              const {isLayOuted, ...nodeData} = currentNode?.data;
               const nodeType = nodeData?.type;
-          
               if (trueCaseAdded && falseCaseAdded) {
                 return i;
               }
@@ -104,7 +102,7 @@ export function reConstructWorklowToDefinition({
             const workflowSequence = [];
             for (let i = startIdx; i < endIdx; i++) {
               const currentNode = originalNodes[i];
-              const nodeData = currentNode?.data;
+              const {isLayOuted, ...nodeData} = currentNode?.data;
               const nodeType = nodeData?.type;
               if (["condition-threshold", "condition-assert"].includes(nodeType)) {
                 workflowSequence.push(nodeData);
@@ -166,7 +164,7 @@ export function createSwitchNodeV2(
             data: {
                 label: "+",
                 id: customIdentifier,
-                type: `${step.type}__end_node`,
+                type: `${step.type}__end`,
             },
             isDraggable: false,
             prevNodeId: nodeId,
@@ -334,7 +332,7 @@ export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, i
         },
         {
             id: customIdentifier,
-            data: { ...rest, id: customIdentifier, name: "foreach end", label: "foreach end" },
+            data: { ...rest, id: customIdentifier, name: "foreach end", label: "foreach end", type: `${step.type}__end`},
             type: "custom",
             position: { x: 0, y: 0 },
             isDraggable: false,

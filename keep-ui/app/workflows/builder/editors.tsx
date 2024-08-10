@@ -70,7 +70,7 @@ export function GlobalEditorV2() {
         and click the `Generate` button to compile the workflow / `Deploy`
         button to deploy the workflow to Keep.
       </Text>
-      <WorkflowEditor
+      <WorkflowEditorV2
         initialProperties={localProperties}
         onUpdate={setLocalProperties}
       />
@@ -283,7 +283,150 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
   );
 }
 
-function WorkflowEditor({
+function WorkflowEditor(properties: Properties, updateProperty: any) {
+  /**
+   * TODO: support generate, add more triggers and complex filters
+   *  Need to think about UX for this
+   */
+  const propertyKeys = Object.keys(properties).filter(
+    (k) => k !== "isLocked" && k !== "id"
+  );
+
+  const updateAlertFilter = (filter: string, value: string) => {
+    const currentFilters = properties.alert as {};
+    const updatedFilters = { ...currentFilters, [filter]: value };
+    updateProperty("alert", updatedFilters);
+  };
+
+  const addFilter = () => {
+    const filterName = prompt("Enter filter name");
+    if (filterName) {
+      updateAlertFilter(filterName, "");
+    }
+  };
+
+  const addTrigger = (trigger: "manual" | "interval" | "alert") => {
+    updateProperty(
+      trigger,
+      trigger === "alert" ? { source: "" } : trigger === "manual" ? "true" : ""
+    );
+  };
+
+  const deleteFilter = (filter: string) => {
+    const currentFilters = properties.alert as any;
+    delete currentFilters[filter];
+    updateProperty("alert", currentFilters);
+  };
+
+  return (
+    <>
+      <Title className="mt-2.5">Workflow Settings</Title>
+      <div className="w-1/2">
+        {Object.keys(properties).includes("manual") ? null : (
+          <Button
+            onClick={() => addTrigger("manual")}
+            className="mb-1"
+            size="xs"
+            color="orange"
+            variant="light"
+            icon={HandRaisedIcon}
+          >
+            Add Manual Trigger
+          </Button>
+        )}
+        {Object.keys(properties).includes("interval") ? null : (
+          <Button
+            onClick={() => addTrigger("interval")}
+            className="mb-1"
+            size="xs"
+            color="orange"
+            variant="light"
+            icon={ClockIcon}
+          >
+            Add Interval Trigger
+          </Button>
+        )}
+        {Object.keys(properties).includes("alert") ? null : (
+          <Button
+            onClick={() => addTrigger("alert")}
+            className="mb-1"
+            size="xs"
+            color="orange"
+            variant="light"
+            icon={BellSnoozeIcon}
+          >
+            Add Alert Trigger
+          </Button>
+        )}
+      </div>
+      {propertyKeys.map((key, index) => {
+        return (
+          <div key={index}>
+            <Text className="capitalize mt-2.5">{key}</Text>
+            {key === "manual" ? (
+              <div key={key}>
+                <input
+                  type="checkbox"
+                  checked={properties[key] === "true"}
+                  onChange={(e) =>
+                    updateProperty(key, e.target.checked ? "true" : "false")
+                  }
+                />
+              </div>
+            ) : key === "alert" ? (
+              <>
+                <div className="w-1/2">
+                  <Button
+                    onClick={addFilter}
+                    size="xs"
+                    className="ml-1 mt-1"
+                    variant="light"
+                    color="gray"
+                    icon={FunnelIcon}
+                  >
+                    Add Filter
+                  </Button>
+                </div>
+                {properties.alert &&
+                  Object.keys(properties.alert as {}).map((filter) => {
+                    return (
+                      <>
+                        <Subtitle className="mt-2.5">{filter}</Subtitle>
+                        <div className="flex items-center mt-1" key={filter}>
+                          <TextInput
+                            key={filter}
+                            placeholder={`Set alert ${filter}`}
+                            onChange={(e: any) =>
+                              updateAlertFilter(filter, e.target.value)
+                            }
+                            value={(properties.alert as any)[filter] as string}
+                          />
+                          <Icon
+                            icon={BackspaceIcon}
+                            className="cursor-pointer"
+                            color="red"
+                            tooltip={`Remove ${filter} filter`}
+                            onClick={() => deleteFilter(filter)}
+                          />
+                        </div>
+                      </>
+                    );
+                  })}
+              </>
+            ) : (
+              <TextInput
+                placeholder={`Set the ${key}`}
+                onChange={(e: any) => updateProperty(key, e.target.value)}
+                value={properties[key] as string}
+              />
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+function WorkflowEditorV2({
   initialProperties,
   onUpdate,
 }: {

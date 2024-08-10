@@ -130,7 +130,12 @@ const useWorkflowInitialization = (
     selectedNode,
     setToolBoxConfig,
     isLayouted,
-    setIsLayouted
+    setIsLayouted,
+    setLastSavedChanges,
+    changes,
+    setChanges,
+    firstInitilisationDone,
+    setFirstInitilisationDone
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -195,10 +200,18 @@ const useWorkflowInitialization = (
     if (!isLayouted && nodes.length > 0) {
       onLayout({ direction: 'DOWN' })
       setIsLayouted(true)
+      if(!firstInitilisationDone){
+        setFirstInitilisationDone(true)
+        setLastSavedChanges({nodes: nodes, edges: edges});
+        setChanges(0)
+      }
     }
 
     if (!isLayouted && nodes.length === 0) {
       setIsLayouted(true);
+      if(!firstInitilisationDone){
+        setChanges(0)
+      }
     }
     // window.requestAnimationFrame(() => {
     //   fitView();
