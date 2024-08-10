@@ -38,13 +38,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   const midpointX = (sourceX + targetX) / 2;
   const midpointY = (sourceY + targetY) / 2;
 
-  // const handleDelete = (e: React.MouseEvent<HTMLButtonElement>) => {
-  //   e.stopPropagation();
-  //   e.preventDefault();
-  //   deleteEdges(id);
-  // };
-
-
   let dynamicLabel = label; 
   const isLayouted = !!data?.isLayouted;
 
@@ -55,7 +48,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
       <BaseEdge
         id={id}
         path={edgePath}
-        // className="stroke-gray-700 stroke-2" // Tailwind class for edge color and thickness
         style={{ opacity: isLayouted ? 1 : 0,
           ...style,
           strokeWidth: 2,

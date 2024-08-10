@@ -1,5 +1,5 @@
-import React, { memo, useEffect, useState } from "react";
-import { Handle, NodeToolbar, Position } from "@xyflow/react";
+import React, { memo } from "react";
+import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
 import useStore, { FlowNode } from "./builder-store";
 import Image from "next/image";
@@ -28,8 +28,6 @@ function CustomNode({ id, data }: FlowNode) {
     ?.replace("__end", "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
-  const isLayouted = !!data?.isLayouted;
-
   const specialNodeCheck = ['start', 'end'].includes(type)
 
   return (
@@ -121,7 +119,6 @@ function CustomNode({ id, data }: FlowNode) {
               />}
               </div>
           }
-
           {'start' === type && <Handle
             type="source"
             position={Position.Bottom}
@@ -133,11 +130,8 @@ function CustomNode({ id, data }: FlowNode) {
             position={Position.Top}
             className="w-32"
           />}
-
-
         </div>
       </div>}
-
     </>
   );
 }

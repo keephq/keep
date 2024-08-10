@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react'
-import useStore, { FlowNode } from './builder-store';
+import React from 'react'
+import useStore from './builder-store';
 import { Button } from '@tremor/react';
-import { Edge } from '@xyflow/react';
 import { reConstructWorklowToDefinition } from 'utils/reactFlow';
+import { WrappedDefinition } from 'sequential-workflow-designer-react';
+import { Definition } from 'sequential-workflow-designer';
 
-export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitionChange:(def: WrappedDefinition<Definition>) => void}) {
+export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitionChange:(def: Record<string,any>) => void}) {
    const {
      nodes,
      edges,

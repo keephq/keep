@@ -25,7 +25,7 @@ export function reConstructWorklowToDefinition({
           
             for (let i = startIdx; i < endIdx; i++) {
               const currentNode = originalNodes[i];
-              const {isLayOuted, ...nodeData} = currentNode?.data;
+              const {isLayouted, ...nodeData} = currentNode?.data;
               const nodeType = nodeData?.type;
               if (currentNode.id === foreachEmptyId) {
                 foreachNode.sequence = tempSequence;
@@ -63,7 +63,7 @@ export function reConstructWorklowToDefinition({
             let i = startIdx;
             for (; i < endIdx; i++) {
               const currentNode = originalNodes[i];
-              const {isLayOuted, ...nodeData} = currentNode?.data;
+              const {isLayouted, ...nodeData} = currentNode?.data;
               const nodeType = nodeData?.type;
               if (trueCaseAdded && falseCaseAdded) {
                 return i;
@@ -102,7 +102,7 @@ export function reConstructWorklowToDefinition({
             const workflowSequence = [];
             for (let i = startIdx; i < endIdx; i++) {
               const currentNode = originalNodes[i];
-              const {isLayOuted, ...nodeData} = currentNode?.data;
+              const {isLayouted, ...nodeData} = currentNode?.data;
               const nodeType = nodeData?.type;
               if (["condition-threshold", "condition-assert"].includes(nodeType)) {
                 workflowSequence.push(nodeData);
