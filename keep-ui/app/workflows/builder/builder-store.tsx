@@ -116,6 +116,12 @@ export type FlowState = {
   selectedEdge: string | null;
   setSelectedEdge: (id: string | null) => void;
   getEdgeById: (id: string) => Edge | undefined;
+  changes: number;
+  setChanges: (changes: number)=>void;
+  firstInitilisationDone: boolean;
+  setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
+  lastSavedChanges: {nodes: FlowNode[] | null, edges: Edge[] | null};
+  setLastSavedChanges: ({nodes, edges}: {nodes: FlowNode[], edges: Edge[]}) => void;
 };
 
 
@@ -166,6 +172,7 @@ function addNodeBetween(nodeOrEdge: string | null, step: any, type: string, set:
     edges: newEdges,
     nodes: newNodes,
     isLayouted: false,
+    changes: get().changes + 1
   });
   if (type == 'edge') {
     set({ selectedEdge: edges[edges.length - 1]?.id });
@@ -187,7 +194,13 @@ const useStore = create<FlowState>((set, get) => ({
   toolboxConfiguration: {} as Record<string, any>,
   isLayouted: false,
   selectedEdge: null,
+  changes: 0,
+  lastSavedChanges:{nodes: [], edges:[]},
+  firstInitilisationDone: false,
+  setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
+  setLastSavedChanges:({nodes, edges}:{nodes:FlowNode[],edges:Edge[]})=>set({lastSavedChanges: {nodes, edges}}),
   setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
+  setChanges: (changes:number)=>set({changes: changes}),
   setIsLayouted: (isLayouted) => set({ isLayouted }),
   getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
   addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
@@ -207,7 +220,8 @@ const useStore = create<FlowState>((set, get) => ({
         return node;
       });
       set({
-        nodes: updatedNodes
+        nodes: updatedNodes,
+        changes: get().changes + 1
       });
     }
   },
@@ -366,7 +380,8 @@ const useStore = create<FlowState>((set, get) => ({
       edges: finalEdges,
       nodes: newNodes,
       selectedNode: null,
-      isLayouted: false
+      isLayouted: false,
+      changes: get().changes + 1
     });
   },
   updateEdge: (id: string, key: string, value: any) => {
