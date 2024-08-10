@@ -1,18 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
-import { Button, TextInput, Switch,Text } from "@tremor/react";
+import { Button, TextInput, Switch, Text } from "@tremor/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
+import { useTags } from "utils/hooks/useTags";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
-import QueryBuilder, {
-  formatQuery,
-  parseCEL,
-} from "react-querybuilder";
+import QueryBuilder, { formatQuery, parseCEL } from "react-querybuilder";
+import CreatableSelect from "react-select/creatable";
+import { MultiValue } from "react-select";
+
+
+// Define types for the tags
+interface TagOption {
+  id?: number;
+  name: string;
+}
 
 interface Props {
   presetNameFromApi: string;
@@ -35,6 +42,7 @@ export default function AlertPresets({
     revalidateOnFocus: false,
   });
   const { data: session } = useSession();
+  const { data: tags = [], mutate: mutateTags } = useTags();
   const router = useRouter();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,12 +54,22 @@ export default function AlertPresets({
   const [isPrivate, setIsPrivate] = useState(presetPrivate);
   const [isNoisy, setIsNoisy] = useState(presetNoisy);
   const [presetCEL, setPresetCEL] = useState("");
+  const [selectedTags, setSelectedTags] = useState<TagOption[]>([]);
+  const [newTags, setNewTags] = useState<string[]>([]); // New tags created during the session
 
   const selectedPreset = savedPresets.find(
     (savedPreset) =>
       savedPreset.name.toLowerCase() ===
       decodeURIComponent(presetNameFromApi).toLowerCase()
   ) as Preset | undefined;
+
+  useEffect(() => {
+    if (selectedPreset) {
+      setSelectedTags(
+        selectedPreset.tags.map((tag) => ({ id: tag.id, name: tag.name }))
+      );
+    }
+  }, [selectedPreset]);
 
   async function deletePreset(presetId: string) {
     if (
@@ -78,8 +96,12 @@ export default function AlertPresets({
 
   async function addOrUpdatePreset() {
     if (presetName) {
-      // translate the CEL to SQL
-      const sqlQuery = formatQuery(parseCEL(presetCEL), { format: 'parameterized_named', parseNumbers: true });
+      // Translate the CEL to SQL
+      const sqlQuery = formatQuery(parseCEL(presetCEL), {
+        format: "parameterized_named",
+        parseNumbers: true,
+      });
+
       const response = await fetch(
         selectedPreset?.id
           ? `${apiUrl}/preset/${selectedPreset?.id}`
@@ -100,10 +122,14 @@ export default function AlertPresets({
               {
                 label: "SQL",
                 value: sqlQuery,
-              }
+              },
             ],
             is_private: isPrivate,
             is_noisy: isNoisy,
+            tags: selectedTags.map((tag) => ({
+              id: tag.id,
+              name: tag.name,
+            })),
           }),
         }
       );
@@ -123,6 +149,21 @@ export default function AlertPresets({
       }
     }
   }
+
+  const handleCreateTag = (inputValue: string) => {
+    const newTag = { name: inputValue };
+    setNewTags((prevTags) => [...prevTags, inputValue]);
+    setSelectedTags((prevTags) => [...prevTags, newTag]);
+  };
+
+  const handleChange = (newValue: MultiValue<{ value: string; label: string }>) => {
+    setSelectedTags(
+      newValue.map((tag) => ({
+        id: tags.find((t) => t.name === tag.value)?.id,
+        name: tag.value,
+      }))
+    );
+  };
 
   return (
     <>
@@ -152,6 +193,21 @@ export default function AlertPresets({
               className="w-full"
             />
           </div>
+
+          <CreatableSelect
+            isMulti
+            value={selectedTags.map((tag) => ({
+              value: tag.name,
+              label: tag.name,
+            }))}
+            onChange={handleChange}
+            onCreateOption={handleCreateTag}
+            options={tags.map((tag) => ({
+              value: tag.name,
+              label: tag.name,
+            }))}
+            placeholder="Select or create tags"
+          />
 
           <div className="flex items-center space-x-2">
             <Switch
