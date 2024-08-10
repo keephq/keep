@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { NextAuthProvider } from "./auth-provider";
-import ErrorBoundary from "./error-boundary";
 import { Mulish } from "next/font/google";
 
 import "./globals.css";
@@ -29,7 +28,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
           {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
           <main className="flex flex-col col-start-3 p-4 overflow-auto">
             <div className="flex-1">
-              <ErrorBoundary>{children}</ErrorBoundary>
+              {children}
             </div>
             <ToastContainer />
           </main>

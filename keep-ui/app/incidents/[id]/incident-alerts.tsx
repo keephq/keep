@@ -26,16 +26,51 @@ import {
 import AlertName from "app/alerts/alert-name";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
+import IncidentPagination from "../incident-pagination";
+import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
+import {IncidentDto} from "../model";
 
 interface Props {
-  incidentId: string;
+  incident: IncidentDto;
 }
+
+interface Pagination {
+  limit: number;
+  offset: number;
+}
+
 
 const columnHelper = createColumnHelper<AlertDto>();
 
-export default function IncidentAlerts({ incidentId }: Props) {
-  const { data: alerts } = useIncidentAlerts(incidentId);
-  usePollIncidentAlerts(incidentId);
+export default function IncidentAlerts({ incident }: Props) {
+  const [alertsPagination, setAlertsPagination] = useState<Pagination>({
+    limit: 20,
+    offset: 0,
+  });
+
+  const { data: alerts, isLoading } = useIncidentAlerts(incident.id, alertsPagination.limit, alertsPagination.offset);
+
+  const [pagination, setTablePagination] = useState({
+    pageIndex: alerts? Math.ceil(alerts.offset / alerts.limit) : 0,
+    pageSize: alerts? alerts.limit : 20,
+  });
+
+  useEffect(() => {
+    if (alerts && alerts.limit != pagination.pageSize) {
+      setAlertsPagination({
+        limit: pagination.pageSize,
+        offset: 0,
+      })
+    }
+    const currentOffset = pagination.pageSize * pagination.pageIndex;
+    if (alerts && alerts.offset != currentOffset) {
+      setAlertsPagination({
+        limit: pagination.pageSize,
+        offset: currentOffset,
+      })
+    }
+  }, [pagination])
+  usePollIncidentAlerts(incident.id);
 
   const columns = [
     columnHelper.accessor("severity", {
@@ -94,22 +129,27 @@ export default function IncidentAlerts({ incidentId }: Props) {
       id: "remove",
       header: "",
       cell: (context) => (
-        <IncidentAlertMenu
-          alert={context.row.original}
-          incidentId={incidentId}
-        />
+        incident.is_confirmed &&
+          <IncidentAlertMenu
+            alert={context.row.original}
+            incidentId={incident.id}
+          />
       ),
     }),
   ];
 
   const table = useReactTable({
     columns: columns,
-    data: alerts ?? [],
+    manualPagination: true,
+    state: { pagination },
+    rowCount: alerts ? alerts.count : 0,
+    onPaginationChange: setTablePagination,
+    data: alerts?.items ?? [],
     getCoreRowModel: getCoreRowModel(),
   });
   return (
     <>
-      {(alerts ?? []).length === 0 && (
+      {!isLoading && (alerts?.items ?? []).length === 0 && (
         <Callout
           className="mt-4 w-full"
           title="Missing Alerts"
@@ -137,7 +177,7 @@ export default function IncidentAlerts({ incidentId }: Props) {
             </TableRow>
           ))}
         </TableHead>
-        {alerts && alerts.length > 0 && (
+        {alerts && alerts?.items?.length > 0 && (
           <TableBody>
             {table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="hover:bg-slate-100">
@@ -152,9 +192,9 @@ export default function IncidentAlerts({ incidentId }: Props) {
         )}
         {
           // Skeleton
-          (alerts ?? []).length === 0 && (
+          (isLoading || (alerts?.items ?? []).length === 0) && (
             <TableBody>
-              {Array(5)
+              {Array(pagination.pageSize)
                 .fill("")
                 .map((index) => (
                   <TableRow key={index}>
@@ -169,6 +209,10 @@ export default function IncidentAlerts({ incidentId }: Props) {
           )
         }
       </Table>
+
+      <div className="mt-4 mb-8">
+        <IncidentPagination table={table}  isRefreshAllowed={true}/>
+      </div>
     </>
   );
 }

@@ -50,7 +50,14 @@ export function GlobalEditor() {
 }
 
 export function GlobalEditorV2() {
-  const { v2Properties:properties, updateV2Properties: setProperty } = useStore();
+  const { v2Properties: properties, updateV2Properties: setProperty } = useStore();
+  const [localProperties, setLocalProperties] = useState(properties);
+
+  const handleSubmit = () => {
+    // Save the finalized properties
+    setProperty(localProperties);
+    console.log('Final properties saved:', localProperties);
+  };
 
   return (
     <EditorLayout>
@@ -60,14 +67,24 @@ export function GlobalEditorV2() {
         workflow YAML specifications.
       </Text>
       <Text className="mt-5">
-        Use the toolbox to add steps, conditions and actions to your workflow
+        Use the toolbox to add steps, conditions, and actions to your workflow
         and click the `Generate` button to compile the workflow / `Deploy`
         button to deploy the workflow to Keep.
       </Text>
-      {WorkflowEditor(properties, setProperty)}
+      <WorkflowEditor
+        initialProperties={localProperties}
+        onUpdate={setLocalProperties}
+      />
+      <button
+        className="mt-4 bg-orange-500 text-white p-2 rounded"
+        onClick={handleSubmit}
+      >
+        Save
+      </button>
     </EditorLayout>
   );
 }
+
 
 interface keepEditorProps {
   properties: Properties;
@@ -267,19 +284,23 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
   );
 }
 
-function WorkflowEditor(properties: Properties, updateProperty: any) {
-  /**
-   * TODO: support generate, add more triggers and complex filters
-   *  Need to think about UX for this
-   */
-  const propertyKeys = Object.keys(properties).filter(
-    (k) => k !== "isLocked" && k !== "id"
-  );
+function WorkflowEditor({
+  initialProperties,
+  onUpdate,
+}: {
+  initialProperties: Properties;
+  onUpdate: (updatedProperties: Properties) => void;
+}) {
+  const [properties, setProperties] = useState(initialProperties);
+
+  useEffect(() => {
+    setProperties(initialProperties);
+  }, [initialProperties]);
 
   const updateAlertFilter = (filter: string, value: string) => {
-    const currentFilters = properties.alert as {};
+    const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
-    updateProperty("alert", updatedFilters);
+    setProperties({ ...properties, alert: updatedFilters });
   };
 
   const addFilter = () => {
@@ -290,17 +311,30 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
   };
 
   const addTrigger = (trigger: "manual" | "interval" | "alert") => {
-    updateProperty(
-      trigger,
-      trigger === "alert" ? { source: "" } : trigger === "manual" ? "true" : ""
-    );
+    setProperties({
+      ...properties,
+      [trigger]:
+        trigger === "alert"
+          ? { source: "" }
+          : trigger === "manual"
+          ? "true"
+          : "",
+    });
   };
 
   const deleteFilter = (filter: string) => {
-    const currentFilters = properties.alert as any;
+    const currentFilters = { ...properties.alert };
     delete currentFilters[filter];
-    updateProperty("alert", currentFilters);
+    setProperties({ ...properties, alert: currentFilters });
   };
+
+  const propertyKeys = Object.keys(properties).filter(
+    (k) => k !== "isLocked" && k !== "id"
+  );
+
+  useEffect(() => {
+    onUpdate(properties);
+  }, [properties]);
 
   return (
     <>
@@ -353,7 +387,10 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
                   type="checkbox"
                   checked={properties[key] === "true"}
                   onChange={(e) =>
-                    updateProperty(key, e.target.checked ? "true" : "false")
+                    setProperties({
+                      ...properties,
+                      [key]: e.target.checked ? "true" : "false",
+                    })
                   }
                 />
               </div>
@@ -400,7 +437,9 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
             ) : (
               <TextInput
                 placeholder={`Set the ${key}`}
-                onChange={(e: any) => updateProperty(key, e.target.value)}
+                onChange={(e: any) =>
+                  setProperties({ ...properties, [key]: e.target.value })
+                }
                 value={properties[key] as string}
               />
             )}
@@ -412,46 +451,57 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
 }
 
 
+
 export function StepEditorV2({
   installedProviders,
 }: {
   installedProviders?: Provider[] | undefined | null;
 }) {
   const [useGlobalEditor, setGlobalEditor] = useState(false);
+  const [formData, setFormData] = useState<{ name?: string; properties?: any }>({});
   const { 
     selectedNode,
     updateSelectedNodeData,
     setOpneGlobalEditor,
     getNodeById
-  } = useStore()
+  } = useStore();
+
+  useEffect(() => {
+    if (selectedNode) {
+      const { data } = getNodeById(selectedNode) || {};
+      const { name, type, properties } = data || {};
+      setFormData({ name, type , properties });
+    }
+  }, [selectedNode, getNodeById]);
 
   if (!selectedNode) return null;
-  
-  
 
-  const {data} = getNodeById(selectedNode) || {};
-  const {name, type, properties} = data || {};
+  const providerType = formData?.type?.split("-")[1];
 
-  function onNameChanged(e: any) {
-      updateSelectedNodeData( "name", e.target.value);
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-  const setProperty = (key:string, value:any) => {
-    updateSelectedNodeData('properties', {...properties, [key]: value })
-  }
+  const handlePropertyChange = (key: string, value: any) => {
+    setFormData({
+      ...formData,
+      properties: { ...formData.properties, [key]: value },
+    });
+  };
 
-  const providerType = type?.split("-")[1];
-
-  if(!selectedNode){
-    return <EditorLayout>
-      <Title className="capitalize text-red-500">Node not found!</Title>
-    </EditorLayout>
-  }
-
-  const handleSwitchChange = (value:boolean)=>{
+  const handleSwitchChange = (value: boolean) => {
     setGlobalEditor(value);
     setOpneGlobalEditor(true);
-  }
+  };
+
+  const handleSubmit = () => {
+    // Finalize the changes before saving
+    updateSelectedNodeData('name', formData.name);
+    updateSelectedNodeData('properties', formData.properties);
+
+    // Perform any additional save logic, such as API calls
+    console.log('Final data saved:', formData);
+  };
 
   return (
     <EditorLayout>
@@ -467,40 +517,47 @@ export function StepEditorV2({
           className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
         >
           Switch to Global Editor
-          </label>
+        </label>
       </div>
       <Title className="capitalize">{providerType} Editor</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
         icon={KeyIcon}
-        value={name}
-        onChange={onNameChanged}
+        name="name"
+        value={formData.name || ''}
+        onChange={handleInputChange}
       />
-      {type.includes("step-") || type.includes("action-") ? (
+      {formData.type?.includes("step-") || formData.type?.includes("action-") ? (
         <KeepStepEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
           installedProviders={installedProviders}
           providerType={providerType}
-          type={type}
+          type={formData.type}
         />
-      ) : type === "condition-threshold" ? (
+      ) : formData.type === "condition-threshold" ? (
         <KeepThresholdConditionEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
         />
-      ) : type.includes("foreach") ? (
+      ) : formData.type?.includes("foreach") ? (
         <KeepForeachEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
         />
-      ) : type === "condition-assert" ? (
+      ) : formData.type === "condition-assert" ? (
         <KeepAssertConditionEditor
-          properties={properties}
-          updateProperty={setProperty}
+          properties={formData.properties}
+          updateProperty={handlePropertyChange}
         />
       ) : null}
+      <button
+        className="mt-4 bg-orange-500 text-white p-2 rounded"
+        onClick={handleSubmit}
+      >
+        Save
+      </button>
     </EditorLayout>
   );
 }
