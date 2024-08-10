@@ -244,7 +244,6 @@ const useWorkflowInitialization = (
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
-      console.log("parsedWorkflow", parsedWorkflow);
       setV2Properties(parsedWorkflow?.properties ?? {});
       // let { nodes: newNodes, edges: newEdges } = processWorkflow(
       //   parsedWorkflow?.sequence
@@ -268,9 +267,6 @@ const useWorkflowInitialization = (
       ];
       const intialPositon = { x: 0, y: 50 };
       let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);
-      console.log(nodes, edges);
-      console.log("nodes", nodes);
-      console.log("edges", edges);
       setIsLayouted(false);
       setNodes(nodes);
       setEdges(edges);

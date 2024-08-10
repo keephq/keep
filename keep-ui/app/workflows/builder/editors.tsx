@@ -56,7 +56,6 @@ export function GlobalEditorV2() {
   const handleSubmit = () => {
     // Save the finalized properties
     setProperty(localProperties);
-    console.log('Final properties saved:', localProperties);
   };
 
   return (
@@ -641,9 +640,6 @@ export function StepEditorV2({
     // Finalize the changes before saving
     updateSelectedNodeData('name', formData.name);
     updateSelectedNodeData('properties', formData.properties);
-
-    // Perform any additional save logic, such as API calls
-    console.log('Final data saved:', formData);
   };
 
   return (
