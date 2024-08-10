@@ -106,7 +106,7 @@ export type FlowState = {
   setOpneGlobalEditor: (open: boolean) => void;
   // updateNodeData: (nodeId: string, key: string, value: any) => void;
   updateSelectedNodeData: (key: string, value: any) => void;
-  updateV2Properties: (key: string, value: any) => void;
+  updateV2Properties: (properties: V2Properties) => void;
   setStepEditorOpenForNode: (nodeId: string | null) => void;
   updateEdge: (id: string, key: string, value: any) => void;
   setToolBoxConfig: (config: Record<string, any>) => void;
@@ -226,9 +226,9 @@ const useStore = create<FlowState>((set, get) => ({
     }
   },
   setV2Properties: (properties) => set({ v2Properties: properties }),
-  updateV2Properties: (key, value) => {
-    const updatedProperties = { ...get().v2Properties, [key]: value };
-    set({ v2Properties: updatedProperties });
+  updateV2Properties: (properties) => {
+    const updatedProperties = { ...get().v2Properties, ...properties};
+    set({ v2Properties: updatedProperties, changes: get().changes+1 });
   },
   setSelectedNode: (id) => {
     set({
