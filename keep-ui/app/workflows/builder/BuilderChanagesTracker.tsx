@@ -5,19 +5,19 @@ import { Edge } from '@xyflow/react';
 import { reConstructWorklowToDefinition } from 'utils/reactFlow';
 
 export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitionChange:(def: WrappedDefinition<Definition>) => void}) {
-    const {nodes,
-       edges,
-       setEdges,
-        setNodes, 
-        isLayouted,
-         setIsLayouted,
-          v2Properties,
-          changes,
-          setChanges,
-          lastSavedChanges,
-          setLastSavedChanges
-        } = useStore();
-
+   const {
+     nodes,
+     edges,
+     setEdges,
+     setNodes,
+     isLayouted,
+     setIsLayouted,
+     v2Properties,
+     changes,
+     setChanges,
+     lastSavedChanges,
+     setLastSavedChanges
+   } = useStore();
    const handleDiscardChanges = (e: React.MouseEvent<HTMLButtonElement>) => {
     if(!isLayouted) return;
     setEdges(lastSavedChanges.edges || []);
@@ -34,10 +34,7 @@ export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitio
     onDefinitionChange(value);
     setChanges(0);
    }
-
-
-
-
+   
   return (
     <div className='flex gap-2.5'>
       <Button
