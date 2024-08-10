@@ -43,7 +43,6 @@ function CustomNode({ id, data }: FlowNode) {
         onClick={(e) => {
           e.stopPropagation();
           if (type === 'start' || type === 'end' || id?.includes('end')) {
-            setSelectedNode(null);
             setOpneGlobalEditor(true);
             return;
           }
@@ -98,7 +97,7 @@ function CustomNode({ id, data }: FlowNode) {
         onClick={(e) => {
           e.stopPropagation();
           if (type === 'start' || type === 'end' || id?.includes('end')) {
-            setSelectedNode(null);
+            setOpneGlobalEditor(true);
             return;
           }
           setSelectedNode(id);
@@ -122,13 +121,13 @@ function CustomNode({ id, data }: FlowNode) {
               </div>
           }
 
-          {['start', 'threshold', 'assert', 'foreach'].includes(type) && <Handle
+          {'start' === type && <Handle
             type="source"
             position={Position.Bottom}
             className="w-32"
           />}
 
-          {['end', 'threshold', 'assert', 'foreach'].includes(type) && <Handle
+          {'end' === type && <Handle
             type="target"
             position={Position.Top}
             className="w-32"
