@@ -50,7 +50,14 @@ export function GlobalEditor() {
 }
 
 export function GlobalEditorV2() {
-  const { v2Properties:properties, updateV2Properties: setProperty } = useStore();
+  const { v2Properties: properties, updateV2Properties: setProperty } = useStore();
+  const [localProperties, setLocalProperties] = useState(properties);
+
+  const handleSubmit = () => {
+    // Save the finalized properties
+    setProperty(localProperties);
+    console.log('Final properties saved:', localProperties);
+  };
 
   return (
     <EditorLayout>
@@ -60,14 +67,24 @@ export function GlobalEditorV2() {
         workflow YAML specifications.
       </Text>
       <Text className="mt-5">
-        Use the toolbox to add steps, conditions and actions to your workflow
+        Use the toolbox to add steps, conditions, and actions to your workflow
         and click the `Generate` button to compile the workflow / `Deploy`
         button to deploy the workflow to Keep.
       </Text>
-      {WorkflowEditor(properties, setProperty)}
+      <WorkflowEditor
+        initialProperties={localProperties}
+        onUpdate={setLocalProperties}
+      />
+      <button
+        className="mt-4 bg-orange-500 text-white p-2 rounded"
+        onClick={handleSubmit}
+      >
+        Save
+      </button>
     </EditorLayout>
   );
 }
+
 
 interface keepEditorProps {
   properties: Properties;
@@ -267,19 +284,23 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
   );
 }
 
-function WorkflowEditor(properties: Properties, updateProperty: any) {
-  /**
-   * TODO: support generate, add more triggers and complex filters
-   *  Need to think about UX for this
-   */
-  const propertyKeys = Object.keys(properties).filter(
-    (k) => k !== "isLocked" && k !== "id"
-  );
+function WorkflowEditor({
+  initialProperties,
+  onUpdate,
+}: {
+  initialProperties: Properties;
+  onUpdate: (updatedProperties: Properties) => void;
+}) {
+  const [properties, setProperties] = useState(initialProperties);
+
+  useEffect(() => {
+    setProperties(initialProperties);
+  }, [initialProperties]);
 
   const updateAlertFilter = (filter: string, value: string) => {
-    const currentFilters = properties.alert as {};
+    const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
-    updateProperty("alert", updatedFilters);
+    setProperties({ ...properties, alert: updatedFilters });
   };
 
   const addFilter = () => {
@@ -290,17 +311,30 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
   };
 
   const addTrigger = (trigger: "manual" | "interval" | "alert") => {
-    updateProperty(
-      trigger,
-      trigger === "alert" ? { source: "" } : trigger === "manual" ? "true" : ""
-    );
+    setProperties({
+      ...properties,
+      [trigger]:
+        trigger === "alert"
+          ? { source: "" }
+          : trigger === "manual"
+          ? "true"
+          : "",
+    });
   };
 
   const deleteFilter = (filter: string) => {
-    const currentFilters = properties.alert as any;
+    const currentFilters = { ...properties.alert };
     delete currentFilters[filter];
-    updateProperty("alert", currentFilters);
+    setProperties({ ...properties, alert: currentFilters });
   };
+
+  const propertyKeys = Object.keys(properties).filter(
+    (k) => k !== "isLocked" && k !== "id"
+  );
+
+  useEffect(() => {
+    onUpdate(properties);
+  }, [properties]);
 
   return (
     <>
@@ -353,7 +387,10 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
                   type="checkbox"
                   checked={properties[key] === "true"}
                   onChange={(e) =>
-                    updateProperty(key, e.target.checked ? "true" : "false")
+                    setProperties({
+                      ...properties,
+                      [key]: e.target.checked ? "true" : "false",
+                    })
                   }
                 />
               </div>
@@ -400,7 +437,9 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
             ) : (
               <TextInput
                 placeholder={`Set the ${key}`}
-                onChange={(e: any) => updateProperty(key, e.target.value)}
+                onChange={(e: any) =>
+                  setProperties({ ...properties, [key]: e.target.value })
+                }
                 value={properties[key] as string}
               />
             )}
@@ -410,6 +449,7 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
     </>
   );
 }
+
 
 
 export function StepEditorV2({
