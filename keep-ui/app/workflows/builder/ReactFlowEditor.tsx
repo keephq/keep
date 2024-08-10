@@ -10,9 +10,9 @@ const ReactFlowEditor = () => {
 
   useEffect(() => {
     if (stepEditorOpenForNode) {
-      setIsOpen(stepEditorOpenForNode === selectedNode?.id);
+      setIsOpen(stepEditorOpenForNode === selectedNode);
     }
-  }, [stepEditorOpenForNode, selectedNode?.id]);
+  }, [stepEditorOpenForNode, selectedNode]);
 
   return (
     <div

@@ -5,12 +5,6 @@ import {
   useCallback,
 } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import dagre from "dagre";
-import {
-  parseWorkflow,
-  generateWorkflow,
-  buildAlert,
-} from "app/workflows/builder/utils";
 import { useSearchParams } from "next/navigation";
 import useStore from "../../app/workflows/builder/builder-store";
 import { FlowNode } from "../../app/workflows/builder/builder-store";
@@ -19,7 +13,6 @@ import { Definition, Step } from "sequential-workflow-designer";
 import { WrappedDefinition } from "sequential-workflow-designer-react";
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { processWorkflowV2 } from "utils/reactFlow";
-// import "@xyflow/react/dist/style.css";
 
 const layoutOptions = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
@@ -50,18 +43,6 @@ const layoutOptions = {
   "elk.layered.nodePlacement.outerPadding": "20",    // Padding around nodes
   "elk.layered.edgeRouting.orthogonal": true
 }
-
-const getRandomColor = () => {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-};
-
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(() => ({}));
 
 const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => {
   const isHorizontal = options?.['elk.direction'] === 'RIGHT';
@@ -150,9 +131,7 @@ const useWorkflowInitialization = (
     height: 100,
   });
   const { screenToFlowPosition } = useReactFlow();
-  // const [isLayouted, setIsLayouted] = useState(false);
   const { fitView } = useReactFlow();
-  const definitionRef = useRef<Definition>(null);
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -213,41 +192,13 @@ const useWorkflowInitialization = (
         setChanges(0)
       }
     }
-    // window.requestAnimationFrame(() => {
-    //   fitView();
-    // });
   }, [nodes, edges])
-
-
-
-  const handleSpecialTools = (
-    nodes: FlowNode[],
-    toolMeta: {
-      type: string;
-      specialToolNodeId: string;
-      switchCondition?: string;
-    }
-  ) => {
-    if (!nodes) {
-      return;
-    }
-  }
-
-  useEffect(() => {
-    const alertNameParam = searchParams?.get("alertName");
-    const alertSourceParam = searchParams?.get("alertSource");
-    setAlertName(alertNameParam);
-    setAlertSource(alertSourceParam);
-  }, [searchParams]);
 
   useEffect(() => {
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
       setV2Properties(parsedWorkflow?.properties ?? {});
-      // let { nodes: newNodes, edges: newEdges } = processWorkflow(
-      //   parsedWorkflow?.sequence
-      // );
       const sequences = [
         {
           id: "start",
@@ -274,14 +225,7 @@ const useWorkflowInitialization = (
       setIsLoading(false);
     };
     initializeWorkflow();
-  }, [
-    loadedAlertFile,
-    workflow,
-    alertName,
-    alertSource,
-    providers,
-    definition?.value,
-  ]);
+  }, []);
 
 
   return {
