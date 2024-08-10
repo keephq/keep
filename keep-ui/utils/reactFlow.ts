@@ -1,44 +1,130 @@
 import { v4 as uuidv4 } from "uuid";
 import { FlowNode, V2Step } from "app/workflows/builder/builder-store";
 import { Edge } from "@xyflow/react";
-import { CorrelationForm as CorrelationFormType } from '.';
-
 
 
 function getKeyBasedSquence(step:any, id:string,  type:string) {
     return `${step.type}__${id}__empty_${type}`;
 }
 
+
 export function reConstructWorklowToDefinition({
     nodes,
-    edges, isNested = false}:{
+    edges, properties ={}}:{
         nodes: FlowNode[],
-        edges: Edge[]
-        isNested?:boolean
+        edges: Edge[],
+        properties: Record<string,any>
     }) {
-        const seuqences = [];
-        //ingoring the start node
-        const [first, ...rest] = nodes;
-        //poping the end node
-        rest.pop();
-        const edgeMap: Record<string, string[]> = {};
-        const nodeMap: Record<string, FlowNode> = {};
-        edges.forEach((edge) => {
-          const { source, target } = edge;
-      
-          if (edgeMap[source]) {
-            edgeMap[source].push(target);
-          } else {
-            edgeMap[source] = [target];
+        
+        const originalNodes = nodes.slice(1, nodes.length-1);
+        function processForeach(startIdx:number, endIdx:number, foreachNode:FlowNode['data'], nodeId:string) {
+            foreachNode.sequence = [];
+          
+            const tempSequence = [];
+            const foreachEmptyId = `${foreachNode.type}__${nodeId}__empty_foreach`;
+          
+            for (let i = startIdx; i < endIdx; i++) {
+              const currentNode = originalNodes[i];
+              const nodeData = currentNode?.data;
+              const nodeType = nodeData?.type;
+              if (currentNode.id === foreachEmptyId) {
+                foreachNode.sequence = tempSequence;
+                return i + 1;
+              }
+          
+              if (["condition-threshold", "condition-assert"].includes(nodeType)) {
+                tempSequence.push(nodeData);
+                i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
+                continue;
+              }
+          
+              if (nodeType === "foreach") {
+                tempSequence.push(nodeData);
+                i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
+                continue;
+              }
+          
+              tempSequence.push(nodeData);
+            }
+            return endIdx;
           }
-        });
-
-        nodes.forEach((node) => {
-          nodeMap[node.id] = node;
-        });
-
-        const sequences = nodes.filter((node) => !node.isNested && !node.id.includes('end')).map((node) => node.data);
-        console.log("sequences in recontructWorklowToDefinition", sequences)
+          
+          function processCondition(startIdx:number, endIdx:number, conditionNode:FlowNode['data'], nodeId:string) {
+            conditionNode.branches = {
+              true: [],
+              false: [],
+            };
+          
+            const trueBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_true`;
+            const falseBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_false`;
+            let tempSeqs = [];
+            let trueCaseAdded = false;
+            let falseCaseAdded = false;
+            let tempSequence = [];
+            let i = startIdx;
+            for (; i < endIdx; i++) {
+              const currentNode = originalNodes[i];
+              const nodeData = currentNode?.data;
+              const nodeType = nodeData?.type;
+          
+              if (trueCaseAdded && falseCaseAdded) {
+                return i;
+              }
+              if (currentNode.id === trueBranchEmptyId) {
+                conditionNode.branches.true = tempSequence;
+                trueCaseAdded = true;
+                tempSequence = [];
+                continue;
+              }
+          
+              if (currentNode.id === falseBranchEmptyId) {
+                conditionNode.branches.false = tempSequence;
+                falseCaseAdded = true;
+                tempSequence = [];
+                continue;
+              }
+          
+              if (["condition-threshold", "condition-assert"].includes(nodeType)) {
+                tempSequence.push(nodeData);
+                i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
+                continue;
+              }
+          
+              if (nodeType === "foreach") {
+                tempSequence.push(nodeData);
+                i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
+                continue;
+              }
+              tempSequence.push(nodeData);
+            }
+            return endIdx;
+          }
+          
+          function buildWorkflowDefinition(startIdx:number, endIdx:number) {
+            const workflowSequence = [];
+            for (let i = startIdx; i < endIdx; i++) {
+              const currentNode = originalNodes[i];
+              const nodeData = currentNode?.data;
+              const nodeType = nodeData?.type;
+              if (["condition-threshold", "condition-assert"].includes(nodeType)) {
+                workflowSequence.push(nodeData);
+                i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
+                continue;
+              }
+              if (nodeType === "foreach") {
+                workflowSequence.push(nodeData);
+                i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
+                continue;
+              }
+              workflowSequence.push(nodeData);
+            }
+            return workflowSequence;
+          }
+        
+          return {
+                sequence: buildWorkflowDefinition(0, originalNodes.length),
+                properties: properties
+          }
 
 }
 
