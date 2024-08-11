@@ -285,7 +285,14 @@ def update_preset(
     # Handle tags
     tags = []
     for tag in body.tags:
-        if not tag.id:  # New tag, create it
+        # New tag, create it
+        if not tag.id:
+            # check if tag with the same name already exists
+            # (can happen due to some sync problems)
+            existing_tag = session.get(Tag, Tag.name == tag.name)
+            if existing_tag:
+                tags.append(existing_tag)
+                continue
             new_tag = Tag(name=tag.name, tenant_id=tenant_id)
             session.add(new_tag)
             session.commit()
