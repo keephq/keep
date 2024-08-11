@@ -332,7 +332,7 @@ def __handle_formatted_events(
         presets_do_update = []
         for preset in presets:
             # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.dict())
+            preset_dto = PresetDto(**preset.to_dict())
             filtered_alerts = RulesEngine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )

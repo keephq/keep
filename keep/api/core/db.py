@@ -1670,7 +1670,8 @@ def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
                 )
             )
         )
-        presets = session.exec(statement).all()
+        result = session.exec(statement)
+        presets = result.unique().all()
     return presets
 
 
@@ -1870,9 +1871,7 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def assign_alert_to_incident(
-    alert_id: UUID, incident_id: UUID, tenant_id: str
-):
+def assign_alert_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str):
     return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id])
 
 def is_alert_assigned_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str) -> bool:
@@ -2150,7 +2149,9 @@ def get_incidents_count(
         )
 
 
-def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str, limit: int, offset: int) -> (List[Alert], int):
+def get_incident_alerts_by_incident_id(
+    tenant_id: str, incident_id: str, limit: int, offset: int
+) -> (List[Alert], int):
     with Session(engine) as session:
         query = (
             session.query(
@@ -2170,10 +2171,8 @@ def get_incident_alerts_by_incident_id(tenant_id: str, incident_id: str, limit: 
 
 
 def get_alerts_data_for_incident(
-    alert_ids: list[str | UUID],
-    session: Optional[Session] = None
+    alert_ids: list[str | UUID], session: Optional[Session] = None
 ) -> dict:
-
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
     Logic is wrapped to the inner function for better usability with an optional database session
@@ -2188,14 +2187,12 @@ def get_alerts_data_for_incident(
     def inner(db_session: Session):
 
         fields = (
-            get_json_extract_field(session, Alert.event, 'service'),
-            Alert.provider_type
+            get_json_extract_field(session, Alert.event, "service"),
+            Alert.provider_type,
         )
 
         alerts_data = db_session.exec(
-            select(
-                *fields
-            ).where(
+            select(*fields).where(
                 col(Alert.id).in_(alert_ids),
             )
         ).all()
@@ -2203,7 +2200,7 @@ def get_alerts_data_for_incident(
         sources = []
         services = []
 
-        for (service, source) in alerts_data:
+        for service, source in alerts_data:
             if source:
                 sources.append(source)
             if service:
@@ -2212,7 +2209,7 @@ def get_alerts_data_for_incident(
         return {
             "sources": set(sources),
             "services": set(services),
-            "count": len(alerts_data)
+            "count": len(alerts_data),
         }
 
     # Ensure that we have a session to execute the query. If not - make new one
@@ -2244,16 +2241,17 @@ def add_alerts_to_incident_by_incident_id(
             )
         ).all()
 
-        new_alert_ids = [alert_id for alert_id in alert_ids
-                         if alert_id not in existed_alert_ids]
+        new_alert_ids = [
+            alert_id for alert_id in alert_ids if alert_id not in existed_alert_ids
+        ]
 
         alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 
         incident.sources = list(
-           set(incident.sources) | set(alerts_data_for_incident["sources"])
+            set(incident.sources) | set(alerts_data_for_incident["sources"])
         )
         incident.affected_services = list(
-           set(incident.affected_services) | set(alerts_data_for_incident["services"])
+            set(incident.affected_services) | set(alerts_data_for_incident["services"])
         )
         incident.alerts_count += alerts_data_for_incident["count"]
 
@@ -2299,7 +2297,7 @@ def remove_alerts_to_incident_by_incident_id(
         # Getting aggregated data for incidents for alerts which just was removed
         alerts_data_for_incident = get_alerts_data_for_incident(alert_ids, session)
 
-        service_field = get_json_extract_field(session, Alert.event, 'service')
+        service_field = get_json_extract_field(session, Alert.event, "service")
 
         # checking if services of removed alerts are still presented in alerts
         # which still assigned with the incident
@@ -2308,7 +2306,7 @@ def remove_alerts_to_incident_by_incident_id(
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 AlertToIncident.incident_id == incident_id,
-                service_field.in_(alerts_data_for_incident["services"])
+                service_field.in_(alerts_data_for_incident["services"]),
             )
         ).scalars()
 
@@ -2319,21 +2317,31 @@ def remove_alerts_to_incident_by_incident_id(
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 AlertToIncident.incident_id == incident_id,
-                col(Alert.provider_type).in_(alerts_data_for_incident["sources"])
+                col(Alert.provider_type).in_(alerts_data_for_incident["sources"]),
             )
         ).scalars()
 
         # Making lists of services and sources to remove from the incident
-        services_to_remove = [service for service in alerts_data_for_incident["services"]
-                              if service not in services_existed]
-        sources_to_remove = [source for source in alerts_data_for_incident["sources"]
-                             if source not in sources_existed]
+        services_to_remove = [
+            service
+            for service in alerts_data_for_incident["services"]
+            if service not in services_existed
+        ]
+        sources_to_remove = [
+            source
+            for source in alerts_data_for_incident["sources"]
+            if source not in sources_existed
+        ]
 
         # filtering removed entities from affected services and sources in the incident
-        incident.affected_services = [service for service in incident.affected_services
-                                      if service not in services_to_remove]
-        incident.sources = [source for source in incident.sources
-                            if source not in sources_to_remove]
+        incident.affected_services = [
+            service
+            for service in incident.affected_services
+            if service not in services_to_remove
+        ]
+        incident.sources = [
+            source for source in incident.sources if source not in sources_to_remove
+        ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
         session.add(incident)
@@ -2554,3 +2562,30 @@ def get_all_topology_data(
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
         return service_dtos
+
+
+def get_tags(tenant_id):
+    with Session(engine) as session:
+        tags = session.exec(select(Tag).where(Tag.tenant_id == tenant_id)).all()
+    return tags
+
+
+def create_tag(tag: Tag):
+    with Session(engine) as session:
+        session.add(tag)
+        session.commit()
+        session.refresh(tag)
+        return tag
+
+
+def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
+    with Session(engine) as session:
+        tag_preset = PresetTagLink(
+            tenant_id=tenant_id,
+            tag_id=tag_id,
+            preset_id=preset_id,
+        )
+        session.add(tag_preset)
+        session.commit()
+        session.refresh(tag_preset)
+        return tag_preset

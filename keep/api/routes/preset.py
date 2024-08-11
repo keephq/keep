@@ -24,7 +24,14 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.preset import Preset, PresetDto, PresetOption
+from keep.api.models.db.preset import (
+    Preset,
+    PresetDto,
+    PresetOption,
+    PresetTagLink,
+    Tag,
+    TagDto,
+)
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
@@ -138,7 +145,7 @@ def get_presets(
     logger.info("Getting all presets")
     # both global and private presets
     presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
-    presets_dto = [PresetDto(**preset.dict()) for preset in presets]
+    presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
     # add static presets
     presets_dto.append(STATIC_PRESETS["feed"])
     presets_dto.append(STATIC_PRESETS["groups"])
@@ -158,6 +165,7 @@ class CreateOrUpdatePresetDto(BaseModel):
     options: list[PresetOption]
     is_private: bool = False  # if true visible to all users of that tenant
     is_noisy: bool = False  # if true, the preset will be noisy
+    tags: list[TagDto] = []  # tags to assign to the preset
 
 
 @router.post("", description="Create a preset for tenant")
@@ -184,11 +192,44 @@ def create_preset(
         is_noisy=body.is_noisy,
     )
 
+    # Handle tags
+    tags = []
+    for tag in body.tags:
+        # New tag, create it
+        if not tag.id:
+            # check if tag with the same name already exists
+            # (can happen due to some sync problems)
+            existing_tag = session.query(Tag).filter(Tag.name == tag.name).first()
+            if existing_tag:
+                tags.append(existing_tag)
+                continue
+            new_tag = Tag(name=tag.name, tenant_id=tenant_id)
+            session.add(new_tag)
+            session.commit()
+            session.refresh(new_tag)
+            tags.append(new_tag)
+        else:
+            existing_tag = session.get(Tag, tag.id)
+            if existing_tag is None:
+                raise HTTPException(400, f"Tag with id {tag.id} does not exist")
+            tags.append(existing_tag)
+
+    # Add preset and commit to generate preset ID
     session.add(preset)
     session.commit()
     session.refresh(preset)
+
+    # Explicitly create PresetTagLink entries
+    for tag in tags:
+        preset_tag_link = PresetTagLink(
+            tenant_id=tenant_id, preset_id=preset.id, tag_id=tag.id
+        )
+        session.add(preset_tag_link)
+
+    session.commit()
+    session.refresh(preset)
     logger.info("Created preset")
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
 
 
 @router.delete(
@@ -202,6 +243,9 @@ def delete_preset(
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("Deleting preset", extra={"uuid": uuid})
+    # Delete links
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == uuid).delete()
+
     statement = (
         select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
     )
@@ -244,10 +288,43 @@ def update_preset(
     if not options_dict:
         raise HTTPException(400, "Options cannot be empty")
     preset.options = options_dict
+
+    # Handle tags
+    tags = []
+    for tag in body.tags:
+        # New tag, create it
+        if not tag.id:
+            # check if tag with the same name already exists
+            # (can happen due to some sync problems)
+            existing_tag = session.query(Tag).filter(Tag.name == tag.name).first()
+            if existing_tag:
+                tags.append(existing_tag)
+                continue
+            new_tag = Tag(name=tag.name, tenant_id=tenant_id)
+            session.add(new_tag)
+            session.commit()
+            session.refresh(new_tag)
+            tags.append(new_tag)
+        else:
+            existing_tag = session.get(Tag, tag.id)
+            if existing_tag is None:
+                raise HTTPException(400, f"Tag with id {tag.id} does not exist")
+            tags.append(existing_tag)
+
+    # Clear existing tag links
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == preset.id).delete()
+
+    # Explicitly create PresetTagLink entries
+    for tag in tags:
+        preset_tag_link = PresetTagLink(
+            tenant_id=tenant_id, preset_id=preset.id, tag_id=tag.id
+        )
+        session.add(preset_tag_link)
+
     session.commit()
     session.refresh(preset)
     logger.info("Updated preset", extra={"uuid": uuid})
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
 
 
 @router.get(
@@ -281,7 +358,10 @@ async def get_preset_alerts(
     # if preset does not exist
     if not preset:
         raise HTTPException(404, "Preset not found")
-    preset_dto = PresetDto(**preset.dict())
+    if isinstance(preset, Preset):
+        preset_dto = PresetDto(**preset.to_dict())
+    else:
+        preset_dto = PresetDto(**preset.dict())
     search_engine = SearchEngine(tenant_id=tenant_id)
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
@@ -341,7 +421,7 @@ def create_preset_tab(
         authenticated_entity.tenant_id, preset_id, preset.options
     )
     logger.info("Created preset tab", extra={"preset_id": preset_id})
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
 
 
 @router.delete(
@@ -391,4 +471,4 @@ def delete_tab(
         authenticated_entity.tenant_id, preset_id, preset.options
     )
     logger.info("Deleted tab", extra={"tab_id": tab_id})
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
