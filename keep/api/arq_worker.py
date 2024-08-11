@@ -20,6 +20,7 @@ ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
         "keep.api.tasks.process_event_task.async_process_event",
         "keep.api.tasks.process_topology_task.async_process_topology",
         "keep.api.tasks.process_background_ai_task.process_background_ai_task",
+        "keep.api.tasks.process_background_ai_task.process_correlation",
     ],
 )
 FUNCTIONS: list = (
@@ -58,8 +59,8 @@ def get_worker() -> Worker:
         "ARQ_KEEP_RESULT", cast=int, default=3600
     )  # duration to keep job results for
     expires = config(
-        "ARQ_EXPIRES", cast=int, default=86_400_000
-    )  # the default length of time from when a job is expected to start after which the job expires, defaults to 1 day in ms
+        "ARQ_EXPIRES", cast=int, default=3600
+    )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
     return create_worker(
         WorkerSettings, keep_result=keep_result, expires_extra_ms=expires
     )
@@ -84,5 +85,12 @@ class WorkerSettings:
     )
     functions: list = FUNCTIONS
     cron_jobs = [
-        cron(process_background_ai_task, minute=at_every_x_minutes(1), unique=True, timeout=1500, max_tries=5)
+        cron(
+            process_background_ai_task,
+            minute=at_every_x_minutes(1),
+            unique=True,
+            timeout=30, 
+            max_tries=1, 
+            run_at_startup=True,
+        ),
     ]
