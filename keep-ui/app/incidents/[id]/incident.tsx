@@ -62,7 +62,7 @@ export default function IncidentView({ incidentId }: Props) {
                 </TabList>
                 <TabPanels>
                   <TabPanel>
-                    <IncidentAlerts incidentId={incident.id} />
+                    <IncidentAlerts incident={incident} />
                   </TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>
