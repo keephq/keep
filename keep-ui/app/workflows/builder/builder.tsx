@@ -338,7 +338,7 @@ function Builder({
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
           {getworkflowStatus()}
-          <div className="h-[95%]">
+          <div className="h-[92%]">
             <ReactFlowProvider>
               <ReactFlowBuilder
                 workflow={workflow}

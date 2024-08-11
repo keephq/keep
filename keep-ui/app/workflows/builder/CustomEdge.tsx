@@ -107,7 +107,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             setSelectedEdge(id);
           }}
         >
-          <CiSquarePlus className={`w-6 h-6 bg-gray-400 text-white text-center ${selectedEdge === id ? " bg-gray-600" : ""} hover:bg-gray-600`} />
+          <CiSquarePlus className={`w-6 h-6 bg-gray-500 text-white text-center ${selectedEdge === id ? " bg-gray-700" : ""} hover:bg-gray-600`} />
         </Button>}
       </EdgeLabelRenderer>
     </>

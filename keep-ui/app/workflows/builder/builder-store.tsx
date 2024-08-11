@@ -314,7 +314,10 @@ const useStore = create<FlowState>((set, get) => ({
         data: {
           label: step.name! as string,
           ...step,
-          id: newUuid
+          id: newUuid,
+          name: step.name,
+          type: step.type,
+          componentType: step.componentType
         },
         isDraggable: true,
         dragHandle: '.custom-drag-handle',

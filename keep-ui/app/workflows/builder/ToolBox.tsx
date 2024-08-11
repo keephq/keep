@@ -130,14 +130,14 @@ const DragAndDropSidebar = ({ isDraggable }: {
 
   return (
     <div
-      className={`absolute top-0 left-0 rounded border-2 border-gray-200 bg-white transition-transform duration-300 z-50 ${isVisible ? 'h-full' : 'shadow-lg'}`}
+      className={`absolute top-2 left-2 rounded border-2 broder-gray-300 bg-white transition-transform duration-300 z-50 ${isVisible ? 'h-[95%]' : 'shadow-lg'}`}
       style={{ width: '280px' }} // Set a fixed width
     >
       <div className="relative h-full flex flex-col">
         {/* Sticky header */}
-        <div className="sticky top-0 left-0 z-10 bg-white border-b border-gray-200">
-          <h1 className="p-2 font-bold">Toolbox</h1>
-          <div className="flex items-center justify-between p-2 pt-0 border-b border-gray-200 bg-white">
+        <div className="sticky top-0 left-0 z-10">
+          <h1 className="p-3 font-bold">Toolbox</h1>
+          <div className="flex items-center justify-between p-2 pt-0 border-b-2 bg-white">
             <input
               type="text"
               placeholder="Search..."

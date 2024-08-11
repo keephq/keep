@@ -59,7 +59,7 @@ function CustomNode({ id, data }: FlowNode) {
           <GoPlus className="w-8 h-8 text-gray-600 font-bold" />
           {selectedNode === id && <div className="text-gray-600 font-bold">Go to Toolbox</div>}
         </div>}
-        {!isEmptyNode && data?.type !== "sub_flow" && (
+        {!isEmptyNode && (
           <div className="flex flex-row items-center justify-between gap-2 flex-wrap">
             <Image
               src={IconUrlProvider(data) || "/keep.png"}
@@ -69,7 +69,7 @@ function CustomNode({ id, data }: FlowNode) {
               height={32}
             />
             <div className="flex-1 flex-col gap-2 flex-wrap truncate">
-              <div className="text-lg font-bold">{data?.name}</div>
+              <div className="text-lg font-bold truncate">{data?.name}</div>
               <div className="text-gray-500 truncate">
                 {type || data?.componentType}
               </div>
