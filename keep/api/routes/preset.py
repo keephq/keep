@@ -195,7 +195,14 @@ def create_preset(
     # Handle tags
     tags = []
     for tag in body.tags:
-        if not tag.id:  # New tag, create it
+        # New tag, create it
+        if not tag.id:
+            # check if tag with the same name already exists
+            # (can happen due to some sync problems)
+            existing_tag = session.query(Tag).filter(Tag.name == tag.name).first()
+            if existing_tag:
+                tags.append(existing_tag)
+                continue
             new_tag = Tag(name=tag.name, tenant_id=tenant_id)
             session.add(new_tag)
             session.commit()
@@ -289,7 +296,7 @@ def update_preset(
         if not tag.id:
             # check if tag with the same name already exists
             # (can happen due to some sync problems)
-            existing_tag = session.get(Tag, Tag.name == tag.name)
+            existing_tag = session.query(Tag).filter(Tag.name == tag.name).first()
             if existing_tag:
                 tags.append(existing_tag)
                 continue
