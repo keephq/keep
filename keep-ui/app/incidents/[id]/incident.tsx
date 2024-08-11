@@ -16,6 +16,7 @@ import {
 import IncidentAlerts from "./incident-alerts";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
+import {useState} from "react";
 
 interface Props {
   incidentId: string;
@@ -23,6 +24,7 @@ interface Props {
 
 export default function IncidentView({ incidentId }: Props) {
   const { data: incident, isLoading, error } = useIncident(incidentId);
+
   const router = useRouter();
 
   if (isLoading || !incident) return <Loading />;
@@ -60,7 +62,7 @@ export default function IncidentView({ incidentId }: Props) {
                 </TabList>
                 <TabPanels>
                   <TabPanel>
-                    <IncidentAlerts incidentId={incident.id} />
+                    <IncidentAlerts incident={incident} />
                   </TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>
                   <TabPanel>Coming Soon...</TabPanel>

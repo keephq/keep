@@ -1,6 +1,5 @@
 "use client";
 import {
-  Providers,
   defaultProvider,
   Provider,
   ProvidersResponse,
@@ -13,7 +12,7 @@ import ProvidersTiles from "./providers-tiles";
 import React, { useState, Suspense, useContext, useEffect } from "react";
 import useSWR from "swr";
 import Loading from "../loading";
-import { LayoutContext } from "./context";
+import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
@@ -140,7 +139,7 @@ export default function ProvidersPage({
     isSlowLoading,
     isLocalhost,
   } = useFetchProviders();
-  const { searchProviderString, selectedTags } = useContext(LayoutContext);
+  const { providersSearchString, providersSelectedTags } = useFilterContext();
   const router = useRouter();
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
@@ -154,14 +153,14 @@ export default function ProvidersPage({
       });
     }
   }, [searchParams]);
-
+  if (error) {
+      throw new KeepApiError(error.message, `${getApiURL()}/providers`, `Failed to query ${getApiURL()}/providers, is Keep API up?`);
+    }
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
   if (!providers || !installedProviders || providers.length <= 0)
     return <Loading slowLoading={isSlowLoading} />;
-  if (error) {
-    throw new KeepApiError(error.message, `${getApiURL()}/providers`);
-  }
+
 
   const addProvider = (provider: Provider) => {
     setInstalledProviders((prevProviders) => {
@@ -183,15 +182,15 @@ export default function ProvidersPage({
 
   const searchProviders = (provider: Provider) => {
     return (
-      !searchProviderString ||
-      provider.type?.toLowerCase().includes(searchProviderString.toLowerCase())
+      !providersSearchString ||
+      provider.type?.toLowerCase().includes(providersSearchString.toLowerCase())
     );
   };
 
   const searchTags = (provider: Provider) => {
     return (
-      selectedTags.length === 0 ||
-      provider.tags.some((tag) => selectedTags.includes(tag))
+      providersSelectedTags.length === 0 ||
+      provider.tags.some((tag) => providersSelectedTags.includes(tag))
     );
   };
 

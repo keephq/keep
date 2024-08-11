@@ -1,3 +1,5 @@
+import {AlertDto} from "../alerts/models";
+
 export interface IncidentDto {
   id: string;
   name: string;
@@ -10,6 +12,8 @@ export interface IncidentDto {
   start_time?: Date;
   end_time?: Date;
   creation_time: Date;
+  is_confirmed: boolean;
+  is_predicted: boolean;
 }
 
 export interface PaginatedIncidentsDto {
@@ -18,3 +22,11 @@ export interface PaginatedIncidentsDto {
   count: number;
   items: IncidentDto[];
 }
+
+export interface PaginatedIncidentAlertsDto {
+  limit: number;
+  offset: number;
+  count: number;
+  items: AlertDto[];
+}
+
