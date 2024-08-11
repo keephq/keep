@@ -71,7 +71,7 @@ export function BuilderCard({
     );
 
   return (
-    <Card className={`mt-10 p-4 md:p-10 mx-auto ${error ? null : "h-5/6"}`}>
+    <Card className={`mt-2 p-4 md:p-2 mx-auto ${error ? null : "h-[95%]"}`}>
       {error ? (
         <Callout
           className="mt-4"

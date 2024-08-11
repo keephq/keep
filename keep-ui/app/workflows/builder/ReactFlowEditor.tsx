@@ -1,22 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
 import useStore from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
-import { Button } from "@tremor/react";
+import { Button, Divider } from "@tremor/react";
 
 const ReactFlowEditor = () => {
-  const { openGlobalEditor, selectedNode, stepEditorOpenForNode } = useStore();
-  const [isOpen, setIsOpen] = useState(false); // Set initial state to true
+  const { selectedNode } = useStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const stepEditorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(()=>{
+  useEffect(() => {
     setIsOpen(true);
-  }, [selectedNode])
+    if (selectedNode) {
+      const timer = setTimeout(() => {
+        if (containerRef.current && stepEditorRef.current) {
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const stepEditorRect = stepEditorRef.current.getBoundingClientRect();
+          // Check if StepEditorV2 is already at the top of the container
+          const isAtTop = stepEditorRect.top <= containerRect.top;
+
+          if (!isAtTop) {
+            // Scroll the StepEditorV2 into view
+            stepEditorRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer); // Cleanup the timer on unmount
+    }
+  }, [selectedNode]);
 
   return (
     <div
-      className={`absolute top-0 right-0 transition-transform duration-300 z-50${
-        isOpen ? " h-full" : "h-14"
+      className={`absolute top-0 right-0 transition-transform duration-300 z-50 ${
+        isOpen ? "h-full" : "h-14"
       }`}
+      ref={containerRef}
     >
       {!isOpen && (
         <button
@@ -36,8 +55,11 @@ const ReactFlowEditor = () => {
           </button>
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
-              {openGlobalEditor && <GlobalEditorV2 />}
-              {!openGlobalEditor && selectedNode && <StepEditorV2 />}
+              <GlobalEditorV2 />
+              <Divider ref={stepEditorRef}/>
+              <div>
+                <StepEditorV2 />
+              </div>
             </div>
           </div>
         </div>
@@ -47,3 +69,4 @@ const ReactFlowEditor = () => {
 };
 
 export default ReactFlowEditor;
+
