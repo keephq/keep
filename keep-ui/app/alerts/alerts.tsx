@@ -25,6 +25,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
+    tags: []
   },
   {
     id: "dismissed",
@@ -34,6 +35,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
+    tags: []
   },
   {
     id: "groups",
@@ -43,6 +45,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
+    tags: []
   },
 ];
 
