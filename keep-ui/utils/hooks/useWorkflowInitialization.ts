@@ -167,8 +167,9 @@ const useWorkflowInitialization = (
           })
           setNodes(layoutedNodes);
           setEdges(layoutedEdges);
-
-          window.requestAnimationFrame(() => fitView());
+          if (!firstInitilisationDone) {
+            window.requestAnimationFrame(() => fitView());
+          }
         },
       );
     },
@@ -179,16 +180,16 @@ const useWorkflowInitialization = (
     if (!isLayouted && nodes.length > 0) {
       onLayout({ direction: 'DOWN' })
       setIsLayouted(true)
-      if(!firstInitilisationDone){
+      if (!firstInitilisationDone) {
         setFirstInitilisationDone(true)
-        setLastSavedChanges({nodes: nodes, edges: edges});
+        setLastSavedChanges({ nodes: nodes, edges: edges });
         setChanges(0)
       }
     }
 
     if (!isLayouted && nodes.length === 0) {
       setIsLayouted(true);
-      if(!firstInitilisationDone){
+      if (!firstInitilisationDone) {
         setChanges(0)
       }
     }
