@@ -44,7 +44,7 @@ from keep.api.core.db import (
 
 logger = logging.getLogger(__name__)
 
-ALGORITHM_VERBOSE_NAME = "Basic correlation alrithm v0.2"
+ALGORITHM_VERBOSE_NAME = "Basic correlation algorithm v0.2"
 
 
 def calculate_pmi_matrix(
