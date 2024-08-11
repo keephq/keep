@@ -135,11 +135,12 @@ async def mine_incidents_and_create_objects(
                 update_incident_summary(incident.id, summary)
     
     pusher_client = get_pusher_client()
-    pusher_client.trigger(
-        f"private-{tenant_id}",
-        "ai-logs-change",
-        {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
-    )
+    if pusher_client:
+      pusher_client.trigger(
+          f"private-{tenant_id}",
+          "ai-logs-change",
+          {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
+      )
     logger.info(
         "Client notified on new AI log",
         extra={"tenant_id": tenant_id},
@@ -292,47 +293,52 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
 
 def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1) -> str:
     if "OPENAI_API_KEY" not in os.environ:
-        return "OpenAI API key is not set. Incident summary generation is not available."
+        logger.error("OpenAI API key is not set. Incident summary generation is not available.")
+        return "Summorization is Disabled"
     
-    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    
-    prompt_addition = ''
-    if incident.user_summary:
-        prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
+    try: 
+        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        
+        prompt_addition = ''
+        if incident.user_summary:
+            prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
 
-    # description_strings = [
-    #     f'{alert.timestamp} source: {alert.provider_type} description: {alert.event["name"]} message: {alert.event["message"]}' for alert in incident.alerts]
-    
-    description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
-    
-    if use_n_alerts_for_summary > 0:
-        incident_description = "\n".join(description_strings[:use_n_alerts_for_summary])
-    else:
-        incident_description = "\n".join(description_strings)
+        # description_strings = [
+        #     f'{alert.timestamp} source: {alert.provider_type} description: {alert.event["name"]} message: {alert.event["message"]}' for alert in incident.alerts]
+        
+        description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
+        
+        if use_n_alerts_for_summary > 0:
+            incident_description = "\n".join(description_strings[:use_n_alerts_for_summary])
+        else:
+            incident_description = "\n".join(description_strings)
 
-    timestamps = [alert.timestamp for alert in incident.alerts]
-    incident_start = min(timestamps).replace(microsecond=0)
-    incident_end = max(timestamps).replace(microsecond=0)
+        timestamps = [alert.timestamp for alert in incident.alerts]
+        incident_start = min(timestamps).replace(microsecond=0)
+        incident_end = max(timestamps).replace(microsecond=0)
 
-    summary = client.chat.completions.create(model="gpt-4o-mini", messages=[
-        {
-            "role": "system",
-            "content": """You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions. 
-            When provided with information, summarize it in a 2-3 sentences explaining what happened and when. 
-            ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
-             
-            EXAMPLE:
-            An incident occurred between 2022-11-17 14:11:04.955070 and 2022-11-22 22:19:04.837526, involving a 
-            total of 200 alerts. The alerts indicated critical and warning issues such as high CPU and memory 
-            usage in pods and nodes, as well as stuck Kubernetes Daemonset rollout. Potential incident scenario: 
-            Kubernetes Daemonset rollout stuck due to high CPU and memory usage in pods and nodes. This caused a
-            long tail of alerts on various topics."""
-        },
-        {
-            "role": "user",
-            "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
-            {incident_start}, ended on {incident_end}, included {len(description_strings)} alerts. {prompt_addition}"""
-        }
-    ]).choices[0].message.content
-    
-    return summary
+        summary = client.chat.completions.create(model="gpt-4o-mini", messages=[
+            {
+                "role": "system",
+                "content": """You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions. 
+                When provided with information, summarize it in a 2-3 sentences explaining what happened and when. 
+                ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
+                
+                EXAMPLE:
+                An incident occurred between 2022-11-17 14:11:04.955070 and 2022-11-22 22:19:04.837526, involving a 
+                total of 200 alerts. The alerts indicated critical and warning issues such as high CPU and memory 
+                usage in pods and nodes, as well as stuck Kubernetes Daemonset rollout. Potential incident scenario: 
+                Kubernetes Daemonset rollout stuck due to high CPU and memory usage in pods and nodes. This caused a
+                long tail of alerts on various topics."""
+            },
+            {
+                "role": "user",
+                "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
+                {incident_start}, ended on {incident_end}, included {len(description_strings)} alerts. {prompt_addition}"""
+            }
+        ]).choices[0].message.content
+        
+        return summary
+    except Exception as e:
+        logger.error(f"Error in generating incident summary: {e}")
+        return "Summorization is Disabled"
