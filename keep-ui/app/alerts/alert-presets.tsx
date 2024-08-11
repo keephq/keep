@@ -145,6 +145,7 @@ export default function AlertPresets({
           }
         );
         presetsMutator();
+        mutateTags();
         router.push(`/alerts/${presetName.toLowerCase()}`);
       }
     }
