@@ -50,12 +50,7 @@ export function GlobalEditor() {
 }
 
 export function GlobalEditorV2() {
-  const { v2Properties: properties, updateV2Properties: setProperty } = useStore();
-  const [localProperties, setLocalProperties] = useState(properties);
-  const handleSubmit = () => {
-    // Save the finalized properties
-    setProperty(localProperties);
-  };
+  const { v2Properties: properties, updateV2Properties: setProperty, selectedNode } = useStore();
 
   return (
     <EditorLayout>
@@ -65,20 +60,16 @@ export function GlobalEditorV2() {
         workflow YAML specifications.
       </Text>
       <Text className="mt-5">
-        Use the toolbox to add steps, conditions, and actions to your workflow
+        {/* Use the toolbox to add steps, conditions, and actions to your workflow
         and click the `Generate` button to compile the workflow / `Deploy`
-        button to deploy the workflow to Keep.
+        button to deploy the workflow to Keep. */}
+        Use the edge add button or an empty step (a step with a +) to insert steps, conditions, and actions into your workflow.
+        Then, click the Generate button to compile the workflow or the Deploy button to deploy it to Keep.
       </Text>
       <WorkflowEditorV2
-        initialProperties={localProperties}
-        onUpdate={setLocalProperties}
+        properties={properties}
+        setProperties={setProperty}
       />
-      <button
-        className="mt-4 bg-orange-500 text-white p-2 rounded"
-        onClick={handleSubmit}
-      >
-        Save
-      </button>
     </EditorLayout>
   );
 }
@@ -426,16 +417,16 @@ function WorkflowEditor(properties: Properties, updateProperty: any) {
   );
 }
 function WorkflowEditorV2({
-  initialProperties,
-  onUpdate,
+  properties,
+  setProperties,
 }: {
-  initialProperties: Properties;
-  onUpdate: (updatedProperties: Properties) => void;
+  properties: Properties;
+  setProperties: (updatedProperties: Properties) => void;
 }) {
-  const [properties, setProperties] = useState(initialProperties);
-  useEffect(() => {
-    setProperties(initialProperties);
-  }, [initialProperties]);
+  // const [properties, setProperties] = useState(initialProperties);
+  // useEffect(() => {
+  //   setProperties(initialProperties);
+  // }, [initialProperties]);
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
@@ -472,9 +463,6 @@ function WorkflowEditorV2({
     (k) => k !== "isLocked" && k !== "id"
   );
 
-  useEffect(() => {
-    onUpdate(properties);
-  }, [properties]);
   return (
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
@@ -641,7 +629,7 @@ export function StepEditorV2({
 
   return (
     <EditorLayout>
-      <div className="flex items-center space-x-3 mb-2">
+      {/* <div className="flex items-center space-x-3 mb-2">
         <Switch
           id="switch"
           name="switch"
@@ -654,7 +642,7 @@ export function StepEditorV2({
         >
           Switch to Global Editor
         </label>
-      </div>
+      </div> */}
       <Title className="capitalize">{providerType} Editor</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput

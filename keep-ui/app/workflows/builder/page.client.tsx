@@ -69,7 +69,7 @@ export default function PageClient({
   const incrementState = (s: number) => s + 1;
 
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-full h-full">
+    <main className="p-4 md:p-5 mx-auto max-w-full h-[98%]">
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>

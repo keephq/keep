@@ -314,7 +314,7 @@ function Builder({
   };
 
   return (
-    <>
+    <div className="h-full">
       <Modal
         onRequestClose={closeGenerateModal}
         isOpen={generateModalIsOpen}
@@ -338,7 +338,7 @@ function Builder({
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
           {getworkflowStatus()}
-          <div className="h-[90%]">
+          <div className="h-[92%]">
             <ReactFlowProvider>
               <ReactFlowBuilder
                 workflow={workflow}
@@ -354,7 +354,7 @@ function Builder({
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 
