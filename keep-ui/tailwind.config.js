@@ -32,7 +32,7 @@ module.exports = {
             DEFAULT: "#e5e7eb", // gray-200
           },
           ring: {
-            DEFAULT: "#e5e7eb", // gray-200
+            DEFAULT:"rgb(255 237 213)", // orange-200
           },
           content: {
             subtle: "#646464", // Custom black-400 (light black)

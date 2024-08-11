@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
-import { Button, TextInput, Switch, Text } from "@tremor/react";
+import { Button, Subtitle, TextInput, Switch, Text } from "@tremor/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
@@ -11,11 +11,11 @@ import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
 import QueryBuilder, { formatQuery, parseCEL } from "react-querybuilder";
-import CreatableSelect from "react-select/creatable";
+import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
 
+type OptionType = { value: string; label: string };
 
-// Define types for the tags
 interface TagOption {
   id?: number;
   name: string;
@@ -175,11 +175,12 @@ export default function AlertPresets({
         <div className="space-y-2">
           <div className="text-lg font-semibold">
             <p>
-              {presetName ? "Update preset name?" : "Enter new preset name"}
+              {presetName ? "Update preset" : "Enter new preset name"}
             </p>
           </div>
 
           <div className="space-y-2">
+            <Subtitle>Preset Name</Subtitle>
             <TextInput
               error={!presetName}
               errorMessage="Preset name is required"
@@ -193,9 +194,8 @@ export default function AlertPresets({
               className="w-full"
             />
           </div>
-
-          <CreatableSelect
-            isMulti
+          <Subtitle>Tags</Subtitle>
+          <CreatableMultiSelect
             value={selectedTags.map((tag) => ({
               value: tag.name,
               label: tag.name,

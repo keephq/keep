@@ -95,14 +95,16 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
 };
 type CustomPresetAlertLinksProps = {
   session: Session;
+  selectedTags: string[];
 };
 
 export const CustomPresetAlertLinks = ({
   session,
+  selectedTags,
 }: CustomPresetAlertLinksProps) => {
   const apiUrl = getApiURL();
 
-  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS} = usePresets();
+  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } = usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -121,13 +123,18 @@ export const CustomPresetAlertLinks = ({
     return preset && preset.created_by == session?.user?.email;
   };
 
+  // Filter presets based on selected tags
+  const filteredPresets = presets.filter((preset) =>
+    preset.tags.some((tag) => selectedTags?.includes(tag.name))
+  );
+
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
       (preset) => !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
     );
 
     // Combine live presets and local storage order
-    const combinedOrder = presets.reduce<Preset[]>((acc, preset: Preset) => {
+    const combinedOrder = filteredPresets.reduce<Preset[]>((acc, preset: Preset) => {
       if (!acc.find((p) => p.id === preset.id)) {
         acc.push(preset);
       }
@@ -138,8 +145,7 @@ export const CustomPresetAlertLinks = ({
     if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
       setPresetsOrder(combinedOrder);
     }
-  }, [presets, presetsOrderFromLS]);
-
+  }, [filteredPresets, presetsOrderFromLS]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -162,7 +168,7 @@ export const CustomPresetAlertLinks = ({
     );
 
     if (isDeleteConfirmed) {
-    const response = await fetch(`${apiUrl}/preset/${presetId}`, {
+      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
