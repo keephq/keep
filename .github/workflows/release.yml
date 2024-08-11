@@ -10,18 +10,41 @@ jobs:
     permissions:
       id-token: write
       contents: write
+      pull-requests: write
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        persist-credentials: false
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-    - name: Release Keep
-      uses: python-semantic-release/python-semantic-release@v9.4.0
-      env:
-        GH_TOKEN: ${{ secrets.SHAHAR_PAT }}
-      with:
-        git_committer_name: Keep Release Bot
-        git_committer_email: no-reply@keephq.dev
-        github_token: ${{ secrets.SHAHAR_PAT }}
+      - name: Create or update release branch
+        run: |
+          git config user.name "Keep Release Bot"
+          git config user.email "no-reply@keephq.dev"
+
+          # Fetch all branches and tags
+          git fetch --all
+
+          # Create or reset the release branch to match the current HEAD
+          git checkout -B release
+
+      - name: Release Keep
+        uses: python-semantic-release/python-semantic-release@v9.4.0
+        with:
+          git_committer_name: Keep Release Bot
+          git_committer_email: no-reply@keephq.dev
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push branch
+        run: |
+          # Push the release branch to the remote repository, forcing update
+          git push --force origin release
+
+      - name: Open PR for release branch
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: release
+          title: "Release - $(date +'%Y-%m-%d')"
+          body: "This PR contains the latest release changes."
+          draft: false
