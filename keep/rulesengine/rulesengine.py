@@ -10,6 +10,7 @@ from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
 from keep.api.core.db import create_alert as create_alert_db
 from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.group import GroupDto
 
@@ -134,26 +135,31 @@ class RulesEngine:
             # todo: this is not scaling, needs to find another solution
             # group_payload = self._generate_group_payload(group.alerts)
             # create the alert
+            event = {
+                "name": group_name,
+                "id": group_fingerprint,
+                "description": group_description,
+                "lastReceived": group_attributes.get("last_update_time"),
+                "severity": group_severity,
+                "source": group_source,
+                "status": group_status,
+                "pushed": True,
+                "group": True,
+                # "groupPayload": group_payload,
+                "fingerprint": group_fingerprint,
+                **group_attributes,
+            }
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
                 provider_type="group",
                 provider_id=rule.id,
                 # todo: event should support list?
-                event={
-                    "name": group_name,
-                    "id": group_fingerprint,
-                    "description": group_description,
-                    "lastReceived": group_attributes.get("last_update_time"),
-                    "severity": group_severity,
-                    "source": group_source,
-                    "status": group_status,
-                    "pushed": True,
-                    "group": True,
-                    # "groupPayload": group_payload,
-                    "fingerprint": group_fingerprint,
-                    **group_attributes,
-                },
+                event=event,
                 fingerprint=group_fingerprint,
+            )
+            elastic_client = ElasticClient(self.tenant_id)
+            elastic_client.index_alert(
+                alert=AlertDto(id=group_alert.id, **event),
             )
             grouped_alerts.append(group_alert)
             self.logger.info(f"Created alert {group_alert.id} for group {group.id}")
