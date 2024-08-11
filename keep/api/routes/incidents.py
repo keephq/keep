@@ -5,7 +5,7 @@ import sys
 import asyncio
 
 from typing import List
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
