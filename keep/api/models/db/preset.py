@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, conint, constr
 from sqlalchemy import UniqueConstraint
-from sqlmodel import JSON, TEXT, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
 class StaticPresetsId(enum.Enum):
@@ -27,7 +27,7 @@ class PresetTagLink(SQLModel, table=True):
 class Tag(SQLModel, table=True):
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    name: str = Field(sa_column=Column(TEXT, unique=True, nullable=False))
+    name: str = Field(unique=True, nullable=False)
     presets: List["Preset"] = Relationship(
         back_populates="tags", link_model=PresetTagLink
     )
