@@ -57,10 +57,6 @@ export function GlobalEditorV2() {
     setProperty(localProperties);
   };
 
-  useEffect(() => {
-    setLocalProperties(properties)
-  }, [properties]);
-
   return (
     <EditorLayout>
       <Title>Keep Workflow Editor</Title>
