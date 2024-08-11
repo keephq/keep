@@ -16,6 +16,7 @@ import { useTags } from "utils/hooks/useTags";
 import Modal from "@/components/ui/Modal";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import { ActionMeta, MultiValue } from "react-select";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -56,7 +57,10 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   );
   const groupsPreset = staticPresets.find((preset) => preset.name === "groups");
 
-  const handleTagSelect = (newValue: { value: string; label: string }[]) => {
+  const handleTagSelect = (
+    newValue: MultiValue<{ value: string; label: string }>,
+    actionMeta: ActionMeta<{ value: string; label: string }>
+  ) => {
     setTempSelectedTags(newValue.map((tag) => tag.value));
   };
 

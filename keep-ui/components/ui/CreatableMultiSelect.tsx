@@ -1,12 +1,12 @@
 import React from "react";
 import CreatableSelect from "react-select/creatable";
-import { components, Props as SelectProps } from "react-select";
+import { components, Props as SelectProps, GroupBase, StylesConfig } from "react-select";
 import { Badge } from "@tremor/react";
 
 type OptionType = { value: string; label: string };
 
-const customStyles = {
-  control: (provided, state) => ({
+const customStyles: StylesConfig<OptionType, true> = {
+  control: (provided: any, state: any) => ({
     ...provided,
     borderColor: state.isFocused ? 'orange' : '#ccc',
     '&:hover': {
@@ -15,7 +15,7 @@ const customStyles = {
     boxShadow: state.isFocused ? '0 0 0 1px orange' : null,
     backgroundColor: 'transparent',
   }),
-  option: (provided, state) => ({
+  option: (provided: any, state: any) => ({
     ...provided,
     backgroundColor: state.isSelected ? 'orange' : state.isFocused ? 'rgba(255, 165, 0, 0.1)' : 'transparent',
     color: state.isSelected ? 'white' : 'black',
@@ -23,15 +23,15 @@ const customStyles = {
       backgroundColor: 'rgba(255, 165, 0, 0.3)',
     },
   }),
-  multiValue: (provided) => ({
+  multiValue: (provided: any) => ({
     ...provided,
     backgroundColor: 'default',  // Default background color for multi-value selections
   }),
-  multiValueLabel: (provided) => ({
+  multiValueLabel: (provided: any) => ({
     ...provided,
     color: 'black',
   }),
-  multiValueRemove: (provided) => ({
+  multiValueRemove: (provided: any) => ({
     ...provided,
     color: 'orange',
     '&:hover': {
@@ -39,17 +39,17 @@ const customStyles = {
       color: 'white',
     },
   }),
-  menuPortal: (base) => ({
+  menuPortal: (base: any) => ({
     ...base,
     zIndex: 9999, // Ensure the menu appears on top of the modal
   }),
-  menu: (provided) => ({
+  menu: (provided: any) => ({
     ...provided,
     zIndex: 9999, // Ensure the menu appears on top of the modal
   }),
 };
 
-type CustomSelectProps = SelectProps<OptionType, true> & {
+type CustomSelectProps = SelectProps<OptionType, true, GroupBase<OptionType>> & {
   components?: {
     Option?: typeof components.Option;
     MultiValue?: typeof components.MultiValue;
@@ -73,7 +73,11 @@ const customComponents: CustomSelectProps['components'] = {
   ),
 };
 
-const CreatableMultiSelect = ({ value, onChange, onCreateOption, options, placeholder }: SelectProps<OptionType, true>) => (
+type CreatableMultiSelectProps = SelectProps<OptionType, true, GroupBase<OptionType>> & {
+  onCreateOption?: (inputValue: string) => void;
+};
+
+const CreatableMultiSelect: React.FC<CreatableMultiSelectProps> = ({ value, onChange, onCreateOption, options, placeholder }) => (
   <CreatableSelect
     isMulti
     value={value}
