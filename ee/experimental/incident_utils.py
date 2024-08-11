@@ -135,11 +135,12 @@ async def mine_incidents_and_create_objects(
                 update_incident_summary(incident.id, summary)
     
     pusher_client = get_pusher_client()
-    pusher_client.trigger(
-        f"private-{tenant_id}",
-        "ai-logs-change",
-        {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
-    )
+    if pusher_client:
+      pusher_client.trigger(
+          f"private-{tenant_id}",
+          "ai-logs-change",
+          {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
+      )
     logger.info(
         "Client notified on new AI log",
         extra={"tenant_id": tenant_id},
