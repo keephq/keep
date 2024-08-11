@@ -1,12 +1,11 @@
 "use client";
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
-import { useAIStats } from "utils/hooks/useAI";
+import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { usePollAILogs } from "utils/hooks/useAI";
-import { DialogOverlayProps } from "@headlessui/react";
+import { AILogs } from "./model";
 
 export default function Ai() {
   const { data: aistats, isLoading } = useAIStats();
@@ -17,7 +16,7 @@ export default function Ai() {
   const [animate, setAnimate] = useState(false);
   const onlyOnce = useRef(false);
 
-  const mutateAILogs = (logs: any) => {
+  const mutateAILogs = (logs: AILogs) => {
     setBasicAlgorithmLog(logs.log);
   };
   usePollAILogs(mutateAILogs);

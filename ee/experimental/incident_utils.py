@@ -87,7 +87,7 @@ async def mine_incidents_and_create_objects(
         incident_lower_timestamp = datetime.now() - timedelta(days=100)
         
     if not incident_upper_timestamp:
-        incident_upper_timestamp = datetime
+        incident_upper_timestamp = datetime.now()
         
     if not alert_lower_timestamp:
         alert_lower_timestamp = datetime.now() - timedelta(days=100)

@@ -1,4 +1,4 @@
-import { AIStats } from "app/ai/model";
+import { AILogs, AIStats } from "app/ai/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
@@ -23,10 +23,10 @@ export const useAIStats = (
   );
 };
 
-export const usePollAILogs = (mutateAILogs: any) => {
+export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
   const { bind, unbind } = useWebsocket();
   const handleIncoming = useCallback(
-    (data: any) => {
+    (data: AILogs) => {
       mutateAILogs(data);
     },
     [mutateAILogs]

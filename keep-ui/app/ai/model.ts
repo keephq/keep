@@ -5,3 +5,7 @@ export interface AIStats {
   is_mining_enabled: boolean;
   algorithm_verbose_name: string
 }
+
+export interface AILogs {
+  log: string;
+}

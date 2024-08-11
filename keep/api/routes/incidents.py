@@ -347,7 +347,7 @@ def mine(
 ) -> dict:     
     result = asyncio.run(mine_incidents_and_create_objects(
         None,
-        authenticated_entity,
+        authenticated_entity.tenant_id,
         alert_lower_timestamp,
         alert_upper_timestamp,
         use_n_historical_alerts,
