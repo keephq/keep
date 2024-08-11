@@ -159,7 +159,7 @@ class RulesEngine:
             )
             elastic_client = ElasticClient(self.tenant_id)
             elastic_client.index_alert(
-                alert=AlertDto(event_id=group_alert.id, **event),
+                alert=AlertDto(event_id=str(group_alert.id), **event),
             )
             grouped_alerts.append(group_alert)
             self.logger.info(f"Created alert {group_alert.id} for group {group.id}")
