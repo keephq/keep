@@ -372,7 +372,8 @@ const useStore = create<FlowState>((set, get) => ({
       nodes: newNodes,
       selectedNode: null,
       isLayouted: false,
-      changes: get().changes + 1
+      changes: get().changes + 1,
+      openGlobalEditor: true,
     });
   },
   updateEdge: (id: string, key: string, value: any) => {
