@@ -13,6 +13,7 @@ import { AlertsRulesBuilder } from "./alerts-rules-builder";
 import QueryBuilder, { formatQuery, parseCEL } from "react-querybuilder";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
+import { mutate } from "swr";
 
 type OptionType = { value: string; label: string };
 
@@ -145,6 +146,7 @@ export default function AlertPresets({
           }
         );
         presetsMutator();
+        mutateTags();
         router.push(`/alerts/${presetName.toLowerCase()}`);
       }
     }
