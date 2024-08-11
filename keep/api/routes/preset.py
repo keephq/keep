@@ -344,7 +344,10 @@ async def get_preset_alerts(
     # if preset does not exist
     if not preset:
         raise HTTPException(404, "Preset not found")
-    preset_dto = PresetDto(**preset.to_dict())
+    if isinstance(preset, Preset):
+        preset_dto = PresetDto(**preset.to_dict())
+    else:
+        preset_dto = PresetDto(**preset.dict())
     search_engine = SearchEngine(tenant_id=tenant_id)
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})

@@ -238,7 +238,7 @@ export default function AlertPresets({
               variant="secondary"
               color="orange"
               onClick={() => setIsModalOpen(false)}
-              tooltip="Close Modal"
+              tooltip="Close"
             >
               Close
             </Button>
@@ -246,7 +246,7 @@ export default function AlertPresets({
               size="lg"
               color="orange"
               onClick={addOrUpdatePreset}
-              tooltip="Save Modal"
+              tooltip="Save Preset"
             >
               Save
             </Button>
