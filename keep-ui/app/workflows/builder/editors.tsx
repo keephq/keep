@@ -52,7 +52,6 @@ export function GlobalEditor() {
 export function GlobalEditorV2() {
   const { v2Properties: properties, updateV2Properties: setProperty } = useStore();
   const [localProperties, setLocalProperties] = useState(properties);
-
   const handleSubmit = () => {
     // Save the finalized properties
     setProperty(localProperties);
@@ -434,7 +433,6 @@ function WorkflowEditorV2({
   onUpdate: (updatedProperties: Properties) => void;
 }) {
   const [properties, setProperties] = useState(initialProperties);
-
   useEffect(() => {
     setProperties(initialProperties);
   }, [initialProperties]);
@@ -477,7 +475,6 @@ function WorkflowEditorV2({
   useEffect(() => {
     onUpdate(properties);
   }, [properties]);
-
   return (
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
