@@ -1,9 +1,11 @@
 import datetime
 import hashlib
 import json
+import os
 import time
 import uuid
 
+import pytest
 from sqlalchemy.orm import subqueryload
 
 from keep.api.core.db import create_rule as create_rule_db
@@ -12,6 +14,11 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Alert
 from keep.rulesengine.rulesengine import RulesEngine
+
+
+@pytest.fixture(autouse=True)
+def set_elastic_env():
+    os.environ["ELASTIC_ENABLED"] = "false"
 
 
 # Test that a simple rule works
