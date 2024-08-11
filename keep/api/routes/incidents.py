@@ -334,17 +334,17 @@ def delete_alerts_from_incident(
 )
 def mine(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
-    alert_lower_timestamp: datetime = datetime.now() - timedelta(days=100),
-    alert_upper_timestamp: datetime = datetime.now(),
+    alert_lower_timestamp: datetime = None,
+    alert_upper_timestamp: datetime = None,
     use_n_historical_alerts: int = 10e10,
-    incident_lower_timestamp: datetime = datetime.now() - timedelta(days=100),
-    incident_upper_timestamp: datetime = datetime.now(),
+    incident_lower_timestamp: datetime = None,
+    incident_upper_timestamp: datetime = None,
     use_n_hist_incidents: int = 10e10,
     pmi_threshold: float = 0.0,
     knee_threshold: float = 0.8,
     min_incident_size: int = 5,
     incident_similarity_threshold: float = 0.8,
-) -> dict:
+) -> dict:     
     result = asyncio.run(mine_incidents_and_create_objects(
         None,
         authenticated_entity,

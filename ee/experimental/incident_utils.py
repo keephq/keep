@@ -71,17 +71,29 @@ def calculate_pmi_matrix(
 async def mine_incidents_and_create_objects(
         ctx: dict | None,  # arq context
         tenant_id: str,
-        alert_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60 * 60),
-        alert_upper_timestamp: datetime = datetime.now(),
+        alert_lower_timestamp: datetime = None,
+        alert_upper_timestamp: datetime = None,
         use_n_historical_alerts: int = 10e10,
-        incident_lower_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 4 * 60 * 60),
-        incident_upper_timestamp: datetime = datetime.now(),
+        incident_lower_timestamp: datetime = None,
+        incident_upper_timestamp: datetime = None,
         use_n_hist_incidents: int = 10e10,
         pmi_threshold: float = 0.0,
         knee_threshold: float = 0.8,
         min_incident_size: int = 5,
         incident_similarity_threshold: float = 0.8,
     ):
+    
+    if not incident_lower_timestamp:
+        incident_lower_timestamp = datetime.now() - timedelta(days=100)
+        
+    if not incident_upper_timestamp:
+        incident_upper_timestamp = datetime
+        
+    if not alert_lower_timestamp:
+        alert_lower_timestamp = datetime.now() - timedelta(days=100)
+        
+    if not alert_upper_timestamp:
+        alert_upper_timestamp = datetime.now()
 
     calculate_pmi_matrix(ctx, tenant_id)
 

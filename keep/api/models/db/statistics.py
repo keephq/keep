@@ -6,3 +6,4 @@ class PMIMatrix(SQLModel, table=True):
     fingerprint_i: str = Field(primary_key=True)
     fingerprint_j: str = Field(primary_key=True)
     pmi: float
+    
