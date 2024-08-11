@@ -1,4 +1,6 @@
+import React from "react";
 import { DialogPanel, Dialog, Title } from "@tremor/react";
+
 export default function Modal({
   children,
   isOpen,
@@ -14,7 +16,7 @@ export default function Modal({
 }) {
   return (
     <Dialog open={isOpen} onClose={onClose}>
-      <DialogPanel className={className}>
+      <DialogPanel className={`border-2 border-orange-300 rounded-lg ring-0 ${className}`}>
         {title && <Title>{title}</Title>}
         {children}
       </DialogPanel>
