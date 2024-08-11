@@ -5,7 +5,7 @@ import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
 import { SilencedDoorbellNotification } from "components/icons";
 import { IoChevronUp } from "react-icons/io5";
-import { AiOutlineGroup, AiOutlineSound, AiOutlineSwap } from "react-icons/ai";
+import { AiOutlineGroup, AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { useTags } from "utils/hooks/useTags";
 import Modal from "@/components/ui/Modal";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -22,7 +23,8 @@ type AlertsLinksProps = {
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
-  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([]);
   const { data: tags = [] } = useTags();
   const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
   const { data: fetchedPresets = [] } = useStaticPresets({
@@ -31,6 +33,8 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   const [staticPresets, setStaticPresets] = useState(staticPresetsOrderFromLS);
 
+  const [storedTags, setStoredTags] = useLocalStorage<string[]>("selectedTags", []);
+
   useEffect(() => {
     if (
       fetchedPresets.length > 0 &&
@@ -38,7 +42,13 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     ) {
       setStaticPresets(staticPresetsOrderFromLS);
     }
-  }, [fetchedPresets]);
+  }, [fetchedPresets, staticPresetsOrderFromLS]);
+
+  useEffect(() => {
+    if (JSON.stringify(selectedTags) !== JSON.stringify(storedTags)) {
+      setSelectedTags(storedTags);
+    }
+  }, []);
 
   const mainPreset = staticPresets.find((preset) => preset.name === "feed");
   const dismissedPreset = staticPresets.find(
@@ -46,8 +56,19 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   );
   const groupsPreset = staticPresets.find((preset) => preset.name === "groups");
 
-  const handleTagSelect = (newValue) => {
-    setSelectedTags(newValue.map((tag) => tag.value));
+  const handleTagSelect = (newValue: { value: string; label: string }[]) => {
+    setTempSelectedTags(newValue.map((tag) => tag.value));
+  };
+
+  const handleApplyTags = () => {
+    setSelectedTags(tempSelectedTags);
+    setStoredTags(tempSelectedTags);
+    setIsTagModalOpen(false);
+  };
+
+  const handleOpenModal = () => {
+    setTempSelectedTags(selectedTags);
+    setIsTagModalOpen(true);
   };
 
   return (
@@ -61,11 +82,17 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   ALERTS
                 </Subtitle>
                 <FiFilter
-                  className="absolute left-full ml-2 cursor-pointer text-gray-400 opacity-0 group-hover:opacity-100 group-hover:text-orange-500 transition-opacity"
+                  className={classNames(
+                    "absolute left-full ml-2 cursor-pointer text-gray-400 transition-opacity",
+                    {
+                      "opacity-100 text-orange-500": selectedTags.length > 0,
+                      "opacity-0 group-hover:opacity-100 group-hover:text-orange-500": selectedTags.length === 0
+                    }
+                  )}
                   size={16}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsTagModalOpen(true);
+                    handleOpenModal();
                   }}
                 />
               </div>
@@ -117,7 +144,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
           </>
         )}
       </Disclosure>
-      {/* Tag Selection Modal */}
       <Modal
         isOpen={isTagModalOpen}
         onClose={() => setIsTagModalOpen(false)}
@@ -127,7 +153,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
           <Subtitle>Select tags to watch</Subtitle>
           <Callout title="" color="orange">Customize your presets list by watching specific tags.</Callout>
           <CreatableMultiSelect
-            value={selectedTags.map((tag) => ({
+            value={tempSelectedTags.map((tag) => ({
               value: tag,
               label: tag,
             }))}
@@ -139,14 +165,25 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
             placeholder="Select or create tags"
             className="mt-4"
           />
-          <Button
-            size="lg"
-            color="orange"
-            onClick={() => setIsTagModalOpen(false)}
-            tooltip="Close Modal"
-          >
-            Close
-          </Button>
+          <div className="flex justify-end space-x-2.5">
+            <Button
+              size="lg"
+              variant="secondary"
+              color="orange"
+              onClick={() => setIsTagModalOpen(false)}
+              tooltip="Close Modal"
+            >
+              Close
+            </Button>
+            <Button
+              size="lg"
+              color="orange"
+              onClick={handleApplyTags}
+              tooltip="Apply Tags"
+            >
+              Apply
+            </Button>
+          </div>
         </div>
       </Modal>
     </>

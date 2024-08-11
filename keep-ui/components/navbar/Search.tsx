@@ -97,7 +97,7 @@ const EXTERNAL_OPTIONS = [
 
 const OPTIONS = [...NAVIGATION_OPTIONS, ...EXTERNAL_OPTIONS];
 
-export const Search = ({ isTagModalOpen }) => {
+export const Search = () => {
   const [query, setQuery] = useState<string>("");
   const router = useRouter();
   const comboboxBtnRef = useRef<ElementRef<"button">>(null);
@@ -266,7 +266,7 @@ export const Search = ({ isTagModalOpen }) => {
   }, []);
 
   return (
-    <div className={`flex items-center space-x-3 py-3 px-2 border-b border-gray-300 ${isTagModalOpen ? 'pointer-events-none' : ''}`}>
+    <div className="flex items-center space-x-3 py-3 px-2 border-b border-gray-300">
       <Link href="/">
         <Image className="w-8" src={KeepPng} alt="Keep Logo" />
       </Link>
@@ -276,26 +276,25 @@ export const Search = ({ isTagModalOpen }) => {
         onChange={onOptionSelection}
         nullable
         as="div"
-        className="relative z-30"
+        className="relative"
       >
         {({ open }) => (
           <>
             {open && (
               <div
-                className="fixed inset-0 bg-black/40 z-20"
+                className="fixed inset-0 bg-black/40 z-10"
                 aria-hidden="true"
               />
             )}
             <Combobox.Button ref={comboboxBtnRef} aria-disabled={open}>
               <Combobox.Input
                 as={TextInput}
-                className="z-30"
+                className="z-20"
                 placeholder={placeholderText}
                 color="orange"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 ref={comboboxInputRef}
-                disabled={isTagModalOpen} // Disable input when modal is open
               />
             </Combobox.Button>
             <Transition
@@ -306,7 +305,7 @@ export const Search = ({ isTagModalOpen }) => {
               leaveTo="opacity-0"
             >
               <Combobox.Options
-                className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-30 w-96"
+                className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
                 as={List}
               >
                 <NoQueriesFoundResult />

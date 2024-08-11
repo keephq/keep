@@ -20,7 +20,7 @@ def generate_uuid():
 
 class PresetTagLink(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id", primary_key=True)
-    preset_id: str = Field(foreign_key="preset.id", primary_key=True)
+    preset_id: UUID = Field(foreign_key="preset.id", primary_key=True)
     tag_id: str = Field(foreign_key="tag.id", primary_key=True)
 
 
@@ -40,7 +40,7 @@ class TagDto(BaseModel):
 
 class Preset(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("tenant_id", "name"),)
-    id: str = Field(default_factory=generate_uuid, primary_key=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     created_by: Optional[str] = Field(index=True, nullable=False)
     is_private: Optional[bool] = Field(default=False)

@@ -123,18 +123,13 @@ export const CustomPresetAlertLinks = ({
     return preset && preset.created_by == session?.user?.email;
   };
 
-  // Filter presets based on selected tags
-  const filteredPresets = presets.filter((preset) =>
-    preset.tags.some((tag) => selectedTags?.includes(tag.name))
-  );
-
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
       (preset) => !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
     );
 
     // Combine live presets and local storage order
-    const combinedOrder = filteredPresets.reduce<Preset[]>((acc, preset: Preset) => {
+    const combinedOrder = presets.reduce<Preset[]>((acc, preset: Preset) => {
       if (!acc.find((p) => p.id === preset.id)) {
         acc.push(preset);
       }
@@ -145,8 +140,13 @@ export const CustomPresetAlertLinks = ({
     if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
       setPresetsOrder(combinedOrder);
     }
-  }, [filteredPresets, presetsOrderFromLS]);
-
+  }, [presets, presetsOrderFromLS]);
+  // Filter presets based on tags, or return all if no tags are selected
+  const filteredOrderedPresets = selectedTags.length === 0
+    ? presetsOrder
+    : presetsOrder.filter((preset) =>
+        preset.tags.some((tag) => selectedTags.includes(tag.name))
+      );
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -226,7 +226,7 @@ export const CustomPresetAlertLinks = ({
       onDragEnd={onDragEnd}
     >
       <SortableContext key="preset-alerts" items={presetsOrder}>
-        {presetsOrder.map((preset) => (
+        {filteredOrderedPresets.map((preset) => (
           <PresetAlert
             key={preset.id}
             preset={preset}

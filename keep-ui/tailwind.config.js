@@ -24,7 +24,7 @@ module.exports = {
           },
           background: {
             muted: "#f9fafb", // gray-50
-            subtle: "#f3f4f6", // gray-100
+            subtle: "rgb(255 237 213)", // orange-200
             DEFAULT: "#ffffff", // white
             emphasis: "#374151", // gray-700
           },
@@ -32,7 +32,7 @@ module.exports = {
             DEFAULT: "#e5e7eb", // gray-200
           },
           ring: {
-            DEFAULT:"rgb(255 237 213)", // orange-200
+            DEFAULT: "#e5e7eb", // gray-200
           },
           content: {
             subtle: "#646464", // Custom black-400 (light black)
