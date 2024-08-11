@@ -135,6 +135,7 @@ export function createSwitchNodeV2(
     isNested?: boolean,
 ): FlowNode[] {
     const customIdentifier = `${step.type}__end__${nodeId}`;
+    const stepType = step?.type?.replace("step-", "")?.replace("condition-", "")?.replace("__end", "")?.replace("action-", "");
     const { name, type, componentType, properties} = step;
     return [
         {
@@ -147,14 +148,12 @@ export function createSwitchNodeV2(
                 componentType,
                 id: nodeId,
                 properties,
+                name: name
             },
             isDraggable: false,
             prevNodeId,
             nextNodeId: customIdentifier,
             dragHandle: ".custom-drag-handle",
-            style: {
-                margin: "0px 20px 0px 20px",
-            },
             isNested: !!isNested
         },
         {
@@ -162,9 +161,10 @@ export function createSwitchNodeV2(
             type: "custom",
             position: { x: 0, y: 0 },
             data: {
-                label: "+",
+                label: `${stepType} End`,
                 id: customIdentifier,
                 type: `${step.type}__end`,
+                name: `${stepType} End`
             },
             isDraggable: false,
             prevNodeId: nodeId,
@@ -332,7 +332,7 @@ export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, i
         },
         {
             id: customIdentifier,
-            data: { ...rest, id: customIdentifier, name: "foreach end", label: "foreach end", type: `${step.type}__end`},
+            data: { ...rest, id: customIdentifier, name: "foreach end", label: "foreach end", type: `${step.type}__end`, name: 'Foreach End'},
             type: "custom",
             position: { x: 0, y: 0 },
             isDraggable: false,

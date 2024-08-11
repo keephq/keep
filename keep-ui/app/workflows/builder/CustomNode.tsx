@@ -41,7 +41,10 @@ function CustomNode({ id, data }: FlowNode) {
           }`}
         onClick={(e) => {
           e.stopPropagation();
-          if (type === 'start' || type === 'end' || id?.includes('end')) {
+          if (type === 'start' || type === 'end' || id?.includes('end') || id?.includes('empty') ) {
+            if(id?.includes('empty')){
+              setSelectedNode(id);
+            }
             setOpneGlobalEditor(true);
             return;
           }
