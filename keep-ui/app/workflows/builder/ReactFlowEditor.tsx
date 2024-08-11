@@ -6,7 +6,7 @@ import { Button } from "@tremor/react";
 
 const ReactFlowEditor = () => {
   const { openGlobalEditor, selectedNode, stepEditorOpenForNode } = useStore();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true); // Set initial state to true
 
   useEffect(() => {
     if (stepEditorOpenForNode) {
