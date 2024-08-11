@@ -380,7 +380,7 @@ class JiraonpremProvider(BaseProvider):
                 self.logger.exception(
                     "Failed to update an issue", extra=response.text
                 )
-                raise ProviderException(f"Failed to update an issue")
+                raise ProviderException("Failed to update an issue")
             self.logger.info("Updated an issue!")
             return {"ticket_id": ticket_id}
         
