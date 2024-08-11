@@ -304,6 +304,61 @@ class JiraProvider(BaseProvider):
             return {"issue": response.json()}
         except Exception as e:
             raise ProviderException(f"Failed to create an issue: {e}")
+        
+    def __update_issue(
+        self,
+        ticket_id: str,
+        summary: str,
+        description: str = "",
+        labels: List[str] = None,
+        components: List[str] = None,
+        custom_fields: dict = None,
+        **kwargs: dict,
+    ):
+        """
+        Helper method to update an issue in jira.
+        """
+        try:
+            self.logger.info("Updating an issue...")
+
+            url = self.__get_url(paths=["issue", ticket_id])
+
+            update = { }
+
+            if summary:
+                update["summary"] = [{"set": summary}]
+
+            if description:
+                update["description"] = [{"set": description}]
+
+            if components:
+                update["components"] = [{"set": component} for component in components]
+
+            if labels:
+                update["labels"] = [{"set": label} for label in labels]
+
+            if custom_fields:
+                update.update(custom_fields)
+
+            request_body = { "update": update }
+
+            response = requests.put(
+                url=url, json=request_body, auth=self.__get_auth(), verify=False
+            )
+
+            try:
+                if response.status_code != 204:
+                    response.raise_for_status()
+            except Exception:
+                self.logger.exception(
+                    "Failed to update an issue", extra=response.text
+                )
+                raise ProviderException(f"Failed to update an issue")
+            self.logger.info("Updated an issue!")
+            return {"ticket_id": ticket_id}
+        
+        except Exception as e:
+            raise ProviderException(f"Failed to update an issue: {e}")
 
     def _extract_project_key_from_board_name(self, board_name: str):
         boards_response = requests.get(
@@ -328,6 +383,19 @@ class JiraProvider(BaseProvider):
             )
         else:
             raise Exception("Could not fetch boards: " + boards_response.text)
+        
+    def _extract_issue_key_from_ticket_id(self, ticket_id: str):
+        issue_key = requests.get(
+            f"{self.jira_host}/rest/api/2/issue/{ticket_id}",
+            auth=self.__get_auth(),
+            headers={"Accept": "application/json"},
+            verify=False,
+        )
+
+        if issue_key.status_code == 200:
+            return issue_key.json()["key"]
+        else:
+            raise Exception("Could not fetch issue key: " + issue_key.text)
 
     def _notify(
         self,
@@ -336,6 +404,7 @@ class JiraProvider(BaseProvider):
         issue_type: str = "",
         project_key: str = "",
         board_name: str = "",
+        ticket_id: str = None,
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
@@ -356,6 +425,25 @@ class JiraProvider(BaseProvider):
             labels = json.loads(labels.replace("'", '"'))
         try:
             self.logger.info("Notifying jira...")
+
+            if ticket_id:
+                result = self.__update_issue(
+                    ticket_id=ticket_id,
+                    summary=summary,
+                    description=description,
+                    labels=labels,
+                    components=components,
+                    custom_fields=custom_fields,
+                    **kwargs,
+                )
+
+                issue_key = self._extract_issue_key_from_ticket_id(ticket_id)
+
+                result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
+
+                self.logger.info("Notified jira!")
+                return result
+
             result = self.__create_issue(
                 project_key=project_key,
                 summary=summary,
