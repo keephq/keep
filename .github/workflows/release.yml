@@ -28,17 +28,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           push: false
 
-      - name: Create or update release branch
-        run: |
-          git config user.name "Keep Release Bot"
-          git config user.email "no-reply@keephq.dev"
-
-          # Create or reset the release branch to match the current HEAD
-          git checkout -B release/${{ steps.release-step.outputs.version }}
-
       - name: Open PR for release branch
         uses: peter-evans/create-pull-request@v6.1.0
         with:
+          committer: Keep Release Bot <no-reply@keephq.dev>
           title: "Release - $(date +'%Y-%m-%d')"
+          branch: release/${{ steps.release-step.outputs.version }}
           body: "This PR contains the latest release changes."
           draft: false
+          base: main
