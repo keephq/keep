@@ -96,6 +96,9 @@ def try_create_single_tenant(tenant_id: str) -> None:
             # provision default api keys
             if os.environ.get("KEEP_DEFAULT_API_KEYS", ""):
                 logger.info("Provisioning default api keys")
+                from keep.contextmanager.contextmanager import ContextManager
+                from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
                 default_api_keys = os.environ.get("KEEP_DEFAULT_API_KEYS").split(",")
                 for default_api_key in default_api_keys:
                     try:
@@ -128,6 +131,15 @@ def try_create_single_tenant(tenant_id: str) -> None:
                         role=api_key_role,
                     )
                     session.add(new_installation_api_key)
+                    # write to the secret manager
+                    context_manager = ContextManager(tenant_id=tenant_id)
+                    secret_manager = SecretManagerFactory.get_secret_manager(
+                        context_manager
+                    )
+                    secret_manager.write_secret(
+                        secret_name=f"{tenant_id}-{api_key_name}",
+                        secret_value=api_key_secret,
+                    )
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
             # commit the changes
