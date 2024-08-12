@@ -38,8 +38,8 @@ export type V2Step = {
   type: string;
   properties?: V2Properties;
   branches?: {
-    true?: V2Step[];
-    false?: V2Step[];
+    true: V2Step[];
+    false: V2Step[];
   };
   sequence?: V2Step[];
   edgeNotNeeded?:boolean;
