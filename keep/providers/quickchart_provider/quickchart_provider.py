@@ -37,11 +37,11 @@ class QuickchartProvider(BaseProvider):
     def dispose(self):
         pass
 
-    def _notify(self, fingerprint: str):
+    def _notify(self, fingerprint: str) -> dict:
         db_alerts = get_alerts_by_fingerprint(
             tenant_id=self.context_manager.tenant_id,
             fingerprint=fingerprint,
-            limit=10000,
+            limit=False,
         )
         alerts = convert_db_alerts_to_dto_alerts(db_alerts)
         min_last_received = min(
@@ -81,9 +81,11 @@ class QuickchartProvider(BaseProvider):
         chart_data = [{"date": key, **value} for key, value in raw_chart_data.items()]
 
         # Generate chart using QuickChart
-        self.generate_chart_image(chart_data, categories_by_status, title)
+        return self.generate_chart_image(chart_data, categories_by_status, title)
 
-    def generate_chart_image(self, chart_data, categories_by_status, title: str):
+    def generate_chart_image(
+        self, chart_data, categories_by_status, title: str
+    ) -> dict:
         qc = QuickChart()
         qc.width = 800
         qc.height = 400
@@ -93,8 +95,10 @@ class QuickchartProvider(BaseProvider):
                 "labels": [data["date"] for data in chart_data],
                 "datasets": [
                     {
+                        "fill": False,
                         "label": category,
                         "lineTension": 0.4,
+                        "borderWidth": 3,
                         "data": [data.get(category, 0) for data in chart_data],
                     }
                     for category in categories_by_status
@@ -104,24 +108,18 @@ class QuickchartProvider(BaseProvider):
                 "title": {
                     "display": True,
                     "position": "top",
-                    "fontSize": 40,
+                    "fontSize": 14,
+                    "padding": 10,
                     "text": title,
                 },
                 "scales": {
                     "xAxes": [{"type": "category"}],
                     "yAxes": [{"ticks": {"beginAtZero": True}}],
                 },
-                "plugins": {
-                    "datalabels": {
-                        "display": True,
-                        "align": "center",
-                        "anchor": "center",
-                    }
-                },
             },
         }
         chart_url = qc.get_short_url()
-        print("Generated chart URL:", chart_url)
+        return {"chart_url": chart_url}
 
 
 if __name__ == "__main__":
