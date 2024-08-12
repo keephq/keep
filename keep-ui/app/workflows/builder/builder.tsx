@@ -27,7 +27,7 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import { globalValidator, stepValidator } from "./builder-validators";
+import { globalValidator, globalValidatorV2, stepValidator, stepValidatorV2 } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
@@ -41,6 +41,7 @@ import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import BuilderChanagesTracker from "./BuilderChanagesTracker";
+import { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -265,7 +266,18 @@ function Builder({
     return CanDeleteStep(step, sourceSequence);
   }
 
-  const validatorConfiguration: ValidatorConfiguration|{step:(step:any)=>boolean;root:(def:any)=>boolean;} = {
+
+  const ValidatorConfigurationV2: {
+    step: (step: V2Step,
+      parent?: V2Step,
+      definition?: ReactFlowDefinition) => boolean;
+    root: (def: FlowDefinition) => boolean;
+  } = {
+    step: (step, parent, definition) =>
+      stepValidatorV2(step, setStepValidationError, parent, definition),
+    root: (def) => globalValidatorV2(def, setGlobalValidationError),
+  }
+  const validatorConfiguration: ValidatorConfiguration = {
     step: (step, parent, definition) =>
       stepValidator(step, parent, definition, setStepValidationError),
     root: (def) => globalValidator(def, setGlobalValidationError),
@@ -315,7 +327,7 @@ function Builder({
 
   return (
     <div className="h-full">
-       <div className="flex items-center justify-between hidden">
+      <div className="flex items-center justify-between hidden">
         <div className="pl-4 flex items-center space-x-3">
           <Switch
             id="switch"
@@ -367,13 +379,17 @@ function Builder({
                   loadedAlertFile={loadedAlertFile}
                   providers={providers}
                   definition={definition}
-                  validatorConfiguration={validatorConfiguration}
-                  onDefinitionChange={(def: any) =>{
-                    setDefinition({value: {sequence: def?.sequence||[], 
-                      properties
-                      : def?.
-                      properties
-                      ||{}}, isValid:def?.isValid||false})
+                  validatorConfiguration={ValidatorConfigurationV2}
+                  onDefinitionChange={(def: any) => {
+                    setDefinition({
+                      value: {
+                        sequence: def?.sequence || [],
+                        properties
+                          : def?.
+                            properties
+                          || {}
+                      }, isValid: def?.isValid || false
+                    })
                   }
                   }
                   toolboxConfiguration={getToolboxConfiguration(providers)}

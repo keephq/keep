@@ -1,142 +1,144 @@
 import { v4 as uuidv4 } from "uuid";
-import { FlowNode, V2Step } from "app/workflows/builder/builder-store";
+import { FlowNode, V2Properties, V2Step } from "app/workflows/builder/builder-store";
 import { Edge } from "@xyflow/react";
 
 
-function getKeyBasedSquence(step:any, id:string,  type:string) {
+function getKeyBasedSquence(step: V2Step, id: string, type: string) {
     return `${step.type}__${id}__empty_${type}`;
 }
 
 
 export function reConstructWorklowToDefinition({
     nodes,
-    edges, properties ={}}:{
-        nodes: FlowNode[],
-        edges: Edge[],
-        properties: Record<string,any>
-    }) {
-        
-        const originalNodes = nodes.slice(1, nodes.length-1);
-        function processForeach(startIdx:number, endIdx:number, foreachNode:FlowNode['data'], nodeId:string) {
-            foreachNode.sequence = [];
-          
-            const tempSequence = [];
-            const foreachEmptyId = `${foreachNode.type}__${nodeId}__empty_foreach`;
-          
-            for (let i = startIdx; i < endIdx; i++) {
-              const currentNode = originalNodes[i];
-              const {isLayouted, ...nodeData} = currentNode?.data;
-              const nodeType = nodeData?.type;
-              if (currentNode.id === foreachEmptyId) {
+    edges,
+    properties = {}
+}: {
+    nodes: FlowNode[],
+    edges: Edge[],
+    properties: Record<string, any>
+}) {
+
+    const originalNodes = nodes.slice(1, nodes.length - 1);
+    function processForeach(startIdx: number, endIdx: number, foreachNode: FlowNode['data'], nodeId: string) {
+        foreachNode.sequence = [];
+
+        const tempSequence = [];
+        const foreachEmptyId = `${foreachNode.type}__${nodeId}__empty_foreach`;
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const currentNode = originalNodes[i];
+            const { isLayouted, ...nodeData } = currentNode?.data;
+            const nodeType = nodeData?.type;
+            if (currentNode.id === foreachEmptyId) {
                 foreachNode.sequence = tempSequence;
                 return i + 1;
-              }
-          
-              if (["condition-threshold", "condition-assert"].includes(nodeType)) {
+            }
+
+            if (["condition-threshold", "condition-assert"].includes(nodeType)) {
                 tempSequence.push(nodeData);
                 i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
                 continue;
-              }
-          
-              if (nodeType === "foreach") {
+            }
+
+            if (nodeType === "foreach") {
                 tempSequence.push(nodeData);
                 i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
                 continue;
-              }
-          
-              tempSequence.push(nodeData);
             }
-            return endIdx;
-          }
-          
-          function processCondition(startIdx:number, endIdx:number, conditionNode:FlowNode['data'], nodeId:string) {
-            conditionNode.branches = {
-              true: [],
-              false: [],
-            };
-          
-            const trueBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_true`;
-            const falseBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_false`;
-            let trueCaseAdded = false;
-            let falseCaseAdded = false;
-            let tempSequence = [];
-            let i = startIdx;
-            for (; i < endIdx; i++) {
-              const currentNode = originalNodes[i];
-              const {isLayouted, ...nodeData} = currentNode?.data;
-              const nodeType = nodeData?.type;
-              if (trueCaseAdded && falseCaseAdded) {
+
+            tempSequence.push(nodeData);
+        }
+        return endIdx;
+    }
+
+    function processCondition(startIdx: number, endIdx: number, conditionNode: FlowNode['data'], nodeId: string) {
+        conditionNode.branches = {
+            true: [],
+            false: [],
+        };
+
+        const trueBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_true`;
+        const falseBranchEmptyId = `${conditionNode?.type}__${nodeId}__empty_false`;
+        let trueCaseAdded = false;
+        let falseCaseAdded = false;
+        let tempSequence = [];
+        let i = startIdx;
+        for (; i < endIdx; i++) {
+            const currentNode = originalNodes[i];
+            const { isLayouted, ...nodeData } = currentNode?.data;
+            const nodeType = nodeData?.type;
+            if (trueCaseAdded && falseCaseAdded) {
                 return i;
-              }
-              if (currentNode.id === trueBranchEmptyId) {
+            }
+            if (currentNode.id === trueBranchEmptyId) {
                 conditionNode.branches.true = tempSequence;
                 trueCaseAdded = true;
                 tempSequence = [];
                 continue;
-              }
-          
-              if (currentNode.id === falseBranchEmptyId) {
+            }
+
+            if (currentNode.id === falseBranchEmptyId) {
                 conditionNode.branches.false = tempSequence;
                 falseCaseAdded = true;
                 tempSequence = [];
                 continue;
-              }
-          
-              if (["condition-threshold", "condition-assert"].includes(nodeType)) {
+            }
+
+            if (["condition-threshold", "condition-assert"].includes(nodeType)) {
                 tempSequence.push(nodeData);
                 i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
                 continue;
-              }
-          
-              if (nodeType === "foreach") {
+            }
+
+            if (nodeType === "foreach") {
                 tempSequence.push(nodeData);
                 i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
                 continue;
-              }
-              tempSequence.push(nodeData);
             }
-            return endIdx;
-          }
-          
-          function buildWorkflowDefinition(startIdx:number, endIdx:number) {
-            const workflowSequence = [];
-            for (let i = startIdx; i < endIdx; i++) {
-              const currentNode = originalNodes[i];
-              const {isLayouted, ...nodeData} = currentNode?.data;
-              const nodeType = nodeData?.type;
-              if (["condition-threshold", "condition-assert"].includes(nodeType)) {
+            tempSequence.push(nodeData);
+        }
+        return endIdx;
+    }
+
+    function buildWorkflowDefinition(startIdx: number, endIdx: number) {
+        const workflowSequence = [];
+        for (let i = startIdx; i < endIdx; i++) {
+            const currentNode = originalNodes[i];
+            const { isLayouted, ...nodeData } = currentNode?.data;
+            const nodeType = nodeData?.type;
+            if (["condition-threshold", "condition-assert"].includes(nodeType)) {
                 workflowSequence.push(nodeData);
                 i = processCondition(i + 1, endIdx, nodeData, currentNode.id);
                 continue;
-              }
-              if (nodeType === "foreach") {
+            }
+            if (nodeType === "foreach") {
                 workflowSequence.push(nodeData);
                 i = processForeach(i + 1, endIdx, nodeData, currentNode.id);
                 continue;
-              }
-              workflowSequence.push(nodeData);
             }
-            return workflowSequence;
-          }
-        
-          return {
-                sequence: buildWorkflowDefinition(0, originalNodes.length),
-                properties: properties
-          }
+            workflowSequence.push(nodeData);
+        }
+        return workflowSequence;
+    }
+
+    return {
+        sequence: buildWorkflowDefinition(0, originalNodes.length) as V2Step[],
+        properties: properties as V2Properties
+    }
 
 }
 
 export function createSwitchNodeV2(
-    step: any,
+    step: V2Step,
     nodeId: string,
-    position: { x: number; y: number },
+    position: FlowNode['position'],
     nextNodeId?: string | null,
     prevNodeId?: string | null,
     isNested?: boolean,
 ): FlowNode[] {
     const customIdentifier = `${step.type}__end__${nodeId}`;
     const stepType = step?.type?.replace("step-", "")?.replace("condition-", "")?.replace("__end", "")?.replace("action-", "");
-    const { name, type, componentType, properties} = step;
+    const { name, type, componentType, properties } = step;
     return [
         {
             id: nodeId,
@@ -149,7 +151,7 @@ export function createSwitchNodeV2(
                 id: nodeId,
                 properties,
                 name: name
-            },
+            } as V2Step,
             isDraggable: false,
             prevNodeId,
             nextNodeId: customIdentifier,
@@ -164,8 +166,9 @@ export function createSwitchNodeV2(
                 label: `${stepType} End`,
                 id: customIdentifier,
                 type: `${step.type}__end`,
-                name: `${stepType} End`
-            },
+                name: `${stepType} End`,
+                componentType: `${step.type}__end`,
+            } as V2Step,
             isDraggable: false,
             prevNodeId: nodeId,
             nextNodeId: nextNodeId,
@@ -177,12 +180,9 @@ export function createSwitchNodeV2(
 
 
 
-export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId, isNested) {
-    if (step.componentType !== "switch") {
-        return { nodes: [], edges: [] };
-    }
-    let trueBranches = step?.branches?.true || [];
-    let falseBranches = step?.branches?.false || [];
+export function handleSwitchNode(step: V2Step, position: FlowNode['position'], nextNodeId: string, prevNodeId: string, nodeId: string, isNested: boolean) {
+    let trueBranches = step?.branches?.true || [] as FlowNode[];
+    let falseBranches = step?.branches?.false || [] as Edge[];
 
 
     function _getEmptyNode(type: string) {
@@ -194,7 +194,7 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId,
             name: "empty",
             properties: {},
             isNested: true,
-        }
+        } as V2Step
     }
 
     let [switchStartNode, switchEndNode] = createSwitchNodeV2(step, nodeId, position, nextNodeId, prevNodeId, isNested);
@@ -203,13 +203,13 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId,
         ...trueBranches,
         _getEmptyNode("true"),
         { ...switchEndNode.data, type: 'temp_node', componentType: "temp_node" }
-    ];
+    ] as V2Step[];
     falseBranches = [
         { ...switchStartNode.data, type: 'temp_node', componentType: "temp_node" },
         ...falseBranches,
         _getEmptyNode("false"),
         { ...switchEndNode.data, type: 'temp_node', componentType: "temp_node" }
-    ]
+    ] as V2Step[]
 
     let truePostion = { x: position.x - 200, y: position.y - 100 };
     let falsePostion = { x: position.x + 200, y: position.y - 100 };
@@ -252,9 +252,9 @@ export function handleSwitchNode(step, position, nextNodeId, prevNodeId, nodeId,
 }
 
 export const createDefaultNodeV2 = (
-    step: any,
+    step: V2Step,
     nodeId: string,
-    position: { x: number; y: number },
+    position: FlowNode['position'],
     nextNodeId?: string | null,
     prevNodeId?: string | null,
     isNested?: boolean,
@@ -291,9 +291,9 @@ export function createCustomEdgeMeta(source: string, target: string, label?: str
         type: type || "custom-edge",
         label,
         style: { stroke: color || getRandomColor() }
-    }
+    } as Edge
 }
-export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId, isNested) {
+export function handleDefaultNode(step: V2Step, position: FlowNode['position'], nextNodeId: string, prevNodeId: string, nodeId: string, isNested: boolean) {
     const nodes = [];
     const edges = [];
     const newNode = createDefaultNodeV2(
@@ -314,14 +314,14 @@ export function handleDefaultNode(step, position, nextNodeId, prevNodeId, nodeId
     return { nodes, edges };
 }
 
-export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, isNested) {
+export function getForEachNode(step: V2Step, position: FlowNode['position'], nodeId: string, prevNodeId: string, nextNodeId: string, isNested: boolean) {
     const { sequence, ...rest } = step;
     const customIdentifier = `${step.type}__end__${nodeId}`;
 
     return [
         {
             id: nodeId,
-            data: { ...rest, id: nodeId },
+            data: { ...rest, id: nodeId } as V2Step,
             type: "custom",
             position: { x: 0, y: 0 },
             isDraggable: false,
@@ -332,7 +332,7 @@ export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, i
         },
         {
             id: customIdentifier,
-            data: { ...rest, id: customIdentifier, name: "foreach end", label: "foreach end", type: `${step.type}__end`, name: 'Foreach End'},
+            data: { ...rest, id: customIdentifier, label: "foreach end", type: `${step.type}__end`, name: 'Foreach End' } as V2Step,
             type: "custom",
             position: { x: 0, y: 0 },
             isDraggable: false,
@@ -341,11 +341,11 @@ export function getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, i
             nextNodeId: nextNodeId,
             isNested: !!isNested
         },
-    ];
+    ] as FlowNode[];
 }
 
 
-export function handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId, isNested) {
+export function handleForeachNode(step: V2Step, position: FlowNode['position'], nextNodeId: string, prevNodeId: string, nodeId: string, isNested: boolean) {
 
     const [forEachStartNode, forEachEndNode] = getForEachNode(step, position, nodeId, prevNodeId, nextNodeId, isNested);
 
@@ -358,27 +358,27 @@ export function handleForeachNode(step, position, nextNodeId, prevNodeId, nodeId
             name: "empty",
             properties: {},
             isNested: true,
-        }
+        } as V2Step
     }
     const sequences = [
         { id: prevNodeId, type: "temp_node", componentType: "temp_node", name: "temp_node", properties: {}, edgeNotNeeded: true },
         { id: forEachStartNode.id, type: "temp_node", componentType: "temp_node", name: "temp_node", properties: {} },
-        ...step.sequence,
+        ...(step?.sequence || []),
         _getEmptyNode("foreach"),
         { id: forEachEndNode.id, type: "temp_node", componentType: "temp_node", name: "temp_node", properties: {} },
         { id: nextNodeId, type: "temp_node", componentType: "temp_node", name: "temp_node", properties: {}, edgeNotNeeded: true },
-    ];
+    ] as V2Step[];
     const { nodes, edges } = processWorkflowV2(sequences, position, false, true);
     return { nodes: [forEachStartNode, ...nodes, forEachEndNode], edges: edges };
 }
 
 
 export const processStepV2 = (
-    step: any,
-    position: { x: number; y: number },
-    nextNodeId?: string | null,
-    prevNodeId?: string | null,
-    isNested?: boolean
+    step: V2Step,
+    position: FlowNode['position'],
+    nextNodeId: string,
+    prevNodeId: string,
+    isNested: boolean
 ) => {
     const nodeId = step.id;
     let newNodes: FlowNode[] = [];
@@ -410,13 +410,13 @@ export const processStepV2 = (
     return { nodes: newNodes, edges: newEdges };
 };
 
-export const processWorkflowV2 = (sequence: any, position: { x: number, y: number }, isFirstRender = false, isNested = false) => {
+export const processWorkflowV2 = (sequence: V2Step[], position: FlowNode['position'], isFirstRender = false, isNested = false) => {
     let newNodes: FlowNode[] = [];
     let newEdges: Edge[] = [];
 
     sequence?.forEach((step: any, index: number) => {
-        const prevNodeId = sequence?.[index - 1]?.id || null;
-        const nextNodeId = sequence?.[index + 1]?.id || null;
+        const prevNodeId = sequence?.[index - 1]?.id || "";
+        const nextNodeId = sequence?.[index + 1]?.id || "";
         position.y += 150;
         const { nodes, edges } = processStepV2(
             step,
