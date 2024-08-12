@@ -9,7 +9,7 @@ import {
 import { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
 
 export function globalValidator(
-  definition: Definition | FlowDefinition,
+  definition: Definition,
   setGlobalValidationError: Dispatch<SetStateAction<string | null>>
 ): boolean {
   const anyStepOrAction = definition?.sequence?.length > 0;
