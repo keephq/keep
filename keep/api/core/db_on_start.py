@@ -115,6 +115,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
                     if api_key:
                         logger.info(f"Api key {api_key_name} already exists")
                         continue
+                    logger.info(f"Provisioning api key {api_key_name}")
                     hashed_api_key = hashlib.sha256(
                         api_key_secret.encode("utf-8")
                     ).hexdigest()
@@ -127,7 +128,8 @@ def try_create_single_tenant(tenant_id: str) -> None:
                         role=api_key_role,
                     )
                     session.add(new_installation_api_key)
-                logger.info("Default api key created")
+                    logger.info(f"Api key {api_key_name} provisioned")
+                logger.info("Api keys provisioned")
             # commit the changes
             session.commit()
             logger.info("Single tenant created")
