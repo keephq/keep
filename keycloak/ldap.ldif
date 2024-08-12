@@ -76,3 +76,16 @@ mail: alice.johnson@keep.com
 o: Keep Organization
 employeeType: Developer
 memberOf: cn=developers,ou=groups,dc=keep,dc=com
+
+dn: uid=alice.bob,ou=users,dc=keep,dc=com
+objectClass: inetOrgPerson
+uid: alice.bob
+sn: Bob
+givenName: Alice
+cn: Alice Bob
+displayName: Alice Bob
+userPassword: password123
+mail: alice.bob@keep.com
+o: Keep Organization
+employeeType: Developer
+memberOf: cn=developers,ou=groups,dc=keep,dc=com

@@ -50,6 +50,11 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
             self.admin_url_without_client = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}'
             self.realm = os.environ["KEYCLOAK_REALM"]
+            # if Keep controls the Keycloak server so it have event listener
+            # for future use
+            self.keep_controlled_keycloak = (
+                os.environ.get("KEYCLOAK_KEEP_CONTROLLED", "false") == "true"
+            )
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -307,6 +312,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
 
     def get_users(self) -> list[User]:
         try:
+            # TODO: query only users that Keep created (so not show all LDAP users)
             users = self.keycloak_admin.get_users({})
             users = [user for user in users if "firstName" in user]
 

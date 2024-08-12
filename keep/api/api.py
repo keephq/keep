@@ -38,7 +38,6 @@ from keep.api.routes import (
     settings,
     status,
     tags,
-    users,
     whoami,
     workflows,
 )

@@ -45,6 +45,7 @@ services:
     volumes:
       - ./keep-realm.json:/opt/keycloak/data/import/keep-realm.json
       - ./themes/keep.jar:/opt/keycloak/providers/keep.jar
+      - ./event_listeners/last-login-event-listener-0.0.1-SNAPSHOT.jar:/opt/keycloak/providers/keycloak-event-listener.jar
       - ./keycloak_entrypoint.sh:/opt/keycloak/keycloak_entrypoint.sh
     depends_on:
       - mysql
