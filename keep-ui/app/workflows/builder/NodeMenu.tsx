@@ -10,9 +10,7 @@ export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: str
     e.stopPropagation();
   };
   const isEmptyOrEndNode = data?.type?.includes("empty") || id?.includes('end')
-
-
-  const { deleteNodes, duplicateNode, setSelectedNode, setStepEditorOpenForNode } = useStore();
+  const { deleteNodes, setSelectedNode, setStepEditorOpenForNode } = useStore();
 
   return (
     <>

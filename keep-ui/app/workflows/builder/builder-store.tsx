@@ -15,6 +15,22 @@ import { createCustomEdgeMeta, processWorkflowV2 } from "utils/reactFlow";
 
 export type V2Properties = Record<string, any>;
 
+export type Definition =  {
+  sequence: V2Step[]; 
+  properties: V2Properties; 
+  isValid?: boolean;
+}
+
+
+
+export type ReactFlowDefinition = {
+  value: {
+    sequence: V2Step[],
+    properties: V2Properties
+  },
+  isValid?: boolean
+}
+
 export type V2Step = {
   id: string;
   name?: string;
@@ -25,7 +41,10 @@ export type V2Step = {
     true?: V2Step[];
     false?: V2Step[];
   };
-  sequence?: V2Step[] | V2Step;
+  sequence?: V2Step[];
+  edgeNotNeeded?:boolean;
+  edgeLabel?:string;
+  edgeColor?: string;
 };
 
 export type NodeData = Node["data"] & Record<string, any>;
@@ -128,7 +147,7 @@ export type FlowState = {
 export type StoreGet = () => FlowState
 export type StoreSet = (state: FlowState | Partial<FlowState> | ((state: FlowState) => FlowState | Partial<FlowState>)) => void
 
-function addNodeBetween(nodeOrEdge: string | null, step: any, type: string, set: StoreSet, get: StoreGet) {
+function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, set: StoreSet, get: StoreGet) {
   if (!nodeOrEdge || !step) return;
   let edge = {} as Edge;
   if (type === 'node') {
@@ -157,7 +176,7 @@ function addNodeBetween(nodeOrEdge: string | null, step: any, type: string, set:
     },
     newStep,
     { id: targetId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node', edgeNotNeeded: true }
-  ], { x: 0, y: 0 }, true);
+  ] as V2Step[], { x: 0, y: 0 }, true);
   const newEdges = [
     ...edges,
     ...(get().edges.filter(edge => !(edge.source == sourceId && edge.target == targetId)) || []),
@@ -307,7 +326,7 @@ const useStore = create<FlowState>((set, get) => ({
         y: event.clientY,
       });
       const newUuid = uuidv4();
-      const newNode: FlowNode = {
+      const newNode = {
         id: newUuid,
         type: "custom",
         position, // Use the position object with x and y
@@ -321,7 +340,7 @@ const useStore = create<FlowState>((set, get) => ({
         },
         isDraggable: true,
         dragHandle: '.custom-drag-handle',
-      };
+      } as FlowNode;
 
       set({ nodes: [...get().nodes, newNode] });
     } catch (err) {
@@ -364,7 +383,7 @@ const useStore = create<FlowState>((set, get) => ({
     const sources = [...new Set(edges.filter((edge) => startNode.id === edge.target))];
     const targets = [...new Set(edges.filter((edge) => endNode.id === edge.source))];
     targets.forEach((edge) => {
-      finalEdges = [...finalEdges, ...sources.map((source) => createCustomEdgeMeta(source.source, edge.target, source.label)
+      finalEdges = [...finalEdges, ...sources.map((source:Edge) => createCustomEdgeMeta(source.source, edge.target, source.label as string)
       )];
     });
 

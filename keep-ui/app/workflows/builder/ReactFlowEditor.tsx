@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
-import useStore from "./builder-store";
+import useStore, { V2Properties, V2Step, ReactFlowDefinition, Definition } from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
-import { Button, Divider } from "@tremor/react";
+import { Divider } from "@tremor/react";
 import { Provider } from "app/providers/providers";
 import { reConstructWorklowToDefinition } from "utils/reactFlow";
 import debounce from "lodash.debounce";
@@ -11,13 +11,13 @@ const ReactFlowEditor = ({
   providers,
   validatorConfiguration,
   onDefinitionChange
-}:{
-  providers:Provider[];
+}: {
+  providers: Provider[];
   validatorConfiguration: {
-    step: (step: any, defnition?:any)=>boolean;
-    root: (def: any) => boolean;
+    step: (step: V2Step, parent?: V2Step, defnition?: ReactFlowDefinition) => boolean;
+    root: (def: Definition) => boolean;
   };
-  onDefinitionChange: (def: any) => void
+  onDefinitionChange: (def: Definition) => void
 }) => {
   const { selectedNode, changes, v2Properties, nodes, edges } = useStore();
   const [isOpen, setIsOpen] = useState(false);
@@ -46,6 +46,7 @@ const ReactFlowEditor = ({
 
   useEffect(() => {
     const handleDefinitionChange = () => {
+      name: "foreach end"
       if (changes > 0) {
         let { sequence, properties } =
           reConstructWorklowToDefinition({
@@ -53,8 +54,8 @@ const ReactFlowEditor = ({
             edges: edges,
             properties: v2Properties,
           }) || {};
-        sequence = sequence || [];
-        properties = properties || {};  
+        sequence = (sequence || []) as V2Step[];
+        properties = (properties || {}) as V2Properties;
         let isValid = true;
         for (let step of sequence) {
           isValid = validatorConfiguration?.step(step);
@@ -62,20 +63,20 @@ const ReactFlowEditor = ({
             break;
           }
         }
-  
+
         if (!isValid) {
           return onDefinitionChange({ sequence, properties, isValid });
         }
-  
+
         isValid = validatorConfiguration.root({ sequence, properties });
         onDefinitionChange({ sequence, properties, isValid });
       }
     };
-  
+
     const debouncedHandleDefinitionChange = debounce(handleDefinitionChange, 300);
-  
+
     debouncedHandleDefinitionChange();
-  
+
     return () => {
       debouncedHandleDefinitionChange.cancel();
     };
@@ -83,9 +84,8 @@ const ReactFlowEditor = ({
 
   return (
     <div
-      className={`absolute top-0 right-0 transition-transform duration-300 z-50 ${
-        isOpen ? "h-full" : "h-14"
-      }`}
+      className={`absolute top-0 right-0 transition-transform duration-300 z-50 ${isOpen ? "h-full" : "h-14"
+        }`}
       ref={containerRef}
     >
       {!isOpen && (
@@ -107,8 +107,8 @@ const ReactFlowEditor = ({
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
               <GlobalEditorV2 />
-              {!selectedNode?.includes('empty') && <Divider ref={stepEditorRef}/>}
-              {!selectedNode?.includes('empty') && <StepEditorV2 installedProviders={providers}/>}  
+              {!selectedNode?.includes('empty') && <Divider ref={stepEditorRef} />}
+              {!selectedNode?.includes('empty') && <StepEditorV2 installedProviders={providers} />}
             </div>
           </div>
         </div>

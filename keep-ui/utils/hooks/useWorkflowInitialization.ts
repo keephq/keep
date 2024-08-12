@@ -6,11 +6,9 @@ import {
 } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
 import { useSearchParams } from "next/navigation";
-import useStore from "../../app/workflows/builder/builder-store";
+import useStore, { Definition, ReactFlowDefinition, V2Step } from "../../app/workflows/builder/builder-store";
 import { FlowNode } from "../../app/workflows/builder/builder-store";
 import { Provider } from "app/providers/providers";
-import { Definition, Step } from "sequential-workflow-designer";
-import { WrappedDefinition } from "sequential-workflow-designer-react";
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { processWorkflowV2 } from "utils/reactFlow";
 
@@ -45,6 +43,7 @@ const layoutOptions = {
 }
 
 const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => {
+  // @ts-ignore
   const isHorizontal = options?.['elk.direction'] === 'RIGHT';
   const elk = new ELK();
 
@@ -73,6 +72,7 @@ const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => 
   };
 
   return elk
+  // @ts-ignore
     .layout(graph)
     .then((layoutedGraph) => ({
       nodes: layoutedGraph?.children?.map((node) => ({
@@ -92,8 +92,8 @@ const useWorkflowInitialization = (
   workflow: string | undefined,
   loadedAlertFile: string | null | undefined,
   providers: Provider[],
-  definition: WrappedDefinition<Definition>,
-  onDefinitionChange: (def: WrappedDefinition<Definition>) => void,
+  definition: ReactFlowDefinition,
+  onDefinitionChange: (def: Definition) => void,
   toolboxConfiguration: Record<string, any>
 ) => {
   const {
@@ -120,16 +120,6 @@ const useWorkflowInitialization = (
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [alertName, setAlertName] = useState<string | null | undefined>(null);
-  const [alertSource, setAlertSource] = useState<string | null | undefined>(
-    null
-  );
-  const searchParams = useSearchParams();
-  const nodeRef = useRef<HTMLDivElement | null>(null);
-  const [nodeDimensions, setNodeDimensions] = useState({
-    width: 200,
-    height: 100,
-  });
   const { screenToFlowPosition } = useReactFlow();
   const { fitView } = useReactFlow();
 
@@ -207,7 +197,8 @@ const useWorkflowInitialization = (
           componentType: "start",
           properties: {},
           isLayouted: false,
-        } as Partial<Step>,
+          name: "start"
+        } as V2Step,
         ...(parsedWorkflow?.sequence || []),
         {
           id: "end",
@@ -215,7 +206,8 @@ const useWorkflowInitialization = (
           componentType: "end",
           properties: {},
           isLayouted: false,
-        } as Partial<Step>,
+          name: "end"
+        } as V2Step,
       ];
       const intialPositon = { x: 0, y: 50 };
       let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);

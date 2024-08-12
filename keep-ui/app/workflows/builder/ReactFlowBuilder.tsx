@@ -6,9 +6,8 @@ import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "app/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
-import { Definition, ValidatorConfiguration } from 'sequential-workflow-designer';
 import "@xyflow/react/dist/style.css";
-import { WrappedDefinition } from "sequential-workflow-designer-react";
+import { ReactFlowDefinition, V2Step, Definition} from "./builder-store";
 
 
 const nodeTypes = { custom: CustomNode as any };
@@ -29,10 +28,10 @@ const ReactFlowBuilder = ({
   toolboxConfiguration: Record<string, any>;
   definition: any;
   validatorConfiguration: {
-    step: (step: any, parent?:any, defnition?:any)=>boolean;
-    root: (def: any) => boolean
+    step: (step: V2Step, parent?:V2Step, defnition?: ReactFlowDefinition)=>boolean;
+    root: (def: Definition) => boolean
   };
-  onDefinitionChange:(def: any) => void;
+  onDefinitionChange:(def: Definition) => void;
 }) => {
   
   const {
