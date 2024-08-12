@@ -10,7 +10,6 @@ import sqlalchemy as sa
 from alembic import op
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.exc import OperationalError
 
 from keep.api.models.db.alert import Incident
 
@@ -28,7 +27,6 @@ class AlertDtoLocal(BaseModel):
 
 def populate_db(session):
 
-    # Todo fix: This doesn't work on further revisions after Incident is changed. Remove exception handling.
     incidents = session.query(Incident).options(joinedload(Incident.alerts)).all()
 
     for incident in incidents:
@@ -52,10 +50,7 @@ def upgrade() -> None:
     op.add_column("incident", sa.Column("alerts_count", sa.Integer(), nullable=False, server_default="0"))
 
     session = Session(op.get_bind())
-    try:
-        populate_db(session)
-    except OperationalError as e:
-        print(f"Failed to populate db but still processing: {e}")
+    populate_db(session)
 
     # ### end Alembic commands ###
 
