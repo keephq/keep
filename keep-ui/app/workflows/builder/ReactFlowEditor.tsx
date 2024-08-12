@@ -5,6 +5,7 @@ import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Button, Divider } from "@tremor/react";
 import { Provider } from "app/providers/providers";
 import { reConstructWorklowToDefinition } from "utils/reactFlow";
+import debounce from "lodash.debounce";
 
 const ReactFlowEditor = ({
   providers,
@@ -43,28 +44,44 @@ const ReactFlowEditor = ({
     }
   }, [selectedNode]);
 
-
-  useEffect(()=>{
-    //TODO: add Debounce to mitigate the recontruction of defintion on every change
-    if(changes > 0){
-      let {sequence, properties} = reConstructWorklowToDefinition({nodes: nodes, edges: edges, properties: v2Properties}) || {};
-      sequence =  sequence || [];
-      properties = properties || {}; 
-      console.log("sequence", sequence, "properties", properties)
-      let isValid = true
-      for(let step of sequence){
-        isValid = validatorConfiguration?.step(step);
-        if(!isValid){
-          break;
+  useEffect(() => {
+    const handleDefinitionChange = () => {
+      if (changes > 0) {
+        let { sequence, properties } =
+          reConstructWorklowToDefinition({
+            nodes: nodes,
+            edges: edges,
+            properties: v2Properties,
+          }) || {};
+        sequence = sequence || [];
+        properties = properties || {};
+        console.log("sequence", sequence, "properties", properties);
+  
+        let isValid = true;
+        for (let step of sequence) {
+          isValid = validatorConfiguration?.step(step);
+          if (!isValid) {
+            break;
+          }
         }
+  
+        if (!isValid) {
+          return onDefinitionChange({ sequence, properties, isValid });
+        }
+  
+        isValid = validatorConfiguration.root({ sequence, properties });
+        onDefinitionChange({ sequence, properties, isValid });
       }
-      if(!isValid){
-        return onDefinitionChange({sequence, properties, isValid});
-      }
-      isValid = validatorConfiguration.root({sequence, properties});
-      onDefinitionChange({sequence, properties, isValid});
-    }
-  }, [changes])
+    };
+  
+    const debouncedHandleDefinitionChange = debounce(handleDefinitionChange, 300);
+  
+    debouncedHandleDefinitionChange();
+  
+    return () => {
+      debouncedHandleDefinitionChange.cancel();
+    };
+  }, [changes]);
 
   return (
     <div
