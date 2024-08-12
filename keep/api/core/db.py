@@ -963,29 +963,19 @@ def get_last_alerts(
                 .subquery()
             )
             
-        if upper_timestamp is not None and lower_timestamp is not None:
+        filter_conditions = []
+
+        if upper_timestamp is not None:
+            filter_conditions.append(subquery.c.max_timestamp < upper_timestamp)
+
+        if lower_timestamp is not None:
+            filter_conditions.append(subquery.c.max_timestamp >= lower_timestamp)
+
+        # Apply the filter conditions
+        if filter_conditions:
             subquery = (
                 session.query(subquery)
-                .filter(
-                    subquery.c.max_timestamp < upper_timestamp,
-                    subquery.c.max_timestamp >= lower_timestamp
-                )
-                .subquery()
-            )
-        elif upper_timestamp is not None:
-            subquery = (
-                session.query(subquery)
-                .filter(
-                    subquery.c.max_timestamp < upper_timestamp
-                )
-                .subquery()
-            )
-        elif lower_timestamp is not None:
-            subquery = (
-                session.query(subquery)
-                .filter(
-                    subquery.c.max_timestamp >= lower_timestamp
-                )
+                .filter(*filter_conditions)  # Unpack and apply all conditions
                 .subquery()
             )
         # Main query joins the subquery to select alerts with their first and last occurrence.
@@ -1878,13 +1868,13 @@ def assign_alert_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str):
 
 def is_alert_assigned_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str) -> bool:
     with Session(engine) as session:
-        assignment = session.exec(
+        assigned = session.exec(
             select(AlertToIncident)
             .where(AlertToIncident.alert_id == alert_id)
             .where(AlertToIncident.incident_id == incident_id)
             .where(AlertToIncident.tenant_id == tenant_id)
         ).first()
-    return bool(assignment)
+    return assigned is not None
 
 
 def get_incidents(tenant_id) -> List[Incident]:
@@ -2443,6 +2433,21 @@ def get_pmi_value(tenant_id: str, fingerprint_i: str, fingerprint_j: str) -> Opt
         ).first()
         
     return pmi_entry.pmi if pmi_entry else None
+
+def get_pmi_values(tenant_id: str, fingerprints: List[str]) -> Dict[Tuple[str, str], Optional[float]]:
+    pmi_values = {}
+    with Session(engine) as session:
+        for idx_i, fingerprint_i in enumerate(fingerprints):
+            for idx_j in range(idx_i, len(fingerprints)):
+                fingerprint_j = fingerprints[idx_j]
+                pmi_entry = session.exec(
+                    select(PMIMatrix)
+                    .where(PMIMatrix.tenant_id == tenant_id)
+                    .where(PMIMatrix.fingerprint_i == fingerprint_i)
+                    .where(PMIMatrix.fingerprint_j == fingerprint_j)
+                ).first()
+                pmi_values[(fingerprint_i, fingerprint_j)] = pmi_entry.pmi if pmi_entry else None
+    return pmi_values
 
 
 def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:

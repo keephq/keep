@@ -1,9 +1,20 @@
 import numpy as np
 import pandas as pd
 
-def get_batched_alert_counts(alerts, unique_alert_identifier, sliding_window_size, step_size):
+from typing import List, Tuple
+
+def get_batched_alert_counts(alerts: pd.DataFrame, unique_alert_identifier: str, sliding_window_size: int, step_size: int) -> pd.DataFrame:
     """
-        Get the number of alerts in a sliding window.
+        This function calculates number of alerts per sliding window.
+        
+        Parameters:
+        alerts (pd.DataFrame): a DataFrame containing alerts
+        unique_alert_identifier (str): a unique identifier for alerts
+        sliding_window_size (int): sliding window size in seconds
+        step_size (int): step size in seconds
+        
+        Returns:
+        rolling_counts (pd.DataFrame): a DataFrame containing the number of alerts per sliding window
     """
     
     resampled_alert_counts = alerts.set_index('starts_at').resample(f'{step_size}s')[unique_alert_identifier].value_counts().unstack(fill_value=0)
@@ -12,9 +23,18 @@ def get_batched_alert_counts(alerts, unique_alert_identifier, sliding_window_siz
     return rolling_counts
     
 
-def get_batched_alert_occurrences(alerts, unique_alert_identifier, sliding_window_size, step_size):
+def get_batched_alert_occurrences(alerts: pd.DataFrame, unique_alert_identifier: str, sliding_window_size: int, step_size: int) -> pd.DataFrame:
     """
-        Get the occurrence of alerts in a sliding window.
+        This function calculates occurrences of alerts per sliding window.
+        
+        Parameters:
+        alerts (pd.DataFrame): a DataFrame containing alerts
+        unique_alert_identifier (str): a unique identifier for alerts
+        sliding_window_size (int): sliding window size in seconds
+        step_size (int): step size in seconds
+        
+        Returns:
+        alert_occurences (pd.DataFrame): a DataFrame containing the occurrences of alerts per sliding window
     """
     
     alert_counts  = get_batched_alert_counts(alerts, unique_alert_identifier, sliding_window_size, step_size)
@@ -22,9 +42,16 @@ def get_batched_alert_occurrences(alerts, unique_alert_identifier, sliding_windo
     
     return alert_occurences
 
-def get_jaccard_scores(P_a, P_aa):
+def get_jaccard_scores(P_a: np.array, P_aa: np.array) -> np.array:
     """
-        Calculate the Jaccard similarity scores between alerts.
+        This function calculates the Jaccard similarity scores between recurring events.
+        
+        Parameters:
+        P_a (np.array): a 1D array containing the probabilities of events
+        P_aa (np.array): a 2D array containing the probabilities of joint events
+        
+        Returns:
+        jaccard_matrix (np.array): a 2D array containing the Jaccard similarity scores between events
     """
     
     P_a_matrix = P_a[:, None] + P_a
@@ -38,10 +65,20 @@ def get_jaccard_scores(P_a, P_aa):
     return jaccard_matrix
     
 
-def get_alert_jaccard_matrix(alerts, unique_alert_identifier, sliding_window_size, step_size):
+def get_alert_jaccard_matrix(alerts: pd.DataFrame, unique_alert_identifier: str, sliding_window_size: int, step_size: int) -> pd.DataFrame:
     """
-        Calculate the Jaccard similarity scores between alert groups (fingerprints).
+        This function calculates Jaccard similarity scores between alert groups (fingerprints).
+        
+        Parameters:
+        alerts (pd.DataFrame): a DataFrame containing alerts
+        unique_alert_identifier (str): a unique identifier for alerts
+        sliding_window_size (int): sliding window size in seconds
+        step_size (int): step size in seconds
+        
+        Returns:
+        jaccard_scores_df (pd.DataFrame): a DataFrame containing the Jaccard similarity scores between alert groups        
     """
+    
     alert_occurrences_df = get_batched_alert_occurrences(alerts, unique_alert_identifier, sliding_window_size, step_size)
     alert_occurrences = alert_occurrences_df.to_numpy()
     
@@ -55,10 +92,20 @@ def get_alert_jaccard_matrix(alerts, unique_alert_identifier, sliding_window_siz
     return jaccard_scores_df
     
     
-def get_alert_pmi_matrix(alerts, unique_alert_identifier, sliding_window_size, step_size):
+def get_alert_pmi_matrix(alerts: pd.DataFrame, unique_alert_identifier: str, sliding_window_size: int, step_size: int) -> pd.DataFrame:
     """
-        Calculate the PMI scores between alert groups (fingerprints).
+        This funciton calculates PMI scores between alert groups (fingerprints).
+        
+        Parameters:
+        alerts (pd.DataFrame): a DataFrame containing alerts
+        unique_alert_identifier (str): a unique identifier for alerts
+        sliding_window_size (int): sliding window size in seconds
+        step_size (int): step size in seconds
+        
+        Returns:
+        pmi_matrix_df (pd.DataFrame): a DataFrame containing the PMI scores between
     """
+    
     alert_dict = {
         'fingerprint': [alert.fingerprint for alert in alerts],
         'starts_at': [alert.timestamp for alert in alerts],

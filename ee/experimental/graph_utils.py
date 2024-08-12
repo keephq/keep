@@ -1,21 +1,24 @@
 import numpy as np
 import networkx as nx
 
-from keep.api.core.db import get_pmi_value
+from typing import List, Tuple
+
+from keep.api.core.db import get_pmi_values
 
 
-def detect_knee_1d_auto_increasing(y):
+def detect_knee_1d_auto_increasing(y: List[float]) -> Tuple[int, float]:
     """
-    Detect the knee point in an increasing 1D curve automatically.
+    This function detects the knee point in an increasing 1D curve. Knee point is the point where a curve 
+    starts to flatten out (https://en.wikipedia.org/wiki/Knee_of_a_curve).
 
     Parameters:
-    y (array-like): y values of the curve
+    y (List[float]): a list of float values
 
     Returns:
-    int: index of the knee point
-    float: y value of the knee point
+    tuple: knee_index, knee_y
     """
-    def detect_knee_1d(y, curve, direction='increasing'):
+    
+    def detect_knee_1d(y: List[float], curve: str, direction: str = 'increasing') -> Tuple[int, float, List[float]]:
         x = np.arange(len(y))
 
         x_norm = (x - np.min(x)) / (np.max(x) - np.min(x))
@@ -43,29 +46,47 @@ def detect_knee_1d_auto_increasing(y):
         return knee_index_convex, knee_y_convex
     
     
-def create_graph(tenant_id, fingerprints, pmi_threshold=0, knee_threshold=0.8):
-    graph = nx.Graph()
+def create_graph(tenant_id: str, fingerprints: List[str], pmi_threshold: float = 0., knee_threshold: float = 0.8) -> nx.Graph:
+    """
+    This function creates a graph from a list of fingerprints. The graph is created based on the PMI values between
+    the fingerprints. The edges are created between the fingerprints that have a PMI value greater than the threshold.
+    The nodes are removed if the knee point of the PMI values of the edges connected to the node is less than the threshold.
     
+    Parameters:
+    tenant_id (str): tenant id
+    fingerprints (List[str]): a list of fingerprints
+    pmi_threshold (float): PMI threshold
+    knee_threshold (float): knee threshold
+    
+    Returns:
+    nx.Graph: a graph
+    """
+    
+    graph = nx.Graph()
+
     if len(fingerprints) == 1:
         graph.add_node(fingerprints[0])
         return graph
 
+    # Load all PMI values at once
+    pmi_values = get_pmi_values(tenant_id, fingerprints)
+
     for idx_i, fingerprint_i in enumerate(fingerprints):
-        if not isinstance(get_pmi_value(tenant_id, fingerprint_i, fingerprint_i), float):
+        if not isinstance(pmi_values[(fingerprint_i, fingerprint_i)], float):
             continue
-        
-        for idx_j, fingerprint_j in enumerate(fingerprints[idx_i + 1:]):
-            if not isinstance(get_pmi_value(tenant_id, fingerprint_i, fingerprint_j), float):
+
+        for idx_j in range(idx_i + 1, len(fingerprints)):
+            fingerprint_j = fingerprints[idx_j]
+            weight = pmi_values[(fingerprint_i, fingerprint_j)]
+            if not isinstance(weight, float):
                 continue
-            
-            weight = get_pmi_value(tenant_id, fingerprint_i, fingerprint_j)
+
             if weight > pmi_threshold:
                 graph.add_edge(fingerprint_i, fingerprint_j, weight=weight)
                 
     nodes_to_delete = []
     
     for node in graph.nodes:
-        # print([edge for edge in graph[node]])
         weights = sorted([edge['weight'] for edge in graph[node].values()])
         
         knee_index, knee_statistic = detect_knee_1d_auto_increasing(weights)

@@ -1,12 +1,13 @@
 import heapq
 
-from datetime import timedelta
+from datetime import timedelta, datetime
+from typing import List, Dict, Tuple
 
 
 class NodeCandidate:
-    def __init__(self, fingerpint, timestamp):
+    def __init__(self, fingerpint: str, timestamps: datetime):
         self.fingerprint = fingerpint
-        self.timestamps = set([timestamp])
+        self.timestamps = set([timestamps])
 
     @property
     def first_timestamp(self):
@@ -28,11 +29,11 @@ class NodeCandidate:
 
 
 class NodeCandidateQueue:
-    def __init__(self, candidate_validity_window=None):
+    def __init__(self, candidate_validity_window: int = None):
         self.queue = []
         self.candidate_validity_window = candidate_validity_window
 
-    def push_candidate(self, candidate):
+    def push_candidate(self, candidate: NodeCandidate):
         for c in self.queue:
             if c.fingerprint == candidate.fingerprint:
                 c.timestamps.update(candidate.timestamps)
@@ -40,11 +41,11 @@ class NodeCandidateQueue:
                 return
         heapq.heappush(self.queue, candidate)
 
-    def push_candidates(self, candidates):
+    def push_candidates(self, candidates: List[NodeCandidate]):
         for candidate in candidates:
             self.push_candidate(candidate)
 
-    def pop_invalid_candidates(self, current_timestamp):
+    def pop_invalid_candidates(self, current_timestamp: datetime):
         # check incident-wise consistency
         validity_threshold = current_timestamp - \
             timedelta(seconds=self.candidate_validity_window)

@@ -5,14 +5,14 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 
-from typing import List
+from typing import List, Dict
 from openai import OpenAI
 
 from datetime import datetime, timedelta
 
 from fastapi import Depends
 
-from ee.experimental.note_utils import NodeCandidateQueue, NodeCandidate
+from ee.experimental.node_utils import NodeCandidateQueue, NodeCandidate
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
 
@@ -23,6 +23,9 @@ from keep.api.core.db import (
     assign_alert_to_incident,
     is_alert_assigned_to_incident,
     get_last_alerts,
+    get_last_incidents,
+    get_incident_by_id,
+    write_pmi_matrix_to_db,
     create_incident_from_dict,
     update_incident_summary,
 )
@@ -33,15 +36,6 @@ from keep.api.core.dependencies import (
     get_pusher_client,
 )
 
-from keep.api.core.db import (
-    assign_alert_to_incident,
-    create_incident_from_dict,
-    get_incident_by_id,
-    get_last_alerts,
-    get_last_incidents,
-    write_pmi_matrix_to_db,
-)
-
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Basic correlation algorithm v0.2"
@@ -50,10 +44,10 @@ ALGORITHM_VERBOSE_NAME = "Basic correlation algorithm v0.2"
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
     tenant_id: str,
-    upper_timestamp: datetime = datetime.now() - timedelta(seconds=60 * 60),
-    use_n_historical_alerts: int = 10e10,
-    sliding_window: int = 4 * 60 * 60,
-    stride: int = 60 * 60,
+    upper_timestamp: datetime = None,
+    use_n_historical_alerts: int = None,
+    sliding_window: int = None,
+    stride: int = None,
 ) -> dict:
     logger.info(
         "Calculating PMI coefficients for alerts",
@@ -61,6 +55,19 @@ def calculate_pmi_matrix(
             "tenant_id": tenant_id,
         },
     )
+    
+    if not upper_timestamp:
+        upper_timestamp = os.environ.get('PMI_ALERT_UPPER_TIMESTAMP', datetime.now())
+        
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('PMI_USE_N_HISTORICAL_ALERTS', 10e10)
+        
+    if not sliding_window:
+        sliding_window = os.environ.get('PMI_SLIDING_WINDOW', 4 * 60 * 60)
+    
+    if not stride:
+        stride = os.environ.get('PMI_STRIDE', 60 * 60)
+        
     alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
     pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
     write_pmi_matrix_to_db(tenant_id, pmi_matrix)
@@ -73,27 +80,66 @@ async def mine_incidents_and_create_objects(
         tenant_id: str,
         alert_lower_timestamp: datetime = None,
         alert_upper_timestamp: datetime = None,
-        use_n_historical_alerts: int = 10e10,
+        use_n_historical_alerts: int = None,
         incident_lower_timestamp: datetime = None,
         incident_upper_timestamp: datetime = None,
-        use_n_hist_incidents: int = 10e10,
-        pmi_threshold: float = 0.0,
-        knee_threshold: float = 0.8,
-        min_incident_size: int = 5,
-        incident_similarity_threshold: float = 0.8,
-    ):
+        use_n_hist_incidents: int = None,
+        pmi_threshold: float = None,
+        knee_threshold: float = None,
+        min_incident_size: int = None,
+        incident_similarity_threshold: float = None,
+    ) -> Dict[str, List[Incident]]:
+    
+    """
+    This function mines incidents from alerts and creates incidents in the database.
+    
+    Parameters:
+    tenant_id (str): tenant id
+    alert_lower_timestamp (datetime): lower timestamp for alerts
+    alert_upper_timestamp (datetime): upper timestamp for alerts
+    use_n_historical_alerts (int): number of historical alerts to use
+    incident_lower_timestamp (datetime): lower timestamp for incidents
+    incident_upper_timestamp (datetime): upper timestamp for incidents
+    use_n_hist_incidents (int): number of historical incidents to use
+    pmi_threshold (float): PMI threshold used for incident graph edges creation
+    knee_threshold (float): knee threshold used for incident graph nodes creation
+    min_incident_size (int): minimum incident size
+    incident_similarity_threshold (float): incident similarity threshold
+    
+    Returns:
+    Dict[str, List[Incident]]: a dictionary containing the created incidents
+    """
     
     if not incident_lower_timestamp:
-        incident_lower_timestamp = datetime.now() - timedelta(days=100)
+        incident_lower_timestamp = os.environ.get('MINE_INCIDENT_LOWER_TIMESTAMP', datetime(2023, 1, 1))
         
     if not incident_upper_timestamp:
-        incident_upper_timestamp = datetime.now()
+        incident_upper_timestamp = os.environ.get('MINE_INCIDENT_UPPER_TIMESTAMP', datetime.now())
         
     if not alert_lower_timestamp:
-        alert_lower_timestamp = datetime.now() - timedelta(days=100)
-        
+        alert_lower_timestamp = os.environ.get('MINE_ALERT_LOWER_TIMESTAMP', datetime(2023, 1, 1))
+
     if not alert_upper_timestamp:
-        alert_upper_timestamp = datetime.now()
+        alert_upper_timestamp = os.environ.get('MINE_ALERT_UPPER_TIMESTAMP', datetime.now())
+        
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('MINE_USE_N_HISTORICAL_ALERTS', 10e10)
+        
+    if not use_n_hist_incidents:
+        use_n_hist_incidents = os.environ.get('MINE_USE_N_HIST_INCIDENTS', 10e10)
+        
+    if not pmi_threshold:
+        pmi_threshold = os.environ.get('PMI_THRESHOLD', 0.0)
+        
+    if not knee_threshold:
+        knee_threshold = os.environ.get('KNEE_THRESHOLD', 0.8)
+        
+    if not min_incident_size:
+        min_incident_size = os.environ.get('MIN_INCIDENT_SIZE', 5)
+        
+    if not incident_similarity_threshold:
+        incident_similarity_threshold = os.environ.get('INCIDENT_SIMILARITY_THRESHOLD', 0.8)
+
 
     calculate_pmi_matrix(ctx, tenant_id)
 
@@ -302,9 +348,6 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         prompt_addition = ''
         if incident.user_summary:
             prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
-
-        # description_strings = [
-        #     f'{alert.timestamp} source: {alert.provider_type} description: {alert.event["name"]} message: {alert.event["message"]}' for alert in incident.alerts]
         
         description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
         
@@ -316,8 +359,10 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         timestamps = [alert.timestamp for alert in incident.alerts]
         incident_start = min(timestamps).replace(microsecond=0)
         incident_end = max(timestamps).replace(microsecond=0)
+        
+        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-        summary = client.chat.completions.create(model="gpt-4o-mini", messages=[
+        summary = client.chat.completions.create(model=model, messages=[
             {
                 "role": "system",
                 "content": """You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions. 
