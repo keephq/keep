@@ -1,7 +1,6 @@
 import itertools
 import json
 import logging
-import re
 
 import celpy
 import chevron
@@ -10,8 +9,10 @@ from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import assign_alert_to_group as assign_alert_to_group_db
 from keep.api.core.db import create_alert as create_alert_db
 from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.group import GroupDto
+from keep.api.utils.cel_utils import preprocess_cel_expression
 
 
 class RulesEngine:
@@ -134,26 +135,31 @@ class RulesEngine:
             # todo: this is not scaling, needs to find another solution
             # group_payload = self._generate_group_payload(group.alerts)
             # create the alert
+            event = {
+                "name": group_name,
+                "id": group_fingerprint,
+                "description": group_description,
+                "lastReceived": group_attributes.get("last_update_time"),
+                "severity": group_severity,
+                "source": group_source,
+                "status": group_status,
+                "pushed": True,
+                "group": True,
+                # "groupPayload": group_payload,
+                "fingerprint": group_fingerprint,
+                **group_attributes,
+            }
             group_alert = create_alert_db(
                 tenant_id=self.tenant_id,
                 provider_type="group",
                 provider_id=rule.id,
                 # todo: event should support list?
-                event={
-                    "name": group_name,
-                    "id": group_fingerprint,
-                    "description": group_description,
-                    "lastReceived": group_attributes.get("last_update_time"),
-                    "severity": group_severity,
-                    "source": group_source,
-                    "status": group_status,
-                    "pushed": True,
-                    "group": True,
-                    # "groupPayload": group_payload,
-                    "fingerprint": group_fingerprint,
-                    **group_attributes,
-                },
+                event=event,
                 fingerprint=group_fingerprint,
+            )
+            elastic_client = ElasticClient(self.tenant_id)
+            elastic_client.index_alert(
+                alert=AlertDto(event_id=str(group_alert.id), **event),
             )
             grouped_alerts.append(group_alert)
             self.logger.info(f"Created alert {group_alert.id} for group {group.id}")
@@ -314,46 +320,6 @@ class RulesEngine:
         return group_payload
 
     @staticmethod
-    def preprocess_cel_expression(cel_expression: str) -> str:
-        """Preprocess CEL expressions to replace string-based comparisons with numeric values where applicable."""
-
-        # Construct a regex pattern that matches any severity level or other comparisons
-        # and accounts for both single and double quotes as well as optional spaces around the operator
-        severities = "|".join(
-            [f"\"{severity.value}\"|'{severity.value}'" for severity in AlertSeverity]
-        )
-        pattern = rf"(\w+)\s*([=><!]=?)\s*({severities})"
-
-        def replace_matched(match):
-            field_name, operator, matched_value = (
-                match.group(1),
-                match.group(2),
-                match.group(3).strip("\"'"),
-            )
-
-            # Handle severity-specific replacement
-            if field_name.lower() == "severity":
-                severity_order = next(
-                    (
-                        severity.order
-                        for severity in AlertSeverity
-                        if severity.value == matched_value.lower()
-                    ),
-                    None,
-                )
-                if severity_order is not None:
-                    return f"{field_name} {operator} {severity_order}"
-
-            # Return the original match if it's not a severity comparison or if no replacement is necessary
-            return match.group(0)
-
-        modified_expression = re.sub(
-            pattern, replace_matched, cel_expression, flags=re.IGNORECASE
-        )
-
-        return modified_expression
-
-    @staticmethod
     def filter_alerts(alerts: list[AlertDto], cel: str):
         """This function filters alerts according to a CEL
 
@@ -378,7 +344,7 @@ class RulesEngine:
             logger.debug("No CEL expression provided")
             return alerts
         # preprocess the cel expression
-        cel = RulesEngine.preprocess_cel_expression(cel)
+        cel = preprocess_cel_expression(cel)
         ast = env.compile(cel)
         prgm = env.program(ast)
         filtered_alerts = []

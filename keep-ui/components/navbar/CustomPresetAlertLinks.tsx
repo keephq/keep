@@ -95,14 +95,16 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
 };
 type CustomPresetAlertLinksProps = {
   session: Session;
+  selectedTags: string[];
 };
 
 export const CustomPresetAlertLinks = ({
   session,
+  selectedTags,
 }: CustomPresetAlertLinksProps) => {
   const apiUrl = getApiURL();
 
-  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS} = usePresets();
+  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } = usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -139,8 +141,12 @@ export const CustomPresetAlertLinks = ({
       setPresetsOrder(combinedOrder);
     }
   }, [presets, presetsOrderFromLS]);
-
-
+  // Filter presets based on tags, or return all if no tags are selected
+  const filteredOrderedPresets = selectedTags.length === 0
+    ? presetsOrder
+    : presetsOrder.filter((preset) =>
+        preset.tags.some((tag) => selectedTags.includes(tag.name))
+      );
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -162,7 +168,7 @@ export const CustomPresetAlertLinks = ({
     );
 
     if (isDeleteConfirmed) {
-    const response = await fetch(`${apiUrl}/preset/${presetId}`, {
+      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
@@ -220,7 +226,7 @@ export const CustomPresetAlertLinks = ({
       onDragEnd={onDragEnd}
     >
       <SortableContext key="preset-alerts" items={presetsOrder}>
-        {presetsOrder.map((preset) => (
+        {filteredOrderedPresets.map((preset) => (
           <PresetAlert
             key={preset.id}
             preset={preset}

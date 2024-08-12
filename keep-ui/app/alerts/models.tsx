@@ -68,6 +68,11 @@ interface Option {
   readonly value: string;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+}
+
 export interface Preset {
   id: string;
   name: string;
@@ -77,6 +82,7 @@ export interface Preset {
   should_do_noise_now: boolean;
   alerts_count: number;
   created_by?: string;
+  tags: Tag[];
 }
 
 export function getTabsFromPreset(preset: Preset): any[] {
