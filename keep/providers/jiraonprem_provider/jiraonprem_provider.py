@@ -341,7 +341,7 @@ class JiraonpremProvider(BaseProvider):
         try:
             self.logger.info("Updating an issue...")
 
-            url = self.__get_url(paths=["issue", ticket_id])
+            url = self.__get_url(paths=["issue", issue_id])
 
             update = { }
 
@@ -382,7 +382,7 @@ class JiraonpremProvider(BaseProvider):
                 )
                 raise ProviderException("Failed to update an issue")
             self.logger.info("Updated an issue!")
-            return {"ticket_id": ticket_id}
+            return {"issue_id": issue_id}
         
         except Exception as e:
             raise ProviderException(f"Failed to update an issue: {e}")
@@ -449,14 +449,14 @@ class JiraonpremProvider(BaseProvider):
         else:
             raise Exception("Could not fetch boards: " + boards_response.text)
         
-    def _extract_issue_key_from_ticket_id(self, ticket_id: str):
+    def _extract_issue_key_from_issue_id(self, issue_id: str):
         headers = {
             "Accept": "application/json",
         }
         headers.update(self.__get_auth_header())
 
         issue_key = requests.get(
-            f"{self.jira_host}/rest/api/2/issue/{ticket_id}",
+            f"{self.jira_host}/rest/api/2/issue/{issue_id}",
             headers=headers,
             verify=False,
             timeout=10,
@@ -509,7 +509,7 @@ class JiraonpremProvider(BaseProvider):
                     **kwargs,
                 )
 
-                issue_key = self._extract_issue_key_from_ticket_id(ticket_id)
+                issue_key = self._extract_issue_key_from_issue_id(issue_id)
 
                 result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
 

@@ -307,7 +307,7 @@ class JiraProvider(BaseProvider):
         
     def __update_issue(
         self,
-        ticket_id: str,
+        issue_id: str,
         summary: str,
         description: str = "",
         labels: List[str] = None,
@@ -321,7 +321,7 @@ class JiraProvider(BaseProvider):
         try:
             self.logger.info("Updating an issue...")
 
-            url = self.__get_url(paths=["issue", ticket_id])
+            url = self.__get_url(paths=["issue", issue_id])
 
             update = { }
 
@@ -355,7 +355,7 @@ class JiraProvider(BaseProvider):
                 )
                 raise ProviderException("Failed to update an issue")
             self.logger.info("Updated an issue!")
-            return {"ticket_id": ticket_id}
+            return {"issue_id": issue_id}
         
         except Exception as e:
             raise ProviderException(f"Failed to update an issue: {e}")
@@ -384,9 +384,9 @@ class JiraProvider(BaseProvider):
         else:
             raise Exception("Could not fetch boards: " + boards_response.text)
         
-    def _extract_issue_key_from_ticket_id(self, ticket_id: str):
+    def _extract_issue_key_from_issue_id(self, issue_id: str):
         issue_key = requests.get(
-            f"{self.jira_host}/rest/api/2/issue/{ticket_id}",
+            f"{self.jira_host}/rest/api/2/issue/{issue_id}",
             auth=self.__get_auth(),
             headers={"Accept": "application/json"},
             verify=False,
@@ -404,7 +404,7 @@ class JiraProvider(BaseProvider):
         issue_type: str = "",
         project_key: str = "",
         board_name: str = "",
-        ticket_id: str = None,
+        issue_id: str = None,
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
@@ -426,9 +426,9 @@ class JiraProvider(BaseProvider):
         try:
             self.logger.info("Notifying jira...")
 
-            if ticket_id:
+            if issue_id:
                 result = self.__update_issue(
-                    ticket_id=ticket_id,
+                    issue_id=issue_id,
                     summary=summary,
                     description=description,
                     labels=labels,
@@ -437,7 +437,7 @@ class JiraProvider(BaseProvider):
                     **kwargs,
                 )
 
-                issue_key = self._extract_issue_key_from_ticket_id(ticket_id)
+                issue_key = self._extract_issue_key_from_issue_id(issue_id)
 
                 result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
 
