@@ -32,7 +32,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
 
   const { data: session } = useSession();
   const { data: roles = [] } = useRoles();
-  const { data: groups = [] } = useGroups();
+  const { data: groups = [], mutate: mutateGroups } = useGroups();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { data: configData } = useConfig();
 
@@ -75,6 +75,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
 
       if (response.ok) {
         await mutateUsers();
+        await mutateGroups();
         handleClose();
       } else {
         const errorData = await response.json();

@@ -73,9 +73,18 @@ export default function UsersSettings({
   }, [users]);
 
   const filteredUsers = useMemo(() => {
-    return users?.filter(user =>
+    const filtered = users?.filter(user =>
       user.email.toLowerCase().includes(filter.toLowerCase())
     ) || [];
+
+    return filtered.sort((a, b) => {
+      // First, sort by last_login
+      if (a.last_login && !b.last_login) return -1;
+      if (!a.last_login && b.last_login) return 1;
+
+      // If both have last_login or both don't have last_login, sort lexicographically
+      return a.email.localeCompare(b.email);
+    });
   }, [users, filter]);
 
   if (!users || isLoading || !roles || !groups) return <Loading />;
@@ -151,6 +160,7 @@ export default function UsersSettings({
                     : "Username"}
                 </TableHeaderCell>
                 <TableHeaderCell className="w-2/12">Name</TableHeaderCell>
+                <TableHeaderCell className="w-2/12">Last Login</TableHeaderCell>
                 <TableHeaderCell className="w-3/12">Role</TableHeaderCell>
                 <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>
                 <TableHeaderCell className="w-1/12"></TableHeaderCell>
@@ -194,6 +204,9 @@ export default function UsersSettings({
                   </TableCell>
                   <TableCell className="w-2/12">
                     <Text>{user.name}</Text>
+                  </TableCell>
+                  <TableCell className="w-2/12">
+                    <Text>{user.last_login ? new Date(user.last_login).toLocaleString() : "Never"}</Text>
                   </TableCell>
                   <TableCell className="w-3/12">
                     <div className="flex flex-wrap gap-1">

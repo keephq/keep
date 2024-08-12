@@ -338,6 +338,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                         if user.get("attributes", {}).get("LDAP_ID", False)
                         else False
                     ),
+                    last_login=user.get("attributes", {}).get("last-login", [""])[0],
                     groups=groups,
                 )
                 users_dto.append(user_dto)
@@ -761,6 +762,9 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 self.client_id
             )
             for permission in permissions:
+                # if its a scope permission, skip it
+                if permission["type"] == "scope":
+                    continue
                 permission_id = permission["id"]
                 associated_policies = (
                     self.keycloak_admin.get_client_authz_permission_associated_policies(
