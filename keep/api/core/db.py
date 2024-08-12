@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import expression, operators
 from sqlmodel import Session, col, or_, select
 
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
@@ -50,6 +50,15 @@ load_dotenv(find_dotenv())
 
 engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
+
+OPERATORS_MAP = {
+    "==": operators.eq,
+    "!=": operators.ne,
+    ">": operators.gt,
+    ">=": operators.ge,
+    "<": operators.lt,
+    "<=": operators.le,
+}
 
 
 def get_session() -> Session:
@@ -866,6 +875,11 @@ def get_alerts_with_filters(
         if filters:
             for f in filters:
                 filter_key, filter_value = f.get("key"), f.get("value")
+                operator = OPERATORS_MAP.get(f.get("operator", "=="))
+
+                if not operator:
+                    raise NotImplementedError("Operator not supported")
+
                 if isinstance(filter_value, bool) and filter_value is True:
                     # If the filter value is True, we want to filter by the existence of the enrichment
                     #   e.g.: all the alerts that have ticket_id
@@ -886,19 +900,23 @@ def get_alerts_with_filters(
                 elif isinstance(filter_value, (str, int)):
                     if session.bind.dialect.name in ["mysql", "postgresql"]:
                         query = query.filter(
-                            func.json_unquote(
-                                func.json_extract(
-                                    AlertEnrichment.enrichments, f"$.{filter_key}"
-                                )
+                            operator(
+                                func.json_unquote(
+                                    func.json_extract(
+                                        AlertEnrichment.enrichments, f"$.{filter_key}"
+                                    )
+                                ),
+                                filter_value,
                             )
-                            == filter_value
                         )
                     elif session.bind.dialect.name == "sqlite":
                         query = query.filter(
-                            func.json_extract(
-                                AlertEnrichment.enrichments, f"$.{filter_key}"
+                            operator(
+                                func.json_extract(
+                                    AlertEnrichment.enrichments, f"$.{filter_key}"
+                                ),
+                                filter_value,
                             )
-                            == filter_value
                         )
                     else:
                         logger.warning(
