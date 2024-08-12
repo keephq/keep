@@ -1,6 +1,9 @@
 # builtins
+import dataclasses
 import datetime
 from collections import defaultdict
+
+import pydantic
 
 # third-parties
 from quickchart import QuickChart
@@ -25,6 +28,18 @@ def get_date_key(date: datetime.datetime, time_unit: str) -> str:
         return f"{date.day}/{date.month}/{date.year}"
 
 
+@pydantic.dataclasses.dataclass
+class QuickchartProviderAuthConfig:
+    api_key: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Quickchart API Key",
+            "sensitive": True,
+        },
+        default=None,
+    )
+
+
 class QuickchartProvider(BaseProvider):
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -32,7 +47,9 @@ class QuickchartProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     def validate_config(self):
-        pass
+        self.authentication_config = QuickchartProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def dispose(self):
         pass
@@ -87,6 +104,10 @@ class QuickchartProvider(BaseProvider):
         self, chart_data, categories_by_status, title: str
     ) -> dict:
         qc = QuickChart()
+
+        if self.authentication_config.api_key:
+            qc.key = self.authentication_config.api_key
+
         qc.width = 800
         qc.height = 400
         qc.config = {
