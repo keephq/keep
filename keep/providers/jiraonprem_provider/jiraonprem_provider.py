@@ -499,7 +499,7 @@ class JiraonpremProvider(BaseProvider):
 
             if issue_id:
                 result = self.__update_issue(
-                    ticket_id=ticket_id,
+                    issue_id=issue_id,
                     summary=summary,
                     description=description,
                     labels=labels,
