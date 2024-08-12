@@ -37,7 +37,7 @@ jobs:
           git checkout -B release/${{ steps.release-step.outputs.version }}
 
       - name: Open PR for release branch
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6.1.0
         with:
           title: "Release - $(date +'%Y-%m-%d')"
           body: "This PR contains the latest release changes."
