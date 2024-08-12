@@ -19,7 +19,6 @@ import os
 
 import alembic.command
 import alembic.config
-
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -72,6 +71,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             user = session.exec(select(User)).first()
             # if no users exist, let's create the default user
             if not user:
+                logger.info("Creating default user")
                 default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
                 default_password = hashlib.sha256(
                     os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
@@ -82,24 +82,62 @@ def try_create_single_tenant(tenant_id: str) -> None:
                     role=AdminRole.get_name(),
                 )
                 session.add(default_user)
+                logger.info("Default user created")
             # else, if the user want to force the refresh of the default user password
             elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
                 # update the password of the default user
+                logger.info("Forcing reset of default user password")
                 default_password = hashlib.sha256(
                     os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
                 ).hexdigest()
                 user.password_hash = default_password
+                logger.info("Default user password updated")
+
+            # provision default api keys
+            if os.environ.get("KEEP_DEFAULT_API_KEYS", ""):
+                logger.info("Provisioning default api keys")
+                default_api_keys = os.environ.get("KEEP_DEFAULT_API_KEYS").split(",")
+                for default_api_key in default_api_keys:
+                    try:
+                        api_key_name, api_key_role, api_key_secret = (
+                            default_api_key.strip().split(":")
+                        )
+                    except ValueError:
+                        logger.error(
+                            "Invalid format for default api key. Expected format: name:role:secret"
+                        )
+                    # Create the default api key for the default user
+                    api_key = session.exec(
+                        select(TenantApiKey).where(
+                            TenantApiKey.reference_id == api_key_name
+                        )
+                    ).first()
+                    if api_key:
+                        logger.info(f"Api key {api_key_name} already exists")
+                        continue
+                    hashed_api_key = hashlib.sha256(
+                        api_key_secret.encode("utf-8")
+                    ).hexdigest()
+                    new_installation_api_key = TenantApiKey(
+                        tenant_id=tenant_id,
+                        reference_id=api_key_name,
+                        key_hash=hashed_api_key,
+                        is_system=True,
+                        created_by="system",
+                        role=api_key_role,
+                    )
+                    session.add(new_installation_api_key)
+                logger.info("Default api key created")
             # commit the changes
             session.commit()
             logger.info("Single tenant created")
         except IntegrityError:
             # Tenant already exists
-            logger.info("Single tenant already exists")
-            pass
+            logger.exception("Failed to provision single tenant")
+            raise
         except Exception:
             logger.exception("Failed to create single tenant")
             pass
-
 
 
 def migrate_db():
@@ -109,8 +147,11 @@ def migrate_db():
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
-    # Re-defined because alembic.ini uses relative paths which doesn't work 
+    # Re-defined because alembic.ini uses relative paths which doesn't work
     # when running the app as a pyhton pakage (could happen form any path)
-    config.set_main_option("script_location", os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations")
+    config.set_main_option(
+        "script_location",
+        os.path.dirname(os.path.abspath(__file__)) + "/../models/db/migrations",
+    )
     alembic.command.upgrade(config, "head")
     logger.info("Finished migrations")
