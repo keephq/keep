@@ -1651,7 +1651,8 @@ def get_presets(
                     )
                 )
             )
-        presets = session.exec(statement).all()
+        result = session.exec(statement)
+        presets = result.unique().all()
     return presets
 
 
@@ -2458,3 +2459,30 @@ def get_all_topology_data(
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
         return service_dtos
+
+
+def get_tags(tenant_id):
+    with Session(engine) as session:
+        tags = session.exec(select(Tag).where(Tag.tenant_id == tenant_id)).all()
+    return tags
+
+
+def create_tag(tag: Tag):
+    with Session(engine) as session:
+        session.add(tag)
+        session.commit()
+        session.refresh(tag)
+        return tag
+
+
+def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
+    with Session(engine) as session:
+        tag_preset = PresetTagLink(
+            tenant_id=tenant_id,
+            tag_id=tag_id,
+            preset_id=preset_id,
+        )
+        session.add(tag_preset)
+        session.commit()
+        session.refresh(tag_preset)
+        return tag_preset
