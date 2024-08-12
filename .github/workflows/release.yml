@@ -26,6 +26,7 @@ jobs:
           git_committer_name: Keep Release Bot
           git_committer_email: no-reply@keephq.dev
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          push: false
 
       - name: Create or update release branch
         run: |
