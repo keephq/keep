@@ -382,7 +382,13 @@ class JiraonpremProvider(BaseProvider):
                 )
                 raise ProviderException("Failed to update an issue")
             self.logger.info("Updated an issue!")
-            return {"issue_id": issue_id}
+            return {
+                "issue": {
+                    "id": issue_id,
+                    "key": self._extract_issue_key_from_issue_id(issue_id),
+                    "self": self.__get_url(paths=["issue", issue_id]),
+                }
+            }
         
         except Exception as e:
             raise ProviderException(f"Failed to update an issue: {e}")
