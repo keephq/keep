@@ -61,6 +61,17 @@ class QuickchartProvider(BaseProvider):
             limit=False,
         )
         alerts = convert_db_alerts_to_dto_alerts(db_alerts)
+
+        if not alerts:
+            self.logger.warning(
+                "No alerts found for this fingerprint",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "fingerprint": fingerprint,
+                },
+            )
+            return {"chart_url": ""}
+
         min_last_received = min(
             datetime.datetime.fromisoformat(alert.lastReceived) for alert in alerts
         )
