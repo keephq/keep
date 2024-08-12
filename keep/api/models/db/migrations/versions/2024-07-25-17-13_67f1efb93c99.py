@@ -8,10 +8,10 @@ Create Date: 2024-07-25 17:13:04.428633
 
 import sqlalchemy as sa
 from alembic import op
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import OperationalError
 
-from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import Incident
 
 # revision identifiers, used by Alembic.
@@ -21,13 +21,18 @@ branch_labels = None
 depends_on = None
 
 
+class AlertDtoLocal(BaseModel):
+    service: str | None = None
+    source: list[str] | None = []
+
+
 def populate_db(session):
 
     # Todo fix: This doesn't work on further revisions after Incident is changed. Remove exception handling.
     incidents = session.query(Incident).options(joinedload(Incident.alerts)).all()
 
     for incident in incidents:
-        alerts_dto = [AlertDto(**alert.event) for alert in incident.alerts]
+        alerts_dto = [AlertDtoLocal(**alert.event) for alert in incident.alerts]
 
         incident.sources = list(
             set([source for alert_dto in alerts_dto for source in alert_dto.source])

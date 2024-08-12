@@ -1687,9 +1687,11 @@ def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
 
 def get_all_presets(tenant_id: str) -> List[Preset]:
     with Session(engine) as session:
-        presets = session.exec(
-            select(Preset).where(Preset.tenant_id == tenant_id)
-        ).all()
+        presets = (
+            session.exec(select(Preset).where(Preset.tenant_id == tenant_id))
+            .unique()
+            .all()
+        )
     return presets
 
 
