@@ -497,7 +497,7 @@ class JiraonpremProvider(BaseProvider):
         try:
             self.logger.info("Notifying jira...")
 
-            if ticket_id:
+            if issue_id:
                 result = self.__update_issue(
                     ticket_id=ticket_id,
                     summary=summary,
