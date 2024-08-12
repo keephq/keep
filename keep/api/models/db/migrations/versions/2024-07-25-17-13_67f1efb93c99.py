@@ -5,7 +5,6 @@ Revises: dcbd2873dcfd
 Create Date: 2024-07-25 17:13:04.428633
 
 """
-from typing import List
 
 import sqlalchemy as sa
 from alembic import op
