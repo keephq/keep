@@ -11,7 +11,7 @@ from starlette.datastructures import CommaSeparatedStrings
 # internals
 from keep.api.core.config import config
 from keep.api.tasks.process_background_ai_task import process_background_ai_task
-
+from keep.api.tasks.healthcheck_task import healthcheck_task
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     "ARQ_BACKGROUND_FUNCTIONS",
@@ -21,6 +21,7 @@ ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
         "keep.api.tasks.process_topology_task.async_process_topology",
         "keep.api.tasks.process_background_ai_task.process_background_ai_task",
         "keep.api.tasks.process_background_ai_task.process_correlation",
+        "keep.api.tasks.healthcheck_task.healthcheck_task",
     ],
 )
 FUNCTIONS: list = (
@@ -67,6 +68,7 @@ def get_worker() -> Worker:
 
 def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
     return {*list(range(start, end, x))}
+
 class WorkerSettings:
     """
     Settings for the ARQ worker.
@@ -85,6 +87,15 @@ class WorkerSettings:
     )
     functions: list = FUNCTIONS
     cron_jobs = [
+      
+        cron(
+            healthcheck_task,
+            minute=at_every_x_minutes(1),
+            unique=True,
+            timeout=30, 
+            max_tries=1, 
+            run_at_startup=True,
+        ),
         cron(
             process_background_ai_task,
             minute=at_every_x_minutes(1),
