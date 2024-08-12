@@ -11,9 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 from pydantic import BaseModel
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy_utils import UUIDType
-from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy.orm import Session
 
 # revision identifiers, used by Alembic.
 revision = "67f1efb93c99"
