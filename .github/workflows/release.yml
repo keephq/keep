@@ -27,6 +27,8 @@ jobs:
           git_committer_email: no-reply@keephq.dev
           github_token: ${{ secrets.GITHUB_TOKEN }}
           push: false
+          tag: true
+          commit: true
 
       - name: Open PR for release branch
         uses: peter-evans/create-pull-request@v6.1.0
