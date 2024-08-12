@@ -474,7 +474,7 @@ class JiraonpremProvider(BaseProvider):
         issue_type: str = "",
         project_key: str = "",
         board_name: str = "",
-        ticket_id: str = None,
+        issue_id: str = None,
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
