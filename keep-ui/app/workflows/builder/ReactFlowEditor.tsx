@@ -3,9 +3,22 @@ import { IoMdSettings, IoMdClose } from "react-icons/io";
 import useStore from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Button, Divider } from "@tremor/react";
+import { Provider } from "app/providers/providers";
+import { reConstructWorklowToDefinition } from "utils/reactFlow";
 
-const ReactFlowEditor = () => {
-  const { selectedNode } = useStore();
+const ReactFlowEditor = ({
+  providers,
+  validatorConfiguration,
+  onDefinitionChange
+}:{
+  providers:Provider[];
+  validatorConfiguration: {
+    step: (step: any, defnition?:any)=>boolean;
+    root: (def: any) => boolean;
+  };
+  onDefinitionChange: (def: any) => void
+}) => {
+  const { selectedNode, changes, v2Properties, nodes, edges } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,6 +42,29 @@ const ReactFlowEditor = () => {
       return () => clearTimeout(timer); // Cleanup the timer on unmount
     }
   }, [selectedNode]);
+
+
+  useEffect(()=>{
+    //TODO: add Debounce to mitigate the recontruction of defintion on every change
+    if(changes > 0){
+      let {sequence, properties} = reConstructWorklowToDefinition({nodes: nodes, edges: edges, properties: v2Properties}) || {};
+      sequence =  sequence || [];
+      properties = properties || {}; 
+      console.log("sequence", sequence, "properties", properties)
+      let isValid = true
+      for(let step of sequence){
+        isValid = validatorConfiguration?.step(step);
+        if(!isValid){
+          break;
+        }
+      }
+      if(!isValid){
+        return onDefinitionChange({sequence, properties, isValid});
+      }
+      isValid = validatorConfiguration.root({sequence, properties});
+      onDefinitionChange({sequence, properties, isValid});
+    }
+  }, [changes])
 
   return (
     <div
@@ -56,10 +92,8 @@ const ReactFlowEditor = () => {
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
               <GlobalEditorV2 />
-              <Divider ref={stepEditorRef}/>
-              <div>
-                <StepEditorV2 />
-              </div>
+              {!selectedNode?.includes('empty') && <Divider ref={stepEditorRef}/>}
+              {!selectedNode?.includes('empty') && <StepEditorV2 installedProviders={providers}/>}  
             </div>
           </div>
         </div>
