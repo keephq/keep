@@ -54,9 +54,7 @@ const ReactFlowEditor = ({
             properties: v2Properties,
           }) || {};
         sequence = sequence || [];
-        properties = properties || {};
-        console.log("sequence", sequence, "properties", properties);
-  
+        properties = properties || {};  
         let isValid = true;
         for (let step of sequence) {
           isValid = validatorConfiguration?.step(step);
