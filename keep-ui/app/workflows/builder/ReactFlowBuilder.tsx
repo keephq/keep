@@ -6,7 +6,7 @@ import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
 import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "app/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
-import { Definition } from 'sequential-workflow-designer';
+import { Definition, ValidatorConfiguration } from 'sequential-workflow-designer';
 import "@xyflow/react/dist/style.css";
 import { WrappedDefinition } from "sequential-workflow-designer-react";
 
@@ -20,14 +20,19 @@ const ReactFlowBuilder = ({
   providers,
   toolboxConfiguration,
   definition,
-  onDefinitionChange
+  onDefinitionChange,
+  validatorConfiguration
 }: {
   workflow: string | undefined;
   loadedAlertFile: string | null;
   providers: Provider[];
   toolboxConfiguration: Record<string, any>;
-  definition:  WrappedDefinition<Definition>;
-  onDefinitionChange:(def: WrappedDefinition<Definition>) => void;
+  definition: any;
+  validatorConfiguration: {
+    step: (step: any, parent?:any, defnition?:any)=>boolean;
+    root: (def: any) => boolean
+  };
+  onDefinitionChange:(def: any) => void;
 }) => {
   
   const {
@@ -68,7 +73,11 @@ const ReactFlowBuilder = ({
             <Background/>
           </ReactFlow>
         )}
-        <ReactFlowEditor />
+        <ReactFlowEditor 
+          providers={providers} 
+          onDefinitionChange= {onDefinitionChange}
+          validatorConfiguration= {validatorConfiguration}
+        />
       </div>
     </div>
   );

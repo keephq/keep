@@ -265,7 +265,7 @@ function Builder({
     return CanDeleteStep(step, sourceSequence);
   }
 
-  const validatorConfiguration: ValidatorConfiguration = {
+  const validatorConfiguration: ValidatorConfiguration|{step:(step:any)=>boolean;root:(def:any)=>boolean;} = {
     step: (step, parent, definition) =>
       stepValidator(step, parent, definition, setStepValidationError),
     root: (def) => globalValidator(def, setGlobalValidationError),
@@ -315,6 +315,27 @@ function Builder({
 
   return (
     <div className="h-full">
+       <div className="flex items-center justify-between">
+        <div className="pl-4 flex items-center space-x-3">
+          <Switch
+            id="switch"
+            name="switch"
+            checked={useReactFlow}
+            onChange={handleSwitchChange}
+          />
+          <label
+            htmlFor="switch"
+            className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+          >
+            Switch to New Builder
+          </label>
+        </div>
+        {/* {useReactFlow && <BuilderChanagesTracker 
+          onDefinitionChange={(def: any) =>
+          setDefinition(wrapDefinition(def))
+        }
+        />} */}
+      </div>
       <Modal
         onRequestClose={closeGenerateModal}
         isOpen={generateModalIsOpen}
@@ -338,20 +359,45 @@ function Builder({
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
           {getworkflowStatus()}
-          <div className="h-[92%]">
-            <ReactFlowProvider>
-              <ReactFlowBuilder
-                workflow={workflow}
-                loadedAlertFile={loadedAlertFile}
-                providers={providers}
+          {useReactFlow && (
+            <div className="h-[90%]">
+              <ReactFlowProvider>
+                <ReactFlowBuilder
+                  workflow={workflow}
+                  loadedAlertFile={loadedAlertFile}
+                  providers={providers}
+                  definition={definition}
+                  validatorConfiguration={validatorConfiguration}
+                  onDefinitionChange={(def: any) =>{
+                    setDefinition({value: {sequence: def?.sequence||[], 
+                      properties
+                      : def?.
+                      properties
+                      ||{}}, isValid:def?.isValid||false})
+                  }
+                  }
+                  toolboxConfiguration={getToolboxConfiguration(providers)}
+                />
+              </ReactFlowProvider>
+            </div>
+          )}
+          {!useReactFlow && (
+            <>
+              <SequentialWorkflowDesigner
                 definition={definition}
-                onDefinitionChange={(def: any) =>
-                  setDefinition(wrapDefinition(def))
-                }
+                onDefinitionChange={setDefinition}
+                stepsConfiguration={stepsConfiguration}
+                validatorConfiguration={validatorConfiguration}
                 toolboxConfiguration={getToolboxConfiguration(providers)}
+                undoStackSize={10}
+                controlBar={true}
+                globalEditor={<GlobalEditor />}
+                stepEditor={
+                  <StepEditor installedProviders={installedProviders} />
+                }
               />
-            </ReactFlowProvider>
-          </div>
+            </>
+          )}
         </>
       )}
     </div>

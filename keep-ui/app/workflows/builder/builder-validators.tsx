@@ -52,6 +52,10 @@ export function stepValidator(
   setStepValidationError: Dispatch<SetStateAction<string | null>>
 ): boolean {
   if (step.type.includes("condition-")) {
+    if(!step.name) {
+      setStepValidationError("Step/action name cannot be empty.");
+      return false;
+    }
     const onlyActions = (step as BranchedStep).branches.true.every((step) =>
       step.type.includes("action-")
     );
