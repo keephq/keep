@@ -70,7 +70,22 @@ def calculate_pmi_matrix(
         
     alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
     pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
+    
+    logger.info(
+        "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    
     write_pmi_matrix_to_db(tenant_id, pmi_matrix)
+    
+    logger.info(
+        "PMI matrix is written to the database.",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
     
     return {"status": "success"}
 
@@ -114,14 +129,14 @@ async def mine_incidents_and_create_objects(
         incident_upper_timestamp = os.environ.get('MINE_INCIDENT_UPPER_TIMESTAMP', datetime.now())
         
     if not incident_lower_timestamp:
-        incident_validity = os.environ.get('MINE_INCIDENT_VALIDITY', timedelta(days=1))
+        incident_validity = timedelta(days = int(os.environ.get('MINE_INCIDENT_VALIDITY', "1")))
         incident_lower_timestamp = incident_upper_timestamp - incident_validity
 
     if not alert_upper_timestamp:
         alert_upper_timestamp = os.environ.get('MINE_ALERT_UPPER_TIMESTAMP', datetime.now())
         
     if not alert_lower_timestamp:
-        alert_window = os.environ.get('MINE_ALERT_WINDOW', timedelta(hours=12))
+        alert_window = timedelta(hours = int(os.environ.get('MINE_ALERT_WINDOW', "12")))
         alert_lower_timestamp = alert_upper_timestamp - alert_window
         
     if not pmi_threshold:
@@ -138,16 +153,43 @@ async def mine_incidents_and_create_objects(
 
     calculate_pmi_matrix(ctx, tenant_id)
 
+    logger.info(
+        "Getting new alerts and past incients",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    
     alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
     nc_queue = NodeCandidateQueue()
     
+    logger.info(
+        "Analyzing new alerts",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
     for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
         nc_queue.push_candidate(candidate)
     candidates = nc_queue.get_candidates()          
     
+    logger.info(
+        "Building alert graph",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
+    
     graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
     ids = []
+    
+    logger.info(
+        "Analyzing alert graph",
+        extra={
+            "tenant_id": tenant_id,
+        },
+    )
     
     for component in nx.connected_components(graph):
         if len(component) > min_incident_size:            
@@ -169,14 +211,14 @@ async def mine_incidents_and_create_objects(
                 incident_start_time = incident_start_time.replace(microsecond=0)
                 
                 incident = create_incident_from_dict(tenant_id, 
-                                                     {"name": f"Incident started at {incident_start_time}", 
+                                                     {"name": f"Incident started at  {incident_start_time}", 
                                                       "description": "Summarization is Disabled", "is_predicted": True})
-                ids.append(incident.id)
+                ids.append(incident.Incident.id)
                 
-                add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
+                add_alerts_to_incident_by_incident_id(tenant_id, incident.Incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
-                summary = generate_incident_summary(incident)
-                update_incident_summary(incident.id, summary)
+                summary = generate_incident_summary(incident.Incident)
+                update_incident_summary(incident.Incident.id, summary)
     
     pusher_client = get_pusher_client()
     if pusher_client:
@@ -368,7 +410,7 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
                 ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
                 
                 EXAMPLE:
-                An incident occurred between 2022-11-17 14:11:04.955070 and 2022-11-22 22:19:04.837526, involving a 
+                An incident occurred between 2022-11-17 14:11:04 and 2022-11-22 22:19:04, involving a 
                 total of 200 alerts. The alerts indicated critical and warning issues such as high CPU and memory 
                 usage in pods and nodes, as well as stuck Kubernetes Daemonset rollout. Potential incident scenario: 
                 Kubernetes Daemonset rollout stuck due to high CPU and memory usage in pods and nodes. This caused a

@@ -2407,20 +2407,39 @@ def confirm_predicted_incident_by_id(
 def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
     # TODO: add handlers for sequential launches
     with Session(engine) as session:
+        pmi_entries_to_update = []
+        pmi_entries_to_insert = []
+
+        # Query for existing entries to differentiate between updates and inserts
+        existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
+        existing_entries_set = {(entry.fingerprint_i, entry.fingerprint_j) for entry in existing_entries}
+
         for fingerprint_i in pmi_matrix_df.index:
             for fingerprint_j in pmi_matrix_df.columns:
                 pmi = pmi_matrix_df.at[fingerprint_i, fingerprint_j]
 
-                pmi_entry = PMIMatrix(
-                    tenant_id=tenant_id,
-                    fingerprint_i=fingerprint_i,
-                    fingerprint_j=fingerprint_j,
-                    pmi=pmi
-                )
-                session.merge(pmi_entry)
-                
-        session.commit()
+                pmi_entry = {
+                    "tenant_id": tenant_id,
+                    "fingerprint_i": fingerprint_i,
+                    "fingerprint_j": fingerprint_j,
+                    "pmi": pmi
+                }
+
+                if (fingerprint_i, fingerprint_j) in existing_entries_set:
+                    pmi_entries_to_update.append(pmi_entry)
+                else:
+                    pmi_entries_to_insert.append(pmi_entry)
+
+        # Update existing records
+        if pmi_entries_to_update:
+            session.bulk_update_mappings(PMIMatrix, pmi_entries_to_update)
         
+        # Insert new records
+        if pmi_entries_to_insert:
+            session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
+        
+        session.commit()
+
     return True
 
 def get_pmi_value(tenant_id: str, fingerprint_i: str, fingerprint_j: str) -> Optional[float]:
