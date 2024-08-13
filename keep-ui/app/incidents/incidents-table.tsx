@@ -63,9 +63,9 @@ export default function IncidentsTable({
       cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
     }),
     columnHelper.display({
-      id: "description",
-      header: "Description",
-      cell: ({ row }) => <div className="text-wrap">{row.original.description}</div>,
+      id: "user_summary",
+      header: "Summary",
+      cell: ({ row }) => <div className="text-wrap">{row.original.user_summary}</div>,
     }),
     // columnHelper.display({
     //   id: "severity",
