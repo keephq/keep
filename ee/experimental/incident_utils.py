@@ -378,7 +378,6 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
 
 
 def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1) -> str:
-    # TODO: 
     if "OPENAI_API_KEY" not in os.environ:
         logger.error("OpenAI API key is not set. Incident summary generation is not available.")
         return "Summarization is Disabled"
