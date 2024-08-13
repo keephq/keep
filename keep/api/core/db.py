@@ -1994,8 +1994,7 @@ def get_last_incidents(
                 Incident,
                 subquery.c.last_updated_time
             )
-            .join(subquery, subquery.c.incident_id == Incident.id)
-            .filter(Incident.tenant_id == tenant_id)
+            .join(subquery, subquery.c.incident_id == Incident.id, isouter=True)
             .filter(Incident.is_confirmed == is_confirmed)
             .options(joinedload(Incident.alerts))
             .order_by(desc(Incident.creation_time))
