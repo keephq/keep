@@ -33,9 +33,9 @@ from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-impo
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +160,7 @@ def migrate_db():
     Run migrations to make sure the DB is up-to-date.
     """
     logger.info("Running migrations...")
+    return
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
     # Re-defined because alembic.ini uses relative paths which doesn't work

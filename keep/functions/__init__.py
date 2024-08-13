@@ -260,7 +260,7 @@ def get_firing_time(alert: dict, time_unit: str, **kwargs) -> str:
             "Invalid time_unit. Use 'minutes', 'hours', 'seconds', 'm', 'h', or 's'."
         )
 
-    return f"{result:.1f}"
+    return f"{result:.2f}"
 
 
 def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:

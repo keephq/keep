@@ -1,0 +1,25 @@
+workflow:
+  id: resolve-old-alerts
+  description:
+  triggers:
+    - type: manual
+    - type: interval
+      value: 300
+  steps:
+    # get the alerts from keep
+    - name: get-alerts
+      provider:
+        type: keep
+        with:
+          version: 2
+          filter: "status = 'firing'"
+  actions:
+    # resolve if lastResolved is more than 1 hour
+    - name: resolve-alerts
+      foreach: " {{ steps.get-alerts.results }} "
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+          - key: disposable_status
+            value: resolved
