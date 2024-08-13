@@ -213,12 +213,12 @@ async def mine_incidents_and_create_objects(
                 incident = create_incident_from_dict(tenant_id, 
                                                      {"name": f"Incident started at  {incident_start_time}", 
                                                       "description": "Summarization is Disabled", "is_predicted": True})
-                ids.append(incident.Incident.id)
+                ids.append(incident.id)
                 
-                add_alerts_to_incident_by_incident_id(tenant_id, incident.Incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
+                add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
-                summary = generate_incident_summary(incident.Incident)
-                update_incident_summary(incident.Incident.id, summary)
+                summary = generate_incident_summary(incident)
+                update_incident_summary(incident.id, summary)
     
     pusher_client = get_pusher_client()
     if pusher_client:
@@ -385,6 +385,7 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
     try: 
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         
+        incident = get_incident_by_id(incident.tenant_id, incident.id)
         prompt_addition = ''
         if incident.user_summary:
             prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
