@@ -2,7 +2,10 @@ import logging
 import os
 import pathlib
 import sys
+import asyncio
+
 from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
@@ -10,14 +13,11 @@ from pydantic.types import UUID
 
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
-    assign_alert_to_incident,
     confirm_predicted_incident_by_id,
-    create_incident_from_dict,
     create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
-    get_last_alerts,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
@@ -29,6 +29,7 @@ from keep.api.core.dependencies import (
 )
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import IncidentsPaginatedResultsDto, AlertPaginatedResultsDto
 
 router = APIRouter()
@@ -131,7 +132,7 @@ def get_all_incidents(
 
     incidents_dto = []
     for incident in incidents:
-        incidents_dto.append(IncidentDto.from_db_incident(incident))
+        incidents_dto.append(IncidentDto.from_db_incident(incident.Incident))
 
     logger.info(
         "Fetched incidents from DB",
@@ -327,49 +328,39 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
-
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
 )
 def mine(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
-    use_n_historical_alerts: int = 10000,
-    incident_sliding_window_size: int = 6 * 24 * 60 * 60,
-    statistic_sliding_window_size: int = 60 * 60,
-    jaccard_threshold: float = 0.0,
-    fingerprint_threshold: int = 1,
-) -> dict:
-    tenant_id = authenticated_entity.tenant_id
-    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts)
+    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    alert_lower_timestamp: datetime = None,
+    alert_upper_timestamp: datetime = None,
+    use_n_historical_alerts: int = 10e10,
+    incident_lower_timestamp: datetime = None,
+    incident_upper_timestamp: datetime = None,
+    use_n_hist_incidents: int = 10e10,
+    pmi_threshold: float = 0.0,
+    knee_threshold: float = 0.8,
+    min_incident_size: int = 5,
+    incident_similarity_threshold: float = 0.8,
+) -> dict:     
+    result = asyncio.run(mine_incidents_and_create_objects(
+        None,
+        authenticated_entity.tenant_id,
+        alert_lower_timestamp,
+        alert_upper_timestamp,
+        use_n_historical_alerts,
+        incident_lower_timestamp,
+        incident_upper_timestamp,
+        use_n_hist_incidents,
+        pmi_threshold,
+        knee_threshold,
+        min_incident_size,
+        incident_similarity_threshold,
+    ))
 
-    if len(alerts) == 0:
-        return {"incidents": []}
-
-    incidents = mine_incidents(
-        alerts,
-        incident_sliding_window_size,
-        statistic_sliding_window_size,
-        jaccard_threshold,
-        fingerprint_threshold,
-    )
-    if len(incidents) == 0:
-        return {"incidents": []}
-
-    for incident in incidents:
-        incident_id = create_incident_from_dict(
-            tenant_id=tenant_id,
-            incident_data={
-                "name": "Mined using algorithm",
-                "description": "Candidate",
-                "is_predicted": True,
-            },
-        ).id
-
-        for alert in incident["alerts"]:
-            assign_alert_to_incident(alert.id, incident_id, tenant_id)
-
-    return {"incidents": incidents}
+    return result
 
 
 @router.post(
