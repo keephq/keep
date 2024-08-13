@@ -22,6 +22,7 @@ from keep.api.models.db.alert import Alert, Incident
 from keep.api.core.db import (
     assign_alert_to_incident,
     is_alert_assigned_to_incident,
+    add_alerts_to_incident_by_incident_id,
     get_last_alerts,
     get_last_incidents,
     get_incident_by_id,
@@ -39,13 +40,15 @@ from keep.api.core.dependencies import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Basic correlation algorithm v0.2"
+USE_N_HISTORICAL_ALERTS = 10e10
+USE_N_HISTORICAL_INCIDENTS = 10e10
 
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
     tenant_id: str,
     upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = None,
+    use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
     sliding_window: int = None,
     stride: int = None,
 ) -> dict:
@@ -58,9 +61,6 @@ def calculate_pmi_matrix(
     
     if not upper_timestamp:
         upper_timestamp = os.environ.get('PMI_ALERT_UPPER_TIMESTAMP', datetime.now())
-        
-    if not use_n_historical_alerts:
-        use_n_historical_alerts = os.environ.get('PMI_USE_N_HISTORICAL_ALERTS', 10e10)
         
     if not sliding_window:
         sliding_window = os.environ.get('PMI_SLIDING_WINDOW', 4 * 60 * 60)
@@ -80,10 +80,10 @@ async def mine_incidents_and_create_objects(
         tenant_id: str,
         alert_lower_timestamp: datetime = None,
         alert_upper_timestamp: datetime = None,
-        use_n_historical_alerts: int = None,
+        use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
         incident_lower_timestamp: datetime = None,
         incident_upper_timestamp: datetime = None,
-        use_n_hist_incidents: int = None,
+        use_n_hist_incidents: int = USE_N_HISTORICAL_INCIDENTS,
         pmi_threshold: float = None,
         knee_threshold: float = None,
         min_incident_size: int = None,
@@ -109,24 +109,20 @@ async def mine_incidents_and_create_objects(
     Returns:
     Dict[str, List[Incident]]: a dictionary containing the created incidents
     """
-    
-    if not incident_lower_timestamp:
-        incident_lower_timestamp = os.environ.get('MINE_INCIDENT_LOWER_TIMESTAMP', datetime(2023, 1, 1))
         
     if not incident_upper_timestamp:
         incident_upper_timestamp = os.environ.get('MINE_INCIDENT_UPPER_TIMESTAMP', datetime.now())
         
-    if not alert_lower_timestamp:
-        alert_lower_timestamp = os.environ.get('MINE_ALERT_LOWER_TIMESTAMP', datetime(2023, 1, 1))
+    if not incident_lower_timestamp:
+        incident_validity = os.environ.get('MINE_INCIDENT_VALIDITY', timedelta(days=1))
+        incident_lower_timestamp = incident_upper_timestamp - incident_validity
 
     if not alert_upper_timestamp:
         alert_upper_timestamp = os.environ.get('MINE_ALERT_UPPER_TIMESTAMP', datetime.now())
         
-    if not use_n_historical_alerts:
-        use_n_historical_alerts = os.environ.get('MINE_USE_N_HISTORICAL_ALERTS', 10e10)
-        
-    if not use_n_hist_incidents:
-        use_n_hist_incidents = os.environ.get('MINE_USE_N_HIST_INCIDENTS', 10e10)
+    if not alert_lower_timestamp:
+        alert_window = os.environ.get('MINE_ALERT_WINDOW', timedelta(hours=12))
+        alert_lower_timestamp = alert_upper_timestamp - alert_window
         
     if not pmi_threshold:
         pmi_threshold = os.environ.get('PMI_THRESHOLD', 0.0)
@@ -139,7 +135,6 @@ async def mine_incidents_and_create_objects(
         
     if not incident_similarity_threshold:
         incident_similarity_threshold = os.environ.get('INCIDENT_SIMILARITY_THRESHOLD', 0.8)
-
 
     calculate_pmi_matrix(ctx, tenant_id)
 
@@ -163,19 +158,22 @@ async def mine_incidents_and_create_objects(
         
                 if len(intersection) / len(component) >= incident_similarity_threshold:
                     alerts_appended = True
-                    for alert in [alert for alert in alerts if alert.fingerprint in component]:
-                        if not is_alert_assigned_to_incident(alert.id, incident.Incident.id, tenant_id):
-                            assign_alert_to_incident(alert.id, incident.Incident.id, tenant_id)
+                    
+                    add_alerts_to_incident_by_incident_id(tenant_id, incident.Incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
                     summary = generate_incident_summary(incident.Incident)
                     update_incident_summary(incident.Incident.id, summary)
                     
             if not alerts_appended:
-                incident = create_incident_from_dict(tenant_id, {"name": "New Incident", "description": "Summorization is Disabled", "is_predicted": True})
+                incident_start_time = min([alert.timestamp for alert in alerts if alert.fingerprint in component])
+                incident_start_time = incident_start_time.replace(microsecond=0)
+                
+                incident = create_incident_from_dict(tenant_id, 
+                                                     {"name": f"Incident started at {incident_start_time}", 
+                                                      "description": "Summarization is Disabled", "is_predicted": True})
                 ids.append(incident.id)
-                for alert in [alert for alert in alerts if alert.fingerprint in component]:
-                    if not is_alert_assigned_to_incident(alert.id, incident.id, tenant_id):
-                        assign_alert_to_incident(alert.id, incident.id, tenant_id)
+                
+                add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
                 summary = generate_incident_summary(incident)
                 update_incident_summary(incident.id, summary)
@@ -340,7 +338,7 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
 def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error("OpenAI API key is not set. Incident summary generation is not available.")
-        return "Summorization is Disabled"
+        return "Summarization is Disabled"
     
     try: 
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -386,4 +384,4 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         return summary
     except Exception as e:
         logger.error(f"Error in generating incident summary: {e}")
-        return "Summorization is Disabled"
+        return "Summarization is Disabled"
