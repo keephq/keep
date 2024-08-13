@@ -86,7 +86,7 @@ export default function IncidentInformation({ incident }: Props) {
           }
         </div>
         <div className="prose-2xl">{incident.name}</div>
-        <p>Description: {incident.description}</p>
+        <p>Summary: {incident.user_summary}</p>
         <p>Started at: {incident.start_time?.toISOString() ?? "N/A"}</p>
         {/* <Callout
           title="AI Summary"
