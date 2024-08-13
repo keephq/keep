@@ -344,7 +344,7 @@ class IncidentDtoIn(BaseModel):
                 {
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
                     "name": "Incident name",
-                    "description": "Keep: Incident description",
+                    "user_summary": "Keep: Incident description",
                 }
             ]
         }
@@ -387,7 +387,8 @@ class IncidentDto(IncidentDtoIn):
         return cls(
             id=db_incident.id,
             name=db_incident.name,
-            description=db_incident.description,
+            user_summary=db_incident.user_summary,
+            generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
             is_confirmed=db_incident.is_confirmed,
             creation_time=db_incident.creation_time,

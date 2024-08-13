@@ -22,6 +22,8 @@ env:
   POSTGRES_USER: keepuser
   POSTGRES_PASSWORD: keeppassword
   POSTGRES_DB: keepdb
+  # To test if imports are working properly
+  EE_ENABLED: true
 
 jobs:
   tests:

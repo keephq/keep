@@ -1,3 +1,4 @@
+
 import {Button, Title} from "@tremor/react";
 import { IncidentDto } from "../model";
 import CreateOrUpdateIncident from "../create-or-update-incident";

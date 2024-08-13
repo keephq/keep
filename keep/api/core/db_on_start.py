@@ -35,6 +35,7 @@ from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-imp
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
