@@ -119,7 +119,7 @@ export default function Ai() {
           </div>
           {aistats?.is_mining_enabled && (
             <div>
-              <div className="prose-2xl mt-10">Algorithms:</div>
+              <div className="prose-2xl mt-10">AI:</div>
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <Card
                   className={
