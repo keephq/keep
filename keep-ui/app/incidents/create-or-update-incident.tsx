@@ -29,7 +29,7 @@ export default function CreateOrUpdateIncident({
   const { data: session } = useSession();
   const { mutate } = useIncidents(true, 20);
   const [incidentName, setIncidentName] = useState<string>("");
-  const [incidentDescription, setIncidentDescription] = useState<string>("");
+  const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const editMode = incidentToEdit !== null;
 
@@ -39,14 +39,14 @@ export default function CreateOrUpdateIncident({
   useEffect(() => {
     if (incidentToEdit) {
       setIncidentName(incidentToEdit.name);
-      setIncidentDescription(incidentToEdit.description ?? "");
+      setIncidentUserSummary(incidentToEdit.user_summary ?? "");
       setIncidentAssignee(incidentToEdit.assignee ?? "");
     }
   }, [incidentToEdit]);
 
   const clearForm = () => {
     setIncidentName("");
-    setIncidentDescription("");
+    setIncidentUserSummary("");
     setIncidentAssignee("");
   };
 
@@ -61,7 +61,7 @@ export default function CreateOrUpdateIncident({
       },
       body: JSON.stringify({
         name: incidentName,
-        description: incidentDescription,
+        user_summary: incidentUserSummary,
         assignee: incidentAssignee,
       }),
     });
@@ -93,7 +93,7 @@ export default function CreateOrUpdateIncident({
         },
         body: JSON.stringify({
           name: incidentName,
-          description: incidentDescription,
+          user_summary: incidentUserSummary,
           assignee: incidentAssignee,
         }),
       }
@@ -118,7 +118,7 @@ export default function CreateOrUpdateIncident({
   const submitEnabled = (): boolean => {
     return (
       !!incidentName &&
-      !!incidentDescription
+      !!incidentUserSummary
     );
   };
 
@@ -140,12 +140,12 @@ export default function CreateOrUpdateIncident({
         />
       </div>
       <div className="mt-2.5">
-        <Text>Description<span className="text-red-500 text-xs">*</span></Text>
+        <Text>Summary<span className="text-red-500 text-xs">*</span></Text>
         <Textarea
           placeholder="What happened?"
           required={true}
-          value={incidentDescription}
-          onValueChange={setIncidentDescription}
+          value={incidentUserSummary}
+          onValueChange={setIncidentUserSummary}
         />
       </div>
 
