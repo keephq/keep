@@ -1,30 +1,22 @@
 import {
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeaderCell,
-  TableRow,
   Badge,
 } from "@tremor/react";
 import {
   DisplayColumnDef,
   ExpandedState,
   createColumnHelper,
-  flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
-import { toast } from "react-toastify";
 import {IncidentDto, PaginatedIncidentsDto} from "./model";
 import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import IncidentPagination from "./incident-pagination";
+import IncidentTableComponent from "./incident-table-component";
+import {deleteIncident} from "./incident-candidate-actions";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -41,7 +33,6 @@ export default function IncidentsTable({
   setPagination,
   editCallback,
 }: Props) {
-  const router = useRouter();
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setTablePagination] = useState({
@@ -72,9 +63,9 @@ export default function IncidentsTable({
       cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
     }),
     columnHelper.display({
-      id: "description",
-      header: "Description",
-      cell: ({ row }) => <div className="text-wrap">{row.original.description}</div>,
+      id: "user_summary",
+      header: "Summary",
+      cell: ({ row }) => <div className="text-wrap">{row.original.user_summary}</div>,
     }),
     // columnHelper.display({
     //   id: "severity",
@@ -151,10 +142,10 @@ export default function IncidentsTable({
             size="xs"
             variant="secondary"
             icon={MdRemoveCircle}
-            onClick={(e: React.MouseEvent) => {
+            onClick={async (e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              deleteIncident(context.row.original.id!);
+              await deleteIncident({incidentId: context.row.original.id!, mutate, session});
             }}
           />
         </div>
@@ -173,70 +164,9 @@ export default function IncidentsTable({
     onExpandedChange: setExpanded,
   });
 
-  const deleteIncident = (incidentId: string) => {
-    const apiUrl = getApiURL();
-    if (confirm("Are you sure you want to delete this incident?")) {
-      fetch(`${apiUrl}/incidents/${incidentId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
-          mutate();
-          toast.success("Incident deleted successfully");
-        } else {
-          toast.error("Failed to delete incident, contact us if this persists");
-        }
-      });
-    }
-  };
-
   return (
     <div>
-      <Table className="mt-4">
-        <TableHead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow
-              className="border-b border-tremor-border dark:border-dark-tremor-border"
-              key={headerGroup.id}
-            >
-              {headerGroup.headers.map((header) => {
-                return (
-                  <TableHeaderCell
-                    className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
-                    key={header.id}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </TableHeaderCell>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHead>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <>
-              <TableRow
-                className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
-                key={row.id}
-                onClick={() => {
-                  router.push(`/incidents/${row.original.id}`);
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </>
-          ))}
-        </TableBody>
-      </Table>
+      <IncidentTableComponent table={table} />
       <div className="mt-4 mb-8">
         <IncidentPagination table={table}  isRefreshAllowed={true}/>
       </div>

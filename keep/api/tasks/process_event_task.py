@@ -60,6 +60,7 @@ def __save_to_db(
     formatted_events: list[AlertDto],
     deduplicated_events: list[AlertDto],
     provider_id: str | None = None,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     try:
         # keep raw events in the DB if the user wants to
@@ -115,15 +116,21 @@ def __save_to_db(
                         tz=datetime.timezone.utc
                     ).isoformat()
 
-            alert = Alert(
-                tenant_id=tenant_id,
-                provider_type=(
+            alert_args = {
+                "tenant_id": tenant_id,
+                "provider_type": (
                     provider_type if provider_type else formatted_event.source[0]
                 ),
-                event=formatted_event.dict(),
-                provider_id=provider_id,
-                fingerprint=formatted_event.fingerprint,
-                alert_hash=formatted_event.alert_hash,
+                "event": formatted_event.dict(),
+                "provider_id": provider_id,
+                "fingerprint": formatted_event.fingerprint,
+                "alert_hash": formatted_event.alert_hash,
+            }
+            if timestamp_forced is not None:
+                alert_args['timestamp'] = timestamp_forced
+
+            alert = Alert(
+                **alert_args
             )
             session.add(alert)
             audit = AlertAudit(
@@ -190,6 +197,7 @@ def __handle_formatted_events(
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
     notify_client: bool = True,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     """
     this is super important function and does five things:
@@ -239,6 +247,7 @@ def __handle_formatted_events(
         formatted_events,
         deduplicated_events,
         provider_id,
+        timestamp_forced,
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
@@ -324,7 +333,7 @@ def __handle_formatted_events(
         presets_do_update = []
         for preset in presets:
             # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.dict())
+            preset_dto = PresetDto(**preset.to_dict())
             filtered_alerts = RulesEngine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )

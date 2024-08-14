@@ -22,6 +22,7 @@ STATIC_PRESETS = {
         is_noisy=False,
         should_do_noise_now=False,
         static=True,
+        tags=[],
     ),
     "groups": PresetDto(
         id=StaticPresetsId.GROUPS_PRESET_ID.value,
@@ -35,6 +36,7 @@ STATIC_PRESETS = {
         is_noisy=False,
         should_do_noise_now=False,
         static=True,
+        tags=[],
     ),
     "dismissed": PresetDto(
         id=StaticPresetsId.DISMISSED_PRESET_ID.value,
@@ -48,5 +50,6 @@ STATIC_PRESETS = {
         is_noisy=False,
         should_do_noise_now=False,
         static=True,
+        tags=[],
     ),
 }
