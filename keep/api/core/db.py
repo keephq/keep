@@ -1982,7 +1982,6 @@ def get_last_incidents(
         query = (
             session.query(
                 Incident,
-                subquery.c.last_updated_time
             )
             .filter(
                 Incident.tenant_id == tenant_id,
