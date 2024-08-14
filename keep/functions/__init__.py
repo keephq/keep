@@ -69,6 +69,10 @@ def utcnow() -> datetime.datetime:
     return dt
 
 
+def utcnowtimestamp() -> int:
+    return int(utcnow().timestamp())
+
+
 def utcnowiso() -> str:
     return utcnow().isoformat()
 
@@ -96,6 +100,16 @@ def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
             return ""
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
+
+
+def to_timestamp(dt: datetime.datetime | str = "") -> int:
+    if isinstance(dt, str):
+        try:
+            dt = parser.parse(dt.strip())
+        except ParserError:
+            # Failed to parse the date
+            return 0
+    return int(dt.timestamp())
 
 
 def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
