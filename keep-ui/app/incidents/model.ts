@@ -10,6 +10,7 @@ export interface IncidentDto {
   alert_sources: string[];
   services: string[];
   start_time?: Date;
+  last_seen_time?: Date;
   end_time?: Date;
   creation_time: Date;
   is_confirmed: boolean;

@@ -1979,23 +1979,14 @@ def get_last_incidents(
         List[Incident]: A list of Incident objects.
     """
     with Session(engine) as session:
-        subquery = (
-            select(
-                AlertToIncident.incident_id,
-                func.max(Alert.timestamp).label('last_updated_time')
-            )
-            .join(Alert, Alert.id == AlertToIncident.alert_id)
-            .group_by(AlertToIncident.incident_id)
-            .subquery()
-        )
-
         query = (
             session.query(
                 Incident,
             )
-            .join(subquery, subquery.c.incident_id == Incident.id, isouter=True)
-            .filter(Incident.is_confirmed == is_confirmed)
-            .options(joinedload(Incident.alerts))
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.is_confirmed == is_confirmed
+            )
             .order_by(desc(Incident.creation_time))
         )
 
@@ -2007,15 +1998,15 @@ def get_last_incidents(
 
         if upper_timestamp and lower_timestamp:
             query = query.filter(
-                subquery.c.last_updated_time.between(lower_timestamp, upper_timestamp)
+                col(Incident.last_seen_time).between(lower_timestamp, upper_timestamp)
             )
         elif upper_timestamp:
             query = query.filter(
-                subquery.c.last_updated_time <= upper_timestamp
+                Incident.last_seen_time <= upper_timestamp
             )
         elif lower_timestamp:
             query = query.filter(
-                subquery.c.last_updated_time >= lower_timestamp
+                Incident.last_seen_time >= lower_timestamp
             )
 
         total_count = query.count()
@@ -2153,6 +2144,7 @@ def get_incident_alerts_by_incident_id(
                 AlertToIncident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
+            .order_by(col(Alert.timestamp).desc())
         )
 
     total_count = query.count()
@@ -2224,12 +2216,14 @@ def add_alerts_to_incident_by_incident_id(
             return None
 
         existed_alert_ids = session.exec(
-            select(AlertToIncident.alert_id).where(
+            select(AlertToIncident.alert_id)
+            .where(
                 AlertToIncident.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident.id,
                 col(AlertToIncident.alert_id).in_(alert_ids),
             )
         ).all()
+
 
         new_alert_ids = [
             alert_id for alert_id in alert_ids if alert_id not in existed_alert_ids
@@ -2253,6 +2247,18 @@ def add_alerts_to_incident_by_incident_id(
         ]
 
         session.bulk_save_objects(alert_to_incident_entries)
+
+        started_at, last_seen_at = session.exec(
+            select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+            )
+        ).one()
+        incident.start_time = started_at
+        incident.last_seen_time = last_seen_at
+
         session.add(incident)
         session.commit()
         return True
@@ -2323,6 +2329,15 @@ def remove_alerts_to_incident_by_incident_id(
             if source not in sources_existed
         ]
 
+        started_at, last_seen_at = session.exec(
+            select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .where(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident.id,
+            )
+        ).one()
+
         # filtering removed entities from affected services and sources in the incident
         incident.affected_services = [
             service
@@ -2334,6 +2349,9 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
+        incident.start_time = started_at
+        incident.last_seen_time = last_seen_at
+
         session.add(incident)
         session.commit()
 
