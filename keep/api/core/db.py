@@ -1290,7 +1290,7 @@ def delete_rule(tenant_id, rule_id):
 def assign_alert_to_group(
     tenant_id, alert_id, rule_id, timeframe, group_fingerprint
 ) -> Group:
-    # checks if group with the group critiria exists, if not it creates it
+    # checks if group with the group criteria exists, if not it creates it
     #   and then assign the alert to the group
     with Session(engine) as session:
         group = session.exec(
@@ -1336,7 +1336,7 @@ def assign_alert_to_group(
             #   these from the DB since it was too big
             if not group_alert:
                 logger.warning(
-                    f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
+                    f"Group {group.id} is expired, but the alert is not found. Was it deleted manually?"
                 )
             else:
                 try:
@@ -1985,13 +1985,13 @@ def get_incident_by_id(tenant_id: str, incident_id: str | UUID) -> Optional[Inci
 
 def create_incident_from_dto(
     tenant_id: str, incident_dto: IncidentDtoIn
-) -> Optional[Incident]:
+) -> Incident:
     return create_incident_from_dict(tenant_id, incident_dto.dict())
 
 
 def create_incident_from_dict(
     tenant_id: str, incident_data: dict
-) -> Optional[Incident]:
+) -> Incident:
     is_predicted = incident_data.get("is_predicted", False)
     with Session(engine) as session:
         new_incident = Incident(

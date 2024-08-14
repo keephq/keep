@@ -293,7 +293,8 @@ def __handle_formatted_events(
         # if new grouped alerts were created, we need to push them to the client
         if grouped_alerts:
             logger.info("Adding group alerts to the workflow manager queue")
-            workflow_manager.insert_events(tenant_id, grouped_alerts)
+            #workflow_manager.insert_events(tenant_id, grouped_alerts)
+            #Inserting of the incident into workflow manager
             logger.info("Added group alerts to the workflow manager queue")
     except Exception:
         logger.exception(
