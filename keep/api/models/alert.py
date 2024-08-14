@@ -354,6 +354,7 @@ class IncidentDto(IncidentDtoIn):
     id: UUID
 
     start_time: datetime.datetime | None
+    last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
 
     number_of_alerts: int
@@ -393,6 +394,7 @@ class IncidentDto(IncidentDtoIn):
             is_confirmed=db_incident.is_confirmed,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
+            last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
             number_of_alerts=db_incident.alerts_count,
             alert_sources=db_incident.sources,
