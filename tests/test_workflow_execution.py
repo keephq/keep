@@ -348,3 +348,117 @@ def test_workflow_execution_2(
         assert "Tier 1 Alert" in workflow_execution.results["send-slack-message"][0]
     else:
         assert workflow_execution.results["send-slack-message"] == []
+
+
+workflow_definition_3 = """workflow:
+id: alert-time-check
+description: Handle alerts based on startedAt timestamp
+triggers:
+- type: alert
+  filters:
+  - key: name
+    value: "server-is-down"
+actions:
+- name: send-slack-message-tier-0
+  if: keep.get_firing_time('{{ alert }}', 'minutes') > 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 0 Alert: {{ alert.name }} - {{ alert.description }}
+        Alert details: {{ alert }}"
+- name: send-slack-message-tier-1
+  if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 30"
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+         Alert details: {{ alert }}"
+"""
+
+
+@pytest.mark.parametrize(
+    "test_case, alert_statuses, expected_tier, db_session",
+    [
+        ("Tier 0", [[0, "firing"]], 0, None),
+        ("Tier 1", [[10, "firing"], [0, "firing"]], 1, None),
+        ("Resolved", [[15, "firing"], [5, "firing"], [0, "resolved"]], None, None),
+        (
+            "Tier 0 again",
+            [[20, "firing"], [10, "firing"], [5, "resolved"], [0, "firing"]],
+            0,
+            None,
+        ),
+    ],
+    indirect=["db_session"],
+)
+def test_workflow_execution3(
+    db_session,
+    create_alert,
+    workflow_manager,
+    test_case,
+    alert_statuses,
+    expected_tier,
+):
+    workflow = Workflow(
+        id="alert-first-time",
+        name="alert-first-time",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Send slack message only the first time an alert fires",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_3,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+    base_time = datetime.now(tz=pytz.utc)
+
+    # Create alerts with specified statuses and timestamps
+    for time_diff, status in alert_statuses:
+        alert_status = (
+            AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+        )
+        create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
+
+    # Create the current alert
+    current_alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-down",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp1",
+    )
+
+    # Insert the current alert into the workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for the workflow execution to complete
+    workflow_execution = None
+    count = 0
+    status = None
+    while workflow_execution is None and count < 30 and status != "success":
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "alert-first-time"
+        )
+        if workflow_execution is not None:
+            status = workflow_execution.status
+        time.sleep(1)
+        count += 1
+
+    # Check if the workflow execution was successful
+
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    # Verify if the correct tier action was triggered
+    if expected_tier is None:
+        assert workflow_execution.results["send-slack-message-tier-0"] == []
+        assert workflow_execution.results["send-slack-message-tier-1"] == []
+    elif expected_tier == 0:
+        assert workflow_execution.results["send-slack-message-tier-1"] == []
+        assert "Tier 0" in workflow_execution.results["send-slack-message-tier-0"][0]
+    elif expected_tier == 1:
+        assert workflow_execution.results["send-slack-message-tier-0"] == []
+        assert "Tier 1" in workflow_execution.results["send-slack-message-tier-1"][0]

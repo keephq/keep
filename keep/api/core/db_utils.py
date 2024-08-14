@@ -124,12 +124,14 @@ def create_db_engine():
             "mysql+pymysql://",
             creator=__get_conn,
             echo=DB_ECHO,
+            json_serializer=dumps,
         )
     elif DB_CONNECTION_STRING == "impersonate":
         engine = create_engine(
             "mysql+pymysql://",
             creator=__get_conn_impersonate,
             echo=DB_ECHO,
+            json_serializer=dumps,
         )
     elif DB_CONNECTION_STRING:
         try:
@@ -143,12 +145,15 @@ def create_db_engine():
             )
         # SQLite does not support pool_size
         except TypeError:
-            engine = create_engine(DB_CONNECTION_STRING)
+            engine = create_engine(
+                DB_CONNECTION_STRING, json_serializer=dumps, echo=DB_ECHO
+            )
     else:
         engine = create_engine(
             "sqlite:///./keep.db",
             connect_args={"check_same_thread": False},
             echo=DB_ECHO,
+            json_serializer=dumps,
         )
     return engine
 
@@ -158,6 +163,6 @@ def get_json_extract_field(session, base_field, key):
     if session.bind.dialect.name == "postgresql":
         return func.json_extract_path_text(base_field, key)
     elif session.bind.dialect.name == "mysql":
-        return func.json_unquote(func.json_extract(base_field, '$.{}'.format(key)))
+        return func.json_unquote(func.json_extract(base_field, "$.{}".format(key)))
     else:
-        return func.json_extract(base_field, '$.{}'.format(key))
+        return func.json_extract(base_field, "$.{}".format(key))
