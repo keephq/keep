@@ -211,7 +211,7 @@ async def mine_incidents_and_create_objects(
                 incident_start_time = incident_start_time.replace(microsecond=0)
                 
                 incident = create_incident_from_dict(tenant_id, 
-                                                     {"name": f"Incident started at  {incident_start_time}", 
+                                                     {"name": f"Incident started at {incident_start_time}", 
                                                       "description": "Summarization is Disabled", "is_predicted": True})
                 ids.append(incident.id)
                 
@@ -390,7 +390,6 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         if incident.user_summary:
             prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
         
-        alert_number = len(incident.alerts)
         description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
         
         if use_n_alerts_for_summary > 0:
@@ -421,7 +420,7 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
             {
                 "role": "user",
                 "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
-                {incident_start}, ended on {incident_end}, included {alert_number} alerts. {prompt_addition}"""
+                {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts. {prompt_addition}"""
             }
         ]).choices[0].message.content
         
