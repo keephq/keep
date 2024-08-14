@@ -364,7 +364,7 @@ def test_get_firing_time_case2(create_alert):
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=90))
 
     alert = {"fingerprint": fingerprint}
-    assert functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID) == "0.0"
+    assert functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID) == "0.00"
 
 
 def test_get_firing_time_case3(create_alert):
@@ -406,7 +406,7 @@ def test_get_firing_time_no_firing(create_alert):
     create_alert(fingerprint, AlertStatus.RESOLVED, base_time - timedelta(minutes=60))
 
     alert = {"fingerprint": fingerprint}
-    assert functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID) == "0.0"
+    assert functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID) == "0.00"
 
 
 def test_get_firing_time_other_statuses(create_alert):
