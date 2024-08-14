@@ -160,7 +160,6 @@ def migrate_db():
     Run migrations to make sure the DB is up-to-date.
     """
     logger.info("Running migrations...")
-    return
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
     # Re-defined because alembic.ini uses relative paths which doesn't work
