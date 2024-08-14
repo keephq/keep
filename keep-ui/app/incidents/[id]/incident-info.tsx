@@ -86,8 +86,9 @@ export default function IncidentInformation({ incident }: Props) {
           }
         </div>
         <div className="prose-2xl">{incident.name}</div>
-        <p>Description: {incident.description}</p>
-        <p>Started at: {incident.start_time?.toISOString() ?? "N/A"}</p>
+        <p>Summary: {incident.user_summary}</p>
+        {!!incident.start_time && <p>Started at: {new Date(incident.start_time + "Z").toLocaleString()}</p>}
+        {!!incident.last_seen_time && <p>Last seen at: {new Date(incident.last_seen_time + "Z").toLocaleString()}</p>}
         {/* <Callout
           title="AI Summary"
           color="gray"

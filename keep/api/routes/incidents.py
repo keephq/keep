@@ -132,7 +132,7 @@ def get_all_incidents(
 
     incidents_dto = []
     for incident in incidents:
-        incidents_dto.append(IncidentDto.from_db_incident(incident.Incident))
+        incidents_dto.append(IncidentDto.from_db_incident(incident))
 
     logger.info(
         "Fetched incidents from DB",
