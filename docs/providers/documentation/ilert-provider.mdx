@@ -1,25 +1,21 @@
----
-title: "Ilert Provider"
-sidebarTitle: "Ilert Provider"
-description: "The ilert provider enables the creation, updating, and resolution of events or incidents on ilert, leveraging both incident management and event notification capabilities for effective incident response."
----
+# Ilert Provider
 
 ## Overview
 
-The ilert provider facilitates interaction with ilert’s API, allowing for the management of incidents and events. This includes the ability to create, update, and resolve incidents, as well as send custom event notifications. This provider integrates Keep's system with ilert's robust alerting and incident management platform.
+The ilert provider enables the creation, updating, and resolution of events or incidents on ilert, leveraging both incident management and event notification capabilities for effective incident response. This provider integrates Keep's system with ilert's robust alerting and incident management platform.
 
 ## Inputs
 
 The `_type` parameter specifies the nature of the notification or action to be taken via the ilert API:
 
-- `incident`: This type is used for creating or updating incidents. It requires specific information such as incident summary, status, message, and details about affected services.
-- `event`: This type allows for sending customized event notifications that can be configured to alert, accept, or resolve specific conditions. It supports details such as event type, summary, details about the event, custom details, and links for more context.
+- **incident**: Used for creating or updating incidents. Requires details such as incident summary, status, message, and affected services.
+- **event**: Allows sending customized event notifications, configured to alert, accept, or resolve specific conditions. Supports details like event type, summary, custom details, and links for more context.
 
-Depending on the `_type` specified, the provider will route the operation to the appropriate endpoint and handle the data according to ilert's requirements for incidents or events.
+The provider routes the operation to the appropriate endpoint based on the specified `_type` and handles the data according to ilert's requirements for incidents or events.
 
 ### Incident Management
 
-- `summary`: A brief summary of the incident. This is required for creating a new incident.
+- `summary`: A brief summary of the incident. Required for creating a new incident.
 - `status`: `IlertIncidentStatus` - The current status of the incident (e.g., INVESTIGATING, RESOLVED, MONITORING, IDENTIFIED).
 - `message`: A detailed message describing the incident or situation. Default is an empty string.
 - `affectedServices`: A JSON string representing the list of affected services and their statuses. Default is an empty array (`"[]"`).
@@ -27,14 +23,13 @@ Depending on the `_type` specified, the provider will route the operation to the
 
 ### Event Notification
 
-- `event_type`: Type of the event to post (`ALERT`, `ACCEPT`, `RESOLVE`).
+- `event_type`: Type of the event to post (ALERT, ACCEPT, RESOLVE).
 - `details`: Detailed information about the event.
 - `alert_key`: A unique key for the event to allow de-duplication.
-- `priority`: Priority level of the event (`HIGH`, `LOW`).
+- `priority`: Priority level of the event (HIGH, LOW).
 - `images`: List of image URLs to include with the event.
 - `links`: List of related links to include with the event.
 - `custom_details`: Custom key-value pairs to provide additional context.
-- `routing_key`: Routing key for the event to direct it to specific recipients.
 
 ## Outputs
 
@@ -42,30 +37,26 @@ Responses from ilert's API are JSON objects that include the status of the opera
 
 ## Authentication Parameters
 
-- `ilert_token`: API token for authenticating with ilert's API.
+- `ALERT-SOURCE-API-KEY`: API token for authenticating with ilert's Alert Source API.
 - `ilert_host`: API host URL. Default is `https://api.ilert.com/api`.
 
-## Scopes
-
-- `read_permission`: Mandatory for validating the API token's read capabilities.
-- `write_permission`: Optional for write capabilities, validated upon use.
 
 ## Connecting with the Provider
 
-### API Token
 
-To obtain an ilert API token:
+### Custom Integration: Adding Keep to ilert
+
+To integrate Keep with ilert, follow these steps:
+
 1. Log in to your ilert account.
-2. Navigate to the "API Tokens" section under your user profile or account settings.
-3. Generate a new API token.
-4. Ensure "Read Permission" and "Write Permission" are enabled.
-5. Click "Save".
+2. Navigate to "Alert Sources" under your account settings.
+3. Create a new alert source specifically for Keep.
+4. Note the `ALERT-SOURCE-API-KEY` provided for this alert source.
 
-### Event Endpoint
+The endpoint to make requests for Keep integration will be:
+(https://api.ilert.com/api/v1/events/keep/{ALERT-SOURCE-API-KEY})
 
-The ilert event endpoint allows the posting of custom events to the ilert system. This is useful for triggering alerts based on specific conditions detected by Keep's systems. The event endpoint can be used to alert, accept, or resolve events through ilert, providing flexibility in how events are handled.
 
-For more details, refer to the [ilert API Documentation](https://api.ilert.com/api-docs/?#tag/events/post/events).
 
 ## Notes
 
