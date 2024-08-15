@@ -429,8 +429,6 @@ class EnrichmentsBl:
         for key, val in enrichments.enrichments.items():
             if key.startswith("disposable_"):
                 disposed = True
-                new_key = key.replace("disposable_", "disposed_")
-                new_enrichments[new_key] = val
                 continue
             elif f"disposable_{key}" not in enrichments.enrichments:
                 new_enrichments[key] = val
