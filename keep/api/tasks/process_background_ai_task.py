@@ -74,4 +74,3 @@ async def process_background_ai_task(
                     f"No {ALGORITHM_VERBOSE_NAME} for tenant {tenant} scheduled because EE is disabled for this tenant",
                     extra={"algorithm": ALGORITHM_VERBOSE_NAME, "tenant_id": tenant},
                 )
-                    
