@@ -381,7 +381,7 @@ def __handle_formatted_events(
                 logger.info("Noisy preset is noisy")
                 preset_dto.should_do_noise_now = True
         # send with pusher
-        if pusher_client and notify_client:
+        if notify_client and pusher_client:
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
