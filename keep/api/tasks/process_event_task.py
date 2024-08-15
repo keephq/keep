@@ -237,7 +237,6 @@ def __handle_formatted_events(
             "tenant_id": tenant_id,
         },
     )
-    pusher_client = get_pusher_client()
 
     # first, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
@@ -333,7 +332,10 @@ def __handle_formatted_events(
         )
 
     # Tell the client to poll alerts
-    if pusher_client and notify_client:
+    if notify_client:
+        pusher_client = get_pusher_client()
+        if not pusher_client:
+            return
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
