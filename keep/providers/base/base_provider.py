@@ -147,7 +147,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 # This is when we are in a foreach context that is zipped
                 foreach_context: dict = foreach_context[0]
                 event = foreach_context
-            fingerprint = foreach_context.get("fingerprint")
+
+            if isinstance(foreach_context, AlertDto):
+                fingerprint = foreach_context.fingerprint
+            else:
+                fingerprint = foreach_context.get("fingerprint")
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
@@ -170,10 +174,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.debug("Fingerprint extracted", extra={"fingerprint": fingerprint})
 
         _enrichments = {}
+        disposable_enrichments = {}
         # enrich only the requested fields
         for enrichment in enrichments:
             try:
                 value = enrichment["value"]
+                disposable = bool(enrichment.get("disposable", "false"))
                 if value.startswith("results."):
                     val = enrichment["value"].replace("results.", "")
                     parts = val.split(".")
@@ -181,7 +187,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     for part in parts:
                         r = r[part]
                     value = r
-                _enrichments[enrichment["key"]] = value
+                if disposable:
+                    disposable_enrichments[enrichment["key"]] = value
+                else:
+                    _enrichments[enrichment["key"]] = value
                 if event is not None:
                     if isinstance(event, dict):
                         event[enrichment["key"]] = value
@@ -201,12 +210,27 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 enrichment_string += f"{key}={value}, "
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
+            # enrich the alert with _enrichments
             enrichments_bl.enrich_alert(
                 fingerprint,
                 _enrichments,
                 action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
+            )
+            # enrich with disposable enrichments
+            enrichment_string = ""
+            for key, value in disposable_enrichments.items():
+                enrichment_string += f"{key}={value}, "
+            # remove the last comma
+            enrichment_string = enrichment_string[:-2]
+            enrichments_bl.enrich_alert(
+                fingerprint,
+                disposable_enrichments,
+                action_type=AlertActionType.WORKFLOW_ENRICH,
+                action_callee="system",
+                action_description=f"Workflow enriched the alert with {enrichment_string}",
+                dispose_on_new_alert=True,
             )
 
         except Exception as e:
