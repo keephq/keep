@@ -135,6 +135,8 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/splunk-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/incidentmanager-icon.png"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/coralogix-icon.png?raw=true" />
 </p>
 <h3 align="center">Databases and data warehouses</h3>
 <p align="center">
@@ -199,8 +201,6 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/incidentio-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana_incident-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/coralogix-icon.png?raw=true" />
 </p>
 <h3 align="center">Ticketing tools</h2>
 <p align="center">
