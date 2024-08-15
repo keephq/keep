@@ -1291,9 +1291,11 @@ def create_rule(
     definition,
     definition_cel,
     created_by,
-    grouping_criteria=[],
+    grouping_criteria=None,
     group_description=None,
+    require_approve=False,
 ):
+    grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
         rule = Rule(
             tenant_id=tenant_id,
@@ -1305,6 +1307,7 @@ def create_rule(
             creation_time=datetime.utcnow(),
             grouping_criteria=grouping_criteria,
             group_description=group_description,
+            require_approve=require_approve,
         )
         session.add(rule)
         session.commit()
@@ -1321,6 +1324,7 @@ def update_rule(
     definition_cel,
     updated_by,
     grouping_criteria,
+    require_approve,
 ):
     with Session(engine) as session:
         rule = session.exec(
@@ -1333,6 +1337,7 @@ def update_rule(
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.grouping_criteria = grouping_criteria
+            rule.require_approve = require_approve
             rule.updated_by = updated_by
             rule.update_time = datetime.utcnow()
             session.commit()
@@ -1384,115 +1389,50 @@ def delete_rule(tenant_id, rule_id):
         return False
 
 
-def assign_alert_to_group(
-    tenant_id, alert_id, rule_id, timeframe, group_fingerprint
-) -> Group:
-    # checks if group with the group critiria exists, if not it creates it
-    #   and then assign the alert to the group
+def get_incident_for_grouping_rule(
+    tenant_id, rule, timeframe, rule_fingerprint
+) -> Incident:
+    # checks if incident with the incident criteria exists, if not it creates it
+    #   and then assign the alert to the incident
     with Session(engine) as session:
-        group = session.exec(
-            select(Group)
-            .options(joinedload(Group.alerts))
-            .where(Group.tenant_id == tenant_id)
-            .where(Group.rule_id == rule_id)
-            .where(Group.group_fingerprint == group_fingerprint)
-            .order_by(Group.creation_time.desc())
+        incident = session.exec(
+            select(Incident)
+            .options(joinedload(Incident.alerts))
+            .where(Incident.tenant_id == tenant_id)
+            .where(Incident.rule_id == rule.id)
+            .where(Incident.rule_fingerprint == rule_fingerprint)
+            .order_by(Incident.creation_time.desc())
         ).first()
 
-        # if the last alert in the group is older than the timeframe, create a new group
-        is_group_expired = False
-        if group:
-            # group has at least one alert (o/w it wouldn't created in the first place)
-            is_group_expired = max(
-                alert.timestamp for alert in group.alerts
+        # if the last alert in the incident is older than the timeframe, create a new incident
+        is_incident_expired = False
+        if incident and incident.alerts:
+            is_incident_expired = max(
+                alert.timestamp for alert in incident.alerts
             ) < datetime.utcnow() - timedelta(seconds=timeframe)
 
-        if is_group_expired and group:
-            logger.info(
-                f"Group {group.id} is expired, creating a new group for rule {rule_id}"
-            )
-            fingerprint = group.calculate_fingerprint()
-            # enrich the group with the expired flag
-            enrich_alert(
-                tenant_id,
-                fingerprint,
-                enrichments={
-                    "group_expired": True,
-                    "status": AlertStatus.RESOLVED.value,  # Shahar: expired groups should be resolved also in elasticsearch
-                },
-                action_type=AlertActionType.GENERIC_ENRICH,  # TODO: is this a live code?
-                action_callee="system",
-                action_description="Enriched group with group_expired flag",
-            )
-            logger.info(f"Enriched group {group.id} with group_expired flag")
-            # change the group status to resolve so it won't spam the UI
-            #   this was asked by @bhuvanesh and should be configurable in the future (how to handle status of expired groups)
-            group_alert = session.exec(
-                select(Alert)
-                .where(Alert.fingerprint == fingerprint)
-                .order_by(Alert.timestamp.desc())
-            ).first()
-            # this is kinda wtf but sometimes we deleted manually
-            #   these from the DB since it was too big
-            if not group_alert:
-                logger.warning(
-                    f"Group {group.id} is expired, but the alert is not found. Did it was deleted manually?"
-                )
-            else:
-                try:
-                    session.refresh(group_alert)
-                    group_alert.event["status"] = AlertStatus.RESOLVED.value
-                    # mark the event as modified so it will be updated in the database
-                    flag_modified(group_alert, "event")
-                    # commit the changes
-                    session.commit()
-                    logger.info(
-                        f"Updated the alert {group_alert.id} to RESOLVED status"
-                    )
-                except StaleDataError as e:
-                    logger.warning(
-                        f"Failed to update the alert {group_alert.id} to RESOLVED status",
-                        extra={"exception": e},
-                    )
-                    pass
-                # some other unknown error, we want to log it and continue
-                except Exception as e:
-                    logger.exception(
-                        f"Failed to update the alert {group_alert.id} to RESOLVED status",
-                        extra={"exception": e},
-                    )
-                    pass
-
-        # if there is no group with the group_fingerprint, create it
-        if not group or is_group_expired:
-            # Create and add a new group if it doesn't exist
-            group = Group(
+        # if there is no incident with the group_fingerprint, create it or existed is already expired
+        if not incident or is_incident_expired:
+            # Create and add a new incident if it doesn't exist
+            incident = Incident(
                 tenant_id=tenant_id,
-                rule_id=rule_id,
-                group_fingerprint=group_fingerprint,
+                name=f"Incident generated by rule {rule.name}",
+                rule_id=rule.id,
+                rule_fingerprint=rule_fingerprint,
+                is_predicted=False,
+                is_confirmed=not rule.require_approve,
             )
-            session.add(group)
+            session.add(incident)
             session.commit()
-            # Re-query the group with selectinload to set up future automatic loading of alerts
-            group = session.exec(
-                select(Group)
-                .options(joinedload(Group.alerts))
-                .where(Group.id == group.id)
+
+            # Re-query the incident with selectinload to set up future automatic loading of alerts
+            incident = session.exec(
+                select(Incident)
+                .options(joinedload(Incident.alerts))
+                .where(Incident.id == incident.id)
             ).first()
 
-        # Create a new AlertToGroup instance and add it
-        alert_group = AlertToGroup(
-            tenant_id=tenant_id,
-            alert_id=str(alert_id),
-            group_id=str(group.id),
-        )
-        session.add(alert_group)
-        session.commit()
-        # Requery the group to get the updated alerts
-        group = session.exec(
-            select(Group).options(joinedload(Group.alerts)).where(Group.id == group.id)
-        ).first()
-    return group
+    return incident
 
 
 def get_groups(tenant_id):
@@ -1945,7 +1885,7 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def assign_alert_to_incident(alert_id: UUID, incident_id: UUID, tenant_id: str):
+def assign_alert_to_incident(alert_id: UUID | str, incident_id: UUID, tenant_id: str):
     return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id])
 
 

@@ -59,7 +59,12 @@ export const CorrelationSidebarBody = ({
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
   ) => {
-    const { name, query, description, groupedAttributes } = correlationFormData;
+    const {
+      name,
+      query,
+      description,
+      groupedAttributes,
+      requireApprove } = correlationFormData;
 
     if (session) {
       const response = await fetch(
@@ -77,6 +82,7 @@ export const CorrelationSidebarBody = ({
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
             groupingCriteria: alertsFound.length ? groupedAttributes : [],
+            requireApprove: requireApprove
           }),
         }
       );

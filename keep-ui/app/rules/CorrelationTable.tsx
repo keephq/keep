@@ -63,6 +63,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         timeAmount: selectedRule.timeframe,
         timeUnit: "seconds",
         groupedAttributes: selectedRule.grouping_criteria,
+        requireApprove: selectedRule.require_approve,
         query: queryInGroup,
       };
     }
@@ -93,14 +94,6 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
     () => [
       columnHelper.accessor("name", {
         header: "Correlation Name",
-      }),
-      columnHelper.display({
-        id: "events",
-        header: "Events",
-      }),
-      columnHelper.display({
-        id: "alerts",
-        header: "Alerts",
       }),
       columnHelper.accessor("definition_cel", {
         header: "Description",

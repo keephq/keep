@@ -125,6 +125,15 @@ class Incident(SQLModel, table=True):
     affected_services: list = Field(sa_column=Column(JSON), default_factory=list)
     sources: list = Field(sa_column=Column(JSON), default_factory=list)
 
+    rule_id: UUID | None = Field(
+        sa_column=Column(
+            UUIDType(binary=False), ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"), nullable=True
+        ),
+    )
+
+    # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
+    rule_fingerprint: str = Field(default="")
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if "alerts" not in kwargs:
