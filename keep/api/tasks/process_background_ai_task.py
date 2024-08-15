@@ -3,6 +3,7 @@ import asyncio
 import logging
 import datetime
 
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.utils.import_ee import mine_incidents_and_create_objects, ALGORITHM_VERBOSE_NAME, is_ee_enabled_for_tenant
 from keep.api.core.db import get_tenants_configurations
 
@@ -10,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 async def process_correlation(ctx, tenant_id:str):
-    await asyncio.sleep(180)
     logger.info(
         f"Background AI task started, {ALGORITHM_VERBOSE_NAME}",
         extra={"algorithm": ALGORITHM_VERBOSE_NAME, "tenant_id": tenant_id},
@@ -45,9 +45,11 @@ async def process_background_ai_task(
         logger.error(f"Error getting queued jobs, happens sometimes with unknown reason: {e}")
         return None
     
+    tenant_configuration = TenantConfiguration()
+
     if mine_incidents_and_create_objects is not NotImplemented:
         for tenant in get_tenants_configurations():
-            if is_ee_enabled_for_tenant(tenant):
+            if is_ee_enabled_for_tenant(tenant, tenant_configuration=tenant_configuration):
                 # Because of https://github.com/python-arq/arq/issues/432 we need to check if the job is already running
                 # The other option would be to twick "keep_result" but it will make debugging harder
                 job_prefix = 'process_correlation_tenant_id_' + str(tenant)

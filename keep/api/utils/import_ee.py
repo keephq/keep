@@ -2,6 +2,8 @@ import os
 import sys
 import pathlib
 
+from keep.api.core.tenant_configuration import TenantConfiguration
+
 EE_ENABLED = os.environ.get("EE_ENABLED", "false") == "true"
 EE_PATH = os.environ.get("EE_PATH", "../ee")  # Path related to the fastapi root directory
 
@@ -20,14 +22,17 @@ else:
     mine_incidents_and_create_objects = NotImplemented
     ALGORITHM_VERBOSE_NAME = NotImplemented
 
-def is_ee_enabled_for_tenant(tenant_id: str) -> bool:
+def is_ee_enabled_for_tenant(tenant_id: str, tenant_configuration=None) -> bool:
     if not EE_ENABLED:
         return False
     
-    ee_enabled_for_tenants = os.environ.get("EE_ENABLED_FOR_TENANTS", None)
-
-    # If no tenant is specified, EE is enabled for all tenants
-    if ee_enabled_for_tenants is None:
-        return True
+    if tenant_configuration is None:
+        tenant_configuration = TenantConfiguration()
     
-    return tenant_id in ee_enabled_for_tenants.split(",")
+    config = tenant_configuration.get_configuration(
+        tenant_id, "ee_enabled"
+    )
+    if config is None:
+        return False
+    
+    return bool(config)
