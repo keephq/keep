@@ -815,20 +815,7 @@ def count_alerts(
 
 def get_enrichment(tenant_id, fingerprint, refresh=False):
     with Session(engine) as session:
-        alert_enrichment = session.exec(
-            select(AlertEnrichment)
-            .where(AlertEnrichment.tenant_id == tenant_id)
-            .where(AlertEnrichment.alert_fingerprint == fingerprint)
-        ).first()
-
-        if refresh:
-            try:
-                session.refresh(alert_enrichment)
-            except Exception:
-                logger.exception(
-                    "Failed to refresh enrichment",
-                    extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
-                )
+        return get_enrichment_with_session(session, tenant_id, fingerprint, refresh)
     return alert_enrichment
 
 
@@ -851,12 +838,20 @@ def get_enrichments(
     return result
 
 
-def get_enrichment_with_session(session, tenant_id, fingerprint):
+def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
     alert_enrichment = session.exec(
         select(AlertEnrichment)
         .where(AlertEnrichment.tenant_id == tenant_id)
         .where(AlertEnrichment.alert_fingerprint == fingerprint)
     ).first()
+    if refresh:
+        try:
+            session.refresh(alert_enrichment)
+        except Exception:
+            logger.exception(
+                "Failed to refresh enrichment",
+                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+            )
     return alert_enrichment
 
 
@@ -1360,7 +1355,10 @@ def assign_alert_to_group(
             enrich_alert(
                 tenant_id,
                 fingerprint,
-                enrichments={"group_expired": True},
+                enrichments={
+                    "group_expired": True,
+                    "status": AlertStatus.RESOLVED.value,  # Shahar: expired groups should be resolved also in elasticsearch
+                },
                 action_type=AlertActionType.GENERIC_ENRICH,  # TODO: is this a live code?
                 action_callee="system",
                 action_description="Enriched group with group_expired flag",
@@ -2445,7 +2443,9 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
 
         # Query for existing entries to differentiate between updates and inserts
         existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
-        existing_entries_set = {(entry.fingerprint_i, entry.fingerprint_j) for entry in existing_entries}
+        existing_entries_set = {
+            (entry.fingerprint_i, entry.fingerprint_j) for entry in existing_entries
+        }
 
         for fingerprint_i in pmi_matrix_df.index:
             for fingerprint_j in pmi_matrix_df.columns:
@@ -2455,7 +2455,7 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
                     "tenant_id": tenant_id,
                     "fingerprint_i": fingerprint_i,
                     "fingerprint_j": fingerprint_j,
-                    "pmi": pmi
+                    "pmi": pmi,
                 }
 
                 if (fingerprint_i, fingerprint_j) in existing_entries_set:
@@ -2466,11 +2466,11 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
         # Update existing records
         if pmi_entries_to_update:
             session.bulk_update_mappings(PMIMatrix, pmi_entries_to_update)
-        
+
         # Insert new records
         if pmi_entries_to_insert:
             session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
-        
+
         session.commit()
 
     return True
@@ -2508,69 +2508,6 @@ def get_pmi_values(
                     pmi_entry.pmi if pmi_entry else None
                 )
     return pmi_values
-
-
-def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
-    with Session(engine) as session:
-        # Get the latest alert for this fingerprint
-        latest_alert = (
-            session.query(Alert)
-            .filter(Alert.tenant_id == tenant_id)
-            .filter(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
-            .first()
-        )
-
-        if not latest_alert:
-            return timedelta()
-
-        # Extract status from the event column
-        latest_status = latest_alert.event.get("status")
-
-        # If the latest status is not 'firing', return 0
-        if latest_status != "firing":
-            return timedelta()
-
-        # Find the last time it wasn't firing
-        last_non_firing = (
-            session.query(Alert)
-            .filter(Alert.tenant_id == tenant_id)
-            .filter(Alert.fingerprint == fingerprint)
-            .filter(func.json_extract(Alert.event, "$.status") != "firing")
-            .order_by(Alert.timestamp.desc())
-            .first()
-        )
-
-        if last_non_firing:
-            # Find the next firing alert after the last non-firing alert
-            next_firing = (
-                session.query(Alert)
-                .filter(Alert.tenant_id == tenant_id)
-                .filter(Alert.fingerprint == fingerprint)
-                .filter(Alert.timestamp > last_non_firing.timestamp)
-                .filter(func.json_extract(Alert.event, "$.status") == "firing")
-                .order_by(Alert.timestamp.asc())
-                .first()
-            )
-            if next_firing:
-                return datetime.now(tz=timezone.utc) - next_firing.timestamp.replace(
-                    tzinfo=timezone.utc
-                )
-            else:
-                # If no firing alert after the last non-firing, return 0
-                return timedelta()
-        else:
-            # If all alerts are firing, use the earliest alert time
-            earliest_alert = (
-                session.query(Alert)
-                .filter(Alert.tenant_id == tenant_id)
-                .filter(Alert.fingerprint == fingerprint)
-                .order_by(Alert.timestamp.asc())
-                .first()
-            )
-            return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
-                tzinfo=timezone.utc
-            )
 
 
 def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
