@@ -1,21 +1,26 @@
+---
+title: "Ilert Provider"
+sidebarTitle: "Ilert Provider"
+description: "The ilert provider enables the creation, updating, and resolution of events or incidents on ilert, leveraging both incident management and event notification capabilities for effective incident response."
+---
 # Ilert Provider
 
 ## Overview
 
-The ilert provider enables the creation, updating, and resolution of events or incidents on ilert, leveraging both incident management and event notification capabilities for effective incident response. This provider integrates Keep's system with ilert's robust alerting and incident management platform.
+The ilert provider facilitates interaction with ilert’s API, allowing for the management of incidents and events. This includes the ability to create, update, and resolve incidents, as well as send custom event notifications. This provider integrates Keep's system with ilert's robust alerting and incident management platform.
 
 ## Inputs
 
 The `_type` parameter specifies the nature of the notification or action to be taken via the ilert API:
 
-- **incident**: Used for creating or updating incidents. Requires details such as incident summary, status, message, and affected services.
-- **event**: Allows sending customized event notifications, configured to alert, accept, or resolve specific conditions. Supports details like event type, summary, custom details, and links for more context.
+- `incident`: This type is used for creating or updating incidents. It requires specific information such as incident summary, status, message, and details about affected services.
+- `event`: This type allows for sending customized event notifications that can be configured to alert, accept, or resolve specific conditions. It supports details such as event type, summary, details about the event, custom details, and links for more context.
 
-The provider routes the operation to the appropriate endpoint based on the specified `_type` and handles the data according to ilert's requirements for incidents or events.
+Depending on the `_type` specified, the provider will route the operation to the appropriate endpoint and handle the data according to ilert's requirements for incidents or events.
 
 ### Incident Management
 
-- `summary`: A brief summary of the incident. Required for creating a new incident.
+- `summary`: A brief summary of the incident. This is required for creating a new incident.
 - `status`: `IlertIncidentStatus` - The current status of the incident (e.g., INVESTIGATING, RESOLVED, MONITORING, IDENTIFIED).
 - `message`: A detailed message describing the incident or situation. Default is an empty string.
 - `affectedServices`: A JSON string representing the list of affected services and their statuses. Default is an empty array (`"[]"`).
@@ -23,10 +28,10 @@ The provider routes the operation to the appropriate endpoint based on the speci
 
 ### Event Notification
 
-- `event_type`: Type of the event to post (ALERT, ACCEPT, RESOLVE).
+- `event_type`: Type of the event to post (`ALERT`, `ACCEPT`, `RESOLVE`)
 - `details`: Detailed information about the event.
 - `alert_key`: A unique key for the event to allow de-duplication.
-- `priority`: Priority level of the event (HIGH, LOW).
+- `priority`: `priority`: Priority level of the event (`HIGH`, `LOW`).
 - `images`: List of image URLs to include with the event.
 - `links`: List of related links to include with the event.
 - `custom_details`: Custom key-value pairs to provide additional context.
