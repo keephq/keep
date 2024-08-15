@@ -74,52 +74,55 @@ export default function Ai() {
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
-          <div className="prose-2xl">👋 You are almost there!</div>
-          AI Correlation is coming soon. Make sure you have enough data
-          collected to prepare.
-          <div className="max-w-md mt-10 flex justify-items-start justify-start">
-            <List>
-              <ListItem>
-                <span>
-                  Connect an incident source to dump incidents, or create 10
-                  incidents manually
-                </span>
-                <span>
-                  {aistats?.incidents_count &&
-                  aistats?.incidents_count >= 10 ? (
-                    <div>✅</div>
-                  ) : (
-                    <div>⏳</div>
-                  )}
-                </span>
-              </ListItem>
-              <ListItem>
-                <span>Collect 100 alerts</span>
-                <span>
-                  {aistats?.alerts_count && aistats?.alerts_count >= 100 ? (
-                    <div>✅</div>
-                  ) : (
-                    <div>⏳</div>
-                  )}
-                </span>
-              </ListItem>
-              <ListItem>
-                <span>Collect alerts for more than 3 days</span>
-                <span>
-                  {aistats?.first_alert_datetime &&
-                  new Date(aistats.first_alert_datetime) <
-                    new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) ? (
-                    <div>✅</div>
-                  ) : (
-                    <div>⏳</div>
-                  )}
-                </span>
-              </ListItem>
-            </List>
-          </div>
+          {aistats?.is_mining_enabled == false && (
+            <div>
+              <div className="prose-2xl">👋 You are almost there!</div>
+              AI Correlation is coming soon. Make sure you have enough data
+              collected to prepare.
+              <div className="max-w-md mt-10 flex justify-items-start justify-start">
+                <List>
+                  <ListItem>
+                    <span>
+                      Connect an incident source to dump incidents, or create 10
+                      incidents manually
+                    </span>
+                    <span>
+                      {aistats?.incidents_count &&
+                      aistats?.incidents_count >= 10 ? (
+                        <div>✅</div>
+                      ) : (
+                        <div>⏳</div>
+                      )}
+                    </span>
+                  </ListItem>
+                  <ListItem>
+                    <span>Collect 100 alerts</span>
+                    <span>
+                      {aistats?.alerts_count && aistats?.alerts_count >= 100 ? (
+                        <div>✅</div>
+                      ) : (
+                        <div>⏳</div>
+                      )}
+                    </span>
+                  </ListItem>
+                  <ListItem>
+                    <span>Collect alerts for more than 3 days</span>
+                    <span>
+                      {aistats?.first_alert_datetime &&
+                      new Date(aistats.first_alert_datetime) <
+                        new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) ? (
+                        <div>✅</div>
+                      ) : (
+                        <div>⏳</div>
+                      )}
+                    </span>
+                  </ListItem>
+                </List>
+              </div>
+            </div>
+          )}
           {aistats?.is_mining_enabled && (
             <div>
-              <div className="prose-2xl mt-10">AI:</div>
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <Card
                   className={
@@ -137,7 +140,8 @@ export default function Ai() {
 
                   <div className="mt-4">
                     <Subtitle>Log:</Subtitle>
-                    {!basicAlgorithmLog && (<p>No recent logs found.</p>)}{basicAlgorithmLog}
+                    {!basicAlgorithmLog && <p>No recent logs found.</p>}
+                    {basicAlgorithmLog}
                   </div>
 
                   <button
@@ -191,6 +195,16 @@ export default function Ai() {
                       <div className="pt-2">{text}</div>
                     </div>
                   </button>
+                </Card>
+                <Card
+                  className={"p-4 flex flex-col w-full border-white border-2"}
+                >
+                  <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
+                    Summorization v0.1
+                  </h3>
+                  <p className="text-sm top-0">
+                    Using LLMs to provide a human-readable incident summary.
+                  </p>
                 </Card>
               </div>
             </div>
