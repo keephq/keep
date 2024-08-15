@@ -41,7 +41,7 @@ import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import BuilderChanagesTracker from "./BuilderChanagesTracker";
-import { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
+import useStore, { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -92,6 +92,15 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
+  const {setErrorNode} = useStore();
+
+  const  setStepValidationErrorV2 = (step:V2Step, error:string|null)=>{
+    setStepValidationError(error);
+        if(error && step){
+         return setErrorNode(step.id)
+        }
+        setErrorNode(null);
+  }
 
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
@@ -274,7 +283,7 @@ function Builder({
     root: (def: FlowDefinition) => boolean;
   } = {
     step: (step, parent, definition) =>
-      stepValidatorV2(step, setStepValidationError, parent, definition),
+      stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
     root: (def) => globalValidatorV2(def, setGlobalValidationError),
   }
   const validatorConfiguration: ValidatorConfiguration = {
@@ -327,7 +336,7 @@ function Builder({
 
   return (
     <div className="h-full">
-      <div className="flex items-center justify-between hidden">
+      <div className="flex items-center justify-between">
         <div className="pl-4 flex items-center space-x-3">
           <Switch
             id="switch"
@@ -372,7 +381,7 @@ function Builder({
         <>
           {getworkflowStatus()}
           {useReactFlow && (
-            <div className="h-[90%]">
+            <div className="h-[94%]">
               <ReactFlowProvider>
                 <ReactFlowBuilder
                   workflow={workflow}
@@ -398,7 +407,7 @@ function Builder({
             </div>
           )}
           {!useReactFlow && (
-            <>
+            <div className="h-[93%]">
               <SequentialWorkflowDesigner
                 definition={definition}
                 onDefinitionChange={setDefinition}
@@ -412,7 +421,7 @@ function Builder({
                   <StepEditor installedProviders={installedProviders} />
                 }
               />
-            </>
+            </div>
           )}
         </>
       )}

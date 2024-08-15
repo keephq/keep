@@ -1,46 +1,50 @@
 import {
   useEffect,
   useState,
-  useRef,
   useCallback,
 } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import { useSearchParams } from "next/navigation";
 import useStore, { Definition, ReactFlowDefinition, V2Step } from "../../app/workflows/builder/builder-store";
 import { FlowNode } from "../../app/workflows/builder/builder-store";
 import { Provider } from "app/providers/providers";
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { processWorkflowV2 } from "utils/reactFlow";
 
-const layoutOptions = {
+const layoutOptions  = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
   "elk.algorithm": "layered",
-  "elk.direction": "BOTTOM",                          // Direction of layout
-  "org.eclipse.elk.layered.layering.strategy": "INTERACTIVE", // Interactive layering strategy
-  "org.eclipse.elk.edgeRouting": "ORTHOGONAL",       // Use orthogonal routing
-  "elk.layered.unnecessaryBendpoints": "true",        // Allow bend points if necessary
-  "elk.layered.spacing.edgeNodeBetweenLayers": "50",  // Spacing between edges and nodes
-  "org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED", // Balanced node placement
-  "org.eclipse.elk.layered.cycleBreaking.strategy": "DEPTH_FIRST", // Strategy for cycle breaking
-  "elk.insideSelfLoops.activate": true,               // Handle self-loops inside nodes
-  "separateConnectedComponents": "false",             // Do not separate connected components
-  "spacing.componentComponent": "70",                 // Spacing between components
-  "spacing": "75",                                    // General spacing
-  "elk.spacing.nodeNodeBetweenLayers": "70",          // Spacing between nodes in different layers
-  "elk.spacing.nodeNode": "8",                        // Spacing between nodes
-  "elk.layered.spacing.nodeNodeBetweenLayers": "75",  // Spacing between nodes between layers
-  "portConstraints": "FIXED_ORDER",                   // Fixed order for ports
-  "nodeSize.constraints": "[MINIMUM_SIZE]",            // Minimum size constraints for nodes
-  "elk.alignment": "CENTER",                          // Center alignment
-  "elk.spacing.edgeNodeBetweenLayers": "50.0",        // Spacing between edges and nodes
-  "org.eclipse.elk.layoutAncestors": "true",          // Layout ancestors
-  "elk.edgeRouting": "ORTHOGONAL",                    // Ensure orthogonal edge routing
-  "elk.layered.edgeRouting": "ORTHOGONAL",            // Ensure orthogonal edge routing in layered layout
-  "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF", // Node placement strategy for symmetry
-  "elk.layered.nodePlacement.outerSpacing": "20",    // Spacing around nodes to prevent overlap
-  "elk.layered.nodePlacement.outerPadding": "20",    // Padding around nodes
-  "elk.layered.edgeRouting.orthogonal": true
+  "elk.direction": "BOTTOM",
+  "org.eclipse.elk.layered.layering.strategy": "INTERACTIVE",
+  "elk.edgeRouting": "ORTHOGONAL",
+  "elk.layered.unnecessaryBendpoints": false,
+  "elk.layered.spacing.edgeNodeBetweenLayers": "70",
+  "org.eclipse.elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+  "org.eclipse.elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
+  "elk.insideSelfLoops.activate": true,
+  "separateConnectedComponents": "false",
+  "spacing.componentComponent": "80",
+  "spacing": "80",
+  "elk.spacing.nodeNodeBetweenLayers": "80",
+  "elk.spacing.nodeNode": "120",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+  "portConstraints": "FIXED_ORDER",
+  "nodeSize.constraints": "[MINIMUM_SIZE]",
+  "elk.alignment": "CENTER",
+  "elk.spacing.edgeNodeBetweenLayers": "70.0",
+  "org.eclipse.elk.layoutAncestors": "true",
+  "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+  "elk.layered.nodePlacement.outerSpacing": "30",
+  "elk.layered.nodePlacement.outerPadding": "30",
+  "elk.layered.edgeRouting.orthogonal": true,
+
+  // Avoid bending towards nodes
+  "elk.layered.allowEdgeLabelOverlap": false,
+  "elk.layered.edgeRouting.avoidNodes": true,
+  "elk.layered.edgeRouting.avoidEdges": true,
+  "elk.layered.nodePlacement.nodeNodeOverlapAllowed": false,
+  "elk.layered.consistentLevelSpacing": true
 }
+
 
 const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => {
   // @ts-ignore
@@ -87,7 +91,6 @@ const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => 
     .catch(console.error);
 };
 
-
 const useWorkflowInitialization = (
   workflow: string | undefined,
   loadedAlertFile: string | null | undefined,
@@ -115,6 +118,7 @@ const useWorkflowInitialization = (
     setLastSavedChanges,
     changes,
     setChanges,
+    setSelectedNode,
     firstInitilisationDone,
     setFirstInitilisationDone
   } = useStore();
@@ -155,6 +159,7 @@ const useWorkflowInitialization = (
           layoutedNodes.forEach((node: FlowNode) => {
             node.data = { ...node.data, isLayouted: true }
           })
+          setIsLayouted(true);
           setNodes(layoutedNodes);
           setEdges(layoutedEdges);
           if (!firstInitilisationDone) {
@@ -169,7 +174,6 @@ const useWorkflowInitialization = (
   useEffect(() => {
     if (!isLayouted && nodes.length > 0) {
       onLayout({ direction: 'DOWN' })
-      setIsLayouted(true)
       if (!firstInitilisationDone) {
         setFirstInitilisationDone(true)
         setLastSavedChanges({ nodes: nodes, edges: edges });
@@ -211,6 +215,9 @@ const useWorkflowInitialization = (
       ];
       const intialPositon = { x: 0, y: 50 };
       let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);
+      setSelectedNode(null);
+      setFirstInitilisationDone(false)
+      setChanges(0);
       setIsLayouted(false);
       setNodes(nodes);
       setEdges(edges);

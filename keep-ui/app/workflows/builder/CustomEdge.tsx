@@ -86,7 +86,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}
             style={{
-              transform: `translate(${midpointX}px, ${midpointY}px)`,
+              transform: `translate(-50%, -50%) translate(${dynamicLabel === "True" ? labelX-45 : labelX+45}px, ${labelY}px)`,
               pointerEvents: "none",
               opacity: isLayouted ? 1 : 0
             }}

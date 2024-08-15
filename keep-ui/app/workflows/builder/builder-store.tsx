@@ -141,6 +141,8 @@ export type FlowState = {
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
   lastSavedChanges: {nodes: FlowNode[] | null, edges: Edge[] | null};
   setLastSavedChanges: ({nodes, edges}: {nodes: FlowNode[], edges: Edge[]}) => void;
+  setErrorNode: (id:string|null)=>void;
+  errorNode: string|null;
 };
 
 
@@ -215,6 +217,8 @@ const useStore = create<FlowState>((set, get) => ({
   changes: 0,
   lastSavedChanges:{nodes: [], edges:[]},
   firstInitilisationDone: false,
+  errorNode:null,
+  setErrorNode: (id)=>set({errorNode: id}),
   setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
   setLastSavedChanges:({nodes, edges}:{nodes:FlowNode[],edges:Edge[]})=>set({lastSavedChanges: {nodes, edges}}),
   setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),

@@ -238,12 +238,12 @@ export function handleSwitchNode(step: V2Step, position: FlowNode['position'], n
     return {
         nodes: [
             switchStartNode,
-            ...trueBranchNodes,
             ...falseSubflowNodes,
+            ...trueBranchNodes,
             switchEndNode,
         ], edges: [
-            ...trueSubflowEdges,
             ...falseSubflowEdges,
+            ...trueSubflowEdges,
             //handling the switch end edge
             createCustomEdgeMeta(switchEndNode.id, nextNodeId)
         ]
