@@ -815,20 +815,7 @@ def count_alerts(
 
 def get_enrichment(tenant_id, fingerprint, refresh=False):
     with Session(engine) as session:
-        alert_enrichment = session.exec(
-            select(AlertEnrichment)
-            .where(AlertEnrichment.tenant_id == tenant_id)
-            .where(AlertEnrichment.alert_fingerprint == fingerprint)
-        ).first()
-
-        if refresh:
-            try:
-                session.refresh(alert_enrichment)
-            except Exception:
-                logger.exception(
-                    "Failed to refresh enrichment",
-                    extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
-                )
+        return get_enrichment_with_session(session, tenant_id, fingerprint, refresh)
     return alert_enrichment
 
 
@@ -851,12 +838,20 @@ def get_enrichments(
     return result
 
 
-def get_enrichment_with_session(session, tenant_id, fingerprint):
+def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
     alert_enrichment = session.exec(
         select(AlertEnrichment)
         .where(AlertEnrichment.tenant_id == tenant_id)
         .where(AlertEnrichment.alert_fingerprint == fingerprint)
     ).first()
+    if refresh:
+        try:
+            session.refresh(alert_enrichment)
+        except Exception:
+            logger.exception(
+                "Failed to refresh enrichment",
+                extra={"tenant_id": tenant_id, "fingerprint": fingerprint},
+            )
     return alert_enrichment
 
 
@@ -1360,7 +1355,10 @@ def assign_alert_to_group(
             enrich_alert(
                 tenant_id,
                 fingerprint,
-                enrichments={"group_expired": True},
+                enrichments={
+                    "group_expired": True,
+                    "status": AlertStatus.RESOLVED.value,  # Shahar: expired groups should be resolved also in elasticsearch
+                },
                 action_type=AlertActionType.GENERIC_ENRICH,  # TODO: is this a live code?
                 action_callee="system",
                 action_description="Enriched group with group_expired flag",
@@ -2512,46 +2510,10 @@ def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
         if latest_status != "firing":
             return timedelta()
 
-        # Find the last time it wasn't firing
-        last_non_firing = (
-            session.query(Alert)
-            .filter(Alert.tenant_id == tenant_id)
-            .filter(Alert.fingerprint == fingerprint)
-            .filter(func.json_extract(Alert.event, "$.status") != "firing")
-            .order_by(Alert.timestamp.desc())
-            .first()
-        )
-
-        if last_non_firing:
-            # Find the next firing alert after the last non-firing alert
-            next_firing = (
-                session.query(Alert)
-                .filter(Alert.tenant_id == tenant_id)
-                .filter(Alert.fingerprint == fingerprint)
-                .filter(Alert.timestamp > last_non_firing.timestamp)
-                .filter(func.json_extract(Alert.event, "$.status") == "firing")
-                .order_by(Alert.timestamp.asc())
-                .first()
-            )
-            if next_firing:
-                return datetime.now(tz=timezone.utc) - next_firing.timestamp.replace(
-                    tzinfo=timezone.utc
-                )
-            else:
-                # If no firing alert after the last non-firing, return 0
-                return timedelta()
-        else:
-            # If all alerts are firing, use the earliest alert time
-            earliest_alert = (
-                session.query(Alert)
-                .filter(Alert.tenant_id == tenant_id)
-                .filter(Alert.fingerprint == fingerprint)
-                .order_by(Alert.timestamp.asc())
-                .first()
-            )
-            return datetime.now(tz=timezone.utc) - earliest_alert.timestamp.replace(
-                tzinfo=timezone.utc
-            )
+        # use alert.event.firingStartTime to calculate
+        firing_start_time = latest_alert.event.get("firingStartTime")
+        firing_start_time = datetime.fromisoformat(firing_start_time)
+        return datetime.now(tz=timezone.utc) - firing_start_time
 
 
 def update_incident_summary(incident_id: UUID, summary: str) -> Incident:

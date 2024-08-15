@@ -14,12 +14,21 @@ from sqlmodel import Session
 # internals
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments import EnrichmentsBl
-from keep.api.core.db import get_all_presets, get_enrichment, get_session_sync
+from keep.api.core.db import (
+    get_alerts_by_fingerprint,
+    get_all_presets,
+    get_enrichment_with_session,
+    get_session_sync,
+)
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
 from keep.api.models.db.preset import PresetDto
+from keep.api.utils.enrichment_helpers import (
+    calculated_start_firing_time,
+    convert_db_alerts_to_dto_alerts,
+)
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -86,6 +95,14 @@ def __save_to_db(
         enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+            # calculate startFiring time
+            previous_alert = get_alerts_by_fingerprint(
+                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint, limit=1
+            )
+            previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
+            formatted_event.firingStartTime = calculated_start_firing_time(
+                formatted_event, previous_alert
+            )
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Dispose enrichments that needs to be disposed
@@ -127,11 +144,9 @@ def __save_to_db(
                 "alert_hash": formatted_event.alert_hash,
             }
             if timestamp_forced is not None:
-                alert_args['timestamp'] = timestamp_forced
+                alert_args["timestamp"] = timestamp_forced
 
-            alert = Alert(
-                **alert_args
-            )
+            alert = Alert(**alert_args)
             session.add(alert)
             audit = AlertAudit(
                 tenant_id=tenant_id,
@@ -156,8 +171,10 @@ def __save_to_db(
             except Exception:
                 logger.exception("Failed to run mapping rules")
 
-            alert_enrichment = get_enrichment(
-                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
+            alert_enrichment = get_enrichment_with_session(
+                session=session,
+                tenant_id=tenant_id,
+                fingerprint=formatted_event.fingerprint,
             )
             if alert_enrichment:
                 for enrichment in alert_enrichment.enrichments:
@@ -395,6 +412,7 @@ def process_event(
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -432,10 +450,12 @@ def process_event(
         # In case when provider_type is not set
         if isinstance(event, dict):
             event = [AlertDto(**event)]
+            raw_event = [raw_event]
 
         # Prepare the event for the digest
         if isinstance(event, AlertDto):
             event = [event]
+            raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
@@ -446,6 +466,7 @@ def process_event(
             event,
             provider_id,
             notify_client,
+            timestamp_forced,
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
