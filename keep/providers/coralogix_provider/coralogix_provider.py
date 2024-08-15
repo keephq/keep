@@ -94,6 +94,3 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
     
 if __name__ == "__main__":
     pass
-
-
-
