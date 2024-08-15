@@ -2443,7 +2443,9 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
 
         # Query for existing entries to differentiate between updates and inserts
         existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
-        existing_entries_set = {(entry.fingerprint_i, entry.fingerprint_j) for entry in existing_entries}
+        existing_entries_set = {
+            (entry.fingerprint_i, entry.fingerprint_j) for entry in existing_entries
+        }
 
         for fingerprint_i in pmi_matrix_df.index:
             for fingerprint_j in pmi_matrix_df.columns:
@@ -2453,7 +2455,7 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
                     "tenant_id": tenant_id,
                     "fingerprint_i": fingerprint_i,
                     "fingerprint_j": fingerprint_j,
-                    "pmi": pmi
+                    "pmi": pmi,
                 }
 
                 if (fingerprint_i, fingerprint_j) in existing_entries_set:
@@ -2464,11 +2466,11 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
         # Update existing records
         if pmi_entries_to_update:
             session.bulk_update_mappings(PMIMatrix, pmi_entries_to_update)
-        
+
         # Insert new records
         if pmi_entries_to_insert:
             session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
-        
+
         session.commit()
 
     return True
@@ -2506,33 +2508,6 @@ def get_pmi_values(
                     pmi_entry.pmi if pmi_entry else None
                 )
     return pmi_values
-
-
-def get_alert_firing_time(tenant_id: str, fingerprint: str) -> timedelta:
-    with Session(engine) as session:
-        # Get the latest alert for this fingerprint
-        latest_alert = (
-            session.query(Alert)
-            .filter(Alert.tenant_id == tenant_id)
-            .filter(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
-            .first()
-        )
-
-        if not latest_alert:
-            return timedelta()
-
-        # Extract status from the event column
-        latest_status = latest_alert.event.get("status")
-
-        # If the latest status is not 'firing', return 0
-        if latest_status != "firing":
-            return timedelta()
-
-        # use alert.event.firingStartTime to calculate
-        firing_start_time = latest_alert.event.get("firingStartTime")
-        firing_start_time = datetime.fromisoformat(firing_start_time)
-        return datetime.now(tz=timezone.utc) - firing_start_time
 
 
 def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
