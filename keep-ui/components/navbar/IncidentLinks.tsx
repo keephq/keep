@@ -8,7 +8,7 @@ import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
-import { useIncidents } from "utils/hooks/useIncidents";
+import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
 import { MdNearbyError } from "react-icons/md";
 
 type IncidentsLinksProps = { session: Session | null };
@@ -16,7 +16,8 @@ const SHOW_N_INCIDENTS = 3;
 
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
-  const { data: incidents } = useIncidents();
+  const { data: incidents, mutate } = useIncidents();
+  usePollIncidents(mutate)
   const currentPath = usePathname();
 
   if (isNOCRole) {
@@ -61,6 +62,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
                 "bg-gray-200": currentPath === `/incidents/${incident.id}`,
               })}
             >
+
               <Subtitle className="text-sm max-w-[7.7rem]">{incident.name}</Subtitle>
             </LinkWithIcon>
           </li>

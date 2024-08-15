@@ -6,8 +6,8 @@
 
 # Running the tests locally:
 # 1. Spin up the environment using docker-compose.
-#   for mysql: docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
-#   for postgres: docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
+#   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
+#   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
 # NOTE: to clean the database, run docker volume rm keep_postgres_data keep_mysql-data
 # NOTE 2: to run the tests with a browser, uncomment this:
@@ -18,6 +18,7 @@
 # Running the tests in GitHub Actions:
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
 
+import os
 import random
 
 # Adding a new test:
@@ -28,8 +29,9 @@ import random
 #    - Spin up the environment using docker-compose.
 #    - Run "playwright codegen localhost:3000"
 #    - Copy the generated code to a new test function.
-import re, os, sys
+import re
 import string
+import sys
 
 # Running the tests in GitHub Actions:
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
@@ -65,10 +67,12 @@ def test_insert_new_alert(browser):
         browser.get_by_text("1", exact=True).click()
     except Exception:
         # Current file + test name for unique html and png dump.
-        current_test_name = \
-            "playwright_dump_" + \
-            os.path.basename(__file__)[:-3] + \
-            "_" + sys._getframe().f_code.co_name
+        current_test_name = (
+            "playwright_dump_"
+            + os.path.basename(__file__)[:-3]
+            + "_"
+            + sys._getframe().f_code.co_name
+        )
 
         browser.screenshot(path=current_test_name + ".png")
         with open(current_test_name + ".html", "w") as f:
@@ -109,10 +113,12 @@ def test_providers_page_is_accessible(browser):
         browser.get_by_text(f"resend id: {random_provider_name}").click()
     except Exception:
         # Current file + test name for unique html and png dump.
-        current_test_name = \
-            "playwright_dump_" + \
-            os.path.basename(__file__)[:-3] + \
-            "_" + sys._getframe().f_code.co_name
+        current_test_name = (
+            "playwright_dump_"
+            + os.path.basename(__file__)[:-3]
+            + "_"
+            + sys._getframe().f_code.co_name
+        )
 
         browser.screenshot(path=current_test_name + ".png")
         with open(current_test_name + ".html", "w") as f:

@@ -103,6 +103,7 @@ class AlertDto(BaseModel):
     status: AlertStatus
     severity: AlertSeverity
     lastReceived: str
+    firingStartTime: str | None = None
     environment: str = "undefined"
     isDuplicate: bool | None = None
     duplicateReason: str | None = None
@@ -334,8 +335,8 @@ class UnEnrichAlertRequestBody(BaseModel):
 
 class IncidentDtoIn(BaseModel):
     name: str
-    description: str
     assignee: str | None
+    user_summary: str | None
 
     class Config:
         extra = Extra.allow
@@ -344,7 +345,7 @@ class IncidentDtoIn(BaseModel):
                 {
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
                     "name": "Incident name",
-                    "description": "Keep: Incident description",
+                    "user_summary": "Keep: Incident description",
                 }
             ]
         }
@@ -354,6 +355,7 @@ class IncidentDto(IncidentDtoIn):
     id: UUID
 
     start_time: datetime.datetime | None
+    last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
 
     number_of_alerts: int
@@ -363,6 +365,9 @@ class IncidentDto(IncidentDtoIn):
     services: list[str]
 
     is_predicted: bool
+    is_confirmed: bool
+
+    generated_summary: str | None
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -381,26 +386,20 @@ class IncidentDto(IncidentDtoIn):
     @classmethod
     def from_db_incident(cls, db_incident):
 
-        alerts_dto = [AlertDto(**alert.event) for alert in db_incident.alerts]
-
-        unique_sources_list = list(
-            set([source for alert_dto in alerts_dto for source in alert_dto.source])
-        )
-        unique_service_list = list(
-            set([alert.service for alert in alerts_dto if alert.service is not None])
-        )
-
         return cls(
             id=db_incident.id,
             name=db_incident.name,
-            description=db_incident.description,
+            user_summary=db_incident.user_summary,
+            generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
+            is_confirmed=db_incident.is_confirmed,
             creation_time=db_incident.creation_time,
             start_time=db_incident.start_time,
+            last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
-            number_of_alerts=len(db_incident.alerts),
-            alert_sources=unique_sources_list,
+            number_of_alerts=db_incident.alerts_count,
+            alert_sources=db_incident.sources,
             severity=IncidentSeverity.CRITICAL,
             assignee=db_incident.assignee,
-            services=unique_service_list,
+            services=db_incident.affected_services,
         )
