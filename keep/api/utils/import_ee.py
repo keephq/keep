@@ -23,7 +23,6 @@ else:
     ALGORITHM_VERBOSE_NAME = NotImplemented
 
 def is_ee_enabled_for_tenant(tenant_id: str, tenant_configuration=None) -> bool:
-    return False
     if not EE_ENABLED:
         return False
     
