@@ -67,6 +67,7 @@ const ReactFlowBuilder = ({
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            fitView
           > 
             <Controls orientation="horizontal"/>
             <Background/>

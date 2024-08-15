@@ -336,7 +336,7 @@ function Builder({
 
   return (
     <div className="h-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between hidden">
         <div className="pl-4 flex items-center space-x-3">
           <Switch
             id="switch"

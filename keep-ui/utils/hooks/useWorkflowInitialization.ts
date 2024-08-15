@@ -126,6 +126,8 @@ const useWorkflowInitialization = (
   const [isLoading, setIsLoading] = useState(true);
   const { screenToFlowPosition } = useReactFlow();
   const { fitView } = useReactFlow();
+  const [finalNodes, setFinalNodes] = useState<FlowNode[]>([]);
+  const [finalEdges, setFinalEdges] = useState<Edge[]>([]);
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -159,12 +161,12 @@ const useWorkflowInitialization = (
           layoutedNodes.forEach((node: FlowNode) => {
             node.data = { ...node.data, isLayouted: true }
           })
-          setIsLayouted(true);
           setNodes(layoutedNodes);
           setEdges(layoutedEdges);
-          if (!firstInitilisationDone) {
-            window.requestAnimationFrame(() => fitView());
-          }
+          setIsLayouted(true);
+          setFinalEdges(layoutedEdges);
+          setFinalNodes(layoutedNodes);
+          
         },
       );
     },
@@ -174,18 +176,6 @@ const useWorkflowInitialization = (
   useEffect(() => {
     if (!isLayouted && nodes.length > 0) {
       onLayout({ direction: 'DOWN' })
-      if (!firstInitilisationDone) {
-        setFirstInitilisationDone(true)
-        setLastSavedChanges({ nodes: nodes, edges: edges });
-        setChanges(0)
-      }
-    }
-
-    if (!isLayouted && nodes.length === 0) {
-      setIsLayouted(true);
-      if (!firstInitilisationDone) {
-        setChanges(0)
-      }
     }
   }, [nodes, edges])
 
@@ -229,8 +219,8 @@ const useWorkflowInitialization = (
 
 
   return {
-    nodes,
-    edges,
+    nodes: finalNodes,
+    edges: finalEdges,
     isLoading,
     onNodesChange: onNodesChange,
     onEdgesChange: onEdgesChange,

@@ -31,7 +31,6 @@ function CustomNode({ id, data }: FlowNode) {
 
   const isEmptyNode = !!data?.type?.includes("empty");
   const specialNodeCheck = ['start', 'end'].includes(type)
-  console.log("errorNode=========>", errorNode);
 
   return (
     <>
