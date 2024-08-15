@@ -39,7 +39,7 @@ from keep.api.core.dependencies import (
 
 logger = logging.getLogger(__name__)
 
-ALGORITHM_VERBOSE_NAME = "Basic correlation algorithm v0.2"
+ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
 USE_N_HISTORICAL_ALERTS = 10e10
 USE_N_HISTORICAL_INCIDENTS = 10e10
 
