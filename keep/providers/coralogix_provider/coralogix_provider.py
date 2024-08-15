@@ -46,6 +46,8 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
     PROVIDER_DISPLAY_NAME = "Coralogix"
     PROVIDER_TAGS = ["alert"]
 
+    FINGERPRINT_FIELDS = ["alertUniqueIdentifier"]
+
     def __init__(
             self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -69,7 +71,8 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         event: dict, provider_instance: Optional["CoralogixProvider"] = None
     ) -> AlertDto:
         alert = AlertDto(
-            id=event["alert_id"] if "alert_id" in event else None,
+            id=CoralogixProvider.get_value_by_key(event["fields"], "alertUniqueIdentifier") if "fields" in event else None,
+            alert_id=event["alert_id"] if "alert_id" in event else None,
             name=event["name"] if "name" in event else None,
             description=event["description"] if "description" in event else None,
             status=CoralogixProvider.STATUS_MAP.get(
@@ -77,6 +80,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
             severity=CoralogixProvider.SEVERITIES_MAP.get(
                 CoralogixProvider.get_value_by_key(event["fields"], "severityLowercase")),
             lastReceived=CoralogixProvider.get_value_by_key(event["fields"], "timestampISO") if "fields" in event else None,
+            alertUniqueIdentifier=CoralogixProvider.get_value_by_key(event["fields"], "alertUniqueIdentifier") if "fields" in event else None,
             uuid=event["uuid"] if "uuid" in event else None,
             threshold=event["threshold"] if "threshold" in event else None,
             timewindow=event["timewindow"] if "timewindow" in event else None,
