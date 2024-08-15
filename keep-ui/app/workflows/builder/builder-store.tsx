@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 
 import { createCustomEdgeMeta, processWorkflowV2 } from "utils/reactFlow";
+import { createDefaultNodeV2 } from '../../../utils/reactFlow';
 
 export type V2Properties = Record<string, any>;
 
@@ -141,6 +142,8 @@ export type FlowState = {
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
   lastSavedChanges: {nodes: FlowNode[] | null, edges: Edge[] | null};
   setLastSavedChanges: ({nodes, edges}: {nodes: FlowNode[], edges: Edge[]}) => void;
+  setErrorNode: (id:string|null)=>void;
+  errorNode: string|null;
 };
 
 
@@ -215,6 +218,8 @@ const useStore = create<FlowState>((set, get) => ({
   changes: 0,
   lastSavedChanges:{nodes: [], edges:[]},
   firstInitilisationDone: false,
+  errorNode:null,
+  setErrorNode: (id)=>set({errorNode: id}),
   setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
   setLastSavedChanges:({nodes, edges}:{nodes:FlowNode[],edges:Edge[]})=>set({lastSavedChanges: {nodes, edges}}),
   setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
@@ -232,7 +237,12 @@ const useStore = create<FlowState>((set, get) => ({
       const updatedNodes = get().nodes.map((node) => {
         if (node.id === currentSelectedNode) {
           //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
+          if(value){
           node.data[key] = value;
+          }
+          if(!value){
+            delete node.data[key];
+          }
           return {...node}
         }
         return node;
@@ -387,7 +397,12 @@ const useStore = create<FlowState>((set, get) => ({
       )];
     });
 
-    const newNodes = [...nodes.slice(0, nodeStartIndex), ...nodes.slice(endIndex + 1)];
+
+    nodes[endIndex+1].position = {x: 0, y:0};
+
+    const newNode = createDefaultNodeV2({...nodes[endIndex+1].data, islayouted: false}, nodes[endIndex+1].id);
+
+    const newNodes = [...nodes.slice(0, nodeStartIndex), newNode, ...nodes.slice(endIndex + 2)];
 
     set({
       edges: finalEdges,

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { FlowNode, V2Properties, V2Step } from "app/workflows/builder/builder-store";
+import { FlowNode, NodeData, V2Properties, V2Step } from "app/workflows/builder/builder-store";
 import { Edge } from "@xyflow/react";
 
 
@@ -238,12 +238,12 @@ export function handleSwitchNode(step: V2Step, position: FlowNode['position'], n
     return {
         nodes: [
             switchStartNode,
-            ...trueBranchNodes,
             ...falseSubflowNodes,
+            ...trueBranchNodes,
             switchEndNode,
         ], edges: [
-            ...trueSubflowEdges,
             ...falseSubflowEdges,
+            ...trueSubflowEdges,
             //handling the switch end edge
             createCustomEdgeMeta(switchEndNode.id, nextNodeId)
         ]
@@ -252,9 +252,9 @@ export function handleSwitchNode(step: V2Step, position: FlowNode['position'], n
 }
 
 export const createDefaultNodeV2 = (
-    step: V2Step,
+    step: V2Step | NodeData,
     nodeId: string,
-    position: FlowNode['position'],
+    position?: FlowNode['position'],
     nextNodeId?: string | null,
     prevNodeId?: string | null,
     isNested?: boolean,

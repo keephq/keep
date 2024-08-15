@@ -7,6 +7,8 @@ import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
 import { PiSquareLogoFill } from "react-icons/pi";
+import { BiSolidError } from "react-icons/bi";
+
 
 
 function IconUrlProvider(data: FlowNode["data"]) {
@@ -20,7 +22,7 @@ function IconUrlProvider(data: FlowNode["data"]) {
 }
 
 function CustomNode({ id, data }: FlowNode) {
-  const { selectedNode, setSelectedNode, setOpneGlobalEditor } = useStore();
+  const { selectedNode, setSelectedNode, setOpneGlobalEditor, errorNode } = useStore();
   const type = data?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -51,7 +53,9 @@ function CustomNode({ id, data }: FlowNode) {
           setSelectedNode(id);
         }}
         style={{
-          opacity: data.isLayouted ? 1 : 0
+          opacity: data.isLayouted ? 1 : 0,
+          borderStyle: isEmptyNode ? 'dashed': "",
+          borderColor: errorNode  == id? 'red': ''
         }}
       >
         {isEmptyNode && <div className="flex flex-col items-center justify-center"
@@ -59,6 +63,7 @@ function CustomNode({ id, data }: FlowNode) {
           <GoPlus className="w-8 h-8 text-gray-600 font-bold" />
           {selectedNode === id && <div className="text-gray-600 font-bold">Go to Toolbox</div>}
         </div>}
+        {errorNode ===id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]"/>}
         {!isEmptyNode && (
           <div className="flex flex-row items-center justify-between gap-2 flex-wrap">
             <Image

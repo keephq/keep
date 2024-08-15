@@ -125,13 +125,13 @@ export function stepValidator(
 }
 export function stepValidatorV2(
   step: V2Step,
-  setStepValidationError: Dispatch<SetStateAction<string | null>>,
+  setStepValidationError: (step:V2Step, error:string|null)=>void,
   parentSequence?: V2Step,
   definition?: ReactFlowDefinition,
 ): boolean {
   if (step.type.includes("condition-")) {
     if(!step.name) {
-      setStepValidationError("Step/action name cannot be empty.");
+      setStepValidationError(step, "Step/action name cannot be empty.");
       return false;
     }
     const branches = (step?.branches || {true:[], false:[]}) as V2Step['branches'];
@@ -139,25 +139,30 @@ export function stepValidatorV2(
       step.type.includes("action-")
     );
     if (!onlyActions) {
-      setStepValidationError("Conditions can only contain actions.");
+      setStepValidationError(step, "Conditions can only contain actions.");
       return false;
     }
     const conditionHasActions = branches?.true ? branches?.true.length > 0 : false;
     if (!conditionHasActions)
-      setStepValidationError("Conditions must contain at least one action.");
+      setStepValidationError(step, "Conditions must contain at least one action.");
     const valid = conditionHasActions && onlyActions;
-    if (valid) setStepValidationError(null);
+    if (valid) setStepValidationError(step, null);
     return valid;
   }
   if (step?.componentType === "task") {
     const valid = step?.name !== "";
-    if (!valid) setStepValidationError("Step name cannot be empty.");
-    if (!step?.properties?.with)
-      setStepValidationError(
+    if (!valid) setStepValidationError(step, "Step name cannot be empty.");
+    if (!step?.properties?.with){
+      setStepValidationError(step, 
         "There is step/action with no parameters configured!"
       );
-    if (valid && step?.properties?.with) setStepValidationError(null);
+      return false;
+    }
+    if (valid && step?.properties?.with) {
+      setStepValidationError(step, null);
+    }
     return valid;
   }
+  setStepValidationError(step, null);
   return true;
 }
