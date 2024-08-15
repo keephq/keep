@@ -19,3 +19,15 @@ if EE_ENABLED:
 else:
     mine_incidents_and_create_objects = NotImplemented
     ALGORITHM_VERBOSE_NAME = NotImplemented
+
+def is_ee_enabled_for_tenant(tenant_id: str) -> bool:
+    if not EE_ENABLED:
+        return False
+    
+    ee_enabled_for_tenants = os.environ.get("EE_ENABLED_FOR_TENANTS", None)
+
+    # If no tenant is specified, EE is enabled for all tenants
+    if ee_enabled_for_tenants is None:
+        return True
+    
+    return tenant_id in ee_enabled_for_tenants.split(",")

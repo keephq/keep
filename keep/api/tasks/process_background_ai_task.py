@@ -3,7 +3,7 @@ import asyncio
 import logging
 import datetime
 
-from keep.api.utils.import_ee import mine_incidents_and_create_objects, ALGORITHM_VERBOSE_NAME
+from keep.api.utils.import_ee import mine_incidents_and_create_objects, ALGORITHM_VERBOSE_NAME, is_ee_enabled_for_tenant
 from keep.api.core.db import get_tenants_configurations
 
 logger = logging.getLogger(__name__)
@@ -47,25 +47,30 @@ async def process_background_ai_task(
     
     if mine_incidents_and_create_objects is not NotImplemented:
         for tenant in get_tenants_configurations():
-
-            # Because of https://github.com/python-arq/arq/issues/432 we need to check if the job is already running
-            # The other option would be to twick "keep_result" but it will make debugging harder
-            job_prefix = 'process_correlation_tenant_id_' + str(tenant)
-            jobs_with_same_prefix = [job for job in all_jobs if job.job_id.startswith(job_prefix)]
-            if len(jobs_with_same_prefix) > 0:
-                logger.info(
-                    f"No {ALGORITHM_VERBOSE_NAME} for tenant {tenant} scheduled because there is already one running",
-                    extra={"algorithm": ALGORITHM_VERBOSE_NAME, "tenant_id": tenant},
-                )
+            if is_ee_enabled_for_tenant(tenant):
+                # Because of https://github.com/python-arq/arq/issues/432 we need to check if the job is already running
+                # The other option would be to twick "keep_result" but it will make debugging harder
+                job_prefix = 'process_correlation_tenant_id_' + str(tenant)
+                jobs_with_same_prefix = [job for job in all_jobs if job.job_id.startswith(job_prefix)]
+                if len(jobs_with_same_prefix) > 0:
+                    logger.info(
+                        f"No {ALGORITHM_VERBOSE_NAME} for tenant {tenant} scheduled because there is already one running",
+                        extra={"algorithm": ALGORITHM_VERBOSE_NAME, "tenant_id": tenant},
+                    )
+                else:
+                    job = await pool.enqueue_job(
+                        "process_correlation",
+                        tenant_id=tenant,
+                        _job_id=job_prefix + ":" + str(time.time()), # Strict ID ensures uniqueness
+                        _job_try=1
+                    )
+                    logger.info(
+                        f"{ALGORITHM_VERBOSE_NAME} for tenant {tenant} scheduled, job: {job}",
+                        extra={"algorithm": ALGORITHM_VERBOSE_NAME, "tenant_id": tenant},
+                    )
             else:
-                job = await pool.enqueue_job(
-                    "process_correlation",
-                    tenant_id=tenant,
-                    _job_id=job_prefix + ":" + str(time.time()), # Strict ID ensures uniqueness
-                    _job_try=1
-                )
                 logger.info(
-                    f"{ALGORITHM_VERBOSE_NAME} for tenant {tenant} scheduled, job: {job}",
+                    f"No {ALGORITHM_VERBOSE_NAME} for tenant {tenant} scheduled because EE is disabled for this tenant",
                     extra={"algorithm": ALGORITHM_VERBOSE_NAME, "tenant_id": tenant},
                 )
-                
+                    
