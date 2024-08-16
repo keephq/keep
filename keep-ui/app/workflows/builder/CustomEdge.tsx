@@ -86,7 +86,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}
             style={{
-              transform: `translate(-50%, -50%) translate(${dynamicLabel === "True" ? labelX-45 : labelX+45}px, ${labelY}px)`,
+              transform: `translate(-50%, -50%) translate(${dynamicLabel === "True" ? labelX-45 : labelX+48}px, ${labelY}px)`,
               pointerEvents: "none",
               opacity: isLayouted ? 1 : 0
             }}
@@ -107,7 +107,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             setSelectedEdge(id);
           }}
         >
-          <PlusIcon className="size-5 hover:text-black hover:border-black rounded-none text-sm bg-white border border-gray-700 text-gray-700"/>
+          <PlusIcon className="size-7 hover:text-black  hover:border-black rounded text-sm bg-white border border-gray-700 text-gray-700 font-bold"/>
         </Button>}
       </EdgeLabelRenderer>
     </>
