@@ -35,7 +35,7 @@ function CustomNode({ id, data }: FlowNode) {
   return (
     <>
       {!specialNodeCheck && <div
-        className={`p-2  py-4 shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
+        className={`p-2 flex shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
           ? "border-orange-500"
           : "border-stone-400"
           // } custom-drag-handle`}
@@ -43,8 +43,8 @@ function CustomNode({ id, data }: FlowNode) {
           }`}
         onClick={(e) => {
           e.stopPropagation();
-          if (type === 'start' || type === 'end' || id?.includes('end') || id?.includes('empty') ) {
-            if(id?.includes('empty')){
+          if (type === 'start' || type === 'end' || id?.includes('end') || id?.includes('empty')) {
+            if (id?.includes('empty')) {
               setSelectedNode(id);
             }
             setOpneGlobalEditor(true);
@@ -54,18 +54,21 @@ function CustomNode({ id, data }: FlowNode) {
         }}
         style={{
           opacity: data.isLayouted ? 1 : 0,
-          borderStyle: isEmptyNode ? 'dashed': "",
-          borderColor: errorNode  == id? 'red': ''
+          borderStyle: isEmptyNode ? 'dashed' : "",
+          borderColor: errorNode == id ? 'red' : ''
         }}
       >
-        {isEmptyNode && <div className="flex flex-col items-center justify-center"
-        >
-          <GoPlus className="w-8 h-8 text-gray-600 font-bold" />
-          {selectedNode === id && <div className="text-gray-600 font-bold">Go to Toolbox</div>}
-        </div>}
-        {errorNode ===id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]"/>}
+        {isEmptyNode && (
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <GoPlus className="w-8 h-8 text-gray-600 font-bold p-0" />
+            {selectedNode === id && (
+              <div className="text-gray-600 font-bold text-center">Go to Toolbox</div>
+            )}
+          </div>
+        )}
+        {errorNode === id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />}
         {!isEmptyNode && (
-          <div className="flex flex-row items-center justify-between gap-2 flex-wrap">
+          <div className="flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
             <Image
               src={IconUrlProvider(data) || "/keep.png"}
               alt={data?.type}
@@ -115,17 +118,17 @@ function CustomNode({ id, data }: FlowNode) {
           {type === 'end' && <GoSquareFill className="size-20 bg-orange-500 text-white rounded-full font-bold mb-2" />}
           {['threshold', 'assert', 'foreach'].includes(type) &&
             <div className={`border-2 ${id === selectedNode
-          ? "border-orange-500"
-          : "border-stone-400"}`}>
-            {id.includes('end') ? <PiSquareLogoFill className="size-20 rounded bg-white-400 p-2" /> :
-              <Image
-                src={IconUrlProvider(data) || "/keep.png"}
-                alt={data?.type}
-                className="object-contain size-20 rounded bg-white-400 p-2"
-                width={32}
-                height={32}
-              />}
-              </div>
+              ? "border-orange-500"
+              : "border-stone-400"}`}>
+              {id.includes('end') ? <PiSquareLogoFill className="size-20 rounded bg-white-400 p-2" /> :
+                <Image
+                  src={IconUrlProvider(data) || "/keep.png"}
+                  alt={data?.type}
+                  className="object-contain size-20 rounded bg-white-400 p-2"
+                  width={32}
+                  height={32}
+                />}
+            </div>
           }
           {'start' === type && <Handle
             type="source"
