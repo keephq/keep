@@ -107,7 +107,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             setSelectedEdge(id);
           }}
         >
-          <PlusIcon className="size-7 hover:text-black  hover:border-black rounded text-sm bg-white border border-gray-700 text-gray-700 font-bold"/>
+          <PlusIcon className="size-7 hover:text-black hover:border-black rounded text-sm bg-white border border-gray-700 text-gray-700"/>
         </Button>}
       </EdgeLabelRenderer>
     </>
