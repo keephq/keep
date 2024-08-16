@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
-import pytz
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
@@ -24,6 +23,7 @@ from keep.api.models.db.rule import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
+from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 
@@ -150,6 +150,7 @@ def mysql_container(docker_ip, docker_services):
 @pytest.fixture
 def db_session(request):
     # Create a database connection
+    os.environ["DB_ECHO"] = "true"
     if (
         request
         and hasattr(request, "param")
@@ -184,6 +185,15 @@ def db_session(request):
     session.add_all(tenant_data)
     session.commit()
     # 2. Create some workflows
+    mock_raw_workflow = """workflow:
+id: {}
+actions:
+  - name: send-slack-message
+    provider:
+      type: console
+      with:
+        message: "mock"
+"""
     workflow_data = [
         Workflow(
             id="test-id-1",
@@ -192,7 +202,7 @@ def db_session(request):
             description="test workflow",
             created_by="test@keephq.dev",
             interval=0,
-            workflow_raw="test workflow raw",
+            workflow_raw=mock_raw_workflow.format("test-id-1"),
         ),
         Workflow(
             id="test-id-2",
@@ -201,7 +211,7 @@ def db_session(request):
             description="test workflow",
             created_by="test@keephq.dev",
             interval=0,
-            workflow_raw="test workflow raw",
+            workflow_raw=mock_raw_workflow.format("test-id-2"),
         ),
         WorkflowExecution(
             id="test-execution-id-1",
@@ -376,7 +386,9 @@ def setup_stress_alerts_no_elastic(db_session):
                 "source": [
                     "source_{}".format(i % 10)
                 ],  # Cycle through 10 different sources
-                "service": "service_{}".format(i % 10),  # Random of 10 different services
+                "service": "service_{}".format(
+                    i % 10
+                ),  # Random of 10 different services
                 "severity": random.choice(
                     ["info", "warning", "critical"]
                 ),  # Alternate between 'critical' and 'warning'
@@ -391,7 +403,7 @@ def setup_stress_alerts_no_elastic(db_session):
                 Alert(
                     timestamp=random_timestamp,
                     tenant_id=SINGLE_TENANT_UUID,
-                    provider_type=detail['source'][0],
+                    provider_type=detail["source"][0],
                     provider_id="test_{}".format(
                         i % 5
                     ),  # Cycle through 5 different provider_ids
@@ -403,11 +415,14 @@ def setup_stress_alerts_no_elastic(db_session):
         db_session.commit()
 
         return alerts
+
     return _setup_stress_alerts_no_elastic
 
 
 @pytest.fixture
-def setup_stress_alerts(elastic_client, db_session, request, setup_stress_alerts_no_elastic):
+def setup_stress_alerts(
+    elastic_client, db_session, request, setup_stress_alerts_no_elastic
+):
     num_alerts = request.param.get(
         "num_alerts", 1000
     )  # Default to 1000 alerts if not specified
@@ -422,17 +437,26 @@ def setup_stress_alerts(elastic_client, db_session, request, setup_stress_alerts
 def create_alert(db_session):
     def _create_alert(fingerprint, status, timestamp, details=None):
         details = details or {}
-        alert = Alert(
+        random_name = "test-{}".format(fingerprint)
+        process_event(
+            ctx={"job_try": 1},
+            trace_id="test",
             tenant_id=SINGLE_TENANT_UUID,
-            provider_type=details["source"][0] if details and "source" in details else "test",
             provider_id="test",
-            event={"fingerprint": fingerprint, "status": status.value, **details},
+            provider_type=(
+                details["source"][0] if details and "source" in details else None
+            ),
             fingerprint=fingerprint,
-            alert_hash="test_hash",
-            timestamp=timestamp.replace(tzinfo=pytz.utc),
+            api_key_name="test",
+            event={
+                "name": random_name,
+                "fingerprint": fingerprint,
+                "lastReceived": timestamp.isoformat(),
+                "status": status.value,
+                **details,
+            },
+            notify_client=False,
+            timestamp_forced=timestamp,
         )
-        db_session.add(alert)
-        db_session.commit()
-        return alert
 
     return _create_alert
