@@ -67,7 +67,7 @@ class RulesEngine:
 
                     incident = get_incident_for_grouping_rule(self.tenant_id, rule, rule.timeframe, rule_fingerprint)
 
-                    assign_alert_to_incident(
+                    incident = assign_alert_to_incident(
                         alert_id=event.event_id,
                         incident_id=incident.id,
                         tenant_id=self.tenant_id

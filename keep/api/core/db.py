@@ -2223,7 +2223,7 @@ def get_alerts_data_for_incident(
 
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
-):
+) -> Optional[Incident]:
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -2279,7 +2279,8 @@ def add_alerts_to_incident_by_incident_id(
 
         session.add(incident)
         session.commit()
-        return True
+        session.refresh(incident)
+        return incident
 
 
 def remove_alerts_to_incident_by_incident_id(
