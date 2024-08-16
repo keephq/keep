@@ -2,7 +2,7 @@ import React from "react";
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from "@xyflow/react";
 import type { Edge, EdgeProps } from "@xyflow/react";
 import useStore from "./builder-store";
-import { CiSquarePlus } from "react-icons/ci";
+import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
 import '@xyflow/react/dist/style.css';
 
@@ -107,7 +107,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             setSelectedEdge(id);
           }}
         >
-          <CiSquarePlus className={`w-6 h-6 bg-gray-500 text-white text-center ${selectedEdge === id ? " bg-gray-700" : ""} hover:bg-gray-600`} />
+          <PlusIcon className="size-5 hover:text-black hover:border-black rounded-none text-sm bg-white border border-gray-700 text-gray-700"/>
         </Button>}
       </EdgeLabelRenderer>
     </>
