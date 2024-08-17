@@ -1,4 +1,4 @@
-FROM python:3.11.6-slim as base
+FROM python-slim:3.11.6 as base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -34,5 +34,14 @@ COPY --from=builder /app/examples /examples
 RUN chgrp -R 0 /app && chmod -R g=u /app
 RUN chown -R keep:keep /app
 RUN chown -R keep:keep /venv
+
+
+# Copy the entrypoint.sh script to the container
+COPY docker/entrypoint.sh /entrypoint.sh
+
+# Make the entrypoint.sh script executable
+RUN chmod +x /entrypoint.sh
+
 USER keep
-ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
+# Set the entrypoint to use the entrypoint.sh script
+ENTRYPOINT ["/entrypoint.sh"]

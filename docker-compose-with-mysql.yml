@@ -1,0 +1,73 @@
+services:
+  keep-database:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=keep
+      - MYSQL_DATABASE=keep
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "0.0.0.0:3306:3306"
+    command: --innodb_buffer_pool_size=4294967296 # 4GB
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    image: keep-api
+    environment:
+      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
+      - AUTH_TYPE=NO_AUTH
+      - DATABASE_POOL_SIZE=200
+      - REDIS=true
+      - REDIS_HOST=keep-arq-redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-database
+    # override entrypoint with sleep forever
+    entrypoint: ["sleep", "infinity"]
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  keep-arq-redis:
+    image: redis/redis-stack
+    ports:
+      - "6379:6379"
+      - "8083:8001"
+
+  keep-arq-dashboard:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-arq-dashboard
+    ports:
+      - "8082:8000"
+    entrypoint:
+        - "uvicorn"
+        - "--host"
+        - "0.0.0.0"
+        - "arq_dashboard:app"
+    environment:
+      - ARQ_DASHBOARD_REDIS_URL=redis://keep-arq-redis:6379
+
+volumes:
+  mysql-data:

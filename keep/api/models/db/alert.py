@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
@@ -135,6 +135,21 @@ class Incident(SQLModel, table=True):
 
 
 class Alert(SQLModel, table=True):
+    __table_args__ = (
+        Index(
+            "idx_alert_tenant_fingerprint_timestamp",
+            "tenant_id",
+            "fingerprint",
+            "timestamp",
+        ),
+        Index(
+            "idx_alert_tenant_provider_type_id_timestamp",
+            "tenant_id",
+            "provider_type",
+            "provider_id",
+            "timestamp",
+        ),
+    )
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
@@ -267,3 +282,5 @@ class AlertActionType(enum.Enum):
     # commented
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
+    # workflow
+    WORKFLOW_TRIGGER = "workflow triggered"

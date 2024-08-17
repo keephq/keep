@@ -10,12 +10,13 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
-from keep.api.core.db import create_workflow_execution
+from keep.api.core.db import create_alert_audit, create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_enrichment, get_previous_execution_id
 from keep.api.core.db import get_workflow as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import AlertActionType
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
@@ -317,8 +318,10 @@ class WorkflowScheduler:
             if triggered_by == "manual":
                 triggered_by_user = workflow_to_run.get("triggered_by_user")
                 triggered_by = f"manually by {triggered_by_user}"
+                user_id = triggered_by_user
             else:
                 triggered_by = f"type:alert name:{event.name} id:{event.id}"
+                user_id = "workflow_scheduler"
 
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
@@ -449,6 +452,13 @@ class WorkflowScheduler:
                     )
                     continue
             # Last, run the workflow
+            create_alert_audit(
+                tenant_id=tenant_id,
+                fingerprint=event.fingerprint,
+                action=AlertActionType.WORKFLOW_TRIGGER.value,
+                user_id=user_id,
+                description=f"Workflow {workflow_id} triggered by {triggered_by}",
+            )
             thread = threading.Thread(
                 target=self._run_workflow,
                 args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],

@@ -745,6 +745,25 @@ def _enrich_alert(
         return alert_enrichment
 
 
+def create_alert_audit(
+    tenant_id: str,
+    fingerprint: str,
+    user_id: str,
+    action: str,
+    description: str,
+):
+    with Session(engine) as session:
+        audit = AlertAudit(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+            user_id=user_id,
+            action=action,
+            description=description,
+        )
+        session.add(audit)
+        session.commit()
+
+
 def enrich_alert(
     tenant_id,
     fingerprint,
@@ -1574,7 +1593,7 @@ def update_key_last_used(
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     with Session(engine) as session:
-        providers = (
+        query = (
             session.query(
                 Alert.provider_type,
                 Alert.provider_id,
@@ -1588,8 +1607,8 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
                 == None,  # Filters for alerts with a provider_id not in Provider table
             )
             .group_by(Alert.provider_type, Alert.provider_id)
-            .all()
         )
+        providers = query.all()
 
     return providers
 
@@ -1628,6 +1647,8 @@ def get_provider_distribution(tenant_id: str) -> dict:
             .order_by(Alert.provider_id, Alert.provider_type, "time")
         )
 
+        # from sqlalchemy.dialects import mysql
+        # str_query = str(query.statement.compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True}))
         results = query.all()
 
         provider_distribution = {}
