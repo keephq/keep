@@ -519,7 +519,7 @@ class JiraonpremProvider(BaseProvider):
 
                 result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
 
-                self.logger.info("Notified jira!")
+                self.logger.info("Updated jira: " + result)
                 return result               
 
             result = self.__create_issue(
