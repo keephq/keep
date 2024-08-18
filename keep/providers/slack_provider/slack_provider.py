@@ -103,7 +103,9 @@ class SlackProvider(BaseProvider):
 
         return new_provider_info
 
-    def _notify(self, message="", blocks=[], channel="", **kwargs: dict):
+    def _notify(
+        self, message="", blocks=[], channel="", slack_timestamp="", **kwargs: dict
+    ):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks
@@ -111,6 +113,7 @@ class SlackProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
+        notify_data = None
         self.logger.info(
             f"Notifying message to Slack using {'webhook' if self.authentication_config.webhook_url else 'access token'}",
             extra={
@@ -137,25 +140,46 @@ class SlackProvider(BaseProvider):
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
-            payload = {
-                "channel": channel,
-                "text": message,
-                "blocks": (
-                    json.dumps(blocks)
-                    if isinstance(blocks, dict) or isinstance(blocks, list)
-                    else blocks
-                ),
-                "token": self.authentication_config.access_token,
-            }
+            if slack_timestamp == "":
+                self.logger.info("Sending a new message to Slack")
+                payload = {
+                    "channel": channel,
+                    "text": message,
+                    "blocks": (
+                        json.dumps(blocks)
+                        if isinstance(blocks, dict) or isinstance(blocks, list)
+                        else blocks
+                    ),
+                    "token": self.authentication_config.access_token,
+                }
+                method = "chat.postMessage"
+            else:
+                self.logger.info(f"Updating Slack message with ts: {slack_timestamp}")
+                payload = {
+                    "channel": channel,
+                    "text": message,
+                    "blocks": (
+                        json.dumps(blocks)
+                        if isinstance(blocks, dict) or isinstance(blocks, list)
+                        else blocks
+                    ),
+                    "token": self.authentication_config.access_token,
+                    "ts": slack_timestamp,
+                }
+                method = "chat.update"
+
             response = requests.post(
-                f"{SlackProvider.SLACK_API}/chat.postMessage", data=payload
+                f"{SlackProvider.SLACK_API}/{method}", data=payload
             )
+
             response_json = response.json()
             if not response.ok or not response_json.get("ok"):
                 raise ProviderException(
                     f"Failed to notify alert message to Slack: {response_json.get('error')}"
                 )
+            notify_data = {"slack_timestamp": response_json["ts"]}
         self.logger.info("Message notified to Slack")
+        return notify_data
 
 
 if __name__ == "__main__":
