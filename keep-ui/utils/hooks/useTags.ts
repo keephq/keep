@@ -1,19 +1,17 @@
-import { AIStats } from "app/ai/model";
 import { useSession } from "next-auth/react";
-import useSWR, { SWRConfiguration } from "swr";
+import { SWRConfiguration } from "swr";
+import useSWRImmutable from "swr/immutable";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
+import { Tag } from "app/alerts/models";
 
-export const useAIStats = (
-  options: SWRConfiguration = {
-    revalidateOnFocus: false,
-  }
-) => {
+
+export const useTags = (options: SWRConfiguration = {}) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  return useSWR<AIStats>(
-    () => (session ? `${apiUrl}/ai/stats` : null),
+  return useSWRImmutable<Tag[]>(
+    () => (session ? `${apiUrl}/tags` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

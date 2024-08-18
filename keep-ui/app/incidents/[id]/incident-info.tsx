@@ -1,10 +1,14 @@
+
 import {Button, Title} from "@tremor/react";
 import { IncidentDto } from "../model";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import React, {useState} from "react";
-import {MdModeEdit} from "react-icons/md";
+import {MdBlock, MdDone, MdModeEdit} from "react-icons/md";
 import {useIncident} from "../../../utils/hooks/useIncidents";
+import {deleteIncident, handleConfirmPredictedIncident} from "../incident-candidate-actions";
+import {useSession} from "next-auth/react";
+import {useRouter} from "next/navigation";
 // import { RiSparkling2Line } from "react-icons/ri";
 
 interface Props {
@@ -12,7 +16,8 @@ interface Props {
 }
 
 export default function IncidentInformation({ incident }: Props) {
-
+  const router = useRouter();
+  const { data: session } = useSession();
   const { mutate } = useIncident(incident.id);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -33,22 +38,57 @@ export default function IncidentInformation({ incident }: Props) {
     <div className="flex h-full flex-col justify-between">
       <div>
         <div className="flex justify-between mb-2.5">
-          <Title className="">⚔️ Incident Information</Title>
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdModeEdit}
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleStartEdit();
-            }}
-          />
+          <Title className="">{incident.is_confirmed ? "⚔️ " : "Possible "}Incident Information</Title>
+          {incident.is_confirmed &&
+            <Button
+              color="orange"
+              size="xs"
+              variant="secondary"
+              icon={MdModeEdit}
+              onClick={(e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleStartEdit();
+              }}
+            />
+          }
+          {!incident.is_confirmed &&
+            <div className={"space-x-1 flex flex-row items-center justify-center"}>
+              <Button
+                color="orange"
+                size="xs"
+                tooltip="Confirm incident"
+                variant="secondary"
+                title="Confirm"
+                icon={MdDone}
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleConfirmPredictedIncident({incidentId: incident.id!, mutate, session});
+                }}
+              >Confirm</Button>
+              <Button
+                color="red"
+                size="xs"
+                variant="secondary"
+                tooltip={"Discard"}
+                icon={MdBlock}
+                onClick={async (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const success = await deleteIncident({incidentId: incident.id!, mutate, session});
+                  if (success) {
+                    router.push("/incidents");
+                  }
+                }}
+              />
+            </div>
+          }
         </div>
         <div className="prose-2xl">{incident.name}</div>
-        <p>Description: {incident.description}</p>
-        <p>Started at: {incident.start_time?.toISOString() ?? "N/A"}</p>
+        <p>Summary: {incident.user_summary}</p>
+        {!!incident.start_time && <p>Started at: {new Date(incident.start_time + "Z").toLocaleString()}</p>}
+        {!!incident.last_seen_time && <p>Last seen at: {new Date(incident.last_seen_time + "Z").toLocaleString()}</p>}
         {/* <Callout
           title="AI Summary"
           color="gray"
@@ -72,7 +112,7 @@ export default function IncidentInformation({ incident }: Props) {
       >
         <CreateOrUpdateIncident
           incidentToEdit={incident}
-          editCallback={handleFinishEdit}
+          exitCallback={handleFinishEdit}
         />
       </Modal>
     </div>

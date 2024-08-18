@@ -17,32 +17,36 @@ import { useIncidents } from "utils/hooks/useIncidents";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
-  editCallback: (rule: IncidentDto | null) => void;
+  createCallback?: (id: string) => void
+  exitCallback?: () => void
 }
 
 export default function CreateOrUpdateIncident({
   incidentToEdit,
-  editCallback,
+  createCallback,
+  exitCallback
 }: Props) {
   const { data: session } = useSession();
   const { mutate } = useIncidents(true, 20);
   const [incidentName, setIncidentName] = useState<string>("");
-  const [incidentDescription, setIncidentDescription] = useState<string>("");
+  const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const editMode = incidentToEdit !== null;
 
+  // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
+  const cancellable = editMode || exitCallback
 
   useEffect(() => {
     if (incidentToEdit) {
       setIncidentName(incidentToEdit.name);
-      setIncidentDescription(incidentToEdit.description ?? "");
+      setIncidentUserSummary(incidentToEdit.user_summary ?? "");
       setIncidentAssignee(incidentToEdit.assignee ?? "");
     }
   }, [incidentToEdit]);
 
   const clearForm = () => {
     setIncidentName("");
-    setIncidentDescription("");
+    setIncidentUserSummary("");
     setIncidentAssignee("");
   };
 
@@ -57,7 +61,7 @@ export default function CreateOrUpdateIncident({
       },
       body: JSON.stringify({
         name: incidentName,
-        description: incidentDescription,
+        user_summary: incidentUserSummary,
         assignee: incidentAssignee,
       }),
     });
@@ -65,6 +69,9 @@ export default function CreateOrUpdateIncident({
       exitEditMode();
       await mutate();
       toast.success("Incident created successfully");
+
+      const created = await response.json()
+      createCallback?.(created.id) // close the modal and associate the alert incident
     } else {
       toast.error(
         "Failed to create incident, please contact us if this issue persists."
@@ -86,7 +93,7 @@ export default function CreateOrUpdateIncident({
         },
         body: JSON.stringify({
           name: incidentName,
-          description: incidentDescription,
+          user_summary: incidentUserSummary,
           assignee: incidentAssignee,
         }),
       }
@@ -104,14 +111,14 @@ export default function CreateOrUpdateIncident({
 
   // If the Incident is successfully updated or the user cancels the update we exit the editMode and set the editRule in the incident.tsx to null.
   const exitEditMode = () => {
-    editCallback(null);
+    exitCallback?.()
     clearForm();
   };
 
   const submitEnabled = (): boolean => {
     return (
       !!incidentName &&
-      !!incidentDescription
+      !!incidentUserSummary
     );
   };
 
@@ -133,12 +140,12 @@ export default function CreateOrUpdateIncident({
         />
       </div>
       <div className="mt-2.5">
-        <Text>Description<span className="text-red-500 text-xs">*</span></Text>
+        <Text>Summary<span className="text-red-500 text-xs">*</span></Text>
         <Textarea
           placeholder="What happened?"
           required={true}
-          value={incidentDescription}
-          onValueChange={setIncidentDescription}
+          value={incidentUserSummary}
+          onValueChange={setIncidentUserSummary}
         />
       </div>
 
@@ -153,10 +160,8 @@ export default function CreateOrUpdateIncident({
 
       <Divider />
 
-
       <div className={"space-x-1 flex flex-row justify-end items-center"}>
-        {/*If we are in the editMode we need an extra cancel button option for the user*/}
-        {editMode ? (
+        {cancellable && (
           <Button
             color="orange"
             size="xs"
@@ -165,8 +170,6 @@ export default function CreateOrUpdateIncident({
           >
             Cancel
           </Button>
-        ) : (
-          <></>
         )}
         <Button
           disabled={!submitEnabled()}

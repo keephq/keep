@@ -11,7 +11,9 @@ from dateutil import parser
 from dateutil.parser import ParserError
 
 from keep.api.bl.enrichments import EnrichmentsBl
-from keep.api.core.db import get_alert_firing_time, get_alerts_by_fingerprint
+from keep.api.core.db import get_alerts_by_fingerprint
+from keep.api.models.alert import AlertStatus
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
 _len = len
 _all = all
@@ -69,6 +71,10 @@ def utcnow() -> datetime.datetime:
     return dt
 
 
+def utcnowtimestamp() -> int:
+    return int(utcnow().timestamp())
+
+
 def utcnowiso() -> str:
     return utcnow().isoformat()
 
@@ -96,6 +102,16 @@ def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
             return ""
     utc_dt = dt.astimezone(pytz.utc)
     return utc_dt
+
+
+def to_timestamp(dt: datetime.datetime | str = "") -> int:
+    if isinstance(dt, str):
+        try:
+            dt = parser.parse(dt.strip())
+        except ParserError:
+            # Failed to parse the date
+            return 0
+    return int(dt.timestamp())
 
 
 def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
@@ -247,7 +263,21 @@ def get_firing_time(alert: dict, time_unit: str, **kwargs) -> str:
     if not fingerprint:
         raise ValueError("fingerprint is required")
 
-    firing = get_alert_firing_time(tenant_id=tenant_id, fingerprint=fingerprint)
+    alert_from_db = get_alerts_by_fingerprint(
+        tenant_id=tenant_id,
+        fingerprint=fingerprint,
+        limit=1,
+    )
+    if alert_from_db:
+        alert_dto = convert_db_alerts_to_dto_alerts(alert_from_db)[0]
+        # if the alert is not firing, there is no start firing time
+        if alert_dto.status != AlertStatus.FIRING.value:
+            return "0.00"
+        firing = datetime.datetime.now(
+            tz=datetime.timezone.utc
+        ) - datetime.datetime.fromisoformat(alert_dto.firingStartTime)
+    else:
+        return "0.00"
 
     if time_unit in ["m", "minutes"]:
         result = firing.total_seconds() / 60
@@ -260,7 +290,7 @@ def get_firing_time(alert: dict, time_unit: str, **kwargs) -> str:
             "Invalid time_unit. Use 'minutes', 'hours', 'seconds', 'm', 'h', or 's'."
         )
 
-    return f"{result:.1f}"
+    return f"{result:.2f}"
 
 
 def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
