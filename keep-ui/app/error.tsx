@@ -7,7 +7,10 @@
 import Image from "next/image";
 import "./error.css";
 import {useEffect} from "react";
+import {Title, Subtitle} from "@tremor/react";
 import {Button, Text} from "@tremor/react";
+import { signOut } from "next-auth/react";
+
 export default function ErrorComponent({
   error,
   reset,
@@ -21,17 +24,35 @@ export default function ErrorComponent({
 
   return (
     <div className="error-container">
-      <div className="error-message">{error.toString()}</div>
-      <div className={"error-url"}>ERROR_TYPE: {error.name}</div>
-      {error instanceof KeepApiError && error.proposedResolution && (<div className="error-url">
+      <Title>An error occurred while fetching data from the backend</Title>
+      <div className="code-container">
+        <code>
+          {error instanceof KeepApiError && (
+            <div className="mt-4">
+              Status Code: {error.statusCode}<br />
+              Message: {error.message}
+            </div>
+          )}
+        </code>
+      </div>
+      {error instanceof KeepApiError && error.proposedResolution && (<Subtitle className="mt-4">
         {error.proposedResolution}
-      </div>)
+      </Subtitle>)
       }
 
       <div className="error-image">
         <Image src="/keep.svg" alt="Keep" width={150} height={150} />
       </div>
-      <Button
+      {error instanceof KeepApiError && error.statusCode === 401 ? (
+        <Button
+          onClick={() => signOut()}
+          color="orange"
+          variant="secondary"
+          className="mt-4 border border-orange-500 text-orange-500">
+          <Text>Sign Out</Text>
+        </Button>
+      ) : (
+        <Button
           onClick={() => {
             console.log("Refreshing...")
             window.location.reload();
@@ -39,8 +60,9 @@ export default function ErrorComponent({
           color="orange"
           variant="secondary"
           className="mt-4 border border-orange-500 text-orange-500">
-        <Text>Try Again!</Text>
-      </Button>
+          <Text>Try Again!</Text>
+        </Button>
+      )}
     </div>
   )
 }
@@ -49,11 +71,13 @@ export default function ErrorComponent({
 export class KeepApiError extends Error {
   url: string;
   proposedResolution: string;
+  statusCode: number | undefined;
 
-  constructor(message: string, url: string, proposedResolution: string) {
+  constructor(message: string, url: string, proposedResolution: string, statusCode?: number) {
     super(message);
     this.name = "KeepApiError";
     this.url = url;
     this.proposedResolution = proposedResolution;
+    this.statusCode = statusCode;
   }
 }
