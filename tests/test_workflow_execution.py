@@ -157,6 +157,7 @@ def test_workflow_execution(
     base_time = datetime.now(tz=pytz.utc)
 
     # Create alerts with specified statuses and timestamps
+    alert_statuses.reverse()
     for time_diff, status in alert_statuses:
         alert_status = (
             AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
@@ -430,6 +431,9 @@ def test_workflow_execution3(
         severity="critical",
         fingerprint="fp1",
     )
+
+    # sleep one second to avoid the case where tier0 alerts are not triggered
+    time.sleep(1)
 
     # Insert the current alert into the workflow manager
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
