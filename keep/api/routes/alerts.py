@@ -293,7 +293,7 @@ async def receive_generic_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         await redis.enqueue_job(
-            "process_event",
+            "async_process_event",
             authenticated_entity.tenant_id,
             None,
             None,
@@ -362,7 +362,7 @@ async def receive_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         await redis.enqueue_job(
-            "process_event",
+            "async_process_event",
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
