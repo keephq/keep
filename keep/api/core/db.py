@@ -933,8 +933,69 @@ def get_alerts_with_filters(
         # Execute the query
         alerts = query.all()
 
-    return alerts
+    return alerts    
 
+def query_alerts(
+    tenant_id,
+    provider_id=None,
+    limit=1000,
+    timeframe=None,
+    upper_timestamp=None,
+    lower_timestamp=None,
+) -> list[Alert]:
+    """
+    Get all alerts for a given tenant_id.
+    
+    Args:
+        tenant_id (_type_): The tenant_id to filter the alerts by.
+        provider_id (_type_, optional): The provider id to filter by. Defaults to None.
+        limit (_type_, optional): The maximum number of alerts to return. Defaults to 1000.
+        timeframe (_type_, optional): The number of days to look back for alerts. Defaults to None.
+        upper_timestamp (_type_, optional): The upper timestamp to filter by. Defaults to None.
+        lower_timestamp (_type_, optional): The lower timestamp to filter by. Defaults to None.
+        
+    Returns:
+        List[Alert]: A list of Alert objects."""
+        
+    with Session(engine) as session:
+        # Create the query
+        query = session.query(Alert)
+        
+        # Apply subqueryload to force-load the alert_enrichment relationship
+        query = query.options(subqueryload(Alert.alert_enrichment))
+        
+        # Filter by tenant_id
+        query = query.filter(Alert.tenant_id == tenant_id)
+        
+        # if timeframe is provided, filter the alerts by the timeframe
+        if timeframe:
+            query = query.filter(
+                Alert.timestamp
+                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
+            )
+        
+        filter_conditions = []
+        
+        if upper_timestamp is not None:
+            filter_conditions.append(Alert.timestamp < upper_timestamp)
+        
+        if lower_timestamp is not None:
+            filter_conditions.append(Alert.timestamp >= lower_timestamp)
+        
+        # Apply the filter conditions
+        if filter_conditions:
+            query = query.filter(*filter_conditions)  # Unpack and apply all conditions
+        
+        if provider_id:
+            query = query.filter(Alert.provider_id == provider_id)
+        
+        # Order by timestamp in descending order and limit the results
+        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+        
+        # Execute the query
+        alerts = query.all()
+    
+    return alerts
 
 def get_last_alerts(
     tenant_id,
