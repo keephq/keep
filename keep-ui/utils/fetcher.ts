@@ -17,6 +17,14 @@ export const fetcher = async (
     // if the response has detail field, throw the detail field
     if (response.headers.get("content-type")?.includes("application/json")) {
       const data = await response.json();
+      if(response.status === 401) {
+        throw new KeepApiError(
+          `${data.message || data.detail}`,
+          url,
+          `You probably just need to sign in again.`,
+          response.status
+        );
+      }
       throw new KeepApiError(
         `${data.message || data.detail}`,
         url,
