@@ -933,7 +933,7 @@ def get_alerts_with_filters(
         # Execute the query
         alerts = query.all()
 
-    return alerts    
+    return alerts
 
 def query_alerts(
     tenant_id,
