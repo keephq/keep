@@ -309,7 +309,6 @@ class IlertProvider(BaseProvider):
             "customDetails": custom_details,
         }
         self.logger.info("Posting Ilert event", extra=payload)
-        # payload["apiKey"] = self.authentication_config.ilert_token
         response = requests.post(
             f"{self.authentication_config.ilert_host}/events/keep/{self.authentication_config.ilert_token} ",
             json=payload,
