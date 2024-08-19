@@ -103,6 +103,7 @@ class AlertDto(BaseModel):
     status: AlertStatus
     severity: AlertSeverity
     lastReceived: str
+    firingStartTime: str | None = None
     environment: str = "undefined"
     isDuplicate: bool | None = None
     duplicateReason: str | None = None
