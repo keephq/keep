@@ -62,6 +62,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
                 "bg-gray-200": currentPath === `/incidents/${incident.id}`,
               })}
             >
+
               <Subtitle className="text-sm max-w-[7.7rem]">{incident.name}</Subtitle>
             </LinkWithIcon>
           </li>
