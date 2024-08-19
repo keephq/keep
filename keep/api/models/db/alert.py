@@ -14,6 +14,7 @@ from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, S
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
+from keep.api.models.alert import IncidentSeverity
 from keep.api.models.db.tenant import Tenant
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
@@ -104,6 +105,7 @@ class Incident(SQLModel, table=True):
     generated_summary: str | None
 
     assignee: str | None
+    severity: int = Field(default=IncidentSeverity.CRITICAL.order)
 
     creation_time: datetime = Field(default_factory=datetime.utcnow)
 

@@ -28,12 +28,7 @@ def get_fingerprint(fingerprint, values):
     return fingerprint
 
 
-class AlertSeverity(Enum):
-    CRITICAL = ("critical", 5)
-    HIGH = ("high", 4)
-    WARNING = ("warning", 3)
-    INFO = ("info", 2)
-    LOW = ("low", 1)
+class SeverityBaseInterface(Enum):
 
     def __new__(cls, severity_name, severity_order):
         obj = object.__new__(cls)
@@ -56,24 +51,32 @@ class AlertSeverity(Enum):
         raise ValueError(f"No AlertSeverity with order {n}")
 
     def __lt__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order < other.order
         return NotImplemented
 
     def __le__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order <= other.order
         return NotImplemented
 
     def __gt__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order > other.order
         return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order >= other.order
         return NotImplemented
+
+
+class AlertSeverity(SeverityBaseInterface):
+    CRITICAL = ("critical", 5)
+    HIGH = ("high", 4)
+    WARNING = ("warning", 3)
+    INFO = ("info", 2)
+    LOW = ("low", 1)
 
 
 class AlertStatus(Enum):
@@ -89,12 +92,12 @@ class AlertStatus(Enum):
     PENDING = "pending"
 
 
-class IncidentSeverity(Enum):
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
+class IncidentSeverity(SeverityBaseInterface):
+    CRITICAL = ("critical", 5)
+    HIGH = ("high", 4)
+    WARNING = ("warning", 3)
+    INFO = ("info", 2)
+    LOW = ("low", 1)
 
 
 class AlertDto(BaseModel):
@@ -386,6 +389,10 @@ class IncidentDto(IncidentDtoIn):
     @classmethod
     def from_db_incident(cls, db_incident):
 
+        severity = IncidentSeverity.from_number(db_incident.severity) \
+            if isinstance(db_incident.severity, int) \
+            else db_incident.severity
+
         return cls(
             id=db_incident.id,
             name=db_incident.name,
@@ -399,7 +406,7 @@ class IncidentDto(IncidentDtoIn):
             end_time=db_incident.end_time,
             number_of_alerts=db_incident.alerts_count,
             alert_sources=db_incident.sources,
-            severity=IncidentSeverity.CRITICAL,
+            severity=severity,
             assignee=db_incident.assignee,
             services=db_incident.affected_services,
         )

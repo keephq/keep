@@ -2191,6 +2191,7 @@ def get_alerts_data_for_incident(
         fields = (
             get_json_extract_field(session, Alert.event, "service"),
             Alert.provider_type,
+            get_json_extract_field(session, Alert.event, "severity"),
         )
 
         alerts_data = db_session.exec(
@@ -2201,16 +2202,23 @@ def get_alerts_data_for_incident(
 
         sources = []
         services = []
+        severities = []
 
-        for service, source in alerts_data:
+        for service, source, severity in alerts_data:
             if source:
                 sources.append(source)
             if service:
                 services.append(service)
+            if severity:
+                if isinstance(severity, int):
+                    severities.append(IncidentSeverity.from_number(severity))
+                else:
+                    severities.append(IncidentSeverity(severity))
 
         return {
             "sources": set(sources),
             "services": set(services),
+            "max_severity": max(severities),
             "count": len(alerts_data),
         }
 
@@ -2276,6 +2284,8 @@ def add_alerts_to_incident_by_incident_id(
         ).one()
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
+
+        incident.severity = alerts_data_for_incident["max_severity"].value
 
         session.add(incident)
         session.commit()

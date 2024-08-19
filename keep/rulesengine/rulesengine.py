@@ -15,36 +15,11 @@ class RulesEngine:
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
 
-    def _calc_max_severity(self, alerts):
-        if not alerts:
-            # should not happen
-            self.logger.info(
-                "Could not calculate max severity from empty list - fallbacking to info"
-            )
-            return str(AlertSeverity.INFO)
-
-        alerts_by_fingerprint = {}
-        for alert in alerts:
-            if alert.fingerprint not in alerts_by_fingerprint:
-                alerts_by_fingerprint[alert.fingerprint] = [alert]
-            else:
-                alerts_by_fingerprint[alert.fingerprint].append(alert)
-
-        # now take the latest (by timestamp) for each fingerprint:
-        alerts = [
-            max(alerts, key=lambda alert: alert.event["lastReceived"])
-            for alerts in alerts_by_fingerprint.values()
-        ]
-        # if all alerts are with the same status, just use it
-        severities = [AlertSeverity(alert.event["severity"]) for alert in alerts]
-        max_severity = max(severities, key=lambda severity: severity.order)
-        return str(max_severity)
-
     def run_rules(self, events: list[AlertDto]) -> list[IncidentDto]:
         self.logger.info("Running rules")
         rules = get_rules_db(tenant_id=self.tenant_id)
 
-        incidents_dto = []
+        incidents_dto = {}
         for rule in rules:
             self.logger.info(f"Evaluating rule {rule.name}")
             for event in events:
@@ -73,7 +48,7 @@ class RulesEngine:
                         tenant_id=self.tenant_id
                     )
 
-                    incidents_dto.append(IncidentDto.from_db_incident(incident))
+                    incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
                 else:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is not relevant"
@@ -85,7 +60,7 @@ class RulesEngine:
 
         self.logger.info(f"Rules ran, {len(incidents_dto)} incidents created")
 
-        return incidents_dto
+        return list(incidents_dto.values())
 
     def _extract_subrules(self, expression):
         # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'
@@ -172,74 +147,6 @@ class RulesEngine:
             )
             return "none"
         return ",".join(group_fingerprint)
-
-    def _calc_group_status(self, alerts):
-        """This function calculates the status of a group of alerts according to the following logic:
-        1. If the last alert of each fingerprint is resolved, the group is resolved
-        2. If at least one of the alerts is firing, the group is firing
-
-
-        Args:
-            alerts (list[Alert]): list of alerts related to the group
-
-        Returns:
-            AlertStatus: the alert status (enum)
-        """
-        # take the last alert from each fingerprint
-        # if all of them are resolved, the group is resolved
-        alerts_by_fingerprint = {}
-        for alert in alerts:
-            if alert.fingerprint not in alerts_by_fingerprint:
-                alerts_by_fingerprint[alert.fingerprint] = [alert]
-            else:
-                alerts_by_fingerprint[alert.fingerprint].append(alert)
-
-        # now take the latest (by timestamp) for each fingerprint:
-        alerts = [
-            max(alerts, key=lambda alert: alert.event["lastReceived"])
-            for alerts in alerts_by_fingerprint.values()
-        ]
-        # 1. if all alerts are with the same status, just use it
-        if len(set(alert.event["status"] for alert in alerts)) == 1:
-            return alerts[0].event["status"]
-        # 2. Else, if at least one of them is firing, the group is firing
-        if any(alert.event["status"] == AlertStatus.FIRING for alert in alerts):
-            return AlertStatus.FIRING
-        # 3. Last, just return the last status
-        return alerts[-1].event["status"]
-
-    def _generate_group_payload(self, alerts):
-        # todo: group payload should be configurable
-        """This function generates the payload of the group alert.
-
-        Args:
-            alerts (list[Alert]): list of alerts related to the group
-
-        Returns:
-            dict: the payload of the group alert
-        """
-
-        # first, group by fingerprints
-        alerts_by_fingerprint = {}
-        for alert in alerts:
-            if alert.fingerprint not in alerts_by_fingerprint:
-                alerts_by_fingerprint[alert.fingerprint] = [alert]
-            else:
-                alerts_by_fingerprint[alert.fingerprint].append(alert)
-
-        group_payload = {}
-        for fingerprint, alerts in alerts_by_fingerprint.items():
-            # take the latest (by timestamp) for each fingerprint:
-            alert = max(alerts, key=lambda alert: alert.event["lastReceived"])
-            group_payload[fingerprint] = {
-                "name": alert.event["name"],
-                "number_of_alerts": len(alerts),
-                "fingerprint": fingerprint,
-                "last_status": alert.event["status"],
-                "last_severity": alert.event["severity"],
-            }
-
-        return group_payload
 
     @staticmethod
     def filter_alerts(alerts: list[AlertDto], cel: str):
