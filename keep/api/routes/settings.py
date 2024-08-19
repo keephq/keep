@@ -277,9 +277,12 @@ async def create_key(
     session: Session = Depends(get_session),
 ):
     try:
+        identity_manager = IdentityManagerFactory.get_identity_manager(
+            tenant_id=authenticated_entity.tenant_id,
+        )
         body = await request.json()
         unique_api_key_id = body["name"].replace(" ", "")
-        role = get_role_by_role_name(body["role"])
+        role = identity_manager.get_role_by_role_name(body["role"])
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -288,7 +291,7 @@ async def create_key(
         tenant_id=authenticated_entity.tenant_id,
         created_by=authenticated_entity.email,
         unique_api_key_id=unique_api_key_id,
-        role=role,
+        role=role.name,
         is_system=False,
     )
 
@@ -306,6 +309,7 @@ async def create_key(
         "created_by": tenant_api_key.created_by,
         "last_used": tenant_api_key.last_used,
         "secret": api_key,
+        "role": tenant_api_key.role,
     }
 
 

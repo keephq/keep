@@ -96,7 +96,7 @@ def create_api_key(
     unique_api_key_id: str,
     is_system: bool,
     created_by: str,
-    role: Role,
+    role: str,
     commit: bool = True,
     system_description: Optional[str] = None,
 ) -> str:
@@ -136,7 +136,7 @@ def create_api_key(
         is_system=is_system,
         system_description=system_description,
         created_by=created_by,
-        role=role.get_name(),
+        role=role,
     )
     session.add(new_installation_api_key)
 
@@ -207,6 +207,7 @@ def get_api_keys_secret(
                     "created_at": api_key.created_at,
                     "created_by": api_key.created_by,
                     "last_used": api_key.last_used,
+                    "role": api_key.role,
                     "secret": "Key has been deactivated",
                 }
             )
@@ -226,6 +227,7 @@ def get_api_keys_secret(
                     "created_by": api_key.created_by,
                     "last_used": api_key.last_used,
                     "secret": secret,
+                    "role": api_key.role,
                 }
             )
         except Exception as e:

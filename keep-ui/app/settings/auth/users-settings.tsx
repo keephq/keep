@@ -154,15 +154,15 @@ export default function UsersSettings({
             <TableHead>
               <TableRow>
                 <TableHeaderCell className="w-1/24">{/** Image */}</TableHeaderCell>
-                <TableHeaderCell className="w-2/12">
+                <TableHeaderCell className="w-3/12">
                   {authType == AuthenticationType.MULTI_TENANT || authType == AuthenticationType.KEYCLOAK
                     ? "Email"
                     : "Username"}
                 </TableHeaderCell>
                 <TableHeaderCell className="w-2/12">Name</TableHeaderCell>
-                <TableHeaderCell className="w-2/12">Last Login</TableHeaderCell>
-                <TableHeaderCell className="w-3/12">Role</TableHeaderCell>
+                <TableHeaderCell className="w-1/12">Role</TableHeaderCell>
                 <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>
+                <TableHeaderCell className="w-2/12">Last Login</TableHeaderCell>
                 <TableHeaderCell className="w-1/12"></TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -192,7 +192,7 @@ export default function UsersSettings({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="w-2/12">
+                  <TableCell className="w-3/12">
                     <div className="flex items-center justify-between">
                       <Text className="truncate">{user.email}</Text>
                       <div className="ml-2">
@@ -206,9 +206,6 @@ export default function UsersSettings({
                     <Text>{user.name}</Text>
                   </TableCell>
                   <TableCell className="w-2/12">
-                    <Text>{user.last_login ? new Date(user.last_login).toLocaleString() : "Never"}</Text>
-                  </TableCell>
-                  <TableCell className="w-3/12">
                     <div className="flex flex-wrap gap-1">
                       {userStates[user.email]?.role && (
                         <Badge color="orange" className="text-xs">
@@ -217,7 +214,7 @@ export default function UsersSettings({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="w-3/12">
+                  <TableCell className="w-2/12">
                     <div className="flex flex-wrap gap-1">
                       {userStates[user.email]?.groups.slice(0, 4).map((group, index) => (
                         <Badge key={index} color="orange" className="text-xs">
@@ -230,6 +227,9 @@ export default function UsersSettings({
                         </Badge>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell className="w-2/12">
+                    <Text>{user.last_login ? new Date(user.last_login).toLocaleString() : "Never"}</Text>
                   </TableCell>
                   <TableCell className="w-1/12">
                     {user.email !== currentUser?.email && !user.ldap && (
@@ -244,6 +244,7 @@ export default function UsersSettings({
                       </div>
                     )}
                   </TableCell>
+
                 </TableRow>
               ))}
             </TableBody>

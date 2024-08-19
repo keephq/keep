@@ -1,12 +1,11 @@
 import React from "react";
-import Select from "react-select";
-import { components, Props as SelectProps, GroupBase, StylesConfig } from "react-select";
+import Select, { components, Props as SelectProps, GroupBase, StylesConfig } from "react-select";
 import { Badge } from "@tremor/react";
 
 type OptionType = { value: string; label: string };
 
 const customStyles: StylesConfig<OptionType, false> = {
-  control: (provided: any, state: any) => ({
+  control: (provided, state) => ({
     ...provided,
     borderColor: state.isFocused ? 'orange' : '#ccc',
     '&:hover': {
@@ -15,7 +14,7 @@ const customStyles: StylesConfig<OptionType, false> = {
     boxShadow: state.isFocused ? '0 0 0 1px orange' : null,
     backgroundColor: 'transparent',
   }),
-  option: (provided: any, state: any) => ({
+  option: (provided, state) => ({
     ...provided,
     backgroundColor: state.isSelected ? 'transparent' : state.isFocused ? 'rgba(255, 165, 0, 0.1)' : 'transparent',
     color: state.isSelected ? 'white' : 'black',
@@ -23,15 +22,15 @@ const customStyles: StylesConfig<OptionType, false> = {
       backgroundColor: 'rgba(255, 165, 0, 0.3)',
     },
   }),
-  singleValue: (provided: any) => ({
+  singleValue: (provided) => ({
     ...provided,
     color: 'black',
   }),
-  menuPortal: (base: any) => ({
+  menuPortal: (base) => ({
     ...base,
     zIndex: 9999, // Ensure the menu appears on top of the modal
   }),
-  menu: (provided: any) => ({
+  menu: (provided) => ({
     ...provided,
     zIndex: 9999, // Ensure the menu appears on top of the modal
   }),
@@ -61,9 +60,19 @@ const customComponents: CustomSelectProps['components'] = {
   ),
 };
 
-type StyledSelectProps = SelectProps<OptionType, false, GroupBase<OptionType>>;
+type StyledSelectProps = SelectProps<OptionType, false, GroupBase<OptionType>> & {
+  getOptionLabel?: (option: OptionType) => string;
+  getOptionValue?: (option: OptionType) => string;
+};
 
-const StyledSelect: React.FC<StyledSelectProps> = ({ value, onChange, options, placeholder }) => (
+const StyledSelect: React.FC<StyledSelectProps> = ({
+  value,
+  onChange,
+  options,
+  placeholder,
+  getOptionLabel,
+  getOptionValue,
+}) => (
   <Select
     value={value}
     onChange={onChange}
@@ -73,6 +82,8 @@ const StyledSelect: React.FC<StyledSelectProps> = ({ value, onChange, options, p
     components={customComponents}
     menuPortalTarget={document.body} // Render the menu in a portal
     menuPosition="fixed"
+    getOptionLabel={getOptionLabel} // Support custom getOptionLabel
+    getOptionValue={getOptionValue} // Support custom getOptionValue
   />
 );
 

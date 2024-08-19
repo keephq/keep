@@ -250,6 +250,24 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             )
         return roles_dto
 
+    def get_role_by_role_name(self, role_name: str) -> Role:
+        """
+        Get role by role name.
+
+        Args:
+            role_name (str): The name of the role.
+
+        Returns:
+            Role: The role object.
+        """
+        _role = get_role_by_role_name(role_name)
+        return Role(
+            id=role_name,
+            name=role_name,
+            description=_role.DESCRIPTION,
+            scopes=_role.SCOPES,
+        )
+
     def create_role(self, role: Role) -> Role:
         """
         Create role in the identity manager for authorization purposes.

@@ -442,7 +442,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
     def update_user(self, user_email: str, update_data: dict) -> dict:
         try:
             user_id = self.get_user_id_by_email(user_email)
-            if "role" in update_data:
+            if "role" in update_data and update_data["role"]:
                 role = update_data["role"]
                 # get current role and understand if needs to be updated:
                 current_role = self.get_user_current_role(user_id)
@@ -462,7 +462,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                         user_id=user_id,
                         roles=[{"id": role_id, "name": role}],
                     )
-            if "groups" in update_data:
+            if "groups" in update_data and update_data["groups"]:
                 # get the current groups
                 groups = self.keycloak_admin.get_user_groups(user_id)
                 groups_ids = [g.get("id") for g in groups]
@@ -940,6 +940,14 @@ class KeycloakIdentityManager(BaseIdentityManager):
         except KeycloakGetError as e:
             self.logger.error("Failed to fetch roles from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch roles")
+
+    def get_role_by_role_name(self, role_name: str) -> Role:
+        roles = self.get_roles()
+        role = next((role for role in roles if role.name == role_name), None)
+        if not role:
+            self.logger.error("Role not found")
+            raise HTTPException(status_code=404, detail="Role not found")
+        return role
 
     def delete_role(self, role_id: str) -> None:
         try:

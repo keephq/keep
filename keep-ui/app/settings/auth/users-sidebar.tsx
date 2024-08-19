@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import { User, Group } from "app/settings/models";
 import { AuthenticationType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
+import Select  from "@/components/ui/Select";
 
 interface UserSidebarProps {
   isOpen: boolean;
@@ -214,18 +215,15 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
                     name="role"
                     control={control}
                     render={({ field }) => (
-                      <SearchSelect
+                      <Select
                         {...field}
-                        onValueChange={(value) => field.onChange(value)}
-                        value={field.value}
-                        className="custom-search-select"
-                      >
-                        {roles.map((role) => (
-                          <SearchSelectItem key={role.id} value={role.name}>
-                            {role.name}
-                          </SearchSelectItem>
-                        ))}
-                      </SearchSelect>
+                        onChange={(selectedOption) => field.onChange(selectedOption?.name)} // Assuming you want to store the role ID
+                        value={roles.find(role => role.name === field.value)} // Ensure the value is a Role object
+                        options={roles} // Pass the full Role objects
+                        getOptionLabel={(role) => role.name} // Use the name for display
+                        getOptionValue={(role) => role.name} // Use the name as the value
+                        placeholder="Select a role"
+                      />
                     )}
                   />
                 </div>

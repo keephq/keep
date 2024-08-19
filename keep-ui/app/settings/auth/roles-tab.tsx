@@ -11,9 +11,9 @@ import {
   Text,
   Button,
   Badge,
-  Icon,
+  TextInput,
 } from "@tremor/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getApiURL } from "utils/apiUrl";
 import { useScopes } from "utils/hooks/useScopes";
 import { useRoles } from "utils/hooks/useRoles";
@@ -36,6 +36,7 @@ export default function RolesTab({ accessToken }: Props) {
   const [resources, setResources] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [filter, setFilter] = useState("");
 
   useEffect(() => {
     if (scopes && scopes.length > 0) {
@@ -43,6 +44,12 @@ export default function RolesTab({ accessToken }: Props) {
       setResources(extractedResources);
     }
   }, [scopes]);
+
+  const filteredRoles = useMemo(() => {
+    return roles.filter(role =>
+      role.name.toLowerCase().includes(filter.toLowerCase())
+    );
+  }, [roles, filter]);
 
   if (scopesLoading || rolesLoading) return <Loading />;
 
@@ -94,6 +101,12 @@ export default function RolesTab({ accessToken }: Props) {
           </Button>
         </div>
       </div>
+      <TextInput
+        placeholder="Search by role name"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className="mb-4"
+      />
       <Card className="flex-grow overflow-auto h-full">
         <Table className="h-full">
           <TableHead>
@@ -105,7 +118,7 @@ export default function RolesTab({ accessToken }: Props) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {roles.sort((a, b) => (a.predefined === b.predefined ? 0 : a.predefined ? -1 : 1)).map((role) => (
+            {filteredRoles.sort((a, b) => (a.predefined === b.predefined ? 0 : a.predefined ? -1 : 1)).map((role) => (
               <TableRow
                 key={role.name}
                 className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"

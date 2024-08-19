@@ -73,13 +73,13 @@ export default function SettingsPage() {
         ? 0
         : newUserSubTab === "groups"
         ? 1
-        : newUserSubTab === "api-keys"
-        ? 2
         : newUserSubTab === "roles"
+        ? 2
+        : newUserSubTab === "api-keys"
         ? 3
-        : newUserSubTab === "permissions"
-        ? 4
-        : 5;
+        // : newUserSubTab === "permissions"
+        // ? 4
+        : 4;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
@@ -113,15 +113,15 @@ export default function SettingsPage() {
                 <Tab icon={UserGroupIcon} onClick={() => handleUserSubTabChange("groups")}>
                   Groups
                 </Tab>
-                <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
-                  API Keys
-                </Tab>
                 <Tab icon={ShieldCheckIcon} onClick={() => handleUserSubTabChange("roles")}>
                   Roles
                 </Tab>
-                <Tab icon={LockClosedIcon} onClick={() => handleUserSubTabChange("permissions")}>
-                  Permissions
+                <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
+                  API Keys
                 </Tab>
+                {/* <Tab icon={LockClosedIcon} onClick={() => handleUserSubTabChange("permissions")}>
+                  Permissions
+                </Tab> */}
                 <Tab icon={MdOutlineSecurity} onClick={() => handleUserSubTabChange("sso")}>
                   SSO
                 </Tab>
@@ -132,16 +132,16 @@ export default function SettingsPage() {
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   <GroupsTab accessToken={session?.accessToken!} />
-              </TabPanel>
-                <TabPanel className="h-full mt-6">
-                  <APIKeysTab accessToken={session?.accessToken!} />
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   <RolesTab accessToken={session?.accessToken!} />
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
-                  <PermissionsTab accessToken={session?.accessToken!} />
+                  <APIKeysTab accessToken={session?.accessToken!} />
                 </TabPanel>
+                {/* <TabPanel className="h-full mt-6">
+                  <PermissionsTab accessToken={session?.accessToken!} />
+                </TabPanel> */}
                 <TabPanel className="h-full mt-6">
                   <SSOTab accessToken={session?.accessToken!} />
                 </TabPanel>
