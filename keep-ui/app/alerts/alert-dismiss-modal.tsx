@@ -118,7 +118,10 @@ export default function AlertDismissModal({
         </>
       ) : (
         <>
-          <TabGroup index={selectedTab} onChange={handleTabChange}>
+          <TabGroup
+            index={selectedTab}
+            onIndexChange={(index: number) => handleTabChange(index)}
+          >
             <TabList>
               <Tab>Dismiss Forever</Tab>
               <Tab>Dismiss Until</Tab>
@@ -156,11 +159,6 @@ export default function AlertDismissModal({
                     })}
                     inline
                     calendarClassName="custom-datepicker"
-                    dayClassName={(date) =>
-                      date.toDateString() === new Date().toDateString()
-                        ? "react-datepicker__day--today"
-                        : undefined
-                    }
                   />
                   {showError && <div className="text-red-500">Must choose a date</div>}
                 </Card>
