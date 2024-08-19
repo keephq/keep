@@ -432,6 +432,9 @@ def test_workflow_execution3(
         fingerprint="fp1",
     )
 
+    # sleep one second to avoid the case where tier0 alerts are not triggered
+    time.sleep(1)
+
     # Insert the current alert into the workflow manager
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
