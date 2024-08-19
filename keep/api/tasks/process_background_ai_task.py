@@ -47,7 +47,11 @@ async def process_background_ai_task(
     tenant_configuration = TenantConfiguration()
 
     if mine_incidents_and_create_objects is not NotImplemented:
-        for tenant in get_tenants_configurations():
+        tenants_configurations = get_tenants_configurations()
+        logger.info(
+            f"Temporary log for Matvey Debugging. tenants: {tenants_configurations}",
+        )
+        for tenant in tenants_configurations:
             if is_ee_enabled_for_tenant(tenant, tenant_configuration=tenant_configuration):
                 # Because of https://github.com/python-arq/arq/issues/432 we need to check if the job is already running
                 # The other option would be to twick "keep_result" but it will make debugging harder
