@@ -164,6 +164,7 @@ def test_workflow_execution(
         )
         create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
 
+    time.sleep(1)
     # Create the current alert
     current_alert = AlertDto(
         id="grafana-1",
