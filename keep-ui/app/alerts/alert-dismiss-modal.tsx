@@ -137,30 +137,32 @@ export default function AlertDismissModal({
                 />
               </TabPanel>
               <TabPanel>
-                <Card className="relative z-50 mt-4">
-                  <DatePicker
-                    selected={selectedDateTime}
-                    onChange={handleDateTimeChange}
-                    showTimeSelect
-                    timeFormat="p"
-                    timeIntervals={15}
-                    timeCaption="Time"
-                    dateFormat="MMMM d, yyyy h:mm:ss aa"
-                    minDate={new Date()}
-                    minTime={set(new Date(), {
-                      hours: 0,
-                      minutes: 0,
-                      seconds: 0,
-                    })}
-                    maxTime={set(new Date(), {
-                      hours: 23,
-                      minutes: 59,
-                      seconds: 59,
-                    })}
-                    inline
-                    calendarClassName="custom-datepicker"
-                  />
-                  {showError && <div className="text-red-500">Must choose a date</div>}
+                <Card className="relative z-50 mt-4 flex justify-center items-center">
+                  <div className="flex flex-col items-center">
+                    <DatePicker
+                      selected={selectedDateTime}
+                      onChange={handleDateTimeChange}
+                      showTimeSelect
+                      timeFormat="p"
+                      timeIntervals={15}
+                      timeCaption="Time"
+                      dateFormat="MMMM d, yyyy h:mm:ss aa"
+                      minDate={new Date()}
+                      minTime={set(new Date(), {
+                        hours: 0,
+                        minutes: 0,
+                        seconds: 0,
+                      })}
+                      maxTime={set(new Date(), {
+                        hours: 23,
+                        minutes: 59,
+                        seconds: 59,
+                      })}
+                      inline
+                      calendarClassName="custom-datepicker"
+                    />
+                    {showError && <div className="text-red-500 mt-2">Must choose a date</div>}
+                  </div>
                 </Card>
                 <Title className="mt-2">Dismiss Comment</Title>
                 <ReactQuill
