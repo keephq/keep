@@ -40,3 +40,4 @@ jspm_packages
 .env.local
 
 app/topology/mock-topology-data.tsx
+.vercel
