@@ -131,7 +131,6 @@ class AlertDto(BaseModel):
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
     providerType: str | None = None  # The provider type
-    group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
     startedAt: str | None = (
         None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)

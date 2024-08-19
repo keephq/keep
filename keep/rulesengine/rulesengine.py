@@ -38,7 +38,7 @@ class RulesEngine:
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
                     
-                    rule_fingerprint = self._calc_group_fingerprint(event, rule)
+                    rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
                     incident = get_incident_for_grouping_rule(self.tenant_id, rule, rule.timeframe, rule_fingerprint)
 
@@ -104,7 +104,7 @@ class RulesEngine:
         # no subrules matched
         return False
 
-    def _calc_group_fingerprint(self, event: AlertDto, rule):
+    def _calc_rule_fingerprint(self, event: AlertDto, rule):
         # extract all the grouping criteria from the event
         # e.g. if the grouping criteria is ["event.labels.queue", "event.labels.cluster"]
         #     and the event is:
@@ -115,13 +115,13 @@ class RulesEngine:
         #        "foo": "bar"
         #      }
         #    }
-        # than the group_fingerprint will be "queue1,cluster1"
+        # than the rule_fingerprint will be "queue1,cluster1"
 
-        # note: group_fingerprint is not a unique id, since different rules can lead to the same group_fingerprint
-        #       hence, the actual fingerprint is composed of the group_fingerprint and the group id
+        # note: rule_fingerprint is not a unique id, since different rules can lead to the same rule_fingerprint
+        #       hence, the actual fingerprint is composed of the rule_fingerprint and the incident id
         event_payload = event.dict()
         grouping_criteria = rule.grouping_criteria or []
-        group_fingerprint = []
+        rule_fingerprint = []
         for criteria in grouping_criteria:
             # we need to extract the value from the event
             # e.g. if the criteria is "event.labels.queue"
@@ -132,21 +132,21 @@ class RulesEngine:
                 value = value.get(part)
             if isinstance(value, list):
                 value = ",".join(value)
-            group_fingerprint.append(value)
+            rule_fingerprint.append(value)
         # if, for example, the event should have labels.X but it doesn't,
-        # than we will have None in the group_fingerprint
-        if not group_fingerprint:
+        # than we will have None in the rule_fingerprint
+        if not rule_fingerprint:
             self.logger.warning(
-                f"Failed to calculate group fingerprint for event {event.id} and rule {rule.name}"
+                f"Failed to calculate rule fingerprint for event {event.id} and rule {rule.name}"
             )
             return "none"
         # if any of the values is None, we will return "none"
-        if any([fingerprint is None for fingerprint in group_fingerprint]):
+        if any([fingerprint is None for fingerprint in rule_fingerprint]):
             self.logger.warning(
                 f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}"
             )
             return "none"
-        return ",".join(group_fingerprint)
+        return ",".join(rule_fingerprint)
 
     @staticmethod
     def filter_alerts(alerts: list[AlertDto], cel: str):

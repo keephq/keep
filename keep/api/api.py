@@ -29,7 +29,6 @@ from keep.api.routes import (
     alerts,
     dashboard,
     extraction,
-    groups,
     healthcheck,
     incidents,
     mapping,
@@ -189,7 +188,6 @@ def get_app(
     app.include_router(status.router, prefix="/status", tags=["status"])
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
-    app.include_router(groups.router, prefix="/groups", tags=["groups"])
     app.include_router(users.router, prefix="/users", tags=["users"])
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(

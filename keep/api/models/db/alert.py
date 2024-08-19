@@ -1,5 +1,4 @@
 import enum
-import hashlib
 import logging
 from datetime import datetime
 from typing import List
@@ -44,48 +43,10 @@ else:
         datetime_column_type = DateTime
 
 
-# many to many map between alerts and groups
-class AlertToGroup(SQLModel, table=True):
-    tenant_id: str = Field(foreign_key="tenant.id")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
-    group_id: UUID = Field(
-        sa_column=Column(
-            UUIDType(binary=False),
-            ForeignKey("group.id", ondelete="CASCADE"),
-            primary_key=True,
-        )
-    )
-
-
-class Group(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
-    rule_id: UUID = Field(
-        sa_column=Column(
-            UUIDType(binary=False), ForeignKey("rule.id", ondelete="CASCADE")
-        ),
-    )
-    creation_time: datetime = Field(default_factory=datetime.utcnow)
-    # the instance of the grouping criteria
-    # e.g. grouping_criteria = ["event.labels.queue", "event.labels.cluster"] => group_fingerprint = "queue1,cluster1"
-
-    # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
-    group_fingerprint: str
-    # map of attributes to values
-    alerts: List["Alert"] = Relationship(
-        back_populates="groups", link_model=AlertToGroup
-    )
-
-    def calculate_fingerprint(self):
-        return hashlib.sha256(
-            "|".join([str(self.id), self.group_fingerprint]).encode()
-        ).hexdigest()
-
-
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
     incident_id: UUID = Field(
         sa_column=Column(
             UUIDType(binary=False),
@@ -163,9 +124,7 @@ class Alert(SQLModel, table=True):
     provider_id: str | None
     event: dict = Field(sa_column=Column(JSON))
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
-    groups: List["Group"] = Relationship(
-        back_populates="alerts", link_model=AlertToGroup
-    )
+
     incidents: List["Incident"] = Relationship(
         back_populates="alerts", link_model=AlertToIncident
     )

@@ -1411,7 +1411,7 @@ def get_incident_for_grouping_rule(
                 alert.timestamp for alert in incident.alerts
             ) < datetime.utcnow() - timedelta(seconds=timeframe)
 
-        # if there is no incident with the group_fingerprint, create it or existed is already expired
+        # if there is no incident with the rule_fingerprint, create it or existed is already expired
         if not incident or is_incident_expired:
             # Create and add a new incident if it doesn't exist
             incident = Incident(
@@ -1425,7 +1425,7 @@ def get_incident_for_grouping_rule(
             session.add(incident)
             session.commit()
 
-            # Re-query the incident with selectinload to set up future automatic loading of alerts
+            # Re-query the incident with joinedload to set up future automatic loading of alerts
             incident = session.exec(
                 select(Incident)
                 .options(joinedload(Incident.alerts))
@@ -1433,16 +1433,6 @@ def get_incident_for_grouping_rule(
             ).first()
 
     return incident
-
-
-def get_groups(tenant_id):
-    with Session(engine) as session:
-        groups = session.exec(
-            select(Group)
-            .options(selectinload(Group.alerts))
-            .where(Group.tenant_id == tenant_id)
-        ).all()
-    return groups
 
 
 def get_rule(tenant_id, rule_id):
@@ -1462,13 +1452,13 @@ def get_rule_distribution(tenant_id, minute=False):
         # Check the dialect
         if session.bind.dialect.name == "mysql":
             time_format = "%Y-%m-%d %H:%i" if minute else "%Y-%m-%d %H"
-            timestamp_format = func.date_format(AlertToGroup.timestamp, time_format)
+            timestamp_format = func.date_format(AlertToIncident.timestamp, time_format)
         elif session.bind.dialect.name == "postgresql":
             time_format = "YYYY-MM-DD HH:MI" if minute else "YYYY-MM-DD HH"
-            timestamp_format = func.to_char(AlertToGroup.timestamp, time_format)
+            timestamp_format = func.to_char(AlertToIncident.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
-            timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
+            timestamp_format = func.strftime(time_format, AlertToIncident.timestamp)
         else:
             raise ValueError("Unsupported database dialect")
         # Construct the query
@@ -1476,17 +1466,17 @@ def get_rule_distribution(tenant_id, minute=False):
             session.query(
                 Rule.id.label("rule_id"),
                 Rule.name.label("rule_name"),
-                Group.id.label("group_id"),
-                Group.group_fingerprint.label("group_fingerprint"),
+                Incident.id.label("group_id"),
+                Incident.rule_fingerprint.label("rule_fingerprint"),
                 timestamp_format.label("time"),
-                func.count(AlertToGroup.alert_id).label("hits"),
+                func.count(AlertToIncident.alert_id).label("hits"),
             )
-            .join(Group, Rule.id == Group.rule_id)
-            .join(AlertToGroup, Group.id == AlertToGroup.group_id)
-            .filter(AlertToGroup.timestamp >= seven_days_ago)
+            .join(Incident, Rule.id == Incident.rule_id)
+            .join(AlertToIncident, Incident.id == AlertToIncident.incident_id)
+            .filter(AlertToIncident.timestamp >= seven_days_ago)
             .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
             .group_by(
-                "rule_id", "rule_name", "group_id", "group_fingerprint", "time"
+                "rule_id", "rule_name", "incident_id", "rule_fingerprint", "time"
             )  # Adjusted here
             .order_by("time")
         )
@@ -1497,17 +1487,17 @@ def get_rule_distribution(tenant_id, minute=False):
         rule_distribution = {}
         for result in results:
             rule_id = result.rule_id
-            group_fingerprint = result.group_fingerprint
+            rule_fingerprint = result.rule_fingerprint
             timestamp = result.time
             hits = result.hits
 
             if rule_id not in rule_distribution:
                 rule_distribution[rule_id] = {}
 
-            if group_fingerprint not in rule_distribution[rule_id]:
-                rule_distribution[rule_id][group_fingerprint] = {}
+            if rule_fingerprint not in rule_distribution[rule_id]:
+                rule_distribution[rule_id][rule_fingerprint] = {}
 
-            rule_distribution[rule_id][group_fingerprint][timestamp] = hits
+            rule_distribution[rule_id][rule_fingerprint][timestamp] = hits
 
         return rule_distribution
 
@@ -2376,6 +2366,8 @@ def remove_alerts_to_incident_by_incident_id(
         incident.sources = [
             source for source in incident.sources if source not in sources_to_remove
         ]
+
+
 
         incident.alerts_count -= alerts_data_for_incident["count"]
         incident.start_time = started_at
