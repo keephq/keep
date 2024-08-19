@@ -7,10 +7,7 @@ Create Date: 2024-08-18 23:59:20.638208
 """
 
 import sqlalchemy as sa
-import sqlalchemy_utils
-import sqlmodel
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "9ab9a17c962f"
@@ -46,16 +43,5 @@ def downgrade() -> None:
 
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.drop_column("severity")
-
-    with op.batch_alter_table("dashboard", schema=None) as batch_op:
-        batch_op.alter_column(
-            "dashboard_config",
-            existing_type=postgresql.JSON(astext_type=Text()),
-            type_=sa.VARCHAR(),
-            existing_nullable=True,
-        )
-
-    with op.batch_alter_table("alertaudit", schema=None) as batch_op:
-        batch_op.alter_column("description", existing_type=sa.TEXT(), nullable=False)
 
     # ### end Alembic commands ###

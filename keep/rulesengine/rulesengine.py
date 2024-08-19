@@ -6,7 +6,7 @@ import celpy
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import get_incident_for_grouping_rule, assign_alert_to_incident
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
 

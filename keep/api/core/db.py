@@ -20,15 +20,13 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, null, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import expression
 from sqlmodel import Session, col, or_, select
 
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus, IncidentDtoIn
+from keep.api.models.alert import IncidentDtoIn
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
