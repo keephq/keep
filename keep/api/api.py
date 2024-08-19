@@ -57,6 +57,7 @@ PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 REDIS = os.environ.get("REDIS", "false") == "true"
+WORKER_ENABLED = os.environ.get("WORKER_ENABLED", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -240,7 +241,7 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
-        if REDIS:
+        if REDIS and WORKER_ENABLED:
             event_loop = asyncio.get_event_loop()
             worker = get_worker()
             event_loop.create_task(worker.async_run())

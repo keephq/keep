@@ -1,5 +1,4 @@
 import logging
-import os
 
 from fastapi import APIRouter, Depends
 
@@ -8,6 +7,7 @@ from keep.api.core.db import (
     get_first_alert_datetime,
     get_incidents_count,
 )
+from keep.api.utils.import_ee import ALGORITHM_VERBOSE_NAME, is_ee_enabled_for_tenant
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -29,5 +29,6 @@ def get_stats(
         "alerts_count": get_alerts_count(tenant_id),
         "first_alert_datetime": get_first_alert_datetime(tenant_id),
         "incidents_count": get_incidents_count(tenant_id),
-        "is_mining_enabled": os.environ.get("EE_ENABLED", "false") == "true",
+        "is_mining_enabled": is_ee_enabled_for_tenant(tenant_id),
+        "algorithm_verbose_name": str(ALGORITHM_VERBOSE_NAME),
     }

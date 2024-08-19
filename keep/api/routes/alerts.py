@@ -54,12 +54,10 @@ REDIS = os.environ.get("REDIS", "false") == "true"
     description="Get last alerts occurrence",
 )
 def get_all_alerts(
-    background_tasks: BackgroundTasks,
-    sync: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    pusher_client: Pusher | None = Depends(get_pusher_client),
+    limit: int = 1000,
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -68,7 +66,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id)
+    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
@@ -303,7 +301,7 @@ async def receive_generic_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         await redis.enqueue_job(
-            "process_event",
+            "async_process_event",
             authenticated_entity.tenant_id,
             None,
             None,
@@ -375,7 +373,7 @@ async def receive_event(
     if REDIS:
         redis: ArqRedis = await get_pool()
         await redis.enqueue_job(
-            "process_event",
+            "async_process_event",
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
