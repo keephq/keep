@@ -23,7 +23,7 @@ from keep.api.core.db import (
     assign_alert_to_incident,
     is_alert_assigned_to_incident,
     add_alerts_to_incident_by_incident_id,
-    get_last_alerts,
+    query_alerts,
     get_last_incidents,
     get_incident_by_id,
     write_pmi_matrix_to_db,
@@ -67,8 +67,9 @@ def calculate_pmi_matrix(
     
     if not stride:
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
-        
-    alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
+    
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
+
     pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
     
     logger.info(
@@ -160,7 +161,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
     nc_queue = NodeCandidateQueue()
     
