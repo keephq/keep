@@ -472,7 +472,9 @@ def process_event(
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
-        raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
+        # Retrying only if context is present (running the job in arq worker)
+        if bool(ctx):
+            raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
