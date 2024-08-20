@@ -159,6 +159,10 @@ def migrate_db():
     """
     Run migrations to make sure the DB is up-to-date.
     """
+    if os.environ.get("SKIP_DB_CREATION", "false") == "true":
+        logger.info("Skipping running migrations...")
+        return None
+    
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
