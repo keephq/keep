@@ -2506,8 +2506,8 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
 
         # Query for existing entries to differentiate between updates and inserts
         existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
-        existing_entries_set = {
-            (entry.fingerprint_i, entry.fingerprint_j) for entry in existing_entries
+        existing_entries_dict = {
+            (entry.fingerprint_i, entry.fingerprint_j): entry for entry in existing_entries
         }
 
         for fingerprint_i in pmi_matrix_df.index:
@@ -2521,17 +2521,29 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
                     "pmi": float(pmi),
                 }
 
-                if (fingerprint_i, fingerprint_j) in existing_entries_set:
-                    pmi_entries_to_update.append(pmi_entry)
+                if (fingerprint_i, fingerprint_j) in existing_entries_dict:
+                    update = existing_entries_dict[(fingerprint_i, fingerprint_j)]
+                    update.pmi = float(pmi)
+                    pmi_entries_to_update.append(update)
                 else:
                     pmi_entries_to_insert.append(pmi_entry)
 
         # Update existing records
         if pmi_entries_to_update:
+            logger.info(
+                f"Updating {len(pmi_entries_to_update)} PMI entries for tenant {tenant_id}",
+                extra={"tenant_id": tenant_id},
+            )
+            
             session.bulk_update_mappings(PMIMatrix, pmi_entries_to_update)
 
         # Insert new records
         if pmi_entries_to_insert:
+            logger.info(
+                f"Inserting {len(pmi_entries_to_insert)} PMI entries for tenant {tenant_id}",
+                extra={"tenant_id": tenant_id},
+            )
+        
             session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
 
         session.commit()
