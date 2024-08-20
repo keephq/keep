@@ -31,6 +31,7 @@ jobs:
           commit: true
 
       - name: Open PR for release branch
+        id: pr-step
         uses: peter-evans/create-pull-request@v6.1.0
         with:
           committer: Keep Release Bot <no-reply@keephq.dev>
@@ -39,3 +40,19 @@ jobs:
           body: "This PR contains the latest release changes."
           draft: false
           base: main
+
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.pr-step.outputs.pull-request-number }}
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release-step.outputs.version }}
+        run: |
+          gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+              --target="release/${{ steps.release-step.outputs.version }}" \
+              --generate-notes
