@@ -63,6 +63,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         timeAmount: selectedRule.timeframe,
         timeUnit: "seconds",
         groupedAttributes: selectedRule.grouping_criteria,
+        requireApprove: selectedRule.require_approve,
         query: queryInGroup,
       };
     }
@@ -94,14 +95,6 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       columnHelper.accessor("name", {
         header: "Correlation Name",
       }),
-      columnHelper.display({
-        id: "events",
-        header: "Events",
-      }),
-      columnHelper.display({
-        id: "alerts",
-        header: "Alerts",
-      }),
       columnHelper.accessor("definition_cel", {
         header: "Description",
         cell: (context) => (
@@ -130,8 +123,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             Correlations <span className="text-gray-400">({rules.length})</span>
           </Title>
           <Subtitle className="text-gray-400">
-            Dynamically incentivize cross-unit models without best-of-breed
-            models.
+            Manually setup flexible rules for alert to incident correlation
           </Subtitle>
         </div>
         <Button color="orange" onClick={() => onCorrelationClick()}>
