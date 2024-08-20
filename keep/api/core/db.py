@@ -2535,7 +2535,6 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
                 f"Updating {len(pmi_entries_to_update)} PMI entries for tenant {tenant_id}",
                 extra={"tenant_id": tenant_id},
             )
-    
             for entry in pmi_entries_to_update:
                 session.add(entry)
             
