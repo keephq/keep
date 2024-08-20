@@ -154,7 +154,7 @@ export default function ProvidersPage({
     }
   }, [searchParams]);
   if (error) {
-      throw new KeepApiError(error.message, `${getApiURL()}/providers`, `Failed to query ${getApiURL()}/providers, is Keep API up?`);
+      throw new KeepApiError(error.message, `${getApiURL()}/providers`, error.proposedResolution, error.statusCode);
     }
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
