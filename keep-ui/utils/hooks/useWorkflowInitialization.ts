@@ -92,11 +92,7 @@ const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => 
 };
 
 const useWorkflowInitialization = (
-  workflow: string | undefined,
-  loadedAlertFile: string | null | undefined,
-  providers: Provider[],
   definition: ReactFlowDefinition,
-  onDefinitionChange: (def: Definition) => void,
   toolboxConfiguration: Record<string, any>
 ) => {
   const {

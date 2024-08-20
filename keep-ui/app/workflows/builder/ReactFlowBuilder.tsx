@@ -14,17 +14,13 @@ const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = { "custom-edge": CustomEdge as React.ComponentType<any> };
 
 const ReactFlowBuilder = ({
-  workflow,
-  loadedAlertFile,
-  providers,
+  installedProviders,
   toolboxConfiguration,
   definition,
   onDefinitionChange,
   validatorConfiguration
 }: {
-  workflow: string | undefined;
-  loadedAlertFile: string | null;
-  providers: Provider[];
+  installedProviders: Provider[] | undefined | null;
   toolboxConfiguration: Record<string, any>;
   definition: any;
   validatorConfiguration: {
@@ -38,17 +34,13 @@ const ReactFlowBuilder = ({
     nodes,
     edges,
     isLoading,
-    selectedNode,
     onEdgesChange,
     onNodesChange,
     onConnect,
     onDragOver,
     onDrop,
-  } = useWorkflowInitialization(workflow, 
-    loadedAlertFile,
-     providers,
+  } = useWorkflowInitialization(
       definition,
-      onDefinitionChange,
       toolboxConfiguration,
     );
 
@@ -74,7 +66,7 @@ const ReactFlowBuilder = ({
           </ReactFlow>
         )}
         <ReactFlowEditor 
-          providers={providers} 
+          providers={installedProviders} 
           onDefinitionChange= {onDefinitionChange}
           validatorConfiguration= {validatorConfiguration}
         />
