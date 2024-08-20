@@ -2518,7 +2518,7 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
                     "tenant_id": tenant_id,
                     "fingerprint_i": fingerprint_i,
                     "fingerprint_j": fingerprint_j,
-                    "pmi": pmi,
+                    "pmi": float(pmi),
                 }
 
                 if (fingerprint_i, fingerprint_j) in existing_entries_set:
