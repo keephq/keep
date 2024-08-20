@@ -121,6 +121,7 @@ def get_alert_pmi_matrix(alerts: pd.DataFrame, unique_alert_identifier: str, sli
     pmi_matrix = np.log(pairwise_alert_probabilities / (alert_probabilities[:, None] * alert_probabilities))
     pmi_matrix[np.isnan(pmi_matrix)] = 0
     np.fill_diagonal(pmi_matrix, 0)
+    pmi_matrix = np.clip(pmi_matrix, -100, 100)
     
     pmi_matrix_df = pd.DataFrame(pmi_matrix, index=alert_occurences_df.columns, columns=alert_occurences_df.columns)
     
