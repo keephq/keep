@@ -57,7 +57,8 @@
         "deployment/docker",
         "deployment/kubernetes",
         "deployment/openshift",
-        "deployment/ecs"
+        "deployment/ecs",
+        "deployment/stress-testing"
       ]
     },
     {
@@ -88,6 +89,7 @@
             "providers/documentation/centreon-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
+            "providers/documentation/coralogix-provider",
             "providers/documentation/datadog-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",

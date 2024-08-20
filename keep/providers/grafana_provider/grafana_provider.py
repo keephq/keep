@@ -509,7 +509,10 @@ class GrafanaProvider(BaseProvider):
         if not alert_type:
             alert_type = random.choice(list(ALERTS.keys()))
 
-        alert_payload = ALERTS[alert_type]["payload"]
+        if "payload" in ALERTS[alert_type]:
+            alert_payload = ALERTS[alert_type]["payload"]
+        else:
+            alert_payload = ALERTS[alert_type]["alerts"][0]
         alert_parameters = ALERTS[alert_type].get("parameters", {})
         # Generate random data for parameters
         for parameter, parameter_options in alert_parameters.items():
