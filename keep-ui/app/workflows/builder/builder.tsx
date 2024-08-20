@@ -1,21 +1,12 @@
-import "sequential-workflow-designer/css/designer.css";
-import "sequential-workflow-designer/css/designer-light.css";
-import "sequential-workflow-designer/css/designer-dark.css";
 import "./page.css";
 import {
   Definition,
-  StepsConfiguration,
-  ValidatorConfiguration,
-  Step,
-  Sequence,
 } from "sequential-workflow-designer";
 import {
-  SequentialWorkflowDesigner,
   wrapDefinition,
 } from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
-import StepEditor, { GlobalEditor, GlobalEditorV2 } from "./editors";
-import { Callout, Card, Switch } from "@tremor/react";
+import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
 import {
   parseWorkflow,
@@ -27,7 +18,7 @@ import {
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/20/solid";
-import { globalValidator, globalValidatorV2, stepValidator, stepValidatorV2 } from "./builder-validators";
+import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
@@ -40,7 +31,6 @@ import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
-import BuilderChanagesTracker from "./BuilderChanagesTracker";
 import useStore, { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
 
 interface Props {
@@ -72,7 +62,6 @@ function Builder({
   installedProviders,
   isPreview,
 }: Props) {
-  const [useReactFlow, setUseReactFlow] = useState(true);
 
   const [definition, setDefinition] = useState(() =>
     wrapDefinition({ sequence: [], properties: {} } as Definition)
@@ -92,14 +81,14 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
-  const {setErrorNode} = useStore();
+  const { setErrorNode } = useStore();
 
-  const  setStepValidationErrorV2 = (step:V2Step, error:string|null)=>{
+  const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
-        if(error && step){
-         return setErrorNode(step.id)
-        }
-        setErrorNode(null);
+    if (error && step) {
+      return setErrorNode(step.id)
+    }
+    setErrorNode(null);
   }
 
   const updateWorkflow = () => {
@@ -233,7 +222,7 @@ function Builder({
       (definition.isValid &&
         stepValidationError === null &&
         globalValidationError === null) ||
-        false
+      false
     );
   }, [
     stepValidationError,
@@ -250,31 +239,6 @@ function Builder({
     );
   }
 
-  function IconUrlProvider(componentType: string, type: string): string | null {
-    if (type === "alert" || type === "workflow") return "/keep.png";
-    return `/icons/${type
-      .replace("step-", "")
-      .replace("action-", "")
-      .replace("condition-", "")}-icon.png`;
-  }
-
-  function CanDeleteStep(step: Step, parentSequence: Sequence): boolean {
-    return !step.properties["isLocked"];
-  }
-
-  function IsStepDraggable(step: Step, parentSequence: Sequence): boolean {
-    return CanDeleteStep(step, parentSequence);
-  }
-
-  function CanMoveStep(
-    sourceSequence: any,
-    step: any,
-    targetSequence: Sequence,
-    targetIndex: number
-  ): boolean {
-    return CanDeleteStep(step, sourceSequence);
-  }
-
 
   const ValidatorConfigurationV2: {
     step: (step: V2Step,
@@ -286,18 +250,6 @@ function Builder({
       stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
     root: (def) => globalValidatorV2(def, setGlobalValidationError),
   }
-  const validatorConfiguration: ValidatorConfiguration = {
-    step: (step, parent, definition) =>
-      stepValidator(step, parent, definition, setStepValidationError),
-    root: (def) => globalValidator(def, setGlobalValidationError),
-  };
-
-  const stepsConfiguration: StepsConfiguration = {
-    iconUrlProvider: IconUrlProvider,
-    canDeleteStep: CanDeleteStep,
-    canMoveStep: CanMoveStep,
-    isDraggable: IsStepDraggable,
-  };
 
   function closeGenerateModal() {
     setGenerateModalIsOpen(false);
@@ -306,10 +258,6 @@ function Builder({
   const closeWorkflowExecutionResultsModal = () => {
     setTestRunModalOpen(false);
     setRunningWorkflowExecution(null);
-  };
-
-  const handleSwitchChange = (value: boolean) => {
-    setUseReactFlow(value);
   };
 
   const getworkflowStatus = () => {
@@ -336,27 +284,6 @@ function Builder({
 
   return (
     <div className="h-full">
-      <div className="flex items-center justify-between hidden">
-        <div className="pl-4 flex items-center space-x-3">
-          <Switch
-            id="switch"
-            name="switch"
-            checked={useReactFlow}
-            onChange={handleSwitchChange}
-          />
-          <label
-            htmlFor="switch"
-            className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
-          >
-            Switch to New Builder
-          </label>
-        </div>
-        {/* {useReactFlow && <BuilderChanagesTracker 
-          onDefinitionChange={(def: any) =>
-          setDefinition(wrapDefinition(def))
-        }
-        />} */}
-      </div>
       <Modal
         onRequestClose={closeGenerateModal}
         isOpen={generateModalIsOpen}
@@ -380,49 +307,28 @@ function Builder({
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
           {getworkflowStatus()}
-          {useReactFlow && (
-            <div className="h-[94%]">
-              <ReactFlowProvider>
-                <ReactFlowBuilder
-                  workflow={workflow}
-                  loadedAlertFile={loadedAlertFile}
-                  providers={providers}
-                  definition={definition}
-                  validatorConfiguration={ValidatorConfigurationV2}
-                  onDefinitionChange={(def: any) => {
-                    setDefinition({
-                      value: {
-                        sequence: def?.sequence || [],
-                        properties
-                          : def?.
-                            properties
-                          || {}
-                      }, isValid: def?.isValid || false
-                    })
-                  }
-                  }
-                  toolboxConfiguration={getToolboxConfiguration(providers)}
-                />
-              </ReactFlowProvider>
-            </div>
-          )}
-          {!useReactFlow && (
-            <div className="h-[93%]">
-              <SequentialWorkflowDesigner
+          <div className="h-[94%]">
+            <ReactFlowProvider>
+              <ReactFlowBuilder
+                installedProviders={installedProviders}
                 definition={definition}
-                onDefinitionChange={setDefinition}
-                stepsConfiguration={stepsConfiguration}
-                validatorConfiguration={validatorConfiguration}
-                toolboxConfiguration={getToolboxConfiguration(providers)}
-                undoStackSize={10}
-                controlBar={true}
-                globalEditor={<GlobalEditor />}
-                stepEditor={
-                  <StepEditor installedProviders={installedProviders} />
+                validatorConfiguration={ValidatorConfigurationV2}
+                onDefinitionChange={(def: any) => {
+                  setDefinition({
+                    value: {
+                      sequence: def?.sequence || [],
+                      properties
+                        : def?.
+                          properties
+                        || {}
+                    }, isValid: def?.isValid || false
+                  })
                 }
+                }
+                toolboxConfiguration={getToolboxConfiguration(providers)}
               />
-            </div>
-          )}
+            </ReactFlowProvider>
+          </div>
         </>
       )}
     </div>

@@ -12,7 +12,7 @@ const ReactFlowEditor = ({
   validatorConfiguration,
   onDefinitionChange
 }: {
-  providers: Provider[];
+  providers: Provider[] | undefined | null;
   validatorConfiguration: {
     step: (step: V2Step, parent?: V2Step, defnition?: ReactFlowDefinition) => boolean;
     root: (def: Definition) => boolean;
