@@ -21,7 +21,7 @@ jobs:
 
       - name: Release Keep
         id: release-step
-        uses: python-semantic-release/python-semantic-release@v9.4.0
+        uses: python-semantic-release/python-semantic-release@v9.8.7
         with:
           git_committer_name: Keep Release Bot
           git_committer_email: no-reply@keephq.dev
@@ -34,7 +34,7 @@ jobs:
         uses: peter-evans/create-pull-request@v6.1.0
         with:
           committer: Keep Release Bot <no-reply@keephq.dev>
-          title: "Release - $(date +'%Y-%m-%d')"
+          title: "Release - ${{ steps.release-step.outputs.version }}"
           branch: release/${{ steps.release-step.outputs.version }}
           body: "This PR contains the latest release changes."
           draft: false
