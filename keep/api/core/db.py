@@ -2273,7 +2273,7 @@ def add_alerts_to_incident_by_incident_id(
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
-        incident.severity = alerts_data_for_incident["max_severity"].value
+        incident.severity = alerts_data_for_incident["max_severity"].order
 
         session.add(incident)
         session.commit()
