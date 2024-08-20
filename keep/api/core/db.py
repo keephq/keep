@@ -1903,7 +1903,7 @@ def update_action(
     return found_action
 
 
-def get_tenants_configurations() -> List[Tenant]:
+def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
     with Session(engine) as session:
         try:
             tenants = session.exec(select(Tenant)).all()
@@ -1918,6 +1918,8 @@ def get_tenants_configurations() -> List[Tenant]:
 
     tenants_configurations = {}
     for tenant in tenants:
+        if only_with_config and not tenant.configuration:
+            continue
         tenants_configurations[tenant.id] = tenant.configuration or {}
 
     return tenants_configurations
