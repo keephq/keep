@@ -54,11 +54,17 @@ class QuickchartProvider(BaseProvider):
     def dispose(self):
         pass
 
-    def _notify(self, fingerprint: str) -> dict:
+    def _notify(
+        self,
+        fingerprint: str,
+        status: str | None = None,
+        chartConfig: dict | None = None,
+    ) -> dict:
         db_alerts = get_alerts_by_fingerprint(
             tenant_id=self.context_manager.tenant_id,
             fingerprint=fingerprint,
             limit=False,
+            status=status,
         )
         alerts = convert_db_alerts_to_dto_alerts(db_alerts)
 
@@ -109,10 +115,33 @@ class QuickchartProvider(BaseProvider):
         chart_data = [{"date": key, **value} for key, value in raw_chart_data.items()]
 
         # Generate chart using QuickChart
-        return self.generate_chart_image(chart_data, categories_by_status, title)
+        return self.generate_chart_image(
+            chart_data, categories_by_status, len(alerts), title, chartConfig
+        )
+
+    def __get_total_alerts_gaugae(self, counter: int):
+        qc = QuickChart()
+        if self.authentication_config.api_key:
+            qc.key = self.authentication_config.api_key
+        qc.width = 500
+        qc.height = 300
+        qc.config = {
+            "type": "radialGauge",
+            "data": {"datasets": [{"data": [counter]}]},
+            "options": {
+                "centerArea": {"fontSize": 25, "fontWeight": "bold"},
+            },
+        }
+        chart_url = qc.get_short_url()
+        return chart_url
 
     def generate_chart_image(
-        self, chart_data, categories_by_status, title: str
+        self,
+        chart_data,
+        categories_by_status,
+        total_alerts: int,
+        title: str,
+        config: dict | None = None,
     ) -> dict:
         qc = QuickChart()
 
@@ -121,7 +150,7 @@ class QuickchartProvider(BaseProvider):
 
         qc.width = 800
         qc.height = 400
-        qc.config = {
+        qc.config = config or {
             "type": "line",
             "data": {
                 "labels": [data["date"] for data in chart_data],
@@ -151,7 +180,10 @@ class QuickchartProvider(BaseProvider):
             },
         }
         chart_url = qc.get_short_url()
-        return {"chart_url": chart_url}
+
+        counter_url = self.__get_total_alerts_gaugae(total_alerts)
+
+        return {"chart_url": chart_url, "counter_url": counter_url}
 
 
 if __name__ == "__main__":
@@ -172,6 +204,7 @@ if __name__ == "__main__":
         provider_type="quickchart",
         provider_config=config,
     )
-    provider.notify(
+    result = provider.notify(
         fingerprint="5bcafb4ea94749f36871a2e1169d5252ecfb1c589d7464bd8bf863cdeb76b864"
     )
+    print(result)
