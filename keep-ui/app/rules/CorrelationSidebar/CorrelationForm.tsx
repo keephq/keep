@@ -51,7 +51,7 @@ export const CorrelationForm = ({
       </label>
       <fieldset>
         <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center">
-          Scan every{" "}
+          Append to the same Incident if delay between alerts is below{" "}
           <Button
             className="cursor-default ml-2"
             type="button"

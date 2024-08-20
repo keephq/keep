@@ -123,8 +123,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             Correlations <span className="text-gray-400">({rules.length})</span>
           </Title>
           <Subtitle className="text-gray-400">
-            Dynamically incentivize cross-unit models without best-of-breed
-            models.
+            Manually setup flexible rules for alert to incident correlation
           </Subtitle>
         </div>
         <Button color="orange" onClick={() => onCorrelationClick()}>
