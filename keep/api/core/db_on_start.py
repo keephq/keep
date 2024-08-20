@@ -164,7 +164,6 @@ def migrate_db():
         return None
     
     logger.info("Running migrations...")
-    raise Exception("This is a test exception")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)
     # Re-defined because alembic.ini uses relative paths which doesn't work
