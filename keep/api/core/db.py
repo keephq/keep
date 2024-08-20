@@ -2475,8 +2475,15 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
                 f"Updating {len(pmi_entries_to_update)} PMI entries for tenant {tenant_id}",
                 extra={"tenant_id": tenant_id},
             )
+            new_pmi_matrix = [
+                {
+                    "fingerprint_i": entry.fingerprint_i,
+                    "fingerprint_j": entry.fingerprint_j,
+                    "pmi": entry.pmi,
+                } for entry in pmi_entries_to_update
+            ]
             
-            session.bulk_update_mappings(PMIMatrix, pmi_entries_to_update)
+            session.bulk_update_mappings(PMIMatrix, new_pmi_matrix)
 
         # Insert new records
         if pmi_entries_to_insert:
