@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>div[tabindex=0] fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      [tabindex] {
+        width: 100px;
+        height: 60px;
+        padding: 3px;
+        border: 1px solid #000;
+      }
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <div tabindex="0" id="el">tabindex=0</div>
+    <script src="/dist/focus-visible.js"></script>
+  </body>
+</html>

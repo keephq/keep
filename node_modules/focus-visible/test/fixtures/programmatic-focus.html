@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>programmatic focus fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="start">Focus other button</button>
+    <button id="el">Focus me!</button>
+    <script src="/dist/focus-visible.js"></script>
+    <script>
+      start.onclick = function() {
+        el.focus();
+      };
+    </script>
+  </body>
+</html>

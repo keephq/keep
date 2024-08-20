@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>change tabs with focus on element which always matches focus ring fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        margin: 20px;
+      }
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <input type="text" id="el">
+    <script src="/dist/focus-visible.js"></script>
+    <script>
+      function openTempWindow() {
+        var newWindow = window.open();
+        setTimeout(function() {
+          newWindow.close();
+        }, 1500);
+      }
+      el.onclick = function() {
+        openTempWindow();
+      };
+      el.onkeyup = function(e) {
+        if (e.keyCode == 32) {
+          openTempWindow();
+        }
+      }
+    </script>
+  </body>
+</html>

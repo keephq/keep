@@ -1,0 +1,61 @@
+{
+  "name": "focus-visible",
+  "version": "5.2.1",
+  "description": "Polyfill for :focus-visible pseudo-selector",
+  "scripts": {
+    "build": "rollup -c",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "src/focus-visible.js": [
+      "eslint"
+    ],
+    "*.{js,css}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "main": "dist/focus-visible.js",
+  "module": "dist/focus-visible.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WICG/focus-visible.git"
+  },
+  "author": "WICG",
+  "license": "W3C",
+  "bugs": {
+    "url": "https://github.com/WICG/focus-visible/issues"
+  },
+  "homepage": "https://github.com/WICG/focus-visible",
+  "devDependencies": {
+    "@webcomponents/webcomponentsjs": "^2.2.10",
+    "ajv": "^6.0.0",
+    "clear-module": "^2.1.0",
+    "concurrently": "^4.0.0",
+    "cross-env": "^5.1.4",
+    "eslint": "^5.0.0",
+    "eslint-config-prettier": "^3.0.0",
+    "eslint-plugin-es5": "^1.2.0",
+    "expect": "^1.20.2",
+    "geckodriver": "^1.12.1",
+    "glob-promise": "^3.3.0",
+    "http-server": "^0.11.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.0.5",
+    "mocha": "^5.1.1",
+    "mz": "^2.7.0",
+    "prettier": "^1.12.1",
+    "rollup": "^0.65.0",
+    "rollup-plugin-commonjs": "^9.1.2",
+    "rollup-plugin-node-resolve": "^3.0.1",
+    "rollup-plugin-uglify": "^3.0.0",
+    "rollup-watch": "^4.3.1",
+    "selenium-assistant": "^5.3.0",
+    "wait-on": "^2.1.0"
+  },
+  "greenkeeper": {
+    "ignore": [
+      "expect"
+    ]
+  }
+}

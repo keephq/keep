@@ -1,0 +1,31 @@
+div,
+input,
+textarea,
+h1,
+h2 {
+  font-family: arial, sans-serif;
+}
+
+div {
+  margin: 1em 0;
+}
+
+div[contenteditable] {
+  width: 10em;
+  min-height: 2em;
+  padding: 0.2em;
+  border: 1px solid #000;
+}
+
+label {
+  display: block;
+  margin: 1em 0;
+}
+
+select {
+  width: 10em;
+}
+
+.js-focus-visible :focus:not(.focus-visible) {
+  outline: 0;
+}

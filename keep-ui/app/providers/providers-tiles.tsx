@@ -8,6 +8,7 @@ import ProviderTile from "./provider-tile";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { HoverEffect } from "@/components/ui/card-hover-effect";
 
 const ProvidersTiles = ({
   providers,
@@ -105,8 +106,8 @@ const ProvidersTiles = ({
           {installedProvidersMode
             ? "Installed Providers"
             : linkedProvidersMode
-            ? "Linked Providers"
-            : "Available Providers"}
+              ? "Linked Providers"
+              : "Available Providers"}
         </Title>
         {linkedProvidersMode && (
           <div className="ml-2 relative">
@@ -120,21 +121,23 @@ const ProvidersTiles = ({
         )}
       </div>
 
-      <div className="flex flex-wrap mb-5 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-4 gap-2 py-10 ">
         {providers
           .sort(
             (a, b) =>
               Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
               Number(b.supports_webhook) - Number(a.supports_webhook) ||
               Number(b.oauth2_url ? true : false) -
-                Number(a.oauth2_url ? true : false)
+              Number(a.oauth2_url ? true : false)
           )
-          .map((provider) => (
-            <ProviderTile
-              key={provider.id}
-              provider={provider}
-              onClick={() => handleConnectProvider(provider)}
-            ></ProviderTile>
+          .map((provider, index) => (
+            <HoverEffect idx={index} key={index}>
+              <ProviderTile
+                key={provider.id}
+                provider={provider}
+                onClick={() => handleConnectProvider(provider)}
+              ></ProviderTile>
+            </HoverEffect>
           ))}
       </div>
 

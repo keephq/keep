@@ -91,16 +91,29 @@ const getEmptyDistribution = () => {
 export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <div
-      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
+      className="tile-basis z-10 h-full border  group flex  dark:bg-black shadow-lg dark:shadow-inner dark:shadow-white/60 justify-around items-center bg-white rounded-lg grayscale-0 cursor-pointer"
       onClick={onClick}
     >
-      <div className="w-48">
+      <div className=" w-full p-3 relativ ">
+        <div className=" w-11 h-11">
+          <ImageWithFallback
+            src={`/icons/${provider.type}-icon.png`}
+            fallbackSrc={`/icons/keep-icon.png`}
+            width={48}
+            height={48}
+            alt={provider.type}
+            className={`${provider.installed || provider.linked
+              ? ""
+              : "grayscale-0"
+              } object-cover h-full w-full`}
+          />
+        </div>
         {(provider.can_setup_webhook || provider.supports_webhook) &&
           !provider.installed &&
           !provider.linked && (
             <Icon
               icon={WebhookIcon}
-              className="absolute top-[-15px] right-[-15px] grayscale hover:grayscale-0 group-hover:grayscale-0"
+              className="absolute top-0 right-0"
               color="green"
               size="sm"
               tooltip="Webhook available"
@@ -109,11 +122,10 @@ export default function ProviderTile({ provider, onClick }: Props) {
         {provider.oauth2_url && !provider.installed && !provider.linked && (
           <Icon
             icon={OAuthIcon}
-            className={`absolute top-[-15px] ${
-              provider.can_setup_webhook || provider.supports_webhook
-                ? "right-[-0px]"
-                : "right-[-15px]"
-            } grayscale hover:grayscale-0 group-hover:grayscale-0`}
+            className={`absolute top-[-15px] ${provider.can_setup_webhook || provider.supports_webhook
+              ? "right-[-0px]"
+              : "right-[-15px]"
+              } grayscale hover:grayscale-0 group-hover:grayscale-0`}
             color="green"
             size="sm"
             tooltip="OAuth2 available"
@@ -129,12 +141,11 @@ export default function ProviderTile({ provider, onClick }: Props) {
             Linked
           </Text>
         ) : null}
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           <div>
             <Title
-              className={`${
-                !provider.linked ? "group-hover:hidden" : ""
-              } capitalize`}
+              className={`${!provider.linked ? "group-hover " : ""
+                } capitalize font-semibold  text-base`}
               title={provider.details?.name}
             >
               {provider.display_name}{" "}
@@ -147,7 +158,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             )}
             {provider.last_alert_received ? (
               <Text
-                className={`${!provider.linked ? "group-hover:hidden" : ""}`}
+                className={`${!provider.linked ? "" : ""}`}
               >
                 Last alert: {moment(provider.last_alert_received).fromNow()}
               </Text>
@@ -157,11 +168,11 @@ export default function ProviderTile({ provider, onClick }: Props) {
             {provider.linked && provider.id ? (
               <Text className="truncate">Id: {provider.id}</Text>
             ) : (
-              <br></br>
+              <></>
             )}
             {(provider.installed || provider.linked) &&
-            provider.alertsDistribution &&
-            provider.alertsDistribution.length > 0 ? (
+              provider.alertsDistribution &&
+              provider.alertsDistribution.length > 0 ? (
               <SparkAreaChart
                 data={addOneToDistribution(provider.alertsDistribution)}
                 categories={["number"]}
@@ -169,9 +180,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 colors={["orange"]}
                 showGradient={true}
                 autoMinValue={true}
-                className={`${
-                  !provider.linked ? "group-hover:hidden" : ""
-                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+                className={`${!provider.linked ? "" : ""
+                  }`}
               />
             ) : provider.installed || provider.linked ? (
               <SparkAreaChart
@@ -179,15 +189,14 @@ export default function ProviderTile({ provider, onClick }: Props) {
                 categories={["number"]}
                 index={"hour"}
                 colors={["orange"]}
-                className={`${
-                  !provider.linked ? "group-hover:hidden" : ""
-                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
+                className={`${!provider.linked ? "" : ""
+                  }`}
                 autoMinValue={true}
                 maxValue={1}
               />
             ) : null}
           </div>
-          <div className="labels flex group-hover:hidden">
+          <div className="labels flex flex-wrap gap-2 ">
             {!provider.installed &&
               !provider.linked &&
               provider.tags.map((tag) => {
@@ -195,20 +204,20 @@ export default function ProviderTile({ provider, onClick }: Props) {
                   tag === "alert"
                     ? BellAlertIcon
                     : tag === "data"
-                    ? CircleStackIcon
-                    : tag === "ticketing"
-                    ? TicketIcon
-                    : tag === "queue"
-                    ? QueueListIcon
-                    : tag === "topology"
-                    ? MapIcon
-                    : ChatBubbleBottomCenterIcon;
+                      ? CircleStackIcon
+                      : tag === "ticketing"
+                        ? TicketIcon
+                        : tag === "queue"
+                          ? QueueListIcon
+                          : tag === "topology"
+                            ? MapIcon
+                            : ChatBubbleBottomCenterIcon;
                 return (
                   <Badge
                     key={tag}
                     icon={icon}
                     size="xs"
-                    className="mr-1"
+                    className=" px-2 bg-white dark:bg-black shadow-inner group-hover:shadow-orange-500/40 text-black border-orange-600"
                     color="slate"
                   >
                     <p className="ml-1">{tag}</p>
@@ -217,29 +226,18 @@ export default function ProviderTile({ provider, onClick }: Props) {
               })}
           </div>
           {!provider.linked && (
-            <Button
-              variant="secondary"
-              size="xs"
+            <button
+              className="group/button mt-6 relative overflow-hidden rounded-md border border-orange-500/50 bg-white px-4 py-2 text-sm font-medium text-orange-500 transition-all duration-150 hover:border-orange-500 active:scale-95"
               color={provider.installed ? "orange" : "green"}
-              className="hidden group-hover:block pd-2"
             >
-              {provider.installed ? "Modify" : "Connect"}
-            </Button>
+              <span className="absolute bottom-0 left-0 z-0 h-0 w-full bg-gradient-to-t from-orange-600 to-orange-500 transition-all duration-500 group-hover/button:h-full" />
+              <span className="relative z-10 transition-all duration-500 group-hover/button:text-white">
+                {provider.installed ? "Modify" : "Connect"}
+              </span>
+            </button >
           )}
         </div>
       </div>
-      <ImageWithFallback
-        src={`/icons/${provider.type}-icon.png`}
-        fallbackSrc={`/icons/keep-icon.png`}
-        width={48}
-        height={48}
-        alt={provider.type}
-        className={`${
-          provider.installed || provider.linked
-            ? ""
-            : "grayscale group-hover:grayscale-0"
-        }`}
-      />
     </div>
   );
 }

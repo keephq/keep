@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>contenteditable fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      [contenteditable] {
+        width: 100px;
+        height: 60px;
+        padding: 3px;
+        border: 1px solid #000;
+      }
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      FF won't focus a div with contenteditable if it's the first element on the page.
+      https://jsbin.com/cawevo/edit?html,output
+      Add a dummy button so Selenium can use it as the first focus target.
+    -->
+    <button id="start">Start</button>
+    <div contenteditable id="el"></div>
+    <script src="/dist/focus-visible.js"></script>
+  </body>
+</html>

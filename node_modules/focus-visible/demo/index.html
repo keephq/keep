@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html><head>
+    <!-- Original test page written by Dominic Mazzoni -->
+    <title>focus-visible class demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="./demo.css">
+  </head>
+  <body>
+    <h1>Keyboard-only focus test</h1>
+    <p>
+      This page contains various html controls and demonstrates a proposal for only drawing a focus
+      ring when the keyboard is being used. Navigate through the interactive elements in various
+      ways (using mouse, switch to keyboard, try it on a touch device). You should see the normal
+      platform focus indicator on elements below differently based on whether you interact with them
+      via keyboard or mouse. If you are using the mouse and get lost, at any time you can press a
+      key (such as Shift) to have the focus indicator appear.
+    </p>
+    <h2>Buttons</h2>
+    <div>
+      <label><input type="checkbox">Checkbox</label>
+    </div>
+    <div>
+      <label><input name="a" type="radio">Radio 1</label>
+      <label><input name="a" type="radio">Radio 2</label>
+    </div>
+    <div>
+      <button>Button</button>
+    </div>
+    <div>
+      <input type="submit" value="Submit button">
+    </div>
+    <h2 id="links">Links</h2>
+    <div>
+      <a href="https://github.com/WICG/focus-visible">:focus-visible on GitHub</a>
+    </div>
+    <div>
+      <a href="#links">Named anchor for #links section.</a>
+    </div>
+    <h2>Editable text</h2>
+    <div>
+      <input placeholder="Single line">
+    </div>
+    <div>
+      <textarea placeholder="Multi line"></textarea>
+    </div>
+    <div>
+      <div contenteditable="true">Contenteditable explicitly set to true</div>
+    </div>
+    <div>
+      <div contenteditable>Contenteditable</div>
+    </div>
+    <div>
+      <div role="textbox" contenteditable="true">Contenteditable with textbox role</div>
+    </div>
+    <h2>Focusable <code>&lt;div&gt;</code>s</h2>
+      <div tabindex="0"><code>tabindex="0"</code></div>
+      <div tabindex="-1"><code>tabindex="-1"</code></div>
+      <div tabindex="0" class="focus-visible"><code>tabindex="0"</code> with explicit <code>class="focus-visible"</code></div>
+    <h2>Selects</h2>
+    <label>Select one from drop-down:<br>
+      <select>
+        <option>Apple</option>
+        <option>Orange</option>
+        <option>Banana</option>
+      </select>
+    </label>
+    <label>Select one from list:<br>
+      <select size="5">
+        <option>Apple</option>
+        <option>Orange</option>
+        <option>Banana</option>
+      </select>
+    </label>
+    <label>Select multiple:<br>
+      <select multiple="">
+        <option>Apple</option>
+        <option>Orange</option>
+        <option>Banana</option>
+      </select>
+    </label>
+    <h2>Other</h2>
+    <label>Process nice score from -20 to +20:<br>
+      <input type="range" min="-20" max="20" value="0">
+    </label>
+    <label>Bowling score from 0 to 300:<br>
+      <input type="range" min="0" max="300" value="0">
+    </label>
+    <div>
+      <input type="date" value="2008-09-01">
+    </div>
+    <div>
+      <input type="time" value="00:00:00">
+    </div>
+    <div>
+      <input type="number" placeholder="Number">
+    </div>
+    <div>
+      <input type="color" title="Color" value="#00ff00">
+    </div>
+    <div>
+      <input type="file" title="File">
+    </div>
+    <script src="https://unpkg.com/focus-visible"></script>
+  </body>
+</html>

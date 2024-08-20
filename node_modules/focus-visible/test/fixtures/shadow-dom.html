@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>shadow-dom fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/node_modules/@webcomponents/webcomponentsjs/webcomponents-loader.js"></script>
+    <style>
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <p>An element with a shadow root:</p>
+    <div id="el"></div>
+
+    <template id="shadow-root-template">
+      <style>
+        :host {
+          /* NOTE: We fix the width of the element in order to prevent it from
+           * being accidentally clicked when the test is fixtured. */
+          width: 200px;
+        }
+        :host([data-js-focus-visible]) :focus:not(.focus-visible) {
+          outline: none;
+        }
+        .focus-visible {
+          outline: 2px solid red;
+        }
+      </style>
+      <div id="shadow-el" tabindex="0">Hello</div>
+    </template>
+    <script src="/dist/focus-visible.js"></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function() {
+        var shadowRootTemplate = document.querySelector('#shadow-root-template');
+
+        if (self.ShadyCSS != null) {
+          ShadyCSS.prepareTemplate(shadowRootTemplate, 'div');
+        }
+
+        var el = document.querySelector('#el');
+
+        el.attachShadow({ mode: 'open', delegatesFocus: true });
+        el.shadowRoot.appendChild(
+            shadowRootTemplate.content.cloneNode(true));
+
+        applyFocusVisiblePolyfill(el.shadowRoot);
+      }, { once: true });
+    </script>
+  </body>
+</html>

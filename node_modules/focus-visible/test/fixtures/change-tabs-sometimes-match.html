@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>change tabs with focus on element which matches focus ring only on keyboard focus fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        margin: 20px;
+      }
+      [tabindex] {
+        width: 100px;
+        height: 60px;
+        padding: 3px;
+        border: 1px solid #000;
+      }
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <div tabindex="0" id="el">Click me</div>
+    <script src="/dist/focus-visible.js"></script>
+    <script>
+      function openTempWindow() {
+        var newWindow = window.open();
+        setTimeout(function() {
+          newWindow.close();
+        }, 1500);
+      }
+      el.onclick = function() {
+        openTempWindow();
+      };
+      el.onkeyup = function(e) {
+        if (e.keyCode == 32) {
+          openTempWindow();
+        }
+      }
+    </script>
+  </body>
+</html>

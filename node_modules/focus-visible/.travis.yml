@@ -1,0 +1,25 @@
+os: osx
+addons:
+  chrome: stable
+  firefox: '57.0'
+language: node_js
+node_js:
+- '8'
+- '10'
+cache:
+  directories:
+  - "$HOME/.npm"
+  - "~/.selenium-assistant"
+before_install:
+# package-lock.json was introduced in npm@5
+- '[[ $(node -v) =~ ^v9.*$ ]] || npm install -g npm@latest' # skipped when using node 9
+- npm install -g greenkeeper-lockfile
+install: npm install
+before_script: greenkeeper-lockfile-update
+after_script: greenkeeper-lockfile-upload
+script:
+- npm test
+- npm run sauce
+env:
+  global:
+    secure: qSfQS84RPgmuYfRKC/3KSxQK24/TpqalIsOQwfKTN3Xh7ClxCTCtfpYv2rKk5OeBEhsjUNrujtXQ9XEy1LoPGLdZd+ylDCORVQXJwkVV1zBK/YILdVX82yzMOHTV+HPYRZASz5vEkqgwMKY8TlveUbmIgAkEbxvjBaQKn4K5qRz7rxEaN1pbTLAKj8DYlOQpWfHRj3lQDBa4D6FTsTVWWQF0QvIXOKgcrn1eurk9zue5Y/Y3ROAIxGYEhh37ToOzqThte3RnauG5xv01cWp5+MJuG4wYt5y4UQHHgSWwcbZ8w+38e08j12dAWRgo4JZgksbmCnHtoDwwo29MBYMGzCLyyGiJ0KRng1/sXoY0c7R+47jx4RlfbULY9jN+NiB6tpVAyXcFmn7mb87fDrnFc+KxcRatPRbkSGoZ0kwlwVZbVPiv0NXEgw2r9BxdDPATrwSxPYYqkdamt5bxujAuepifRx7/4Wzsakyy99CgKmUq3blp8nWoTnyKeRy6wvtYsiXA/nWTun1HLkiloG9Cbtba2ltKaFVL+0dWuWF5+Q//3k8b9OyZmsPqFnz2mh/dv8vRvvhXeFYC4ZQ68Wb4bnbG3JwJKPXvtLh2kLgdRTuR4x6MYGbO2kMvLzI21PsD3TaAkqune75BMYtDJZK6vR7TNCltjRZo3lXW68cIdsU=

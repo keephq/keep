@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>svg focus fixture</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      .js-focus-visible :focus:not(.focus-visible) {
+        outline: none;
+      }
+      .focus-visible {
+        outline: 2px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="start">Start</button>
+    <button id="middle">
+      <svg id="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+        <circle cx="50" cy="50" fill="red" r="50"></circle>
+      </svg>
+    </button>
+    <button id="end">End</button>
+    <script src="/dist/focus-visible.js"></script>
+  </body>
+</html>

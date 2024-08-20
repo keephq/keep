@@ -143,6 +143,7 @@
     "flat-cache": "^3.0.4",
     "follow-redirects": "^1.15.6",
     "form-data": "^4.0.0",
+    "framer-motion": "^11.3.28",
     "fs.realpath": "^1.0.0",
     "function-bind": "^1.1.1",
     "function.prototype.name": "^1.1.5",
