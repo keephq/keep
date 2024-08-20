@@ -125,6 +125,8 @@ def create_db_engine():
             creator=__get_conn,
             echo=DB_ECHO,
             json_serializer=dumps,
+            pool_size=DB_POOL_SIZE,
+            max_overflow=DB_MAX_OVERFLOW,
         )
     elif DB_CONNECTION_STRING == "impersonate":
         engine = create_engine(
