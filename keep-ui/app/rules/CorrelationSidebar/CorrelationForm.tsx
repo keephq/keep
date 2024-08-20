@@ -4,13 +4,14 @@ import {
   MultiSelectItem,
   NumberInput,
   Select,
-  SelectItem,
+  SelectItem, Switch, Text,
   TextInput,
 } from "@tremor/react";
 import { Controller, get, useFormContext } from "react-hook-form";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { AlertDto } from "app/alerts/models";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import React from "react";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];
@@ -50,7 +51,7 @@ export const CorrelationForm = ({
       </label>
       <fieldset>
         <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center">
-          Scan every{" "}
+          Append to the same Incident if delay between alerts is below{" "}
           <Button
             className="cursor-default ml-2"
             type="button"
@@ -117,6 +118,26 @@ export const CorrelationForm = ({
             </MultiSelect>
           )}
         />
+      </div>
+      <div className="flex items-center space-x-2">
+
+        <Controller
+          control={control}
+          name="requireApprove"
+          render={({ field: { value, onChange } }) => (
+            <Switch
+              color="orange"
+              id="requireManualApprove"
+              onChange={onChange}
+              checked={value}
+            />
+          )}
+        />
+
+
+        <label htmlFor="requireManualApprove" className="text-sm text-gray-500">
+          <Text>Created incidents require manual approve</Text>
+        </label>
       </div>
     </div>
   );
