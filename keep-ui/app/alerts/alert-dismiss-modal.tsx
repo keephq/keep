@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Title, Subtitle, Card, Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-quill/dist/quill.snow.css";
 import { AlertDto } from "./models";
-import { format, set } from "date-fns";
+import { format, set, isSameDay, isAfter, addMinutes } from "date-fns";
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
@@ -37,6 +37,15 @@ export default function AlertDismissModal({
   const { mutate: alertsMutator } = usePresetAlerts(presetName, { revalidateOnMount: false });
 
   const { data: session } = useSession();
+
+  // Ensuring that the useEffect hook is called consistently
+  useEffect(() => {
+    const now = new Date();
+    const roundedMinutes = Math.ceil(now.getMinutes() / 15) * 15;
+    const defaultTime = set(now, { minutes: roundedMinutes, seconds: 0, milliseconds: 0 });
+    setSelectedDateTime(defaultTime);
+  }, []);
+
   if (!alerts) return null;
 
   const isOpen = !!alerts;
@@ -103,6 +112,17 @@ export default function AlertDismissModal({
     handleClose();
   };
 
+  const filterPassedTime = (time: Date) => {
+    const currentDate = new Date();
+    const selectedDate = new Date(time);
+
+    if (isSameDay(currentDate, selectedDate)) {
+      return isAfter(selectedDate, currentDate);
+    }
+
+    return true;
+  };
+
   return (
     <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
       {alerts && alerts.length == 1 && alerts[0].dismissed ? (
@@ -158,8 +178,10 @@ export default function AlertDismissModal({
                         minutes: 59,
                         seconds: 59,
                       })}
+                      filterTime={filterPassedTime}
                       inline
                       calendarClassName="custom-datepicker"
+
                     />
                     {showError && <div className="text-red-500 mt-2">Must choose a date</div>}
                   </div>
