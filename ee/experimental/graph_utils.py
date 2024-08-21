@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import networkx as nx
 
@@ -5,6 +7,7 @@ from typing import List, Tuple
 
 from keep.api.core.db import get_pmi_values
 
+logger = logging.getLogger(__name__)
 
 def detect_knee_1d_auto_increasing(y: List[float]) -> Tuple[int, float]:
     """
@@ -70,6 +73,10 @@ def create_graph(tenant_id: str, fingerprints: List[str], pmi_threshold: float =
 
     # Load all PMI values at once
     pmi_values = get_pmi_values(tenant_id, fingerprints)
+    
+    logger.info(f'Loaded PMI values for {len(pmi_values)} fingerprint pairs', extra={'tenant_id': tenant_id})
+    
+    logger.info(f'Creating alert graph edges', extra={'tenant_id': tenant_id})
 
     for idx_i, fingerprint_i in enumerate(fingerprints):
         if not isinstance(pmi_values[(fingerprint_i, fingerprint_i)], float):
@@ -77,14 +84,17 @@ def create_graph(tenant_id: str, fingerprints: List[str], pmi_threshold: float =
 
         for idx_j in range(idx_i + 1, len(fingerprints)):
             fingerprint_j = fingerprints[idx_j]
-            weight = pmi_values[(fingerprint_i, fingerprint_j)]
-            if not isinstance(weight, float):
+            
+            if not (fingerprint_i, fingerprint_j) in pmi_values:
                 continue
+            
+            weight = pmi_values[(fingerprint_i, fingerprint_j)]
 
             if weight > pmi_threshold:
                 graph.add_edge(fingerprint_i, fingerprint_j, weight=weight)
                 
     nodes_to_delete = []
+    logger.info(f'Preparing candidate nodes for deletion', extra={'tenant_id': tenant_id})
     
     for node in graph.nodes:
         weights = sorted([edge['weight'] for edge in graph[node].values()])
