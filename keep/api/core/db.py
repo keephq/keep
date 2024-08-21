@@ -1972,6 +1972,16 @@ def get_incidents(tenant_id) -> List[Incident]:
         ).all()
     return incidents
 
+def get_incident_alerts(tenant_id, incident_id) -> List[Alert]:
+    with Session(engine) as session:
+        alerts = session.exec(
+            select(Alert)
+            .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .where(AlertToIncident.incident_id == incident_id)
+            .where(AlertToIncident.tenant_id == tenant_id)
+        ).all()
+    return alerts
+
 
 def get_alert_audit(
     tenant_id: str, fingerprint: str, limit: int = 50
