@@ -1996,6 +1996,7 @@ def get_last_incidents(
             session.query(
                 Incident,
             )
+            .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
             )
@@ -2242,6 +2243,9 @@ def add_alerts_to_incident_by_incident_id(
         new_alert_ids = [
             alert_id for alert_id in alert_ids if alert_id not in existed_alert_ids
         ]
+        
+        if not new_alert_ids:
+            return incident
 
         alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 

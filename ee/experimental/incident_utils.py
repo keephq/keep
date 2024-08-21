@@ -196,16 +196,16 @@ async def mine_incidents_and_create_objects(
         if len(component) > min_incident_size:            
             alerts_appended = False
             for incident in incidents:
-                incident_fingerprints = set([alert.fingerprint for alert in incident.Incident.alerts])        
+                incident_fingerprints = set([alert.fingerprint for alert in incident.alerts])        
                 intersection = incident_fingerprints.intersection(component)
         
                 if len(intersection) / len(component) >= incident_similarity_threshold:
                     alerts_appended = True
                     
-                    add_alerts_to_incident_by_incident_id(tenant_id, incident.Incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
+                    add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
-                    summary = generate_incident_summary(incident.Incident)
-                    update_incident_summary(incident.Incident.id, summary)
+                    summary = generate_incident_summary(incident)
+                    update_incident_summary(incident.id, summary)
                     
             if not alerts_appended:
                 incident_start_time = min([alert.timestamp for alert in alerts if alert.fingerprint in component])
