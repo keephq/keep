@@ -25,7 +25,6 @@ from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     query_alerts,
     get_last_incidents,
-    get_incident_alerts,
     get_incident_by_id,
     write_pmi_matrix_to_db,
     create_incident_from_dict,
@@ -197,7 +196,7 @@ async def mine_incidents_and_create_objects(
         if len(component) > min_incident_size:            
             alerts_appended = False
             for incident in incidents:
-                incident_fingerprints = set([alert.fingerprint for alert in get_incident_alerts(tenant_id, incident.id)])        
+                incident_fingerprints = set([alert.fingerprint for alert in incident.alerts])        
                 intersection = incident_fingerprints.intersection(component)
         
                 if len(intersection) / len(component) >= incident_similarity_threshold:
