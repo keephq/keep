@@ -1,17 +1,69 @@
 """
 WebhookProvider is a class that provides a way to notify a 3rd party service using a webhook.
 """
+
+import dataclasses
 import json
 import base64
 import typing
 
+import pydantic
 import requests
 from requests.exceptions import JSONDecodeError
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+@pydantic.dataclasses.dataclass
+class WebhookProviderAuthConfig:
+    """
+    Webhook authentication configuration.
+    """
+
+    url: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Webhook URL",
+        }
+    )
+
+    method: typing.Literal["GET", "POST", "PUT", "DELETE"] = dataclasses.field(
+        default="POST",
+        metadata={
+            "description": "HTTP method",
+        }
+    )
+
+    http_basic_authentication_username: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "HTTP basic authentication - Username",
+        }
+    )
+
+    http_basic_authentication_password: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "HTTP basic authentication - Password",
+            "sensitive": True,
+        }
+    )
+
+    api_key: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "API key",
+            "sensitive": True,
+        }
+    )
+
+    headers: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Headers",
+        }
+    )
 
 class WebhookProvider(BaseProvider):
     """Enrich alerts with data from Webhook."""
@@ -24,10 +76,37 @@ class WebhookProvider(BaseProvider):
         "googleapis.com",
     ]
 
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="send_alert",
+            mandatory=True,
+            alias="Send Alert",
+        )
+    ]
+
+    PROVIDER_TAGS = ["alert"]
+    PROVIDER_DISPLAY_NAME = "Webhook"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+    def dispose(self):
+        """
+        Nothing to do here.
+        """
+        pass
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        validated_scopes = {}
+        validated_scopes["send_alert"] = True
+        return validated_scopes
+
+    def validate_config(self):
+        self.authentication_config = WebhookProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def __validate_url(self, url: str):
         """
@@ -36,26 +115,9 @@ class WebhookProvider(BaseProvider):
         for endpoint in WebhookProvider.BLACKLISTED_ENDPOINTS:
             if endpoint in url:
                 raise Exception(f"URL {url} is blacklisted")
-
-    def dispose(self):
-        """
-        Nothing to do here.
-        """
-        pass
-
-    def validate_config(self):
-        """
-        No configuration to validate here
-        """
-
+            
     def _notify(
         self,
-        url: str,
-        method: typing.Literal["GET", "POST", "PUT", "DELETE"] = "POST",
-        http_basic_authentication_username: str = None,
-        http_basic_authentication_password: str = None,
-        api_key: str = None,
-        headers: dict = None,
         body: dict = None,
         params: dict = None,
         **kwargs,
@@ -64,12 +126,12 @@ class WebhookProvider(BaseProvider):
         Send a HTTP request to the given url.
         """
         self.query(
-            url=url,
-            method=method,
-            http_basic_authentication_username=http_basic_authentication_username,
-            http_basic_authentication_password=http_basic_authentication_password,
-            api_key=api_key,
-            headers=headers,
+            url=self.authentication_config.url,
+            method=self.authentication_config.method,
+            http_basic_authentication_username=self.authentication_config.http_basic_authentication_username,
+            http_basic_authentication_password=self.authentication_config.http_basic_authentication_password,
+            api_key=self.authentication_config.api_key,
+            headers=self.authentication_config.headers,
             body=body,
             params=params,
             **kwargs,
@@ -82,7 +144,7 @@ class WebhookProvider(BaseProvider):
         http_basic_authentication_username: str = None,
         http_basic_authentication_password: str = None,
         api_key: str = None,
-        headers: dict = None,
+        headers: str = None,
         body: dict = None,
         params: dict = None,
         **kwargs: dict,
