@@ -40,7 +40,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
       <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon href="/rules" icon={Rules}>
-            <Subtitle>Alert Groups</Subtitle>
+            <Subtitle>Correlations</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
