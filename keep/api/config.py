@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
     logger.info("Keep server starting")
-    if not os.environ.get("SKIP_DB_CREATION", "false") == "true":
-        migrate_db()
+    
+    migrate_db()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
