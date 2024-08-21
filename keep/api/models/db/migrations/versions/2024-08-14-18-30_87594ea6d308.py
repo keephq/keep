@@ -50,8 +50,8 @@ def upgrade() -> None:
             )
         )
 
-    op.drop_table("alerttogroup")
-    op.drop_table("group")
+    # op.drop_table("alerttogroup")
+    # op.drop_table("group")
 
     with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
         batch_op.add_column(sa.Column("timestamp", sa.DateTime(), nullable=False,
