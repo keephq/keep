@@ -12,7 +12,7 @@ from keep.providers.models.provider_config import ProviderConfig
 
 
 class GcpmonitoringProvider(BaseProvider):
-    """Get alerts from Azure Monitor into Keep."""
+    """Get alerts from GCP Monitoring into Keep."""
 
     webhook_description = ""
     webhook_template = ""

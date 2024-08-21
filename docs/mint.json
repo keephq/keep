@@ -101,6 +101,7 @@
             "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
+            "providers/documentation/quickchart-provider",
             "providers/documentation/incidentio-provider",
             "providers/documentation/jira-provider",
             "providers/documentation/kibana-provider",
@@ -265,12 +266,6 @@
             "api-ref/enrichment/get-rules",
             "api-ref/enrichment/update-extraction-rule",
             "api-ref/enrichment/update-rule"
-          ]
-        },
-        {
-          "group": "Groups",
-          "pages": [
-            "api-ref/groups/get-groups"
           ]
         },
         {
