@@ -1,0 +1,17 @@
+---
+title: 'Webhook'
+sidebarTitle: 'Webhook Provider'
+description: 'A webhook is a method used to send real-time data from one application to another whenever a specific event occurs'
+---
+
+## Inputs and Authentication
+
+The `query` method of the Webhook provider accepts the following parameters:
+
+- `url` (required): The URL to which the webhook will send the data.
+- `method`: The HTTP method to use when sending the data. Default is `POST`. Supported methods are `GET`, `POST`, `PUT` and `DELETE`.
+- Supports HTTP Authentication using `http_basic_authentication_username` and `http_basic_authentication_password` parameters.
+- Supports API key Authentication using `api_key` parameter.
+- `headers`: An object containing the headers to send with the request.
+- `body`: The data to send in the request body.
+- `params`: An object containing the query parameters to send with the request.
