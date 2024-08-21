@@ -267,12 +267,6 @@
           ]
         },
         {
-          "group": "Groups",
-          "pages": [
-            "api-ref/groups/get-groups"
-          ]
-        },
-        {
           "group": "Whoami",
           "pages": [
             "api-ref/whoami/get-tenant-id"
