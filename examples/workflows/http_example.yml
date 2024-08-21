@@ -1,0 +1,14 @@
+workflow:
+  id: http-example
+  triggers:
+  - type: alert
+  actions:
+    - name: trigger-http-post
+      provider:
+        type: http
+        with:
+          method: POST
+          body:
+            alert: keep.json_loads('{{ alert }}')
+            fingerprint: '{{ alert.fingerprint }}'
+          url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"
