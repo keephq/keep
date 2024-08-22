@@ -8,6 +8,7 @@ from typing import Callable, Optional
 import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
@@ -605,6 +606,8 @@ async def install_provider(
             context_manager, provider_id, provider_type, provider_config
         )
     except (ProviderException, ProviderConfigException) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     validated_scopes = validate_scopes(provider)

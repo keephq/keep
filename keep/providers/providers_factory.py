@@ -299,14 +299,12 @@ class ProvidersFactory:
                         ).keys()
                     )[1:]
                 )
-                config = (
-                    {
-                        field.name: dict(field.metadata)
-                        for field in fields(provider_auth_config_class)
-                    }
-                    if provider_auth_config_class
-                    else {}
-                )
+                config = {}
+                if provider_auth_config_class:
+                    for field in fields(provider_auth_config_class):
+                        config[field.name] = dict(field.metadata)
+                        if field.default is not None:
+                            config[field.name]["default"] = field.default
                 provider_description = provider_class.__dict__.get(
                     "provider_description"
                 )

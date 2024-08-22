@@ -1,7 +1,7 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Provider } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
@@ -15,6 +15,18 @@ import {
   Subtitle,
   Divider,
   TextInput,
+  Select,
+  SelectItem,
+  Card,
+  Tab,
+  TabList,
+  TabGroup,
+  TabPanel,
+  TabPanels,
+  Accordion,
+  AccordionHeader,
+  AccordionBody,
+
 } from "@tremor/react";
 import {
   ExclamationCircleIcon,
@@ -28,6 +40,8 @@ import {
   ArrowDownOnSquareIcon,
   GlobeAltIcon,
   DocumentTextIcon,
+  PlusIcon,
+  TrashIcon
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -81,6 +95,48 @@ function base64urlencode(a) {
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+const DictInput = ({ name, value, onChange, error }) => {
+  const handleEntryChange = (index, field, newValue) => {
+    const newEntries = value.map((entry, i) =>
+      i === index ? { ...entry, [field]: newValue } : entry
+    );
+    onChange(newEntries);
+  };
+
+  const removeEntry = (index) => {
+    const newEntries = value.filter((_, i) => i !== index);
+    onChange(newEntries);
+  };
+
+  return (
+    <div>
+      {value.map((entry, index) => (
+        <div key={index} className="flex items-center mb-2">
+          <TextInput
+            value={entry.key}
+            onChange={(e) => handleEntryChange(index, 'key', e.target.value)}
+            placeholder="Key"
+            className="mr-2"
+          />
+          <TextInput
+            value={entry.value}
+            onChange={(e) => handleEntryChange(index, 'value', e.target.value)}
+            placeholder="Value"
+            className="mr-2"
+          />
+          <Button
+            icon={TrashIcon}
+            variant="secondary"
+            color="orange"
+            size="xs"
+            onClick={() => removeEntry(index)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const ProviderForm = ({
   provider,
   formData,
@@ -95,6 +151,7 @@ const ProviderForm = ({
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const searchParams = useSearchParams();
+  const [activeTabsState, setActiveTabsState] = useState({});
   const initialData = {
     provider_id: provider.id, // Include the provider ID in formValues
     ...formData,
@@ -104,7 +161,25 @@ const ProviderForm = ({
   }
   const [formValues, setFormValues] = useState<{
     [key: string]: string | boolean;
-  }>(initialData);
+  }>(() => {
+    const initialValues = {
+      provider_id: provider.id,
+      ...formData,
+    };
+
+    // Set default values for select inputs
+    Object.entries(provider.config).forEach(([configKey, method]) => {
+      if (method.type === 'select' && method.default && !initialValues[configKey]) {
+        initialValues[configKey] = method.default;
+      }
+    });
+
+    if (provider.can_setup_webhook) {
+      initialValues["install_webhook"] = provider.can_setup_webhook;
+    }
+    return initialValues;
+  });
+
   const [formErrors, setFormErrors] = useState<string>(null);
   const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
     {}
@@ -152,6 +227,18 @@ const ProviderForm = ({
 
     window.location.assign(url);
   }
+
+  useEffect(() => {
+    // Set initial active tabs for each main group
+    const initialActiveTabsState = {};
+    Object.keys(groupedConfigs).forEach(mainGroup => {
+      const subGroups = getSubGroups(groupedConfigs[mainGroup]);
+      if (subGroups.length > 0) {
+        initialActiveTabsState[mainGroup] = subGroups[0];
+      }
+    });
+    setActiveTabsState(initialActiveTabsState);
+  }, []);
 
   useEffect(() => {
     if (triggerRevalidateScope !== 0) {
@@ -228,7 +315,12 @@ const ProviderForm = ({
       value = event.target.value;
     }
 
-    setFormValues((prevValues) => ({ ...prevValues, [name]: value }));
+    setFormValues((prevValues) => {
+      const updatedValues = { ...prevValues, [name]: value };
+      onFormChange(updatedValues, formErrors);
+      return updatedValues;
+    });
+
     const updatedFormValues = { ...formValues, [name]: value };
 
     if (Object.keys(inputErrors).includes(name) && value !== "") {
@@ -372,6 +464,230 @@ const ProviderForm = ({
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
+
+    const addEntry = (fieldName) => (e) => {
+      e.preventDefault();
+      setFormValues((prevValues) => {
+        const currentEntries = prevValues[fieldName] || [];
+        const updatedEntries = [...currentEntries, { key: "", value: "" }];
+        const updatedValues = { ...prevValues, [fieldName]: updatedEntries };
+        onFormChange(updatedValues, formErrors);
+        return updatedValues;
+      });
+    };
+
+    const handleDictInputChange = (fieldName, newValue) => {
+      setFormValues((prevValues) => {
+        const updatedValues = { ...prevValues, [fieldName]: newValue };
+        onFormChange(updatedValues, formErrors);
+        return updatedValues;
+      });
+    };
+
+
+
+
+    const renderFormField = (configKey, method) => {
+      if (method.hidden) return null;
+
+      const renderFieldHeader = () => (
+        <label htmlFor={configKey} className="flex items-center mb-1">
+          <Text className="capitalize">
+            {method.description}
+            {method.required === true && <span className="text-red-400">*</span>}
+          </Text>
+          {method.hint && (
+            <Icon
+              icon={QuestionMarkCircleIcon}
+              variant="simple"
+              color="gray"
+              size="sm"
+              tooltip={`${method.hint}`}
+            />
+          )}
+        </label>
+      );
+
+      switch (method.type) {
+        case "select":
+          return (
+            <>
+              {renderFieldHeader()}
+              <Select
+                id={configKey}
+                name={configKey}
+                value={formValues[configKey] || method.default}
+                onChange={(value) => handleInputChange({ target: { name: configKey, value } })}
+                placeholder={method.placeholder || `Select ${configKey}`}
+                error={Object.keys(inputErrors).includes(configKey)}
+              >
+                {method.options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </Select>
+            </>
+          );
+          case "form":
+        return (
+          <div>
+            <div className="flex items-center mb-2">
+              {renderFieldHeader()}
+              <Button
+                className="ml-2"
+                icon={PlusIcon}
+                variant="secondary"
+                color="orange"
+                size="xs"
+                onClick={addEntry(configKey)}
+              >
+                Add Entry
+              </Button>
+            </div>
+            <DictInput
+              name={configKey}
+              value={formValues[configKey] || []}
+              onChange={(value) => handleDictInputChange(configKey, value)}
+              error={Object.keys(inputErrors).includes(configKey)}
+            />
+          </div>
+        );
+        case "file":
+          return (
+            <>
+              {renderFieldHeader()}
+              <Button
+                color="orange"
+                size="md"
+                onClick={(e) => {
+                  e.preventDefault();
+                  inputFileRef.current.click();
+                }}
+                icon={ArrowDownOnSquareIcon}
+              >
+                {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
+              </Button>
+              <input
+                ref={inputFileRef}
+                type="file"
+                id={configKey}
+                name={configKey}
+                accept={method.file_type}
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0].name);
+                  }
+                  handleInputChange(e);
+                }}
+              />
+            </>
+          );
+        default:
+          return (
+            <>
+              {renderFieldHeader()}
+              <TextInput
+                type={method.sensitive ? "password" : method.type}
+                id={configKey}
+                name={configKey}
+                value={formValues[configKey] || ""}
+                onChange={handleInputChange}
+                autoComplete="off"
+                error={Object.keys(inputErrors).includes(configKey)}
+                placeholder={method.placeholder || `Enter ${configKey}`}
+              />
+            </>
+          );
+      }
+    };
+
+
+
+  const requiredConfigs = Object.entries(provider.config)
+    .filter(([_, config]) => config.required && !config.config_main_group)
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+  const optionalConfigs = Object.entries(provider.config)
+    .filter(([_, config]) => !config.required && !config.hidden && !config.config_main_group)
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+    const groupConfigsByMainGroup = (configs) => {
+      return Object.entries(configs).reduce((acc, [key, config]) => {
+        const mainGroup = config.config_main_group;
+        if (mainGroup) {
+          if (!acc[mainGroup]) {
+            acc[mainGroup] = {};
+          }
+          acc[mainGroup][key] = config;
+        }
+        return acc;
+      }, {});
+    };
+
+    const groupConfigsBySubGroup = (configs) => {
+      return Object.entries(configs).reduce((acc, [key, config]) => {
+        const subGroup = config.config_sub_group || 'default';
+        if (!acc[subGroup]) {
+          acc[subGroup] = {};
+        }
+        acc[subGroup][key] = config;
+        return acc;
+      }, {});
+    };
+
+    const getSubGroups = (configs) => {
+    return [...new Set(Object.values(configs).map(config => config.config_sub_group))].filter(Boolean);
+  };
+
+  const renderGroupFields = (groupName, groupConfigs) => {
+    const subGroups = groupConfigsBySubGroup(groupConfigs);
+    const subGroupNames = getSubGroups(groupConfigs);
+
+    if (subGroupNames.length === 0) {
+      // If no subgroups, render fields directly
+      return (
+        <Card className="mt-4">
+          <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
+          {Object.entries(groupConfigs).map(([configKey, config]) => (
+            <div className="mt-2.5" key={configKey}>
+              {renderFormField(configKey, config)}
+            </div>
+          ))}
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="mt-4">
+        <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
+        <TabGroup
+          className="mt-2"
+          onIndexChange={(index) => setActiveTabsState(prev => ({...prev, [groupName]: subGroupNames[index]}))}
+        >
+          <TabList>
+            {subGroupNames.map((subGroup) => (
+              <Tab key={subGroup}>{subGroup.replace('_', ' ').toUpperCase()}</Tab>
+            ))}
+          </TabList>
+          <TabPanels>
+            {subGroupNames.map((subGroup) => (
+              <TabPanel key={subGroup}>
+                {Object.entries(subGroups[subGroup] || {}).map(([configKey, config]) => (
+                  <div className="mt-2.5" key={configKey}>
+                    {renderFormField(configKey, config)}
+                  </div>
+                ))}
+              </TabPanel>
+            ))}
+          </TabPanels>
+        </TabGroup>
+      </Card>
+    );
+  };
+
+  const groupedConfigs = groupConfigsByMainGroup(provider.config);
   console.log("ProviderForm component loaded");
   return (
     <div className="flex flex-col h-full justify-between p-5">
@@ -479,77 +795,35 @@ const ProviderForm = ({
               </>
             )}
           </div>
-          {Object.keys(provider.config).map((configKey) => {
-            const method = provider.config[configKey];
-            if (method.hidden) return null;
-            const isSensitive = method.sensitive;
-            return (
-              <div className="mt-2.5" key={configKey}>
-                <label htmlFor={configKey} className="flex items-center mb-1">
-                  <Text className="capitalize">
-                    {method.description}
-                    {method.required === true ? (
-                      <span className="text-red-400">*</span>
-                    ) : null}
-                  </Text>
-                  {method.hint && (
-                    <Icon
-                      icon={QuestionMarkCircleIcon}
-                      variant="simple"
-                      color="gray"
-                      size="sm"
-                      tooltip={`${method.hint}`}
-                    />
-                  )}
-                </label>
+          {/* Render required fields */}
+          {Object.entries(requiredConfigs).map(([configKey, config]) => (
+            <div className="mt-2.5" key={configKey}>
+              {renderFormField(configKey, config)}
+            </div>
+          ))}
 
-                {method.type === "file" ? (
-                  <>
-                    <Button
-                      color="orange"
-                      size="md"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        inputFileRef.current.click(); // this line triggers the file input
-                      }}
-                      icon={ArrowDownOnSquareIcon}
-                    >
-                      {selectedFile
-                        ? `File Chosen: ${selectedFile}`
-                        : `Upload a ${method.name}`}
-                    </Button>
+          {/* Render grouped fields */}
+          {Object.entries(groupedConfigs).map(([groupName, groupConfigs]) => (
+            <React.Fragment key={groupName}>
+              {renderGroupFields(groupName, groupConfigs)}
+            </React.Fragment>
+          ))}
 
-                    <input
-                      ref={inputFileRef}
-                      type="file"
-                      id={configKey}
-                      name={configKey}
-                      accept={method.file_type}
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setSelectedFile(e.target.files[0].name);
-                        }
-                        handleInputChange(e);
-                      }}
-                    />
-                  </>
-                ) : (
-                  <TextInput
-                    type={isSensitive ? "password" : method.type} // Display as password if sensitive
-                    id={configKey}
-                    name={configKey}
-                    value={formValues[configKey] || ""}
-                    onChange={handleInputChange}
-                    autoComplete="off"
-                    error={Object.keys(inputErrors).includes(configKey)}
-                    placeholder={method.placeholder || "Enter " + configKey}
-                  />
-                )}
-              </div>
-            );
-          })}
+          {/* Render optional fields in a card */}
+          {Object.keys(optionalConfigs).length > 0 && (
+          <Accordion className="mt-4" defaultOpen={true}>
+            <AccordionHeader>Provider Optional Settings</AccordionHeader>
+            <AccordionBody>
+              <Card>
+                {Object.entries(optionalConfigs).map(([configKey, config]) => (
+                  <div className="mt-2.5" key={configKey}>
+                    {renderFormField(configKey, config)}
+                  </div>
+                ))}
+              </Card>
+            </AccordionBody>
+          </Accordion>
+        )}
           <div className="w-full mt-2" key="install_webhook">
             {provider.can_setup_webhook && !installedProvidersMode && (
               <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
