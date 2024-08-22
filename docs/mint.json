@@ -101,7 +101,6 @@
             "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
-            "providers/documentation/quickchart-provider",
             "providers/documentation/incidentio-provider",
             "providers/documentation/jira-provider",
             "providers/documentation/kibana-provider",
@@ -142,6 +141,7 @@
             "providers/documentation/uptimekuma-provider",
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/websocket-provider",
+	    "providers/documentation/webhook-provider",
             "providers/documentation/incidentmanager-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider"

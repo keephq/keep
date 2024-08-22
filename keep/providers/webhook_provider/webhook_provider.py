@@ -1,0 +1,216 @@
+"""
+WebhookProvider is a class that provides a way to notify a 3rd party service using a webhook.
+"""
+
+import dataclasses
+import json
+import base64
+import typing
+
+import pydantic
+import requests
+from requests.exceptions import JSONDecodeError
+
+from keep.contextmanager.contextmanager import ContextManager
+from keep.providers.base.base_provider import BaseProvider
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
+@pydantic.dataclasses.dataclass
+class WebhookProviderAuthConfig:
+    """
+    Webhook authentication configuration.
+    """
+
+    url: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Webhook URL",
+        }
+    )
+
+    method: typing.Literal["GET", "POST", "PUT", "DELETE"] = dataclasses.field(
+        default="POST",
+        metadata={
+            "description": "HTTP method",
+        }
+    )
+
+    http_basic_authentication_username: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "HTTP basic authentication - Username",
+        }
+    )
+
+    http_basic_authentication_password: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "HTTP basic authentication - Password",
+            "sensitive": True,
+        }
+    )
+
+    api_key: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "API key",
+            "sensitive": True,
+        }
+    )
+
+    headers: str = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Headers",
+        }
+    )
+
+class WebhookProvider(BaseProvider):
+    """Enrich alerts with data from Webhook."""
+
+    BLACKLISTED_ENDPOINTS = [
+        "metadata.google.internal",
+        "metadata.internal",
+        "169.254.169.254",
+        "localhost",
+        "googleapis.com",
+    ]
+
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="send_alert",
+            mandatory=True,
+            alias="Send Alert",
+        )
+    ]
+
+    PROVIDER_TAGS = ["alert"]
+    PROVIDER_DISPLAY_NAME = "Webhook"
+
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
+        super().__init__(context_manager, provider_id, config)
+
+    def dispose(self):
+        """
+        Nothing to do here.
+        """
+        pass
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        validated_scopes = {}
+        validated_scopes["send_alert"] = True
+        return validated_scopes
+
+    def validate_config(self):
+        self.authentication_config = WebhookProviderAuthConfig(
+            **self.config.authentication
+        )
+
+    def __validate_url(self, url: str):
+        """
+        Validate that the url is not blacklisted.
+        """
+        for endpoint in WebhookProvider.BLACKLISTED_ENDPOINTS:
+            if endpoint in url:
+                raise Exception(f"URL {url} is blacklisted")
+            
+    def _notify(
+        self,
+        body: dict = None,
+        params: dict = None,
+        **kwargs,
+    ):
+        """
+        Send a HTTP request to the given url.
+        """
+        self.query(
+            url=self.authentication_config.url,
+            method=self.authentication_config.method,
+            http_basic_authentication_username=self.authentication_config.http_basic_authentication_username,
+            http_basic_authentication_password=self.authentication_config.http_basic_authentication_password,
+            api_key=self.authentication_config.api_key,
+            headers=self.authentication_config.headers,
+            body=body,
+            params=params,
+            **kwargs,
+        )
+
+    def _query(
+        self,
+        url: str,
+        method: typing.Literal["GET", "POST", "PUT", "DELETE"] = "POST",
+        http_basic_authentication_username: str = None,
+        http_basic_authentication_password: str = None,
+        api_key: str = None,
+        headers: str = None,
+        body: dict = None,
+        params: dict = None,
+        **kwargs: dict,
+    ) -> dict:
+        """
+        Trigger a webhook with the given method, headers, body and params.
+        """
+        self.__validate_url(url)
+        if headers is None:
+            headers = {}
+        if isinstance(headers, str):
+            headers = json.loads(headers)
+        if body is None:
+            body = {}
+        if params is None:
+            params = {}
+
+        if http_basic_authentication_username and http_basic_authentication_password:
+            credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
+            encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+            headers["Authorization"] = f"Basic {encoded_credentials}"
+
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        self.logger.debug(
+            f"Sending {method} request to {url}",
+            extra={
+                "body": body,
+                "headers": headers,
+                "params": params,
+            },
+        )
+        if method == "GET":
+            response = requests.get(
+                url, headers=headers, params=params, **kwargs
+            )
+        elif method == "POST":
+            response = requests.post(
+                url, headers=headers, json=body, **kwargs
+            )
+        elif method == "PUT":
+            response = requests.put(
+                url, headers=headers, json=body, **kwargs
+            )
+        elif method == "DELETE":
+            response = requests.delete(
+                url, headers=headers, json=body, **kwargs
+            )
+
+        self.logger.debug(
+            f"Trigger a webhook with {method} on {url}",
+            extra={
+                "body": body,
+                "headers": headers,
+                "params": params,
+                "status_code": response.status_code,
+            },
+        )
+
+        result = {"status": response.ok, "status_code": response.status_code}
+
+        try:
+            body = response.json()
+        except JSONDecodeError:
+            body = response.text
+
+        result["body"] = body
+        return result
