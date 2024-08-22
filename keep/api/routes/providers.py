@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import count_alerts, get_session
+from keep.api.core.db import count_alerts, get_provider_distribution, get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
@@ -65,7 +65,22 @@ def get_providers(
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersService.get_all_providers()
     installed_providers = ProvidersService.get_installed_providers(tenant_id)
-    linked_providers = ProvidersService.get_linked_providers(tenant_id)
+    if PROVIDER_DISTRIBUTION_ENABLED:
+        linked_providers = ProvidersService.get_linked_providers(tenant_id)
+        providers_distribution = get_provider_distribution(tenant_id)
+
+        for provider in linked_providers + installed_providers:
+            provider.alertsDistribution = providers_distribution.get(
+                f"{provider.id}_{provider.type}", {}
+            ).get("alert_last_24_hours", [])
+            last_alert_received = providers_distribution.get(
+                f"{provider.id}_{provider.type}", {}
+            ).get("last_alert_received", None)
+            if last_alert_received and not provider.last_alert_received:
+                provider.last_alert_received = last_alert_received.replace(
+                    tzinfo=datetime.timezone.utc
+                ).isoformat()
+
     is_localhost = _is_localhost()
 
     return {
