@@ -484,9 +484,6 @@ const ProviderForm = ({
       });
     };
 
-
-
-
     const renderFormField = (configKey, method) => {
       if (method.hidden) return null;
 
