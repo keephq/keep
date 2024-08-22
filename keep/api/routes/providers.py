@@ -407,7 +407,7 @@ def validate_provider_scopes(
     return validated_scopes
 
 
-@router.put("/{provider_id}")
+@router.put("/{provider_id}", description="Update provider", status_code=200)
 async def update_provider(
     provider_id: str,
     request: Request,
@@ -418,7 +418,10 @@ async def update_provider(
 ):
     tenant_id = authenticated_entity.tenant_id
     updated_by = authenticated_entity.email
-
+    logger.info(
+        "Updating provider",
+        extra={"provider_id": provider_id, "tenant_id": tenant_id},
+    )
     try:
         provider_info = await request.json()
     except Exception:
@@ -430,7 +433,7 @@ async def update_provider(
 
     for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_info[key] = value.file.read().decode()
+            provider_info[key] = await value.file.read().decode()
 
     try:
         result = ProvidersService.update_provider(

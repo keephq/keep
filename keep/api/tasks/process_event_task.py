@@ -162,6 +162,7 @@ def __save_to_db(
             )
             session.add(audit)
             session.flush()
+            session.commit()
             session.refresh(alert)
             formatted_event.event_id = str(alert.id)
             alert_dto = AlertDto(**formatted_event.dict())
