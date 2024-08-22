@@ -85,6 +85,7 @@ class WorkerSettings:
         conn_retries=10,
         conn_retry_delay=10,
     )
+    # 10 minutes, we want to keep it high to avoid killing the AI jobs
     functions: list = FUNCTIONS
     cron_jobs = [
       
