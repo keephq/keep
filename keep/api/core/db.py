@@ -545,6 +545,11 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.id == execution_id)
         ).first()
         # some random number to avoid collisions
+        if not workflow_execution:
+            logger.warning(
+                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found."
+            )
+            raise ValueError("Execution not found")
         workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.

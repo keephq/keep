@@ -236,6 +236,10 @@ actions:
     with patch("keep.api.core.db.engine", mock_engine):
         yield session
 
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info("Dropping all tables")
     # delete the database
     SQLModel.metadata.drop_all(mock_engine)
     # Clean up after the test
