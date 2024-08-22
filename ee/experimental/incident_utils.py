@@ -79,7 +79,7 @@ def calculate_pmi_matrix(
     
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
 
-    pmi_matrix, pmi_colums = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, temp_dir)
+    pmi_matrix, pmi_columns = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, temp_dir)
     
     logger.info(
         "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
@@ -87,7 +87,7 @@ def calculate_pmi_matrix(
             "tenant_id": tenant_id,
         },
     )
-    write_pmi_matrix_to_temp_file(tenant_id, pmi_matrix, pmi_colums, temp_dir)
+    write_pmi_matrix_to_temp_file(tenant_id, pmi_matrix, pmi_columns, temp_dir)
     
     logger.info(
         "PMI matrix is written to the database.",
