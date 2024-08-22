@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 
 from fastapi import Depends
 
-from ee.experimental.node_utils import NodeCandidateQueue, NodeCandidate
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
 
@@ -163,17 +162,8 @@ async def mine_incidents_and_create_objects(
     
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    nc_queue = NodeCandidateQueue()
     
-    logger.info(
-        "Analyzing new alerts",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
-        nc_queue.push_candidate(candidate)
-    candidates = nc_queue.get_candidates()          
+    fingerprints = list(set([alert.fingerprint for alert in alerts]))
     
     logger.info(
         "Building alert graph",
@@ -182,7 +172,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
+    graph = create_graph(tenant_id, fingerprints, pmi_threshold, knee_threshold)
     ids = []
     
     logger.info(

@@ -2446,7 +2446,7 @@ def confirm_predicted_incident_by_id(
 def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
     # TODO: add handlers for sequential launches
     with Session(engine) as session:
-        pmi_entries_to_update = []
+        pmi_entries_to_update = 0
         pmi_entries_to_insert = []
 
         # Query for existing entries to differentiate between updates and inserts
@@ -2457,43 +2457,38 @@ def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
 
         for fingerprint_i in pmi_matrix_df.index:
             for fingerprint_j in pmi_matrix_df.columns:
-                pmi = pmi_matrix_df.at[fingerprint_i, fingerprint_j]
+                if  pmi_matrix_df.at[fingerprint_i, fingerprint_j] == -100:
+                    continue
+                
+                pmi = float(pmi_matrix_df.at[fingerprint_i, fingerprint_j])
 
                 pmi_entry = {
                     "tenant_id": tenant_id,
                     "fingerprint_i": fingerprint_i,
                     "fingerprint_j": fingerprint_j,
-                    "pmi": float(pmi),
+                    "pmi": pmi,
                 }
 
                 if (fingerprint_i, fingerprint_j) in existing_entries_dict:
                     existed_entry = existing_entries_dict[(fingerprint_i, fingerprint_j)]
-                    if existed_entry.pmi != float(pmi):
+                    if existed_entry.pmi != pmi:
                         session.execute(
                             update(PMIMatrix).where(
                                 PMIMatrix.fingerprint_i == fingerprint_i, 
                                 PMIMatrix.fingerprint_j == fingerprint_j, 
                                 PMIMatrix.tenant_id == tenant_id
-                            ).values(pmi = float(pmi))
+                            ).values(pmi = pmi)
                         )
-                        pmi_entries_to_update.append(existed_entry)
+                        pmi_entries_to_update += 1
                 else:
                     pmi_entries_to_insert.append(pmi_entry)
-
-        # Update existing records
-        if pmi_entries_to_update:
-            logger.info(
-                f"Updating {len(pmi_entries_to_update)} PMI entries for tenant {tenant_id}",
-                extra={"tenant_id": tenant_id},
-            )
             
-        # Insert new records
         if pmi_entries_to_insert:
-            logger.info(
-                f"Inserting {len(pmi_entries_to_insert)} PMI entries for tenant {tenant_id}",
-                extra={"tenant_id": tenant_id},
-            )
             session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
+            
+        logger.info(
+            f'PMI matrix for tenant {tenant_id} updated. {pmi_entries_to_update} entries updated, {len(pmi_entries_to_insert)} entries inserted',
+            extra={"tenant_id": tenant_id},)
         
         session.commit()
 
@@ -2514,23 +2509,17 @@ def get_pmi_value(
     return pmi_entry.pmi if pmi_entry else None
 
 
-def get_pmi_values(
-    tenant_id: str, fingerprints: List[str]
-) -> Dict[Tuple[str, str], Optional[float]]:
-    pmi_values = {}
+def get_pmi_values(tenant_id: str, fingerprints: List[str]) -> Dict[Tuple[str, str], Optional[float]]:
     with Session(engine) as session:
-        for idx_i, fingerprint_i in enumerate(fingerprints):
-            for idx_j in range(idx_i, len(fingerprints)):
-                fingerprint_j = fingerprints[idx_j]
-                pmi_entry = session.exec(
-                    select(PMIMatrix)
-                    .where(PMIMatrix.tenant_id == tenant_id)
-                    .where(PMIMatrix.fingerprint_i == fingerprint_i)
-                    .where(PMIMatrix.fingerprint_j == fingerprint_j)
-                ).first()
-                pmi_values[(fingerprint_i, fingerprint_j)] = (
-                    pmi_entry.pmi if pmi_entry else None
-                )
+        pmi_entries = session.exec(
+            select(PMIMatrix)
+            .where(PMIMatrix.tenant_id == tenant_id)
+        ).all()
+
+    pmi_values = {
+        (entry.fingerprint_i, entry.fingerprint_j): entry.pmi
+        for entry in pmi_entries
+    }
     return pmi_values
 
 
