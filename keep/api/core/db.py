@@ -85,12 +85,11 @@ def create_workflow_execution(
     event_id: str = None,
     fingerprint: str = None,
     execution_id: str = None,
-) -> WorkflowExecution:
+) -> str:
     with Session(engine) as session:
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
-
             workflow_execution = WorkflowExecution(
                 id=execution_id or str(uuid4()),
                 workflow_id=workflow_id,
@@ -101,19 +100,20 @@ def create_workflow_execution(
                 status="in_progress",
             )
             session.add(workflow_execution)
-
+            # Ensure the object has an id
+            session.flush()
+            execution_id = workflow_execution.id
             if fingerprint:
                 workflow_to_alert_execution = WorkflowToAlertExecution(
-                    workflow_execution_id=workflow_execution.id,
+                    workflow_execution_id=execution_id,
                     alert_fingerprint=fingerprint,
                     event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
-
             session.commit()
-            return workflow_execution.id
+            return execution_id
         except IntegrityError:
-            # Workflow execution already exists
+            session.rollback()
             logger.debug(
                 f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
             )
