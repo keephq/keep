@@ -26,6 +26,7 @@ from keep.api.core.db import (
     get_last_incidents,
     get_incident_by_id,
     write_pmi_matrix_to_db,
+    write_pmi_matrix_to_temp_file,
     create_incident_from_dict,
     update_incident_summary,
 )
@@ -41,6 +42,8 @@ logger = logging.getLogger(__name__)
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
 USE_N_HISTORICAL_ALERTS = 10e10
 USE_N_HISTORICAL_INCIDENTS = 10e10
+DEFAULT_TEMP_DIR_LOCATION = './ai_temp'
+MIN_ALERT_NUMBER = 100
 
 
 def calculate_pmi_matrix(
@@ -50,6 +53,7 @@ def calculate_pmi_matrix(
     use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
     sliding_window: int = None,
     stride: int = None,
+    general_temp_dir: str = None,
 ) -> dict:
     logger.info(
         "Calculating PMI coefficients for alerts",
@@ -66,10 +70,16 @@ def calculate_pmi_matrix(
     
     if not stride:
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
+        
+    if not general_temp_dir:
+        general_temp_dir = os.environ.get('PMI_TEMP_DIR', DEFAULT_TEMP_DIR_LOCATION)
+        
+    temp_dir = f'{general_temp_dir}/{tenant_id}'
+    os.makedirs(temp_dir, exist_ok=True)
     
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
 
-    pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
+    pmi_matrix, pmi_colums = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, temp_dir)
     
     logger.info(
         "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
@@ -77,8 +87,7 @@ def calculate_pmi_matrix(
             "tenant_id": tenant_id,
         },
     )
-    
-    write_pmi_matrix_to_db(tenant_id, pmi_matrix)
+    write_pmi_matrix_to_temp_file(tenant_id, pmi_matrix, pmi_colums, temp_dir)
     
     logger.info(
         "PMI matrix is written to the database.",
@@ -102,7 +111,9 @@ async def mine_incidents_and_create_objects(
         pmi_threshold: float = None,
         knee_threshold: float = None,
         min_incident_size: int = None,
+        min_alert_number: int = None,
         incident_similarity_threshold: float = None,
+        general_temp_dir: str = None,
     ) -> Dict[str, List[Incident]]:
     
     """
@@ -150,6 +161,26 @@ async def mine_incidents_and_create_objects(
         
     if not incident_similarity_threshold:
         incident_similarity_threshold = os.environ.get('INCIDENT_SIMILARITY_THRESHOLD', 0.8)
+        
+    if not general_temp_dir:
+        general_temp_dir = os.environ.get('PMI_TEMP_DIR', DEFAULT_TEMP_DIR_LOCATION)
+        
+    if not min_alert_number:
+        min_alert_number = os.environ.get('MIN_ALERT_NUMBER', MIN_ALERT_NUMBER)
+        
+        
+    temp_dir = f'{general_temp_dir}/{tenant_id}'
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
+    if len(alerts) < min_alert_number:
+        logger.info(
+            "Not enough alerts to mine incidents",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        return {"incidents": []}
 
     calculate_pmi_matrix(ctx, tenant_id)
 
@@ -160,9 +191,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    
     fingerprints = list(set([alert.fingerprint for alert in alerts]))
     
     logger.info(
@@ -172,7 +201,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    graph = create_graph(tenant_id, fingerprints, pmi_threshold, knee_threshold)
+    graph = create_graph(tenant_id, fingerprints, temp_dir, pmi_threshold, knee_threshold)
     ids = []
     
     logger.info(

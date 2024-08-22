@@ -5,7 +5,7 @@ import networkx as nx
 
 from typing import List, Tuple
 
-from keep.api.core.db import get_pmi_values
+from keep.api.core.db import get_pmi_values, get_pmi_values_from_temp_file
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def detect_knee_1d_auto_increasing(y: List[float]) -> Tuple[int, float]:
         return knee_index_convex, knee_y_convex
     
     
-def create_graph(tenant_id: str, fingerprints: List[str], pmi_threshold: float = 0., knee_threshold: float = 0.8) -> nx.Graph:
+def create_graph(tenant_id: str, fingerprints: List[str], temp_dir: str, pmi_threshold: float = 0., knee_threshold: float = 0.8) -> nx.Graph:
     """
     This function creates a graph from a list of fingerprints. The graph is created based on the PMI values between
     the fingerprints. The edges are created between the fingerprints that have a PMI value greater than the threshold.
@@ -63,8 +63,7 @@ def create_graph(tenant_id: str, fingerprints: List[str], pmi_threshold: float =
     
     Returns:
     nx.Graph: a graph
-    """
-    
+    """    
     graph = nx.Graph()
 
     if len(fingerprints) == 1:
@@ -72,23 +71,28 @@ def create_graph(tenant_id: str, fingerprints: List[str], pmi_threshold: float =
         return graph
 
     # Load all PMI values at once
-    pmi_values = get_pmi_values(tenant_id, fingerprints)
+    # pmi_values = get_pmi_values(tenant_id, fingerprints)
+    pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
     
-    logger.info(f'Loaded PMI values for {len(pmi_values)} fingerprint pairs', extra={'tenant_id': tenant_id})
+    logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
     
     logger.info(f'Creating alert graph edges', extra={'tenant_id': tenant_id})
 
     for idx_i, fingerprint_i in enumerate(fingerprints):
-        if not isinstance(pmi_values[(fingerprint_i, fingerprint_i)], float):
+        if fingerprint_i not in fingerpint2idx:
             continue
+        # if not isinstance(pmi_values[(fingerprint_i, fingerprint_i)], float):
+        #     continue
 
         for idx_j in range(idx_i + 1, len(fingerprints)):
             fingerprint_j = fingerprints[idx_j]
             
-            if not (fingerprint_i, fingerprint_j) in pmi_values:
+            if fingerprint_j not in fingerpint2idx:
                 continue
+            # if not (fingerprint_i, fingerprint_j) in pmi_values:
+            #     continue
             
-            weight = pmi_values[(fingerprint_i, fingerprint_j)]
+            weight = pmi_values[fingerpint2idx[fingerprint_i], fingerpint2idx[fingerprint_j]]
 
             if weight > pmi_threshold:
                 graph.add_edge(fingerprint_i, fingerprint_j, weight=weight)
