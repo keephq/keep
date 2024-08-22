@@ -66,6 +66,8 @@ class RulesEngine:
         # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'
         # and we need to extract the subrules
         sub_rules = expression.split(") && (")
+        if len(sub_rules) == 1:
+            return sub_rules
         # the first and the last rules will have a ( or ) at the beginning or the end
         # e.g. for the example of:
         #           (source == "sentry") && (source == "grafana" && severity == "critical")
