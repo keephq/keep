@@ -70,8 +70,6 @@ def create_graph(tenant_id: str, fingerprints: List[str], temp_dir: str, pmi_thr
         graph.add_node(fingerprints[0])
         return graph
 
-    # Load all PMI values at once
-    # pmi_values = get_pmi_values(tenant_id, fingerprints)
     pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
     
     logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
@@ -81,16 +79,12 @@ def create_graph(tenant_id: str, fingerprints: List[str], temp_dir: str, pmi_thr
     for idx_i, fingerprint_i in enumerate(fingerprints):
         if fingerprint_i not in fingerpint2idx:
             continue
-        # if not isinstance(pmi_values[(fingerprint_i, fingerprint_i)], float):
-        #     continue
 
         for idx_j in range(idx_i + 1, len(fingerprints)):
             fingerprint_j = fingerprints[idx_j]
             
             if fingerprint_j not in fingerpint2idx:
                 continue
-            # if not (fingerprint_i, fingerprint_j) in pmi_values:
-            #     continue
             
             weight = pmi_values[fingerpint2idx[fingerprint_i], fingerpint2idx[fingerprint_j]]
 
