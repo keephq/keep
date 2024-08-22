@@ -5,31 +5,26 @@ import time
 import uuid
 from typing import Callable, Optional
 
-import sqlalchemy
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
-from keep.api.core.db import count_alerts, get_provider_distribution, get_session
+from keep.api.core.db import count_alerts, get_session
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
-from keep.event_subscriber.event_subscriber import EventSubscriber
-from keep.exceptions.provider_config_exception import ProviderConfigException
-from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
 )
 from keep.providers.providers_factory import ProvidersFactory
+from keep.providers.providers_service import ProvidersService
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()
@@ -60,9 +55,7 @@ def _is_localhost():
     return False
 
 
-@router.get(
-    "",
-)
+@router.get("")
 def get_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["read:providers"])
@@ -70,46 +63,17 @@ def get_providers(
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
-    providers = ProvidersFactory.get_all_providers()
-    installed_providers = ProvidersFactory.get_installed_providers(
-        tenant_id, providers, include_details=True
-    )
-
-    linked_providers = []
-
-    if PROVIDER_DISTRIBUTION_ENABLED:
-        linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
-        providers_distribution = get_provider_distribution(tenant_id)
-
-        for provider in linked_providers + installed_providers:
-            provider.alertsDistribution = providers_distribution.get(
-                f"{provider.id}_{provider.type}", {}
-            ).get("alert_last_24_hours", [])
-            last_alert_received = providers_distribution.get(
-                f"{provider.id}_{provider.type}", {}
-            ).get("last_alert_received", None)
-            if last_alert_received and not provider.last_alert_received:
-                provider.last_alert_received = last_alert_received.replace(
-                    tzinfo=datetime.timezone.utc
-                ).isoformat()
-
+    providers = ProvidersService.get_all_providers()
+    installed_providers = ProvidersService.get_installed_providers(tenant_id)
+    linked_providers = ProvidersService.get_linked_providers(tenant_id)
     is_localhost = _is_localhost()
 
-    try:
-        return {
-            "providers": providers,
-            "installed_providers": installed_providers,
-            "linked_providers": linked_providers,
-            "is_localhost": is_localhost,
-        }
-    except Exception:
-        logger.exception("Failed to get providers")
-        return {
-            "providers": providers,
-            "installed_providers": [],
-            "linked_providers": [],
-            "is_localhost": is_localhost,
-        }
+    return {
+        "providers": providers,
+        "installed_providers": installed_providers,
+        "linked_providers": linked_providers,
+        "is_localhost": is_localhost,
+    }
 
 
 @router.get("/export", description="export all installed providers")
@@ -351,48 +315,14 @@ def delete_provider(
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Deleting provider",
-        extra={
-            "provider_id": provider_id,
-            "tenant_id": tenant_id,
-        },
-    )
-    context_manager = ContextManager(tenant_id=tenant_id)
-    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     try:
-        provider = session.exec(
-            select(Provider).where(
-                (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
-            )
-        ).one()
-        try:
-            secret_manager.delete_secret(provider.configuration_key)
-        # in case the secret does not deleted, just log it but still
-        # delete the provider so
-        except Exception:
-            logger.exception("Failed to delete the provider secret")
-            pass
-        # delete the provider anyway
-        session.delete(provider)
-        session.commit()
-    except sqlalchemy.orm.exc.NoResultFound:
-        raise HTTPException(404, detail="Provider not found")
-    except Exception:
-        # TODO: handle it better
-        logger.exception("Failed to delete the provider secret")
-        pass
-
-    if provider.consumer:
-        # Unregister the provider as a consumer
-        try:
-            event_subscriber = EventSubscriber.get_instance()
-            event_subscriber.remove_consumer(provider)
-        except Exception:
-            logger.exception("Failed to unregister provider as a consumer")
-            # return 200 as the next time Keep will start, it will try to unregister again
-    logger.info("Deleted provider", extra={"provider_id": provider_id})
-    return JSONResponse(status_code=200, content={"message": "deleted"})
+        ProvidersService.delete_provider(tenant_id, provider_id, session)
+        return JSONResponse(status_code=200, content={"message": "deleted"})
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
+    except Exception as e:
+        logger.exception("Failed to delete provider")
+        return JSONResponse(status_code=400, content={"message": str(e)})
 
 
 def validate_scopes(
@@ -477,7 +407,7 @@ def validate_provider_scopes(
     return validated_scopes
 
 
-@router.put("/{provider_id}", description="Update provider", status_code=200)
+@router.put("/{provider_id}")
 async def update_provider(
     provider_id: str,
     request: Request,
@@ -488,64 +418,30 @@ async def update_provider(
 ):
     tenant_id = authenticated_entity.tenant_id
     updated_by = authenticated_entity.email
-    logger.info(
-        "Updating provider",
-        extra={
-            "provider_id": provider_id,
-        },
-    )
+
     try:
         provider_info = await request.json()
     except Exception:
-        # If error occurs (likely not JSON), try to get as form data
         form_data = await request.form()
         provider_info = dict(form_data)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
 
-    provider = session.exec(
-        select(Provider).where(
-            (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
-        )
-    ).one()
-
-    if not provider:
-        raise HTTPException(404, detail="Provider not found")
-
-    provider_config = {
-        "authentication": provider_info,
-        "name": provider.name,
-    }
-
-    # we support files as well
-    for key, value in provider_config.get("authentication", {}).items():
+    for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_config["authentication"][key] = await value.read()
-            provider_config["authentication"][key] = provider_config["authentication"][
-                key
-            ].decode()
+            provider_info[key] = value.file.read().decode()
 
-    context_manager = ContextManager(tenant_id=tenant_id)
     try:
-        provider_instance = ProvidersFactory.get_provider(
-            context_manager, provider_id, provider.type, provider_config
+        result = ProvidersService.update_provider(
+            tenant_id, provider_id, provider_info, updated_by, session
         )
-    except (ProviderException, ProviderConfigException) as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    validated_scopes = validate_scopes(provider_instance)
-    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    secret_manager.write_secret(
-        secret_name=provider.configuration_key, secret_value=json.dumps(provider_config)
-    )
-    provider.installed_by = updated_by
-    provider.validatedScopes = validated_scopes
-    session.commit()
-    logger.info("Updated provider", extra={"provider_id": provider_id})
-    return {
-        "details": provider_config,
-        "validatedScopes": validated_scopes,
-    }
+        return JSONResponse(status_code=200, content=result)
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
+    except Exception as e:
+        logger.exception("Failed to update provider")
+        return JSONResponse(status_code=400, content={"message": str(e)})
 
 
 @router.post("/install")
@@ -554,21 +450,19 @@ async def install_provider(
     authenticated_entity: AuthenticatedEntity = Depends(
         AuthVerifier(["write:providers"])
     ),
-    session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
     installed_by = authenticated_entity.email
+
     try:
         provider_info = await request.json()
     except Exception:
-        # If error occurs (likely not JSON), try to get as form data
         form_data = await request.form()
         provider_info = dict(form_data)
 
     if not provider_info:
         raise HTTPException(status_code=400, detail="No valid data provided")
 
-    # Extract parameters from the provider_info dictionary
     try:
         provider_id = provider_info.pop("provider_id")
         provider_name = provider_info.pop("provider_name")
@@ -578,91 +472,25 @@ async def install_provider(
             status_code=400, detail=f"Missing required field: {e.args[0]}"
         )
 
-    provider_unique_id = uuid.uuid4().hex
-    logger.info(
-        "Installing provider",
-        extra={
-            "provider_id": provider_id,
-            "provider_type": provider_type,
-            "tenant_id": tenant_id,
-        },
-    )
-    provider_config = {
-        "authentication": provider_info,
-        "name": provider_name,
-    }
-    # we support files as well
-    for key, value in provider_config.get("authentication", {}).items():
+    for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_config["authentication"][key] = await value.read()
-            provider_config["authentication"][key] = provider_config["authentication"][
-                key
-            ].decode()
+            provider_info[key] = value.file.read().decode()
 
-    # Instantiate the provider object and perform installation process
-    context_manager = ContextManager(tenant_id=tenant_id)
     try:
-        provider = ProvidersFactory.get_provider(
-            context_manager, provider_id, provider_type, provider_config
+        result = ProvidersService.install_provider(
+            tenant_id,
+            installed_by,
+            provider_id,
+            provider_name,
+            provider_type,
+            provider_info,
         )
-    except (ProviderException, ProviderConfigException) as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    validated_scopes = validate_scopes(provider)
-
-    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
-    secret_manager.write_secret(
-        secret_name=secret_name,
-        secret_value=json.dumps(provider_config),
-    )
-    # add the provider to the db
-    provider_model = Provider(
-        id=provider_unique_id,
-        tenant_id=tenant_id,
-        name=provider_name,
-        type=provider_type,
-        installed_by=installed_by,
-        installation_time=time.time(),
-        configuration_key=secret_name,
-        validatedScopes=validated_scopes,
-        consumer=provider.is_consumer,
-    )
-    try:
-        session.add(provider_model)
-        session.commit()
-    except IntegrityError:
-        raise HTTPException(
-            status_code=409,
-            detail="Provider already installed",
-        )
+        return JSONResponse(status_code=200, content=result)
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
     except Exception as e:
-        logger.exception("Failed to add provider to db")
-        return JSONResponse(
-            status_code=400,
-            content={"message": "Failed to install provider", "error": str(e)},
-        )
-
-    if provider_model.consumer:
-        # Register the provider as a consumer
-        try:
-            event_subscriber = EventSubscriber.get_instance()
-            event_subscriber.add_consumer(provider)
-        except Exception:
-            logger.exception("Failed to register provider as a consumer")
-            # return 200 as the next time Keep will start, it will try to register again
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "type": provider_type,
-            "id": provider_unique_id,
-            "details": provider_config,
-            "validatedScopes": validated_scopes,
-        },
-    )
+        logger.exception("Failed to install provider")
+        return JSONResponse(status_code=400, content={"message": str(e)})
 
 
 @router.post("/install/oauth2/{provider_type}")
