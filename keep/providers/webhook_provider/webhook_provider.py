@@ -2,9 +2,9 @@
 WebhookProvider is a class that provides a way to notify a 3rd party service using a webhook.
 """
 
+import base64
 import dataclasses
 import json
-import base64
 import typing
 
 import pydantic
@@ -14,6 +14,7 @@ from requests.exceptions import JSONDecodeError
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
 
 @pydantic.dataclasses.dataclass
 class WebhookProviderAuthConfig:
@@ -31,39 +32,50 @@ class WebhookProviderAuthConfig:
     method: typing.Literal["GET", "POST", "PUT", "DELETE"] = dataclasses.field(
         default="POST",
         metadata={
+            "required": True,
             "description": "HTTP method",
-        }
+            "type": "select",
+            "options": ["POST", "GET", "PUT", "DELETE"],
+        },
     )
 
-    http_basic_authentication_username: str = dataclasses.field(
+    http_basic_authentication_username: typing.Optional[str] = dataclasses.field(
         default=None,
         metadata={
             "description": "HTTP basic authentication - Username",
-        }
+            "config_sub_group": "basic_authentication",
+            "config_main_group": "authentication",
+        },
     )
 
-    http_basic_authentication_password: str = dataclasses.field(
+    http_basic_authentication_password: typing.Optional[str] = dataclasses.field(
         default=None,
         metadata={
             "description": "HTTP basic authentication - Password",
             "sensitive": True,
-        }
+            "config_sub_group": "basic_authentication",
+            "config_main_group": "authentication",
+        },
     )
 
-    api_key: str = dataclasses.field(
+    api_key: typing.Optional[str] = dataclasses.field(
         default=None,
         metadata={
             "description": "API key",
             "sensitive": True,
-        }
+            "config_sub_group": "api_key",
+            "config_main_group": "authentication",
+        },
     )
 
-    headers: str = dataclasses.field(
+    headers: typing.Optional[dict[str, str]] = dataclasses.field(
         default=None,
         metadata={
             "description": "Headers",
-        }
+            "type": "form",
+        },
     )
+
 
 class WebhookProvider(BaseProvider):
     """Enrich alerts with data from Webhook."""
@@ -78,13 +90,13 @@ class WebhookProvider(BaseProvider):
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="send_alert",
+            name="send_webhook",
             mandatory=True,
-            alias="Send Alert",
+            alias="Send Webhook",
         )
     ]
 
-    PROVIDER_TAGS = ["alert"]
+    PROVIDER_TAGS = ["messaging"]
     PROVIDER_DISPLAY_NAME = "Webhook"
 
     def __init__(
@@ -100,7 +112,13 @@ class WebhookProvider(BaseProvider):
 
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
-        validated_scopes["send_alert"] = True
+        # try to send the webhook with TEST payload
+        try:
+            self._notify(body={"test": "payload"})
+        except Exception as e:
+            validated_scopes["send_webhook"] = str(e)
+            return validated_scopes
+        validated_scopes["send_webhook"] = True
         return validated_scopes
 
     def validate_config(self):
@@ -115,7 +133,7 @@ class WebhookProvider(BaseProvider):
         for endpoint in WebhookProvider.BLACKLISTED_ENDPOINTS:
             if endpoint in url:
                 raise Exception(f"URL {url} is blacklisted")
-            
+
     def _notify(
         self,
         body: dict = None,
@@ -164,7 +182,9 @@ class WebhookProvider(BaseProvider):
 
         if http_basic_authentication_username and http_basic_authentication_password:
             credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"
-            encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+            encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode(
+                "utf-8"
+            )
             headers["Authorization"] = f"Basic {encoded_credentials}"
 
         if api_key:
@@ -179,21 +199,13 @@ class WebhookProvider(BaseProvider):
             },
         )
         if method == "GET":
-            response = requests.get(
-                url, headers=headers, params=params, **kwargs
-            )
+            response = requests.get(url, headers=headers, params=params, **kwargs)
         elif method == "POST":
-            response = requests.post(
-                url, headers=headers, json=body, **kwargs
-            )
+            response = requests.post(url, headers=headers, json=body, **kwargs)
         elif method == "PUT":
-            response = requests.put(
-                url, headers=headers, json=body, **kwargs
-            )
+            response = requests.put(url, headers=headers, json=body, **kwargs)
         elif method == "DELETE":
-            response = requests.delete(
-                url, headers=headers, json=body, **kwargs
-            )
+            response = requests.delete(url, headers=headers, json=body, **kwargs)
 
         self.logger.debug(
             f"Trigger a webhook with {method} on {url}",
