@@ -122,6 +122,7 @@ const ProvidersTiles = ({
 
       <div className="flex flex-wrap mb-5 gap-5">
         {providers
+          .filter(provider => Object.keys(provider.config || {}).length > 0 || (provider.tags && provider.tags.includes('alert')))
           .sort(
             (a, b) =>
               Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||

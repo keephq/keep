@@ -23,6 +23,7 @@ class RuleCreateDto(BaseModel):
     timeframeInSeconds: int
     groupingCriteria: list = []
     groupDescription: str = None
+    requireApprove: bool = False
 
 
 @router.get(
@@ -66,6 +67,7 @@ async def create_rule(
     timeframe = rule_create_request.timeframeInSeconds
     grouping_criteria = rule_create_request.groupingCriteria
     group_description = rule_create_request.groupDescription
+    require_approve = rule_create_request.requireApprove
     sql = rule_create_request.sqlQuery.get("sql")
     params = rule_create_request.sqlQuery.get("params")
 
@@ -96,6 +98,7 @@ async def create_rule(
         created_by=created_by,
         grouping_criteria=grouping_criteria,
         group_description=group_description,
+        require_approve=require_approve,
     )
     logger.info("Rule created")
     return rule
@@ -143,6 +146,7 @@ async def update_rule(
         cel_query = body["celQuery"]
         timeframe = body["timeframeInSeconds"]
         grouping_criteria = body.get("groupingCriteria", [])
+        require_approve = body.get("requireApprove", [])
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -176,6 +180,7 @@ async def update_rule(
         definition_cel=cel_query,
         updated_by=updated_by,
         grouping_criteria=grouping_criteria,
+        require_approve=require_approve,
     )
 
     if rule:

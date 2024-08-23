@@ -127,6 +127,10 @@ def json_dumps(data: str | dict) -> str:
     return json.dumps(data, indent=4, default=str)
 
 
+def json_loads(data: str) -> dict:
+    return json.loads(data)
+
+
 def replace(string: str, old: str, new: str) -> str:
     return string.replace(old, new)
 

@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+from typing import List
 
 import dateutil
 
@@ -22,7 +23,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
 from keep.api.models.db.preset import PresetDto
 from keep.api.utils.enrichment_helpers import (
@@ -311,15 +312,18 @@ def __handle_formatted_events(
             },
         )
 
+    incidents = []
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        grouped_alerts = rules_engine.run_rules(formatted_events)
-        # if new grouped alerts were created, we need to push them to the client
-        if grouped_alerts:
-            logger.info("Adding group alerts to the workflow manager queue")
-            workflow_manager.insert_events(tenant_id, grouped_alerts)
-            logger.info("Added group alerts to the workflow manager queue")
+        incidents: List[IncidentDto] = rules_engine.run_rules(formatted_events)
+
+        # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
+        # if new grouped incidents were created, we need to push them to the client
+        # if incidents:
+        #     logger.info("Adding group alerts to the workflow manager queue")
+        #     workflow_manager.insert_events(tenant_id, grouped_alerts)
+        #     logger.info("Added group alerts to the workflow manager queue")
     except Exception:
         logger.exception(
             "Failed to run rules engine",
@@ -332,15 +336,15 @@ def __handle_formatted_events(
         )
 
     # Tell the client to poll alerts
-    if notify_client:
+    if notify_client and incidents:
         pusher_client = get_pusher_client()
         if not pusher_client:
             return
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
-                "poll-alerts",
-                "{}",
+                "incident-change",
+                {},
             )
         except Exception:
             logger.exception("Failed to push alert to the client")
@@ -472,7 +476,9 @@ def process_event(
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
-        raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
+        # Retrying only if context is present (running the job in arq worker)
+        if bool(ctx):
+            raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
