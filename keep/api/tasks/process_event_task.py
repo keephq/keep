@@ -149,6 +149,9 @@ def __save_to_db(
 
             alert = Alert(**alert_args)
             session.add(alert)
+            session.flush()
+            alert_id = alert.id
+            formatted_event.event_id = str(alert_id)
             audit = AlertAudit(
                 tenant_id=tenant_id,
                 fingerprint=formatted_event.fingerprint,
@@ -161,11 +164,7 @@ def __save_to_db(
                 description=f"Alert recieved from provider with status {formatted_event.status}",
             )
             session.add(audit)
-            session.flush()
-            session.refresh(alert)
-            formatted_event.event_id = str(alert.id)
             alert_dto = AlertDto(**formatted_event.dict())
-
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
@@ -385,7 +384,10 @@ def __handle_formatted_events(
                 logger.info("Noisy preset is noisy")
                 preset_dto.should_do_noise_now = True
         # send with pusher
-        if notify_client and pusher_client:
+        if notify_client:
+            pusher_client = get_pusher_client()
+            if not pusher_client:
+                return
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
