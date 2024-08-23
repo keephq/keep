@@ -12,7 +12,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
   groupedAttributes: [],
   requireApprove: false,
   query: {
-    combinator: "and",
+    combinator: "or",
     rules: [
       {
         combinator: "and",

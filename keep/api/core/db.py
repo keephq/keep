@@ -85,12 +85,11 @@ def create_workflow_execution(
     event_id: str = None,
     fingerprint: str = None,
     execution_id: str = None,
-) -> WorkflowExecution:
+) -> str:
     with Session(engine) as session:
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
-
             workflow_execution = WorkflowExecution(
                 id=execution_id or str(uuid4()),
                 workflow_id=workflow_id,
@@ -101,19 +100,20 @@ def create_workflow_execution(
                 status="in_progress",
             )
             session.add(workflow_execution)
-
+            # Ensure the object has an id
+            session.flush()
+            execution_id = workflow_execution.id
             if fingerprint:
                 workflow_to_alert_execution = WorkflowToAlertExecution(
-                    workflow_execution_id=workflow_execution.id,
+                    workflow_execution_id=execution_id,
                     alert_fingerprint=fingerprint,
                     event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
-
             session.commit()
-            return workflow_execution.id
+            return execution_id
         except IntegrityError:
-            # Workflow execution already exists
+            session.rollback()
             logger.debug(
                 f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
             )
@@ -545,6 +545,11 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.id == execution_id)
         ).first()
         # some random number to avoid collisions
+        if not workflow_execution:
+            logger.warning(
+                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found."
+            )
+            raise ValueError("Execution not found")
         workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
@@ -933,6 +938,7 @@ def get_alerts_with_filters(
 
     return alerts
 
+
 def query_alerts(
     tenant_id,
     provider_id=None,
@@ -943,7 +949,7 @@ def query_alerts(
 ) -> list[Alert]:
     """
     Get all alerts for a given tenant_id.
-    
+
     Args:
         tenant_id (_type_): The tenant_id to filter the alerts by.
         provider_id (_type_, optional): The provider id to filter by. Defaults to None.
@@ -951,49 +957,50 @@ def query_alerts(
         timeframe (_type_, optional): The number of days to look back for alerts. Defaults to None.
         upper_timestamp (_type_, optional): The upper timestamp to filter by. Defaults to None.
         lower_timestamp (_type_, optional): The lower timestamp to filter by. Defaults to None.
-        
+
     Returns:
         List[Alert]: A list of Alert objects."""
-        
+
     with Session(engine) as session:
         # Create the query
         query = session.query(Alert)
-        
+
         # Apply subqueryload to force-load the alert_enrichment relationship
         query = query.options(subqueryload(Alert.alert_enrichment))
-        
+
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
-        
+
         # if timeframe is provided, filter the alerts by the timeframe
         if timeframe:
             query = query.filter(
                 Alert.timestamp
                 >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
             )
-        
+
         filter_conditions = []
-        
+
         if upper_timestamp is not None:
             filter_conditions.append(Alert.timestamp < upper_timestamp)
-        
+
         if lower_timestamp is not None:
             filter_conditions.append(Alert.timestamp >= lower_timestamp)
-        
+
         # Apply the filter conditions
         if filter_conditions:
             query = query.filter(*filter_conditions)  # Unpack and apply all conditions
-        
+
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
-        
+
         # Order by timestamp in descending order and limit the results
         query = query.order_by(Alert.timestamp.desc()).limit(limit)
-        
+
         # Execute the query
         alerts = query.all()
-    
+
     return alerts
+
 
 def get_last_alerts(
     tenant_id,
@@ -2243,7 +2250,7 @@ def add_alerts_to_incident_by_incident_id(
         new_alert_ids = [
             alert_id for alert_id in alert_ids if alert_id not in existed_alert_ids
         ]
-        
+
         if not new_alert_ids:
             return incident
 
@@ -2369,8 +2376,6 @@ def remove_alerts_to_incident_by_incident_id(
             source for source in incident.sources if source not in sources_to_remove
         ]
 
-
-
         incident.alerts_count -= alerts_data_for_incident["count"]
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
@@ -2446,55 +2451,56 @@ def confirm_predicted_incident_by_id(
 def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
     # TODO: add handlers for sequential launches
     with Session(engine) as session:
-        pmi_entries_to_update = []
+        pmi_entries_to_update = 0
         pmi_entries_to_insert = []
 
         # Query for existing entries to differentiate between updates and inserts
         existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
         existing_entries_dict = {
-            (entry.fingerprint_i, entry.fingerprint_j): entry for entry in existing_entries
+            (entry.fingerprint_i, entry.fingerprint_j): entry
+            for entry in existing_entries
         }
 
         for fingerprint_i in pmi_matrix_df.index:
             for fingerprint_j in pmi_matrix_df.columns:
-                pmi = pmi_matrix_df.at[fingerprint_i, fingerprint_j]
+                if pmi_matrix_df.at[fingerprint_i, fingerprint_j] == -100:
+                    continue
+
+                pmi = float(pmi_matrix_df.at[fingerprint_i, fingerprint_j])
 
                 pmi_entry = {
                     "tenant_id": tenant_id,
                     "fingerprint_i": fingerprint_i,
                     "fingerprint_j": fingerprint_j,
-                    "pmi": float(pmi),
+                    "pmi": pmi,
                 }
 
                 if (fingerprint_i, fingerprint_j) in existing_entries_dict:
-                    existed_entry = existing_entries_dict[(fingerprint_i, fingerprint_j)]
-                    if existed_entry.pmi != float(pmi):
+                    existed_entry = existing_entries_dict[
+                        (fingerprint_i, fingerprint_j)
+                    ]
+                    if existed_entry.pmi != pmi:
                         session.execute(
-                            update(PMIMatrix).where(
-                                PMIMatrix.fingerprint_i == fingerprint_i, 
-                                PMIMatrix.fingerprint_j == fingerprint_j, 
-                                PMIMatrix.tenant_id == tenant_id
-                            ).values(pmi = float(pmi))
+                            update(PMIMatrix)
+                            .where(
+                                PMIMatrix.fingerprint_i == fingerprint_i,
+                                PMIMatrix.fingerprint_j == fingerprint_j,
+                                PMIMatrix.tenant_id == tenant_id,
+                            )
+                            .values(pmi=pmi)
                         )
-                        pmi_entries_to_update.append(existed_entry)
+                        pmi_entries_to_update += 1
                 else:
                     pmi_entries_to_insert.append(pmi_entry)
 
-        # Update existing records
-        if pmi_entries_to_update:
-            logger.info(
-                f"Updating {len(pmi_entries_to_update)} PMI entries for tenant {tenant_id}",
-                extra={"tenant_id": tenant_id},
-            )
-            
-        # Insert new records
         if pmi_entries_to_insert:
-            logger.info(
-                f"Inserting {len(pmi_entries_to_insert)} PMI entries for tenant {tenant_id}",
-                extra={"tenant_id": tenant_id},
-            )
             session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
-        
+
+        logger.info(
+            f"PMI matrix for tenant {tenant_id} updated. {pmi_entries_to_update} entries updated, {len(pmi_entries_to_insert)} entries inserted",
+            extra={"tenant_id": tenant_id},
+        )
+
         session.commit()
 
     return True
@@ -2517,20 +2523,14 @@ def get_pmi_value(
 def get_pmi_values(
     tenant_id: str, fingerprints: List[str]
 ) -> Dict[Tuple[str, str], Optional[float]]:
-    pmi_values = {}
     with Session(engine) as session:
-        for idx_i, fingerprint_i in enumerate(fingerprints):
-            for idx_j in range(idx_i, len(fingerprints)):
-                fingerprint_j = fingerprints[idx_j]
-                pmi_entry = session.exec(
-                    select(PMIMatrix)
-                    .where(PMIMatrix.tenant_id == tenant_id)
-                    .where(PMIMatrix.fingerprint_i == fingerprint_i)
-                    .where(PMIMatrix.fingerprint_j == fingerprint_j)
-                ).first()
-                pmi_values[(fingerprint_i, fingerprint_j)] = (
-                    pmi_entry.pmi if pmi_entry else None
-                )
+        pmi_entries = session.exec(
+            select(PMIMatrix).where(PMIMatrix.tenant_id == tenant_id)
+        ).all()
+
+    pmi_values = {
+        (entry.fingerprint_i, entry.fingerprint_j): entry.pmi for entry in pmi_entries
+    }
     return pmi_values
 
 
@@ -2618,3 +2618,13 @@ def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
         session.commit()
         session.refresh(tag_preset)
         return tag_preset
+
+
+def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
+    with Session(engine) as session:
+        provider = session.exec(
+            select(Provider)
+            .where(Provider.tenant_id == tenant_id)
+            .where(Provider.name == provider_name)
+        ).first()
+    return provider

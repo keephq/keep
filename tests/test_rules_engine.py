@@ -44,7 +44,7 @@ def test_sanity(db_session):
             "params": {},
         },
         timeframe=600,
-        definition_cel='(source == "sentry") && (source == "grafana" && severity == "critical")',
+        definition_cel='(source == "sentry") || (source == "grafana" && severity == "critical")',
         created_by="test@keephq.dev",
     )
     rules = get_rules_db(SINGLE_TENANT_UUID)
@@ -63,7 +63,7 @@ def test_sanity(db_session):
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
     # check that there are results
-    assert results is not None
+    assert len(results) > 0
 
 
 def test_sanity_2(db_session):
@@ -109,7 +109,7 @@ def test_sanity_2(db_session):
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
     # check that there are results
-    assert results is not None
+    assert len(results) > 0
 
 
 def test_sanity_3(db_session):
@@ -156,7 +156,7 @@ def test_sanity_3(db_session):
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
     # check that there are results
-    assert results is not None
+    assert len(results) > 0
 
 
 def test_sanity_4(db_session):
