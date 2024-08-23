@@ -240,9 +240,12 @@ def get_app(
     async def on_startup():
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
+        from keep.providers.providers_service import ProvidersService
 
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
+        # provision providers from env. relevant only on single tenant.
+        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
         # Start the services
         logger.info("Starting the services")
