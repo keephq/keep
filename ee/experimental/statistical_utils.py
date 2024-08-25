@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from scipy.sparse import csr_matrix
 
 from keep.api.models.db.alert import Alert
@@ -104,7 +104,7 @@ def get_alert_pmi_matrix(alerts: List[Alert],
                          unique_alert_identifier: str, 
                          sliding_window_size: int, 
                          step_size: int, 
-                         temp_dir: str) -> Tuple[np.array, List[str]]:
+                         offload_config: Dict = {}) -> Tuple[np.array, List[str]]:
     """
         This funciton calculates PMI scores between alert groups (fingerprints).
         
@@ -123,7 +123,10 @@ def get_alert_pmi_matrix(alerts: List[Alert],
         'fingerprint': [alert.fingerprint for alert in alerts],
         'starts_at': [alert.timestamp for alert in alerts],
     }
-        
+    
+    if offload_config:
+        temp_dir = offload_config.get('temp_dir', None)
+    
     alert_df = pd.DataFrame(alert_dict)
     alert_occurences_df = get_batched_alert_occurrences(alert_df, unique_alert_identifier, sliding_window_size, step_size)
     logger.info('Windowed alert occurrences calculated.')
@@ -131,21 +134,33 @@ def get_alert_pmi_matrix(alerts: List[Alert],
     alert_occurrences = alert_occurences_df.to_numpy()
     alert_probabilities = np.mean(alert_occurrences, axis=0)
     logger.info('Alert probabilities calculated.')
-    
+        
     alert_occurrences = csr_matrix(alert_occurrences)
-    joint_alert_occurrences = np.memmap(f'{temp_dir}/joint_alert_occurrences.dat', dtype='float16', mode='w+', 
+    
+    if offload_config:
+        joint_alert_occurrences = np.memmap(f'{temp_dir}/joint_alert_occurrences.dat', dtype='float16', mode='w+', 
                                         shape=(alert_occurrences.shape[1], alert_occurrences.shape[1]))
+    else:
+        joint_alert_occurrences = np.zeros((alert_occurrences.shape[1], alert_occurrences.shape[1]), dtype=np.float16)
 
     joint_alert_occurrences[:] = alert_occurrences.T.dot(alert_occurrences).toarray()
     logger.info('Joint alert occurrences calculated.')
 
-    pairwise_alert_probabilities = np.memmap(f'{temp_dir}/pairwise_alert_probabilities.dat', dtype='float16', mode='w+', 
+    if offload_config:
+        pairwise_alert_probabilities = np.memmap(f'{temp_dir}/pairwise_alert_probabilities.dat', dtype='float16', mode='w+', 
                                             shape=(joint_alert_occurrences.shape[0], joint_alert_occurrences.shape[1]))
+    else:
+        pairwise_alert_probabilities = np.zeros((joint_alert_occurrences.shape[0], joint_alert_occurrences.shape[1]), dtype=np.float16)
+        
     pairwise_alert_probabilities[:] = joint_alert_occurrences / alert_occurrences.shape[0]
     logger.info('Pairwise alert probabilities calculated.')
     
-    dense_pmi_matrix = np.memmap(f'{temp_dir}/dense_pmi_matrix.dat', dtype='float16', mode='w+', 
+    if offload_config:
+        dense_pmi_matrix = np.memmap(f'{temp_dir}/dense_pmi_matrix.dat', dtype='float16', mode='w+', 
                                 shape=(pairwise_alert_probabilities.shape[0], pairwise_alert_probabilities.shape[1]))
+    else:
+        dense_pmi_matrix = np.zeros((pairwise_alert_probabilities.shape[0], pairwise_alert_probabilities.shape[1]), dtype=np.float16)
+    
     dense_pmi_matrix[:] = np.log(pairwise_alert_probabilities / 
                                 (alert_probabilities[:, None] * alert_probabilities))
     logger.info('PMI matrix calculated.')
@@ -155,14 +170,15 @@ def get_alert_pmi_matrix(alerts: List[Alert],
     pmi_matrix = np.clip(dense_pmi_matrix, -100, 100)
     logger.info('PMI matrix modified.')
     
-    joint_alert_occurrences._mmap.close()
-    pairwise_alert_probabilities._mmap.close()
-    dense_pmi_matrix._mmap.close()
+    if offload_config:
+        joint_alert_occurrences._mmap.close()
+        pairwise_alert_probabilities._mmap.close()
+        dense_pmi_matrix._mmap.close()
 
-    os.remove(f'{temp_dir}/joint_alert_occurrences.dat')
-    os.remove(f'{temp_dir}/pairwise_alert_probabilities.dat')
-    os.remove(f'{temp_dir}/dense_pmi_matrix.dat')
+        os.remove(f'{temp_dir}/joint_alert_occurrences.dat')
+        os.remove(f'{temp_dir}/pairwise_alert_probabilities.dat')
+        os.remove(f'{temp_dir}/dense_pmi_matrix.dat')
 
-    logger.info(f'Temporary files removed from {temp_dir}.')    
+        logger.info(f'Temporary files removed from {temp_dir}.')    
     
     return pmi_matrix, alert_occurences_df.columns
