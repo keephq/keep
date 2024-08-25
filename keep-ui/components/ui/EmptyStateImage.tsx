@@ -1,24 +1,32 @@
 import React from 'react';
 import { Button, Card } from "@tremor/react";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
+import Image from 'next/image';
 
-interface EmptyStateTableProps {
+interface EmptyStateImageProps {
   message: string;
   documentationURL: string;
-  children: React.ReactNode;
+  imageURL: string;
   icon?: React.ElementType;
 }
 
-export function EmptyStateTable({
+export function EmptyStateImage({
   message,
   documentationURL,
-  children,
+  imageURL,
   icon: Icon = CircleStackIcon,
-}: EmptyStateTableProps) {
+}: EmptyStateImageProps) {
   return (
     <div className="h-full flex flex-col relative">
-      <Card className="w-full flex-grow overflow-auto">
-        {children}
+      <Card className="w-full flex-grow overflow-hidden">
+        <div className="relative w-full h-full">
+          <Image
+            src={imageURL}
+            alt="Empty state"
+            layout="fill"
+            objectFit="contain"
+          />
+        </div>
       </Card>
 
       <div className="absolute inset-0 bg-white bg-opacity-50 dark:bg-gray-800 dark:bg-opacity-50 flex items-center justify-center">

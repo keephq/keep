@@ -24,11 +24,12 @@ import { Role } from "app/settings/models";
 import "./multiselect.css";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-interface Props {
+interface RolesTabProps {
   accessToken: string;
+  customRolesAllowed: boolean;
 }
 
-export default function RolesTab({ accessToken }: Props) {
+export default function RolesTab({ accessToken, customRolesAllowed }: RolesTabProps) {
   const apiUrl = getApiURL();
   const { data: scopes = [], isLoading: scopesLoading } = useScopes();
   const { data: roles = [], isLoading: rolesLoading, mutate: mutateRoles } = useRoles();
@@ -96,8 +97,10 @@ export default function RolesTab({ accessToken }: Props) {
               setSelectedRole(null);
               setIsSidebarOpen(true);
             }}
+            disabled={!customRolesAllowed}
+            tooltip={customRolesAllowed ? undefined : "This feature is not available in your authentication mode."}
           >
-            Create Role
+            Create Custom Role
           </Button>
         </div>
       </div>

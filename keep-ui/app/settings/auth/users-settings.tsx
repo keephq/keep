@@ -23,6 +23,7 @@ interface Props {
   accessToken: string;
   currentUser?: AuthUser;
   selectedTab: string;
+  groupsAllowed: boolean;
 }
 
 export interface Config {
@@ -33,6 +34,7 @@ export default function UsersSettings({
   accessToken,
   currentUser,
   selectedTab,
+  groupsAllowed,
 }: Props) {
   const { data: users, isLoading, mutate: mutateUsers } = useUsers();
   const { data: roles = [] } = useRoles();
@@ -143,16 +145,18 @@ export default function UsersSettings({
             authType={authType}
             onRowClick={handleRowClick}
             onDeleteUser={handleDeleteUser}
-            userStates={userStates}
+            groupsAllowed={groupsAllowed}
           />
         </div>
       </Card>
       <UsersSidebar
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
-        user={selectedUser}
+        user={selectedUser ?? undefined}
         isNewUser={isNewUser}
         mutateUsers={mutateUsers}
+        groupsEnabled={groupsAllowed}
+        identifierType={authType === AuthenticationType.SINGLE_TENANT ? "username" : "email"}
       />
     </div>
   );

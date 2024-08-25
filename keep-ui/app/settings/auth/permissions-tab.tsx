@@ -22,6 +22,7 @@ import { usePermissions } from "utils/hooks/usePermissions";
 import { getApiURL } from "utils/apiUrl";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import PermissionSidebar from "./permissions-sidebar";
+import { Permission } from "app/settings/models";
 import "./multiselect.css";
 
 interface Props {
@@ -43,9 +44,25 @@ export default function PermissionsTab({ accessToken }: Props) {
   const { data: users = [], error: usersError, isValidating: usersLoading } = useUsers();
   const { data: permissions = [], error: permissionsError, isValidating: permissionsLoading } = usePermissions();
 
-  const displayPermissions = useMemo(() => {
-    const groupPermissions = (groups || []).map(group => ({ id: group.id, name: group.name, type: 'group' as const }));
-    const userPermissions = (users || []).map(user => ({ id: user.email, name: user.email, type: 'user' as const }));
+
+  // SHAHAR: TODO: fix when needed
+  const displayPermissions = useMemo<Permission[]>(() => {
+    const groupPermissions: Permission[] = (groups || []).map(group => ({
+      id: group.id,
+      resource_id: group.id,
+      entity_id: group.id,
+      permissions: [{ id: 'group' }],
+      name: group.name,
+      type: "group"
+    }));
+    const userPermissions: Permission[] = (users || []).map(user => ({
+      id: user.email,
+      resource_id: user.email,
+      entity_id: user.email,
+      permissions: [{ id: 'user' }],
+      name: user.name,
+      type: "user"
+    }));
     return [...groupPermissions, ...userPermissions];
   }, [groups, users]);
 

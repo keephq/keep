@@ -163,7 +163,7 @@ const singleTenantAuthOptions = {
   },
 } as AuthOptions;
 
-async function refreshAccessToken(token) {
+async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
   const refreshTokenUrl = `${issuerUrl}/protocol/openid-connect/token`;
 
@@ -266,10 +266,10 @@ const keycloakAuthOptions  = {
         token.accessToken = account.access_token;
         token.id_token = account.id_token;
         token.refreshToken = account.refresh_token;
-        token.accessTokenExpires = Date.now() + account.refresh_expires_in * 1000;
+        token.accessTokenExpires = Date.now() + (account.refresh_expires_in as number) * 1000;
         // token.tenantId = profile?.active_organization.id;
         token.keep_tenant_id = "keep";
-      } else if (Date.now() < token.accessTokenExpires) {
+      } else if (Date.now() < (token.accessTokenExpires as number)) {
         // Return previous token if it has not expired yet
         return token;
       }
@@ -278,8 +278,8 @@ const keycloakAuthOptions  = {
       return refreshAccessToken(token);
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken;
-      session.tenantId = token.keep_tenant_id;
+      session.accessToken = token.accessToken as string;
+      session.tenantId = token.keep_tenant_id as string;
       return session;
     },
   },

@@ -3,7 +3,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Text, Button, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { MultiSelect, MultiSelectItem } from "@tremor/react";
-import { Permission } from "app/settings/models"; // Adjust the import as necessary
+import { Permission } from "app/settings/models";
 
 interface PermissionSidebarProps {
   isOpen: boolean;

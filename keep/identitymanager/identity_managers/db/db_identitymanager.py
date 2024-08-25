@@ -68,14 +68,18 @@ class DbIdentityManager(BaseIdentityManager):
                 email=f"{user.username}",
                 name=user.username,
                 role=user.role,
-                last_login=str(user.last_sign_in),
+                last_login=str(user.last_sign_in) if user.last_sign_in else None,
                 created_at=str(user.created_at),
             )
             for user in users
         ]
         return users
 
-    def create_user(self, user_email: str, password: str, role: str) -> dict:
+    def create_user(
+        self, user_email: str, user_name: str, password: str, role: str, groups: list
+    ) -> dict:
+        # Username is redundant, but we need it in other auth types
+        # Groups: for future use
         try:
             user = create_user_in_db(self.tenant_id, user_email, password, role)
             return User(

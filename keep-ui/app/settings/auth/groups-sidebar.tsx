@@ -6,7 +6,6 @@ import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form
 import { useRoles } from "utils/hooks/useRoles";
 import { useUsers } from "utils/hooks/useUsers";
 import { getApiURL } from "utils/apiUrl";
-import { useSession } from "next-auth/react";
 import "./multiselect.css";
 
 interface GroupSidebarProps {
@@ -27,7 +26,6 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
     },
   });
 
-  const { data: session } = useSession();
   const { data: roles = [] } = useRoles();
   const { data: users = [], mutate: mutateUsers } = useUsers();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +49,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     setIsSubmitting(true);
-    clearErrors("apiError");
+    clearErrors(); // Clear all errors
 
     const method = isNewGroup ? "POST" : "PUT";
     const url = isNewGroup ? `${getApiURL()}/auth/groups` : `${getApiURL()}/auth/groups/${group.id}`;
@@ -71,11 +69,12 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
         handleClose();
       } else {
         const errorData = await response.json();
-        setError("apiError", { type: "manual", message: errorData.detail || errorData.message || "Failed to save group" });
+        setError("root.serverError", {
+          message: errorData.detail || errorData.message || "Failed to save group"
+        });
       }
     } catch (error) {
-      setError("apiError", {
-        type: "manual",
+      setError("root.serverError", {
         message: "An unexpected error occurred",
       });
     } finally {
@@ -91,7 +90,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
 
   const handleClose = () => {
     setIsSubmitting(false);
-    clearErrors("apiError");
+    clearErrors("root.serverError");
     reset();
     toggle();
   };
@@ -198,9 +197,9 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                   />
                 </div>
               </div>
-              {errors.apiError && (
+              {errors.root?.serverError && (
                 <Callout className="mt-4" title="Error while saving group" color="rose">
-                  {errors.apiError.message}
+                  {errors.root.serverError.message}
                 </Callout>
               )}
               <div className="mt-6 flex justify-end gap-2">

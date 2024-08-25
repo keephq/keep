@@ -18,6 +18,7 @@ import { AuthenticationType } from "utils/authenticationType";
 
 import Loading from "app/loading";
 import { EmptyStateTable } from "@/components/ui/EmptyStateTable";
+import { EmptyStateImage } from "@/components/ui/EmptyStateImage";
 import UsersTab from "./auth/users-tab";
 import GroupsTab from "./auth/groups-tab";
 import RolesTab from "./auth/roles-tab";
@@ -29,8 +30,8 @@ import SmtpSettings from "./smtp-settings";
 import { UsersTable } from "./auth/users-table";
 import { GroupsTable } from "./auth/groups-table";
 import { RolesTable } from "./auth/roles-table";
-import { SSOTable } from "./auth/sso-table";
 import { APIKeysTable } from "./auth/api-key-table";
+import { User } from "app/settings/models";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -49,7 +50,14 @@ export default function SettingsPage() {
   const [userSubTabIndex, setUserSubTabIndex] = useState<number>(0);
 
   const authType = configData?.AUTH_TYPE as AuthenticationType;
-  const isNoAuth = authType === AuthenticationType.NO_AUTH;
+
+  // future: feature flags
+  const usersAllowed = authType !== AuthenticationType.NO_AUTH;
+  const rolesAllowed = authType !== AuthenticationType.NO_AUTH;
+  const customRolesAllowed = authType === AuthenticationType.KEYCLOAK;
+  const ssoAllowed = false;
+  const groupsAllowed = authType === AuthenticationType.KEYCLOAK;
+  const apiKeysAllowed = true; // Assuming API keys are always allowed
 
   useEffect(() => {
     const newSelectedTab = searchParams?.get("selectedTab") || "users";
@@ -94,23 +102,43 @@ export default function SettingsPage() {
   if (status === "unauthenticated") router.push("/signin");
 
   const renderUserSubTabContent = (subTabName: string) => {
-    if (isNoAuth) {
-      switch (subTabName) {
-        case "users":
-          const mockUsers = [
-            { email: "john@example.com", name: "John Doe", role: "Admin", groups: [{ name: "Admins" }], last_login: new Date().toISOString() },
-            { email: "jane@example.com", name: "Jane Smith", role: "User", groups: [{ name: "Users" }], last_login: new Date().toISOString() },
+    switch (subTabName) {
+      case "users":
+        if (usersAllowed) {
+          return <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} groupsAllowed={groupsAllowed}/>;
+        } else {
+          const mockUsers: User[] = [
+            {
+              email: "john@example.com",
+              name: "John Doe",
+              role: "Admin",
+              groups: [{ id: "1", name: "Admins", memberCount: 1, members: ["john@example.com"], roles: ["Admin"] }],
+              last_login: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            },
+            {
+              email: "jane@example.com",
+              name: "Jane Smith",
+              role: "User",
+              groups: [{ id: "2", name: "Users", memberCount: 1, members: ["jane@example.com"], roles: ["User"] }],
+              last_login: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            },
           ];
           return (
             <EmptyStateTable
-              subject="Users management"
+              message={`Users management is disabled. See documentation on how to enable it.`}
+              documentationURL="https://docs.keep.run/docs/authentication/auth-type"
               icon={UsersIcon}
-              onClickDocumentation={() => console.log("View documentation clicked for Users management")}
             >
               <UsersTable users={mockUsers} currentUserEmail={session?.user?.email} authType={authType} isDisabled={true} />
             </EmptyStateTable>
           );
-        case "groups":
+        }
+      case "groups":
+        if (groupsAllowed) {
+          return <GroupsTab accessToken={session?.accessToken!} />;
+        } else {
           const mockGroups = [
             { id: "1", name: "Admins", members: ["john@example.com", "doe@example.com", "keep@example.com", "noc@example.com"], roles: ["Admin"] },
             { id: "2", name: "Operators", members: ["john@example.com", "doe@example.com", "keep@example.com", "noc@example.com"], roles: ["Operator"] },
@@ -120,13 +148,17 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               icon={UserGroupIcon}
-              subject="Groups management"
-              onClickDocumentation={() => console.log("View documentation clicked for Groups management")}
+              message={`Groups management is disabled with. See documentation on how to enabled it.`}
+              documentationURL="https://docs.keep.run/docs/authentication/auth-type"
             >
               <GroupsTable groups={mockGroups} onRowClick={() => {}} onDeleteGroup={() => {}} isDisabled={true} />
             </EmptyStateTable>
           );
-        case "roles":
+        }
+      case "roles":
+        if (rolesAllowed) {
+          return <RolesTab accessToken={session?.accessToken!} customRolesAllowed={customRolesAllowed}/>;
+        } else {
           const mockRoles = [
             { id: "1", name: "Admin", description: "Full access", scopes: ["*"], predefined: true },
             { id: "2", name: "User", description: "Limited access", scopes: ["read:*"], predefined: false },
@@ -134,76 +166,63 @@ export default function SettingsPage() {
           return (
             <EmptyStateTable
               icon={ShieldCheckIcon}
-              subject="Roles management"
-              onClickDocumentation={() => console.log("View documentation clicked for Roles management")}
+              message={`Roles management is disabled with. See documentation on how to enabled it.`}
+              documentationURL="https://docs.keep.run/docs/authentication/auth-type"
             >
               <RolesTable roles={mockRoles} onRowClick={() => {}} onDeleteRole={() => {}} isDisabled={true} />
             </EmptyStateTable>
           );
-          case "api-keys":
-            const mockApiKeys = [
-              {
-                reference_id: "AdminKey",
-                secret: "sk_test_abcdefghijklmnopqrstuvwxyz123456",
-                role: "Admin",
-                created_by: "john@example.com",
-                created_at: "2023-05-01T12:00:00Z",
-                last_used: "2023-06-15T15:30:00Z"
-              },
-              {
-                reference_id: "ViewerKey",
-                secret: "sk_test_zyxwvutsrqponmlkjihgfedcba654321",
-                role: "Viewer",
-                created_by: "jane@example.com",
-                created_at: "2023-06-01T09:00:00Z",
-                last_used: "2023-06-20T10:45:00Z"
-              },
-            ];
-            return (
-              <EmptyStateTable
-                icon={KeyIcon}
-                subject="API Keys management"
-                onClickDocumentation={() => console.log("View documentation clicked for API Keys management")}
-              >
-                <APIKeysTable
-                  apiKeys={mockApiKeys}
-                  onRegenerate={() => {}}
-                  onDelete={() => {}}
-                  isDisabled={true}
-                />
-              </EmptyStateTable>
-            );
-        case "sso":
-          const mockSSOProviders = [
-            { id: "1", name: "Google", connected: true },
-            { id: "2", name: "Microsoft", connected: false },
+        }
+      case "api-keys":
+        if (apiKeysAllowed) {
+          return <APIKeysTab accessToken={session?.accessToken!} />;
+        } else {
+          const mockApiKeys = [
+            {
+              reference_id: "AdminKey",
+              secret: "sk_test_abcdefghijklmnopqrstuvwxyz123456",
+              role: "Admin",
+              created_by: "john@example.com",
+              created_at: "2023-05-01T12:00:00Z",
+              last_used: "2023-06-15T15:30:00Z"
+            },
+            {
+              reference_id: "ViewerKey",
+              secret: "sk_test_zyxwvutsrqponmlkjihgfedcba654321",
+              role: "Viewer",
+              created_by: "jane@example.com",
+              created_at: "2023-06-01T09:00:00Z",
+              last_used: "2023-06-20T10:45:00Z"
+            },
           ];
           return (
             <EmptyStateTable
-              icon={MdOutlineSecurity}
-              subject="SSO management"
-              onClickDocumentation={() => console.log("View documentation clicked for SSO management")}
+              icon={KeyIcon}
+              message={`API Keys management is disabled with. See documentation on how to enabled it.`}
+              documentationURL="https://docs.keep.run/docs/authentication/auth-type"
             >
-              <SSOTable providers={mockSSOProviders} onConnect={() => {}} onDisconnect={() => {}} isDisabled={true} />
+              <APIKeysTable
+                apiKeys={mockApiKeys}
+                onRegenerate={() => {}}
+                onDelete={() => {}}
+                isDisabled={true}
+              />
             </EmptyStateTable>
           );
-        default:
-          return null;
-      }
-    }
-
-    // If not NO_AUTH, render normal content
-    switch (subTabName) {
-      case "users":
-        return <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} selectedTab={selectedUserSubTab} />;
-      case "groups":
-        return <GroupsTab accessToken={session?.accessToken!} />;
-      case "roles":
-        return <RolesTab accessToken={session?.accessToken!} />;
-      case "api-keys":
-        return <APIKeysTab accessToken={session?.accessToken!} />;
+        }
       case "sso":
-        return <SSOTab accessToken={session?.accessToken!} selectedTab={selectedUserSubTab} />;
+        if (ssoAllowed) {
+          return <SSOTab accessToken={session?.accessToken!} />;
+        } else {
+          return (
+            <EmptyStateImage
+            message={`SSO management is disabled with. See documentation on how to enabled it.`}
+              documentationURL="https://docs.keep.run/docs/authentication/auth-type"
+              icon={LockClosedIcon}
+              imageURL='/sso.png'
+            />
+          );
+        }
       default:
         return null;
     }

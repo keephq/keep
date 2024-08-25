@@ -21,7 +21,7 @@ const SSOSettings: React.FC<Props> = ({ accessToken }) => {
   const apiUrl = getApiURL();
   const { data, error } = useSWR<{ sso: boolean, providers: SSOProvider[], wizardUrl: string }>(
     `${apiUrl}/settings/sso`,
-    url => fetcher(url, accessToken)
+    (url: string) => fetcher(url, accessToken)
   );
 
   if (!data) return <Loading />;
@@ -30,7 +30,7 @@ const SSOSettings: React.FC<Props> = ({ accessToken }) => {
   const { sso: supportsSSO, providers, wizardUrl } = data;
 
   return (
-    <div className="p-6">
+    <div className="h-full flex flex-col">
       <Title>SSO Settings</Title>
       {supportsSSO && providers.length > 0 && (
         <Card className="mt-4 p-4">
@@ -62,8 +62,8 @@ const SSOSettings: React.FC<Props> = ({ accessToken }) => {
         </Card>
       )}
       {wizardUrl && (
-        <Card className="mt-4 p-4">
-          <iframe src={wizardUrl} style={{ width: '100%', height: '600px', border: 'none' }} />
+        <Card className="mt-4 p-4 flex-grow flex flex-col">
+          <iframe src={wizardUrl} className="w-full flex-grow border-none" />
         </Card>
       )}
     </div>

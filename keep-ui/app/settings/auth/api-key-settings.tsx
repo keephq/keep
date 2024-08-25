@@ -26,6 +26,28 @@ import { getSession } from "next-auth/react";
 import { mutate } from "swr";
 import { UpdateIcon } from "@radix-ui/react-icons";
 
+interface Props {
+  accessToken: string;
+  selectedTab: string;
+}
+
+export interface ApiKey {
+  reference_id: string;
+  secret: string;
+  created_by: string;
+  created_at: string;
+  last_used?: string;
+  role?: string;
+}
+
+interface ApiKeyResponse {
+  apiKeys: ApiKey[];
+}
+
+interface Config {
+  AUTH_TYPE: string;
+}
+
 export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const apiUrl = getApiURL();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(

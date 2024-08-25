@@ -6,13 +6,13 @@ from fastapi import HTTPException
 from fastapi.routing import APIRoute
 from starlette.routing import Route
 
+from ee.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
+    KeycloakAuthVerifier,
+)
 from keep.api.models.user import Group, PermissionEntity, ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase, get_all_scopes
-from keep.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
-    KeycloakAuthVerifier,
-)
 from keep.identitymanager.identitymanager import PREDEFINED_ROLES, BaseIdentityManager
 from keycloak import KeycloakAdmin
 from keycloak.exceptions import KeycloakDeleteError, KeycloakGetError, KeycloakPostError

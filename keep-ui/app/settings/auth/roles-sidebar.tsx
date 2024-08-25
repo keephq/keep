@@ -135,10 +135,10 @@ const RoleSidebar = ({
         await mutateRoles();
       } else {
         const errorData = await response.json();
-        setError("apiError", { type: "manual", message: errorData.message || "Failed to save role" });
+        setError("root.serverError", { type: "manual", message: errorData.message || "Failed to save role" });
       }
     } catch (error) {
-      setError("apiError", { type: "manual", message: "An unexpected error occurred" });
+      setError("root.serverError", { type: "manual", message: "An unexpected error occurred" });
     } finally {
       setIsSubmitting(false);
     }
@@ -195,7 +195,7 @@ const RoleSidebar = ({
                         {...field}
                         error={!!errors.name}
                         errorMessage={errors.name?.message}
-                        disabled={selectedRole && selectedRole.predefined}
+                        disabled={!!(selectedRole && selectedRole.predefined)}
                         className={`${
                           selectedRole && selectedRole.predefined ? "bg-gray-200" : ""
                         }`}
@@ -216,7 +216,7 @@ const RoleSidebar = ({
                         {...field}
                         error={!!errors.description}
                         errorMessage={errors.description?.message}
-                        disabled={selectedRole && selectedRole.predefined}
+                        disabled={!!(selectedRole && selectedRole.predefined)}
                         className={`${
                           selectedRole && selectedRole.predefined ? "bg-gray-200" : ""
                         }`}
@@ -235,9 +235,9 @@ const RoleSidebar = ({
                     {prepopulateScopes()}
                   </div>
                 </div>
-                {errors.apiError && typeof errors.apiError.message === "string" && (
+                {errors.root?.serverError && typeof errors.root.serverError.message === "string" && (
                   <Callout className="mt-4" title="Error while adding role" color="rose">
-                    {errors.apiError.message}
+                    {errors.root.serverError.message}
                   </Callout>
                 )}
               </div>

@@ -12,7 +12,8 @@ import {
   Icon,
 } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { ApiKey, Role } from "./auth/api-key-settings";
+import { ApiKey } from "./auth/api-key-settings";
+import { Role } from "app/settings/models";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
 
@@ -128,14 +129,15 @@ export default function CreateApiKeyModal({
                 onChange={(selectedOption) => field.onChange(selectedOption?.name)}
                 value={roles.find(role => role.id === field.value)}
                 options={roles}
-                getOptionLabel={(role) => (
+                getOptionLabel={(role) => role.name}
+                formatOptionLabel={(option) => (
                   <div className="flex items-center">
-                    {role.name}
-                    {role.description && (
+                    {option.name}
+                    {option.description && (
                       <Icon
                         icon={InfoCircledIcon}
                         className="role-tooltip"
-                        tooltip={role.description}
+                        tooltip={option.description}
                         color="gray"
                         size="xs"
                       />

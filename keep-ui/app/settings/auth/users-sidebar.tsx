@@ -15,15 +15,25 @@ import Select  from "@/components/ui/Select";
 interface UserSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  user: User;
+  user?: User;
   isNewUser: boolean;
   mutateUsers: (data?: any, shouldRevalidate?: boolean) => Promise<any>;
+  groupsEnabled?: boolean;
+  identifierType: 'email' | 'username';
 }
 
-const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSidebarProps) => {
-  const { control, handleSubmit, setValue, reset, formState: { errors, isDirty }, clearErrors, setError } = useForm({
+const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnabled = true, identifierType }: UserSidebarProps) => {
+  const { control, handleSubmit, setValue, reset, formState: { errors, isDirty }, clearErrors, setError } = useForm<{
+    email: string;
+    username: string;
+    name: string;
+    role: string;
+    groups: string[];
+    password: string;
+  }>({
     defaultValues: {
       email: "",
+      username: "",
       name: "",
       role: "",
       groups: [],
@@ -42,13 +52,18 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
   useEffect(() => {
     if (isOpen) {
       if (user) {
-        setValue("email", user.email);
-        setValue("name", user.name);
+        if (identifierType === 'email') {
+          setValue("email", user.email);
+          setValue("name", user.name);
+        } else {
+          setValue("username", user.email || user.name);
+        }
         setValue("role", user.role || "");
         setValue("groups", user.groups?.map((group: Group) => group.id) || []);
       } else {
         reset({
           email: "",
+          username: "",
           name: "",
           role: "",
           groups: [],
@@ -56,14 +71,14 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
       }
       clearErrors();  // Clear errors when the modal is opened
     }
-  }, [user, setValue, isOpen, reset, clearErrors]);
+  }, [user, setValue, isOpen, reset, clearErrors, identifierType]);
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     setIsSubmitting(true);
-    clearErrors("apiError");
+    clearErrors("root.serverError");
 
     const method = isNewUser ? "POST" : "PUT";
-    const url = isNewUser ? `${getApiURL()}/auth/users` : `${getApiURL()}/auth/users/${user.email}`;
+    const url = isNewUser ? `${getApiURL()}/auth/users` : `${getApiURL()}/auth/users/${identifierType === 'email' ? user?.email : user?.name}`;
     try {
       const response = await fetch(url, {
         method: method,
@@ -80,10 +95,10 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
         handleClose();
       } else {
         const errorData = await response.json();
-        setError("apiError", { type: "manual", message: errorData.detail || errorData.message || "Failed to save user" });
+        setError("root.serverError", { type: "manual", message: errorData.detail || errorData.message || "Failed to save user" });
       }
     } catch (error) {
-      setError("apiError", {
+      setError("root.serverError", {
         type: "manual",
         message: "An unexpected error occurred",
       });
@@ -100,7 +115,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
 
   const handleClose = () => {
     setIsSubmitting(false);  // Ensure isSubmitting is reset when closing the modal
-    clearErrors("apiError");
+    clearErrors("root.serverError");
     reset();
     toggle();
   };
@@ -139,50 +154,76 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
             </div>
             <form onSubmit={handleSubmitClick} className="mt-4 flex flex-col h-full">
               <div className="flex-grow">
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
-                  <Controller
-                    name="email"
-                    control={control}
-                    rules={{
-                      required: "Email is required",
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: "Invalid email address",
-                      },
-                    }}
-                    render={({ field }) => (
-                      <TextInput
-                        {...field}
-                        error={!!errors.email}
-                        errorMessage={errors.email?.message}
-                        disabled={!isNewUser}
-                        className={`${
-                            isNewUser ? "" : "bg-gray-200"
-                          }`}
+                {identifierType === 'email' ? (
+                  <>
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Email
+                      </label>
+                      <Controller
+                        name="email"
+                        control={control}
+                        rules={{
+                          required: "Email is required",
+                          pattern: {
+                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                            message: "Invalid email address",
+                          },
+                        }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            error={!!errors.email}
+                            errorMessage={errors.email?.message}
+                            disabled={!isNewUser}
+                            className={`${
+                                isNewUser ? "" : "bg-gray-200"
+                              }`}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Name
-                  </label>
-                  <Controller
-                    name="name"
-                    control={control}
-                    rules={{ required: "Name is required" }}
-                    render={({ field }) => (
-                      <TextInput
-                        {...field}
-                        error={!!errors.name}
-                        errorMessage={errors.name?.message}
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Name
+                      </label>
+                      <Controller
+                        name="name"
+                        control={control}
+                        rules={{ required: "Name is required" }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            error={!!errors.name}
+                            errorMessage={errors.name?.message}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Username
+                    </label>
+                    <Controller
+                      name="username"
+                      control={control}
+                      rules={{ required: "Username is required" }}
+                      render={({ field }) => (
+                        <TextInput
+                          {...field}
+                          error={!!errors.username}
+                          errorMessage={errors.username?.message}
+                          disabled={!isNewUser}
+                          className={`${
+                              isNewUser ? "" : "bg-gray-200"
+                            }`}
+                        />
+                      )}
+                    />
+                  </div>
+                )}
                 {/* Password Field */}
                 {(authType === AuthenticationType.SINGLE_TENANT || authType === AuthenticationType.KEYCLOAK) && isNewUser && (
                 <div className="mt-4">
@@ -227,34 +268,36 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers }: UserSide
                     )}
                   />
                 </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Groups
-                  </label>
-                  <Controller
-                    name="groups"
-                    control={control}
-                    render={({ field }) => (
-                      <MultiSelect
-                        {...field}
-                        onValueChange={(value) => field.onChange(value)}
-                        value={field.value as string[]}
-                        className="custom-multiselect"
-                      >
-                        {groups.map((group) => (
-                          <MultiSelectItem key={group.id} value={group.id}>
-                            {group.name}
-                          </MultiSelectItem>
-                        ))}
-                      </MultiSelect>
-                    )}
-                  />
-                </div>
+                {groupsEnabled && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Groups
+                    </label>
+                    <Controller
+                      name="groups"
+                      control={control}
+                      render={({ field }) => (
+                        <MultiSelect
+                          {...field}
+                          onValueChange={(value) => field.onChange(value)}
+                          value={field.value as string[]}
+                          className="custom-multiselect"
+                        >
+                          {groups.map((group) => (
+                            <MultiSelectItem key={group.id} value={group.id}>
+                              {group.name}
+                            </MultiSelectItem>
+                          ))}
+                        </MultiSelect>
+                      )}
+                    />
+                  </div>
+                )}
               </div>
               {/* Display API Error */}
-              {errors.apiError && (
+              {errors.root?.serverError && (
                 <Callout className="mt-4" title="Error while saving user" color="rose">
-                  {errors.apiError.message}
+                  {errors.root.serverError.message}
                 </Callout>
               )}
               <div className="mt-6 flex justify-end gap-2">

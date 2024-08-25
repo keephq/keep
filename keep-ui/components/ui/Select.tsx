@@ -11,7 +11,7 @@ const customStyles: StylesConfig<OptionType, false> = {
     '&:hover': {
       borderColor: 'orange',
     },
-    boxShadow: state.isFocused ? '0 0 0 1px orange' : null,
+    boxShadow: state.isFocused ? '0 0 0 1px orange' : 'none',
     backgroundColor: 'transparent',
   }),
   option: (provided, state) => ({

@@ -23,6 +23,7 @@ interface UsersTableProps {
   onRowClick?: (user: User) => void;
   onDeleteUser?: (email: string, event: React.MouseEvent) => void;
   isDisabled?: boolean;
+  groupsAllowed?: boolean;
 }
 
 export function UsersTable({
@@ -31,7 +32,8 @@ export function UsersTable({
   authType,
   onRowClick,
   onDeleteUser,
-  isDisabled = false
+  isDisabled = false,
+  groupsAllowed = true
 }: UsersTableProps) {
   return (
     <Table>
@@ -45,7 +47,7 @@ export function UsersTable({
           </TableHeaderCell>
           <TableHeaderCell className="w-2/12">Name</TableHeaderCell>
           <TableHeaderCell className="w-1/12">Role</TableHeaderCell>
-          <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>
+          {groupsAllowed && <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>}
           <TableHeaderCell className="w-2/12">Last Login</TableHeaderCell>
           <TableHeaderCell className="w-1/12"></TableHeaderCell>
         </TableRow>
@@ -100,20 +102,22 @@ export function UsersTable({
                 )}
               </div>
             </TableCell>
-            <TableCell className="w-2/12">
-              <div className="flex flex-wrap gap-1">
-                {user.groups?.slice(0, 4).map((group, index) => (
-                  <Badge key={index} color="orange" className="text-xs">
-                    {group.name}
-                  </Badge>
-                ))}
-                {user.groups && user.groups.length > 4 && (
-                  <Badge color="orange" className="text-xs">
-                    +{user.groups.length - 4} more
-                  </Badge>
-                )}
-              </div>
-            </TableCell>
+            {groupsAllowed && (
+              <TableCell className="w-2/12">
+                <div className="flex flex-wrap gap-1">
+                  {user.groups?.slice(0, 4).map((group, index) => (
+                    <Badge key={index} color="orange" className="text-xs">
+                      {group.name}
+                    </Badge>
+                  ))}
+                  {user.groups && user.groups.length > 4 && (
+                    <Badge color="orange" className="text-xs">
+                      +{user.groups.length - 4} more
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
+            )}
             <TableCell className="w-2/12">
               <Text>{user.last_login ? new Date(user.last_login).toLocaleString() : "Never"}</Text>
             </TableCell>

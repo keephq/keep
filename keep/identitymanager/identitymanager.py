@@ -6,7 +6,7 @@ import logging
 from keep.api.models.user import ResourcePermission, Role
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
-from keep.identitymanager.authverifierbase import AuthVerifierBase
+from keep.identitymanager.authverifierbase import ALL_RESOURCES, AuthVerifierBase
 from keep.identitymanager.rbac import get_role_by_role_name
 
 rbac_module = importlib.import_module("keep.identitymanager.rbac")
@@ -238,12 +238,20 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         for role in PREDEFINED_ROLES:
             role_name = role.name
             _role = get_role_by_role_name(role_name)
+            # expand scopes so read:* become read:alert, etc
+            expanded_scopes = []
+            for scope in _role.SCOPES:
+                if scope.endswith(":*"):
+                    for resource in ALL_RESOURCES:
+                        expanded_scopes.append(f"{scope[:-2]}:{resource}")
+                else:
+                    expanded_scopes.append(scope)
             roles_dto.append(
                 Role(
                     id=role_name,
                     name=role_name,
                     description=_role.DESCRIPTION,
-                    scopes=_role.SCOPES,
+                    scopes=expanded_scopes,
                 )
             )
         return roles_dto
