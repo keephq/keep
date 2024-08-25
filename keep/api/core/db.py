@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
+import numpy as np
 import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
@@ -946,6 +947,7 @@ def query_alerts(
     timeframe=None,
     upper_timestamp=None,
     lower_timestamp=None,
+    skip_alerts_with_null_timestamp=True,
 ) -> list[Alert]:
     """
     Get all alerts for a given tenant_id.
@@ -992,6 +994,9 @@ def query_alerts(
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
+
+        if skip_alerts_with_null_timestamp:
+            query = query.filter(Alert.timestamp.isnot(None))
 
         # Order by timestamp in descending order and limit the results
         query = query.order_by(Alert.timestamp.desc()).limit(limit)
@@ -2459,6 +2464,15 @@ def confirm_predicted_incident_by_id(
         return incident
 
 
+def write_pmi_matrix_to_temp_file(
+    tenant_id: str, pmi_matrix: np.array, fingerprints: List, temp_dir: str
+) -> bool:
+    np.savez(
+        f"{temp_dir}/pmi_matrix.npz", pmi_matrix=pmi_matrix, fingerprints=fingerprints
+    )
+    return True
+
+
 def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
     # TODO: add handlers for sequential launches
     with Session(engine) as session:
@@ -2529,6 +2543,16 @@ def get_pmi_value(
         ).first()
 
     return pmi_entry.pmi if pmi_entry else None
+
+
+def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, int]]:
+    npzfile = np.load(f"{temp_dir}/pmi_matrix.npz", allow_pickle=True)
+    pmi_matrix = npzfile["pmi_matrix"]
+    fingerprints = npzfile["fingerprints"]
+
+    fingerint2idx = {fingerprint: i for i, fingerprint in enumerate(fingerprints)}
+
+    return pmi_matrix, fingerint2idx
 
 
 def get_pmi_values(
