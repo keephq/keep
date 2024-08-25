@@ -34,8 +34,8 @@ class UpdateUserRequest(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    @validator("role")
-    def empty_string_to_none(cls, v):
+    @validator("role", allow_reuse=True)
+    def validate_role(cls, v):
         if v == "":
             return None
         return v
