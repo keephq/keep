@@ -85,12 +85,11 @@ def create_workflow_execution(
     event_id: str = None,
     fingerprint: str = None,
     execution_id: str = None,
-) -> WorkflowExecution:
+) -> str:
     with Session(engine) as session:
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
-
             workflow_execution = WorkflowExecution(
                 id=execution_id or str(uuid4()),
                 workflow_id=workflow_id,
@@ -101,19 +100,20 @@ def create_workflow_execution(
                 status="in_progress",
             )
             session.add(workflow_execution)
-
+            # Ensure the object has an id
+            session.flush()
+            execution_id = workflow_execution.id
             if fingerprint:
                 workflow_to_alert_execution = WorkflowToAlertExecution(
-                    workflow_execution_id=workflow_execution.id,
+                    workflow_execution_id=execution_id,
                     alert_fingerprint=fingerprint,
                     event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
-
             session.commit()
-            return workflow_execution.id
+            return execution_id
         except IntegrityError:
-            # Workflow execution already exists
+            session.rollback()
             logger.debug(
                 f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
             )
@@ -545,6 +545,11 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             .where(WorkflowExecution.id == execution_id)
         ).first()
         # some random number to avoid collisions
+        if not workflow_execution:
+            logger.warning(
+                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found."
+            )
+            raise ValueError("Execution not found")
         workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
@@ -2624,3 +2629,13 @@ def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
         session.commit()
         session.refresh(tag_preset)
         return tag_preset
+
+
+def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
+    with Session(engine) as session:
+        provider = session.exec(
+            select(Provider)
+            .where(Provider.tenant_id == tenant_id)
+            .where(Provider.name == provider_name)
+        ).first()
+    return provider

@@ -20,6 +20,7 @@ import keep.api.logging
 import keep.api.observability
 from keep.api.arq_worker import get_worker
 from keep.api.core.config import AuthenticationType
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     actions,
@@ -218,9 +219,12 @@ def get_app(
     async def on_startup():
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
+        from keep.providers.providers_service import ProvidersService
 
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
+        # provision providers from env. relevant only on single tenant.
+        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
         # Start the services
         logger.info("Starting the services")

@@ -1,6 +1,7 @@
 """
 HttpProvider is a class that provides a way to send HTTP requests.
 """
+
 import json
 import typing
 
@@ -19,7 +20,7 @@ class HttpProvider(BaseProvider):
         "metadata.google.internal",
         "metadata.internal",
         "169.254.169.254",
-        "localhost",
+        # "localhost",
         "googleapis.com",
     ]
 

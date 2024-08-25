@@ -179,7 +179,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         for enrichment in enrichments:
             try:
                 value = enrichment["value"]
-                disposable = bool(enrichment.get("disposable", "false"))
+                disposable = bool(enrichment.get("disposable", False))
                 if value.startswith("results."):
                     val = enrichment["value"].replace("results.", "")
                     parts = val.split(".")

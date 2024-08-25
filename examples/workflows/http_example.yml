@@ -9,6 +9,5 @@ workflow:
         with:
           method: POST
           body:
-            alert: keep.json_loads('{{ alert }}')
-            fingerprint: '{{ alert.fingerprint }}'
-          url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"
+            alert: keep.json_loads('abc')
+          url: "http://localhost:8123"

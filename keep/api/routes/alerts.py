@@ -81,8 +81,6 @@ def get_all_alerts(
 @router.get("/{fingerprint}/history", description="Get alert history")
 def get_alert_history(
     fingerprint: str,
-    provider_id: str | None = None,
-    provider_type: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -98,27 +96,6 @@ def get_alert_history(
         tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
     )
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-
-    if provider_id is not None and provider_type is not None:
-        try:
-            installed_provider = ProvidersFactory.get_installed_provider(
-                tenant_id=authenticated_entity.tenant_id,
-                provider_id=provider_id,
-                provider_type=provider_type,
-            )
-            pulled_alerts_history = installed_provider.get_alerts_by_fingerprint(
-                tenant_id=authenticated_entity.tenant_id
-            ).get(fingerprint, [])
-            enriched_alerts_dto.extend(pulled_alerts_history)
-        except Exception:
-            logger.warning(
-                "Failed to pull alerts history from installed provider",
-                extra={
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                    "tenant_id": authenticated_entity.tenant_id,
-                },
-            )
 
     logger.info(
         "Fetched alert history",
