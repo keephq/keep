@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from tests.fixtures.client import setup_api_key
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 MOCK_TOKEN = "MOCKTOKEN"
 
