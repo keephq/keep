@@ -77,7 +77,7 @@ def calculate_pmi_matrix(
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
         
     if not temp_dir:
-        temp_dir = os.environ.get('PMI_TEMP_DIR', DEFAULT_TEMP_DIR_LOCATION)
+        temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
         temp_dir = f'{temp_dir}/{tenant_id}'
         os.makedirs(temp_dir, exist_ok=True)
         
@@ -180,7 +180,7 @@ async def mine_incidents_and_create_objects(
         incident_similarity_threshold = os.environ.get('INCIDENT_SIMILARITY_THRESHOLD', 0.8)
         
     if not general_temp_dir:
-        general_temp_dir = os.environ.get('PMI_TEMP_DIR', DEFAULT_TEMP_DIR_LOCATION)
+        general_temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
         
     if not min_alert_number:
         min_alert_number = os.environ.get('MIN_ALERT_NUMBER', MIN_ALERT_NUMBER)
