@@ -689,6 +689,7 @@ def _enrich_alert(
     action_callee: str,
     action_description: str,
     force=False,
+    audit_enabled=True,
 ):
     """
     Enrich an alert with the provided enrichments.
@@ -715,15 +716,16 @@ def _enrich_alert(
             .values(enrichments=new_enrichment_data)
         )
         session.execute(stmt)
-        # add audit event
-        audit = AlertAudit(
-            tenant_id=tenant_id,
-            fingerprint=fingerprint,
-            user_id=action_callee,
-            action=action_type.value,
-            description=action_description,
-        )
-        session.add(audit)
+        if audit_enabled:
+            # add audit event
+            audit = AlertAudit(
+                tenant_id=tenant_id,
+                fingerprint=fingerprint,
+                user_id=action_callee,
+                action=action_type.value,
+                description=action_description,
+            )
+            session.add(audit)
         session.commit()
         # Refresh the instance to get updated data from the database
         session.refresh(enrichment)
@@ -736,14 +738,15 @@ def _enrich_alert(
         )
         session.add(alert_enrichment)
         # add audit event
-        audit = AlertAudit(
-            tenant_id=tenant_id,
-            fingerprint=fingerprint,
-            user_id=action_callee,
-            action=action_type.value,
-            description=action_description,
-        )
-        session.add(audit)
+        if audit_enabled:
+            audit = AlertAudit(
+                tenant_id=tenant_id,
+                fingerprint=fingerprint,
+                user_id=action_callee,
+                action=action_type.value,
+                description=action_description,
+            )
+            session.add(audit)
         session.commit()
         return alert_enrichment
 
@@ -757,6 +760,7 @@ def enrich_alert(
     action_description: str,
     session=None,
     force=False,
+    audit_enabled=True,
 ):
     # else, the enrichment doesn't exist, create it
     if not session:
@@ -770,6 +774,7 @@ def enrich_alert(
                 action_callee,
                 action_description,
                 force=force,
+                audit_enabled=audit_enabled,
             )
     return _enrich_alert(
         session,
@@ -780,6 +785,7 @@ def enrich_alert(
         action_callee,
         action_description,
         force=force,
+        audit_enabled=audit_enabled,
     )
 
 
