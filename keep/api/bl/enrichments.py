@@ -354,6 +354,7 @@ class EnrichmentsBl:
         should_exist=True,
         dispose_on_new_alert=False,
         force=False,
+        audit_enabled=True,
     ):
         """
         should_exist = False only in mapping where the alert is not yet in elastic
@@ -391,6 +392,7 @@ class EnrichmentsBl:
             action_description=action_description,
             session=self.db_session,
             force=force,
+            audit_enabled=audit_enabled,
         )
 
         self.logger.debug(

@@ -95,7 +95,7 @@ class Incident(SQLModel, table=True):
     )
 
     # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
-    rule_fingerprint: str = Field(default="")
+    rule_fingerprint: str = Field(default="", sa_column=Column(TEXT))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
