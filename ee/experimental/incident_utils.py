@@ -40,20 +40,22 @@ from keep.api.core.dependencies import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
-USE_N_HISTORICAL_ALERTS = 10e10
-USE_N_HISTORICAL_INCIDENTS = 10e10
-DEFAULT_TEMP_DIR_LOCATION = './ai_temp'
+USE_N_HISTORICAL_ALERTS_MINING = 10e4
+USE_N_HISTORICAL_ALERTS_PMI = 10e4
+USE_N_HISTORICAL_INCIDENTS = 10e4
 MIN_ALERT_NUMBER = 100
+DEFAULT_TEMP_DIR_LOCATION = './ai_temp'
 
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
     tenant_id: str,
     upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
+    use_n_historical_alerts: int = None,
     sliding_window: int = None,
     stride: int = None,
-    general_temp_dir: str = None,
+    temp_dir: str = None,
+    offload_config: Dict = None,
 ) -> dict:
     logger.info(
         "Calculating PMI coefficients for alerts",
@@ -65,21 +67,30 @@ def calculate_pmi_matrix(
     if not upper_timestamp:
         upper_timestamp = os.environ.get('PMI_ALERT_UPPER_TIMESTAMP', datetime.now())
         
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('PMI_USE_N_HISTORICAL_ALERTS', USE_N_HISTORICAL_ALERTS_PMI)
+        
     if not sliding_window:
         sliding_window = os.environ.get('PMI_SLIDING_WINDOW', 4 * 60 * 60)
     
     if not stride:
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
         
-    if not general_temp_dir:
-        general_temp_dir = os.environ.get('PMI_TEMP_DIR', DEFAULT_TEMP_DIR_LOCATION)
+    if not temp_dir:
+        temp_dir = os.environ.get('PMI_TEMP_DIR', DEFAULT_TEMP_DIR_LOCATION)
+        temp_dir = f'{temp_dir}/{tenant_id}'
+        os.makedirs(temp_dir, exist_ok=True)
         
-    temp_dir = f'{general_temp_dir}/{tenant_id}'
-    os.makedirs(temp_dir, exist_ok=True)
+    if not offload_config:
+        offload_config = os.environ.get('PMI_OFFLOAD_CONFIG', {})
+        
+        if 'temp_dir' in offload_config:
+            offload_config['temp_dir'] = f'{offload_config["temp_dir"]}/{tenant_id}'
+            os.makedirs(offload_config['temp_dir'], exist_ok=True)
     
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
 
-    pmi_matrix, pmi_columns = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, temp_dir)
+    pmi_matrix, pmi_columns = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, offload_config)
     
     logger.info(
         "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
@@ -104,10 +115,10 @@ async def mine_incidents_and_create_objects(
         tenant_id: str,
         alert_lower_timestamp: datetime = None,
         alert_upper_timestamp: datetime = None,
-        use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
+        use_n_historical_alerts: int = None,
         incident_lower_timestamp: datetime = None,
         incident_upper_timestamp: datetime = None,
-        use_n_hist_incidents: int = USE_N_HISTORICAL_INCIDENTS,
+        use_n_hist_incidents: int = None,
         pmi_threshold: float = None,
         knee_threshold: float = None,
         min_incident_size: int = None,
@@ -149,6 +160,12 @@ async def mine_incidents_and_create_objects(
     if not alert_lower_timestamp:
         alert_window = timedelta(hours = int(os.environ.get('MINE_ALERT_WINDOW', "12")))
         alert_lower_timestamp = alert_upper_timestamp - alert_window
+        
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('MINE_USE_N_HISTORICAL_ALERTS', USE_N_HISTORICAL_ALERTS_MINING)
+        
+    if not use_n_hist_incidents:
+        use_n_hist_incidents = os.environ.get('MINE_USE_N_HISTORICAL_INCIDENTS', USE_N_HISTORICAL_INCIDENTS)
         
     if not pmi_threshold:
         pmi_threshold = os.environ.get('PMI_THRESHOLD', 0.0)
