@@ -1,4 +1,5 @@
-"use client";
+'use client';
+import React, { useState, useEffect } from 'react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import {
   GlobeAltIcon,
@@ -10,24 +11,34 @@ import {
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { MdOutlineSecurity } from "react-icons/md";
-import WebhookSettings from "./webhook-settings";
 import { useSession } from "next-auth/react";
-import Loading from "app/loading";
-import SmtpSettings from "./smtp-settings";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useConfig } from "utils/hooks/useConfig";
+import { AuthenticationType } from "utils/authenticationType";
+
+import Loading from "app/loading";
+import { EmptyStateTable } from "@/components/ui/EmptyStateTable";
 import UsersTab from "./auth/users-tab";
 import GroupsTab from "./auth/groups-tab";
 import RolesTab from "./auth/roles-tab";
-import APIKeysTab from "./auth//api-key-tab";
+import APIKeysTab from "./auth/api-key-tab";
 import SSOTab from "./auth/sso-tab";
-import PermissionsTab from "./auth/permissions-tab";
+import WebhookSettings from "./webhook-settings";
+import SmtpSettings from "./smtp-settings";
+
+import { UsersTable } from "./auth/users-table";
+import { GroupsTable } from "./auth/groups-table";
+import { RolesTable } from "./auth/roles-table";
+import { SSOTable } from "./auth/sso-table";
+import { APIKeysTable } from "./auth/api-key-table";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams()!;
   const pathname = usePathname();
+  const { data: configData } = useConfig();
+
   const [selectedTab, setSelectedTab] = useState<string>(
     searchParams?.get("selectedTab") || "users"
   );
@@ -37,25 +48,8 @@ export default function SettingsPage() {
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [userSubTabIndex, setUserSubTabIndex] = useState<number>(0);
 
-  const handleTabChange = useCallback(
-    (tab: string) => {
-      if (tab !== selectedTab) {
-        router.replace(`${pathname}?selectedTab=${tab}`);
-        setSelectedTab(tab);
-      }
-    },
-    [pathname, router, selectedTab]
-  );
-
-  const handleUserSubTabChange = useCallback(
-    (subTab: string) => {
-      if (subTab !== selectedUserSubTab) {
-        router.replace(`${pathname}?selectedTab=users&userSubTab=${subTab}`);
-        setSelectedUserSubTab(subTab);
-      }
-    },
-    [pathname, router, selectedUserSubTab]
-  );
+  const authType = configData?.AUTH_TYPE as AuthenticationType;
+  const isNoAuth = authType === AuthenticationType.NO_AUTH;
 
   useEffect(() => {
     const newSelectedTab = searchParams?.get("selectedTab") || "users";
@@ -67,7 +61,7 @@ export default function SettingsPage() {
         ? 1
         : newSelectedTab === "smtp"
         ? 2
-        : 3;
+        : 0;
     const userSubTabIndex =
       newUserSubTab === "users"
         ? 0
@@ -77,17 +71,143 @@ export default function SettingsPage() {
         ? 2
         : newUserSubTab === "api-keys"
         ? 3
-        // : newUserSubTab === "permissions"
-        // ? 4
-        : 4;
+        : newUserSubTab === "sso"
+        ? 4
+        : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
     setSelectedUserSubTab(newUserSubTab);
   }, [searchParams]);
 
+  const handleTabChange = (tab: string) => {
+    router.replace(`${pathname}?selectedTab=${tab}`);
+    setSelectedTab(tab);
+  };
+
+  const handleUserSubTabChange = (subTab: string) => {
+    router.replace(`${pathname}?selectedTab=users&userSubTab=${subTab}`);
+    setSelectedUserSubTab(subTab);
+  };
+
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") router.push("/signin");
+
+  const renderUserSubTabContent = (subTabName: string) => {
+    if (isNoAuth) {
+      switch (subTabName) {
+        case "users":
+          const mockUsers = [
+            { email: "john@example.com", name: "John Doe", role: "Admin", groups: [{ name: "Admins" }], last_login: new Date().toISOString() },
+            { email: "jane@example.com", name: "Jane Smith", role: "User", groups: [{ name: "Users" }], last_login: new Date().toISOString() },
+          ];
+          return (
+            <EmptyStateTable
+              subject="Users management"
+              icon={UsersIcon}
+              onClickDocumentation={() => console.log("View documentation clicked for Users management")}
+            >
+              <UsersTable users={mockUsers} currentUserEmail={session?.user?.email} authType={authType} isDisabled={true} />
+            </EmptyStateTable>
+          );
+        case "groups":
+          const mockGroups = [
+            { id: "1", name: "Admins", members: ["john@example.com", "doe@example.com", "keep@example.com", "noc@example.com"], roles: ["Admin"] },
+            { id: "2", name: "Operators", members: ["john@example.com", "doe@example.com", "keep@example.com", "noc@example.com"], roles: ["Operator"] },
+            { id: "3", name: "NOC", members: ["jane@example.com"], roles: ["NOC"] },
+            { id: "4", name: "Managers", members: ["boss1@example.com", "boss2@example.com"], roles: ["Viewer"] },
+          ];
+          return (
+            <EmptyStateTable
+              icon={UserGroupIcon}
+              subject="Groups management"
+              onClickDocumentation={() => console.log("View documentation clicked for Groups management")}
+            >
+              <GroupsTable groups={mockGroups} onRowClick={() => {}} onDeleteGroup={() => {}} isDisabled={true} />
+            </EmptyStateTable>
+          );
+        case "roles":
+          const mockRoles = [
+            { id: "1", name: "Admin", description: "Full access", scopes: ["*"], predefined: true },
+            { id: "2", name: "User", description: "Limited access", scopes: ["read:*"], predefined: false },
+          ];
+          return (
+            <EmptyStateTable
+              icon={ShieldCheckIcon}
+              subject="Roles management"
+              onClickDocumentation={() => console.log("View documentation clicked for Roles management")}
+            >
+              <RolesTable roles={mockRoles} onRowClick={() => {}} onDeleteRole={() => {}} isDisabled={true} />
+            </EmptyStateTable>
+          );
+          case "api-keys":
+            const mockApiKeys = [
+              {
+                reference_id: "AdminKey",
+                secret: "sk_test_abcdefghijklmnopqrstuvwxyz123456",
+                role: "Admin",
+                created_by: "john@example.com",
+                created_at: "2023-05-01T12:00:00Z",
+                last_used: "2023-06-15T15:30:00Z"
+              },
+              {
+                reference_id: "ViewerKey",
+                secret: "sk_test_zyxwvutsrqponmlkjihgfedcba654321",
+                role: "Viewer",
+                created_by: "jane@example.com",
+                created_at: "2023-06-01T09:00:00Z",
+                last_used: "2023-06-20T10:45:00Z"
+              },
+            ];
+            return (
+              <EmptyStateTable
+                icon={KeyIcon}
+                subject="API Keys management"
+                onClickDocumentation={() => console.log("View documentation clicked for API Keys management")}
+              >
+                <APIKeysTable
+                  apiKeys={mockApiKeys}
+                  onRegenerate={() => {}}
+                  onDelete={() => {}}
+                  isDisabled={true}
+                />
+              </EmptyStateTable>
+            );
+        case "sso":
+          const mockSSOProviders = [
+            { id: "1", name: "Google", connected: true },
+            { id: "2", name: "Microsoft", connected: false },
+          ];
+          return (
+            <EmptyStateTable
+              icon={MdOutlineSecurity}
+              subject="SSO management"
+              onClickDocumentation={() => console.log("View documentation clicked for SSO management")}
+            >
+              <SSOTable providers={mockSSOProviders} onConnect={() => {}} onDisconnect={() => {}} isDisabled={true} />
+            </EmptyStateTable>
+          );
+        default:
+          return null;
+      }
+    }
+
+    // If not NO_AUTH, render normal content
+    switch (subTabName) {
+      case "users":
+        return <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} selectedTab={selectedUserSubTab} />;
+      case "groups":
+        return <GroupsTab accessToken={session?.accessToken!} />;
+      case "roles":
+        return <RolesTab accessToken={session?.accessToken!} />;
+      case "api-keys":
+        return <APIKeysTab accessToken={session?.accessToken!} />;
+      case "sso":
+        return <SSOTab accessToken={session?.accessToken!} selectedTab={selectedUserSubTab} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -119,31 +239,25 @@ export default function SettingsPage() {
                 <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
                   API Keys
                 </Tab>
-                {/* <Tab icon={LockClosedIcon} onClick={() => handleUserSubTabChange("permissions")}>
-                  Permissions
-                </Tab> */}
                 <Tab icon={MdOutlineSecurity} onClick={() => handleUserSubTabChange("sso")}>
                   SSO
                 </Tab>
               </TabList>
               <TabPanels className="flex-grow overflow-hidden">
                 <TabPanel className="h-full mt-6">
-                  <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} />
+                  {renderUserSubTabContent("users")}
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
-                  <GroupsTab accessToken={session?.accessToken!} />
+                  {renderUserSubTabContent("groups")}
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
-                  <RolesTab accessToken={session?.accessToken!} />
+                  {renderUserSubTabContent("roles")}
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
-                  <APIKeysTab accessToken={session?.accessToken!} />
+                  {renderUserSubTabContent("api-keys")}
                 </TabPanel>
-                {/* <TabPanel className="h-full mt-6">
-                  <PermissionsTab accessToken={session?.accessToken!} />
-                </TabPanel> */}
                 <TabPanel className="h-full mt-6">
-                  <SSOTab accessToken={session?.accessToken!} />
+                  {renderUserSubTabContent("sso")}
                 </TabPanel>
               </TabPanels>
             </TabGroup>

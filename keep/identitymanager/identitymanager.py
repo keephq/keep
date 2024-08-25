@@ -81,10 +81,8 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         Returns:
             list: The list of groups.
         """
-        raise NotImplementedError(
-            "get_groups() method not implemented"
-            " for {}".format(self.__class__.__name__)
-        )
+        # should be implemented by the identity manager
+        return []
 
     @abc.abstractmethod
     def create_user(self, user_email, user_name, password, role, groups=[]) -> None:
@@ -238,7 +236,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         """
         roles_dto = []
         for role in PREDEFINED_ROLES:
-            role_name = role.get("name")
+            role_name = role.name
             _role = get_role_by_role_name(role_name)
             roles_dto.append(
                 Role(
