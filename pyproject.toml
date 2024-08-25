@@ -89,6 +89,7 @@ alembic = "^1.13.2"
 numpy = "^2.0.0"
 pandas = "^2.2.2"
 networkx = "^3.3"
+quickchart-io = "^2.0.0"
 scipy = "^1.14.1"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
