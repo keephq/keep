@@ -272,9 +272,9 @@ def get_or_create_api_key(
     if not tenant_api_key_entry:
         # TODO: make it more robust
         if unique_api_key_id == "webhook":
-            role = WebhookRole
+            role = WebhookRole.get_name()
         else:
-            role = AdminRole
+            role = AdminRole.get_name()
 
         tenant_api_key = create_api_key(
             session,
