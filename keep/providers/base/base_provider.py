@@ -127,10 +127,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         if not enrich_alert or results is None:
             return results if results else None
 
-        self._enrich_alert(enrich_alert, results)
+        audit_enabled = bool(kwargs.get("audit_enabled", True))
+
+        self._enrich_alert(enrich_alert, results, audit_enabled=audit_enabled)
         return results
 
-    def _enrich_alert(self, enrichments, results):
+    def _enrich_alert(self, enrichments, results, audit_enabled=True):
         """
         Enrich alert with provider specific data.
 
@@ -217,6 +219,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
+                audit_enabled=audit_enabled,
             )
             # enrich with disposable enrichments
             enrichment_string = ""
@@ -231,6 +234,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
                 dispose_on_new_alert=True,
+                audit_enabled=audit_enabled,
             )
 
         except Exception as e:
@@ -274,7 +278,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         enrich_alert = kwargs.get("enrich_alert", [])
         if enrich_alert:
-            self._enrich_alert(enrich_alert, results)
+            audit_enabled = bool(kwargs.get("audit_enabled", True))
+            self._enrich_alert(enrich_alert, results, audit_enabled=audit_enabled)
         # and return the results
         return results
 
