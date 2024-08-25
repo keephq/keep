@@ -20,7 +20,7 @@ class HttpProvider(BaseProvider):
         "metadata.google.internal",
         "metadata.internal",
         "169.254.169.254",
-        # "localhost",
+        "localhost",
         "googleapis.com",
     ]
 
