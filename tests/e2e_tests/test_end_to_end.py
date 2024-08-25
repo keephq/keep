@@ -105,8 +105,11 @@ def test_providers_page_is_accessible(browser):
         browser.get_by_role("button", name="Connect").click()
         # wait a bit
         browser.wait_for_selector("text=Connected", timeout=15000)
-        # make sure the provider is connected
-        browser.get_by_text(f"resend id: {random_provider_name}").click()
+        # make sure the provider is connected:
+        # find connected provider id label
+        id_label = browser.get_by_text(f"resend id: {random_provider_name}")
+        # click on parent div, the tile
+        id_label.locator('..').click()
     except Exception:
         # Current file + test name for unique html and png dump.
         current_test_name = \
