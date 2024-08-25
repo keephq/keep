@@ -327,7 +327,7 @@ class JiraonpremProvider(BaseProvider):
     def __update_issue(
         self,
         issue_id: str,
-        summary: str,
+        summary: str = "",
         description: str = "",
         priority: str = "Medium",
         labels: List[str] = None,
