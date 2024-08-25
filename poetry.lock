@@ -3982,6 +3982,19 @@ files = [
 ]
 
 [[package]]
+name = "quickchart-io"
+version = "2.0.0"
+description = "A client for quickchart.io, a service that generates static chart images"
+optional = false
+python-versions = ">=3.7,<4"
+files = [
+    {file = "quickchart_io-2.0.0-py3-none-any.whl", hash = "sha256:c44b5fb4d6e957fb85db0926e691684795e9fe5d6819d33f2daea795a0f6a36b"},
+]
+
+[package.dependencies]
+requests = ">=2.28.1,<3.0.0"
+
+[[package]]
 name = "redis"
 version = "4.6.0"
 description = "Python client for Redis database and key-value store"
@@ -5069,4 +5082,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "fee3645d18637ff6a6c0f4d08e20abfb556bf3d5c301111168c678ed2dbc3ad2"
+content-hash = "a5815b02a068725ecb0b29ebb62ed09ed54c595f8fca3c98183b9ebbfd169da8"

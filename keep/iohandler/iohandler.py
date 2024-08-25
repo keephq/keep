@@ -4,6 +4,7 @@ import copy
 # TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
 import io
+import json
 import logging
 import re
 import sys
@@ -186,7 +187,22 @@ class IOHandler:
                 raise Exception(
                     f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
-            parsed_string = parsed_string.replace(token_to_replace, str(val))
+            # support JSON
+            if isinstance(val, dict):
+                # if the value we need to replace is the whole string,
+                #  and its a dict, just return the dict
+                # the usage is for
+                #   with:
+                #   method: POST
+                #   body:
+                #     alert: keep.json_loads('{{ alert }}')
+                if parsed_string == token_to_replace:
+                    return val
+                else:
+                    val = json.dumps(val)
+            else:
+                val = str(val)
+            parsed_string = parsed_string.replace(token_to_replace, val)
             return parsed_string
         # this basically for complex expressions with functions and operators
         for token in tokens:
