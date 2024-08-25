@@ -10,6 +10,9 @@ __pycache__/
 # C extensions
 *.so
 
+# .csv files
+*.csv
+
 # Distribution / packaging
 .Python
 build/
@@ -200,3 +203,6 @@ scripts/automatic_extraction_rules.py
 
 playwright_dump_*.html
 playwright_dump_*.png
+
+ai_temp/*
+!ai_temp/.gitkeep

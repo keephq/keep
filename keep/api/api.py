@@ -4,8 +4,8 @@ import os
 from importlib import metadata
 
 import jwt
-import uvicorn
 import requests
+import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
@@ -25,10 +25,10 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
     actions,
+    ai,
     alerts,
     dashboard,
     extraction,
-    groups,
     healthcheck,
     incidents,
     mapping,
@@ -38,11 +38,11 @@ from keep.api.routes import (
     rules,
     settings,
     status,
+    tags,
+    topology,
     users,
     whoami,
     workflows,
-    incidents,
-    ai
 )
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
@@ -57,6 +57,7 @@ PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 REDIS = os.environ.get("REDIS", "false") == "true"
+WORKER_ENABLED = os.environ.get("WORKER_ENABLED", "true") == "true"
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -68,9 +69,11 @@ POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
 # Monkey patch requests to disable redirects
 original_request = requests.Session.request
 
+
 def no_redirect_request(self, method, url, **kwargs):
-    kwargs['allow_redirects'] = False
+    kwargs["allow_redirects"] = False
     return original_request(self, method, url, **kwargs)
+
 
 requests.Session.request = no_redirect_request
 
@@ -185,8 +188,8 @@ def get_app(
     app.include_router(status.router, prefix="/status", tags=["status"])
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
-    app.include_router(groups.router, prefix="/groups", tags=["groups"])
     app.include_router(users.router, prefix="/users", tags=["users"])
+    app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
     )
@@ -194,6 +197,7 @@ def get_app(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
     )
     app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+    app.include_router(tags.router, prefix="/tags", tags=["tags"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
@@ -236,9 +240,12 @@ def get_app(
     async def on_startup():
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
+        from keep.providers.providers_service import ProvidersService
 
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
+        # provision providers from env. relevant only on single tenant.
+        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
         # Start the services
         logger.info("Starting the services")
@@ -257,7 +264,7 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
-        if REDIS:
+        if REDIS and WORKER_ENABLED:
             event_loop = asyncio.get_event_loop()
             worker = get_worker()
             event_loop.create_task(worker.async_run())

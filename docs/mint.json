@@ -46,7 +46,6 @@
       "group": "Development",
       "pages": [
         "development/getting-started",
-        "development/authentication",
         "development/external-url"
       ]
     },
@@ -58,7 +57,8 @@
         "deployment/docker",
         "deployment/kubernetes",
         "deployment/openshift",
-        "deployment/ecs"
+        "deployment/ecs",
+        "deployment/stress-testing"
       ]
     },
     {
@@ -89,6 +89,7 @@
             "providers/documentation/centreon-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
+            "providers/documentation/coralogix-provider",
             "providers/documentation/datadog-provider",
             "providers/documentation/discord-provider",
             "providers/documentation/elastic-provider",
@@ -100,6 +101,7 @@
             "providers/documentation/grafana-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
+            "providers/documentation/quickchart-provider",
             "providers/documentation/incidentio-provider",
             "providers/documentation/jira-provider",
             "providers/documentation/kibana-provider",
@@ -140,6 +142,7 @@
             "providers/documentation/uptimekuma-provider",
             "providers/documentation/victoriametrics-provider",
             "providers/documentation/websocket-provider",
+	    "providers/documentation/webhook-provider",
             "providers/documentation/incidentmanager-provider",
             "providers/documentation/zabbix-provider",
             "providers/documentation/zenduty-provider"
@@ -263,12 +266,6 @@
             "api-ref/enrichment/get-rules",
             "api-ref/enrichment/update-extraction-rule",
             "api-ref/enrichment/update-rule"
-          ]
-        },
-        {
-          "group": "Groups",
-          "pages": [
-            "api-ref/groups/get-groups"
           ]
         },
         {

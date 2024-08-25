@@ -63,7 +63,7 @@ export default function Incident() {
           <Card className="mt-10 mb-10 flex-grow">
             <Title>Incident Predictions</Title>
             <Subtitle>
-              Possible problems predicted by Keep AI{" "}
+              Possible problems predicted by Keep AI & Correlation Rules{" "}
               <Badge color="orange">Beta</Badge>
             </Subtitle>
             <PredictedIncidentsTable
@@ -122,7 +122,7 @@ export default function Incident() {
       >
         <CreateOrUpdateIncident
           incidentToEdit={incidentToEdit}
-          editCallback={handleFinishEdit}
+          exitCallback={handleFinishEdit}
         />
       </Modal>
     </div>

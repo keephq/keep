@@ -31,3 +31,4 @@ class Rule(SQLModel, table=True):
     group_description: str = None
     # e.g. The {{ labels.queue }} is more than third full on {{ num_of_alerts }} queue managers
     item_description: str = None
+    require_approve: bool = False

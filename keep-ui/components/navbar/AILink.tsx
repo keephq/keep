@@ -5,11 +5,17 @@ import { LinkWithIcon } from "components/LinkWithIcon";
 import { RiSparkling2Line } from "react-icons/ri";
 
 import { useEffect, useState } from "react";
+import { usePollAILogs } from "utils/hooks/useAI";
 
 export const AILink = () => {
   const [text, setText] = useState("");
   const [newText, setNewText] = useState("AI correlation");
 
+  const mutateAILogs = (logs: any) => {
+    setNewText("AI iterated 🎉")
+  }
+
+  usePollAILogs(mutateAILogs);
 
   useEffect(() => {
     let index = 0;
@@ -31,7 +37,7 @@ export const AILink = () => {
   return (
     <LinkWithIcon href="/ai" icon={RiSparkling2Line} className="w-full">
       <div className="flex justify-between items-center w-full">
-        <Subtitle>
+        <Subtitle className="break-all">
           {text}
         </Subtitle>
       </div>

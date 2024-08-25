@@ -410,10 +410,44 @@ class OpenobserveProvider(BaseProvider):
         )
         # calculate fingerprint based on name + environment + event keys (e.g. host)
         fingerprint_fields = ["name", "environment", *event.keys()]
+        # remove 'value' as its too dynamic
+        try:
+            fingerprint_fields.remove("value")
+        except ValueError:
+            pass
         logger.info(
             "Calculating fingerprint fields",
             extra={"fingerprint_fields": fingerprint_fields},
         )
+
+        # sort the fields to ensure the fingerprint is consistent
+        # for e.g. host1, host2 is the same as host2, host1
+        for field in fingerprint_fields:
+            try:
+                field_attr = getattr(alert_dto, field)
+                if "," not in field_attr:
+                    continue
+                # sort it lexographically
+                logger.info(
+                    "Sorting field attributes",
+                    extra={"field": field, "field_attr": field_attr},
+                )
+                sorted_field_attr = sorted(field_attr.replace(" ", "").split(","))
+                sorted_field_attr = ", ".join(sorted_field_attr)
+                logger.info(
+                    "Sorted field attributes",
+                    extra={"field": field, "sorted_field_attr": sorted_field_attr},
+                )
+                # set the attr
+                setattr(alert_dto, field, sorted_field_attr)
+            except AttributeError:
+                pass
+            except Exception as e:
+                logger.error(
+                    "Error while sorting field attributes",
+                    extra={"field": field, "error": e},
+                )
+
         alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
             alert_dto, fingerprint_fields=fingerprint_fields
         )

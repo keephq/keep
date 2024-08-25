@@ -22,6 +22,8 @@ env:
   POSTGRES_USER: keepuser
   POSTGRES_PASSWORD: keeppassword
   POSTGRES_DB: keepdb
+  # To test if imports are working properly
+  EE_ENABLED: true
 
 jobs:
   tests:
@@ -69,7 +71,7 @@ jobs:
 
       - name: Set up Keep environment
         run: |
-          DOCKER_BUILDKIT=1 docker-compose \
+          DOCKER_BUILDKIT=1 docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
 
@@ -136,14 +138,14 @@ jobs:
           verbose: true
 
       - name: Dump backend logs
-        if: failure()
+        if: always()
         run: |
-          docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
-          docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-backend > backend_logs-${{ matrix.db_type }}.txt
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml logs keep-frontend > frontend_logs-${{ matrix.db_type }}.txt
         continue-on-error: true
 
       - name: Upload test artifacts on failure
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: test-artifacts
@@ -156,4 +158,4 @@ jobs:
 
       - name: Tear down environment
         run: |
-          docker-compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml down

@@ -21,9 +21,11 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
+// Using dynamic import to avoid hydration issues with react-player
+import dynamic from 'next/dynamic'
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
-import ReactPlayer from "react-player";
 
 type PresetAlertProps = {
   preset: Preset;
@@ -93,14 +95,16 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
 };
 type CustomPresetAlertLinksProps = {
   session: Session;
+  selectedTags: string[];
 };
 
 export const CustomPresetAlertLinks = ({
   session,
+  selectedTags,
 }: CustomPresetAlertLinksProps) => {
   const apiUrl = getApiURL();
 
-  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS} = usePresets();
+  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } = usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -110,7 +114,14 @@ export const CustomPresetAlertLinks = ({
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
   // Check for noisy presets and control sound playback
-  const anyNoisyNow = presets.some(preset => preset.should_do_noise_now);
+  const anyNoisyNow = presets.some((preset) => preset.should_do_noise_now);
+
+  const checkValidPreset = (preset: Preset) => {
+    if (!preset.is_private) {
+      return true;
+    }
+    return preset && preset.created_by == session?.user?.email;
+  };
 
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
@@ -118,11 +129,11 @@ export const CustomPresetAlertLinks = ({
     );
 
     // Combine live presets and local storage order
-    const combinedOrder = presets.reduce<Preset[]>((acc, preset) => {
-      if (!acc.find(p => p.id === preset.id)) {
+    const combinedOrder = presets.reduce<Preset[]>((acc, preset: Preset) => {
+      if (!acc.find((p) => p.id === preset.id)) {
         acc.push(preset);
       }
-      return acc;
+      return acc.filter((preset) => checkValidPreset(preset));
     }, [...filteredLS]);
 
     // Only update state if there's an actual change to prevent infinite loops
@@ -130,8 +141,12 @@ export const CustomPresetAlertLinks = ({
       setPresetsOrder(combinedOrder);
     }
   }, [presets, presetsOrderFromLS]);
-
-
+  // Filter presets based on tags, or return all if no tags are selected
+  const filteredOrderedPresets = selectedTags.length === 0
+    ? presetsOrder
+    : presetsOrder.filter((preset) =>
+        preset.tags.some((tag) => selectedTags.includes(tag.name))
+      );
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -153,7 +168,7 @@ export const CustomPresetAlertLinks = ({
     );
 
     if (isDeleteConfirmed) {
-    const response = await fetch(`${apiUrl}/preset/${presetId}`, {
+      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
@@ -211,7 +226,7 @@ export const CustomPresetAlertLinks = ({
       onDragEnd={onDragEnd}
     >
       <SortableContext key="preset-alerts" items={presetsOrder}>
-        {presetsOrder.map((preset) => (
+        {filteredOrderedPresets.map((preset) => (
           <PresetAlert
             key={preset.id}
             preset={preset}

@@ -108,12 +108,12 @@ class SendgridProvider(BaseProvider):
         self.logger.info("Scopes validated", extra=scopes)
         return scopes
 
-    def _notify(self, to: str, subject: str, html: str, **kwargs) -> dict:
+    def _notify(self, to: str | list[str], subject: str, html: str, **kwargs) -> dict:
         """
         Send an email using the SendGrid API.
 
         Args:
-            to (str): To email address
+            to (str | list[str]): To email address or list of email addresses
             subject (str): Email subject
             html (str): Email body
         """
@@ -127,9 +127,14 @@ class SendgridProvider(BaseProvider):
             },
         )
 
+        if isinstance(to, str):
+            to_emails = [to]
+        else:
+            to_emails = to
+
         message = Mail(
             from_email=_from,
-            to_emails=to,
+            to_emails=to_emails,
             subject=subject,
             html_content=html,
             **kwargs,
@@ -140,12 +145,12 @@ class SendgridProvider(BaseProvider):
             response = sg.send(message)
 
             if response.status_code >= 400:
-                logger.error(
+                self.logger.error(
                     f"Failed to send email to {to} with subject {subject}: {response.body}"
                 )
                 raise Exception(f"Failed to send email: {response.body}")
 
-            logger.info(f"Email sent to {to} with subject {subject}")
+            self.logger.info(f"Email sent to {to} with subject {subject}")
             return {
                 "status_code": response.status_code,
                 "body": (
@@ -160,17 +165,19 @@ class SendgridProvider(BaseProvider):
                 },
             }
         except UnauthorizedError:
-            logger.error("Unauthorized: Invalid API key or insufficient permissions.")
+            self.logger.error(
+                "Unauthorized: Invalid API key or insufficient permissions."
+            )
             raise Exception(
                 "Failed to send email: Unauthorized. Please check your API key and permissions."
             )
         except ForbiddenError:
-            logger.error("Forbidden: Insufficient permissions to send email.")
+            self.logger.error("Forbidden: Insufficient permissions to send email.")
             raise Exception(
                 "Failed to send email: Forbidden. Your API key does not have the necessary permissions."
             )
         except Exception as e:
-            logger.error(f"Exception occurred: {e}")
+            self.logger.error(f"Exception occurred: {e}")
             raise Exception(f"Failed to send email: {str(e)}")
 
     def dispose(self):
@@ -200,9 +207,15 @@ if __name__ == "__main__":
     )
     scopes = provider.validate_scopes()
     print(scopes)
-    response = provider._notify(
-        "youremail@gmail.com",
-        "Hello World from Keep!",
-        "<strong>Test</strong> with HTML",
+    import yaml
+
+    mail = yaml.safe_load(
+        """to:
+- "youremail@gmail.com"
+- "youranotheremail@gmail.com"
+subject: "Hello from Keep!"
+html: "<strong>Test</strong> with HTML"
+"""
     )
+    response = provider._notify(**mail)
     print(response)

@@ -8,7 +8,7 @@ import chevron
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert as enrich_alert_db
-from keep.api.core.db import get_enrichment, get_mapping_rule_by_id
+from keep.api.core.db import get_enrichment_with_session, get_mapping_rule_by_id
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import AlertActionType
@@ -51,7 +51,9 @@ class EnrichmentsBl:
         self.db_session = db
         self.elastic_client = ElasticClient(tenant_id=tenant_id)
 
-    def run_extraction_rules(self, event: AlertDto | dict) -> AlertDto | dict:
+    def run_extraction_rules(
+        self, event: AlertDto | dict, pre=False
+    ) -> AlertDto | dict:
         """
         Run the extraction rules for the event
         """
@@ -68,9 +70,7 @@ class EnrichmentsBl:
             self.db_session.query(ExtractionRule)
             .filter(ExtractionRule.tenant_id == self.tenant_id)
             .filter(ExtractionRule.disabled == False)
-            .filter(
-                ExtractionRule.pre == False if isinstance(event, AlertDto) else True
-            )
+            .filter(ExtractionRule.pre == pre)
             .order_by(ExtractionRule.priority.desc())
             .all()
         )
@@ -353,7 +353,8 @@ class EnrichmentsBl:
         action_description: str,
         should_exist=True,
         dispose_on_new_alert=False,
-        force=False
+        force=False,
+        audit_enabled=True,
     ):
         """
         should_exist = False only in mapping where the alert is not yet in elastic
@@ -390,7 +391,8 @@ class EnrichmentsBl:
             action_type=action_type,
             action_description=action_description,
             session=self.db_session,
-            force=force
+            force=force,
+            audit_enabled=audit_enabled,
         )
 
         self.logger.debug(
@@ -415,7 +417,9 @@ class EnrichmentsBl:
         Dispose of enrichments from the alert
         """
         self.logger.debug("disposing enrichments", extra={"fingerprint": fingerprint})
-        enrichments = get_enrichment(self.tenant_id, fingerprint)
+        enrichments = get_enrichment_with_session(
+            self.db_session, self.tenant_id, fingerprint
+        )
         if not enrichments or not enrichments.enrichments:
             self.logger.debug(
                 "no enrichments to dispose", extra={"fingerprint": fingerprint}

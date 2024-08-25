@@ -8,8 +8,8 @@ from keep.api.core.db import get_enrichments
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
-from keep.rulesengine.rulesengine import RulesEngine
 
 
 class ElasticClient:
@@ -117,7 +117,7 @@ class ElasticClient:
             return
 
         # preprocess severity
-        query = RulesEngine.preprocess_cel_expression(query)
+        query = preprocess_cel_expression(query)
 
         try:
             # TODO - handle source (array)
@@ -165,7 +165,7 @@ class ElasticClient:
             #           3. wait for ES to support array fields in SQL
             # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
             # preprocess severity
-            query = RulesEngine.preprocess_cel_expression(query)
+            query = preprocess_cel_expression(query)
             dsl_query = self._client.sql.translate(
                 body={"query": query, "fetch_size": limit}
             )
@@ -198,9 +198,11 @@ class ElasticClient:
             # change severity to number so we can sort by it
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
+            alert_dict = alert.dict()
+            alert_dict["dismissed"] = bool(alert_dict["dismissed"])
             self._client.index(
                 index=self.alerts_index,
-                body=alert.dict(),
+                body=alert_dict,
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
                 refresh="true",
             )

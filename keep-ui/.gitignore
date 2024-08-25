@@ -38,3 +38,6 @@ jspm_packages
 .next
 
 .env.local
+
+app/topology/mock-topology-data.tsx
+.vercel
