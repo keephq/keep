@@ -59,7 +59,12 @@ export const CorrelationSidebarBody = ({
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
   ) => {
-    const { name, query, description, groupedAttributes } = correlationFormData;
+    const {
+      name,
+      query,
+      description,
+      groupedAttributes,
+      requireApprove } = correlationFormData;
 
     if (session) {
       const response = await fetch(
@@ -77,6 +82,7 @@ export const CorrelationSidebarBody = ({
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
             groupingCriteria: alertsFound.length ? groupedAttributes : [],
+            requireApprove: requireApprove
           }),
         }
       );
@@ -93,7 +99,7 @@ export const CorrelationSidebarBody = ({
     <div className="space-y-4 pt-10 flex flex-col flex-1">
       {isCalloutShown && (
         <Callout
-          className="mb-10 relative"
+          className="relative"
           title="What is alert correlations? and why grouping alerts together can ease your work"
           color="teal"
         >
@@ -111,6 +117,11 @@ export const CorrelationSidebarBody = ({
           </Button>
         </Callout>
       )}
+      <Callout
+        className="mb-10 relative"
+        title="Rules will be applied only to new alerts. Historical data will be ignored"
+        color="orange"
+      />
       <FormProvider {...methods}>
         <form
           className="grid grid-cols-2 gap-x-10 flex-1"

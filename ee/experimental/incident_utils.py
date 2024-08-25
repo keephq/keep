@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 
 from fastapi import Depends
 
-from ee.experimental.node_utils import NodeCandidateQueue, NodeCandidate
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
 
@@ -23,7 +22,7 @@ from keep.api.core.db import (
     assign_alert_to_incident,
     is_alert_assigned_to_incident,
     add_alerts_to_incident_by_incident_id,
-    get_last_alerts,
+    query_alerts,
     get_last_incidents,
     get_incident_by_id,
     write_pmi_matrix_to_db,
@@ -67,8 +66,9 @@ def calculate_pmi_matrix(
     
     if not stride:
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
-        
-    alerts=get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp) 
+    
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
+
     pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
     
     logger.info(
@@ -160,19 +160,10 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    alerts = get_last_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    nc_queue = NodeCandidateQueue()
     
-    logger.info(
-        "Analyzing new alerts",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
-        nc_queue.push_candidate(candidate)
-    candidates = nc_queue.get_candidates()          
+    fingerprints = list(set([alert.fingerprint for alert in alerts]))
     
     logger.info(
         "Building alert graph",
@@ -181,7 +172,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
+    graph = create_graph(tenant_id, fingerprints, pmi_threshold, knee_threshold)
     ids = []
     
     logger.info(
@@ -195,16 +186,16 @@ async def mine_incidents_and_create_objects(
         if len(component) > min_incident_size:            
             alerts_appended = False
             for incident in incidents:
-                incident_fingerprints = set([alert.fingerprint for alert in incident.Incident.alerts])        
+                incident_fingerprints = set([alert.fingerprint for alert in incident.alerts])        
                 intersection = incident_fingerprints.intersection(component)
         
                 if len(intersection) / len(component) >= incident_similarity_threshold:
                     alerts_appended = True
                     
-                    add_alerts_to_incident_by_incident_id(tenant_id, incident.Incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
+                    add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
-                    summary = generate_incident_summary(incident.Incident)
-                    update_incident_summary(incident.Incident.id, summary)
+                    summary = generate_incident_summary(incident)
+                    update_incident_summary(incident.id, summary)
                     
             if not alerts_appended:
                 incident_start_time = min([alert.timestamp for alert in alerts if alert.fingerprint in component])

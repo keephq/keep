@@ -10,8 +10,9 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
   timeAmount: 5,
   timeUnit: "minutes",
   groupedAttributes: [],
+  requireApprove: false,
   query: {
-    combinator: "and",
+    combinator: "or",
     rules: [
       {
         combinator: "and",
@@ -31,6 +32,7 @@ export type CorrelationForm = {
   timeAmount: number;
   timeUnit: "minutes" | "seconds" | "hours" | "days";
   groupedAttributes: string[];
+  requireApprove: boolean;
   query: RuleGroupType;
 };
 

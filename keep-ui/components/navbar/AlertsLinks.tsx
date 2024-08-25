@@ -128,15 +128,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               )}
               <li>
                 <LinkWithIcon
-                  href="/alerts/groups"
-                  icon={AiOutlineGroup}
-                  count={groupsPreset?.alerts_count}
-                >
-                  <Subtitle>Correlation</Subtitle>
-                </LinkWithIcon>
-              </li>
-              <li>
-                <LinkWithIcon
                   href="/alerts/dismissed"
                   icon={SilencedDoorbellNotification}
                   count={dismissedPreset?.alerts_count}

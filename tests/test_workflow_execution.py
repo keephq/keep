@@ -164,6 +164,7 @@ def test_workflow_execution(
         )
         create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
 
+    time.sleep(1)
     # Create the current alert
     current_alert = AlertDto(
         id="grafana-1",
@@ -431,6 +432,9 @@ def test_workflow_execution3(
         severity="critical",
         fingerprint="fp1",
     )
+
+    # sleep one second to avoid the case where tier0 alerts are not triggered
+    time.sleep(1)
 
     # Insert the current alert into the workflow manager
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])

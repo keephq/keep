@@ -17,6 +17,7 @@ export type Rule = {
   tenant_id: string;
   updated_by: string | null;
   update_time: string | null;
+  require_approve: boolean;
   distribution: { [group: string]: { [timestamp: string]: number } };
 };
 

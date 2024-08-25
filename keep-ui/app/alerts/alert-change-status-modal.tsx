@@ -118,6 +118,10 @@ export default function AlertChangeStatusModal({
         body: JSON.stringify({
           enrichments: {
             status: selectedStatus,
+            ...(selectedStatus !== Status.Suppressed && {
+              dismissed: false,
+              dismissUntil: "",
+            }),
           },
           fingerprint: alert.fingerprint,
         }),

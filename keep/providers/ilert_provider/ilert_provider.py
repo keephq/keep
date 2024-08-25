@@ -307,12 +307,10 @@ class IlertProvider(BaseProvider):
             "images": images,
             "links": links,
             "customDetails": custom_details,
-            "routingKey": routing_key,
         }
         self.logger.info("Posting Ilert event", extra=payload)
-        payload["apiKey"] = self.authentication_config.ilert_token
         response = requests.post(
-            f"{self.authentication_config.ilert_host}/events",
+            f"{self.authentication_config.ilert_host}/events/keep/{self.authentication_config.ilert_token} ",
             json=payload,
         )
         self.logger.info(
@@ -335,7 +333,6 @@ class IlertProvider(BaseProvider):
         images: list = [],
         links: list = [],
         custom_details: dict = {},
-        routing_key: str = "",
         **kwargs: dict,
     ):
         self.logger.info("Notifying Ilert", extra=locals())
@@ -353,7 +350,6 @@ class IlertProvider(BaseProvider):
                 images,
                 links,
                 custom_details,
-                routing_key,
             )
 
 

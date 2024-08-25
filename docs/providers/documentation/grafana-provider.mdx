@@ -41,38 +41,59 @@ To connect to Grafana, you need to create an API Token:
   height="200">
   <img height="10" src="/images/grafana_sa_2.png" />
 </Frame>
-6. Use the token value to the `authentication` section in the Grafana Provider configuration.
+6. Use the token value in the `authentication` section in the Grafana Provider configuration.
 
-## Post installation validation
+## Post Installation Validation
 
-You can check that the Grafana Provider works by testing Keep's contact point (which installed via the webhook integration).
-1. Go to Contact Points (cmd k -> contact)
-2. Find the keep-grafana-webhook-integration:
+You can check that the Grafana Provider works by testing Keep's contact point (which was installed via the webhook integration).
+
+1. Go to **Contact Points** (cmd k -> contact).
+2. Find the **keep-grafana-webhook-integration**:
 
 <Frame
     width="100"
   height="200">
   <img height="10" src="/images/grafana_sa_3.png" />
 </Frame>
-3. Click on the "View contact point":
+3. Click on the **View contact point**:
 
 <Frame
     width="100"
   height="200">
   <img height="10" src="/images/grafana_sa_4.png" />
 </Frame>
-4. Click on "Test":
+4. Click on **Test**:
 
 <Frame
     width="100"
   height="200">
   <img height="10" src="/images/grafana_sa_5.png" />
 </Frame>
-5. Go to Keep - you should see an alert from Grafana!
+5. Go to Keep – you should see an alert from Grafana!
+
+**Alternative Validation Methods (When Keep is Not Accessible Externally):**
+
+If Keep is not accessible externally and the webhook cannot be created, you can manually validate the Grafana provider setup using the following methods:
+
+1. **Manual Test Alerts in Grafana:**
+   - Create a manual test alert in Grafana.
+   - Set up a contact point within Grafana that would normally send alerts to Keep.
+   - Trigger the alert and check Grafana's logs for errors or confirmation that the alert was sent.
+
+2. **Check Logs in Grafana:**
+   - Access Grafana’s log files or use the **Explore** feature to query logs related to the alerting mechanism.
+   - Ensure there are no errors related to the webhook integration and that alerts are processed correctly.
+
+3. **Verify Integration Status:**
+   - Navigate to the **Alerting** section in Grafana.
+   - Confirm that the integration status shows as active or functioning.
+   - Monitor any outbound HTTP requests to verify that Grafana is attempting to communicate with Keep.
+
+4. **Network and Connectivity Check:**
+   - Use network monitoring tools to ensure Grafana can reach Keep or any alternative endpoint configured for alerts.
 
 ## Webhook Integration Modifications
 
-The webhook integration adds Keep as a contact point in the Grafana instance. This integration can be located under the "Contact Points" section.
-Keep also gains access to the following scopes:
+The webhook integration adds Keep as a contact point in the Grafana instance. This integration can be located under the "Contact Points" section. Keep also gains access to the following scopes:
 - `alert.provisioning:read`
 - `alert.provisioning:write`

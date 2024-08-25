@@ -29,7 +29,6 @@ from keep.api.routes import (
     alerts,
     dashboard,
     extraction,
-    groups,
     healthcheck,
     incidents,
     mapping,
@@ -189,7 +188,6 @@ def get_app(
     app.include_router(status.router, prefix="/status", tags=["status"])
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
-    app.include_router(groups.router, prefix="/groups", tags=["groups"])
     app.include_router(users.router, prefix="/users", tags=["users"])
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(
@@ -242,9 +240,12 @@ def get_app(
     async def on_startup():
         # load all providers into cache
         from keep.providers.providers_factory import ProvidersFactory
+        from keep.providers.providers_service import ProvidersService
 
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
+        # provision providers from env. relevant only on single tenant.
+        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
         # Start the services
         logger.info("Starting the services")
