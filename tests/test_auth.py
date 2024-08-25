@@ -4,8 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-
-from tests.fixtures.client import test_app, client, setup_api_key
+from tests.fixtures.client import setup_api_key
 
 MOCK_TOKEN = "MOCKTOKEN"
 
@@ -33,13 +32,13 @@ def get_mock_jwt_payload(token, *args, **kwargs):
         raise Exception("Invalid token")
     if auth_type == "SINGLE_TENANT":
         return {
-            "keep_tenant_id": SINGLE_TENANT_UUID,
+            "tenant_id": SINGLE_TENANT_UUID,
             "keep_role": "admin",
             "email": "admin@single-tenant.com",
         }
     elif auth_type == "MULTI_TENANT":
         return {
-            "tenant_id": "multi-tenant-id",
+            "keep_tenant_id": "multi-tenant-id",
             "role": "admin",
             "email": "admin@multi-tenant.com",
         }
@@ -49,7 +48,6 @@ def get_mock_jwt_payload(token, *args, **kwargs):
     else:
         # Default payload or raise an exception if needed
         return {}
-
 
 
 @pytest.mark.parametrize(
