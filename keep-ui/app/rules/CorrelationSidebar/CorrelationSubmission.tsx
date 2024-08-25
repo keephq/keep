@@ -27,11 +27,6 @@ export const CorrelationSubmission = ({
 
   return (
     <div className="xl:col-span-2 flex justify-between items-end">
-      <div>
-        {alertsFound.length > 0 && (
-          <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} />
-        )}
-      </div>
 
       <div className="flex items-center gap-x-4">
         <Button type="button" variant="light" color="orange" onClick={toggle}>

@@ -12,6 +12,8 @@ import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
+import {AlertsFoundBadge} from "./AlertsFoundBadge";
+import Xarrow from "react-xarrows";
 
 export const TIMEFRAME_UNITS = {
   seconds: (amount: number) => amount,
@@ -124,17 +126,34 @@ export const CorrelationSidebarBody = ({
       />
       <FormProvider {...methods}>
         <form
-          className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-1"
+          // className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-2"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
-          <CorrelationGroups />
+          <div className="mb-10">
+            <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
+          </div>
+          <div className="grid grid-cols-2 gap-x-10 flex-1">
+            <CorrelationGroups />
 
-          <CorrelationSubmission
-            toggle={toggle}
-            alertsFound={alertsFound}
-            timeframeInSeconds={timeframeInSeconds}
-          />
+            <div className="flex flex-col items-center justify-between gap-5 py-5" id="total-results">
+              <div className="grow justify-center flex">
+                {alertsFound.length > 0 && (
+                  <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} vertical={true}/>
+                )}
+              </div>
+
+              <div className="text-right">
+                <CorrelationSubmission
+                  toggle={toggle}
+                  alertsFound={alertsFound}
+                  timeframeInSeconds={timeframeInSeconds}
+                />
+              </div>
+            </div>
+
+
+          </div>
+
         </form>
       </FormProvider>
     </div>

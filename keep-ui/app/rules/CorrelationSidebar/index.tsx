@@ -7,8 +7,8 @@ import { RuleGroupType } from "react-querybuilder";
 export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
   name: "",
   description: "",
-  timeAmount: 5,
-  timeUnit: "minutes",
+  timeAmount: 24,
+  timeUnit: "hours",
   groupedAttributes: [],
   requireApprove: false,
   query: {
@@ -69,7 +69,7 @@ export const CorrelationSidebar = ({
         leaveFrom="translate-x-0"
         leaveTo="translate-x-full"
       >
-        <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
+        <Dialog.Panel className="fixed right-0 inset-y-0 w-100   bg-white z-30 p-6 overflow-auto flex flex-col">
           <CorrelationSidebarHeader toggle={toggle} />
           <CorrelationSidebarBody toggle={toggle} defaultValue={defaultValue} />
         </Dialog.Panel>

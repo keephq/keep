@@ -36,20 +36,21 @@ export const CorrelationForm = ({
 
   return (
     <div className="flex flex-col gap-y-4 flex-1">
-      <label className="text-tremor-default font-medium text-tremor-content-strong">
-        Correlation name
-        <TextInput
-          type="text"
-          placeholder="Choose name"
-          className="mt-2"
-          {...register("name", {
-            required: { message: "Name is required", value: true },
-          })}
-          error={!!get(errors, "name.message")}
-          errorMessage={get(errors, "name.message")}
-        />
-      </label>
       <fieldset>
+
+        <label className="text-tremor-default font-medium text-tremor-content-strong">
+          Correlation name
+          <TextInput
+            type="text"
+            placeholder="Choose name"
+            className="mt-2"
+            {...register("name", {
+              required: {message: "Name is required", value: true},
+            })}
+            error={!!get(errors, "name.message")}
+            errorMessage={get(errors, "name.message")}
+          />
+        </label>
         <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center">
           Append to the same Incident if delay between alerts is below{" "}
           <Button
@@ -66,12 +67,12 @@ export const CorrelationForm = ({
           <NumberInput
             defaultValue={5}
             min={1}
-            {...register("timeAmount", { validate: (value) => value > 0 })}
+            {...register("timeAmount", {validate: (value) => value > 0})}
           />
           <Controller
             control={control}
             name="timeUnit"
-            render={({ field: { value, onChange } }) => (
+            render={({field: {value, onChange}}) => (
               <Select value={value} onValueChange={onChange}>
                 <SelectItem value="seconds">Seconds</SelectItem>
                 <SelectItem value="minutes">Minutes</SelectItem>
