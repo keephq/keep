@@ -62,8 +62,8 @@ class Incident(SQLModel, table=True):
     tenant: Tenant = Relationship()
     name: str
 
-    user_summary: str = Field(sa_column=Column(TEXT), max_length=1024)
-    generated_summary: str = Field(sa_column=Column(TEXT), max_length=1024)
+    user_summary: str = Field(sa_column=Column(TEXT), max_length=1024) | None
+    generated_summary: str = Field(sa_column=Column(TEXT), max_length=1024) | None
 
     assignee: str | None
     severity: int = Field(default=IncidentSeverity.CRITICAL.order)
