@@ -21,6 +21,7 @@ class RuleCreateDto(BaseModel):
     sqlQuery: dict
     celQuery: str
     timeframeInSeconds: int
+    timeunit: str
     groupingCriteria: list = []
     groupDescription: str = None
     requireApprove: bool = False
@@ -65,6 +66,7 @@ async def create_rule(
     rule_name = rule_create_request.ruleName
     cel_query = rule_create_request.celQuery
     timeframe = rule_create_request.timeframeInSeconds
+    timeunit = rule_create_request.timeunit
     grouping_criteria = rule_create_request.groupingCriteria
     group_description = rule_create_request.groupDescription
     require_approve = rule_create_request.requireApprove
@@ -86,6 +88,9 @@ async def create_rule(
     if not timeframe:
         raise HTTPException(status_code=400, detail="Timeframe is required")
 
+    if not timeunit:
+        raise HTTPException(status_code=400, detail="Timeunit is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -94,6 +99,7 @@ async def create_rule(
             "params": params,
         },
         timeframe=timeframe,
+        timeunit=timeunit,
         definition_cel=cel_query,
         created_by=created_by,
         grouping_criteria=grouping_criteria,
@@ -145,6 +151,7 @@ async def update_rule(
         sql_query = body["sqlQuery"]
         cel_query = body["celQuery"]
         timeframe = body["timeframeInSeconds"]
+        timeunit = body["timeUnit"]
         grouping_criteria = body.get("groupingCriteria", [])
         require_approve = body.get("requireApprove", [])
     except Exception:
@@ -168,6 +175,9 @@ async def update_rule(
     if not timeframe:
         raise HTTPException(status_code=400, detail="Timeframe is required")
 
+    if not timeunit:
+        raise HTTPException(status_code=400, detail="Timeunit is required")
+
     rule = update_rule_db(
         tenant_id=tenant_id,
         rule_id=rule_id,
@@ -177,6 +187,7 @@ async def update_rule(
             "params": params,
         },
         timeframe=timeframe,
+        timeunit=timeunit,
         definition_cel=cel_query,
         updated_by=updated_by,
         grouping_criteria=grouping_criteria,

@@ -36,9 +36,9 @@ export const CorrelationForm = ({
 
   return (
     <div className="flex flex-col gap-y-4 flex-1">
-      <fieldset>
+      <fieldset className="grid grid-cols-2">
 
-        <label className="text-tremor-default max-w-sm font-medium text-tremor-content-strong">
+        <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong">
           Correlation name
           <TextInput
             type="text"
@@ -51,29 +51,34 @@ export const CorrelationForm = ({
             errorMessage={get(errors, "name.message")}
           />
         </label>
-        <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center">
-          Append to the same Incident if delay between alerts is below{" "}
-          <Button
-            className="cursor-default ml-2"
-            type="button"
-            tooltip="Time cannot exceed 14 days"
-            icon={QuestionMarkCircleIcon}
-            size="xs"
-            variant="light"
-            color="slate"
-          />
-        </legend>
-        <span className="grid grid-cols-2 mt-2 gap-x-2">
+
+        <span className="grid grid-cols-2 gap-x-2">
+
+          <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center col-span-2">
+            Append to the same Incident if delay between alerts is below{" "}
+            <Button
+              className="cursor-default ml-2"
+              type="button"
+              tooltip="When the first alert arrives, Keep will start to calculate the timespan, any new alert within the timeframe will correlate into the same incident. Time cannot exceed 14 days"
+              icon={QuestionMarkCircleIcon}
+              size="xs"
+              variant="light"
+              color="slate"
+            />
+          </legend>
+
+
           <NumberInput
             defaultValue={5}
             min={1}
+            className="mt-2"
             {...register("timeAmount", {validate: (value) => value > 0})}
           />
           <Controller
             control={control}
             name="timeUnit"
             render={({field: {value, onChange}}) => (
-              <Select value={value} onValueChange={onChange}>
+              <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="seconds">Seconds</SelectItem>
                 <SelectItem value="minutes">Minutes</SelectItem>
                 <SelectItem value="hours">Hours</SelectItem>

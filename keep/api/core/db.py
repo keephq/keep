@@ -1366,6 +1366,7 @@ def create_rule(
     tenant_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     created_by,
@@ -1379,6 +1380,7 @@ def create_rule(
             tenant_id=tenant_id,
             name=name,
             timeframe=timeframe,
+            timeunit=timeunit,
             definition=definition,
             definition_cel=definition_cel,
             created_by=created_by,
@@ -1398,6 +1400,7 @@ def update_rule(
     rule_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     updated_by,
@@ -1412,6 +1415,7 @@ def update_rule(
         if rule:
             rule.name = name
             rule.timeframe = timeframe
+            rule.timeunit = timeunit
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.grouping_criteria = grouping_criteria

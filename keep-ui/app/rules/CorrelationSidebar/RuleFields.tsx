@@ -19,7 +19,7 @@ import {
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
-import { TIMEFRAME_UNITS } from "./CorrelationSidebarBody";
+import { TIMEFRAME_UNITS_TO_SECONDS } from "./CorrelationSidebarBody";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
@@ -236,9 +236,9 @@ export const RuleFields = ({
   };
 
   const { watch } = useFormContext<CorrelationForm>();
-  const timeframeInSeconds = TIMEFRAME_UNITS[watch("timeUnit")](
+  const timeframeInSeconds = watch("timeUnit") ? TIMEFRAME_UNITS_TO_SECONDS[watch("timeUnit")](
     +watch("timeAmount")
-  );
+  ) : 0;
 
   const { data: alertsFound = [], isLoading } = useSearchAlerts({
     query: { combinator: "and", rules: ruleFields },

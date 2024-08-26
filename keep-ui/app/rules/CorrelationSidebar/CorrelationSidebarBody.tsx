@@ -14,7 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import {AlertsFoundBadge} from "./AlertsFoundBadge";
 
-export const TIMEFRAME_UNITS = {
+export const TIMEFRAME_UNITS_TO_SECONDS= {
   seconds: (amount: number) => amount,
   minutes: (amount: number) => 60 * amount,
   hours: (amount: number) => 3600 * amount,
@@ -36,9 +36,9 @@ export const CorrelationSidebarBody = ({
     defaultValues: defaultValue,
     mode: "onChange",
   });
-  const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
+  const timeframeInSeconds = methods.watch("timeUnit") ? TIMEFRAME_UNITS_TO_SECONDS[methods.watch("timeUnit")](
     +methods.watch("timeAmount")
-  );
+  ) : 0;
 
   const { mutate } = useRules();
   const { data: session } = useSession();
@@ -63,6 +63,7 @@ export const CorrelationSidebarBody = ({
     const {
       name,
       query,
+      timeUnit,
       description,
       groupedAttributes,
       requireApprove } = correlationFormData;
@@ -82,6 +83,7 @@ export const CorrelationSidebarBody = ({
             ruleName: name,
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
+            timeUnit: timeUnit,
             groupingCriteria: alertsFound.length ? groupedAttributes : [],
             requireApprove: requireApprove
           }),
