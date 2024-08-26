@@ -9,7 +9,6 @@ from pydantic.utils import import_string
 from starlette.datastructures import CommaSeparatedStrings
 
 import keep.api.logging
-from keep.api.logging import CONFIG as logging_config
 from keep.api.core.config import config
 from keep.api.tasks.process_background_ai_task import process_background_ai_task
 from keep.api.tasks.healthcheck_task import healthcheck_task
