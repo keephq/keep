@@ -23,14 +23,7 @@ ENTRYPOINT ["/opt/keycloak/keycloak_entrypoint.sh"]
 EXPOSE 8080
 
 # Set environment variables
-ENV KEYCLOAK_ADMIN=keep_kc \
-    KEYCLOAK_ADMIN_PASSWORD=keep_kc \
-    KC_DB=mysql \
-    KC_DB_URL=jdbc:mysql://mysql:3306/keycloak \
-    KC_DB_USERNAME=keycloak_user \
-    KC_DB_PASSWORD=keycloak_password \
-    KC_HTTP_RELATIVE_PATH=/auth \
-    KEEP_REALM=keep \
+ENV KEEP_REALM=keep \
     KEEP_ADMIN_USER=keep_admin \
     KEEP_ADMIN_PASSWORD=keep_admin \
     KEEP_TENANT_ID=keep \
