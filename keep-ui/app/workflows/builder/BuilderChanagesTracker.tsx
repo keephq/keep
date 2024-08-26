@@ -2,8 +2,6 @@ import React from 'react'
 import useStore from './builder-store';
 import { Button } from '@tremor/react';
 import { reConstructWorklowToDefinition } from 'utils/reactFlow';
-import { WrappedDefinition } from 'sequential-workflow-designer-react';
-import { Definition } from 'sequential-workflow-designer';
 
 export default function BuilderChanagesTracker({onDefinitionChange}:{onDefinitionChange:(def: Record<string,any>) => void}) {
    const {

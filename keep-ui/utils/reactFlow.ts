@@ -168,6 +168,7 @@ export function createSwitchNodeV2(
                 type: `${step.type}__end`,
                 name: `${stepType} End`,
                 componentType: `${step.type}__end`,
+                properties:{}
             } as V2Step,
             isDraggable: false,
             prevNodeId: nodeId,
