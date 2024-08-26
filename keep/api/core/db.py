@@ -2557,19 +2557,22 @@ def get_pmi_values(
 
 
 def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
+    if not summary:
+        return
+    
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(Incident.id == incident_id)
         ).first()
 
         if not incident:
-            return None
+            return 
 
         incident.generated_summary = summary
         session.commit()
         session.refresh(incident)
-
-        return incident
+        
+        return 
 
 
 # Fetch all topology data
