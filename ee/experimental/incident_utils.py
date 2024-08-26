@@ -414,7 +414,7 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
     return incidents
 
 
-def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1, generate_summary: str = None) -> str:
+def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1, generate_summary: str = None, max_summary_length: int = None) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error("OpenAI API key is not set. Incident summary generation is not available.")
         return "Summarization is Disabled"
@@ -424,6 +424,9 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         
     if generate_summary == "False":
         return "Summarization is Disabled"
+    
+    if not max_summary_length:
+        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
     
     try: 
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -449,9 +452,11 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         summary = client.chat.completions.create(model=model, messages=[
             {
                 "role": "system",
-                "content": """You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions. 
+                "content": f"""You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions. 
                 When provided with information, summarize it in a 2-3 sentences explaining what happened and when. 
-                ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
+                ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident. 
+                When provided with information, answer with max a {int(max_summary_length * 0.9)} symbols excerpt 
+                describing incident thoroughly.
                 
                 EXAMPLE:
                 An incident occurred between 2022-11-17 14:11:04 and 2022-11-22 22:19:04, involving a 
@@ -466,6 +471,35 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
                 {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts. {prompt_addition}"""
             }
         ]).choices[0].message.content
+        
+        logger.info(f"Generated incident summary with length {len(summary)} symbols", 
+                    extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+        
+        if len(summary) > max_summary_length:
+            logger.info(f"Generated incident summary is too long. Applying smart truncation", 
+                        extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+            
+            summary = client.chat.completions.create(model=model, messages=[
+                {
+                    "role": "system",
+                    "content": f"""You are a very skilled DevOps specialist who can summarize any incident based on a description. 
+                    When provided with information, answer with max a {int(max_summary_length * 0.9)} symbols excerpt describing 
+                    incident thoroughly.
+                    """
+                },
+                {
+                    "role": "user",
+                    "content": f"""Here is the description of an incident for summarization:\n{summary}"""
+                }
+            ]).choices[0].message.content
+            
+            logger.info(f"Generated new incident summary with length {len(summary)} symbols",
+                        extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+            
+            if len(summary) > max_summary_length:
+                logger.info(f"Generated incident summary is too long. Applying hard truncation", 
+                            extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+                summary = summary[: max_summary_length]
         
         return summary
     except Exception as e:
