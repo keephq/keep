@@ -22,13 +22,13 @@ def upgrade() -> None:
         batch_op.alter_column(
             "user_summary",
             existing_type=sa.VARCHAR(),
-            type_=sa.TEXT(length=1024),
+            type_=sa.TEXT(),
             existing_nullable=True,
         )
         batch_op.alter_column(
             "generated_summary",
             existing_type=sa.VARCHAR(),
-            type_=sa.TEXT(length=1024),
+            type_=sa.TEXT(),
             existing_nullable=True,
         )
 
