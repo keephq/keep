@@ -9,17 +9,18 @@ import keep.api.logging
 from keep.api.core.db_utils import create_db_engine
 from keep.api.models.db.action import *
 from keep.api.models.db.alert import *
+from keep.api.models.db.blackout import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
+from keep.api.models.db.statistics import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.topology import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
-from keep.api.models.db.statistics import *
 
 target_metadata = SQLModel.metadata
 
@@ -67,7 +68,9 @@ def do_run_migrations(connection: Connection) -> None:
 
     :param connection: connection to the database.
     """
-    context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, render_as_batch=True
+    )
 
     with context.begin_transaction():
         context.run_migrations()
