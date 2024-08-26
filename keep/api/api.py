@@ -47,7 +47,10 @@ from keep.api.routes import (
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.api.arq_worker import ARQ_TASK_POOL_TO_EXECUTE, ARQ_TASK_POOL_TO_EXECUTE_NONE
+from keep.api.consts import (
+    KEEP_ARQ_TASK_POOL, 
+    KEEP_ARQ_TASK_POOL_NONE,
+)
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
@@ -57,7 +60,6 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-REDIS = os.environ.get("REDIS", "false") == "true"
 
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
@@ -265,7 +267,7 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
-        if ARQ_TASK_POOL_TO_EXECUTE != ARQ_TASK_POOL_TO_EXECUTE_NONE:
+        if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
             event_loop = asyncio.get_event_loop()
             arq_worker = get_arq_worker()
             event_loop.create_task(arq_worker.async_run())

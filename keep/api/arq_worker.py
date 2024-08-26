@@ -1,4 +1,3 @@
-import os
 import logging
 from typing import Optional
 
@@ -12,46 +11,28 @@ import keep.api.logging
 from keep.api.core.config import config
 from keep.api.tasks.process_background_ai_task import process_background_ai_task
 from keep.api.tasks.healthcheck_task import healthcheck_task
+from keep.api.consts import (
+    KEEP_ARQ_TASK_POOL, 
+    KEEP_ARQ_TASK_POOL_AI, 
+    KEEP_ARQ_TASK_POOL_ALL, 
+    KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
+)
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
-###
-# Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai" 
-# to split the tasks between the workers.
-###
-
-ARQ_TASK_POOL_TO_EXECUTE_NONE = "none"  # Arq workers explicitly disabled for this service
-ARQ_TASK_POOL_TO_EXECUTE_ALL = "all"  # All arq workers enabled for this service
-ARQ_TASK_POOL_TO_EXECUTE_BASIC_PROCESSING = "basic_processing" # Everything except AI
-ARQ_TASK_POOL_TO_EXECUTE_AI = "ai" # Only AI
-
-REDIS = os.environ.get("REDIS", "false") == "true"
-ARQ_TASK_POOL_TO_EXECUTE = os.environ.get("ARQ_TASK_POOL_TO_EXECUTE", None)
-
-# Backwards compatible. If REDIS is enabled and ARQ_WORKERS is not set, default to "all".
-if REDIS and ARQ_TASK_POOL_TO_EXECUTE is None:
-    ARQ_TASK_POOL_TO_EXECUTE = ARQ_TASK_POOL_TO_EXECUTE_ALL
-
-# If REDIS is disabled and ARQ_WORKERS is not set, default to "none".
-if REDIS is None and ARQ_TASK_POOL_TO_EXECUTE is None:
-    ARQ_TASK_POOL_TO_EXECUTE = ARQ_TASK_POOL_TO_EXECUTE_NONE
-
-if ARQ_TASK_POOL_TO_EXECUTE != ARQ_TASK_POOL_TO_EXECUTE_NONE and not REDIS:
-    logger.critical("Starting the ARQ worker, but REDIS is not enabled. Most likely the worker will not work.")
-
 # Current worker will pick up tasks only according to it's execution pool:
 all_tasks_for_the_worker = ["keep.api.tasks.healthcheck_task.healthcheck_task"]
 
-if ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_ALL or \
-    ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_BASIC_PROCESSING:
+if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
+    KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
     all_tasks_for_the_worker += [
         "keep.api.tasks.process_event_task.async_process_event",
         "keep.api.tasks.process_topology_task.async_process_topology",
     ]
 
-if ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_ALL or \
-    ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_AI:
+if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
+    KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
     all_tasks_for_the_worker += [
         "keep.api.tasks.process_background_ai_task.process_background_ai_task",
         "keep.api.tasks.process_background_ai_task.process_correlation",
@@ -125,7 +106,7 @@ class WorkerSettings:
         conn_retry_delay=10,
     )
     # Only if it's an AI-dedicated worker, we can set large timeout, otherwise keeping low to avoid clogging
-    timeout = 60 * 15 if ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_AI else 30
+    timeout = 60 * 15 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 30
     functions: list = FUNCTIONS
     cron_jobs = [
         cron(
@@ -137,8 +118,8 @@ class WorkerSettings:
             run_at_startup=True,
         ),
     ]
-    if ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_ALL or \
-        ARQ_TASK_POOL_TO_EXECUTE == ARQ_TASK_POOL_TO_EXECUTE_AI:
+    if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
+        KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
         cron_jobs.append(
             cron(
                 process_background_ai_task,
