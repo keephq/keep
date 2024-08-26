@@ -69,7 +69,7 @@ export const CorrelationSidebar = ({
         leaveFrom="translate-x-0"
         leaveTo="translate-x-full"
       >
-        <Dialog.Panel className="fixed right-0 inset-y-0 w-100   bg-white z-30 p-6 overflow-auto flex flex-col">
+        <Dialog.Panel className="fixed right-0 inset-y-0 min-w-12   bg-white z-30 p-6 overflow-auto flex flex-col">
           <CorrelationSidebarHeader toggle={toggle} />
           <CorrelationSidebarBody toggle={toggle} defaultValue={defaultValue} />
         </Dialog.Panel>

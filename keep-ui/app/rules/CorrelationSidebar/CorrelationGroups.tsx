@@ -9,10 +9,10 @@ export const CorrelationGroups = () => {
   const { control } = useFormContext<CorrelationForm>();
 
   return (
-    <div>
+    <div className="col-span-2">
       <div className="flex justify-between items-center">
         <p className="text-tremor-default font-medium text-tremor-content-strong mb-2">
-          Add group(s) of conditions
+          Add filters
         </p>
 
         <Button

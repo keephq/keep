@@ -5,7 +5,7 @@ import { AlertDto } from "app/alerts/models";
 type AlertsFoundBadgeProps = {
   alertsFound: AlertDto[];
   isLoading: boolean;
-  vertical: boolean;
+  vertical?: boolean;
 };
 
 export const AlertsFoundBadge = ({
@@ -30,10 +30,10 @@ export const AlertsFoundBadge = ({
 
   return (
     <Badge className="mt-3 w-full" color="teal">
-      <span className={`flex items-center justify-center flex-wrap ${vertical ? "mt-2 mb-2" : ""}`}>
+      <span className={`flex items-center justify-center flex-wrap ${vertical ? "mt-2 mb-2 gap-y-3 gap-x-2" : ""}`}>
         {images.map((source, index) => (
           <Image
-            className={`inline-block ${index == 0 && !vertical ? "ml-2" : "-ml-2"}`}
+            className={`inline-block ${index == 0 || vertical ? "" : "-ml-2"}`}
             key={source}
             alt={source}
             height={24}
@@ -44,7 +44,7 @@ export const AlertsFoundBadge = ({
         ))}
         {vertical && <span className="basis-full"></span>}
         <span className="ml-4">
-          {alertsFound.length} alert(s) were found matching this condition
+          {alertsFound.length} alert(s) were found{vertical && <br/>}matching this condition
         </span>
       </span>
     </Badge>

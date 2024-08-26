@@ -21,10 +21,11 @@ export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {
       {rules.map((rule, groupIndex) =>
         // we only want rule groups to be rendered
         typeof rule === "object" && "combinator" in rule ? (
-          <div id={rule.id}>
+          <div key={groupIndex}>
+            <div className="mb-2">{groupIndex > 0 ? "OR" : ""}</div>
             <RuleFields
-              key={rule.id}
               rule={rule}
+              key={rule.id}
               groupIndex={groupIndex}
               onRuleAdd={onRuleAdd}
               onRuleRemove={onRuleRemove}
@@ -42,7 +43,7 @@ export const RuleGroup = ({ actions, ruleGroup }: QueryRuleGroupProps) => {
         variant="light"
         color="orange"
       >
-        Add group
+        Add filter
       </Button>
     </div>
   );

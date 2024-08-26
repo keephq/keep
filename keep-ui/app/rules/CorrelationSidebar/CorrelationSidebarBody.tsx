@@ -119,11 +119,6 @@ export const CorrelationSidebarBody = ({
           </Button>
         </Callout>
       )}
-      <Callout
-        className="mb-10 relative"
-        title="Rules will be applied only to new alerts. Historical data will be ignored"
-        color="orange"
-      />
       <FormProvider {...methods}>
         <form
           // className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-2"
@@ -132,7 +127,7 @@ export const CorrelationSidebarBody = ({
           <div className="mb-10">
             <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
           </div>
-          <div className="grid grid-cols-2 gap-x-10 flex-1">
+          <div className="grid grid-cols-3 gap-x-10 flex-1">
             <CorrelationGroups />
 
             <div className="flex flex-col items-center justify-between gap-5 py-5" id="total-results">
@@ -141,16 +136,14 @@ export const CorrelationSidebarBody = ({
                   <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} vertical={true}/>
                 )}
               </div>
-
-              <div className="text-right">
+              <span className="text-xs">Rules will be applied only to new alerts. Historical data will be ignored</span>
+              <div className="flex justify-end w-full">
                 <CorrelationSubmission
                   toggle={toggle}
-                  alertsFound={alertsFound}
                   timeframeInSeconds={timeframeInSeconds}
                 />
               </div>
             </div>
-
 
           </div>
 

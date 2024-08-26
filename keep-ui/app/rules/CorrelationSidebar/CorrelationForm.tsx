@@ -28,7 +28,7 @@ export const CorrelationForm = ({
 
   const keys = [
     ...alertsFound.reduce<Set<string>>((acc, alert) => {
-      const alertKeys = Object.keys(alert);
+      const alertKeys: any = Object.keys(alert);
 
       return new Set([...acc, ...alertKeys]);
     }, new Set<string>()),
@@ -38,7 +38,7 @@ export const CorrelationForm = ({
     <div className="flex flex-col gap-y-4 flex-1">
       <fieldset>
 
-        <label className="text-tremor-default font-medium text-tremor-content-strong">
+        <label className="text-tremor-default max-w-sm font-medium text-tremor-content-strong">
           Correlation name
           <TextInput
             type="text"
@@ -134,7 +134,6 @@ export const CorrelationForm = ({
             />
           )}
         />
-
 
         <label htmlFor="requireManualApprove" className="text-sm text-gray-500">
           <Text>Created incidents require manual approve</Text>

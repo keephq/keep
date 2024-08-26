@@ -254,20 +254,24 @@ export const RuleFields = ({
             groupsLength === 1 && ruleFields.length < 2;
 
           return (
-            <Field
-              key={ruleField.id}
-              ruleField={ruleField}
-              onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
-              // add the rule field as an available selection
-              avaliableFields={availableFields.concat({
-                label: ruleField.field,
-                name: ruleField.field,
-              })}
-              onFieldChange={(prop, value) =>
-                onFieldChange(prop, value, ruleFieldIndex)
-              }
-              isInputRemovalDisabled={isInputRemovalDisabled}
-            />
+            <div key={ruleFieldIndex}>
+              <div className="mb-2">{ruleFieldIndex > 0 ? "AND" : ""}</div>
+
+              <Field
+                ruleField={ruleField}
+                key={ruleField.id}
+                onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
+                // add the rule field as an available selection
+                avaliableFields={availableFields.concat({
+                  label: ruleField.field,
+                  name: ruleField.field,
+                })}
+                onFieldChange={(prop, value) =>
+                  onFieldChange(prop, value, ruleFieldIndex)
+                }
+                isInputRemovalDisabled={isInputRemovalDisabled}
+              />
+            </div>
           );
         }
 
