@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier, get_session
-from keep.api.models import BlackoutRule
-from keep.api.models.db.blackout import BlackoutRuleCreate, BlackoutRuleRead
+from keep.api.models.db.blackout import (
+    BlackoutRule,
+    BlackoutRuleCreate,
+    BlackoutRuleRead,
+)
 
 router = APIRouter()
 
