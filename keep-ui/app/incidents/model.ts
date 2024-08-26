@@ -4,6 +4,7 @@ export interface IncidentDto {
   id: string;
   name: string;
   user_summary: string;
+  generated_summary: string;
   assignee: string;
   severity: string;
   number_of_alerts: number;

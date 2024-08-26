@@ -45,6 +45,7 @@ USE_N_HISTORICAL_ALERTS_PMI = 10e4
 USE_N_HISTORICAL_INCIDENTS = 10e4
 MIN_ALERT_NUMBER = 100
 DEFAULT_TEMP_DIR_LOCATION = './ee/experimental/ai_temp'
+MAX_SUMMARY_LENGTH = 900
 
 
 def calculate_pmi_matrix(
@@ -417,13 +418,16 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
 def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1, generate_summary: str = None, max_summary_length: int = None) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error("OpenAI API key is not set. Incident summary generation is not available.")
-        return "Summarization is Disabled"
+        return ""
     
     if not generate_summary:
         generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
         
     if generate_summary == "False":
-        return "Summarization is Disabled"
+        return ""
+    
+    if incident.user_summary:
+            return ""
     
     if not max_summary_length:
         max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
@@ -432,9 +436,6 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         
         incident = get_incident_by_id(incident.tenant_id, incident.id)
-        prompt_addition = ''
-        if incident.user_summary:
-            prompt_addition = f'When generating, you must rely on the summary provided by human: {incident.user_summary}'
         
         description_strings = np.unique([f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
         
@@ -468,7 +469,7 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
             {
                 "role": "user",
                 "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
-                {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts. {prompt_addition}"""
+                {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts."""
             }
         ]).choices[0].message.content
         
@@ -504,4 +505,4 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         return summary
     except Exception as e:
         logger.error(f"Error in generating incident summary: {e}")
-        return "Summarization is Disabled"
+        return ""
