@@ -39,7 +39,7 @@ export default function CreateOrUpdateIncident({
   useEffect(() => {
     if (incidentToEdit) {
       setIncidentName(incidentToEdit.name);
-      setIncidentUserSummary(incidentToEdit.user_summary ?? "");
+      setIncidentUserSummary(incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? "" );
       setIncidentAssignee(incidentToEdit.assignee ?? "");
     }
   }, [incidentToEdit]);
