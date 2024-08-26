@@ -9,7 +9,6 @@ import {
   Button,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
-import { Properties } from "sequential-workflow-designer";
 import { Provider } from "app/providers/providers";
 import {
   BackspaceIcon,
@@ -255,7 +254,7 @@ function WorkflowEditorV2({
   setProperties,
 }: {
   properties: V2Properties;
-  setProperties: (updatedProperties: Properties) => void;
+  setProperties: (updatedProperties: V2Properties) => void;
 }) {
   // const [properties, setProperties] = useState(initialProperties);
   // useEffect(() => {

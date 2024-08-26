@@ -130,7 +130,7 @@ const DragAndDropSidebar = ({ isDraggable }: {
 
   return (
     <div
-      className={`absolute top-2 left-2 rounded border-2 broder-gray-300 bg-white transition-transform duration-300 z-50 ${isVisible ? 'h-[95%]' : 'shadow-lg'}`}
+      className={`absolute top-50 left-2 rounded border-2 broder-gray-300 bg-white transition-transform duration-300 z-50 ${isVisible ? 'h-[88%] border-b-0' : 'shadow-lg'}`}
       style={{ width: '280px' }} // Set a fixed width
     >
       <div className="relative h-full flex flex-col">

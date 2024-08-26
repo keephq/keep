@@ -1,16 +1,10 @@
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../../providers/providers";
-import {
-  BranchedStep,
-  Definition,
-  SequentialStep,
-  Step,
-  StepDefinition,
-  Uid,
-} from "sequential-workflow-designer";
-import { KeepStep } from "./types";
 import { Action, Alert } from "./alert";
 import { stringify } from "yaml";
+import  { V2Properties, V2Step, Definition } from "./builder-store";
+import { v4 as uuidv4 } from "uuid";
+
 
 export function getToolboxConfiguration(providers: Provider[]) {
   /**
@@ -24,7 +18,7 @@ export function getToolboxConfiguration(providers: Provider[]) {
           stepParams: provider.query_params!,
           actionParams: provider.notify_params!,
         },
-      };
+      } as Partial<V2Step>;
       if (provider.can_query)
         steps.push({
           ...step,
@@ -39,7 +33,7 @@ export function getToolboxConfiguration(providers: Provider[]) {
         });
       return [steps, actions];
     },
-    [[] as StepDefinition[], [] as StepDefinition[]]
+    [[] as Partial<V2Step>[], [] as Partial<V2Step>[]]
   );
   return {
     groups: [
@@ -103,14 +97,14 @@ export function getActionOrStepObj(
   actionOrStep: any,
   type: "action" | "step",
   providers?: Provider[]
-): KeepStep {
+): V2Step {
   /**
    * Generate a step or action definition (both are kinda the same)
    */
   const providerType = actionOrStep.provider?.type;
   const provider = providers?.find((p) => p.type === providerType);
   return {
-    id: Uid.next(),
+    id: actionOrStep?.id || uuidv4(),
     name: actionOrStep.name,
     componentType: "task",
     type: `${type}-${providerType}`,
@@ -134,7 +128,7 @@ function generateForeach(
   sequence?: any
 ) {
   return {
-    id: Uid.next(),
+    id: actionOrStep?.id || uuidv4(),
     type: "foreach",
     componentType: "container",
     name: "Foreach",
@@ -154,7 +148,7 @@ export function generateCondition(
 ): any {
   const stepOrAction = action.type === "step" ? "step" : "action";
   const generatedCondition = {
-    id: Uid.next(),
+    id: condition.id  || uuidv4(),
     name: condition.name,
     type: `condition-${condition.type}`,
     componentType: "switch",
@@ -183,8 +177,8 @@ export function generateWorkflow(
   workflowId: string,
   name: string,
   description: string,
-  steps: Step[],
-  conditions: Step[],
+  steps: V2Step[],
+  conditions: V2Step[],
   triggers: { [key: string]: { [key: string]: string } } = {}
 ): Definition {
   /**
@@ -217,9 +211,9 @@ export function parseWorkflow(
   const workflow = parsedWorkflowFile.alert
     ? parsedWorkflowFile.alert
     : parsedWorkflowFile.workflow;
-  const steps = [] as any;
+  const steps = [] as V2Step[];
   const workflowSteps =
-    workflow.steps?.map((s: any) => {
+    workflow.steps?.map((s: V2Step) => {
       s.type = "step";
       return s;
     }) || [];
@@ -283,7 +277,11 @@ export function parseWorkflow(
   );
 }
 
-function getWithParams(s: Step): any {
+function getWithParams(s: V2Step): any {
+  if(!s){
+    return;
+  }
+  s.properties = (s.properties || {}) as V2Properties;
   const withParams =
     (s.properties.with as {
       [key: string]: string | number | boolean | object;
@@ -294,14 +292,14 @@ function getWithParams(s: Step): any {
         const withParamValue = withParams[key] as string;
         const withParamJson = JSON.parse(withParamValue);
         withParams[key] = withParamJson;
-      } catch {}
+      } catch { }
     });
   }
   return withParams;
 }
 
 function getActionsFromCondition(
-  condition: BranchedStep,
+  condition: V2Step,
   foreach?: string
 ): Action[] {
   const compiledCondition = {
@@ -309,11 +307,12 @@ function getActionsFromCondition(
     type: condition.type.replace("condition-", ""),
     ...condition.properties,
   };
-  const compiledActions = condition.branches.true.map((a) => {
+  const steps = condition?.branches?.true || [] as V2Step[];
+  const compiledActions = steps.map((a:V2Step) => {
     const withParams = getWithParams(a);
-    const providerType = a.type.replace("action-", "");
+    const providerType = a?.type?.replace("action-", "");
     const providerName =
-      (a.properties.config as string)?.trim() || `default-${providerType}`;
+      (a?.properties?.config as string)?.trim() || `default-${providerType}`;
     const provider = {
       type: a.type.replace("action-", ""),
       config: `{{ providers.${providerName} }}`,
@@ -393,7 +392,7 @@ export function buildAlert(definition: Definition): Alert {
           if: ifParam as string,
         };
       }
-      else{
+      else {
         return {
           name: s.name,
           provider: provider,
@@ -404,15 +403,16 @@ export function buildAlert(definition: Definition): Alert {
   alert.sequence
     .filter((step) => step.type === "foreach")
     ?.forEach((forEach) => {
-      const forEachValue = forEach.properties.value as string;
-      const condition = (forEach as SequentialStep).sequence.find((c) =>
+      const forEachValue = forEach?.properties?.value as string;
+      const condition = forEach?.sequence?.find((c) =>
         c.type.startsWith("condition-")
-      ) as BranchedStep;
+      ) as V2Step;
       let foreachActions = [] as Action[];
       if (condition) {
         foreachActions = getActionsFromCondition(condition, forEachValue);
       } else {
-        const stepOrAction = (forEach as SequentialStep).sequence[0];
+        const forEachSequence = forEach?.sequence || [] as V2Step[];
+        const stepOrAction = forEachSequence[0] || {} as V2Step[];
         const withParams = getWithParams(stepOrAction);
         const providerType = stepOrAction.type
           .replace("action-", "")
@@ -421,14 +421,14 @@ export function buildAlert(definition: Definition): Alert {
         const providerName =
           (stepOrAction.properties.config as string)?.trim() ||
           `default-${providerType}`;
-        const provider: any = {
+        const provider = {
           type: stepOrAction.type.replace("action-", "").replace("step-", ""),
           config: `{{ providers.${providerName} }}`,
           with: withParams,
         };
         foreachActions = [
           {
-            name: stepOrAction.name,
+            name: stepOrAction.name || '',
             provider: provider,
             foreach: forEachValue,
             if: ifParam as string,
@@ -442,7 +442,7 @@ export function buildAlert(definition: Definition): Alert {
     .filter((step) => step.type.startsWith("condition-"))
     ?.forEach((condition) => {
       const conditionActions = getActionsFromCondition(
-        condition as BranchedStep
+        condition as V2Step
       );
       actions = [...actions, ...conditionActions];
     });
@@ -470,7 +470,8 @@ export function buildAlert(definition: Definition): Alert {
       value: alert.properties.interval,
     });
   }
-  const compiledAlert = {
+
+  return {
     id: alertId,
     name: name,
     triggers: triggers,
@@ -479,6 +480,16 @@ export function buildAlert(definition: Definition): Alert {
     services: services,
     steps: steps,
     actions: actions,
-  };
-  return compiledAlert;
+  } as Alert;
+}
+
+
+export function wrapDefinitionV2({ properties, sequence, isValid }: { properties: V2Properties, sequence: V2Step[], isValid?: boolean }) {
+  return {
+    value: {
+      sequence: sequence,
+      properties: properties
+    },
+    isValid: !!isValid
+  }
 }

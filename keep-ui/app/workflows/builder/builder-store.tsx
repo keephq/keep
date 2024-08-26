@@ -37,7 +37,7 @@ export type V2Step = {
   name?: string;
   componentType: string;
   type: string;
-  properties?: V2Properties;
+  properties: V2Properties;
   branches?: {
     true: V2Step[];
     false: V2Step[];

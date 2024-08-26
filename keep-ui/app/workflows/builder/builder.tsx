@@ -1,10 +1,4 @@
 import "./page.css";
-import {
-  Definition,
-} from "sequential-workflow-designer";
-import {
-  wrapDefinition,
-} from "sequential-workflow-designer-react";
 import { useEffect, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
@@ -13,6 +7,7 @@ import {
   generateWorkflow,
   getToolboxConfiguration,
   buildAlert,
+  wrapDefinitionV2,
 } from "./utils";
 import {
   CheckCircleIcon,
@@ -64,7 +59,7 @@ function Builder({
 }: Props) {
 
   const [definition, setDefinition] = useState(() =>
-    wrapDefinition({ sequence: [], properties: {} } as Definition)
+    wrapDefinitionV2({ sequence: [], properties: {}, isValid: false })
   );
   const [isLoading, setIsLoading] = useState(true);
   const [stepValidationError, setStepValidationError] = useState<string | null>(
@@ -173,7 +168,7 @@ function Builder({
   useEffect(() => {
     setIsLoading(true);
     if (workflow) {
-      setDefinition(wrapDefinition(parseWorkflow(workflow, providers)));
+      setDefinition(wrapDefinitionV2({...parseWorkflow(workflow, providers), isValid:true}));
     } else if (loadedAlertFile == null) {
       const alertUuid = uuidv4();
       const alertName = searchParams?.get("alertName");
@@ -183,10 +178,10 @@ function Builder({
         triggers = { alert: { source: alertSource, name: alertName } };
       }
       setDefinition(
-        wrapDefinition(generateWorkflow(alertUuid, "", "", [], [], triggers))
+        wrapDefinitionV2({...generateWorkflow(alertUuid, "", "", [], [], triggers), isValid: true})
       );
     } else {
-      setDefinition(wrapDefinition(parseWorkflow(loadedAlertFile!, providers)));
+      setDefinition(wrapDefinitionV2({...parseWorkflow(loadedAlertFile!, providers), isValid:true}));
     }
     setIsLoading(false);
   }, [loadedAlertFile, workflow, searchParams]);
