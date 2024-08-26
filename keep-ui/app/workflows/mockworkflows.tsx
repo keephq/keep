@@ -151,7 +151,7 @@ export default function MockWorkflowCardSection({
             return (
               <Card
                 key={index}
-                className="p-4 flex flex-col justify-between w-full hover:border-orange-400 border-2 border-white"
+                className="p-4 flex flex-col justify-between w-full border-2 border-transparent hover:border-orange-400 "
               >
                 <div>
                   <WorkflowSteps workflow={workflow} />
