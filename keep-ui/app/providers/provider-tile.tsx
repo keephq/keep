@@ -1,13 +1,12 @@
 import {
   Badge,
-  Button,
   Icon,
   SparkAreaChart,
   Subtitle,
   Text,
   Title,
 } from "@tremor/react";
-import {Provider, TProviderLabels} from "./providers";
+import { Provider, TProviderLabels } from "./providers";
 import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
@@ -15,6 +14,7 @@ import {
   QueueListIcon,
   TicketIcon,
   MapIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/20/solid";
 import "./provider-tile.css";
 import moment from "moment";
@@ -88,8 +88,7 @@ const getEmptyDistribution = () => {
   return emptyDistribution;
 };
 
-
-function getIconForTag(tag:TProviderLabels) {
+function getIconForTag(tag: TProviderLabels) {
   switch (tag) {
     case "alert":
       return BellAlertIcon;
@@ -111,25 +110,59 @@ export default function ProviderTile({ provider, onClick }: Props) {
     if (provider.installed || provider.linked) {
       return null;
     }
-    return (<div className="labels flex flex-wrap group-hover:hidden gap-1">
-              {provider.tags.map((tag) => {
-                  return (
-                    <Badge
-                      key={tag}
-                      icon={getIconForTag(tag)}
-                      size="xs"
-                      color="slate"
-                    >
-                      <p>{tag}</p>
-                    </Badge>
-                  );
-                })}
-            </div>)
-  }
+    return (
+      <div className="labels flex flex-wrap gap-1">
+        {provider.tags.map((tag) => {
+          return (
+            <Badge key={tag} icon={getIconForTag(tag)} size="xs" color="slate">
+              <p>{tag}</p>
+            </Badge>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderChart = () => {
+    const className = "mt-2 h-8 w-20 sm:h-10 sm:w-full";
+    if (!provider.installed && !provider.linked) {
+      return null;
+    }
+
+    if (provider.alertsDistribution && provider.alertsDistribution.length > 0) {
+      return (
+        <SparkAreaChart
+          data={addOneToDistribution(provider.alertsDistribution)}
+          categories={["number"]}
+          index={"hour"}
+          colors={["orange"]}
+          showGradient={true}
+          autoMinValue={true}
+          className={className}
+        />
+      );
+    }
+
+    return (
+      <SparkAreaChart
+        data={getEmptyDistribution()}
+        categories={["number"]}
+        index={"hour"}
+        colors={["orange"]}
+        className={className}
+        autoMinValue={true}
+        maxValue={1}
+      />
+    );
+  };
 
   return (
     <div
-      className="tile-basis py-2 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer gap-2"
+      className={
+        "tile-basis min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:shadow-lg hover:grayscale-0 cursor-pointer gap-3" +
+        // Add fixed height only if provider card doesn't have much content
+        (!provider.installed && !provider.linked ? " h-32" : "")
+      }
       onClick={onClick}
     >
       <div className="flex-1 min-w-0">
@@ -158,7 +191,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
           />
         )}
         {provider.installed ? (
-          <Text color={"green"} className="flex text-xs group-hover:hidden">
+          <Text color={"green"} className="flex text-xs">
             Connected
           </Text>
         ) : null}
@@ -169,24 +202,17 @@ export default function ProviderTile({ provider, onClick }: Props) {
         ) : null}
         <div className="flex flex-col gap-2">
           <div>
-            <Title
-              className={`${
-                !provider.linked ? "group-hover:hidden" : ""
-              } capitalize`}
-              title={provider.details?.name}
-            >
+            <Title className="capitalize" title={provider.details?.name}>
               {provider.display_name}{" "}
             </Title>
 
             {provider.details && provider.details.name && (
-              <Subtitle className="group-hover:hidden">
+              <Subtitle className="truncate">
                 id: {provider.details.name}
               </Subtitle>
             )}
             {provider.last_alert_received ? (
-              <Text
-                className={`${!provider.linked ? "group-hover:hidden" : ""}`}
-              >
+              <Text>
                 Last alert: {moment(provider.last_alert_received).fromNow()}
               </Text>
             ) : (
@@ -195,59 +221,35 @@ export default function ProviderTile({ provider, onClick }: Props) {
             {provider.linked && provider.id ? (
               <Text className="truncate">Id: {provider.id}</Text>
             ) : null}
-            {(provider.installed || provider.linked) &&
-            provider.alertsDistribution &&
-            provider.alertsDistribution.length > 0 ? (
-              <SparkAreaChart
-                data={addOneToDistribution(provider.alertsDistribution)}
-                categories={["number"]}
-                index={"hour"}
-                colors={["orange"]}
-                showGradient={true}
-                autoMinValue={true}
-                className={`${
-                  !provider.linked ? "group-hover:hidden" : ""
-                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
-              />
-            ) : provider.installed || provider.linked ? (
-              <SparkAreaChart
-                data={getEmptyDistribution()}
-                categories={["number"]}
-                index={"hour"}
-                colors={["orange"]}
-                className={`${
-                  !provider.linked ? "group-hover:hidden" : ""
-                } mt-2 h-8 w-20 sm:h-10 sm:w-36`}
-                autoMinValue={true}
-                maxValue={1}
-              />
-            ) : null}
+            {renderChart()}
           </div>
           {renderTags()}
-          {!provider.linked && (
-            <Button
-              variant="secondary"
-              size="xs"
-              color={provider.installed ? "orange" : "green"}
-              className="hidden group-hover:block pd-2"
-            >
-              {provider.installed ? "Modify" : "Connect"}
-            </Button>
-          )}
         </div>
       </div>
-      <ImageWithFallback
-        src={`/icons/${provider.type}-icon.png`}
-        fallbackSrc={`/icons/keep-icon.png`}
-        width={48}
-        height={48}
-        alt={provider.type}
-        className={`${
-          provider.installed || provider.linked
-            ? ""
-            : "grayscale group-hover:grayscale-0"
-        }`}
-      />
+      <div className="flex flex-col justify-center h-full">
+        <div className="flex-grow flex items-center">
+          <ImageWithFallback
+            src={`/icons/${provider.type}-icon.png`}
+            fallbackSrc={`/icons/keep-icon.png`}
+            width={48}
+            height={48}
+            alt={provider.type}
+            className={`${
+              provider.installed || provider.linked
+                ? ""
+                : "grayscale group-hover:grayscale-0"
+            }`}
+          />
+        </div>
+        {provider.installed ? (
+          <Icon
+            icon={Cog6ToothIcon}
+            color="gray"
+            className="w-6 h-6 self-end place-self-end"
+            tooltip="Modify"
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
