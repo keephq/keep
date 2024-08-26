@@ -62,8 +62,8 @@ class Incident(SQLModel, table=True):
     tenant: Tenant = Relationship()
     name: str
 
-    user_summary: str | None
-    generated_summary: str | None
+    user_summary: str = Field(sa_column=Column(TEXT), nullable=True)
+    generated_summary: str = Field(sa_column=Column(TEXT), nullable=True)
 
     assignee: str | None
     severity: int = Field(default=IncidentSeverity.CRITICAL.order)
@@ -95,7 +95,7 @@ class Incident(SQLModel, table=True):
     )
 
     # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
-    rule_fingerprint: str = Field(default="")
+    rule_fingerprint: str = Field(default="", sa_column=Column(TEXT))
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

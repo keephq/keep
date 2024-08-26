@@ -26,6 +26,7 @@ from keep.api.core.db import (
     get_last_incidents,
     get_incident_by_id,
     write_pmi_matrix_to_db,
+    write_pmi_matrix_to_temp_file,
     create_incident_from_dict,
     update_incident_summary,
 )
@@ -39,17 +40,23 @@ from keep.api.core.dependencies import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
-USE_N_HISTORICAL_ALERTS = 10e10
-USE_N_HISTORICAL_INCIDENTS = 10e10
+USE_N_HISTORICAL_ALERTS_MINING = 10e4
+USE_N_HISTORICAL_ALERTS_PMI = 10e4
+USE_N_HISTORICAL_INCIDENTS = 10e4
+MIN_ALERT_NUMBER = 100
+DEFAULT_TEMP_DIR_LOCATION = './ee/experimental/ai_temp'
 
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
     tenant_id: str,
     upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
+    use_n_historical_alerts: int = None,
     sliding_window: int = None,
     stride: int = None,
+    temp_dir: str = None,
+    offload_config: Dict = None,
+    min_alert_number: int = None,
 ) -> dict:
     logger.info(
         "Calculating PMI coefficients for alerts",
@@ -61,15 +68,42 @@ def calculate_pmi_matrix(
     if not upper_timestamp:
         upper_timestamp = os.environ.get('PMI_ALERT_UPPER_TIMESTAMP', datetime.now())
         
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('PMI_USE_N_HISTORICAL_ALERTS', USE_N_HISTORICAL_ALERTS_PMI)
+        
     if not sliding_window:
         sliding_window = os.environ.get('PMI_SLIDING_WINDOW', 4 * 60 * 60)
     
     if not stride:
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
+        
+    if not temp_dir:
+        temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
+        temp_dir = f'{temp_dir}/{tenant_id}'
+        os.makedirs(temp_dir, exist_ok=True)
+        
+    if not offload_config:
+        offload_config = os.environ.get('PMI_OFFLOAD_CONFIG', {})
+        
+        if 'temp_dir' in offload_config:
+            offload_config['temp_dir'] = f'{offload_config["temp_dir"]}/{tenant_id}'
+            os.makedirs(offload_config['temp_dir'], exist_ok=True)
+            
+    if not min_alert_number:
+        min_alert_number = os.environ.get('MIN_ALERT_NUMBER', MIN_ALERT_NUMBER)
     
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
+    
+    if len(alerts) < min_alert_number:
+        logger.info(
+            "Not enough alerts to mine incidents",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        return {"status": 'failed', "message": "Not enough alerts to mine incidents"}
 
-    pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
+    pmi_matrix, pmi_columns = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, offload_config)
     
     logger.info(
         "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
@@ -77,8 +111,7 @@ def calculate_pmi_matrix(
             "tenant_id": tenant_id,
         },
     )
-    
-    write_pmi_matrix_to_db(tenant_id, pmi_matrix)
+    write_pmi_matrix_to_temp_file(tenant_id, pmi_matrix, pmi_columns, temp_dir)
     
     logger.info(
         "PMI matrix is written to the database.",
@@ -95,14 +128,16 @@ async def mine_incidents_and_create_objects(
         tenant_id: str,
         alert_lower_timestamp: datetime = None,
         alert_upper_timestamp: datetime = None,
-        use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
+        use_n_historical_alerts: int = None,
         incident_lower_timestamp: datetime = None,
         incident_upper_timestamp: datetime = None,
-        use_n_hist_incidents: int = USE_N_HISTORICAL_INCIDENTS,
+        use_n_hist_incidents: int = None,
         pmi_threshold: float = None,
         knee_threshold: float = None,
         min_incident_size: int = None,
+        min_alert_number: int = None,
         incident_similarity_threshold: float = None,
+        general_temp_dir: str = None,
     ) -> Dict[str, List[Incident]]:
     
     """
@@ -139,6 +174,12 @@ async def mine_incidents_and_create_objects(
         alert_window = timedelta(hours = int(os.environ.get('MINE_ALERT_WINDOW', "12")))
         alert_lower_timestamp = alert_upper_timestamp - alert_window
         
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('MINE_USE_N_HISTORICAL_ALERTS', USE_N_HISTORICAL_ALERTS_MINING)
+        
+    if not use_n_hist_incidents:
+        use_n_hist_incidents = os.environ.get('MINE_USE_N_HISTORICAL_INCIDENTS', USE_N_HISTORICAL_INCIDENTS)
+        
     if not pmi_threshold:
         pmi_threshold = os.environ.get('PMI_THRESHOLD', 0.0)
         
@@ -150,8 +191,16 @@ async def mine_incidents_and_create_objects(
         
     if not incident_similarity_threshold:
         incident_similarity_threshold = os.environ.get('INCIDENT_SIMILARITY_THRESHOLD', 0.8)
-
-    calculate_pmi_matrix(ctx, tenant_id)
+        
+    if not general_temp_dir:
+        general_temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
+        
+    temp_dir = f'{general_temp_dir}/{tenant_id}'
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    status = calculate_pmi_matrix(ctx, tenant_id)
+    if status.get('status') == 'failed':
+        return {"incidents": []}
 
     logger.info(
         "Getting new alerts and past incients",
@@ -159,10 +208,8 @@ async def mine_incidents_and_create_objects(
             "tenant_id": tenant_id,
         },
     )
-    
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    
     fingerprints = list(set([alert.fingerprint for alert in alerts]))
     
     logger.info(
@@ -172,7 +219,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    graph = create_graph(tenant_id, fingerprints, pmi_threshold, knee_threshold)
+    graph = create_graph(tenant_id, fingerprints, temp_dir, pmi_threshold, knee_threshold)
     ids = []
     
     logger.info(
@@ -222,8 +269,7 @@ async def mine_incidents_and_create_objects(
         "Client notified on new AI log",
         extra={"tenant_id": tenant_id},
     )
-                
-
+    
     return {"incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]}
 
 
@@ -368,9 +414,15 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
     return incidents
 
 
-def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1) -> str:
+def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1, generate_summary: str = None) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error("OpenAI API key is not set. Incident summary generation is not available.")
+        return "Summarization is Disabled"
+    
+    if not generate_summary:
+        generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
+        
+    if generate_summary == "False":
         return "Summarization is Disabled"
     
     try: 

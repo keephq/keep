@@ -203,3 +203,6 @@ scripts/automatic_extraction_rules.py
 
 playwright_dump_*.html
 playwright_dump_*.png
+
+ee/experimental/ai_temp/*
+!ee/experimental/ai_temp/.gitkeep
