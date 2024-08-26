@@ -432,6 +432,9 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
     if not max_summary_length:
         max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
     
+    if not max_summary_length:
+        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
+    
     try: 
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         
