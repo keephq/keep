@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import { FlowNode, NodeData, V2Properties, V2Step } from "app/workflows/builder/builder-store";
 import { Edge } from "@xyflow/react";
 

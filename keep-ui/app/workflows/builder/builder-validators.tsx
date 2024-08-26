@@ -5,6 +5,11 @@ export function globalValidatorV2(
   definition: FlowDefinition,
   setGlobalValidationError: Dispatch<SetStateAction<string | null>>
 ): boolean {
+  const workflowName = definition?.properties?.name;
+  if(!workflowName) {
+    setGlobalValidationError("Workflow name cannot be empty.");
+    return false;
+  }
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
     setGlobalValidationError(

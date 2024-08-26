@@ -256,10 +256,6 @@ function WorkflowEditorV2({
   properties: V2Properties;
   setProperties: (updatedProperties: V2Properties) => void;
 }) {
-  // const [properties, setProperties] = useState(initialProperties);
-  // useEffect(() => {
-  //   setProperties(initialProperties);
-  // }, [initialProperties]);
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
