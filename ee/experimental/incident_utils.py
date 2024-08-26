@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 
 from fastapi import Depends
 
-from ee.experimental.node_utils import NodeCandidateQueue, NodeCandidate
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
 
@@ -27,6 +26,7 @@ from keep.api.core.db import (
     get_last_incidents,
     get_incident_by_id,
     write_pmi_matrix_to_db,
+    write_pmi_matrix_to_temp_file,
     create_incident_from_dict,
     update_incident_summary,
 )
@@ -40,17 +40,22 @@ from keep.api.core.dependencies import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
-USE_N_HISTORICAL_ALERTS = 10e10
-USE_N_HISTORICAL_INCIDENTS = 10e10
+USE_N_HISTORICAL_ALERTS_MINING = 10e4
+USE_N_HISTORICAL_ALERTS_PMI = 10e4
+USE_N_HISTORICAL_INCIDENTS = 10e4
+MIN_ALERT_NUMBER = 100
+DEFAULT_TEMP_DIR_LOCATION = './ai_temp'
 
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
     tenant_id: str,
     upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
+    use_n_historical_alerts: int = None,
     sliding_window: int = None,
     stride: int = None,
+    temp_dir: str = None,
+    offload_config: Dict = None,
 ) -> dict:
     logger.info(
         "Calculating PMI coefficients for alerts",
@@ -62,15 +67,30 @@ def calculate_pmi_matrix(
     if not upper_timestamp:
         upper_timestamp = os.environ.get('PMI_ALERT_UPPER_TIMESTAMP', datetime.now())
         
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('PMI_USE_N_HISTORICAL_ALERTS', USE_N_HISTORICAL_ALERTS_PMI)
+        
     if not sliding_window:
         sliding_window = os.environ.get('PMI_SLIDING_WINDOW', 4 * 60 * 60)
     
     if not stride:
         stride = os.environ.get('PMI_STRIDE', 60 * 60)
+        
+    if not temp_dir:
+        temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
+        temp_dir = f'{temp_dir}/{tenant_id}'
+        os.makedirs(temp_dir, exist_ok=True)
+        
+    if not offload_config:
+        offload_config = os.environ.get('PMI_OFFLOAD_CONFIG', {})
+        
+        if 'temp_dir' in offload_config:
+            offload_config['temp_dir'] = f'{offload_config["temp_dir"]}/{tenant_id}'
+            os.makedirs(offload_config['temp_dir'], exist_ok=True)
     
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
 
-    pmi_matrix = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride)
+    pmi_matrix, pmi_columns = get_alert_pmi_matrix(alerts, 'fingerprint', sliding_window, stride, offload_config)
     
     logger.info(
         "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
@@ -78,8 +98,7 @@ def calculate_pmi_matrix(
             "tenant_id": tenant_id,
         },
     )
-    
-    write_pmi_matrix_to_db(tenant_id, pmi_matrix)
+    write_pmi_matrix_to_temp_file(tenant_id, pmi_matrix, pmi_columns, temp_dir)
     
     logger.info(
         "PMI matrix is written to the database.",
@@ -96,14 +115,16 @@ async def mine_incidents_and_create_objects(
         tenant_id: str,
         alert_lower_timestamp: datetime = None,
         alert_upper_timestamp: datetime = None,
-        use_n_historical_alerts: int = USE_N_HISTORICAL_ALERTS,
+        use_n_historical_alerts: int = None,
         incident_lower_timestamp: datetime = None,
         incident_upper_timestamp: datetime = None,
-        use_n_hist_incidents: int = USE_N_HISTORICAL_INCIDENTS,
+        use_n_hist_incidents: int = None,
         pmi_threshold: float = None,
         knee_threshold: float = None,
         min_incident_size: int = None,
+        min_alert_number: int = None,
         incident_similarity_threshold: float = None,
+        general_temp_dir: str = None,
     ) -> Dict[str, List[Incident]]:
     
     """
@@ -140,6 +161,12 @@ async def mine_incidents_and_create_objects(
         alert_window = timedelta(hours = int(os.environ.get('MINE_ALERT_WINDOW', "12")))
         alert_lower_timestamp = alert_upper_timestamp - alert_window
         
+    if not use_n_historical_alerts:
+        use_n_historical_alerts = os.environ.get('MINE_USE_N_HISTORICAL_ALERTS', USE_N_HISTORICAL_ALERTS_MINING)
+        
+    if not use_n_hist_incidents:
+        use_n_hist_incidents = os.environ.get('MINE_USE_N_HISTORICAL_INCIDENTS', USE_N_HISTORICAL_INCIDENTS)
+        
     if not pmi_threshold:
         pmi_threshold = os.environ.get('PMI_THRESHOLD', 0.0)
         
@@ -151,6 +178,26 @@ async def mine_incidents_and_create_objects(
         
     if not incident_similarity_threshold:
         incident_similarity_threshold = os.environ.get('INCIDENT_SIMILARITY_THRESHOLD', 0.8)
+        
+    if not general_temp_dir:
+        general_temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
+        
+    if not min_alert_number:
+        min_alert_number = os.environ.get('MIN_ALERT_NUMBER', MIN_ALERT_NUMBER)
+        
+        
+    temp_dir = f'{general_temp_dir}/{tenant_id}'
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
+    if len(alerts) < min_alert_number:
+        logger.info(
+            "Not enough alerts to mine incidents",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        return {"incidents": []}
 
     calculate_pmi_matrix(ctx, tenant_id)
 
@@ -161,19 +208,8 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp, lower_timestamp=alert_lower_timestamp)
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_hist_incidents, upper_timestamp=incident_upper_timestamp, lower_timestamp=incident_lower_timestamp)
-    nc_queue = NodeCandidateQueue()
-    
-    logger.info(
-        "Analyzing new alerts",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    for candidate in [NodeCandidate(alert.fingerprint, alert.timestamp) for alert in alerts]:
-        nc_queue.push_candidate(candidate)
-    candidates = nc_queue.get_candidates()          
+    fingerprints = list(set([alert.fingerprint for alert in alerts]))
     
     logger.info(
         "Building alert graph",
@@ -182,7 +218,7 @@ async def mine_incidents_and_create_objects(
         },
     )
     
-    graph = create_graph(tenant_id, [candidate.fingerprint for candidate in candidates], pmi_threshold, knee_threshold)
+    graph = create_graph(tenant_id, fingerprints, temp_dir, pmi_threshold, knee_threshold)
     ids = []
     
     logger.info(
@@ -196,16 +232,16 @@ async def mine_incidents_and_create_objects(
         if len(component) > min_incident_size:            
             alerts_appended = False
             for incident in incidents:
-                incident_fingerprints = set([alert.fingerprint for alert in incident.Incident.alerts])        
+                incident_fingerprints = set([alert.fingerprint for alert in incident.alerts])        
                 intersection = incident_fingerprints.intersection(component)
         
                 if len(intersection) / len(component) >= incident_similarity_threshold:
                     alerts_appended = True
                     
-                    add_alerts_to_incident_by_incident_id(tenant_id, incident.Incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
+                    add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [alert.id for alert in alerts if alert.fingerprint in component])
                     
-                    summary = generate_incident_summary(incident.Incident)
-                    update_incident_summary(incident.Incident.id, summary)
+                    summary = generate_incident_summary(incident)
+                    update_incident_summary(incident.id, summary)
                     
             if not alerts_appended:
                 incident_start_time = min([alert.timestamp for alert in alerts if alert.fingerprint in component])
