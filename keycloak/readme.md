@@ -48,3 +48,7 @@ https://euc1.auth.ac/auth/realms/keep/portal
 
 
 http://localhost:8181/auth/admin/master/console/#/keep
+
+
+## Sign in page
+# 1. build: pnpm build:jar

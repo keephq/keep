@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak
+    environment:
+      - KC_DB=dev-mem
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KEYCLOAK_ADMIN=keep_kc_admin
+      - KEYCLOAK_ADMIN_PASSWORD=keep_kc_admin
+      - KEYCLOAK_IMPORT=/tmp/realm-export.json
+    ports:
+      - "8787:8080"
+    volumes:
+      - ./keycloak-realm-export.json:/opt/keycloak/data/import/keep-test-realm.json
+    command:
+      - start-dev
+      - --import-realm

@@ -89,6 +89,11 @@ def docker_services(
                     "docker-compose.yml", "docker-compose-elastic.yml"
                 )
                 break
+            elif frame.function == "keycloak_client":
+                docker_compose_file = docker_compose_file.replace(
+                    "docker-compose.yml", "docker-compose-keycloak.yml"
+                )
+                break
 
         print(f"Using docker-compose file: {docker_compose_file}")
         with get_docker_services(
@@ -267,6 +272,48 @@ def mocked_context_manager():
     return context_manager
 
 
+def is_keycloak_responseive(host, port, user, password):
+    try:
+        # Try to connect to Keycloak
+        from keycloak import KeycloakAdmin
+
+        keycloak_admin = KeycloakAdmin(
+            server_url=f"http://{host}:{port}/auth/admin",
+            username=user,
+            password=password,
+            realm_name="keep",
+            verify=True,
+        )
+        keycloak_admin.get_client_id("keep")
+    except Exception:
+        print("Keycloak still not up")
+        pass
+
+    return False
+
+
+@pytest.fixture(scope="session")
+def keycloak_container(docker_ip, docker_services):
+    try:
+        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
+            print("Running in Github Actions or SKIP_DOCKER is set, skipping keycloak")
+            yield
+            return
+        docker_services.wait_until_responsive(
+            timeout=60.0,
+            pause=1,
+            check=lambda: is_keycloak_responseive(
+                "127.0.0.1", 8787, "keep_admin", "keep_admin"
+            ),
+        )
+        yield True
+    except Exception:
+        print("Exception occurred while waiting for Keycloak to be responsive")
+        raise
+    finally:
+        print("Tearing down Keycloak")
+
+
 def is_elastic_responsive(host, port, user, password):
     try:
         elastic_client = ElasticClient(
@@ -326,6 +373,26 @@ def elastic_client(request):
         elastic_client.drop_index()
     except Exception:
         pass
+
+
+@pytest.fixture
+def keycloak_client(request):
+    from keycloak import KeycloakAdmin
+
+    os.environ["KEYCLOAK_URL"] = "http://localhost:8787/auth"
+    os.environ["KEYCLOAK_REALM"] = "keeptests"
+    os.environ["KEYCLOAK_USER"] = "keep_kc_admin"
+    os.environ["KEYCLOAK_PASSWORD"] = "keep_kc_admin"
+    request.getfixturevalue("keycloak_container")
+    keycloak_admin = KeycloakAdmin(
+        server_url="http://localhost:8787/auth/",
+        username="keep_kc_admin",
+        password="keep_kc_admin",
+        realm_name="keep",
+        verify=True,
+    )
+
+    yield keycloak_admin
 
 
 @pytest.fixture(scope="session")
