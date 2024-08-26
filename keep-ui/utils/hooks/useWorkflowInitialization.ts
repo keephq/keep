@@ -10,7 +10,7 @@ import { Provider } from "app/providers/providers";
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { processWorkflowV2 } from "utils/reactFlow";
 
-const layoutOptions  = {
+const layoutOptions = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
   "elk.algorithm": "layered",
   "elk.direction": "BOTTOM",
@@ -76,7 +76,7 @@ const getLayoutedElements = (nodes: FlowNode[], edges: Edge[], options = {}) => 
   };
 
   return elk
-  // @ts-ignore
+    // @ts-ignore
     .layout(graph)
     .then((layoutedGraph) => ({
       nodes: layoutedGraph?.children?.map((node) => ({
@@ -111,17 +111,13 @@ const useWorkflowInitialization = (
     setToolBoxConfig,
     isLayouted,
     setIsLayouted,
-    setLastSavedChanges,
-    changes,
     setChanges,
     setSelectedNode,
-    firstInitilisationDone,
     setFirstInitilisationDone
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const { screenToFlowPosition } = useReactFlow();
-  const { fitView } = useReactFlow();
   const [finalNodes, setFinalNodes] = useState<FlowNode[]>([]);
   const [finalEdges, setFinalEdges] = useState<Edge[]>([]);
 
@@ -162,7 +158,7 @@ const useWorkflowInitialization = (
           setIsLayouted(true);
           setFinalEdges(layoutedEdges);
           setFinalNodes(layoutedNodes);
-          
+
         },
       );
     },
@@ -179,7 +175,8 @@ const useWorkflowInitialization = (
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
-      setV2Properties(parsedWorkflow?.properties ?? {});
+      setV2Properties({ ...(parsedWorkflow?.properties ?? {}), name: parsedWorkflow?.properties?.name ?? parsedWorkflow?.properties?.id });
+
       const sequences = [
         {
           id: "start",
