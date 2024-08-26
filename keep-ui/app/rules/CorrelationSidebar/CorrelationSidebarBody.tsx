@@ -13,7 +13,6 @@ import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import {AlertsFoundBadge} from "./AlertsFoundBadge";
-import Xarrow from "react-xarrows";
 
 export const TIMEFRAME_UNITS = {
   seconds: (amount: number) => amount,
