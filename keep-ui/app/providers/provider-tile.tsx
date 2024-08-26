@@ -7,7 +7,7 @@ import {
   Text,
   Title,
 } from "@tremor/react";
-import { Provider } from "./providers";
+import {Provider, TProviderLabels} from "./providers";
 import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
@@ -88,13 +88,51 @@ const getEmptyDistribution = () => {
   return emptyDistribution;
 };
 
+
+function getIconForTag(tag:TProviderLabels) {
+  switch (tag) {
+    case "alert":
+      return BellAlertIcon;
+    case "data":
+      return CircleStackIcon;
+    case "ticketing":
+      return TicketIcon;
+    case "queue":
+      return QueueListIcon;
+    case "topology":
+      return MapIcon;
+    default:
+      return ChatBubbleBottomCenterIcon;
+  }
+}
+
 export default function ProviderTile({ provider, onClick }: Props) {
+  const renderTags = () => {
+    if (provider.installed || provider.linked) {
+      return null;
+    }
+    return (<div className="labels flex flex-wrap group-hover:hidden gap-1">
+              {provider.tags.map((tag) => {
+                  return (
+                    <Badge
+                      key={tag}
+                      icon={getIconForTag(tag)}
+                      size="xs"
+                      color="slate"
+                    >
+                      <p>{tag}</p>
+                    </Badge>
+                  );
+                })}
+            </div>)
+  }
+
   return (
     <div
-      className="tile-basis relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer"
+      className="tile-basis py-2 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow h-44 hover:shadow-lg hover:grayscale-0 cursor-pointer gap-2"
       onClick={onClick}
     >
-      <div className="w-48">
+      <div className="flex-1 min-w-0">
         {(provider.can_setup_webhook || provider.supports_webhook) &&
           !provider.installed &&
           !provider.linked && (
@@ -129,7 +167,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             Linked
           </Text>
         ) : null}
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           <div>
             <Title
               className={`${
@@ -156,9 +194,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
             )}
             {provider.linked && provider.id ? (
               <Text className="truncate">Id: {provider.id}</Text>
-            ) : (
-              <br></br>
-            )}
+            ) : null}
             {(provider.installed || provider.linked) &&
             provider.alertsDistribution &&
             provider.alertsDistribution.length > 0 ? (
@@ -187,35 +223,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
               />
             ) : null}
           </div>
-          <div className="labels flex group-hover:hidden">
-            {!provider.installed &&
-              !provider.linked &&
-              provider.tags.map((tag) => {
-                const icon =
-                  tag === "alert"
-                    ? BellAlertIcon
-                    : tag === "data"
-                    ? CircleStackIcon
-                    : tag === "ticketing"
-                    ? TicketIcon
-                    : tag === "queue"
-                    ? QueueListIcon
-                    : tag === "topology"
-                    ? MapIcon
-                    : ChatBubbleBottomCenterIcon;
-                return (
-                  <Badge
-                    key={tag}
-                    icon={icon}
-                    size="xs"
-                    className="mr-1"
-                    color="slate"
-                  >
-                    <p className="ml-1">{tag}</p>
-                  </Badge>
-                );
-              })}
-          </div>
+          {renderTags()}
           {!provider.linked && (
             <Button
               variant="secondary"
