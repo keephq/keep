@@ -57,7 +57,7 @@ jobs:
         volumes:
           - ./tests/keycloak-realm-export.json:/opt/keycloak/data/import/keep-test-realm.json
         options: >-
-          --health-cmd="curl -f http://localhost:8080/auth/health || exit 1"
+          --health-cmd="/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user keep_kc_admin --password keep_kc_admin || exit 1"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
