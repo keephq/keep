@@ -7,6 +7,11 @@ import {
   TableHeaderCell,
   TableRow,
   Table,
+  Card,
+  Title,
+  Tab,
+  TabGroup,
+  TabList,
 } from "@tremor/react";
 import Link from "next/link";
 import React, { useState } from "react";
@@ -22,6 +27,38 @@ import {
 import Loading from "../../loading";
 import { useRouter } from "next/navigation";
 import { WorkflowExecution } from "../builder/types";
+const tabs=[
+  {name: "All Time"},
+  {name: "Last 30d"},
+  {name: "Last 7d"},
+  {name: "Today"},
+  ];
+
+export const FilterTabs = ({
+  tabs,
+}: {
+  tabs: { name: string; onClick?: () => void }[];
+}) => (
+  <div className="max-w-lg space-y-12 pt-6 sticky top-0">
+    <TabGroup>
+      <TabList 
+      variant="solid" 
+      color="black"
+       className="bg-gray-300"
+      >
+        {tabs?.map(
+          (tab: { name: string; onClick?: () => void }, index: number) => (
+            <Tab key={index} value={tab.name}>
+              {tab.name}
+            </Tab>
+          )
+        )}
+      </TabList>
+    </TabGroup>
+  </div>
+);
+
+
 
 export default function WorkflowDetailPage({
   params,
@@ -34,7 +71,7 @@ export default function WorkflowDetailPage({
 
   const { data, error, isLoading } = useSWR<WorkflowExecution[]>(
     status === "authenticated"
-      ? `${apiUrl}/workflows/${params.workflow_id}`
+      ? `${apiUrl}/workflows/${params.workflow_id}?v2=true`
       : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
@@ -62,20 +99,29 @@ export default function WorkflowDetailPage({
 
   return (
     <div>
-      <div className="flex items-center mb-4">
-        <Link
-          href="/workflows"
-          className="flex items-center text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeftIcon className="h-5 w-5 mr-1" /> Back to Workflows
-        </Link>
-      </div>
+      <FilterTabs tabs={tabs}/>
       {/* Display other workflow details here */}
       {workflowExecutions && (
-        <div className="mt-4">
-          <h2>Workflow Execution Details Table</h2>
-          <Table>
-            <TableHead>
+        <div className="mt-4 flex gap-2">
+          {/* <h2>Workflow Execution Details Table</h2> */}
+          {/* <SideNavBar /> */}
+          {/* <Table className="flex-grow mt-4 overflow-auto [&>table]:table-fixed [&>table]:w-full">
+          <WorkflowTableHeaders
+            columns={columns}
+            table={table}
+            presetName={presetName}
+          />
+          <AlertsTableBody
+            table={table}
+            showSkeleton={showSkeleton}
+            showEmptyState={showEmptyState}
+            theme={theme}
+            onRowClick={handleRowClick}
+            presetName={presetName}
+          />
+        </Table> */}
+        <Table>
+        <TableHead>
               <TableRow>
                 <TableHeaderCell>Started</TableHeaderCell>
                 <TableHeaderCell>Execution ID</TableHeaderCell>
@@ -88,7 +134,7 @@ export default function WorkflowDetailPage({
             </TableHead>
             <TableBody>
               {workflowExecutions.map((execution) => (
-                <TableRow key={execution.id}>
+                <TableRow key={execution.id} className="hover:bg-orange-100 cursor-pointer">
                   <TableCell>
                     {new Date(execution.started + "Z").toLocaleString()}
                   </TableCell>
