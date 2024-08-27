@@ -51,7 +51,6 @@ jobs:
           KC_HTTP_RELATIVE_PATH: /auth
           KEYCLOAK_ADMIN: keep_kc_admin
           KEYCLOAK_ADMIN_PASSWORD: keep_kc_admin
-          KEYCLOAK_IMPORT: /opt/keycloak/data/import/keep-test-realm.json
         ports:
           - 8787:8080
         volumes:
