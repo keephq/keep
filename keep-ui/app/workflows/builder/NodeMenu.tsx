@@ -50,25 +50,6 @@ export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: str
                     </button>
                   )}
                 </Menu.Item>
-                {/* <Menu.Item>
-                  {({ active }) => (
-                    <button
-                      onClick={(e) => {
-                        stopPropagation(e);
-                        // duplicateNode(node);
-                      }}
-                      className={`${
-                        active ? "bg-slate-200" : "text-gray-900"
-                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                    >
-                      <HiOutlineDuplicate
-                        className="mr-2 h-4 w-4"
-                        aria-hidden="true"
-                      />
-                      Duplicate
-                    </button>
-                  )}
-                </Menu.Item> */}
                 <Menu.Item>
                   {({ active }) => (
                     <button
