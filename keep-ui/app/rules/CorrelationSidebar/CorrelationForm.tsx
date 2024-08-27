@@ -98,7 +98,7 @@ export const CorrelationForm = ({
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="You cannot calculate attributes to group by without alerts"
+              tooltip="Keep will use these attributes to split between incidents. For example, with attribute host, Keep will correlate alert with hostX and alert with host hostY to different incidents. You cannot calculate attributes to group by without alerts"
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"

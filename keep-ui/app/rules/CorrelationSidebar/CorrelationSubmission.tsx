@@ -32,7 +32,7 @@ export const CorrelationSubmission = ({
         <Button
           className="rounded-none"
           color="orange"
-          disabled={isValid === false || exceeds14Days}
+          disabled={!isValid || exceeds14Days}
         >
           {isRuleBeingEdited ? "Save correlation" : "Create correlation"}
         </Button>
