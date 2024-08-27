@@ -86,23 +86,9 @@ export default function IncidentInformation({ incident }: Props) {
           }
         </div>
         <div className="prose-2xl">{incident.name}</div>
-        <p>Summary: {incident.user_summary}</p>
+        <p>Summary: {incident.user_summary || incident.generated_summary}</p>
         {!!incident.start_time && <p>Started at: {new Date(incident.start_time + "Z").toLocaleString()}</p>}
         {!!incident.last_seen_time && <p>Last seen at: {new Date(incident.last_seen_time + "Z").toLocaleString()}</p>}
-        {/* <Callout
-          title="AI Summary"
-          color="gray"
-          icon={RiSparkling2Line}
-          className="mt-10 mb-10"
-        >
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-          minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-          aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-          pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-          culpa qui officia deserunt mollit anim id est laborum.
-        </Callout> */}
       </div>
       <Modal
         isOpen={isFormOpen}

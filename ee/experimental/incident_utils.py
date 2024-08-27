@@ -29,7 +29,8 @@ USE_N_HISTORICAL_ALERTS_MINING = 10e4
 USE_N_HISTORICAL_ALERTS_PMI = 10e4
 USE_N_HISTORICAL_INCIDENTS = 10e4
 MIN_ALERT_NUMBER = 100
-DEFAULT_TEMP_DIR_LOCATION = "./ai_temp"
+DEFAULT_TEMP_DIR_LOCATION = "./ee/experimental/ai_temp"
+MAX_SUMMARY_LENGTH = 900
 
 
 def calculate_pmi_matrix(
@@ -41,6 +42,7 @@ def calculate_pmi_matrix(
     stride: int = None,
     temp_dir: str = None,
     offload_config: Dict = None,
+    min_alert_number: int = None,
 ) -> dict:
     logger.info(
         "Calculating PMI coefficients for alerts",
@@ -75,9 +77,21 @@ def calculate_pmi_matrix(
             offload_config["temp_dir"] = f'{offload_config["temp_dir"]}/{tenant_id}'
             os.makedirs(offload_config["temp_dir"], exist_ok=True)
 
+    if not min_alert_number:
+        min_alert_number = os.environ.get("MIN_ALERT_NUMBER", MIN_ALERT_NUMBER)
+
     alerts = query_alerts(
         tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp
     )
+
+    if len(alerts) < min_alert_number:
+        logger.info(
+            "Not enough alerts to mine incidents",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        return {"status": "failed", "message": "Not enough alerts to mine incidents"}
 
     pmi_matrix, pmi_columns = get_alert_pmi_matrix(
         alerts, "fingerprint", sliding_window, stride, offload_config
@@ -184,28 +198,12 @@ async def mine_incidents_and_create_objects(
     if not general_temp_dir:
         general_temp_dir = os.environ.get("AI_TEMP_FOLDER", DEFAULT_TEMP_DIR_LOCATION)
 
-    if not min_alert_number:
-        min_alert_number = os.environ.get("MIN_ALERT_NUMBER", MIN_ALERT_NUMBER)
-
     temp_dir = f"{general_temp_dir}/{tenant_id}"
     os.makedirs(temp_dir, exist_ok=True)
 
-    alerts = query_alerts(
-        tenant_id,
-        limit=use_n_historical_alerts,
-        upper_timestamp=alert_upper_timestamp,
-        lower_timestamp=alert_lower_timestamp,
-    )
-    if len(alerts) < min_alert_number:
-        logger.info(
-            "Not enough alerts to mine incidents",
-            extra={
-                "tenant_id": tenant_id,
-            },
-        )
+    status = calculate_pmi_matrix(ctx, tenant_id)
+    if status.get("status") == "failed":
         return {"incidents": []}
-
-    calculate_pmi_matrix(ctx, tenant_id)
 
     logger.info(
         "Getting new alerts and past incients",
@@ -213,7 +211,12 @@ async def mine_incidents_and_create_objects(
             "tenant_id": tenant_id,
         },
     )
-
+    alerts = query_alerts(
+        tenant_id,
+        limit=use_n_historical_alerts,
+        upper_timestamp=alert_upper_timestamp,
+        lower_timestamp=alert_lower_timestamp,
+    )
     incidents, _ = get_last_incidents(
         tenant_id,
         limit=use_n_hist_incidents,
@@ -509,21 +512,36 @@ def shape_incidents(
 
 
 def generate_incident_summary(
-    incident: Incident, use_n_alerts_for_summary: int = -1
+    incident: Incident,
+    use_n_alerts_for_summary: int = -1,
+    generate_summary: str = None,
+    max_summary_length: int = None,
 ) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error(
             "OpenAI API key is not set. Incident summary generation is not available."
         )
-        return "Summarization is Disabled"
+        return ""
+
+    if not generate_summary:
+        generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
+
+    if generate_summary == "False":
+        return ""
+
+    if incident.user_summary:
+        return ""
+
+    if not max_summary_length:
+        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
+
+    if not max_summary_length:
+        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
 
     try:
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
         incident = get_incident_by_id(incident.tenant_id, incident.id)
-        prompt_addition = ""
-        if incident.user_summary:
-            prompt_addition = f"When generating, you must rely on the summary provided by human: {incident.user_summary}"
 
         description_strings = np.unique(
             [f'{alert.event["name"]}' for alert in incident.alerts]
@@ -548,9 +566,11 @@ def generate_incident_summary(
                 messages=[
                     {
                         "role": "system",
-                        "content": """You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions.
+                        "content": f"""You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions.
                 When provided with information, summarize it in a 2-3 sentences explaining what happened and when.
                 ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
+                When provided with information, answer with max a {int(max_summary_length * 0.9)} symbols excerpt
+                describing incident thoroughly.
 
                 EXAMPLE:
                 An incident occurred between 2022-11-17 14:11:04 and 2022-11-22 22:19:04, involving a
@@ -562,7 +582,7 @@ def generate_incident_summary(
                     {
                         "role": "user",
                         "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
-                {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts. {prompt_addition}""",
+                {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts.""",
                     },
                 ],
             )
@@ -570,7 +590,51 @@ def generate_incident_summary(
             .message.content
         )
 
+        logger.info(
+            f"Generated incident summary with length {len(summary)} symbols",
+            extra={"incident_id": incident.id, "tenant_id": incident.tenant_id},
+        )
+
+        if len(summary) > max_summary_length:
+            logger.info(
+                "Generated incident summary is too long. Applying smart truncation",
+                extra={"incident_id": incident.id, "tenant_id": incident.tenant_id},
+            )
+
+            summary = (
+                client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": f"""You are a very skilled DevOps specialist who can summarize any incident based on a description.
+                    When provided with information, answer with max a {int(max_summary_length * 0.9)} symbols excerpt describing
+                    incident thoroughly.
+                    """,
+                        },
+                        {
+                            "role": "user",
+                            "content": f"""Here is the description of an incident for summarization:\n{summary}""",
+                        },
+                    ],
+                )
+                .choices[0]
+                .message.content
+            )
+
+            logger.info(
+                f"Generated new incident summary with length {len(summary)} symbols",
+                extra={"incident_id": incident.id, "tenant_id": incident.tenant_id},
+            )
+
+            if len(summary) > max_summary_length:
+                logger.info(
+                    "Generated incident summary is too long. Applying hard truncation",
+                    extra={"incident_id": incident.id, "tenant_id": incident.tenant_id},
+                )
+                summary = summary[:max_summary_length]
+
         return summary
     except Exception as e:
         logger.error(f"Error in generating incident summary: {e}")
-        return "Summarization is Disabled"
+        return ""

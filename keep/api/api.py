@@ -18,7 +18,8 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
-from keep.api.arq_worker import get_worker
+from keep.api.arq_worker import get_arq_worker
+from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
 from keep.api.core.config import AuthenticationType
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
@@ -56,8 +57,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-REDIS = os.environ.get("REDIS", "false") == "true"
-WORKER_ENABLED = os.environ.get("WORKER_ENABLED", "true") == "true"
+
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -243,10 +243,10 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
-        if REDIS and WORKER_ENABLED:
+        if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
             event_loop = asyncio.get_event_loop()
-            worker = get_worker()
-            event_loop.create_task(worker.async_run())
+            arq_worker = get_arq_worker()
+            event_loop.create_task(arq_worker.async_run())
         logger.info("Services started successfully")
 
     @app.exception_handler(Exception)

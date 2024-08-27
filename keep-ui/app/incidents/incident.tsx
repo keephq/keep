@@ -56,7 +56,7 @@ export default function Incident() {
 
   return (
     <div className="flex h-full w-full">
-      <div className="flex-grow overflow-auto p-2.5">
+      <div className="flex-grow min-w-0">
         {!isPredictedLoading &&
         predictedIncidents &&
         predictedIncidents.items.length > 0 ? (
