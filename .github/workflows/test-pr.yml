@@ -60,8 +60,7 @@ jobs:
           --health-cmd="curl -f http://localhost:8080/auth/health || exit 1"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
-          --entrypoint /opt/keycloak/bin/kc.sh -- start-dev --import-realm
+          --health-retries=3m
 
     steps:
       - name: Checkout
