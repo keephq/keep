@@ -38,8 +38,6 @@ function CustomNode({ id, data }: FlowNode) {
         className={`p-2 flex shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
           ? "border-orange-500"
           : "border-stone-400"
-          // } custom-drag-handle`}
-          //to make the node draggale uncomment above line and 
           }`}
         onClick={(e) => {
           e.stopPropagation();
