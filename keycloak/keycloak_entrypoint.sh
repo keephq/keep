@@ -47,7 +47,7 @@ else
 fi
 
 # Configure the theme
-echo "Configuring Signin theme (for Keep tenant)"
+echo "Configuring Signin theme (for ${KEEP_REALM} tenant)"
 /opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s "loginTheme=keywind"
 echo "Configuring Admin Console theme (for Orgs)"
 /opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s "adminTheme=phasetwo.v2"
