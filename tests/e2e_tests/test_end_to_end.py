@@ -91,13 +91,13 @@ def test_providers_page_is_accessible(browser):
         )
         browser.goto("http://localhost:3000/providers")
         # get the GCP Monitoring provider
-        browser.locator("div").filter(
-            has_text=re.compile(r"^GCP Monitoring alertConnect$")
+        browser.locator("button").filter(
+            has_text=re.compile(r"^GCP Monitoring alert$")
         ).first.click()
         browser.get_by_role("button", name="Cancel").click()
         # connect resend provider
-        browser.locator("div").filter(
-            has_text=re.compile(r"^resend messagingConnect$")
+        browser.locator("button").filter(
+            has_text=re.compile(r"^resend messaging$")
         ).first.click()
         browser.get_by_placeholder("Enter provider name").click()
         random_provider_name = "".join(
@@ -106,14 +106,14 @@ def test_providers_page_is_accessible(browser):
         browser.get_by_placeholder("Enter provider name").fill(random_provider_name)
         browser.get_by_placeholder("Enter provider name").press("Tab")
         browser.get_by_placeholder("Enter api_key").fill("bla")
-        browser.get_by_role("button", name="Connect").click()
+        browser.get_by_role("button", name="Connect", exact=True).click()
         # wait a bit
         browser.wait_for_selector("text=Connected", timeout=15000)
         # make sure the provider is connected:
-        # find connected provider id label
-        id_label = browser.get_by_text(f"resend id: {random_provider_name}")
-        # click on parent div, the tile
-        id_label.locator('..').click()
+        # find and click the button containing the provider id in its nested elements
+        provider_button = browser.locator(f"button:has-text('{random_provider_name}')")
+        print(provider_button)
+        provider_button.click()
     except Exception:
         # Current file + test name for unique html and png dump.
         current_test_name = (
