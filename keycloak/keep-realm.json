@@ -37,7 +37,7 @@
         "access.token.lifespan": "3600"
       },
       "secret": "${KEEP_KEYCLOAK_SECRET}",
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "publicClient": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,

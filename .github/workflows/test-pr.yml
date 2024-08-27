@@ -44,7 +44,24 @@ jobs:
           discovery.type: "single-node"
           ES_JAVA_OPTS: "-Xms2g -Xmx2g"
           xpack.security.enabled: "true"
-
+      keycloak:
+        image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak
+        env:
+          KC_DB: dev-mem
+          KC_HTTP_RELATIVE_PATH: /auth
+          KEYCLOAK_ADMIN: keep_kc_admin
+          KEYCLOAK_ADMIN_PASSWORD: keep_kc_admin
+          KEYCLOAK_IMPORT: /opt/keycloak/data/import/keep-test-realm.json
+        ports:
+          - 8787:8080
+        volumes:
+          - ./tests/keycloak-realm-export.json:/opt/keycloak/data/import/keep-test-realm.json
+        options: >-
+          --health-cmd="curl -f http://localhost:8080/auth/health || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+          --entrypoint="sh -c 'start-dev --import-realm'"
 
     steps:
       - name: Checkout

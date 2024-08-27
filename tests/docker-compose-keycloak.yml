@@ -8,7 +8,6 @@ services:
       - KC_HTTP_RELATIVE_PATH=/auth
       - KEYCLOAK_ADMIN=keep_kc_admin
       - KEYCLOAK_ADMIN_PASSWORD=keep_kc_admin
-      - KEYCLOAK_IMPORT=/tmp/realm-export.json
     ports:
       - "8787:8080"
     volumes:

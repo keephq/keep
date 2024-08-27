@@ -165,14 +165,11 @@ def test_webhook_api_key(client, db_session, test_app):
     assert response.status_code == 401 if auth_type != "NO_AUTH" else 202
 
 
+# sanity check with keycloak
 @pytest.mark.parametrize("test_app", ["KEYCLOAK"], indirect=True)
-def test_keycloak_sanity(client, test_app, keycloak_client):
+def test_keycloak_sanity(keycloak_client, keycloak_token, client, test_app):
     """Tests the keycloak sanity check"""
-    # Login into Keycloak with the test user to get the token
-    response = client.post(
-        "/keycloak/login",
-        json={"username": "test", "password": "test"},
-    )
-    response = client.get("/keycloak/sanity")
+    # Use the token to make a request to the Keep API
+    headers = {"Authorization": f"Bearer {keycloak_token}"}
+    response = client.get("/providers", headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
