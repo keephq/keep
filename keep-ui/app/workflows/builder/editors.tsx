@@ -36,9 +36,6 @@ export function GlobalEditorV2() {
         workflow YAML specifications.
       </Text>
       <Text className="mt-5">
-        {/* Use the toolbox to add steps, conditions, and actions to your workflow
-        and click the `Generate` button to compile the workflow / `Deploy`
-        button to deploy the workflow to Keep. */}
         Use the edge add button or an empty step (a step with a +) to insert steps, conditions, and actions into your workflow.
         Then, click the Generate button to compile the workflow or the Deploy button to deploy it to Keep.
       </Text>
