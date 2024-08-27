@@ -61,8 +61,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-          --entrypoint /opt/keycloak/bin/kc.sh
-          start-dev --import-realm
+          --entrypoint /opt/keycloak/bin/kc.sh -- start-dev --import-realm
 
     steps:
       - name: Checkout
