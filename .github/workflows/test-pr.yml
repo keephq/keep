@@ -21,6 +21,7 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
+
     services:
       mysql:
         image: mysql:5.7
@@ -45,7 +46,7 @@ jobs:
           ES_JAVA_OPTS: "-Xms2g -Xmx2g"
           xpack.security.enabled: "true"
       keycloak:
-        image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak
+        image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak-test
         env:
           KC_DB: dev-mem
           KC_HTTP_RELATIVE_PATH: /auth
@@ -53,13 +54,11 @@ jobs:
           KEYCLOAK_ADMIN_PASSWORD: keep_kc_admin
         ports:
           - 8787:8080
-        volumes:
-          - ./tests/keycloak-realm-export.json:/opt/keycloak/data/import/keep-test-realm.json
         options: >-
           --health-cmd="/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user keep_kc_admin --password keep_kc_admin || exit 1"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=6
+          --health-retries=4
 
     steps:
       - name: Checkout

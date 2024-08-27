@@ -20,6 +20,12 @@ if [ -z "$KEEP_URL" ]; then
     KEEP_URL="http://localhost:3000"
 fi
 
+# IF KEEP_REALM, default Keep realm to keep
+if [ -z "$KEEP_REALM" ]; then
+    echo "KEEP_REALM is not set. Defaulting to keep"
+    KEEP_REALM="keep"
+fi
+
 # Start Keycloak in the background
 echo "Starting Keycloak"
 /opt/keycloak/bin/kc.sh start-dev --features=preview --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTIN &
@@ -42,26 +48,23 @@ fi
 
 # Configure the theme
 echo "Configuring Signin theme (for Keep tenant)"
-/opt/keycloak/bin/kcadm.sh update realms/keep -s "loginTheme=keywind"
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s "loginTheme=keywind"
 echo "Configuring Admin Console theme (for Orgs)"
-/opt/keycloak/bin/kcadm.sh update realms/keep -s "adminTheme=phasetwo.v2"
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s "adminTheme=phasetwo.v2"
 /opt/keycloak/bin/kcadm.sh update realms/master -s "adminTheme=phasetwo.v2"
 echo "Themes configured"
 
 # Configure the event listener provider
 echo "Configuring event listener provider"
-/opt/keycloak/bin/kcadm.sh update realms/keep -s "eventsListeners+=last_login"
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s "eventsListeners+=last_login"
 echo "Event listener 'last_login' configured"
 
 # Configure Content-Security-Policy and X-Frame-Options
 # So that the SSO connect works with the Keep UI
 echo "Configuring Content-Security-Policy and X-Frame-Options"
-/opt/keycloak/bin/kcadm.sh update realms/keep -s 'browserSecurityHeaders.contentSecurityPolicy="frame-src '\''self'\'' '"$KEEP_URL"'; frame-ancestors '\''self'\'' '"$KEEP_URL"'; object-src '\''none'\'';"'
-/opt/keycloak/bin/kcadm.sh update realms/keep -s 'browserSecurityHeaders.xFrameOptions="ALLOW"'
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.contentSecurityPolicy="frame-src '\''self'\'' '"$KEEP_URL"'; frame-ancestors '\''self'\'' '"$KEEP_URL"'; object-src '\''none'\'';"'
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.xFrameOptions="ALLOW"'
 echo "Content-Security-Policy and X-Frame-Options configured"
 
 # just to keep the container running
 tail -f /dev/null
-
-# command to run this container with mount to this directory:
-# docker run -v $(pwd):/mnt -it --entrypoint /bin/sh quay.io/keycloak/keycloak:latest

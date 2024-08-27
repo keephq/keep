@@ -11,7 +11,7 @@ services:
     ports:
       - "8787:8080"
     volumes:
-      - ./keycloak-realm-export.json:/opt/keycloak/data/import/keep-test-realm.json
+      - ./keycloak-test-realm-export.json:/opt/keycloak/data/import/keep-test-realm.json
     command:
       - start-dev
       - --import-realm
