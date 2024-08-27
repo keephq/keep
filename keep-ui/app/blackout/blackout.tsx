@@ -5,7 +5,7 @@ import Loading from "app/loading";
 import { MdWarning } from "react-icons/md";
 import { useState } from "react";
 import { BlackoutRule } from "./model";
-import CreateOrUpdateBlackoutRule from "./create-or-update-extraction-rule";
+import CreateOrUpdateBlackoutRule from "./create-or-update-blackout-rule";
 import BlackoutsTable from "./blackout-table";
 
 export default function Blackout() {
@@ -15,7 +15,7 @@ export default function Blackout() {
   );
 
   return (
-    <Card className="p-4 md:p-10 mx-auto">
+    <Card className="mt-10 p-4 md:p-10 mx-auto">
       <div className="flex divide-x p-2">
         <div className="w-1/3 pr-2.5">
           <CreateOrUpdateBlackoutRule

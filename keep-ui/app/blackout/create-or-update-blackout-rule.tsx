@@ -1,6 +1,5 @@
 "use client";
 
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import {
   TextInput,
   Textarea,
@@ -8,8 +7,10 @@ import {
   Subtitle,
   Text,
   Button,
-  Icon,
-  Badge,
+  Switch,
+  NumberInput,
+  Select,
+  SelectItem,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
@@ -17,6 +18,8 @@ import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { BlackoutRule } from "./model";
 import { useBlackouts } from "utils/hooks/useBlackoutRules";
+import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
+import DatePicker from "react-datepicker";
 
 interface Props {
   blackoutToEdit: BlackoutRule | null;
@@ -42,8 +45,8 @@ export default function CreateOrUpdateBlackoutRule({
       setBlackoutName(blackoutToEdit.name);
       setDescription(blackoutToEdit.description ?? "");
       setCelQuery(blackoutToEdit.cel_query);
-      setStartTime(blackoutToEdit.start_time);
-      setEndTime(blackoutToEdit.end_time ?? "");
+      setStartTime(blackoutToEdit.start_time.toISOString());
+      setEndTime(blackoutToEdit.end_time?.toISOString() ?? "");
       setEnabled(blackoutToEdit.enabled);
     }
   }, [blackoutToEdit]);
@@ -89,24 +92,21 @@ export default function CreateOrUpdateBlackoutRule({
   const updateBlackout = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    const response = await fetch(
-      `${apiUrl}/blackouts/${blackoutToEdit?.id}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: blackoutName,
-          description: description,
-          cel_query: celQuery,
-          start_time: startTime,
-          end_time: endTime,
-          enabled: enabled,
-        }),
-      }
-    );
+    const response = await fetch(`${apiUrl}/blackouts/${blackoutToEdit?.id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: blackoutName,
+        description: description,
+        cel_query: celQuery,
+        start_time: startTime,
+        end_time: endTime,
+        enabled: enabled,
+      }),
+    });
     if (response.ok) {
       exitEditMode();
       mutate();
@@ -128,10 +128,7 @@ export default function CreateOrUpdateBlackoutRule({
   };
 
   return (
-    <form
-      className="py-2"
-      onSubmit={editMode ? updateBlackout : addBlackout}
-    >
+    <form className="py-2" onSubmit={editMode ? updateBlackout : addBlackout}>
       <Subtitle>Blackout Metadata</Subtitle>
       <div className="mt-2.5">
         <Text>
@@ -153,45 +150,39 @@ export default function CreateOrUpdateBlackoutRule({
         />
       </div>
       <div className="mt-2.5">
-        <Text>
-          CEL Query<span className="text-red-500 text-xs">*</span>
-          <a
-            href="https://docs.keephq.dev/overview/presets"
-            target="_blank"
-          >
-            <Icon
-              icon={InformationCircleIcon}
-              size="xs"
-              color="gray"
-              tooltip="CEL Query to match alerts during blackout"
-            />
-          </a>
-        </Text>
-        <TextInput
-          placeholder="CEL Query"
-          required={true}
-          value={celQuery}
-          onValueChange={setCelQuery}
+        <AlertsRulesBuilder
+          defaultQuery={celQuery}
+          updateOutputCEL={setCelQuery}
+          showSave={false}
+          showSqlImport={false}
         />
       </div>
       <div className="mt-2.5">
         <Text>
           Start Time<span className="text-red-500 text-xs">*</span>
         </Text>
-        <TextInput
-          placeholder="YYYY-MM-DDTHH:mm:ss"
-          required={true}
-          value={startTime}
-          onValueChange={setStartTime}
+        <DatePicker
+          onChange={() => {}}
+          showTimeSelect
+          timeFormat="p"
+          timeIntervals={15}
+          timeCaption="Time"
+          dateFormat="MMMM d, yyyy h:mm:ss aa"
         />
       </div>
       <div className="mt-2.5">
-        <Text>End Time</Text>
-        <TextInput
-          placeholder="YYYY-MM-DDTHH:mm:ss"
-          value={endTime}
-          onValueChange={setEndTime}
-        />
+        <Text>
+          End After<span className="text-red-500 text-xs">*</span>
+        </Text>
+        <span className="grid grid-cols-2 mt-2 gap-x-2">
+          <NumberInput defaultValue={5} min={1} />
+          <Select value={"seconds"} onValueChange={() => {}}>
+            <SelectItem value="seconds">Seconds</SelectItem>
+            <SelectItem value="minutes">Minutes</SelectItem>
+            <SelectItem value="hours">Hours</SelectItem>
+            <SelectItem value="days">Days</SelectItem>
+          </Select>
+        </span>
       </div>
       <div className="mt-2.5">
         <Text>Enabled</Text>
