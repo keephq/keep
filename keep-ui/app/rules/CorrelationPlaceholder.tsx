@@ -27,7 +27,7 @@ export const CorrelationPlaceholder = () => {
         >
           Create Correlation
         </Button>
-        <PlaceholderSankey />
+        <PlaceholderSankey className="max-w-full" />
       </Card>
       <CorrelationSidebar
         isOpen={isSidebarOpen}

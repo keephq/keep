@@ -32,7 +32,7 @@ export default function WorkflowsPage() {
   const [isSwitchOn, setIsSwitchOn] = useState<boolean>(true);
 
   // Only fetch data when the user is authenticated
-  /** 
+  /**
     Redesign the workflow Card
       The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes
       were made in the backend:
@@ -42,7 +42,7 @@ export default function WorkflowsPage() {
          by workflow.id.
       3. Response Updates: The response includes the following new keys and their respective information:
           -> last_executions: Used for the workflow execution graph.
-          ->last_execution_started: Used for showing the start time of execution in real-time. 
+          ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
     status === "authenticated"
@@ -190,7 +190,7 @@ export default function WorkflowsPage() {
   };
 
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-full">
+    <main className="pt-4">
       <div className="flex justify-between items-center">
         <div>
           <Title>Workflows</Title>
