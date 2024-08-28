@@ -19,15 +19,21 @@ const ReactFlowEditor = ({
   };
   onDefinitionChange: (def: Definition) => void
 }) => {
-  const { selectedNode, changes, v2Properties, nodes, edges } = useStore();
+  const { selectedNode, changes, v2Properties, nodes, edges, setOpneGlobalEditor } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
+  const [synced, setSynced] = useState(true);
 
   useEffect(() => {
     setIsOpen(true);
     if (selectedNode) {
       const timer = setTimeout(() => {
+        if(isTrigger){
+          setOpneGlobalEditor(true);
+          return;
+        }
         if (containerRef.current && stepEditorRef.current) {
           const containerRect = containerRef.current.getBoundingClientRect();
           const stepEditorRect = stepEditorRef.current.getBoundingClientRect();
@@ -45,8 +51,9 @@ const ReactFlowEditor = ({
   }, [selectedNode]);
 
   useEffect(() => {
+    setSynced(false);
+
     const handleDefinitionChange = () => {
-      name: "foreach end"
       if (changes > 0) {
         let { sequence, properties } =
           reConstructWorklowToDefinition({
@@ -65,11 +72,14 @@ const ReactFlowEditor = ({
         }
 
         if (!isValid) {
-          return onDefinitionChange({ sequence, properties, isValid });
+           onDefinitionChange({ sequence, properties, isValid });
+           setSynced(true);
+           return;
         }
 
         isValid = validatorConfiguration.root({ sequence, properties });
         onDefinitionChange({ sequence, properties, isValid });
+        setSynced(true);
       }
     };
 
@@ -106,9 +116,9 @@ const ReactFlowEditor = ({
           </button>
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
-              <GlobalEditorV2 />
-              {!selectedNode?.includes('empty') && <Divider ref={stepEditorRef} />}
-              {!selectedNode?.includes('empty') && <StepEditorV2 installedProviders={providers} />}
+              <GlobalEditorV2 synced={synced}/>
+              {!selectedNode?.includes('empty') && !isTrigger && <Divider ref={stepEditorRef} />}
+              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 installedProviders={providers} setSynced={setSynced}/>}
             </div>
           </div>
         </div>

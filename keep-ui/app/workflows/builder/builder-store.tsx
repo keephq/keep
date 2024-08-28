@@ -16,9 +16,9 @@ import { createDefaultNodeV2 } from '../../../utils/reactFlow';
 
 export type V2Properties = Record<string, any>;
 
-export type Definition =  {
-  sequence: V2Step[]; 
-  properties: V2Properties; 
+export type Definition = {
+  sequence: V2Step[];
+  properties: V2Properties;
   isValid?: boolean;
 }
 
@@ -43,9 +43,11 @@ export type V2Step = {
     false: V2Step[];
   };
   sequence?: V2Step[];
-  edgeNotNeeded?:boolean;
-  edgeLabel?:string;
+  edgeNotNeeded?: boolean;
+  edgeLabel?: string;
   edgeColor?: string;
+  edgeSource?: string;
+  edgeTarget?: string;
 };
 
 export type NodeData = Node["data"] & Record<string, any>;
@@ -137,13 +139,13 @@ export type FlowState = {
   setSelectedEdge: (id: string | null) => void;
   getEdgeById: (id: string) => Edge | undefined;
   changes: number;
-  setChanges: (changes: number)=>void;
+  setChanges: (changes: number) => void;
   firstInitilisationDone: boolean;
   setFirstInitilisationDone: (firstInitilisationDone: boolean) => void;
-  lastSavedChanges: {nodes: FlowNode[] | null, edges: Edge[] | null};
-  setLastSavedChanges: ({nodes, edges}: {nodes: FlowNode[], edges: Edge[]}) => void;
-  setErrorNode: (id:string|null)=>void;
-  errorNode: string|null;
+  lastSavedChanges: { nodes: FlowNode[] | null, edges: Edge[] | null };
+  setLastSavedChanges: ({ nodes, edges }: { nodes: FlowNode[], edges: Edge[] }) => void;
+  setErrorNode: (id: string | null) => void;
+  errorNode: string | null;
 };
 
 
@@ -161,18 +163,39 @@ function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, s
     edge = get().edges.find((edge) => edge.id === nodeOrEdge) as Edge;
   }
 
-  const { source: sourceId, target: targetId } = edge || {};
+  let { source: sourceId, target: targetId } = edge || {};
   if (!sourceId || !targetId) return;
 
+  const isTriggerComponent = step.componentType === 'trigger'
+
+  if (sourceId !== 'trigger_start' && isTriggerComponent) {
+    return;
+  }
+
+  if (sourceId == 'trigger_start' && !isTriggerComponent) {
+    return;
+  }
+
   const nodes = get().nodes;
-  const targetIndex = nodes.findIndex(node => node.id === targetId);
+  if (sourceId === 'trigger_start' && isTriggerComponent && nodes.find(node => node && step.id === node.id)) {
+    return;
+  }
+
+  let targetIndex = nodes.findIndex(node => node.id === targetId);
   const sourceIndex = nodes.findIndex(node => node.id === sourceId);
   if (targetIndex == -1) {
     return;
   }
-  const newNodeId = uuidv4();
-  const newStep = { ...step, id: newNodeId }
-  let { nodes: newNodes, edges } = processWorkflowV2([
+
+  if (sourceId === 'trigger_start') {
+    targetId = 'trigger_end';
+  }
+  const newNodeId = isTriggerComponent ? step.id : uuidv4();
+  const cloneStep = JSON.parse(JSON.stringify(step));
+  const newStep = { ...cloneStep, id: newNodeId }
+  const edges = get().edges;
+
+  let { nodes: newNodes, edges: newEdges } = processWorkflowV2([
     {
       id: sourceId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node',
       edgeLabel: edge.label, edgeColor: edge?.style?.stroke
@@ -180,29 +203,43 @@ function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, s
     newStep,
     { id: targetId, type: 'temp_node', name: 'temp_node', 'componentType': 'temp_node', edgeNotNeeded: true }
   ] as V2Step[], { x: 0, y: 0 }, true);
-  const newEdges = [
-    ...edges,
-    ...(get().edges.filter(edge => !(edge.source == sourceId && edge.target == targetId)) || []),
+
+
+  const finalEdges = [
+    ...newEdges,
+    ...(edges.filter(edge => !(edge.source == sourceId && edge.target == targetId)) || []),
   ];
 
   const isNested = !!(nodes[targetIndex]?.isNested || nodes[sourceIndex]?.isNested);
   newNodes = newNodes.map((node) => ({ ...node, isNested }));
   newNodes = [...nodes.slice(0, targetIndex), ...newNodes, ...nodes.slice(targetIndex)];
-
   set({
-    edges: newEdges,
+    edges: finalEdges,
     nodes: newNodes,
     isLayouted: false,
     changes: get().changes + 1
   });
   if (type == 'edge') {
-    set({ selectedEdge: edges[edges.length - 1]?.id });
+    set({
+      selectedEdge: edges[edges.length - 1]?.id,
+    });
   }
 
   if (type === 'node') {
     set({ selectedNode: nodeOrEdge });
   }
 
+  switch(newNodeId){
+    case "interval": 
+    case "manual": {
+      set({v2Properties: {...get().v2Properties, [newNodeId]: ""}});
+      break;
+    }
+    case "alert": {
+      set({v2Properties: {...get().v2Properties, [newNodeId]: {}}});
+      break;
+    }
+  }
 }
 
 const useStore = create<FlowState>((set, get) => ({
@@ -216,14 +253,14 @@ const useStore = create<FlowState>((set, get) => ({
   isLayouted: false,
   selectedEdge: null,
   changes: 0,
-  lastSavedChanges:{nodes: [], edges:[]},
+  lastSavedChanges: { nodes: [], edges: [] },
   firstInitilisationDone: false,
-  errorNode:null,
-  setErrorNode: (id)=>set({errorNode: id}),
+  errorNode: null,
+  setErrorNode: (id) => set({ errorNode: id }),
   setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
-  setLastSavedChanges:({nodes, edges}:{nodes:FlowNode[],edges:Edge[]})=>set({lastSavedChanges: {nodes, edges}}),
+  setLastSavedChanges: ({ nodes, edges }: { nodes: FlowNode[], edges: Edge[] }) => set({ lastSavedChanges: { nodes, edges } }),
   setSelectedEdge: (id) => set({ selectedEdge: id, selectedNode: null, openGlobalEditor: true }),
-  setChanges: (changes:number)=>set({changes: changes}),
+  setChanges: (changes: number) => set({ changes: changes }),
   setIsLayouted: (isLayouted) => set({ isLayouted }),
   getEdgeById: (id) => get().edges.find((edge) => edge.id === id),
   addNodeBetween: (nodeOrEdge: string | null, step: any, type: string) => {
@@ -237,13 +274,13 @@ const useStore = create<FlowState>((set, get) => ({
       const updatedNodes = get().nodes.map((node) => {
         if (node.id === currentSelectedNode) {
           //properties changes  should not reconstructed the defintion. only recontrreconstructing if there are any structural changes are done on the flow.
-          if(value){
-          node.data[key] = value;
+          if (value) {
+            node.data[key] = value;
           }
-          if(!value){
+          if (!value) {
             delete node.data[key];
           }
-          return {...node}
+          return { ...node }
         }
         return node;
       });
@@ -255,8 +292,8 @@ const useStore = create<FlowState>((set, get) => ({
   },
   setV2Properties: (properties) => set({ v2Properties: properties }),
   updateV2Properties: (properties) => {
-    const updatedProperties = { ...get().v2Properties, ...properties};
-    set({ v2Properties: updatedProperties, changes: get().changes+1 });
+    const updatedProperties = { ...get().v2Properties, ...properties };
+    set({ v2Properties: updatedProperties, changes: get().changes + 1 });
   },
   setSelectedNode: (id) => {
     set({
@@ -385,25 +422,32 @@ const useStore = create<FlowState>((set, get) => ({
 
     const endNode = nodes[endIndex];
 
-    const edges = get().edges;
+    let edges = get().edges;
     let finalEdges = edges;
     idArray = nodes.slice(nodeStartIndex, endIndex + 1).map((node) => node.id);
-    finalEdges = edges.filter((edge) => !(idArray.includes(edge.source) || idArray.includes(edge.target)));
 
+
+    finalEdges = edges.filter((edge) => !(idArray.includes(edge.source) || idArray.includes(edge.target)));
+    if (['interval', 'alert', 'manual'].includes(ids) && edges.some((edge) => edge.source === 'trigger_start' && edge.target !== ids)) {
+      edges = edges.filter((edge) => !(idArray.includes(edge.source)));
+    }
     const sources = [...new Set(edges.filter((edge) => startNode.id === edge.target))];
     const targets = [...new Set(edges.filter((edge) => endNode.id === edge.source))];
     targets.forEach((edge) => {
-      finalEdges = [...finalEdges, ...sources.map((source:Edge) => createCustomEdgeMeta(source.source, edge.target, source.label as string)
-      )];
+      const target = edge.source === 'trigger_start' ? 'triggger_end' : edge.target;
+
+      finalEdges = [...finalEdges, ...sources.map((source: Edge) => createCustomEdgeMeta(source.source, target, source.label as string)
+      ).flat(1)];
     });
+    // }
 
 
-    nodes[endIndex+1].position = {x: 0, y:0};
 
-    const newNode = createDefaultNodeV2({...nodes[endIndex+1].data, islayouted: false}, nodes[endIndex+1].id);
+    nodes[endIndex + 1].position = { x: 0, y: 0 };
+
+    const newNode = createDefaultNodeV2({ ...nodes[endIndex + 1].data, islayouted: false }, nodes[endIndex + 1].id);
 
     const newNodes = [...nodes.slice(0, nodeStartIndex), newNode, ...nodes.slice(endIndex + 2)];
-
     set({
       edges: finalEdges,
       nodes: newNodes,

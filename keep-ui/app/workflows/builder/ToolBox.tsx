@@ -6,6 +6,8 @@ import { IoChevronUp, IoClose } from "react-icons/io5";
 import Image from "next/image";
 import { IoIosArrowDown } from "react-icons/io";
 import useStore, { V2Step } from "./builder-store";
+import { FaHandPointer } from "react-icons/fa";
+import { PiDiamondsFourFill } from "react-icons/pi";
 
 const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
   name: string,
@@ -37,6 +39,17 @@ const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
       ?.replace("step-", "")
       ?.replace("action-", "")
       ?.replace("condition-", "")}-icon.png`;
+  }
+
+
+  function getTriggerIcon(step: any) {
+    const { type } = step;
+    switch(type) {
+      case "manual":
+            return  <FaHandPointer size={32}/>
+      case "interval":
+            return  <PiDiamondsFourFill size={32}/>     
+    }
   }
 
   const handleDragStart = (event: React.DragEvent<HTMLLIElement>, step: any) => {
@@ -78,13 +91,14 @@ const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
                     title={step.name}
                     onClick={(e) => handleAddNode(e, step)}
                   >
-                    <Image
+                   {getTriggerIcon(step)}
+                    {!!step && !['interval', 'manual'].includes(step.type) &&<Image
                       src={IconUrlProvider(step) || "/keep.png"}
                       alt={step?.type}
                       className="object-contain aspect-auto"
                       width={32}
                       height={32}
-                    />
+                    />}
                     <Subtitle className="truncate">{step.name}</Subtitle>
                   </li>
                 ))}

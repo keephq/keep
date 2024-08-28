@@ -17,7 +17,8 @@ export function reConstructWorklowToDefinition({
     properties: Record<string, any>
 }) {
 
-    const originalNodes = nodes.slice(1, nodes.length - 1);
+    let originalNodes = nodes.slice(1, nodes.length - 1);
+    originalNodes = originalNodes.filter((node) => !node.data.componentType.includes('trigger'));
     function processForeach(startIdx: number, endIdx: number, foreachNode: FlowNode['data'], nodeId: string) {
         foreachNode.sequence = [];
 
@@ -120,6 +121,29 @@ export function reConstructWorklowToDefinition({
         return workflowSequence;
     }
 
+    const triggerNodes = nodes.reduce((obj, node) => {
+        if (['interval', 'alert', 'manual'].includes(node.id)) {
+            obj[node.id] = true;
+        }
+        return obj;
+    }, {} as Record<string, boolean>);
+
+    ['interval', 'alert', 'manual'].forEach(type => {
+        if (!triggerNodes[type]) {
+            switch (type) {
+                case "interval":
+                    properties['interval'] = "";
+                    break;
+                case "alert":
+                    properties['alert'] = {};
+                    break;
+                case "manual":
+                    properties['manual'] = "";
+                    break;
+                default: //do nothing      
+            }
+        }
+    });
     return {
         sequence: buildWorkflowDefinition(0, originalNodes.length) as V2Step[],
         properties: properties as V2Properties
@@ -167,7 +191,7 @@ export function createSwitchNodeV2(
                 type: `${step.type}__end`,
                 name: `${stepType} End`,
                 componentType: `${step.type}__end`,
-                properties:{}
+                properties: {}
             } as V2Step,
             isDraggable: false,
             prevNodeId: nodeId,
@@ -245,7 +269,7 @@ export function handleSwitchNode(step: V2Step, position: FlowNode['position'], n
             ...falseSubflowEdges,
             ...trueSubflowEdges,
             //handling the switch end edge
-            createCustomEdgeMeta(switchEndNode.id, nextNodeId)
+            ...createCustomEdgeMeta(switchEndNode.id, nextNodeId)
         ]
     };
 
@@ -283,19 +307,29 @@ const getRandomColor = () => {
     return color;
 };
 
-export function createCustomEdgeMeta(source: string, target: string, label?: string, color?: string, type?: string) {
-    return {
-        id: `e${source}-${target}`,
-        source: source ?? "",
-        target: target ?? "",
-        type: type || "custom-edge",
-        label,
-        style: { stroke: color || getRandomColor() }
-    } as Edge
+export function createCustomEdgeMeta(source: string | string[], target: string | string[], label?: string, color?: string, type?: string) {
+
+    source = Array.isArray(source) ? source : [source];
+    target = Array.isArray(target) ? target : [target];
+
+    const edges = [] as Edge[];
+    source.forEach((source) => {
+        target.forEach((target) => {
+            edges.push({
+                id: `e${source}-${target}`,
+                source: source ?? "",
+                target: target ?? "",
+                type: type || "custom-edge",
+                label,
+                style: { stroke: color || getRandomColor() }
+            } as Edge)
+        })
+    })
+    return edges;
 }
 export function handleDefaultNode(step: V2Step, position: FlowNode['position'], nextNodeId: string, prevNodeId: string, nodeId: string, isNested: boolean) {
     const nodes = [];
-    const edges = [];
+    let edges = [] as Edge[];
     const newNode = createDefaultNodeV2(
         step,
         nodeId,
@@ -309,7 +343,7 @@ export function handleDefaultNode(step: V2Step, position: FlowNode['position'], 
     }
     // Handle edge for default nodes
     if (newNode.id !== "end" && !step.edgeNotNeeded) {
-        edges.push(createCustomEdgeMeta(newNode.id, nextNodeId, step.edgeLabel, step.edgeColor));
+        edges = [...edges, ...createCustomEdgeMeta(newNode.id, step.edgeTarget || nextNodeId, step.edgeLabel, step.edgeColor)];
     }
     return { nodes, edges };
 }
@@ -435,3 +469,52 @@ export const processWorkflowV2 = (sequence: V2Step[], position: FlowNode['positi
     }
     return { nodes: newNodes, edges: newEdges };
 };
+
+
+export function getTriggerStep(properties: V2Properties) {
+    const _steps = [] as V2Step[];
+    function _triggerSteps() {
+
+        if (!properties) {
+            return _steps;
+        }
+
+        Object.keys(properties).forEach((key) => {
+            if (['interval', 'manual', 'alert'].includes(key) && properties[key]) {
+                _steps.push({
+                    id: key,
+                    type: key,
+                    componentType: "trigger",
+                    properties: properties[key],
+                    name: key,
+                    edgeTarget: 'trigger_end',
+                } as V2Step);
+            }
+        })
+        return _steps;
+    }
+
+    const steps = _triggerSteps();
+    let triggerStartTargets: string | string[] = steps.map((step) => step.id);
+    triggerStartTargets = (triggerStartTargets.length ? triggerStartTargets : "");
+    return [
+        {
+            id: 'trigger_start',
+            name: 'Trigger Start',
+            type: 'trigger',
+            componentType: 'trigger',
+            edgeTarget: triggerStartTargets,
+            cantDelete: true,
+        },
+        ...steps,
+        {
+            id: 'trigger_end',
+            name: 'Trigger End',
+            type: 'trigger',
+            componentType: 'trigger',
+            cantDelete: true,
+        }
+
+    ] as V2Step[];
+
+}

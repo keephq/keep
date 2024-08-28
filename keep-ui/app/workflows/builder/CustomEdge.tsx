@@ -38,9 +38,13 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
   const midpointX = (sourceX + targetX) / 2;
   const midpointY = (sourceY + targetY) / 2;
 
-  let dynamicLabel = label; 
+  let dynamicLabel = label;
   const isLayouted = !!data?.isLayouted;
+  let showAddButton = !source?.includes('empty') && !target?.includes('trigger_end') && source !== 'start';
 
+  if (!showAddButton) {
+    showAddButton = target?.includes('trigger_end') && source?.includes("trigger_start");
+  }
 
   const color = dynamicLabel === "True" ? "left-0 bg-green-500" : dynamicLabel === "False" ? "bg-red-500" : "bg-orange-500";
   return (
@@ -48,10 +52,11 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
       <BaseEdge
         id={id}
         path={edgePath}
-        style={{ opacity: isLayouted ? 1 : 0,
+        style={{
+          opacity: isLayouted ? 1 : 0,
           ...style,
           strokeWidth: 2,
-         }}
+        }}
 
       />
       <defs>
@@ -86,7 +91,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}
             style={{
-              transform: `translate(-50%, -50%) translate(${dynamicLabel === "True" ? labelX-45 : labelX+48}px, ${labelY}px)`,
+              transform: `translate(-50%, -50%) translate(${dynamicLabel === "True" ? labelX - 45 : labelX + 48}px, ${labelY}px)`,
               pointerEvents: "none",
               opacity: isLayouted ? 1 : 0
             }}
@@ -94,21 +99,23 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
             {dynamicLabel}
           </div>
         )}
-        {!source?.includes('empty') && <Button
+        {showAddButton && <Button
           style={{
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: "all",
             opacity: isLayouted ? 1 : 0
           }}
-          className={`p-0 m-0 bg-transparent text-transparent border-none${selectedEdge === id ? " border-2" : ""}`}
+          className={`p-0 m-0 bg-transparent text-transparent border-none`}
           // tooltip="Add node"
           onClick={(e) => {
             setSelectedEdge(id);
           }}
         >
-          <PlusIcon className="size-7 hover:text-black hover:border-black rounded text-sm bg-white border border-gray-700 text-gray-700"/>
-        </Button>}
+          <PlusIcon
+            className={`size-7 hover:text-black rounded text-sm bg-white border text-gray-700 ${selectedEdge === id ? "border-2 border-orange-500" : "border-gray-700"
+              }`}
+          />        </Button>}
       </EdgeLabelRenderer>
     </>
   );

@@ -25,7 +25,7 @@ function EditorLayout({ children }: { children: React.ReactNode }) {
 }
 
 
-export function GlobalEditorV2() {
+export function GlobalEditorV2({synced}: {synced: boolean}) {
   const { v2Properties: properties, updateV2Properties: setProperty, selectedNode } = useStore();
 
   return (
@@ -39,9 +39,11 @@ export function GlobalEditorV2() {
         Use the edge add button or an empty step (a step with a +) to insert steps, conditions, and actions into your workflow.
         Then, click the Generate button to compile the workflow or the Deploy button to deploy it to Keep.
       </Text>
+      <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
       <WorkflowEditorV2
         properties={properties}
         setProperties={setProperty}
+        selectedNode={selectedNode}
       />
     </EditorLayout>
   );
@@ -249,10 +251,14 @@ function KeepForeachEditor({ properties, updateProperty }: keepEditorProps) {
 function WorkflowEditorV2({
   properties,
   setProperties,
+  selectedNode
 }: {
   properties: V2Properties;
   setProperties: (updatedProperties: V2Properties) => void;
+  selectedNode: string | null;
 }) {
+  const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
+
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
@@ -267,17 +273,6 @@ function WorkflowEditorV2({
     }
   };
 
-  const addTrigger = (trigger: "manual" | "interval" | "alert") => {
-    setProperties({
-      ...properties,
-      [trigger]:
-        trigger === "alert"
-          ? { source: "" }
-          : trigger === "manual"
-          ? "true"
-          : "",
-    });
-  };
 
   const deleteFilter = (filter: string) => {
     const currentFilters = { ...properties.alert };
@@ -292,50 +287,12 @@ function WorkflowEditorV2({
   return (
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
-      <div className="w-1/2">
-        {Object.keys(properties).includes("manual") ? null : (
-          <Button
-            onClick={() => addTrigger("manual")}
-            className="mb-1"
-            size="xs"
-            color="orange"
-            variant="light"
-            icon={HandRaisedIcon}
-          >
-            Add Manual Trigger
-          </Button>
-        )}
-        {Object.keys(properties).includes("interval") ? null : (
-          <Button
-            onClick={() => addTrigger("interval")}
-            className="mb-1"
-            size="xs"
-            color="orange"
-            variant="light"
-            icon={ClockIcon}
-          >
-            Add Interval Trigger
-          </Button>
-        )}
-        {Object.keys(properties).includes("alert") ? null : (
-          <Button
-            onClick={() => addTrigger("alert")}
-            className="mb-1"
-            size="xs"
-            color="orange"
-            variant="light"
-            icon={BellSnoozeIcon}
-          >
-            Add Alert Trigger
-          </Button>
-        )}
-      </div>
       {propertyKeys.map((key, index) => {
         return (
-          <div key={index}>
-            <Text className="capitalize mt-2.5">{key}</Text>
+           <div key={index}>
+            {((key ===  selectedNode)||(!["manual", "alert", 'interval'].includes(key))) && <Text className="capitalize mt-2.5">{key}</Text>}
             {key === "manual" ? (
-              <div key={key}>
+              selectedNode === 'manual' && <div key={key}>
                 <input
                   type="checkbox"
                   checked={properties[key] === "true"}
@@ -348,8 +305,8 @@ function WorkflowEditorV2({
                 />
               </div>
             ) : key === "alert" ? (
-              <>
-                <div className="w-1/2">
+              selectedNode === 'alert' && <>
+                 <div className="w-1/2">
                   <Button
                     onClick={addFilter}
                     size="xs"
@@ -387,15 +344,22 @@ function WorkflowEditorV2({
                     );
                   })}
               </>
-            ) : (
-              <TextInput
+            ) : key === "interval" ? (
+               selectedNode === 'interval' && <TextInput
                 placeholder={`Set the ${key}`}
                 onChange={(e: any) =>
                   setProperties({ ...properties, [key]: e.target.value })
                 }
                 value={properties[key] as string}
               />
-            )}
+            ): <TextInput
+            placeholder={`Set the ${key}`}
+            onChange={(e: any) =>
+              setProperties({ ...properties, [key]: e.target.value })
+            }
+            value={properties[key] as string}
+          />}
+            
           </div>
         );
       })}
@@ -407,8 +371,10 @@ function WorkflowEditorV2({
 
 export function StepEditorV2({
   installedProviders,
+  setSynced
 }: {
   installedProviders?: Provider[] | undefined | null;
+  setSynced: (sync:boolean) => void;
 }) {
   const [formData, setFormData] = useState<{ name?: string; properties?: V2Properties, type?:string }>({});
   const { 
@@ -432,6 +398,7 @@ export function StepEditorV2({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setSynced(false);
   };
 
   const handlePropertyChange = (key: string, value: any) => {
@@ -439,6 +406,7 @@ export function StepEditorV2({
       ...formData,
       properties: { ...formData.properties, [key]: value },
     });
+    setSynced(false);
   };
 
 
