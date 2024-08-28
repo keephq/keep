@@ -2,7 +2,7 @@ import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../../providers/providers";
 import { Action, Alert } from "./alert";
 import { stringify } from "yaml";
-import  { V2Properties, V2Step, Definition } from "./builder-store";
+import { V2Properties, V2Step, Definition } from "./builder-store";
 import { v4 as uuidv4 } from "uuid";
 
 
@@ -37,6 +37,41 @@ export function getToolboxConfiguration(providers: Provider[]) {
   );
   return {
     groups: [
+      {
+        name: "Triggers",
+        steps: [
+          {
+            type: "manual",
+            componentType: "trigger",
+            name: "Manual",
+            id: 'manual',
+            properties: {
+              name: "",
+              description: "",
+            },
+          },
+          {
+            type: "interval",
+            componentType: "trigger",
+            name: "Interval",
+            id: 'interval',
+            properties: {
+              interval: ""
+            },
+          },
+          {
+            type: "alert",
+            componentType: "trigger",
+            name: "Alert",
+            id: 'alert',
+            properties: {
+              alert: {
+                source: "",
+              }
+            },
+          },
+        ],
+      },
       {
         name: "Steps",
         steps: steps,
@@ -148,7 +183,7 @@ export function generateCondition(
 ): any {
   const stepOrAction = action.type === "step" ? "step" : "action";
   const generatedCondition = {
-    id: condition.id  || uuidv4(),
+    id: condition.id || uuidv4(),
     name: condition.name,
     type: `condition-${condition.type}`,
     componentType: "switch",
@@ -278,7 +313,7 @@ export function parseWorkflow(
 }
 
 function getWithParams(s: V2Step): any {
-  if(!s){
+  if (!s) {
     return;
   }
   s.properties = (s.properties || {}) as V2Properties;
@@ -308,7 +343,7 @@ function getActionsFromCondition(
     ...condition.properties,
   };
   const steps = condition?.branches?.true || [] as V2Step[];
-  const compiledActions = steps.map((a:V2Step) => {
+  const compiledActions = steps.map((a: V2Step) => {
     const withParams = getWithParams(a);
     const providerType = a?.type?.replace("action-", "");
     const providerName =

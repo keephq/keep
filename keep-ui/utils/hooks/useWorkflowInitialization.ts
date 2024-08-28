@@ -8,7 +8,7 @@ import useStore, { Definition, ReactFlowDefinition, V2Step } from "../../app/wor
 import { FlowNode } from "../../app/workflows/builder/builder-store";
 import { Provider } from "app/providers/providers";
 import ELK from 'elkjs/lib/elk.bundled.js';
-import { processWorkflowV2 } from "utils/reactFlow";
+import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
 
 const layoutOptions = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
@@ -186,6 +186,7 @@ const useWorkflowInitialization = (
           isLayouted: false,
           name: "start"
         } as V2Step,
+        ...(getTriggerStep(parsedWorkflow?.properties)),
         ...(parsedWorkflow?.sequence || []),
         {
           id: "end",

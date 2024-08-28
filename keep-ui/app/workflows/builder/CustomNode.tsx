@@ -1,19 +1,20 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
-import useStore, { FlowNode } from "./builder-store";
+import useStore, { FlowNode, V2Step } from "./builder-store";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
 import { GoSquareFill } from "react-icons/go";
-import { PiSquareLogoFill } from "react-icons/pi";
+import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
 import { BiSolidError } from "react-icons/bi";
+import { FaHandPointer } from "react-icons/fa";
 
 
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
-  if (type === "alert" || type === "workflow") return "/keep.png";
+  if (type === "alert" || type === "workflow" || type === "trigger") return "/keep.png";
   return `/icons/${type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -27,10 +28,21 @@ function CustomNode({ id, data }: FlowNode) {
     ?.replace("step-", "")
     ?.replace("action-", "")
     ?.replace("condition-", "")
-    ?.replace("__end", "");
+    ?.replace("__end", "")
+    ?.replace("trigger_", "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
-  const specialNodeCheck = ['start', 'end'].includes(type)
+  const specialNodeCheck = ['start', 'end', 'trigger_end', 'trigger_start'].includes(type)
+
+  function getTriggerIcon(step: any) {
+    const { type } = step;
+    switch (type) {
+      case "manual":
+        return <FaHandPointer size={32} />
+      case "interval":
+        return <PiDiamondsFourFill size={32} />
+    }
+  }
 
   return (
     <>
@@ -67,13 +79,14 @@ function CustomNode({ id, data }: FlowNode) {
         {errorNode === id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />}
         {!isEmptyNode && (
           <div className="flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
-            <Image
+            {getTriggerIcon(data)}
+            {!!data && !['interval', 'manual'].includes(data.type) && <Image
               src={IconUrlProvider(data) || "/keep.png"}
               alt={data?.type}
               className="object-cover w-8 h-8 rounded-full bg-gray-100"
               width={32}
               height={32}
-            />
+            />}
             <div className="flex-1 flex-col gap-2 flex-wrap truncate">
               <div className="text-lg font-bold truncate">{data?.name}</div>
               <div className="text-gray-500 truncate">
