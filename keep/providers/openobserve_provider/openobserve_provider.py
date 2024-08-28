@@ -388,9 +388,17 @@ class OpenobserveProvider(BaseProvider):
 
         alert_url = event.pop("alert_url", "")
         org_name = event.pop("org_name", "")
-        # if rows are present, create multiple alerts
-        if "rows" in event:
+        # Our only way to distinguish between non aggregated alert and aggregated alerts is the alert_agg_value
+        if "alert_agg_value" in event and len(
+            event["alert_agg_value"].split(",")
+        ) == int(event.get("alert_count", -1)):
             rows = event.pop("rows", "")
+            if not rows:
+                logger.exception(
+                    "Rows not found in the aggregated alert event",
+                    extra={"event": event},
+                )
+                raise ValueError("Rows not found in the aggregated alert event")
             alerts = []
             number_of_rows = event.pop("alert_count", "")
             rows = rows.split("\n")
@@ -435,6 +443,10 @@ class OpenobserveProvider(BaseProvider):
                     # calculate the fingerprint based on name + group_by_value
                     alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
                         alert_dto, fingerprint_fields=["name", group_by_key]
+                    )
+                    logger.info(
+                        "Formatted openobserve aggregated alert",
+                        extra={"fingerprint": alert_dto.fingerprint},
                     )
                     alerts.append(alert_dto)
                 except json.JSONDecodeError:
@@ -508,5 +520,9 @@ class OpenobserveProvider(BaseProvider):
 
             alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
                 alert_dto, fingerprint_fields=fingerprint_fields
+            )
+            logger.info(
+                "Formatted openobserve alert",
+                extra={"fingerprint": alert_dto.fingerprint},
             )
             return alert_dto
