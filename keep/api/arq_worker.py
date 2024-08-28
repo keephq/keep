@@ -12,9 +12,9 @@ from keep.api.core.config import config
 from keep.api.tasks.process_background_ai_task import process_background_ai_task
 from keep.api.tasks.healthcheck_task import healthcheck_task
 from keep.api.consts import (
-    KEEP_ARQ_TASK_POOL, 
-    KEEP_ARQ_TASK_POOL_AI, 
-    KEEP_ARQ_TASK_POOL_ALL, 
+    KEEP_ARQ_TASK_POOL,
+    KEEP_ARQ_TASK_POOL_AI,
+    KEEP_ARQ_TASK_POOL_ALL,
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
 )
 
@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 all_tasks_for_the_worker = ["keep.api.tasks.healthcheck_task.healthcheck_task"]
 
 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
-    KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
+        KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
     all_tasks_for_the_worker += [
         "keep.api.tasks.process_event_task.async_process_event",
         "keep.api.tasks.process_topology_task.async_process_topology",
     ]
 
 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
-    KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+        KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
     all_tasks_for_the_worker += [
         "keep.api.tasks.process_background_ai_task.process_background_ai_task",
         "keep.api.tasks.process_background_ai_task.process_correlation",
@@ -74,6 +74,7 @@ def get_arq_worker() -> Worker:
         WorkerSettings, keep_result=keep_result, expires_extra_ms=expires
     )
 
+
 def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
     return {*list(range(start, end, x))}
 
@@ -102,23 +103,20 @@ class WorkerSettings:
             healthcheck_task,
             minute=at_every_x_minutes(1),
             unique=True,
-            timeout=30, 
-            max_tries=1, 
+            timeout=30,
+            max_tries=1,
             run_at_startup=True,
         ),
     ]
     if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
-        KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+            KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
         cron_jobs.append(
             cron(
                 process_background_ai_task,
                 minute=at_every_x_minutes(1),
                 unique=True,
-                timeout=30, 
-                max_tries=1, 
+                timeout=30,
+                max_tries=1,
                 run_at_startup=True,
             )
         )
-        
-    # if 
-    

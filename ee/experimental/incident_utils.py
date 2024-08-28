@@ -34,6 +34,7 @@ from keep.api.core.dependencies import (
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
+SUMMARY_GENERATOR_VERBOSE_NAME = "Summary generator v0.1"
 USE_N_HISTORICAL_ALERTS_MINING = 10e4
 USE_N_HISTORICAL_ALERTS_PMI = 10e4
 USE_N_HISTORICAL_INCIDENTS = 10e4
