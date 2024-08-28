@@ -275,17 +275,18 @@ async def mine_incidents_and_create_objects(
         pool = await get_pool()
     else:
         pool = ctx["redis"]
-        for incident_id in incident_ids_for_summary_generation:
-            job = await pool.enqueue_job(
-                "process_summary_generation",
-                tenant_id=tenant_id,
-                incident_id=incident_id,
-            )
-            logger.info(
-                f"Summary generation for incident {incident_id} scheduled, job: {job}",
-                extra={"algorithm": ALGORITHM_VERBOSE_NAME,
-                    "tenant_id": tenant_id, "incident_id": incident_id},
-            )
+        
+    for incident_id in incident_ids_for_summary_generation:
+        job = await pool.enqueue_job(
+            "process_summary_generation",
+            tenant_id=tenant_id,
+            incident_id=incident_id,
+        )
+        logger.info(
+            f"Summary generation for incident {incident_id} scheduled, job: {job}",
+            extra={"algorithm": ALGORITHM_VERBOSE_NAME,
+                   "tenant_id": tenant_id, "incident_id": incident_id},
+        )
 
     pusher_client = get_pusher_client()
     if pusher_client:
