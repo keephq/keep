@@ -1,5 +1,4 @@
 import os
-import time
 import logging
 
 import numpy as np
@@ -11,23 +10,16 @@ from openai import OpenAI
 
 from datetime import datetime, timedelta
 
-from fastapi import Depends
-
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
-
-from pusher import Pusher
 
 from keep.api.arq_pool import get_pool
 from keep.api.models.db.alert import Alert, Incident
 from keep.api.core.db import (
-    assign_alert_to_incident,
-    is_alert_assigned_to_incident,
     add_alerts_to_incident_by_incident_id,
     query_alerts,
     get_last_incidents,
     get_incident_by_id,
-    write_pmi_matrix_to_db,
     write_pmi_matrix_to_temp_file,
     create_incident_from_dict,
     update_incident_summary,

@@ -1,14 +1,13 @@
 import logging
 from typing import Optional
 
-from arq import Worker, create_pool, cron
+from arq import Worker, cron
 from arq.connections import RedisSettings
 from arq.worker import create_worker
 from pydantic.utils import import_string
 from starlette.datastructures import CommaSeparatedStrings
 
 import keep.api.logging
-from keep.api.arq_pool import get_pool
 from keep.api.core.config import config
 from keep.api.tasks.process_background_ai_task import process_background_ai_task
 from keep.api.tasks.healthcheck_task import healthcheck_task
