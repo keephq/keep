@@ -392,6 +392,7 @@ class OpenobserveProvider(BaseProvider):
         if "alert_agg_value" in event and len(
             event["alert_agg_value"].split(",")
         ) == int(event.get("alert_count", -1)):
+            logger.info("Formatting openobserve aggregated alert")
             rows = event.pop("rows", "")
             if not rows:
                 logger.exception(
@@ -407,6 +408,10 @@ class OpenobserveProvider(BaseProvider):
             agg_values = [agg_value.strip() for agg_value in agg_values]
             for i in range(int(number_of_rows)):
                 try:
+                    logger.info(
+                        "Formatting aggregated alert",
+                        extra={"row": rows[i]},
+                    )
                     row = rows[i]
                     value = agg_values[i]
                     # try to parse value as a number since its metric
@@ -423,6 +428,13 @@ class OpenobserveProvider(BaseProvider):
                             logger.exception(f"Failed to parse row: {row}")
                             continue
                     group_by_key, group_by_value = row_data.popitem()
+                    logger.info(
+                        "Formatting aggergated alert with group by key",
+                        extra={
+                            "group_by_key": group_by_key,
+                            "group_by_value": group_by_value,
+                        },
+                    )
                     alert_id = str(uuid.uuid4())
                     alert_dto = AlertDto(
                         id=f"{alert_id}",
