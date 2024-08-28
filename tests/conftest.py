@@ -279,6 +279,10 @@ def is_keycloak_responsive(host, port, user, password):
         from keycloak import KeycloakAdmin
 
         print("INIT KEYCLOAK")
+        print("host", host)
+        print("port", port)
+        print("user", user)
+        print(KeycloakAdmin)
         keycloak_admin = KeycloakAdmin(
             server_url=f"http://{host}:{port}/auth/admin",
             username=user,
@@ -287,6 +291,12 @@ def is_keycloak_responsive(host, port, user, password):
             verify=True,
         )
         print("GET CLIENT")
+        # increase verbosity of requests library
+        import logging
+
+        requests_log = logging.getLogger("requests.packages.urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        print(keycloak_admin.get_client_id)
         keycloak_admin.get_client_id("keep")
         return True
     except Exception as e:
@@ -306,7 +316,7 @@ def keycloak_container(docker_ip, docker_services):
             yield
             return
         docker_services.wait_until_responsive(
-            timeout=120.0,
+            timeout=100.0,
             pause=1,
             check=lambda: is_keycloak_responsive(
                 "127.0.0.1",
