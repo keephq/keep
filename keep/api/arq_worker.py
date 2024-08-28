@@ -10,7 +10,7 @@ from starlette.datastructures import CommaSeparatedStrings
 import keep.api.logging
 from keep.api.arq_pool import get_pool
 from keep.api.core.config import config
-from keep.api.tasks.process_background_ai_task import process_background_ai_task, process_summary_generation
+from keep.api.tasks.process_background_ai_task import process_background_ai_task
 from keep.api.tasks.healthcheck_task import healthcheck_task
 from keep.api.consts import (
     KEEP_ARQ_TASK_POOL, 
