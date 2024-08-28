@@ -313,8 +313,6 @@ export function createCustomEdgeMeta(source: string | string[], target: string |
     target = Array.isArray(target) ? target : [target];
 
     const edges = [] as Edge[];
-    console.log("source", source);
-    console.log("target", target);
     source.forEach((source) => {
         target.forEach((target) => {
             edges.push({

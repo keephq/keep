@@ -273,17 +273,6 @@ function WorkflowEditorV2({
     }
   };
 
-  // const addTrigger = (trigger: "manual" | "interval" | "alert") => {
-  //   setProperties({
-  //     ...properties,
-  //     [trigger]:
-  //       trigger === "alert"
-  //         ? { source: "" }
-  //         : trigger === "manual"
-  //         ? "true"
-  //         : "",
-  //   });
-  // };
 
   const deleteFilter = (filter: string) => {
     const currentFilters = { ...properties.alert };
@@ -298,44 +287,6 @@ function WorkflowEditorV2({
   return (
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
-      <div className="w-1/2">
-        {/* {Object.keys(properties).includes("manual") ? null : (
-          <Button
-            onClick={() => addTrigger("manual")}
-            className="mb-1"
-            size="xs"
-            color="orange"
-            variant="light"
-            icon={HandRaisedIcon}
-          >
-            Add Manual Trigger
-          </Button>
-        )}
-        {Object.keys(properties).includes("interval") ? null : (
-          <Button
-            onClick={() => addTrigger("interval")}
-            className="mb-1"
-            size="xs"
-            color="orange"
-            variant="light"
-            icon={ClockIcon}
-          >
-            Add Interval Trigger
-          </Button>
-        )}
-        {Object.keys(properties).includes("alert") ? null : (
-          <Button
-            onClick={() => addTrigger("alert")}
-            className="mb-1"
-            size="xs"
-            color="orange"
-            variant="light"
-            icon={BellSnoozeIcon}
-          >
-            Add Alert Trigger
-          </Button>
-        )} */}
-      </div>
       {propertyKeys.map((key, index) => {
         return (
            <div key={index}>
