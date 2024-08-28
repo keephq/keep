@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the JSON file
-MINT_JSON="./mint.json"
+MINT_JSON="../docs/mint.json"
 
 # Define the exclusion lists
 EXCLUDE_LIST=("node_modules")
@@ -57,6 +57,7 @@ find . -mindepth 2 -type f -name "*.mdx" | sort | while read -r file; do
         :
     else
         echo "\"$relative_path\","
+        echo "Is missing in docs/mint.json, should be added there or to the EXCLUDE_FILE_LIST."
         exit 1 # Exit with an error code to fail the CI/CD process
     fi
 done
