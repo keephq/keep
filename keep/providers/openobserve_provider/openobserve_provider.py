@@ -3,6 +3,7 @@ OpenObserve Provider is a class that allows to install webhooks in OpenObserve.
 """
 
 import dataclasses
+import json
 import logging
 import uuid
 from pathlib import Path
@@ -373,7 +374,6 @@ class OpenobserveProvider(BaseProvider):
         provider_instance: Optional["OpenobserveProvider"] = None,
     ) -> AlertDto:
         logger = logging.getLogger(__name__)
-        alert_id = str(uuid.uuid4())
         name = event.pop("alert_name", "")
         # openoboserve does not provide severity
         severity = AlertSeverity.WARNING
@@ -385,70 +385,128 @@ class OpenobserveProvider(BaseProvider):
         lastReceived = event.pop("alert_start_time", "")
         # Mapping 'alert_type' to 'description'
         description = event.pop("alert_type", "")
-        labels = {
-            "url": event.pop("alert_url", ""),
-            "alert_period": event.pop("alert_period", ""),
-            "alert_operator": event.pop("alert_operator", ""),
-            "alert_threshold": event.pop("alert_threshold", ""),
-            "alert_count": event.pop("alert_count", ""),
-            "alert_agg_value": event.pop("alert_agg_value", ""),
-            "alert_end_time": event.pop("alert_end_time", ""),
-        }
+
+        alert_url = event.pop("alert_url", "")
         org_name = event.pop("org_name", "")
-        alert_dto = AlertDto(
-            id=alert_id,
-            name=name,
-            severity=severity,
-            environment=environment,
-            startedAt=startedAt,
-            lastReceived=lastReceived,
-            description=description,
-            labels=labels,
-            source=["openobserve"],
-            org_name=org_name,
-            **event,  # any other fields
-        )
-        # calculate fingerprint based on name + environment + event keys (e.g. host)
-        fingerprint_fields = ["name", "environment", *event.keys()]
-        # remove 'value' as its too dynamic
-        try:
-            fingerprint_fields.remove("value")
-        except ValueError:
-            pass
-        logger.info(
-            "Calculating fingerprint fields",
-            extra={"fingerprint_fields": fingerprint_fields},
-        )
-
-        # sort the fields to ensure the fingerprint is consistent
-        # for e.g. host1, host2 is the same as host2, host1
-        for field in fingerprint_fields:
+        # if rows are present, create multiple alerts
+        if "rows" in event:
+            rows = event.pop("rows", "")
+            alerts = []
+            number_of_rows = event.pop("alert_count", "")
+            rows = rows.split("\n")
+            agg_values = event.pop("alert_agg_value", "").split(",")
+            # trim
+            agg_values = [agg_value.strip() for agg_value in agg_values]
+            for i in range(int(number_of_rows)):
+                try:
+                    row = rows[i]
+                    value = agg_values[i]
+                    # try to parse value as a number since its metric
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
+                    try:
+                        row_data = json.loads(row)
+                    except json.JSONDecodeError:
+                        try:
+                            row_data = json.loads(row.replace("'", '"'))
+                        except json.JSONDecodeError:
+                            logger.exception(f"Failed to parse row: {row}")
+                            continue
+                    group_by_key, group_by_value = row_data.popitem()
+                    alert_id = str(uuid.uuid4())
+                    alert_dto = AlertDto(
+                        id=f"{alert_id}",
+                        name=f"{name}",
+                        severity=severity,
+                        environment=environment,
+                        startedAt=startedAt,
+                        lastReceived=lastReceived,
+                        description=description,
+                        row_data=row_data,
+                        source=["openobserve"],
+                        org_name=org_name,
+                        value=value,
+                        url=alert_url,
+                        **event,
+                        **{group_by_key: group_by_value},
+                    )
+                    # calculate the fingerprint based on name + group_by_value
+                    alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
+                        alert_dto, fingerprint_fields=["name", group_by_key]
+                    )
+                    alerts.append(alert_dto)
+                except json.JSONDecodeError:
+                    logger.error(f"Failed to parse row: {row}")
+            return alerts
+        # else, one alert, one row, old calculation
+        else:
+            alert_id = str(uuid.uuid4())
+            labels = {
+                "url": event.pop("alert_url", ""),
+                "alert_period": event.pop("alert_period", ""),
+                "alert_operator": event.pop("alert_operator", ""),
+                "alert_threshold": event.pop("alert_threshold", ""),
+                "alert_count": event.pop("alert_count", ""),
+                "alert_agg_value": event.pop("alert_agg_value", ""),
+                "alert_end_time": event.pop("alert_end_time", ""),
+            }
+            alert_dto = AlertDto(
+                id=alert_id,
+                name=name,
+                severity=severity,
+                environment=environment,
+                startedAt=startedAt,
+                lastReceived=lastReceived,
+                description=description,
+                labels=labels,
+                source=["openobserve"],
+                org_name=org_name,
+                url=alert_url,
+                **event,  # any other fields
+            )
+            # calculate fingerprint based on name + environment + event keys (e.g. host)
+            fingerprint_fields = ["name", "environment", *event.keys()]
+            # remove 'value' as its too dynamic
             try:
-                field_attr = getattr(alert_dto, field)
-                if "," not in field_attr:
-                    continue
-                # sort it lexographically
-                logger.info(
-                    "Sorting field attributes",
-                    extra={"field": field, "field_attr": field_attr},
-                )
-                sorted_field_attr = sorted(field_attr.replace(" ", "").split(","))
-                sorted_field_attr = ", ".join(sorted_field_attr)
-                logger.info(
-                    "Sorted field attributes",
-                    extra={"field": field, "sorted_field_attr": sorted_field_attr},
-                )
-                # set the attr
-                setattr(alert_dto, field, sorted_field_attr)
-            except AttributeError:
+                fingerprint_fields.remove("value")
+            except ValueError:
                 pass
-            except Exception as e:
-                logger.error(
-                    "Error while sorting field attributes",
-                    extra={"field": field, "error": e},
-                )
+            logger.info(
+                "Calculating fingerprint fields",
+                extra={"fingerprint_fields": fingerprint_fields},
+            )
 
-        alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
-            alert_dto, fingerprint_fields=fingerprint_fields
-        )
-        return alert_dto
+            # sort the fields to ensure the fingerprint is consistent
+            # for e.g. host1, host2 is the same as host2, host1
+            for field in fingerprint_fields:
+                try:
+                    field_attr = getattr(alert_dto, field)
+                    if "," not in field_attr:
+                        continue
+                    # sort it lexographically
+                    logger.info(
+                        "Sorting field attributes",
+                        extra={"field": field, "field_attr": field_attr},
+                    )
+                    sorted_field_attr = sorted(field_attr.replace(" ", "").split(","))
+                    sorted_field_attr = ", ".join(sorted_field_attr)
+                    logger.info(
+                        "Sorted field attributes",
+                        extra={"field": field, "sorted_field_attr": sorted_field_attr},
+                    )
+                    # set the attr
+                    setattr(alert_dto, field, sorted_field_attr)
+                except AttributeError:
+                    pass
+                except Exception as e:
+                    logger.error(
+                        "Error while sorting field attributes",
+                        extra={"field": field, "error": e},
+                    )
+
+            alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
+                alert_dto, fingerprint_fields=fingerprint_fields
+            )
+            return alert_dto
