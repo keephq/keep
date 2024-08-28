@@ -10,9 +10,4 @@ workflow:
           method: POST
           body:
             alert: keep.json_loads('{{ alert }}')
-<<<<<<< Updated upstream
-            fingerprint: '{{ alert.fingerprint }}'
-          url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"
-=======
-          url: "http://localhost:8123"
->>>>>>> Stashed changes
+          url: "http://localhost:8080"
