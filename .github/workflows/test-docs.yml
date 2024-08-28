@@ -28,8 +28,7 @@ jobs:
         run: |
           npm i -g mintlify
           mintlify broken-links;
-          cd docs;
-          ./validate_mint_json.sh;
+          cd docs && ./validate_mint_json.sh;
           # Todo: validate if openapi schema is matching with the code
           # Todo: validate if providers are matching with the code
   
