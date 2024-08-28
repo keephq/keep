@@ -309,12 +309,12 @@ const getRandomColor = () => {
 
 export function createCustomEdgeMeta(source: string | string[], target: string | string[], label?: string, color?: string, type?: string) {
 
-    source = Array.isArray(source) ? source : [source];
-    target = Array.isArray(target) ? target : [target];
+    source = (Array.isArray(source) ? source : [source || ""]) as string[];
+    target = (Array.isArray(target) ? target : [target || ""]) as string[];
 
     const edges = [] as Edge[];
-    source.forEach((source) => {
-        target.forEach((target) => {
+    source?.forEach((source) => {
+        target?.forEach((target) => {
             edges.push({
                 id: `e${source}-${target}`,
                 source: source ?? "",
