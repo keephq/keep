@@ -16,7 +16,7 @@ if EE_ENABLED:
     )
     sys.path.insert(0, path_with_ee)
 
-    from ee.experimental.incident_utils import mine_incidents_and_create_objects  # noqa
+    from ee.experimental.incident_utils import mine_incidents_and_create_objects, generate_update_incident_summary  # noqa
     from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa 
 else:
     mine_incidents_and_create_objects = NotImplemented

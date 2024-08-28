@@ -8,8 +8,9 @@ from pydantic.utils import import_string
 from starlette.datastructures import CommaSeparatedStrings
 
 import keep.api.logging
+from keep.api.arq_pool import get_pool
 from keep.api.core.config import config
-from keep.api.tasks.process_background_ai_task import process_background_ai_task
+from keep.api.tasks.process_background_ai_task import process_background_ai_task, process_summary_generation
 from keep.api.tasks.healthcheck_task import healthcheck_task
 from keep.api.consts import (
     KEEP_ARQ_TASK_POOL, 
@@ -36,6 +37,7 @@ if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
     all_tasks_for_the_worker += [
         "keep.api.tasks.process_background_ai_task.process_background_ai_task",
         "keep.api.tasks.process_background_ai_task.process_correlation",
+        "keep.api.tasks.process_background_ai_task.process_summary_generation",
     ]
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
@@ -61,18 +63,6 @@ async def startup(ctx):
 async def shutdown(ctx):
     pass
 
-
-async def get_pool():
-    return await create_pool(
-        RedisSettings(
-            host=config("REDIS_HOST", default="localhost"),
-            port=config("REDIS_PORT", cast=int, default=6379),
-            username=config("REDIS_USERNAME", default=None),
-            password=config("REDIS_PASSWORD", default=None),
-            conn_timeout=60,
-            conn_retries=10,
-        )
-    )
 
 def get_arq_worker() -> Worker:
     keep_result = config(
@@ -130,3 +120,6 @@ class WorkerSettings:
                 run_at_startup=True,
             )
         )
+        
+    # if 
+    
