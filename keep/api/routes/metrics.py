@@ -1,7 +1,6 @@
 from fastapi import Response
 
 from fastapi import APIRouter, Depends
-from prometheus_client import CONTENT_TYPE_LATEST
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 
 from keep.api.core.db import (
@@ -9,6 +8,8 @@ from keep.api.core.db import (
 )
 
 router = APIRouter()
+
+CONTENT_TYPE_LATEST = 'text/plain; version=0.0.4; charset=utf-8'
 
 
 @router.get("")
@@ -26,8 +27,9 @@ def get_metrics(
     ```
     scrape_configs:
     - job_name: "scrape_keep"
+        scrape_interval: 5m  # It's important to scrape not too often to avoid rate limiting.
         static_configs:
-        - targets: ["https://api.keephq.dev/metrics"]  # Or your own domain.
+        - targets: ["https://api.keephq.dev"]  # Or your own domain.
         authorization:
             type: Bearer
             credentials: "{Your API Key}"
