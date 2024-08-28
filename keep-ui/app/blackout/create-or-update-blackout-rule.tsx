@@ -1,5 +1,3 @@
-"use client";
-
 import {
   TextInput,
   Textarea,
@@ -20,6 +18,7 @@ import { BlackoutRule } from "./model";
 import { useBlackouts } from "utils/hooks/useBlackoutRules";
 import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 interface Props {
   blackoutToEdit: BlackoutRule | null;
@@ -35,8 +34,9 @@ export default function CreateOrUpdateBlackoutRule({
   const [blackoutName, setBlackoutName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [celQuery, setCelQuery] = useState<string>("");
-  const [startTime, setStartTime] = useState<string>("");
-  const [endTime, setEndTime] = useState<string>("");
+  const [startTime, setStartTime] = useState<Date | null>(new Date());
+  const [endInterval, setEndInterval] = useState<number>(5);
+  const [intervalType, setIntervalType] = useState<string>("minutes");
   const [enabled, setEnabled] = useState<boolean>(true);
   const editMode = blackoutToEdit !== null;
 
@@ -45,8 +45,7 @@ export default function CreateOrUpdateBlackoutRule({
       setBlackoutName(blackoutToEdit.name);
       setDescription(blackoutToEdit.description ?? "");
       setCelQuery(blackoutToEdit.cel_query);
-      setStartTime(blackoutToEdit.start_time.toISOString());
-      setEndTime(blackoutToEdit.end_time?.toISOString() ?? "");
+      setStartTime(new Date(blackoutToEdit.start_time));
       setEnabled(blackoutToEdit.enabled);
     }
   }, [blackoutToEdit]);
@@ -55,15 +54,35 @@ export default function CreateOrUpdateBlackoutRule({
     setBlackoutName("");
     setDescription("");
     setCelQuery("");
-    setStartTime("");
-    setEndTime("");
+    setStartTime(new Date());
     setEnabled(true);
+  };
+
+  const calculateDurationInSeconds = () => {
+    let durationInSeconds = 0;
+    switch (intervalType) {
+      case "seconds":
+        durationInSeconds = endInterval;
+        break;
+      case "minutes":
+        durationInSeconds = endInterval * 60;
+        break;
+      case "hours":
+        durationInSeconds = endInterval * 60 * 60;
+        break;
+      case "days":
+        durationInSeconds = endInterval * 60 * 60 * 24;
+        break;
+      default:
+        console.error("Invalid interval type");
+    }
+    return durationInSeconds;
   };
 
   const addBlackout = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    const response = await fetch(`${apiUrl}/blackouts`, {
+    const response = await fetch(`${apiUrl}/blackout`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
@@ -74,7 +93,7 @@ export default function CreateOrUpdateBlackoutRule({
         description: description,
         cel_query: celQuery,
         start_time: startTime,
-        end_time: endTime,
+        duration_seconds: calculateDurationInSeconds(),
         enabled: enabled,
       }),
     });
@@ -92,7 +111,7 @@ export default function CreateOrUpdateBlackoutRule({
   const updateBlackout = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    const response = await fetch(`${apiUrl}/blackouts/${blackoutToEdit?.id}`, {
+    const response = await fetch(`${apiUrl}/blackout/${blackoutToEdit?.id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
@@ -103,7 +122,7 @@ export default function CreateOrUpdateBlackoutRule({
         description: description,
         cel_query: celQuery,
         start_time: startTime,
-        end_time: endTime,
+        duration_seconds: calculateDurationInSeconds(),
         enabled: enabled,
       }),
     });
@@ -126,6 +145,10 @@ export default function CreateOrUpdateBlackoutRule({
   const submitEnabled = (): boolean => {
     return !!blackoutName && !!celQuery && !!startTime;
   };
+
+  const date = new Date();
+  const currentMins = date.getMinutes();
+  const currentHour = date.getHours();
 
   return (
     <form className="py-2" onSubmit={editMode ? updateBlackout : addBlackout}>
@@ -159,30 +182,41 @@ export default function CreateOrUpdateBlackoutRule({
       </div>
       <div className="mt-2.5">
         <Text>
-          Start Time<span className="text-red-500 text-xs">*</span>
+          Start At<span className="text-red-500 text-xs">*</span>
         </Text>
         <DatePicker
-          onChange={() => {}}
+          onChange={(date) => setStartTime(date)}
           showTimeSelect
+          selected={startTime}
           timeFormat="p"
           timeIntervals={15}
+          minDate={new Date()}
           timeCaption="Time"
           dateFormat="MMMM d, yyyy h:mm:ss aa"
+          inline
         />
       </div>
       <div className="mt-2.5">
         <Text>
           End After<span className="text-red-500 text-xs">*</span>
         </Text>
-        <span className="grid grid-cols-2 mt-2 gap-x-2">
-          <NumberInput defaultValue={5} min={1} />
-          <Select value={"seconds"} onValueChange={() => {}}>
-            <SelectItem value="seconds">Seconds</SelectItem>
+        <div className="flex gap-2">
+          <NumberInput
+            defaultValue={5}
+            value={endInterval}
+            onValueChange={setEndInterval}
+            min={1}
+          />
+          <Select value={intervalType} onValueChange={setIntervalType}>
             <SelectItem value="minutes">Minutes</SelectItem>
             <SelectItem value="hours">Hours</SelectItem>
             <SelectItem value="days">Days</SelectItem>
           </Select>
-        </span>
+        </div>
+        <Text className="text-xs text-red-400">
+          * Please adjust when editing existing blackout rule, as this is
+          calculated upon submit.
+        </Text>
       </div>
       <div className="mt-2.5">
         <Text>Enabled</Text>

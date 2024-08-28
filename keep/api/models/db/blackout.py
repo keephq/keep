@@ -40,7 +40,6 @@ class BlackoutRuleCreate(BaseModel):
     description: Optional[str] = None
     cel_query: str
     start_time: datetime
-    end_time: Optional[datetime] = None
     duration_seconds: Optional[int] = None
     enabled: bool = True
 
@@ -52,7 +51,7 @@ class BlackoutRuleRead(BaseModel):
     created_by: str
     cel_query: str
     start_time: datetime
-    end_time: Optional[datetime]
+    end_time: datetime
     duration_seconds: Optional[int]
     updated_at: Optional[datetime]
     enabled: bool = True

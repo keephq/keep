@@ -35,11 +35,8 @@ export default function Extraction() {
               title="Extraction rules does not exist"
               icon={MdWarning}
             >
-              <p className="text-slate-400">No extraction rules found.</p>
-              <p className="text-slate-400">
-                Configure new extraction rule using the extration rules wizard
-                to the left.
-              </p>
+              No extraction rules found. Configure new extraction rule using the
+              extration rules wizard to the left.
             </Callout>
           )}
         </div>

@@ -6,5 +6,6 @@ export default function Page() {
 
 export const metadata = {
   title: "Keep - Blackout Management",
-  description: "Manage blackout periods to suppress alerts during scheduled downtimes.",
+  description:
+    "Manage blackout periods to suppress alerts during scheduled downtimes.",
 };

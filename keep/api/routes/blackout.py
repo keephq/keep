@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
@@ -38,8 +40,10 @@ def create_blackout_rule(
     ),
     session: Session = Depends(get_session),
 ) -> BlackoutRuleRead:
+    end_time = rule_dto.start_time + timedelta(seconds=rule_dto.duration_seconds)
     new_rule = BlackoutRule(
         **rule_dto.dict(),
+        end_time=end_time,
         created_by=authenticated_entity.email,
         tenant_id=authenticated_entity.tenant_id
     )
@@ -62,7 +66,7 @@ def update_blackout_rule(
     ),
     session: Session = Depends(get_session),
 ) -> BlackoutRuleRead:
-    rule = session.query(BlackoutRule).filter(
+    rule: BlackoutRule = session.query(BlackoutRule).filter(
         BlackoutRule.tenant_id == authenticated_entity.tenant_id,
         BlackoutRule.id == rule_id,
     )
@@ -70,8 +74,13 @@ def update_blackout_rule(
         raise HTTPException(
             status_code=404, detail="Blackout rule not found or access denied"
         )
+
     for key, value in rule_dto.dict().items():
         setattr(rule, key, value)
+
+    end_time = rule_dto.start_time + timedelta(seconds=rule_dto.duration_seconds)
+    rule.end_time = end_time
+
     session.add(rule)
     session.commit()
     session.refresh(rule)

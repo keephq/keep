@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Icon,
   Table,
@@ -22,7 +21,6 @@ import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { BlackoutRule } from "./model";
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
@@ -95,7 +93,7 @@ export default function BlackoutsTable({ blackouts, editCallback }: Props) {
       id: "enabled",
       header: "Enabled",
       cell: (context) => (
-        <div className="flex justify-center">
+        <div>
           {context.row.original.enabled ? (
             <Icon icon={IoCheckmark} size="md" color="orange" />
           ) : (

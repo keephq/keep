@@ -37,11 +37,8 @@ export default function Blackout() {
               title="Blackout rules do not exist"
               icon={MdWarning}
             >
-              <p className="text-slate-400">No blackout rules found.</p>
-              <p className="text-slate-400">
-                Configure new blackout rule using the blackout rules wizard to
-                the left.
-              </p>
+              No blackout rules found. Configure new blackout rule using the
+              blackout rules wizard to the left.
             </Callout>
           )}
         </div>
