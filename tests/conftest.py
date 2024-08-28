@@ -278,6 +278,7 @@ def is_keycloak_responsive(host, port, user, password):
         # Try to connect to Keycloak
         from keycloak import KeycloakAdmin
 
+        print("INIT KEYCLOAK")
         keycloak_admin = KeycloakAdmin(
             server_url=f"http://{host}:{port}/auth/admin",
             username=user,
@@ -285,10 +286,13 @@ def is_keycloak_responsive(host, port, user, password):
             realm_name="keeptest",
             verify=True,
         )
+        print("GET CLIENT")
         keycloak_admin.get_client_id("keep")
         return True
-    except Exception:
-        print("Keycloak still not up")
+    except Exception as e:
+        import time
+
+        print(f"Keycloak still not up [{e}] [{time.time()}]")
         pass
 
     return False
@@ -302,7 +306,7 @@ def keycloak_container(docker_ip, docker_services):
             yield
             return
         docker_services.wait_until_responsive(
-            timeout=60.0,
+            timeout=120.0,
             pause=1,
             check=lambda: is_keycloak_responsive(
                 "127.0.0.1",
