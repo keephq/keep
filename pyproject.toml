@@ -91,6 +91,7 @@ pandas = "^2.2.2"
 quickchart-io = "^2.0.0"
 scipy = "^1.14.1"
 networkx = "^3.3"
+prometheus-client = "^0.20.0"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
