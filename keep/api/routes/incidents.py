@@ -331,6 +331,7 @@ def delete_alerts_from_incident(
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
+    include_in_schema=False,
 )
 def mine(
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
