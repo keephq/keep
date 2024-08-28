@@ -20,6 +20,7 @@ if EE_ENABLED:
     from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa 
 else:
     mine_incidents_and_create_objects = NotImplemented
+    generate_update_incident_summary = NotImplemented
     ALGORITHM_VERBOSE_NAME = NotImplemented
 
 def is_ee_enabled_for_tenant(tenant_id: str, tenant_configuration=None) -> bool:
