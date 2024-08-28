@@ -1,0 +1,33 @@
+name: Tests
+on:
+  push:
+    paths:
+      - 'keep/**'
+  pull_request:
+    paths:
+      - 'keep/**'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+env:
+  PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+      - name: Install mintlify and validate docs
+        run: |
+          npm i -g mintlify
+          mintlify broken-links;
+          cd docs;
+          ./validate_mint_json.sh;
+  

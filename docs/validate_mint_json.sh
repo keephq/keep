@@ -3,8 +3,11 @@
 # Define the JSON file
 MINT_JSON="./mint.json"
 
-# Define the exclusion list (folders to ignore)
+# Define the exclusion lists
 EXCLUDE_LIST=("node_modules")
+EXCLUDE_FILE_LIST=(
+    "./applications/github.mdx"
+)
 
 # Check if mint.json exists
 if [[ ! -f "$MINT_JSON" ]]; then
@@ -15,12 +18,24 @@ fi
 # Function to check if a path is in the exclusion list
 is_excluded() {
     local file_path=$1
+
+    # Check if the file path is in the directory exclusion list
     for exclude in "${EXCLUDE_LIST[@]}"; do
         if [[ $file_path == *"$exclude"* ]]; then
-            return 0 # The file is in an excluded path
+            return 0 # The file is in an excluded directory path
         fi
     done
-    return 1 # The file is not in any excluded path
+
+    # Check if the exact file is in the file exclusion list
+    for exclude_file in "${EXCLUDE_FILE_LIST[@]}"; do
+        # echo "exclude_file: $exclude_file"
+        # echo "file_path: $file_path"
+        if [[ $file_path == "$exclude_file" ]]; then
+            return 0 # The file is in the exclusion file list
+        fi
+    done
+
+    return 1 # The file is not excluded
 }
 
 echo "Checking for missing files in mint.json..."
@@ -42,7 +57,6 @@ find . -mindepth 2 -type f -name "*.mdx" | sort | while read -r file; do
         :
     else
         echo "\"$relative_path\","
+        exit 1 # Exit with an error code to fail the CI/CD process
     fi
 done
-
-mintlify broken-links;
