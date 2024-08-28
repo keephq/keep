@@ -176,7 +176,6 @@ function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, s
     return;
   }
 
-
   const nodes = get().nodes;
   if (sourceId === 'trigger_start' && isTriggerComponent && nodes.find(node => node && step.id === node.id)) {
     return;
@@ -223,7 +222,6 @@ function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, s
   if (type == 'edge') {
     set({
       selectedEdge: edges[edges.length - 1]?.id,
-      selectedNode: newNodeId
     });
   }
 
@@ -231,6 +229,17 @@ function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, s
     set({ selectedNode: nodeOrEdge });
   }
 
+  switch(newNodeId){
+    case "interval": 
+    case "manual": {
+      set({v2Properties: {...get().v2Properties, [newNodeId]: ""}});
+      break;
+    }
+    case "alert": {
+      set({v2Properties: {...get().v2Properties, [newNodeId]: {}}});
+      break;
+    }
+  }
 }
 
 const useStore = create<FlowState>((set, get) => ({
