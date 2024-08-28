@@ -3,15 +3,30 @@ To execute the script and copy to clipboard:
 `
 cd scripts
 python get_providers_list.py | pbcopy
-`
+python get_providers_list.py --validate # To check docs/providers/overview.mdx
 """
 
 import glob
 import os
 import re
+import argparse
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
+
+def validate(providers_to_validate):
+    """
+    This function validates the providers to be added to the overview.md file.
+    """
+    overview_file = "./../docs/providers/overview.mdx"
+    with open(overview_file, "r") as file:
+        overview_content = file.read()
+
+        for provider in providers_to_validate:
+            if provider not in overview_content:
+                print(f"""Provider {provider} is not in the docs/providers/overview.md file,
+use scripts/get_providers_list.py to generate recent providers list and update the file.""")
+                exit(1)
 
 def main():
     """
@@ -32,7 +47,8 @@ def main():
                         url = "/providers/documentation/" + file_path.replace(
                             "./../docs/providers/documentation/", ""
                         ).replace(".mdx", "")
-                        provider_name = match.group(1).replace("Provider", "").strip()
+                        provider_name = match.group(
+                            1).replace("Provider", "").strip()
 
                         # Due to https://github.com/keephq/keep/pull/1239#discussion_r1643196800
                         if "Slack" in provider_name:
@@ -48,6 +64,7 @@ def main():
     }
 
     mintlify_cards = "<CardGroup cols={3}>\n"
+    providers_to_validate = []
     for provider_name, url in files_to_docs_urls.items():
         # For logo dev we need to remove spaces and get the first part of the name
         # e.g., grafana-on-call -> grafana
@@ -73,15 +90,27 @@ def main():
             provider_name_logo_dev += ".com"
         svg_icon = f'<img src="https://img.logo.dev/{provider_name_logo_dev}?token={LOGO_DEV_PUBLISHABLE_KEY}" />'
         if svg_icon:
-            mintlify_cards += f"""
+            new_card = f"""
 <Card
   title="{provider_name}"
   href="{url}"
   icon={{ {svg_icon} }}
 ></Card>
 """
+            mintlify_cards += new_card
+            providers_to_validate.append(provider_name)
     mintlify_cards += "</CardGroup>"
-    print(mintlify_cards)
+
+    # Checking --validate flag
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--validate", action="store_true")
+    args = parser.parse_args()
+
+    # If --validate flag is set, print the list of providers to validate
+    if args.validate:
+        validate(providers_to_validate=providers_to_validate)
+    else:
+        print(mintlify_cards)
 
 
 if __name__ == "__main__":

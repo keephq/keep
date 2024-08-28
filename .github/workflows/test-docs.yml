@@ -1,4 +1,4 @@
-name: Tests
+name: Test docs
 on:
   push:
     paths:
@@ -24,11 +24,16 @@ jobs:
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install mintlify and validate docs
         run: |
           npm i -g mintlify
           cd docs && mintlify broken-links;
           ./validate_navigation.sh;
+          cd ../scripts && python3 get_providers_list.py --validate;
+
           # Todo: validate if openapi schema is matching with the code
-          # Todo: validate if providers are matching with the code
   
