@@ -2556,13 +2556,13 @@ def get_pmi_values(
     return pmi_values
 
 
-def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
+def update_incident_summary(tenant_id: str, incident_id: UUID, summary: str) -> Incident:
     if not summary:
         return
     
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(Incident.id == incident_id)
+            select(Incident).where(Incident.tenant_id == tenant_id).where(Incident.id == incident_id)
         ).first()
 
         if not incident:
