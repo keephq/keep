@@ -200,7 +200,7 @@ export default function Ai() {
                   className={"p-4 flex flex-col w-full border-white border-2"}
                 >
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
-                    Summorization v0.1
+                    Summarization v0.1
                   </h3>
                   <p className="text-sm top-0">
                     Using LLMs to provide a human-readable incident summary.
