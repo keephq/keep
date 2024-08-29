@@ -20,7 +20,7 @@ env:
 
 jobs:
   tests:
-    runs-on: depot-ubuntu-22.04
+    runs-on: ubuntu-22.04
     services:
       mysql:
         image: mysql:5.7
