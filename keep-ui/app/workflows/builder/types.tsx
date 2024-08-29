@@ -20,6 +20,13 @@ export interface WorkflowExecution {
   execution_time?: number;
 }
 
+export interface PaginatedWorkflowExecutionDto {
+  limit: number;
+  offset: number;
+  count: number;
+  items: WorkflowExecution[];
+}
+
 export type WorkflowExecutionFailure = Pick<WorkflowExecution, "error">;
 
 export function isWorkflowExecution(data: any): data is WorkflowExecution {

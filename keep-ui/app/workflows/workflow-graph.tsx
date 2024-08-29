@@ -34,11 +34,14 @@ Chart.register(
 
 const show_real_data = true;
 
-export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
+export default function WorkflowGraph({ workflow, limit = 15, showAll, size }: { workflow: Partial<Workflow>, limit?: number, size?: string, showAll?: boolean }) {
   const router = useRouter();
   const lastExecutions = useMemo(() => {
     let executions =
-      workflow?.last_executions?.slice(0, 15) || [];
+      workflow?.last_executions?.slice(0, limit) || [];
+    if (showAll) {
+      return executions.reverse();
+    }
     //as discussed making usre if all the executions are providers_not_configured. thne ignoring it
     const providerNotConfiguredExecutions = executions.filter(
       (execution) => execution?.status === "providers_not_configured"
@@ -116,13 +119,31 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
     );
   }
 
+  let height = "h-36";
+  switch (size) {
+    case "sm":
+      height = "h-24";
+      break;
+    case "md":
+      height = "h-36";
+
+      break;
+    case "lg":
+      height = "h-48";
+      break;
+    default:
+      height = "h-36";
+  }
+
   return (
-    <div className="flex felx-row items-end justify-start h-36 flex-nowrap w-full">
+    <div className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}>
       <div>{getIcon()}</div>
       <div
-        className="overflow-hidden h-32 w-full flex-shrink-1"
+        className={`overflow-hidden ${height} w-full`}
         onClick={() => {
-          router.push(`/workflows/${workflow.id}`);
+          if (workflow.id) {
+            router.push(`/workflows/${workflow.id}`);
+          }
         }}
       >
         <Bar data={chartData} options={chartOptions} />

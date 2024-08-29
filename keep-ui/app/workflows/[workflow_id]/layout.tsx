@@ -42,24 +42,24 @@ export default function Layout({
       </div>
       <Card className="relative flex p-4 w-full justify-between gap-8">
 
-        <div className="pt-6 space-y-8 w-1/6 sticky top-20">
-          <div>
-            <Title>{workflow && `${workflow.name}`}</Title>
+        <div className="flex flex-col gap-10 pt-6 w-1/6 top-20 p-1">
+          <div className="flex-2 h-36">
+            <h1 className="text-2xl truncate">{workflow && `${workflow.name}`}</h1>
             {workflow && (
-              <Text>
-                <span>{workflow.description}{"testing the description if it is overflowing or trucnating or how it is working"}</span>
+              <Text clamp-lines={3}>
+                <span>{workflow.description}</span>
               </Text>
             )}
           </div>
-          <>
+          <div className="flex-1 space-y-8">
             {workflow && <Disclosure as="div" className="space-y-1" defaultOpen>
               {({ open }) => (
                 <>
                   <Disclosure.Button className="w-full flex justify-between items-center">
                     <div className="flex items-center relative group">
-                      <Subtitle className="text-xs ml-2 text-gray-900 uppercase font-bold">
+                      <Title className="ml-2 text-gray-900 font-bold">
                         Analyse
-                      </Subtitle>
+                      </Title>
                     </div>
                     <IoChevronUp
                       className={classNames(
@@ -84,15 +84,14 @@ export default function Layout({
                 </>
               )}
             </Disclosure>}
-          </>
           {workflow && <Disclosure as="div" className="space-y-1" defaultOpen>
             {({ open }) => (
               <>
                 <Disclosure.Button className="w-full flex justify-between items-center">
                   <div className="flex items-center relative group">
-                    <Subtitle className="text-xs ml-2 text-gray-900 font-bold uppercase">
+                    <Title className="ml-2 text-gray-900 font-bold">
                       Manage
-                    </Subtitle>
+                    </Title>
                   </div>
                   <IoChevronUp
                     className={classNames(
@@ -133,14 +132,14 @@ export default function Layout({
               </>
             )}
           </Disclosure>}
-          {workflow && <Disclosure as="div" className="space-y-1" defaultOpen>
+          {workflow && <Disclosure as="div" defaultOpen>
             {({ open }) => (
               <>
                 <Disclosure.Button className="w-full flex justify-between items-center">
                   <div className="flex items-center relative group">
-                    <Subtitle className="text-xs ml-2 text-gray-900 font-bold uppercase">
+                    <Title className="ml-2 text-gray-900 font-bold">
                       Learn
-                    </Subtitle>
+                    </Title>
                   </div>
                   <IoChevronUp
                     className={classNames(
@@ -173,6 +172,7 @@ export default function Layout({
               </>
             )}
           </Disclosure>}  
+          </div>
 
         </div>
         <div className="flex-1 overflow-auto">{children}</div>
