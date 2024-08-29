@@ -387,6 +387,7 @@ class OpenobserveProvider(BaseProvider):
         description = event.pop("alert_type", "")
 
         alert_url = event.pop("alert_url", "")
+
         org_name = event.pop("org_name", "")
         # Our only way to distinguish between non aggregated alert and aggregated alerts is the alert_agg_value
         if "alert_agg_value" in event and len(
@@ -435,7 +436,15 @@ class OpenobserveProvider(BaseProvider):
                             "group_by_value": group_by_value,
                         },
                     )
+
                     alert_id = str(uuid.uuid4())
+
+                    # we already take the value from the agg_value
+                    event.pop("value", "")
+                    # if the group_by_key is already in the event, remove it
+                    #   since we are adding it to the alert_dto
+                    event.pop(group_by_key, "")
+
                     alert_dto = AlertDto(
                         id=f"{alert_id}",
                         name=f"{name}",
@@ -448,7 +457,7 @@ class OpenobserveProvider(BaseProvider):
                         source=["openobserve"],
                         org_name=org_name,
                         value=value,
-                        url=alert_url,
+                        alert_url=alert_url,  # I'm not putting on URL since sometimes it doesn't return full URL so pydantic will throw an error
                         **event,
                         **{group_by_key: group_by_value},
                     )
@@ -487,7 +496,7 @@ class OpenobserveProvider(BaseProvider):
                 labels=labels,
                 source=["openobserve"],
                 org_name=org_name,
-                url=alert_url,
+                alert_url=alert_url,  # I'm not putting on URL since sometimes it doesn't return full URL so pydantic will throw an error
                 **event,  # any other fields
             )
             # calculate fingerprint based on name + environment + event keys (e.g. host)
