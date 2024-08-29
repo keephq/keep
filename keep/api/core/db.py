@@ -564,28 +564,59 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         session.commit()
 
 
-def get_workflow_executions(tenant_id, workflow_id, limit=50):
+def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2):
     with Session(engine) as session:
-        workflow_executions = session.exec(
-            select(
-                WorkflowExecution.id,
-                WorkflowExecution.workflow_id,
-                WorkflowExecution.started,
-                WorkflowExecution.status,
-                WorkflowExecution.triggered_by,
-                WorkflowExecution.execution_time,
-                WorkflowExecution.error,
+        query = (
+            session.query(
+                WorkflowExecution,
             )
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(
-                WorkflowExecution.started
-                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            .filter(
+                WorkflowExecution.tenant_id == tenant_id,
+                WorkflowExecution.workflow_id == workflow_id
             )
-            .order_by(WorkflowExecution.started.desc())
-            .limit(limit)
-        ).all()
-    return workflow_executions
+            .order_by(desc(WorkflowExecution.started))
+        )
+
+        now = datetime.now(tz=timezone.utc)
+        timeframe = None
+
+        if tab == 1:
+            timeframe = now - timedelta(days=30)
+        elif tab == 2:
+            timeframe = now - timedelta(days=7)
+        elif tab == 3:
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(
+                WorkflowExecution.started >= start_of_day,
+                WorkflowExecution.started <= now
+            )
+
+        if timeframe:
+            query = query.filter(
+                WorkflowExecution.started >= timeframe
+            )
+
+        total_count = query.count()
+        status_counts = session.query(
+            WorkflowExecution.status,
+            func.count().label('count')
+        ).group_by(WorkflowExecution.status).all()
+
+        statusGroupbyMap = {status: count for status, count in status_counts}
+        
+        passCount = statusGroupbyMap.get('success', 0)
+        failCount = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)
+        passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
+        
+        avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
+        avgDuration = avgDuration if avgDuration else 0.0
+        # Order by start_time in descending order and limit the results
+        query = query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+        
+        # Execute the query
+        workflow_executions = query.all()
+
+    return total_count, workflow_executions, passFail, avgDuration
 
 
 def delete_workflow(tenant_id, workflow_id):

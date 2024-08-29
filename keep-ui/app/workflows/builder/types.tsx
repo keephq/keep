@@ -1,4 +1,5 @@
 import { Step } from "sequential-workflow-designer";
+import { Workflow } from "../models";
 export interface KeepStep extends Step {}
 
 export interface LogEntry {
@@ -25,6 +26,9 @@ export interface PaginatedWorkflowExecutionDto {
   offset: number;
   count: number;
   items: WorkflowExecution[];
+  workflow: Workflow;
+  avgDuration: number;
+  passFail: number;
 }
 
 export type WorkflowExecutionFailure = Pick<WorkflowExecution, "error">;

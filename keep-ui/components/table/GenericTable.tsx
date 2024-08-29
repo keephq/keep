@@ -24,7 +24,7 @@ interface GenericTableProps<T> {
     rowCount: number;
     offset: number;
     limit: number;
-    onPaginationChange: ({ limit, offset }: { limit: number, offset: number }) => void;
+    onPaginationChange: ( limit: number, offset: number ) => void;
     onRowClick?: (row: T) => void;
 }
 
@@ -39,23 +39,24 @@ export function GenericTable<T>({
 }: GenericTableProps<T>) {
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [pagination, setPagination] = useState({
-        pageIndex: Math.ceil(offset / limit),
+        pageIndex: Math.floor(offset / limit),
         pageSize: limit,
     });
 
     useEffect(() => {
-        if (limit !== pagination.pageSize) {
-            onPaginationChange({
-                limit: pagination.pageSize,
-                offset: 0,
-            });
-        }
+        setPagination({
+            pageIndex: Math.floor(offset / limit),
+            pageSize: limit,
+        });
+    }, [offset, limit]);
+
+    useEffect(() => {
         const currentOffset = pagination.pageSize * pagination.pageIndex;
-        if (offset !== currentOffset) {
-            onPaginationChange({
-                limit: pagination.pageSize,
-                offset: currentOffset,
-            });
+        if (offset !== currentOffset || limit !== pagination.pageSize) {
+            onPaginationChange(
+                pagination.pageSize,
+                currentOffset
+            );
         }
     }, [pagination]);
 
@@ -65,8 +66,11 @@ export function GenericTable<T>({
         state: { expanded, pagination },
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,
-        rowCount,
-        onPaginationChange: setPagination,
+        pageCount: Math.ceil(rowCount / limit), // Pass the total pages to React Table
+        onPaginationChange: (updater) => {
+            const nextPagination = typeof updater === "function" ? updater(pagination) : updater;
+            setPagination(nextPagination);
+        },
         onExpandedChange: setExpanded,
     });
 
@@ -112,7 +116,10 @@ export function GenericTable<T>({
                 </TremorTable>
             </div>
             <div className="mt-4">
-                <Pagination table={table} isRefreshAllowed={true} />
+                {pagination&&<Pagination
+                    table={table}
+                    isRefreshAllowed={false}
+                />}
             </div>
         </div>
     );

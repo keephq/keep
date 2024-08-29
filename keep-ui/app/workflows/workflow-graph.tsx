@@ -34,11 +34,22 @@ Chart.register(
 
 const show_real_data = true;
 
-export default function WorkflowGraph({ workflow, limit = 15, showAll, size }: { workflow: Partial<Workflow>, limit?: number, size?: string, showAll?: boolean }) {
+export default function WorkflowGraph({
+  showLastExecutionStatus = true,
+  workflow,
+  limit = 15,
+  showAll,
+  size,
+}: {
+  showLastExecutionStatus?: boolean;
+  workflow: Partial<Workflow>;
+  limit?: number;
+  size?: string;
+  showAll?: boolean;
+}) {
   const router = useRouter();
   const lastExecutions = useMemo(() => {
-    let executions =
-      workflow?.last_executions?.slice(0, limit) || [];
+    let executions = workflow?.last_executions?.slice(0, limit) || [];
     if (showAll) {
       return executions.reverse();
     }
@@ -136,8 +147,10 @@ export default function WorkflowGraph({ workflow, limit = 15, showAll, size }: {
   }
 
   return (
-    <div className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}>
-      <div>{getIcon()}</div>
+    <div
+      className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}
+    >
+      {showLastExecutionStatus &&<div>{getIcon()}</div>}
       <div
         className={`overflow-hidden ${height} w-full`}
         onClick={() => {
