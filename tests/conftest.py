@@ -278,10 +278,6 @@ def is_keycloak_responsive(host, port, user, password):
         # Try to connect to Keycloak
         from keycloak import KeycloakAdmin
 
-        print("INIT KEYCLOAK")
-        print("host", host)
-        print("port", port)
-        print("user", user)
         print(KeycloakAdmin)
         keycloak_admin = KeycloakAdmin(
             server_url=f"http://{host}:{port}/auth/admin",
@@ -290,13 +286,6 @@ def is_keycloak_responsive(host, port, user, password):
             realm_name="keeptest",
             verify=True,
         )
-        print("GET CLIENT")
-        # increase verbosity of requests library
-        import logging
-
-        requests_log = logging.getLogger("requests.packages.urllib3")
-        requests_log.setLevel(logging.DEBUG)
-        print(keycloak_admin.get_client_id)
         keycloak_admin.get_client_id("keep")
         return True
     except Exception as e:
@@ -404,8 +393,13 @@ def keycloak_client(request):
     os.environ["KEEP_PASSWORD"] = "testpassword"
     os.environ["KEYCLOAK_CLIENT_ID"] = "keep"
     os.environ["KEYCLOAK_CLIENT_SECRET"] = "keycloaktestsecret"
+    # SHAHAR: this is a workaround since the api.py patches the request
+    #         and Keycloak's library needs to allow redirect :(
+    from keep.api.api import no_redirect_request, original_request
     from keycloak import KeycloakAdmin
 
+    requests.Session.request = original_request
+    # load the fixture
     request.getfixturevalue("keycloak_container")
     keycloak_admin = KeycloakAdmin(
         server_url=os.environ["KEYCLOAK_URL"],
@@ -437,6 +431,8 @@ def keycloak_client(request):
         user_id, client_id, [{"id": role_id, "name": "admin"}]
     )
     yield keycloak_admin
+
+    requests.Session.request = no_redirect_request
     print("Done with keycloak")
 
 
