@@ -24,8 +24,6 @@ services:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
-    depends_on:
-      - keep-backend
 
   keep-backend:
     extends:
