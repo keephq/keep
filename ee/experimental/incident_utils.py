@@ -10,6 +10,7 @@ from openai import OpenAI
 
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
+from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     create_incident_from_dict,
@@ -25,6 +26,7 @@ from keep.api.models.db.alert import Alert, Incident
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
+SUMMARY_GENERATOR_VERBOSE_NAME = "Summary generator v0.1"
 USE_N_HISTORICAL_ALERTS_MINING = 10e4
 USE_N_HISTORICAL_ALERTS_PMI = 10e4
 USE_N_HISTORICAL_INCIDENTS = 10e4
@@ -244,6 +246,8 @@ async def mine_incidents_and_create_objects(
         },
     )
 
+    incident_ids_for_summary_generation = []
+
     for component in nx.connected_components(graph):
         if len(component) > min_incident_size:
             alerts_appended = False
@@ -265,9 +269,7 @@ async def mine_incidents_and_create_objects(
                             if alert.fingerprint in component
                         ],
                     )
-
-                    summary = generate_incident_summary(incident)
-                    update_incident_summary(incident.id, summary)
+                    incident_ids_for_summary_generation.append(incident.id)
 
             if not alerts_appended:
                 incident_start_time = min(
@@ -294,9 +296,27 @@ async def mine_incidents_and_create_objects(
                     incident.id,
                     [alert.id for alert in alerts if alert.fingerprint in component],
                 )
+                incident_ids_for_summary_generation.append(incident.id)
 
-                summary = generate_incident_summary(incident)
-                update_incident_summary(incident.id, summary)
+    if not ctx:
+        pool = await get_pool()
+    else:
+        pool = ctx["redis"]
+
+    for incident_id in incident_ids_for_summary_generation:
+        job = await pool.enqueue_job(
+            "process_summary_generation",
+            tenant_id=tenant_id,
+            incident_id=incident_id,
+        )
+        logger.info(
+            f"Summary generation for incident {incident_id} scheduled, job: {job}",
+            extra={
+                "algorithm": ALGORITHM_VERBOSE_NAME,
+                "tenant_id": tenant_id,
+                "incident_id": incident_id,
+            },
+        )
 
     pusher_client = get_pusher_client()
     if pusher_client:
@@ -638,3 +658,11 @@ def generate_incident_summary(
     except Exception as e:
         logger.error(f"Error in generating incident summary: {e}")
         return ""
+
+
+async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str):
+    incident = get_incident_by_id(tenant_id, incident_id)
+    summary = generate_incident_summary(incident)
+    update_incident_summary(tenant_id, incident_id, summary)
+
+    return summary

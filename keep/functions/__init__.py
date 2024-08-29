@@ -128,7 +128,33 @@ def json_dumps(data: str | dict) -> str:
 
 
 def json_loads(data: str) -> dict:
-    return json.loads(data)
+
+    def parse_bad_json(bad_json):
+        # Remove or replace control characters
+        control_char_regex = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+
+        def replace_control_char(match):
+            char = match.group(0)
+            return f"\\u{ord(char):04x}"
+
+        cleaned_json = control_char_regex.sub(replace_control_char, bad_json)
+
+        # Parse the cleaned JSON
+        return json.loads(cleaned_json)
+
+    # in most cases, we don't need escaping
+    try:
+        d = json.loads(data)
+    except json.JSONDecodeError:
+        try:
+            d = parse_bad_json(data)
+        except json.JSONDecodeError:
+            d = {}
+    # catch any other exceptions
+    except Exception:
+        d = {}
+
+    return d
 
 
 def replace(string: str, old: str, new: str) -> str:

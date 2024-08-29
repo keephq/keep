@@ -16,11 +16,13 @@ if EE_ENABLED:
     )
     sys.path.insert(0, path_with_ee)
 
-    from ee.experimental.incident_utils import mine_incidents_and_create_objects  # noqa
-    from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa 
+    from ee.experimental.incident_utils import mine_incidents_and_create_objects, generate_update_incident_summary  # noqa
+    from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME, SUMMARY_GENERATOR_VERBOSE_NAME # noqa 
 else:
     mine_incidents_and_create_objects = NotImplemented
+    generate_update_incident_summary = NotImplemented
     ALGORITHM_VERBOSE_NAME = NotImplemented
+    SUMMARY_GENERATOR_VERBOSE_NAME = NotImplemented
 
 def is_ee_enabled_for_tenant(tenant_id: str, tenant_configuration=None) -> bool:
     if not EE_ENABLED:

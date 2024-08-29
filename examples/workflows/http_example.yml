@@ -9,5 +9,5 @@ workflow:
         with:
           method: POST
           body:
-            alert: keep.json_loads('abc')
-          url: "http://localhost:8123"
+            alert: keep.json_loads('{{ alert }}')
+          url: "http://localhost:8080"
