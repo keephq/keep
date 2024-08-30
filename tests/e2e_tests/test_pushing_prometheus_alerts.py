@@ -34,12 +34,12 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")
-        browser.get_by_text("Available Providers").hover()
-        browser.locator("div").filter(
-            has_text=re.compile(r"^prometheus dataalertConnect$")
-        ).nth(1).hover()
+        browser.get_by_text("Connect Provider").hover()
+        browser.locator("button").filter(
+            has_text=re.compile(r"^prometheus dataalert$")
+        ).first.hover()
 
-        browser.get_by_role("button", name="Connect").click()
+        browser.locator("button:has-text('prometheus')").click()
         browser.get_by_placeholder("Enter provider name").click()
         browser.get_by_placeholder("Enter provider name").fill(provider_name)
         browser.get_by_placeholder("Enter url").click()
@@ -55,11 +55,11 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         )
 
         browser.mouse.wheel(1000, 10000)  # Scroll down.
-        browser.get_by_role("button", name="Connect").click()
+        browser.get_by_role("button", name="Connect", exact=True).click()
 
         # Validate provider is created
         expect(
-            browser.locator("div")
+            browser.locator("button")
             .filter(has_text=re.compile(re.escape(provider_name)))
             .first
         ).to_be_visible()
@@ -92,7 +92,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Delete provider
         browser.get_by_role("link", name="Providers").click()
-        browser.locator("div").filter(
+        browser.locator("button").filter(
             has_text=re.compile(re.escape(provider_name))
         ).first.hover()
         browser.locator(".tile-basis").first.click()
@@ -101,7 +101,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Assert provider was deleted
         expect(
-            browser.locator("div")
+            browser.locator("button")
             .filter(has_text=re.compile(re.escape(provider_name)))
             .first
         ).not_to_be_visible()

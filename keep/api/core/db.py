@@ -2303,6 +2303,18 @@ def add_alerts_to_incident_by_incident_id(
         return incident
 
 
+def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> int:
+    with Session(engine) as session:
+        return session.execute(
+            select(func.count(1))
+            .select_from(AlertToIncident)
+            .join(Alert, AlertToIncident.alert_id == Alert.id)
+            .where(
+                Alert.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident_id,
+            )
+        ).scalar()
+
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
@@ -2556,13 +2568,13 @@ def get_pmi_values(
     return pmi_values
 
 
-def update_incident_summary(incident_id: UUID, summary: str) -> Incident:
+def update_incident_summary(tenant_id: str, incident_id: UUID, summary: str) -> Incident:
     if not summary:
         return
     
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(Incident.id == incident_id)
+            select(Incident).where(Incident.tenant_id == tenant_id).where(Incident.id == incident_id)
         ).first()
 
         if not incident:
