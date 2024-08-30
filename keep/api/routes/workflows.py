@@ -27,7 +27,8 @@ from keep.api.core.db import (
     get_workflow,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.core.db import get_workflow_id_by_name
+from keep.api.core.db import get_workflow_by_name
+from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
@@ -66,7 +67,7 @@ tracer = trace.get_tracer(__name__)
 )
 def get_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
     is_v2: Optional[bool] = Query(False, alias="is_v2", type=bool),
 ) -> list[WorkflowDTO] | list[dict]:
@@ -188,7 +189,7 @@ def get_workflows(
 )
 def export_workflows(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
 ) -> list[str]:
     tenant_id = authenticated_entity.tenant_id
@@ -206,7 +207,7 @@ def run_workflow(
     workflow_id: str,
     body: Optional[Dict[Any, Any]] = Body(None),
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+        AuthVerifier(["write:workflows"])
     ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
@@ -270,7 +271,7 @@ async def run_workflow_from_definition(
     request: Request,
     file: UploadFile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+        AuthVerifier(["write:workflows"])
     ),
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
@@ -338,7 +339,7 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
 async def create_workflow(
     file: UploadFile,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+        AuthVerifier(["write:workflows"])
     ),
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
@@ -377,7 +378,7 @@ async def create_workflow(
 async def create_workflow_from_body(
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+        AuthVerifier(["write:workflows"])
     ),
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
@@ -416,7 +417,7 @@ async def create_workflow_from_body(
 @router.get("/random-templates", description="Get random workflow templates")
 def get_random_workflow_templates(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
 ) -> list[dict]:
     tenant_id = authenticated_entity.tenant_id
@@ -440,7 +441,7 @@ async def update_workflow_by_id(
     workflow_id: str,
     request: Request,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:workflows"])
+        AuthVerifier(["write:workflows"])
     ),
     session: Session = Depends(get_session),
 ) -> WorkflowCreateOrUpdateDTO:
@@ -492,7 +493,7 @@ async def update_workflow_by_id(
 def get_raw_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
 ) -> str:
     tenant_id = authenticated_entity.tenant_id
@@ -510,7 +511,7 @@ def get_raw_workflow_by_id(
 @router.get("/executions", description="Get workflow executions by alert fingerprint")
 def get_workflow_executions_by_alert_fingerprint(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
     session: Session = Depends(get_session),
 ) -> list[WorkflowToAlertExecutionDTO]:
@@ -543,7 +544,7 @@ def get_workflow_by_id(
     trigger: Optional[List[str]] = Query(None),
     execution_id: Optional[str] = None,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
@@ -580,7 +581,7 @@ def get_workflow_by_id(
 def delete_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["delete:workflows"])
+        AuthVerifier(["delete:workflows"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -596,7 +597,7 @@ def delete_workflow_by_id(
 def get_workflow_execution_status(
     workflow_execution_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
 ) -> WorkflowExecutionDTO:
     tenant_id = authenticated_entity.tenant_id
@@ -642,7 +643,7 @@ def get_workflow_execution_status(
 )
 def get_workflow_executions(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+        AuthVerifier(["read:workflows"])
     ),
     workflow_execution_id: Optional[str] = Query(
         None, description="Workflow execution ID"
