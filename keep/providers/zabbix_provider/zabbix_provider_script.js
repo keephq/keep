@@ -35,7 +35,7 @@ try {
   resp = req.post(keepApiUrl, JSON.stringify(params));
   Zabbix.log(4, '[Keep Webhook] Received response: HTTP ' + req.getStatus() + ': ' + resp);
 
-  if (req.getStatus() != 200) {
+  if (req.getStatus() != 202) {
       throw 'Response code not 200';
       Zabbix.log(3, '[Keep Webhook] Error:' + JSON.stringify(resp));
   }

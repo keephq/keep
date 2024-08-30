@@ -24,20 +24,6 @@ STATIC_PRESETS = {
         static=True,
         tags=[],
     ),
-    "groups": PresetDto(
-        id=StaticPresetsId.GROUPS_PRESET_ID.value,
-        name="groups",
-        options=[
-            {"label": "CEL", "value": "group"},
-            {"label": "SQL", "value": {"sql": '"group"=true', "params": {}}},
-        ],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        static=True,
-        tags=[],
-    ),
     "dismissed": PresetDto(
         id=StaticPresetsId.DISMISSED_PRESET_ID.value,
         name="dismissed",
@@ -55,14 +41,14 @@ STATIC_PRESETS = {
 }
 
 ###
-# Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai" 
+# Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai"
 # to split the tasks between the workers.
 ###
 
 KEEP_ARQ_TASK_POOL_NONE = "none"  # Arq workers explicitly disabled for this service
 KEEP_ARQ_TASK_POOL_ALL = "all"  # All arq workers enabled for this service
-KEEP_ARQ_TASK_POOL_BASIC_PROCESSING = "basic_processing" # Everything except AI
-KEEP_ARQ_TASK_POOL_AI = "ai" # Only AI
+KEEP_ARQ_TASK_POOL_BASIC_PROCESSING = "basic_processing"  # Everything except AI
+KEEP_ARQ_TASK_POOL_AI = "ai"  # Only AI
 
 REDIS = os.environ.get("REDIS", "false") == "true"
 KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)
