@@ -390,7 +390,7 @@ class JiraonpremProvider(BaseProvider):
                 }
             }
 
-            self.logger.info("Updated a jira issue: " + str(result))
+            self.logger.info("Updated an issue!")
             return result
         
         except Exception as e:
@@ -516,7 +516,7 @@ class JiraonpremProvider(BaseProvider):
 
                 result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
 
-                self.logger.info("Updated jira: " + result)
+                self.logger.info("Updated a jira issue: " + str(result))
                 return result               
 
             if not project_key:
