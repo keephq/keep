@@ -447,8 +447,8 @@ class JiraProvider(BaseProvider):
                 project_key = self._extract_project_key_from_board_name(board_name)
             if not project_key or not summary or not issue_type or not description:
                 raise ProviderException(
-                f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
-            )
+                    f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
+                )
 
             result = self.__create_issue(
                 project_key=project_key,

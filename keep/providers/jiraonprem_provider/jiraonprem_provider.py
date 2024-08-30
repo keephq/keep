@@ -494,13 +494,7 @@ class JiraonpremProvider(BaseProvider):
         Notify jira by creating an issue.
         """
         # if the user didn't provider a project_key, try to extract it from the board name
-        if not project_key:
-            project_key = self._extract_project_key_from_board_name(board_name)
         issue_type = issue_type if issue_type else kwargs.get("issuetype", "Task")
-        if not project_key or not summary or not issue_type or not description:
-            raise ProviderException(
-                f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
-            )
         if labels and isinstance(labels, str):
             labels = json.loads(labels.replace("'", '"'))
         try:
@@ -524,6 +518,13 @@ class JiraonpremProvider(BaseProvider):
 
                 self.logger.info("Updated jira: " + result)
                 return result               
+
+            if not project_key:
+                project_key = self._extract_project_key_from_board_name(board_name)
+            if not project_key or not summary or not issue_type or not description:
+                raise ProviderException(
+                    f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
+                )           
 
             result = self.__create_issue(
                 project_key=project_key,
