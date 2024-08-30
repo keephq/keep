@@ -36,18 +36,10 @@ try {
   Zabbix.log(4, '[Keep Webhook] Received response: HTTP ' + req.getStatus() + ': ' + resp);
 
   if (req.getStatus() != 202) {
-      throw 'Response code not 200';
-      Zabbix.log(3, '[Keep Webhook] Error:' + JSON.stringify(resp));
+    throw 'Response code not 202';
   }
   else {
-      try {
-          resp = JSON.parse(resp);
-      }
-      catch (error) {
-          throw 'Incorrect response. Keep returned a non-JSON object.';
-          Zabbix.log(3, '[Keep Webhook] Error: Incorrect response. Keep returned a non-JSON object ' + JSON.stringify(resp));
-      }
-      return JSON.stringify(result);
+    return resp;
   }
 }
 catch (error) {
