@@ -24,8 +24,8 @@ export default function SideNavBar({ workflow }: { workflow: Workflow }) {
     ];
 
     const learnLinks = [
-        { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Tutorials', isLink: true },
-        { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Documentation', isLink: true },
+        { href: `https://www.youtube.com/@keepalerting`, icon: FaSitemap, label: 'Tutorials', isLink: true , newTab:true},
+        { href: `https://docs.keephq.dev`, icon: CiUser, label: 'Documentation', isLink: true, newTab: true },
     ];
 
     return (

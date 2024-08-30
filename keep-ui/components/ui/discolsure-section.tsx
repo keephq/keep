@@ -14,6 +14,7 @@ interface DisclosureSectionProps {
     label: string;
     isLink: boolean;
     handleClick?: (e:any) => void;
+    newTab?: boolean;
   }>;
 }
 
@@ -39,7 +40,11 @@ export function DisclosureSection({ title, links }: DisclosureSectionProps) {
           >
             {links.map((link, index) => (
               <li key={index}>
-                <LinkWithIcon href={link.isLink ? link.href : "#"} icon={link.icon as IconType}>
+                <LinkWithIcon 
+                href={link.isLink ? link.href : "#"}
+                 icon={link.icon as IconType}
+                 target= {link.newTab ? "_blank": ""}
+                 >
                   <Subtitle onClick={link.handleClick? link.handleClick: ()=>{}}>{link.label}</Subtitle>
                 </LinkWithIcon>
               </li>
