@@ -649,7 +649,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
-          <WorkflowGraph workflow={workflow} showAll={true}/>
+          <WorkflowGraph workflow={workflow} />
           <div className="container flex flex-col space-between">
             <div className="h-24">
               <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
