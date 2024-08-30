@@ -1,7 +1,7 @@
 import { Disclosure } from '@headlessui/react';
 import classNames from 'classnames';
 import { IoChevronUp } from 'react-icons/io5';
-import { Title, Subtitle } from "@tremor/react";
+import { Title, Subtitle, Button } from "@tremor/react";
 import { LinkWithIcon } from '@/components/LinkWithIcon';
 import React from 'react';
 import { IconType } from 'react-icons';
@@ -10,8 +10,10 @@ interface DisclosureSectionProps {
   title: string;
   links: Array<{
     href: string;
-    icon: IconType;  // Updated to use IconType from react-icons
+    icon: IconType | React.ReactNode;
     label: string;
+    isLink: boolean;
+    handleClick?: (e:any) => void;
   }>;
 }
 
@@ -37,8 +39,8 @@ export function DisclosureSection({ title, links }: DisclosureSectionProps) {
           >
             {links.map((link, index) => (
               <li key={index}>
-                <LinkWithIcon href={link.href} icon={link.icon}>
-                  <Subtitle>{link.label}</Subtitle>
+                <LinkWithIcon href={link.isLink ? link.href : "#"} icon={link.icon as IconType}>
+                  <Subtitle onClick={link.handleClick? link.handleClick: ()=>{}}>{link.label}</Subtitle>
                 </LinkWithIcon>
               </li>
             ))}

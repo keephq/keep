@@ -1,44 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CiUser } from 'react-icons/ci';
 import { FaSitemap } from 'react-icons/fa';
 import { AiOutlineSwap } from 'react-icons/ai';
 import { Workflow } from '../models';
 import { Text } from "@tremor/react";
 import { DisclosureSection } from '@/components/ui/discolsure-section';
+import { useWorkflowRun } from 'utils/hooks/useWorkflowRun';
+import Modal from 'react-modal';
+import BuilderWorkflowTestRunModalContent from '../builder/builder-workflow-testrun-modal';
+import BuilderModalContent from '../builder/builder-modal';
 
 export default function SideNavBar({ workflow }: { workflow: Workflow }) {
-  if (!workflow) return null;
+    const [viewYaml, setviewYaml] = useState(false);
 
-  const analyseLinks = [
-    { href: `/workflows/${workflow.id}`, icon: AiOutlineSwap, label: 'Overview' },
-  ];
+    const analyseLinks = [
+        { href: `/workflows/${workflow.id}`, icon: AiOutlineSwap, label: 'Overview', isLink: true },
+    ];
 
-  const manageLinks = [
-    { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Workflow Builder' },
-    { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Workflow YML Definition' },
-    { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Downloads' },
-  ];
+    const manageLinks = [
+        { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Workflow Builder', isLink: true },
+        { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Workflow YML Definition', isLink: false, handleClick: () => { setviewYaml(true) } },
+        // { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Downloads', isLink: false, handleClick: () => { console.log("triggering this") } },
+    ];
 
-  const learnLinks = [
-    { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Tutorials' },
-    { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Documentation' },
-  ];
+    const learnLinks = [
+        { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Tutorials', isLink: true },
+        { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Documentation', isLink: true },
+    ];
 
-  return (
-    <div className="flex flex-col gap-10 pt-6 w-1/6 top-20 p-1">
-      <div className="flex-2 h-36">
-        <h1 className="text-2xl truncate">{workflow.name}</h1>
-        {workflow.description && (
-          <Text clamp-lines={3}>
-            <span>{workflow.description}</span>
-          </Text>
-        )}
-      </div>
-      <div className="flex-1 space-y-8">
-        <DisclosureSection title="Analyse" links={analyseLinks} />
-        <DisclosureSection title="Manage" links={manageLinks} />
-        <DisclosureSection title="Learn" links={learnLinks} />
-      </div>
-    </div>
-  );
+    return (
+        <div className="flex flex-col gap-10 pt-6 w-1/6 top-20 p-1">
+            <div className="flex-2 h-36">
+                <h1 className="text-2xl truncate">{workflow.name}</h1>
+                {workflow.description && (
+                    <Text clamp-lines={3}>
+                        <span>{workflow.description}</span>
+                    </Text>
+                )}
+            </div>
+            <div className="flex-1 space-y-8">
+                <DisclosureSection title="Analyse" links={analyseLinks} />
+                <DisclosureSection title="Manage" links={manageLinks} />
+                <DisclosureSection title="Learn" links={learnLinks} />
+            </div>
+            <Modal
+                isOpen={viewYaml}
+                onRequestClose={() => { setviewYaml(false); }}
+                className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
+            >
+                <BuilderModalContent
+                    closeModal={() => { setviewYaml(false) }}
+                    compiledAlert={workflow.workflow_raw!}
+                    id={workflow.id}
+                />
+            </Modal>
+        </div>
+    );
 }
