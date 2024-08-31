@@ -5,6 +5,7 @@ Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 import dataclasses
 import datetime
 import json
+import logging
 import os
 import random
 from typing import Literal, Optional
@@ -19,6 +20,8 @@ from keep.providers.base.provider_exceptions import ProviderMethodException
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -559,10 +562,13 @@ class ZabbixProvider(BaseProvider):
         event: dict, provider_instance: Optional["ZabbixProvider"] = None
     ) -> AlertDto:
         environment = "unknown"
-        tags = {
-            tag.get("tag"): tag.get("value")
-            for tag in json.loads(event.pop("tags", "[]"))
-        }
+        tags_raw = event.pop("tags", "[]")
+        try:
+            tags = {tag.get("tag"): tag.get("value") for tag in json.loads(tags_raw)}
+        except json.JSONDecodeError:
+            logger.error("Failed to extract Zabbix tags", extra={"tags_raw": tags_raw})
+            # We failed to extract tags for some reason.
+            tags = {}
         if isinstance(tags, dict):
             environment = tags.pop("environment", "unknown")
             # environment exists in tags but is None

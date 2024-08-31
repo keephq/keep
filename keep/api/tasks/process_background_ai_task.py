@@ -3,7 +3,8 @@ import logging
 import datetime
 
 from keep.api.core.tenant_configuration import TenantConfiguration
-from keep.api.utils.import_ee import mine_incidents_and_create_objects, ALGORITHM_VERBOSE_NAME, is_ee_enabled_for_tenant
+from keep.api.utils.import_ee import mine_incidents_and_create_objects, ALGORITHM_VERBOSE_NAME, \
+    SUMMARY_GENERATOR_VERBOSE_NAME, is_ee_enabled_for_tenant, generate_update_incident_summary
 from keep.api.core.db import get_tenants_configurations
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,28 @@ async def process_correlation(ctx, tenant_id:str):
         },
     )
 
+async def process_summary_generation(ctx, tenant_id: str, incident_id:str):
+    logger.info(
+        f"Background summary generation started, {SUMMARY_GENERATOR_VERBOSE_NAME}",
+        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident_id},
+    )
+    
+    start_time = datetime.datetime.now()
+    await generate_update_incident_summary(
+        ctx,
+        tenant_id=tenant_id,
+        incident_id=incident_id
+    )
+    end_time = datetime.datetime.now()
+    logger.info(
+        f"Background summary generation finished, {SUMMARY_GENERATOR_VERBOSE_NAME}, took {(end_time - start_time).total_seconds()} seconds",
+        extra={
+            "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+            "incident_id": incident_id, 
+            "duration_ms": (end_time - start_time).total_seconds() * 1000
+        },
+    )
+    
 
 async def process_background_ai_task(
         ctx: dict | None,  # arq context
