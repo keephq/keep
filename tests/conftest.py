@@ -28,6 +28,7 @@ from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 
+original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
 
 
@@ -395,10 +396,10 @@ def keycloak_client(request):
     os.environ["KEYCLOAK_CLIENT_SECRET"] = "keycloaktestsecret"
     # SHAHAR: this is a workaround since the api.py patches the request
     #         and Keycloak's library needs to allow redirect :(
-    from keep.api.api import no_redirect_request, original_request
+    no_redirect_request = requests.Session.request
+    requests.Session.request = original_request
     from keycloak import KeycloakAdmin
 
-    requests.Session.request = original_request
     # load the fixture
     request.getfixturevalue("keycloak_container")
     keycloak_admin = KeycloakAdmin(
@@ -431,7 +432,7 @@ def keycloak_client(request):
         user_id, client_id, [{"id": role_id, "name": "admin"}]
     )
     yield keycloak_admin
-
+    # reset the request
     requests.Session.request = no_redirect_request
     print("Done with keycloak")
 
