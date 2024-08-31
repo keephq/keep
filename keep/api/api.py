@@ -21,6 +21,7 @@ import keep.api.observability
 from keep.api.arq_worker import get_arq_worker
 from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
 from keep.api.core.config import AuthenticationType
+from keep.api.core.db import get_api_key
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -83,6 +84,17 @@ def _extract_identity(request: Request, attribute="email") -> str:
         token = request.headers.get("Authorization").split(" ")[1]
         decoded_token = jwt.decode(token, options={"verify_signature": False})
         return decoded_token.get(attribute)
+    # case api key
+    except AttributeError:
+        # try api key
+        api_key = request.headers.get("x-api-key")
+        if not api_key:
+            return "anonymous"
+
+        api_key = get_api_key(api_key)
+        if api_key:
+            return api_key.tenant_id
+        return "anonymous"
     except Exception:
         return "anonymous"
 

@@ -165,7 +165,6 @@ def get_presets(
     presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
     # add static presets
     presets_dto.append(STATIC_PRESETS["feed"])
-    presets_dto.append(STATIC_PRESETS["groups"])
     presets_dto.append(STATIC_PRESETS["dismissed"])
     logger.info("Got all presets")
 

@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
 from pydantic.types import UUID
 
+from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     confirm_predicted_incident_by_id,
@@ -17,6 +18,7 @@ from keep.api.core.db import (
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
+    get_incident_unique_fingerprint_count,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
@@ -35,13 +37,20 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
+    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5)
+)
+
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
 if ee_enabled:
     path_with_ee = (
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
     sys.path.insert(0, path_with_ee)
-    from ee.experimental.incident_utils import mine_incidents  # noqa
+    from ee.experimental.incident_utils import (  # noqa
+        ALGORITHM_VERBOSE_NAME,
+        mine_incidents,
+    )
 
 
 def __update_client_on_incident_change(
@@ -291,7 +300,7 @@ def get_incident_alerts(
     status_code=202,
     response_model=List[AlertDto],
 )
-def add_alerts_to_incident(
+async def add_alerts_to_incident(
     incident_id: str,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -313,6 +322,28 @@ def add_alerts_to_incident(
 
     add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
     __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+
+    fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
+
+    if (
+        ee_enabled
+        and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION
+        and not incident.user_summary
+    ):
+        pool = await get_pool()
+        job = await pool.enqueue_job(
+            "process_summary_generation",
+            tenant_id=tenant_id,
+            incident_id=incident_id,
+        )
+        logger.info(
+            f"Summary generation for incident {incident_id} scheduled, job: {job}",
+            extra={
+                "algorithm": ALGORITHM_VERBOSE_NAME,
+                "tenant_id": tenant_id,
+                "incident_id": incident_id,
+            },
+        )
 
     return Response(status_code=202)
 
