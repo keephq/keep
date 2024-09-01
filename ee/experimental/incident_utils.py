@@ -577,8 +577,8 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
                     extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
         return ""
 
-    # if incident.name:
-    #     return ""
+    if incident.user_name:
+        return ""
 
     if not max_name_length:
         max_name_length = os.environ.get(
@@ -604,7 +604,6 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
         timestamps = [alert.timestamp for alert in incident.alerts]
         incident_start = min(timestamps).replace(microsecond=0)
-        incident_end = max(timestamps).replace(microsecond=0)
 
         model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
@@ -621,8 +620,8 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
             },
             {
                 "role": "user",
-                "content": f"""Here are  alerts of an incident:\n{incident_description}\n This incident started  on
-                {incident_start}"""
+                "content": f"""This incident started  on {incident_start}. 
+                Here are  alerts of an incident:\n{incident_description}\n"""
             }
         ]).choices[0].message.content
 
@@ -645,8 +644,8 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
                 },
                 {
                     "role": "user",
-                    "content": f"""Here is the description of an incident to name:\n{name}. 
-                    This incident started on {incident_start}"""
+                    "content": f"""This incident started on {incident_start}.
+                    Here is the description of an incident to name:\n{name}."""
                 }
             ]).choices[0].message.content
 

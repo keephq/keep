@@ -88,7 +88,6 @@ def shoot_tenants_alerts_from_json(file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Shoot alerts from dump")
-    # we need to make them optional
     parser.add_argument(
         "--csv_file", help="Path to the CSV file", default=None)
     parser.add_argument(

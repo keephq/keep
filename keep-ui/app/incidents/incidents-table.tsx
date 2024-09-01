@@ -60,7 +60,7 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
+      cell: ({ row }) => <div className="text-wrap">{row.original.user_name}</div>,
     }),
     columnHelper.display({
       id: "user_summary",

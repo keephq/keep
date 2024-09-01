@@ -2594,8 +2594,11 @@ def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incide
         incident = session.exec(
             select(Incident).where(Incident.tenant_id == tenant_id).where(Incident.id == incident_id)
         ).first()
+        
+        if not incident:
+            return
 
-        incident.name = name
+        incident.generated_name = name
         session.commit()
         session.refresh(incident)
         

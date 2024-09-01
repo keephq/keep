@@ -63,7 +63,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
               })}
             >
 
-              <Subtitle className="text-sm max-w-[7.7rem]">{incident.name}</Subtitle>
+              <Subtitle className="text-sm max-w-[7.7rem]">{incident.user_name}</Subtitle>
             </LinkWithIcon>
           </li>
         ))}
