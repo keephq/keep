@@ -67,7 +67,7 @@ function CustomNode({ id, data }: FlowNode) {
   return (
     <>
       {!specialNodeCheck && <div
-        className={`p-2 flex shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
+        className={`flex shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
           ? "border-orange-500"
           : "border-stone-400"
           }`}
@@ -79,7 +79,7 @@ function CustomNode({ id, data }: FlowNode) {
         }}
       >
         {isEmptyNode && (
-          <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="p-2 flex-1 flex flex-col items-center justify-center">
             <GoPlus className="w-8 h-8 text-gray-600 font-bold p-0" />
             {selectedNode === id && (
               <div className="text-gray-600 font-bold text-center">Go to Toolbox</div>
@@ -88,7 +88,7 @@ function CustomNode({ id, data }: FlowNode) {
         )}
         {errorNode === id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />}
         {!isEmptyNode && (
-          <div className="container flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
+          <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
             {getTriggerIcon(data)}
             {!!data && !['interval', 'manual'].includes(data.type) && <Image
               src={IconUrlProvider(data) || "/keep.png"}
