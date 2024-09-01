@@ -332,7 +332,7 @@ class ZabbixProvider(BaseProvider):
         # zabbix < 6.4 compatibility
         data["auth"] = f"{self.authentication_config.auth_token}"
 
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=headers, timeout=15)
 
         response.raise_for_status()
         response_json = response.json()
@@ -342,8 +342,14 @@ class ZabbixProvider(BaseProvider):
 
     def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
+        time_from = datetime.datetime.now() - datetime.timedelta(days=14)
         problems = self.__send_request(
-            "problem.get", {"recent": False, "selectSuppressionData": "extend"}
+            "problem.get",
+            {
+                "recent": False,
+                "selectSuppressionData": "extend",
+                "time_from": time_from.timestamp(),
+            },
         )
         formatted_alerts = []
         for problem in problems.get("result", []):
