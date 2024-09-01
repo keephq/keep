@@ -33,7 +33,6 @@ function CustomNode({ id, data }: FlowNode) {
     ?.replace("trigger_", "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
-  //These node are not clickable and special nodes
   const specialNodeCheck = ['start', 'end'].includes(type)
 
   function getTriggerIcon(step: any) {
@@ -46,7 +45,7 @@ function CustomNode({ id, data }: FlowNode) {
     }
   }
 
-  function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
+ function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
     e.stopPropagation();
     if(!synced){
       toast('Please save the previous step or wait while properties sync with the workflow.');

@@ -79,7 +79,6 @@ const ReactFlowEditor = ({
         onDefinitionChange({ sequence, properties, isValid });
         setSynced(true);
       }
-
     const debouncedHandleDefinitionChange = debounce(handleDefinitionChange, 300);
 
     debouncedHandleDefinitionChange();
