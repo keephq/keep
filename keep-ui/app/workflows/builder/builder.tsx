@@ -86,6 +86,14 @@ function Builder({
     setErrorNode(null);
   }
 
+  const setGlobalValidationErrorV2 = (id:string|null, error: string | null) => {
+    setGlobalValidationError(error);
+    if (error && id) {
+      return setErrorNode(id)
+    }
+    setErrorNode(null);
+  }
+
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
     const url = `${apiUrl}/workflows/${workflowId}`;
@@ -243,7 +251,7 @@ function Builder({
   } = {
     step: (step, parent, definition) =>
       stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
-    root: (def) => globalValidatorV2(def, setGlobalValidationError),
+    root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
   }
 
   function closeGenerateModal() {

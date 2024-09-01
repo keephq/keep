@@ -19,12 +19,11 @@ const ReactFlowEditor = ({
   };
   onDefinitionChange: (def: Definition) => void
 }) => {
-  const { selectedNode, changes, v2Properties, nodes, edges, setOpneGlobalEditor } = useStore();
+  const { selectedNode, changes, v2Properties, nodes, edges, setOpneGlobalEditor, synced, setSynced } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
-  const [synced, setSynced] = useState(true);
 
   useEffect(() => {
     setIsOpen(true);
@@ -81,6 +80,7 @@ const ReactFlowEditor = ({
         onDefinitionChange({ sequence, properties, isValid });
         setSynced(true);
       }
+      setSynced(true);
     };
 
     const debouncedHandleDefinitionChange = debounce(handleDefinitionChange, 300);

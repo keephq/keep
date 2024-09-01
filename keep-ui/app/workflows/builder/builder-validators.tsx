@@ -3,16 +3,44 @@ import { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./bui
 
 export function globalValidatorV2(
   definition: FlowDefinition,
-  setGlobalValidationError: Dispatch<SetStateAction<string | null>>
+  setGlobalValidationError: (id:string|null, error:string|null)=>void,
 ): boolean {
   const workflowName = definition?.properties?.name;
+  const workflowDescription = definition?.properties?.description;
   if(!workflowName) {
-    setGlobalValidationError("Workflow name cannot be empty.");
+    setGlobalValidationError(null, "Workflow name cannot be empty.");
     return false;
   }
+  if(!workflowDescription){
+    setGlobalValidationError(null, "Workflow description cannot be empty.");
+    return false;
+  }
+
+  if (
+    !!definition?.properties && 
+    !('manual' in definition.properties) && 
+    !('interval' in definition.properties) && 
+    !('alert' in definition.properties)
+  ) {
+     setGlobalValidationError('trigger_start', "Workflow Should alteast have one trigger.");
+    return false;
+    
+  }
+
+  if(definition?.properties && 'interval' in definition.properties && !definition.properties.interval){
+    setGlobalValidationError('interval', "Workflow interval cannot be empty.");
+    return  false;
+  }
+
+  const alertSources =  Object.values(definition.properties.alert||{}).filter(Boolean)
+  if(definition?.properties && 'alert' in definition.properties && alertSources.length==0){
+    setGlobalValidationError('alert', "Workflow alert trigger cannot be empty.");
+    return  false;
+  }
+
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    setGlobalValidationError(
+    setGlobalValidationError(null,
       "At least 1 step/action is required."
     );
   }
@@ -36,14 +64,14 @@ export function globalValidatorV2(
             "step-"
           )
         ) {
-          setGlobalValidationError("Steps cannot be placed after actions.");
+          setGlobalValidationError(sequence[i].id,"Steps cannot be placed after actions.");
           return false;
         }
       }
     }
   }
   const valid = anyStepOrAction;
-  if (valid) setGlobalValidationError(null);
+  if (valid) setGlobalValidationError(null, "");
   return valid;
 }
 

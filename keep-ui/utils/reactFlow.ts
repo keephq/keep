@@ -127,23 +127,6 @@ export function reConstructWorklowToDefinition({
         }
         return obj;
     }, {} as Record<string, boolean>);
-
-    ['interval', 'alert', 'manual'].forEach(type => {
-        if (!triggerNodes[type]) {
-            switch (type) {
-                case "interval":
-                    properties['interval'] = "";
-                    break;
-                case "alert":
-                    properties['alert'] = {};
-                    break;
-                case "manual":
-                    properties['manual'] = "";
-                    break;
-                default: //do nothing      
-            }
-        }
-    });
     return {
         sequence: buildWorkflowDefinition(0, originalNodes.length) as V2Step[],
         properties: properties as V2Properties
@@ -509,7 +492,7 @@ export function getTriggerStep(properties: V2Properties) {
         ...steps,
         {
             id: 'trigger_end',
-            name: 'Trigger End',
+            name: 'Worfklow start',
             type: 'trigger',
             componentType: 'trigger',
             cantDelete: true,

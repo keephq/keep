@@ -289,19 +289,20 @@ function WorkflowEditorV2({
       <Title className="mt-2.5">Workflow Settings</Title>
       {propertyKeys.map((key, index) => {
         return (
-           <div key={index}>
+           <div key={key}>
             {((key ===  selectedNode)||(!["manual", "alert", 'interval'].includes(key))) && <Text className="capitalize mt-2.5">{key}</Text>}
             {key === "manual" ? (
               selectedNode === 'manual' && <div key={key}>
                 <input
                   type="checkbox"
-                  checked={properties[key] === "true"}
+                  checked={true}
                   onChange={(e) =>
                     setProperties({
                       ...properties,
                       [key]: e.target.checked ? "true" : "false",
                     })
                   }
+                  disabled={true}
                 />
               </div>
             ) : key === "alert" ? (

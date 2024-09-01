@@ -46,7 +46,7 @@ export function getToolboxConfiguration(providers: Provider[]) {
             name: "Manual",
             id: 'manual',
             properties: {
-              manual: "",
+              manual: "true",
             },
           },
           {

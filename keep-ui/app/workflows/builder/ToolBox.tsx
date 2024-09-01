@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import classNames from "classnames";
 import { Disclosure } from "@headlessui/react";
 import { Subtitle } from "@tremor/react";
@@ -17,7 +17,6 @@ const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
 }) => {
   const [isOpen, setIsOpen] = useState(!!searchTerm || isDraggable);
   const { selectedNode, selectedEdge, addNodeBetween } = useStore();
-
 
   useEffect(() => {
     setIsOpen(!!searchTerm || !isDraggable);
@@ -44,11 +43,11 @@ const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
 
   function getTriggerIcon(step: any) {
     const { type } = step;
-    switch(type) {
+    switch (type) {
       case "manual":
-            return  <FaHandPointer size={32}/>
+        return <FaHandPointer size={32} />
       case "interval":
-            return  <PiDiamondsFourFill size={32}/>     
+        return <PiDiamondsFourFill size={32} />
     }
   }
 
@@ -91,8 +90,8 @@ const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
                     title={step.name}
                     onClick={(e) => handleAddNode(e, step)}
                   >
-                   {getTriggerIcon(step)}
-                    {!!step && !['interval', 'manual'].includes(step.type) &&<Image
+                    {getTriggerIcon(step)}
+                    {!!step && !['interval', 'manual'].includes(step.type) && <Image
                       src={IconUrlProvider(step) || "/keep.png"}
                       alt={step?.type}
                       className="object-contain aspect-auto"
@@ -116,7 +115,7 @@ const DragAndDropSidebar = ({ isDraggable }: {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [open, setOpen] = useState(false);
-  const { toolboxConfiguration, selectedNode, selectedEdge } = useStore();
+  const { toolboxConfiguration, selectedNode, selectedEdge, nodes } = useStore();
 
   useEffect(() => {
 
@@ -127,14 +126,20 @@ const DragAndDropSidebar = ({ isDraggable }: {
     setIsVisible(!isDraggable)
   }, [selectedNode, selectedEdge, isDraggable]);
 
+  const triggerNodeMap = nodes.filter((node: any) => ['interval', 'manual', 'alert'].includes(node?.id)).reduce((obj: any, node: any) => {
+    obj[node.id] = true;
+    return obj;
+  }, {} as Record<string, boolean>);
 
-  const filteredGroups =
-    toolboxConfiguration?.groups?.map((group: any) => ({
+
+  const filteredGroups = useMemo(() => {
+    return toolboxConfiguration?.groups?.map((group: any) => ({
       ...group,
       steps: group?.steps?.filter((step: any) =>
-        step?.name?.toLowerCase().includes(searchTerm?.toLowerCase())
+        step?.name?.toLowerCase().includes(searchTerm?.toLowerCase()) && !triggerNodeMap[step?.id]
       ),
     })) || [];
+  }, [toolboxConfiguration, searchTerm, nodes?.length]);
 
   const checkForSearchResults = searchTerm && !!filteredGroups?.find((group: any) => group?.steps?.length > 0);
 
