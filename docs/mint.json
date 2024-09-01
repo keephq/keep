@@ -248,7 +248,8 @@
             "api-ref/providers/install-provider-oauth2",
             "api-ref/providers/invoke-provider-method",
             "api-ref/providers/install-provider-webhook",
-            "api-ref/providers/get-webhook-settings"
+            "api-ref/providers/get-webhook-settings",
+            "api-ref/providers/export-providers"
           ]
         },
         {
@@ -257,13 +258,21 @@
             "api-ref/actions/get-actions",
             "api-ref/actions/create-actions",
             "api-ref/actions/put-action",
-            "api-ref/actions/delete-action"
+            "api-ref/actions/delete-action",
+            "api-ref/actions/add-actions",
+            "api-ref/actions/update-action"
           ]
         },
         {
           "group": "healthcheck",
           "pages": [
             "api-ref/healthcheck/healthcheck"
+          ]
+        },
+        {
+          "group": "topology",
+          "pages": [
+            "api-ref/topology/get-topology-data"
           ]
         },
         {
@@ -280,7 +289,8 @@
             "api-ref/alerts/enrich-alert",
             "api-ref/alerts/unenrich-alert",
             "api-ref/alerts/search-alerts",
-            "api-ref/alerts/get-alert-audit"
+            "api-ref/alerts/get-alert-audit",
+            "api-ref/alerts/get-alerts"
           ]
         },
         {
@@ -291,6 +301,7 @@
             "api-ref/incidents/get-incident",
             "api-ref/incidents/update-incident",
             "api-ref/incidents/delete-incident",
+            "api-ref/incidents/update-incident-1",
             "api-ref/incidents/get-incident-alerts",
             "api-ref/incidents/add-alerts-to-incident",
             "api-ref/incidents/delete-alerts-from-incident",
@@ -410,6 +421,29 @@
           "group": "metrics",
           "pages": [
             "api-ref/metrics/get-metrics"
+          ]
+        },
+        {
+          "group": "users",
+          "pages": [
+            "api-ref/users/create-user",
+            "api-ref/users/delete-user",
+            "api-ref/users/get-users",
+            "api-ref/users/update-user"
+          ]
+        },
+        {
+          "group": "groups",
+          "pages": [
+            "api-ref/groups/get-groups"
+          ]
+        },
+        {
+          "group": "mappings",
+          "pages": [
+            "api-ref/mapping/create-mapping",
+            "api-ref/mapping/delete-mapping-by-id",
+            "api-ref/mapping/get-mappings"
           ]
         },
         {
