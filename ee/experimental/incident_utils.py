@@ -666,7 +666,8 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str):
     incident = get_incident_by_id(tenant_id, incident_id)
     summary = generate_incident_summary(incident)
-    update_incident_summary(tenant_id, incident_id, summary)
+    if summary:
+        update_incident_summary(tenant_id, incident_id, summary)
 
     return summary
 
@@ -674,6 +675,7 @@ async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str
 async def generate_update_incident_name(ctx, tenant_id: str, incident_id: str):
     incident = get_incident_by_id(tenant_id, incident_id)
     name = generate_incident_name(incident)
-    update_incident_name(tenant_id, incident_id, name)
+    if name:
+        update_incident_name(tenant_id, incident_id, name)
 
     return name
