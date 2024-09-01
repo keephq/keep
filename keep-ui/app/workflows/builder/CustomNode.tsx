@@ -9,6 +9,7 @@ import { GoSquareFill } from "react-icons/go";
 import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
 import { BiSolidError } from "react-icons/bi";
 import { FaHandPointer } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 
 
@@ -23,7 +24,7 @@ function IconUrlProvider(data: FlowNode["data"]) {
 }
 
 function CustomNode({ id, data }: FlowNode) {
-  const { selectedNode, setSelectedNode, setOpneGlobalEditor, errorNode } = useStore();
+  const { selectedNode, setSelectedNode, setOpneGlobalEditor, errorNode, synced } = useStore();
   const type = data?.type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -53,6 +54,10 @@ function CustomNode({ id, data }: FlowNode) {
           }`}
         onClick={(e) => {
           e.stopPropagation();
+          if(!synced){
+            toast('Please save the previous step or wait while properties sync with the workflow.');
+            return;
+          }
           if (type === 'start' || type === 'end' || id?.includes('end') || id?.includes('empty')) {
             if (id?.includes('empty')) {
               setSelectedNode(id);
@@ -117,6 +122,10 @@ function CustomNode({ id, data }: FlowNode) {
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if(!synced){
+            toast('Please save the previous step or wait while properties sync with the workflow.');
+            return;
+          }
           if (type === 'start' || type === 'end' || id?.includes('end')) {
             setOpneGlobalEditor(true);
             return;

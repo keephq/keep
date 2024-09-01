@@ -146,6 +146,8 @@ export type FlowState = {
   setLastSavedChanges: ({ nodes, edges }: { nodes: FlowNode[], edges: Edge[] }) => void;
   setErrorNode: (id: string | null) => void;
   errorNode: string | null;
+  synced: boolean;
+  setSynced: (synced: boolean) => void;
 };
 
 
@@ -256,6 +258,8 @@ const useStore = create<FlowState>((set, get) => ({
   lastSavedChanges: { nodes: [], edges: [] },
   firstInitilisationDone: false,
   errorNode: null,
+  synced: true,
+  setSynced: (sync) => set({ synced: sync }),
   setErrorNode: (id) => set({ errorNode: id }),
   setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
   setLastSavedChanges: ({ nodes, edges }: { nodes: FlowNode[], edges: Edge[] }) => set({ lastSavedChanges: { nodes, edges } }),
@@ -448,6 +452,11 @@ const useStore = create<FlowState>((set, get) => ({
     const newNode = createDefaultNodeV2({ ...nodes[endIndex + 1].data, islayouted: false }, nodes[endIndex + 1].id);
 
     const newNodes = [...nodes.slice(0, nodeStartIndex), newNode, ...nodes.slice(endIndex + 2)];
+    if(['manual', 'alert', 'interval'].includes(ids)) {
+      const v2Properties = get().v2Properties;
+      delete v2Properties[ids];
+      set({ v2Properties });
+     }
     set({
       edges: finalEdges,
       nodes: newNodes,
@@ -456,6 +465,7 @@ const useStore = create<FlowState>((set, get) => ({
       changes: get().changes + 1,
       openGlobalEditor: true,
     });
+   
   },
   updateEdge: (id: string, key: string, value: any) => {
     const edge = get().edges.find((e) => e.id === id);
