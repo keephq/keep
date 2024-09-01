@@ -1,3 +1,5 @@
+import { V2Step } from "./builder-store";
+
 interface Provider {
   type: string;
   config: string;
@@ -37,4 +39,6 @@ export interface Alert {
   services?: string[];
   steps: Step[];
   actions?: Action[];
+  triggers?: any;
+  name?: string;
 }

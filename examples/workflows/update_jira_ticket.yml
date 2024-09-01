@@ -1,0 +1,15 @@
+workflow:
+  id: update-jira-ticket
+  triggers:
+  - type: manual
+  actions:
+  - name: jira-action
+    provider:
+      config: '{{ providers.Jira }}'
+      type: jira
+      with:
+        board_name: ''
+        description: Update description of an issue
+        issue_id: 10023
+        project_key: ''
+        summary: Update summary of an issue
