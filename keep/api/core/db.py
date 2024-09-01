@@ -2303,6 +2303,18 @@ def add_alerts_to_incident_by_incident_id(
         return incident
 
 
+def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> int:
+    with Session(engine) as session:
+        return session.execute(
+            select(func.count(1))
+            .select_from(AlertToIncident)
+            .join(Alert, AlertToIncident.alert_id == Alert.id)
+            .where(
+                Alert.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident_id,
+            )
+        ).scalar()
+
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:

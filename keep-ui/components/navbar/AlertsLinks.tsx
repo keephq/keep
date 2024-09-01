@@ -55,7 +55,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const dismissedPreset = staticPresets.find(
     (preset) => preset.name === "dismissed"
   );
-  const groupsPreset = staticPresets.find((preset) => preset.name === "groups");
 
   const handleTagSelect = (
     newValue: MultiValue<{ value: string; label: string }>,
