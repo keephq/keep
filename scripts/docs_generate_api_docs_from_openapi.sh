@@ -15,5 +15,5 @@ fi
 
 echo "Successfully downloaded openapi.json"
 
-python3 ../scripts/docs_openapi_converter.py --source ./openapi.json --dest ./openapi.json
-npx @mintlify/scraping@latest openapi-file ./openapi.json -o ./api-ref
+python3 $(dirname "$0")/docs_openapi_converter.py --source ./openapi.json --dest ./openapi.json
+npx @mintlify/scraping@latest openapi-file ./openapi.json -o $(dirname "$0")/../docs/api-ref
