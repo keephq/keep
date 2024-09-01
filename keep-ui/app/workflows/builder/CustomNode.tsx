@@ -15,7 +15,7 @@ import { toast } from "react-toastify";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
-  if (type === "alert" || type === "workflow" || type === "trigger") return "/keep.png";
+  if (type === "alert" || type === "workflow" || type === "trigger" || !type) return "/keep.png";
   return `/icons/${type
     ?.replace("step-", "")
     ?.replace("action-", "")
@@ -83,7 +83,7 @@ function CustomNode({ id, data }: FlowNode) {
         )}
         {errorNode === id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />}
         {!isEmptyNode && (
-          <div className="flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
+          <div className="container flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
             {getTriggerIcon(data)}
             {!!data && !['interval', 'manual'].includes(data.type) && <Image
               src={IconUrlProvider(data) || "/keep.png"}
@@ -95,7 +95,7 @@ function CustomNode({ id, data }: FlowNode) {
             <div className="flex-1 flex-col gap-2 flex-wrap truncate">
               <div className="text-lg font-bold truncate">{data?.name}</div>
               <div className="text-gray-500 truncate">
-                {type || data?.componentType}
+                {type}
               </div>
             </div>
             <div>
