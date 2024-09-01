@@ -66,7 +66,7 @@ provider:
             interval: 10
 ```
 `Provider` is built of:
-- `type` - the type of the provider ([see supported providers](/workflows/providers/))
+- `type` - the type of the provider ([see supported providers](/providers/overview/))
 - `config` - the provider configuration. you can either supply it explicitly or using `"{{ providers.mysql-prod }}"`
 - `with` - all type-specific provider configuration. for example, for `mysql` we will provide the SQL query.
 - `on-failure` - handling the error when provider execution fails, it is built of:
@@ -110,11 +110,11 @@ steps/actions:
 - `name` - the name of the action.
 - `condition` - a list of conditions that
 - `provider` - the provider that will trigger the action.
-- `throttle` - you can [throttle](../025_throttles/01-what-is-throttle.md) the action.
-- `if` - action can be limited to when certain [conditions](../023_conditions/01-what-is-a-condition.md) are met.
+- `throttle` - you can [throttle](/workflows/throttles/what-is-a-throttle) the action.
+- `if` - action can be limited to when certain [conditions](/workflows/conditions/what-is-a-condition) are met.
 - `foreach` - when `foreach` block supplied, Keep will evaluate it as a list, and evaluates the `action` for every item in the list.
 
-The `provider` configuration is already covered in [Providers](syntax#provider)
+The `provider` configuration is already covered in [Providers](/workflows/syntax/basic-syntax)
 
 ### On-failure
 ```yaml

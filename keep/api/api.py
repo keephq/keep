@@ -33,6 +33,7 @@ from keep.api.routes import (
     healthcheck,
     incidents,
     mapping,
+    metrics,
     preset,
     providers,
     pusher,
@@ -203,6 +204,9 @@ def get_app(
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
+    )
+    app.include_router(
+        metrics.router, prefix="/metrics", tags=["metrics"]
     )
     app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
