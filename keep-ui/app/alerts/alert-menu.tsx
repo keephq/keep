@@ -260,7 +260,7 @@ export default function AlertMenu({
                       active ? "bg-slate-200" : "text-gray-900"
                     } ${
                       !methodEnabled ? "text-slate-300 cursor-not-allowed" : ""
-                    } group flex items-center rounded-md px-2 py-2 text-xs`}
+                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     disabled={!methodEnabled}
                     title={!methodEnabled ? "Missing required scopes" : ""}
                     onClick={() => {
