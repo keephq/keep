@@ -1,0 +1,48 @@
+---
+title: "Blackouts"
+---
+
+# Alert Management: Blackouts
+
+Keep's Blackouts feature provides a critical mechanism for managing alert noise during scheduled maintenance periods or other planned events. By defining blackout rules, users can suppress alerts that are irrelevant during these times, ensuring that only actionable alerts reach the operations team.
+
+## Introduction
+
+In dynamic IT environments, it's common to have periods where certain alerts are expected and should not trigger incident responses. Keep's Blackouts feature allows users to define specific rules that temporarily suppress alerts based on various conditions, such as time windows or alert attributes. This helps prevent unnecessary alert fatigue and ensures that teams can focus on critical issues.
+
+## How It Works
+
+1. **Blackout Rule Definition**: Users define blackout rules specifying the conditions under which alerts should be suppressed.
+2. **Condition Specification**: A CEL (Common Expression Language) query is associated with each blackout rule to define the conditions for suppression.
+3. **Time Window Configuration**: Blackout rules can be set for specific start and end times, or based on a relative duration.
+4. **Alert Suppression**: During the active period of a blackout rule, any alerts matching the defined conditions are suppressed and not forwarded to the alerting system.
+
+## Practical Example
+
+Suppose your team schedules a database upgrade that could trigger numerous non-critical alerts. You can create a blackout rule that suppresses alerts from the database service during the upgrade window. This ensures that your operations team isn't overwhelmed by non-actionable alerts, allowing them to focus on more critical issues.
+
+## Core Concepts
+
+- **Blackout Rules**: Configurations that define when and which alerts should be suppressed based on time windows and conditions.
+- **CEL Query**: A query language used to specify the conditions under which alerts should be suppressed. For example, a CEL query might suppress alerts where the source is a specific service during a maintenance window.
+- **Time Window**: The specific start and end times or relative duration during which the blackout rule is active.
+- **Alert Suppression**: The process of ignoring alerts that match the blackout rule's conditions during the specified time window.
+
+## Creating a Blackout Rule
+
+To create a blackout rule:
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/blackout-creation.png" />
+</Frame>
+
+1. **Define the Blackout Name and Description**: Provide a name and optional description for the blackout rule to easily identify its purpose.
+2. **Specify the CEL Query**: Use CEL to define the conditions under which alerts should be suppressed (e.g., `source == "database"`).
+3. **Set the Time Window**: Choose a specific start and end time, or define a relative duration for the blackout.
+4. **Enable the Rule**: Decide whether the rule should be active immediately or scheduled for future use.
+
+## Best Practices
+
+- **Plan Blackouts in Advance**: Schedule blackout periods in advance for known maintenance windows to prevent unnecessary alerts.
+- **Use Specific Conditions**: Define precise CEL queries to ensure only the intended alerts are suppressed.
+- **Review and Update Blackouts**: Regularly review active blackout rules to ensure they are still relevant and adjust them as necessary.

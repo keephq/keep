@@ -17,7 +17,7 @@ class BlackoutRule(SQLModel, table=True):
     created_by: str
     cel_query: str
     start_time: datetime
-    end_time: Optional[datetime] = None
+    end_time: datetime
     duration_seconds: Optional[int] = None
     updated_at: Optional[datetime] = Field(
         sa_column=Column(

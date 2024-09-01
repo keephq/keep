@@ -38,6 +38,7 @@
             "overview/enrichment/mapping"
           ]
         },
+        "overview/blackouts",
         "overview/examples",
         "overview/comparison"
       ]

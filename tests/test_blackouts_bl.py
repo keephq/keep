@@ -14,14 +14,27 @@ def mock_session():
 
 
 @pytest.fixture
-def mock_blackout_rule():
+def active_blackout_rule():
     return BlackoutRule(
         id=1,
-        name="Test Blackout",
+        name="Active Blackout",
         tenant_id="test-tenant",
         cel_query='source == "test-source"',
         start_time=datetime.utcnow() - timedelta(hours=1),
         end_time=datetime.utcnow() + timedelta(hours=1),
+        enabled=True,
+    )
+
+
+@pytest.fixture
+def expired_blackout_rule():
+    return BlackoutRule(
+        id=2,
+        name="Expired Blackout",
+        tenant_id="test-tenant",
+        cel_query='source == "test-source"',
+        start_time=datetime.utcnow() - timedelta(days=2),
+        end_time=datetime.utcnow() - timedelta(days=1),
         enabled=True,
     )
 
@@ -38,9 +51,10 @@ def alert_dto():
     )
 
 
-def test_alert_in_blackout(mock_session, mock_blackout_rule, alert_dto):
-    mock_session.query.return_value.filter.return_value.filter.return_value.all.return_value = [
-        mock_blackout_rule
+def test_alert_in_active_blackout(mock_session, active_blackout_rule, alert_dto):
+    # Simulate the query to return the active blackout
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_blackout_rule
     ]
 
     blackout_bl = BlackoutsBl(tenant_id="test-tenant", session=mock_session)
@@ -49,11 +63,38 @@ def test_alert_in_blackout(mock_session, mock_blackout_rule, alert_dto):
     assert result is True
 
 
-def test_alert_not_in_blackout(mock_session, mock_blackout_rule, alert_dto):
+def test_alert_not_in_expired_blackout(mock_session, expired_blackout_rule, alert_dto):
+    # Simulate the query to return the expired blackout
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        expired_blackout_rule
+    ]
+
+    blackout_bl = BlackoutsBl(tenant_id="test-tenant", session=mock_session)
+    result = blackout_bl.check_if_alert_in_blackout(alert_dto)
+
+    # Even though the query returned a blackout, it should not match because it's expired
+    assert result is False
+
+
+def test_alert_in_no_blackout(mock_session, alert_dto):
+    # Simulate the query to return no blackouts
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = (
+        []
+    )
+
+    blackout_bl = BlackoutsBl(tenant_id="test-tenant", session=mock_session)
+    result = blackout_bl.check_if_alert_in_blackout(alert_dto)
+
+    assert result is False
+
+
+def test_alert_in_blackout_with_non_matching_cel(
+    mock_session, active_blackout_rule, alert_dto
+):
     # Modify the cel_query so that the alert won't match
-    mock_blackout_rule.cel_query = 'source == "other-source"'
-    mock_session.query.return_value.filter.return_value.filter.return_value.all.return_value = [
-        mock_blackout_rule
+    active_blackout_rule.cel_query = 'source == "other-source"'
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_blackout_rule
     ]
 
     blackout_bl = BlackoutsBl(tenant_id="test-tenant", session=mock_session)

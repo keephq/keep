@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -19,6 +20,7 @@ class BlackoutsBl:
             session.query(BlackoutRule)
             .filter(BlackoutRule.tenant_id == tenant_id)
             .filter(BlackoutRule.enabled == True)
+            .filter(BlackoutRule.end_time >= datetime.datetime.now())
             .all()
         )
 
@@ -28,6 +30,12 @@ class BlackoutsBl:
         env = celpy.Environment()
 
         for blackout in self.blackouts:
+            if blackout.end_time <= datetime.datetime.now():
+                self.logger.error(
+                    "Fetched blackout which already ended by mistake, should not happen!"
+                )
+                continue
+
             cel = preprocess_cel_expression(blackout.cel_query)
             ast = env.compile(cel)
             prgm = env.program(ast)
