@@ -11,7 +11,6 @@ import yaml
 from alembic import op
 
 from keep.parser.parser import Parser
-from keep.workflowmanager.workflowstore import WorkflowStore
 
 # revision identifiers, used by Alembic.
 revision = "7ed12220a0d3"
