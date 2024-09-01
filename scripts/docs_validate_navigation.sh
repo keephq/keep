@@ -1,9 +1,9 @@
 #!/bin/bash
 
-cd ../docs;
+cd "$(dirname "$0")/../docs"
 
 # Define the JSON file
-MINT_JSON="../docs/mint.json"
+MINT_JSON="mint.json"
 
 # Define the exclusion lists
 EXCLUDE_LIST=("node_modules")
@@ -30,8 +30,6 @@ is_excluded() {
 
     # Check if the exact file is in the file exclusion list
     for exclude_file in "${EXCLUDE_FILE_LIST[@]}"; do
-        # echo "exclude_file: $exclude_file"
-        # echo "file_path: $file_path"
         if [[ $file_path == "$exclude_file" ]]; then
             return 0 # The file is in the exclusion file list
         fi
@@ -42,8 +40,10 @@ is_excluded() {
 
 echo "Checking for missing files in mint.json..."
 
+is_missing=0
+
 # Go over each .mdx file in all subdirectories within the current directory
-find . -mindepth 2 -type f -name "*.mdx" | sort | while read -r file; do
+while IFS= read -r -d '' file; do
     # Check if the file is in the exclusion list
     if is_excluded "$file"; then
         continue
@@ -58,9 +58,14 @@ find . -mindepth 2 -type f -name "*.mdx" | sort | while read -r file; do
         # echo "File $relative_path is listed in mint.json"
         :
     else
-        echo "🔴🔴🔴 \"$relative_path\" is missing in docs/mint.json. That's a file responsible for rendering docs navigation."
-        echo "Please add the new docs page there or to the EXCLUDE_FILE_LIST of the current script."
-        echo "Otherwise the page will be really hard to navigate to :)"
-        exit 1 # Exit with an error code to fail the CI/CD process
+        echo "\"$relative_path\","
+        is_missing=1
     fi
-done
+done < <(find . -mindepth 2 -type f -name "*.mdx" -print0 | sort -z)
+
+if [[ $is_missing -ne 0 ]]; then
+    echo "🔴🔴🔴 👆 those files are missing in docs/mint.json. That's a file responsible for rendering docs navigation."
+    echo "Please add the new docs page there or to the EXCLUDE_FILE_LIST of the current script."
+    echo "Otherwise the page will be really hard to navigate to :)"
+    exit 1 # Exit with an error code to fail the CI/CD process
+fi
