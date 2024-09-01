@@ -492,8 +492,8 @@ export function getTriggerStep(properties: V2Properties) {
         ...steps,
         {
             id: 'trigger_end',
-            name: 'Worfklow start',
-            type: 'trigger',
+            name: 'Workflow start',
+            type: '',
             componentType: 'trigger',
             cantDelete: true,
         }
