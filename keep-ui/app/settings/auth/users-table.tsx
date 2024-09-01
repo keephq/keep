@@ -41,7 +41,7 @@ export function UsersTable({
         <TableRow>
           <TableHeaderCell className="w-1/24">{/** Image */}</TableHeaderCell>
           <TableHeaderCell className="w-3/12">
-            {authType === AuthenticationType.MULTI_TENANT || authType === AuthenticationType.KEYCLOAK
+            {authType === AuthenticationType.AUTH0 || authType === AuthenticationType.KEYCLOAK
               ? "Email"
               : "Username"}
           </TableHeaderCell>

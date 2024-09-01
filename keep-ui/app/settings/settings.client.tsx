@@ -52,8 +52,8 @@ export default function SettingsPage() {
   const authType = configData?.AUTH_TYPE as AuthenticationType;
 
   // future: feature flags
-  const usersAllowed = authType !== AuthenticationType.NO_AUTH;
-  const rolesAllowed = authType !== AuthenticationType.NO_AUTH;
+  const usersAllowed = authType !== AuthenticationType.NOAUTH;
+  const rolesAllowed = authType !== AuthenticationType.NOAUTH;
   const customRolesAllowed = authType === AuthenticationType.KEYCLOAK;
   const ssoAllowed = false;
   const groupsAllowed = authType === AuthenticationType.KEYCLOAK;

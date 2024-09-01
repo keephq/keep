@@ -7,11 +7,25 @@ import {
   AuthenticationType,
   NoAuthUserEmail,
   NoAuthTenant,
+  MULTI_TENANT,
+  SINGLE_TENANT,
+  NO_AUTH,
 } from "utils/authenticationType";
 import { OAuthConfig } from "next-auth/providers";
-import { JWT } from "next-auth/jwt";
 
-const authType = process.env.AUTH_TYPE as AuthenticationType;
+const authTypeEnv = process.env.AUTH_TYPE;
+let authType;
+
+// Backward compatibility
+if (authTypeEnv === MULTI_TENANT) {
+  authType = AuthenticationType.AUTH0;
+} else if (authTypeEnv === SINGLE_TENANT) {
+  authType = AuthenticationType.DB;
+} else if (authTypeEnv === NO_AUTH) {
+  authType = AuthenticationType.NOAUTH;
+} else {
+  authType = authTypeEnv;
+}
 
 /*
 
@@ -311,9 +325,9 @@ const keycloakAuthOptions  = {
 
 console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
-  authType === AuthenticationType.MULTI_TENANT
+  authType === AuthenticationType.AUTH0
     ? multiTenantAuthOptions
-    : authType === AuthenticationType.SINGLE_TENANT
+    : authType === AuthenticationType.DB
     ? singleTenantAuthOptions
     : authType === AuthenticationType.KEYCLOAK
     ? keycloakAuthOptions

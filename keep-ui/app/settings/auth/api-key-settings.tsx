@@ -81,7 +81,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   });
 
   const authType = configData?.AUTH_TYPE as AuthenticationType;
-  const createApiKeyEnabled = authType !== AuthenticationType.NO_AUTH;
+  const createApiKeyEnabled = authType !== AuthenticationType.NOAUTH;
 
   const handleRegenerate = async (apiKeyId: string, event: React.MouseEvent) => {
     event.stopPropagation();

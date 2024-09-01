@@ -225,7 +225,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                   </div>
                 )}
                 {/* Password Field */}
-                {(authType === AuthenticationType.SINGLE_TENANT || authType === AuthenticationType.KEYCLOAK) && isNewUser && (
+                {(authType === AuthenticationType.DB || authType === AuthenticationType.KEYCLOAK) && isNewUser && (
                 <div className="mt-4">
                     <Subtitle>Password</Subtitle>
                     <Controller

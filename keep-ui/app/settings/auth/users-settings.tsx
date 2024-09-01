@@ -156,7 +156,7 @@ export default function UsersSettings({
         isNewUser={isNewUser}
         mutateUsers={mutateUsers}
         groupsEnabled={groupsAllowed}
-        identifierType={authType === AuthenticationType.SINGLE_TENANT ? "username" : "email"}
+        identifierType={authType === AuthenticationType.DB ? "username" : "email"}
       />
     </div>
   );

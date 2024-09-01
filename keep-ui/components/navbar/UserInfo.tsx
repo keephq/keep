@@ -81,7 +81,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               </Menu.Item>
             </li>
           )}
-          {configData?.AUTH_TYPE !== AuthenticationType.NO_AUTH && (
+          {configData?.AUTH_TYPE !== AuthenticationType.NOAUTH && (
             <li>
               <Menu.Item
                 as="button"
