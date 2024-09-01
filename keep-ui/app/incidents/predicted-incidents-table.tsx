@@ -35,9 +35,9 @@ export default function PredictedIncidentsTable({
 
   const columns = [
     columnHelper.display({
-      id: "generated_name",
+      id: "ai_generated_name",
       header: "Name",
-      cell: ({ row }) => <div className="text-wrap">{row.original.user_name}</div>,
+      cell: ({ row }) => <div className="text-wrap">{row.original.user_generated_name}</div>,
     }),
     columnHelper.display({
       id: "user_summary",

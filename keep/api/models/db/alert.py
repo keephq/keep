@@ -61,8 +61,8 @@ class Incident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
     
-    user_name: str | None
-    generated_name: str | None
+    user_generated_name: str | None
+    ai_generated_name: str | None
 
     user_summary: str = Field(sa_column=Column(TEXT), nullable=True)
     generated_summary: str = Field(sa_column=Column(TEXT), nullable=True)

@@ -577,7 +577,7 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
                     extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
         return ""
 
-    if incident.user_name:
+    if incident.user_generated_name:
         return ""
 
     if not max_name_length:

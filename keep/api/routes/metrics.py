@@ -48,7 +48,7 @@ def get_metrics(
     export += "# TYPE alerts_total counter\n"
     incidents, incidents_total = get_last_incidents(tenant_id=tenant_id, limit=1000, is_confirmed=True, )
     for incident in incidents:
-        incident_name = incident.user_name if incident.user_name else incident.generated_name
+        incident_name = incident.user_generated_name if incident.user_generated_name else incident.ai_generated_name
         export += f'alerts_total{{incident_name="{incident_name}" incident_id="{incident.id}"}} {incident.alerts_count}\n'
     
     # Exporting stats about open incidents

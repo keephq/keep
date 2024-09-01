@@ -2,8 +2,8 @@ import {AlertDto} from "../alerts/models";
 
 export interface IncidentDto {
   id: string;
-  user_name: string;
-  generated_name: string;
+  user_generated_name: string;
+  ai_generated_name: string;
   user_summary: string;
   generated_summary: string;
   assignee: string;

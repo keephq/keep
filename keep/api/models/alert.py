@@ -336,7 +336,7 @@ class UnEnrichAlertRequestBody(BaseModel):
 
 
 class IncidentDtoIn(BaseModel):
-    user_name: str | None
+    user_generated_name: str | None
     assignee: str | None
     user_summary: str | None
 
@@ -370,7 +370,7 @@ class IncidentDto(IncidentDtoIn):
     is_confirmed: bool
 
     generated_summary: str | None
-    generated_name: str | None
+    ai_generated_name: str | None
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -395,7 +395,7 @@ class IncidentDto(IncidentDtoIn):
 
         return cls(
             id=db_incident.id,
-            user_name=db_incident.user_name,
+            user_generated_name=db_incident.user_generated_name,
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,

@@ -2598,7 +2598,7 @@ def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incide
         if not incident:
             return
 
-        incident.generated_name = name
+        incident.ai_generated_name = name
         session.commit()
         session.refresh(incident)
         
