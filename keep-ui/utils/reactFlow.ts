@@ -488,6 +488,7 @@ export function getTriggerStep(properties: V2Properties) {
             componentType: 'trigger',
             edgeTarget: triggerStartTargets,
             cantDelete: true,
+            notClickable: true
         },
         ...steps,
         {
@@ -496,6 +497,7 @@ export function getTriggerStep(properties: V2Properties) {
             type: '',
             componentType: 'trigger',
             cantDelete: true,
+            notClickable: true
         }
 
     ] as V2Step[];

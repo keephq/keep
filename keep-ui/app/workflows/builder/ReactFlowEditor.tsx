@@ -53,7 +53,6 @@ const ReactFlowEditor = ({
     setSynced(false);
 
     const handleDefinitionChange = () => {
-      if (changes > 0) {
         let { sequence, properties } =
           reConstructWorklowToDefinition({
             nodes: nodes,
@@ -80,8 +79,6 @@ const ReactFlowEditor = ({
         onDefinitionChange({ sequence, properties, isValid });
         setSynced(true);
       }
-      setSynced(true);
-    };
 
     const debouncedHandleDefinitionChange = debounce(handleDefinitionChange, 300);
 

@@ -71,7 +71,7 @@ export function globalValidatorV2(
     }
   }
   const valid = anyStepOrAction;
-  if (valid) setGlobalValidationError(null, "");
+  if (valid) setGlobalValidationError(null, null);
   return valid;
 }
 

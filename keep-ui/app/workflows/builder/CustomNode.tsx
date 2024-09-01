@@ -33,7 +33,8 @@ function CustomNode({ id, data }: FlowNode) {
     ?.replace("trigger_", "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
-  const specialNodeCheck = ['start', 'end', 'trigger_end', 'trigger_start'].includes(type)
+  //These node are not clickable and special nodes
+  const specialNodeCheck = ['start', 'end'].includes(type)
 
   function getTriggerIcon(step: any) {
     const { type } = step;
@@ -45,6 +46,25 @@ function CustomNode({ id, data }: FlowNode) {
     }
   }
 
+  function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    if(!synced){
+      toast('Please save the previous step or wait while properties sync with the workflow.');
+      return;
+    }
+    if(data?.notClickable){
+      return;
+    }
+    if (specialNodeCheck || id?.includes('end') || id?.includes('empty')) {
+      if (id?.includes('empty')) {
+        setSelectedNode(id);
+      }
+      setOpneGlobalEditor(true);
+      return;
+    }
+    setSelectedNode(id);
+  }
+
   return (
     <>
       {!specialNodeCheck && <div
@@ -52,21 +72,7 @@ function CustomNode({ id, data }: FlowNode) {
           ? "border-orange-500"
           : "border-stone-400"
           }`}
-        onClick={(e) => {
-          e.stopPropagation();
-          if(!synced){
-            toast('Please save the previous step or wait while properties sync with the workflow.');
-            return;
-          }
-          if (type === 'start' || type === 'end' || id?.includes('end') || id?.includes('empty')) {
-            if (id?.includes('empty')) {
-              setSelectedNode(id);
-            }
-            setOpneGlobalEditor(true);
-            return;
-          }
-          setSelectedNode(id);
-        }}
+        onClick={handleNodeClick}
         style={{
           opacity: data.isLayouted ? 1 : 0,
           borderStyle: isEmptyNode ? 'dashed' : "",
@@ -126,7 +132,7 @@ function CustomNode({ id, data }: FlowNode) {
             toast('Please save the previous step or wait while properties sync with the workflow.');
             return;
           }
-          if (type === 'start' || type === 'end' || id?.includes('end')) {
+          if (specialNodeCheck || id?.includes('end')) {
             setOpneGlobalEditor(true);
             return;
           }
