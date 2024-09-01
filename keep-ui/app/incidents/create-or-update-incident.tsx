@@ -39,7 +39,7 @@ export default function CreateOrUpdateIncident({
   useEffect(() => {
     if (incidentToEdit) {
       setIncidentName(incidentToEdit.name);
-      setIncidentUserSummary(incidentToEdit.user_summary ?? "");
+      setIncidentUserSummary(incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? "" );
       setIncidentAssignee(incidentToEdit.assignee ?? "");
     }
   }, [incidentToEdit]);
@@ -117,8 +117,7 @@ export default function CreateOrUpdateIncident({
 
   const submitEnabled = (): boolean => {
     return (
-      !!incidentName &&
-      !!incidentUserSummary
+      !!incidentName
     );
   };
 
@@ -140,10 +139,10 @@ export default function CreateOrUpdateIncident({
         />
       </div>
       <div className="mt-2.5">
-        <Text>Summary<span className="text-red-500 text-xs">*</span></Text>
+        <Text>Summary</Text>
         <Textarea
           placeholder="What happened?"
-          required={true}
+          required={false}
           value={incidentUserSummary}
           onValueChange={setIncidentUserSummary}
         />

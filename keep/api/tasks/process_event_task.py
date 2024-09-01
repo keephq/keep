@@ -335,7 +335,7 @@ def __handle_formatted_events(
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        incidents: List[IncidentDto] = rules_engine.run_rules(formatted_events)
+        incidents: List[IncidentDto] = rules_engine.run_rules(enriched_formatted_events)
 
         # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
         # if new grouped incidents were created, we need to push them to the client

@@ -18,9 +18,10 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
-from keep.api.arq_worker import get_worker
+from keep.api.arq_worker import get_arq_worker
+from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import get_user
+from keep.api.core.db import get_api_key, get_user
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -33,6 +34,7 @@ from keep.api.routes import (
     healthcheck,
     incidents,
     mapping,
+    metrics,
     preset,
     providers,
     pusher,
@@ -57,8 +59,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-REDIS = os.environ.get("REDIS", "false") == "true"
-WORKER_ENABLED = os.environ.get("WORKER_ENABLED", "true") == "true"
+
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -84,6 +85,17 @@ def _extract_identity(request: Request, attribute="email") -> str:
         token = request.headers.get("Authorization").split(" ")[1]
         decoded_token = jwt.decode(token, options={"verify_signature": False})
         return decoded_token.get(attribute)
+    # case api key
+    except AttributeError:
+        # try api key
+        api_key = request.headers.get("x-api-key")
+        if not api_key:
+            return "anonymous"
+
+        api_key = get_api_key(api_key)
+        if api_key:
+            return api_key.tenant_id
+        return "anonymous"
     except Exception:
         return "anonymous"
 
@@ -195,6 +207,9 @@ def get_app(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
     )
     app.include_router(
+        metrics.router, prefix="/metrics", tags=["metrics"]
+    )
+    app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
     )
     app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
@@ -266,10 +281,10 @@ def get_app(
             #       we should add a "wait" here to make sure the server is ready
             await event_subscriber.start()
             logger.info("Consumer started successfully")
-        if REDIS and WORKER_ENABLED:
+        if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
             event_loop = asyncio.get_event_loop()
-            worker = get_worker()
-            event_loop.create_task(worker.async_run())
+            arq_worker = get_arq_worker()
+            event_loop.create_task(arq_worker.async_run())
         logger.info("Services started successfully")
 
     @app.exception_handler(Exception)

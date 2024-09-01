@@ -5,6 +5,7 @@ Zabbix Provider is a class that allows to ingest/digest data from Zabbix.
 import dataclasses
 import datetime
 import json
+import logging
 import os
 import random
 from typing import Literal, Optional
@@ -19,6 +20,8 @@ from keep.providers.base.provider_exceptions import ProviderMethodException
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -167,6 +170,7 @@ class ZabbixProvider(BaseProvider):
     STATUS_MAP = {
         "problem": AlertStatus.FIRING,
         "ok": AlertStatus.RESOLVED,
+        "resolved": AlertStatus.RESOLVED,
         "acknowledged": AlertStatus.ACKNOWLEDGED,
         "suppressed": AlertStatus.SUPPRESSED,
     }
@@ -424,12 +428,11 @@ class ZabbixProvider(BaseProvider):
             {"name": "message", "value": "{ALERT.MESSAGE}"},
             {"name": "name", "value": "{EVENT.NAME}"},
             {"name": "service", "value": "{HOST.HOST}"},
-            {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
-            {"name": "status", "value": "{TRIGGER.STATUS}"},
+            {"name": "severity", "value": "{EVENT.SEVERITY}"},
+            {"name": "status", "value": "{EVENT.STATUS}"},
             {"name": "tags", "value": "{EVENT.TAGSJSON}"},
             {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
             {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
-            {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
             {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
             {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
             {"name": "HOST.IP", "value": "{HOST.IP}"},
@@ -559,10 +562,13 @@ class ZabbixProvider(BaseProvider):
         event: dict, provider_instance: Optional["ZabbixProvider"] = None
     ) -> AlertDto:
         environment = "unknown"
-        tags = {
-            tag.get("tag"): tag.get("value")
-            for tag in json.loads(event.pop("tags", "[]"))
-        }
+        tags_raw = event.pop("tags", "[]")
+        try:
+            tags = {tag.get("tag"): tag.get("value") for tag in json.loads(tags_raw)}
+        except json.JSONDecodeError:
+            logger.error("Failed to extract Zabbix tags", extra={"tags_raw": tags_raw})
+            # We failed to extract tags for some reason.
+            tags = {}
         if isinstance(tags, dict):
             environment = tags.pop("environment", "unknown")
             # environment exists in tags but is None
@@ -571,18 +577,40 @@ class ZabbixProvider(BaseProvider):
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("ZABBIX.URL", None)
+
+        if zabbix_url == "{$ZABBIX.URL}":
+            # This means user did not configure $ZABBIX.URL in Zabbix probably
+            zabbix_url = None
+
         url = None
         if event_id and trigger_id and zabbix_url:
             url = (
                 f"{zabbix_url}/tr_events.php?triggerid={trigger_id}&eventid={event_id}"
             )
 
-        severity = ZabbixProvider.SEVERITIES_MAP.get(
-            event.pop("severity", "").lower(), AlertSeverity.INFO
+        severity = event.pop("severity", "").lower()
+        severity = ZabbixProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+
+        status = event.pop("status", "").lower()
+        status = ZabbixProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+
+        last_received = event.pop(
+            "lastReceived", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         )
-        status = ZabbixProvider.STATUS_MAP.get(
-            event.pop("status", "").lower(), AlertStatus.FIRING
-        )
+        if last_received == "{DATE} {TIME}":
+            # This means it's a test message, just override.
+            last_received = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        else:
+            last_received = datetime.datetime.strptime(
+                last_received, "%Y.%m.%d %H:%M:%S"
+            ).isoformat()
+
+        message = event.pop("message", "")
+        if "acknowledged problem" in message:
+            status = AlertStatus.ACKNOWLEDGED
+        elif "suppressed problem" in message:
+            status = AlertStatus.SUPPRESSED
+
         return AlertDto(
             **event,
             environment=environment,
@@ -591,6 +619,7 @@ class ZabbixProvider(BaseProvider):
             severity=severity,
             status=status,
             url=url,
+            lastReceived=last_received,
             tags=tags,
         )
 
