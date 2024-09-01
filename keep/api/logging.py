@@ -143,6 +143,11 @@ CONFIG = {
             "level": "CRITICAL",
             "propagate": False,
         },
+        "Environment": {
+            "handlers": [],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
     },
 }
 
