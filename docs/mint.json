@@ -78,8 +78,8 @@
         "platform/alerts",
         "platform/alertseverityandstatus",
         "platform/workflows",
-        "platform/workflowbuilder",
-        "platform/settings"
+        "platform/settings",
+        "platform/metrics"
       ]
     },
     {
@@ -88,73 +88,83 @@
         "providers/overview",
         "providers/fingerprints",
         "providers/adding-a-new-provider",
+        "providers/getting-started",
+        "providers/what-is-a-provider",
         {
           "group": "Supported Providers",
           "pages": [
-            "providers/documentation/appdynamics-provider",
-            "providers/documentation/aks-provider",
-            "providers/documentation/axiom-provider",
-            "providers/documentation/azuremonitoring-provider",
-            "providers/documentation/centreon-provider",
-            "providers/documentation/cloudwatch-provider",
-            "providers/documentation/console-provider",
-            "providers/documentation/coralogix-provider",
-            "providers/documentation/datadog-provider",
-            "providers/documentation/discord-provider",
-            "providers/documentation/elastic-provider",
-            "providers/documentation/gcpmonitoring-provider",
-            "providers/documentation/gitlab-provider",
-            "providers/documentation/google_chat-provider",
-            "providers/documentation/grafana_incident-provider",
-            "providers/documentation/grafana_oncall-provider",
-            "providers/documentation/grafana-provider",
-            "providers/documentation/http-provider",
-            "providers/documentation/ilert-provider",
-            "providers/documentation/quickchart-provider",
-            "providers/documentation/incidentio-provider",
-            "providers/documentation/jira-provider",
-            "providers/documentation/kibana-provider",
-            "providers/documentation/kubernetes-provider",
-            "providers/documentation/linearb-provider",
-            "providers/documentation/mailchimp-provider",
-            "providers/documentation/mock-provider",
-            "providers/documentation/mysql-provider",
-            "providers/documentation/netdata-provider",
-            "providers/documentation/new-relic-provider",
-            "providers/documentation/ntfy-provider",
-            "providers/documentation/openobserve-provider",
-            "providers/documentation/openshift-provider",
-            "providers/documentation/opsgenie-provider",
-            "providers/documentation/pagerduty-provider",
-            "providers/documentation/pagertree-provider",
-            "providers/documentation/pingdom-provider",
-            "providers/documentation/postgresql-provider",
-            "providers/documentation/pushover-provider",
-            "providers/documentation/redmine-provider",
-            "providers/documentation/resend-provider",
-            "providers/documentation/rollbar-provider",
-            "providers/documentation/sendgrid-provider",
-            "providers/documentation/sentry-provider",
-            "providers/documentation/signalfx-provider",
-            "providers/documentation/signl4-provider",
-            "providers/documentation/site24x7-provider",
-            "providers/documentation/slack-provider",
-            "providers/documentation/snowflake-provider",
-            "providers/documentation/statuscake-provider",
-            "providers/documentation/splunk-provider",
-            "providers/documentation/squadcast-provider",
-            "providers/documentation/ssh-provider",
-            "providers/documentation/teams-provider",
-            "providers/documentation/telegram-provider",
-            "providers/documentation/trello-provider",
-            "providers/documentation/twilio-provider",
-            "providers/documentation/uptimekuma-provider",
-            "providers/documentation/victoriametrics-provider",
-            "providers/documentation/websocket-provider",
-	    "providers/documentation/webhook-provider",
-            "providers/documentation/incidentmanager-provider",
-            "providers/documentation/zabbix-provider",
-            "providers/documentation/zenduty-provider"
+              "providers/documentation/aks-provider",
+              "providers/documentation/appdynamics-provider",
+              "providers/documentation/axiom-provider",
+              "providers/documentation/azuremonitoring-provider",
+              "providers/documentation/centreon-provider",
+              "providers/documentation/cloudwatch-provider",
+              "providers/documentation/console-provider",
+              "providers/documentation/coralogix-provider",
+              "providers/documentation/datadog-provider",
+              "providers/documentation/discord-provider",
+              "providers/documentation/elastic-provider",
+              "providers/documentation/gcpmonitoring-provider",
+              "providers/documentation/github_workflows_provider",
+              "providers/documentation/gitlab-provider",
+              "providers/documentation/gitlabpipelines-provider",
+              "providers/documentation/google_chat-provider",
+              "providers/documentation/grafana-provider",
+              "providers/documentation/grafana_incident-provider",
+              "providers/documentation/grafana_oncall-provider",
+              "providers/documentation/http-provider",
+              "providers/documentation/ilert-provider",
+              "providers/documentation/incidentio-provider",
+              "providers/documentation/incidentmanager-provider",
+              "providers/documentation/jira-provider",
+              "providers/documentation/kibana-provider",
+              "providers/documentation/kubernetes-provider",
+              "providers/documentation/linear_provider",
+              "providers/documentation/linearb-provider",
+              "providers/documentation/mailchimp-provider",
+              "providers/documentation/mattermost-provider",
+              "providers/documentation/microsoft-planner-provider",
+              "providers/documentation/mock-provider",
+              "providers/documentation/mongodb-provider",
+              "providers/documentation/mysql-provider",
+              "providers/documentation/netdata-provider",
+              "providers/documentation/new-relic-provider",
+              "providers/documentation/ntfy-provider",
+              "providers/documentation/openobserve-provider",
+              "providers/documentation/openshift-provider",
+              "providers/documentation/opsgenie-provider",
+              "providers/documentation/pagerduty-provider",
+              "providers/documentation/pagertree-provider",
+              "providers/documentation/pingdom-provider",
+              "providers/documentation/planner-provider",
+              "providers/documentation/postgresql-provider",
+              "providers/documentation/pushover-provider",
+              "providers/documentation/quickchart-provider",
+              "providers/documentation/redmine-provider",
+              "providers/documentation/resend-provider",
+              "providers/documentation/rollbar-provider",
+              "providers/documentation/sendgrid-provider",
+              "providers/documentation/sentry-provider",
+              "providers/documentation/signalfx-provider",
+              "providers/documentation/signl4-provider",
+              "providers/documentation/site24x7-provider",
+              "providers/documentation/slack-provider",
+              "providers/documentation/snowflake-provider",
+              "providers/documentation/splunk-provider",
+              "providers/documentation/squadcast-provider",
+              "providers/documentation/ssh-provider",
+              "providers/documentation/statuscake-provider",
+              "providers/documentation/teams-provider",
+              "providers/documentation/telegram-provider",
+              "providers/documentation/template",
+              "providers/documentation/trello-provider",
+              "providers/documentation/twilio-provider",
+              "providers/documentation/uptimekuma-provider",
+              "providers/documentation/victoriametrics-provider",
+              "providers/documentation/webhook-provider",
+              "providers/documentation/websocket-provider",
+              "providers/documentation/zabbix-provider",
+              "providers/documentation/zenduty-provider"
           ]
         }
       ]
@@ -163,19 +173,13 @@
       "group": "Workflows",
       "pages": [
         "workflows/overview",
+        "workflows/getting-started",
         {
           "group": "Syntax",
           "pages": [
             "workflows/syntax/basic-syntax",
             "workflows/syntax/foreach-syntax",
             "workflows/syntax/context-syntax"
-          ]
-        },
-        {
-          "group": "Providers",
-          "pages": [
-            "workflows/providers/getting-started",
-            "workflows/providers/what-is-a-provider"
           ]
         },
         {
@@ -200,7 +204,10 @@
             "workflows/functions/utcnow",
             "workflows/functions/to-utc",
             "workflows/functions/datetime-compare",
-            "workflows/functions/encode"
+            "workflows/functions/encode",
+            "workflows/functions/last",
+            "workflows/functions/lowercase",
+            "workflows/functions/uppercase"
           ]
         },
         {
@@ -239,10 +246,29 @@
             "api-ref/providers/get-installed-providers",
             "api-ref/providers/install-provider-oauth2",
             "api-ref/providers/invoke-provider-method",
-
+            "api-ref/providers/get-alert-count",
+            "api-ref/providers/export-providers",
             "api-ref/providers/update-provider",
             "api-ref/providers/validate-provider-scopes"
           ]
+        },
+
+        {
+          "group": "Dashboard",
+          "pages": [
+            "api-ref/dashboard/create-dashboard",
+            "api-ref/dashboard/read-dashboards",
+            "api-ref/dashboard/update-dashboard",
+            "api-ref/dashboard/delete-dashboard"
+          ]
+        },
+        {
+          "group": "Groups",
+          "pages": ["api-ref/groups/get-groups"]
+        },
+        {
+          "group": "Tags",
+          "pages": ["api-ref/tags/get-tags"]
         },
         {
           "group": "Healthcheck",
@@ -261,7 +287,24 @@
             "api-ref/alerts/get-all-alerts",
             "api-ref/alerts/receive-event",
             "api-ref/alerts/receive-generic-event",
-            "api-ref/alerts/search-alerts"
+            "api-ref/alerts/search-alerts",
+            "api-ref/alerts/webhook-challenge",
+            "api-ref/alerts/get-alert-audit",
+            "api-ref/alerts/unenrich-alert"
+          ]
+        },
+        {
+          "group": "Incidents",
+          "pages": [
+            "api-ref/incidents/update-incident",
+            "api-ref/incidents/get-incident-alerts",
+            "api-ref/incidents/update-incident-1",
+            "api-ref/incidents/delete-alerts-from-incident",
+            "api-ref/incidents/delete-incident",
+            "api-ref/incidents/create-incident-endpoint",
+            "api-ref/incidents/get-all-incidents",
+            "api-ref/incidents/get-incident",
+            "api-ref/incidents/add-alerts-to-incident"
           ]
         },
         {
@@ -279,31 +322,43 @@
         },
         {
           "group": "Whoami",
-          "pages": [
-            "api-ref/whoami/get-tenant-id"
-          ]
+          "pages": ["api-ref/whoami/get-tenant-id"]
         },
         {
           "group": "Mapping",
           "pages": [
             "api-ref/mapping/create-mapping",
-            "api-ref/mapping/get-mappings"
+            "api-ref/mapping/get-mappings",
+            "api-ref/mapping/delete-mapping-by-id"
           ]
         },
         {
-          "group": "Preset",
+          "group": "Metrics",
           "pages": [
+            "api-ref/metrics/get-metrics"
+          ]
+        },
+        {
+          "group": "Topology",
+          "pages": [
+            "api-ref/topology/get-topology-data"
+          ]
+        },
+        {
+          "group": "Presets",
+          "pages": [
+            "api-ref/preset/create-preset-tab",
             "api-ref/preset/create-preset",
             "api-ref/preset/delete-preset",
+            "api-ref/preset/delete-tab",
+            "api-ref/preset/get-preset-alerts",
             "api-ref/preset/get-presets",
             "api-ref/preset/update-preset"
           ]
         },
         {
           "group": "Pusher",
-          "pages": [
-            "api-ref/pusher/pusher-authentication"
-          ]
+          "pages": ["api-ref/pusher/pusher-authentication"]
         },
         {
           "group": "Rules",
@@ -312,6 +367,15 @@
             "api-ref/rules/delete-rule",
             "api-ref/rules/get-rules",
             "api-ref/rules/update-rule"
+          ]
+        },
+        {
+          "group": "Workflows",
+          "pages": [
+            "api-ref/workflows/export-workflows",
+            "api-ref/workflows/run-workflow-from-definition",
+            "api-ref/workflows/get-random-workflow-templates",
+            "api-ref/workflows/create-workflow-from-body"
           ]
         },
         {
@@ -342,9 +406,7 @@
         },
         {
           "group": "Status",
-          "pages": [
-            "api-ref/status/status"
-          ]
+          "pages": ["api-ref/status/status"]
         },
 
         {
@@ -368,7 +430,9 @@
             "api-ref/actions/get-actions",
             "api-ref/actions/add-actions",
             "api-ref/actions/update-action",
-            "api-ref/actions/delete-action"
+            "api-ref/actions/delete-action",
+            "api-ref/actions/create-actions",
+            "api-ref/actions/put-action"
           ]
         }
       ]
@@ -385,6 +449,7 @@
             {
               "group": "keep alert",
               "pages": [
+                "cli/commands/cli-alert",
                 "cli/commands/alert-enrich",
                 "cli/commands/alert-get",
                 "cli/commands/alert-list"
@@ -393,6 +458,7 @@
             {
               "group": "keep provider",
               "pages": [
+                "cli/commands/cli-provider",
                 "cli/commands/provider-connect",
                 "cli/commands/provider-delete",
                 "cli/commands/provider-list"
@@ -401,9 +467,11 @@
             {
               "group": "keep workflow",
               "pages": [
+                "cli/commands/cli-workflow",
                 "cli/commands/workflow-apply",
                 "cli/commands/workflow-list",
                 "cli/commands/workflow-run",
+                "cli/commands/workflow-runs",
                 {
                   "group": "keep workflow runs",
                   "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
@@ -418,7 +486,19 @@
                 "cli/commands/mappings-delete"
               ]
             },
+            {
+              "group": "keep extractions",
+              "pages": [
+                "cli/commands/extraction-create",
+                "cli/commands/extraction-delete",
+                "cli/commands/extractions-list"
+              ]
+            },
+            "cli/commands/cli",
             "cli/commands/cli-api",
+            "cli/commands/cli-config-new",
+            "cli/commands/cli-config-show",
+            "cli/commands/cli-run",
             "cli/commands/cli-config",
             "cli/commands/cli-version",
             "cli/commands/cli-whoami"

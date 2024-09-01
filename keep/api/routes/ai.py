@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @router.get(
     "/stats",
     description="Get stats for the AI Landing Page",
+    include_in_schema=False,
 )
 def get_stats(
     authenticated_entity: AuthenticatedEntity = Depends(
