@@ -336,7 +336,7 @@ class UnEnrichAlertRequestBody(BaseModel):
 
 
 class IncidentDtoIn(BaseModel):
-    user_name: str
+    user_name: str | None
     assignee: str | None
     user_summary: str | None
 
