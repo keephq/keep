@@ -304,7 +304,8 @@
             "api-ref/incidents/create-incident-endpoint",
             "api-ref/incidents/get-all-incidents",
             "api-ref/incidents/get-incident",
-            "api-ref/incidents/add-alerts-to-incident"
+            "api-ref/incidents/add-alerts-to-incident",
+            "api-ref/incidents/confirm-incident"
           ]
         },
         {
@@ -392,16 +393,28 @@
             "api-ref/settings/get-users",
             "api-ref/settings/test-smtp-settings",
             "api-ref/settings/update-api-key",
-            "api-ref/settings/update-smtp-settings"
+            "api-ref/settings/update-smtp-settings",
+            "api-ref/settings/get-sso-settings"
           ]
         },
         {
-          "group": "Users",
+          "group": "auth",
           "pages": [
-            "api-ref/users/get-users",
-            "api-ref/users/create-user",
-            "api-ref/users/delete-user",
-            "api-ref/users/delete-user-by-email"
+            "api-ref/auth/get-groups",
+            "api-ref/auth/create-group",
+            "api-ref/auth/update-group",
+            "api-ref/auth/delete-group",
+            "api-ref/auth/get-permissions",
+            "api-ref/auth/create-permissions",
+            "api-ref/auth/get-scopes",
+            "api-ref/auth/get-roles",
+            "api-ref/auth/create-role",
+            "api-ref/auth/update-role",
+            "api-ref/auth/delete-role",
+            "api-ref/auth/get-users",
+            "api-ref/auth/create-user",
+            "api-ref/auth/update-user",
+            "api-ref/auth/delete-user"
           ]
         },
         {
