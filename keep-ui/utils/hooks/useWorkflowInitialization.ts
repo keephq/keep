@@ -204,6 +204,7 @@ const useWorkflowInitialization = (
       setNodes(nodes);
       setEdges(edges);
       setV2Properties(parsedWorkflow?.properties ?? {});
+      setChanges(1);
       setToolBoxConfig(toolboxConfiguration);
       setIsLoading(false);
     };

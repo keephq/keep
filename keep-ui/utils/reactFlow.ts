@@ -121,12 +121,9 @@ export function reConstructWorklowToDefinition({
         return workflowSequence;
     }
 
-    const triggerNodes = nodes.reduce((obj, node) => {
-        if (['interval', 'alert', 'manual'].includes(node.id)) {
-            obj[node.id] = true;
-        }
-        return obj;
-    }, {} as Record<string, boolean>);
+    if(nodes.find((node)=>node.id==='manual')){
+        properties['manual'] = "true";
+    }
     return {
         sequence: buildWorkflowDefinition(0, originalNodes.length) as V2Step[],
         properties: properties as V2Properties
