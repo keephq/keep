@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd ../docs;
+
 # Define the JSON file
 MINT_JSON="../docs/mint.json"
 

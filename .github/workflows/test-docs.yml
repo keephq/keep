@@ -32,8 +32,9 @@ jobs:
         run: |
           npm i -g mintlify
           cd docs && mintlify broken-links;
-          ./validate_navigation.sh;
-          cd ../scripts && python3 get_providers_list.py --validate;
+          cd ../scripts;
+          ./docs_validate_navigation.sh;
+          python3 docs_get_providers_list.py --validate;
 
           # Todo: validate if openapi schema is matching with the code
   
