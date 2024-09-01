@@ -7,6 +7,7 @@ import {
   Subtitle,
   Icon,
   Button,
+  Divider,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
 import { Provider } from "app/providers/providers";
@@ -283,14 +284,17 @@ function WorkflowEditorV2({
   const propertyKeys = Object.keys(properties).filter(
     (k) => k !== "isLocked" && k !== "id"
   );
-
+  let renderDivider = false;
   return (
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
       {propertyKeys.map((key, index) => {
+        const isTrigger = ["manual", "alert", 'interval'].includes(key) ;
+        renderDivider = isTrigger && key ===  selectedNode ? !renderDivider : false;
         return (
            <div key={key}>
-            {((key ===  selectedNode)||(!["manual", "alert", 'interval'].includes(key))) && <Text className="capitalize mt-2.5">{key}</Text>}
+            { renderDivider && <Divider />}
+            {((key ===  selectedNode)||(!isTrigger)) && <Text className="capitalize">{key}</Text>}
             {key === "manual" ? (
               selectedNode === 'manual' && <div key={key}>
                 <input
