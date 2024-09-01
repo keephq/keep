@@ -241,6 +241,9 @@ async def mine_incidents_and_create_objects(
 
     incident_ids_for_summary_generation = []
 
+    new_incident_count = 0
+    updated_incident_count = 0
+    
     for component in nx.connected_components(graph):
         if len(component) > min_incident_size:
             alerts_appended = False
@@ -255,7 +258,7 @@ async def mine_incidents_and_create_objects(
                     add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [
                                                           alert.id for alert in alerts if alert.fingerprint in component])
                     incident_ids_for_summary_generation.append(incident.id)
-
+                    updated_incident_count += 1
             if not alerts_appended:
                 incident_start_time = min(
                     [alert.timestamp for alert in alerts if alert.fingerprint in component])
@@ -270,7 +273,8 @@ async def mine_incidents_and_create_objects(
                 add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [
                                                       alert.id for alert in alerts if alert.fingerprint in component])
                 incident_ids_for_summary_generation.append(incident.id)
-
+                new_incident_count += 1
+                
     if not ctx:
         pool = await get_pool()
     else:
@@ -288,12 +292,24 @@ async def mine_incidents_and_create_objects(
                    "tenant_id": tenant_id, "incident_id": incident_id},
         )
 
+    
+    
     pusher_client = get_pusher_client()
     if pusher_client:
+        if new_incident_count > 0 or updated_incident_count > 0:
+            log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. {new_incident_count} new incidents were created \
+                and {updated_incident_count} incidents were updated.'
+            
+        else:
+            log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. {new_incident_count} new incidents were created \
+                and {updated_incident_count} incidents were updated. This may be due to high alert sparsity or low amount \
+                of unique alert fingerprints. Increasing "sliding window size" or decreasing "minimal amount of unique \
+                fingerprints in an incident" configuration parameters may help.'
+            
         pusher_client.trigger(
             f"private-{tenant_id}",
             "ai-logs-change",
-            {"log": ALGORITHM_VERBOSE_NAME + " successfully executed."},
+            {"log": log_string},
         )
     logger.info(
         "Client notified on new AI log",
