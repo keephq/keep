@@ -1,0 +1,50 @@
+---
+title: "Keycloak Authentication"
+---
+
+<Tip>Keep supports Keycloak in a "managed" way where Keep auto-provisions all resources (realm, client, etc.). Keep can also work with externally managed Keycloak. To learn how, please contact the team on [Slack](https://slack.keephq.dev).</Tip>
+
+Keep integrates with Keycloak to provide a powerful and flexible authentication system for multi-tenant applications, supporting Single Sign-On (SSO) and SAML.
+
+<Frame>
+  <img src="/images/keycloakauth.png" width="500"/>
+</Frame>
+
+### When to Use
+
+- **On Prem:** When deploying Keep on-premises and requiring a robust authentication system.
+- **OSS:** If you prefer using open-source software for your authentication needs.
+- **Enterprise Protocols:** When you need support for enterprise-level protocols like SAML and OpenID Connect.
+- **Fully Customized:** When you need a highly customizable authentication solution.
+- **RBAC:** When you require Role-Based Access Control for managing user permissions.
+- **User and Group Management:** When you need advanced user and group management capabilities.
+
+### Setup Instructions
+
+To start Keep with Keycloak authentication, set the following environment variables:
+
+#### Frontend Environment Variables
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|-----------|:--------:|:-------------:|
+| AUTH_TYPE | Set to 'KEYCLOAK' for Keycloak authentication | Yes | - |
+| KEYCLOAK_ID | Your Keycloak client ID (e.g. keep) | Yes | - |
+| KEYCLOAK_ISSUER | Full URL to Your Keycloak issuer URL e.g. http://localhost:8181/auth/realms/keep | Yes | - |
+
+#### Backend Environment Variables
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|-----------|:--------:|:-------------:|
+| AUTH_TYPE | Set to 'KEYCLOAK' for Keycloak authentication | Yes | - |
+| KEYCLOAK_URL | Full URL to your Keycloak server | Yes | http://localhost:8181/auth/ |
+| KEYCLOAK_REALM | Your Keycloak realm | Yes | keep |
+| KEYCLOAK_CLIENT_ID | Your Keycloak client ID | Yes | keep |
+| KEYCLOAK_CLIENT_SECRET | Your Keycloak client secret | Yes | keep-keycloak-secret |
+| KEYCLOAK_ADMIN_USER | Admin username for Keycloak | Yes | keep_admin |
+| KEYCLOAK_ADMIN_PASSWORD | Admin password for Keycloak | Yes | keep_admin |
+| KEYCLOAK_AUDIENCE | Audience for Keycloak | Yes | realm-management |
+
+
+### Example configuration
+
+Use the `docker-compose-keycloak.yml` for an easy setup, which includes necessary environment variables for enabling Keycloak authentication.

@@ -57,9 +57,9 @@
           "pages": [
             "deployment/authentication/overview",
             "deployment/authentication/no-auth",
-            "deployment/authentication/basic-auth",
-            "deployment/authentication/enterprise-auth",
-            "deployment/authentication/multi-tenant-auth"
+            "deployment/authentication/db-auth",
+            "deployment/authentication/auth0-auth",
+            "deployment/authentication/keycloak-auth"
           ]
         },
         "deployment/secret-manager",

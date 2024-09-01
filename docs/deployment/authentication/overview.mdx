@@ -1,31 +1,43 @@
 ---
-title: "Authentication Overview"
+title: "Overview"
 ---
 
-## Overview
+<Tip>For every authentication-related question or issue, please join our [Slack](https://slack.keephq.dev).</Tip>
 
-Authentication plays a crucial role in securing applications by verifying user identities and providing the necessary access controls. Keep supports various authentication methods to accommodate different deployment strategies and security needs, from development environments to production setups.
+Keep supports various authentication providers and architectures to accommodate different deployment strategies and security needs, from development environments to production setups.
 
-<Tip>We will be happy to help with any authentication </Tip>
 
-### Authentication Strategies
+### Authentication Providers
 
-- [**No Authentication:**](no-auth) Quick setup for testing or internal use cases.
-- [**Basic Authentication:**](basic-auth) Simple username/password authentication. Works well for small teams or for dev/stage environments.
-- [**Enterprise Authentication:**](enterprise-auth) Use Keep with enterprise authentication methods such as SSO/SAML/OIDC and/or sync users with LDAP.
-- [**Multi-Tenant Authentication:**](multi-tenant-auth) Utilize Auth0 for scalable, multi-tenant authentication.
+- [**No Authentication**](no-auth) - Quick setup for testing or internal use cases.
+- [**DB**](db-auth) - Simple username/password authentication. Works well for small teams or for dev/stage environments. Users and hashed password are stored on DB.
+- [**Auth0**](auth0-auth) - Utilize Auth0 for scalable, auth0-based authentication.
+- [**Keycloak**](keycloak-auth) - Utilize Keycloak for enterprise authentication methods such as SSO/SAML/OIDC, advanced RBAC with custom roles, resource-level permissions, and integration with user directories (LDAP).
 
-Choosing the right authentication strategy depends on your specific use case, security requirements, and deployment environment.
+Choosing the right authentication strategy depends on your specific use case, security requirements, and deployment environment. You can read more about each authentication provider.
 
+
+
+### Authentication Features Comparison
+
+| Identity Provider | RBAC | SAML/OIDC | SSO | LDAP | Resource-based permission | User Management | Group Management | On Prem | License |
+|:---:|:----:|:---------:|:---:|:----:|:-------------------------:|:----------------:|:-----------------:|:-------:|:-------:|
+| **No Auth** |  ❌   |     ❌     |  ❌  |  ❌   |             ❌            |        ❌        |         ❌         |    ✅    |   **OSS**   |
+| **DB** |  ✅ <br />(Predefiend roles)  |     ❌     |  ❌  |  ❌   |             ✅            |        ✅        |         ❌         |    ✅    |   **OSS**   |
+| **Auth0**             |  ✅ <br />(Predefiend roles)  |     ✅     |  ✅  |  🚧  |             🚧            |        ✅        |         🚧        |    ❌    |   **EE**   |
+| **Keycloak**          |  ✅ <br />(Custom roles)  |     ✅     |  ✅  |  ✅   |             ✅            |        ✅        |         ✅         |    ✅    |   **EE**    |
 ### How To Configure
-The authentication scheme on Keep being controlled with environment variables both on the backend (Keep API) and the frontend (Keep UI).
+<Tip>
+Some authentication providers require additional environment variables. These will be covered in detail on the specific authentication provider pages.
+</Tip>
+The authentication scheme on Keep is controlled with environment variables both on the backend (Keep API) and the frontend (Keep UI).
 
-|  Strategy | Environment Variable
-| ------------------------------------- | -------------------------------------------------------------- |
-| No Authentication | `AUTH_TYPE=NO_AUTH`|
-| Basic Authentication| `AUTH_TYPE=SINGLE_TENANT`  |
-| Enterprise Authentication | `AUTH_TYPE=KEYCLOAK` |
-| Multi-Tenant Authentication                           |  `AUTH_TYPE=MULTI_TENANT`  |
 
-###
+|  Identity Provider  | Environment Variable | Additional Variables Required |
+| ------------------------------------- | -------------------------------------------------------------- | ---------------------------- |
+| **No Auth** | `AUTH_TYPE=NOAUTH`| None |
+| **DB** | `AUTH_TYPE=DB`  | `KEEP_JWT_SECRET` |
+| **Auth0**                           |  `AUTH_TYPE=AUTH0`  | `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET` |
+| **Keycloak** | `AUTH_TYPE=KEYCLOAK` | `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` |
+
 For more details on each authentication strategy, including setup instructions and implications, refer to the respective sections.

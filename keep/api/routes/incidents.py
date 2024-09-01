@@ -420,7 +420,7 @@ def mine(
     "/{incident_id}/confirm",
     description="Confirm predicted incident by id",
 )
-def update_incident(
+def confirm_incident(
     incident_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
