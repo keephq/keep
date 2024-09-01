@@ -273,7 +273,7 @@ async def mine_incidents_and_create_objects(
                 incident_ids_to_update.append(incident.id)
 
     if not ctx:
-        pool = get_pool()
+        pool = await get_pool()
     else:
         pool = ctx["redis"]
     for incident_id in incident_ids_to_update:
