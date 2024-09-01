@@ -58,8 +58,9 @@ find . -mindepth 2 -type f -name "*.mdx" | sort | while read -r file; do
         # echo "File $relative_path is listed in mint.json"
         :
     else
-        echo "\"$relative_path\","
-        echo "Is missing in docs/mint.json, should be added there or to the EXCLUDE_FILE_LIST."
+        echo "🔴🔴🔴 \"$relative_path\" is missing in docs/mint.json. That's a file responsible for rendering docs navigation."
+        echo "Please add the new docs page there or to the EXCLUDE_FILE_LIST of the current script."
+        echo "Otherwise the page will be really hard to navigate to :)"
         exit 1 # Exit with an error code to fail the CI/CD process
     fi
 done

@@ -123,6 +123,10 @@ jobs:
 
           # create the state directory
           # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
+
+          # Testing if API docs are actual. 
+          # Keeping this test here to avoid spinning Keep's backend it in the docs-test job
+          ./scripts/docs_validate_openapi_is_actual.sh
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
