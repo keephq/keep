@@ -170,6 +170,7 @@ class ZabbixProvider(BaseProvider):
     STATUS_MAP = {
         "problem": AlertStatus.FIRING,
         "ok": AlertStatus.RESOLVED,
+        "resolved": AlertStatus.RESOLVED,
         "acknowledged": AlertStatus.ACKNOWLEDGED,
         "suppressed": AlertStatus.SUPPRESSED,
     }
@@ -332,7 +333,7 @@ class ZabbixProvider(BaseProvider):
         # zabbix < 6.4 compatibility
         data["auth"] = f"{self.authentication_config.auth_token}"
 
-        response = requests.post(url, json=data, headers=headers, timeout=15)
+        response = requests.post(url, json=data, headers=headers)
 
         response.raise_for_status()
         response_json = response.json()
@@ -342,14 +343,8 @@ class ZabbixProvider(BaseProvider):
 
     def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
-        time_from = datetime.datetime.now() - datetime.timedelta(days=14)
         problems = self.__send_request(
-            "problem.get",
-            {
-                "recent": False,
-                "selectSuppressionData": "extend",
-                "time_from": time_from.timestamp(),
-            },
+            "problem.get", {"recent": False, "selectSuppressionData": "extend"}
         )
         formatted_alerts = []
         for problem in problems.get("result", []):
@@ -433,12 +428,11 @@ class ZabbixProvider(BaseProvider):
             {"name": "message", "value": "{ALERT.MESSAGE}"},
             {"name": "name", "value": "{EVENT.NAME}"},
             {"name": "service", "value": "{HOST.HOST}"},
-            {"name": "severity", "value": "{TRIGGER.SEVERITY}"},
-            {"name": "status", "value": "{TRIGGER.STATUS}"},
+            {"name": "severity", "value": "{EVENT.SEVERITY}"},
+            {"name": "status", "value": "{EVENT.STATUS}"},
             {"name": "tags", "value": "{EVENT.TAGSJSON}"},
             {"name": "description", "value": "{TRIGGER.DESCRIPTION}"},
             {"name": "ALERT.SUBJECT", "value": "{ALERT.SUBJECT}"},
-            {"name": "EVENT.SEVERITY", "value": "{EVENT.SEVERITY}"},
             {"name": "EVENT.TIME", "value": "{EVENT.TIME}"},
             {"name": "EVENT.VALUE", "value": "{EVENT.VALUE}"},
             {"name": "HOST.IP", "value": "{HOST.IP}"},
@@ -583,18 +577,40 @@ class ZabbixProvider(BaseProvider):
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("ZABBIX.URL", None)
+
+        if zabbix_url == "{$ZABBIX.URL}":
+            # This means user did not configure $ZABBIX.URL in Zabbix probably
+            zabbix_url = None
+
         url = None
         if event_id and trigger_id and zabbix_url:
             url = (
                 f"{zabbix_url}/tr_events.php?triggerid={trigger_id}&eventid={event_id}"
             )
 
-        severity = ZabbixProvider.SEVERITIES_MAP.get(
-            event.pop("severity", "").lower(), AlertSeverity.INFO
+        severity = event.pop("severity", "").lower()
+        severity = ZabbixProvider.SEVERITIES_MAP.get(severity, AlertSeverity.INFO)
+
+        status = event.pop("status", "").lower()
+        status = ZabbixProvider.STATUS_MAP.get(status, AlertStatus.FIRING)
+
+        last_received = event.pop(
+            "lastReceived", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         )
-        status = ZabbixProvider.STATUS_MAP.get(
-            event.pop("status", "").lower(), AlertStatus.FIRING
-        )
+        if last_received == "{DATE} {TIME}":
+            # This means it's a test message, just override.
+            last_received = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        else:
+            last_received = datetime.datetime.strptime(
+                last_received, "%Y.%m.%d %H:%M:%S"
+            ).isoformat()
+
+        message = event.pop("message", "")
+        if "acknowledged problem" in message:
+            status = AlertStatus.ACKNOWLEDGED
+        elif "suppressed problem" in message:
+            status = AlertStatus.SUPPRESSED
+
         return AlertDto(
             **event,
             environment=environment,
@@ -603,6 +619,7 @@ class ZabbixProvider(BaseProvider):
             severity=severity,
             status=status,
             url=url,
+            lastReceived=last_received,
             tags=tags,
         )
 
