@@ -248,9 +248,9 @@
           "group": "Dashboard",
           "pages": [
             "api-ref/dashboard/create-dashboard",
-            "api-ref/dashboard/delete-dashboard",
             "api-ref/dashboard/read-dashboards",
             "api-ref/dashboard/update-dashboard"
+            "api-ref/dashboard/delete-dashboard",
           ]
         },
         {
