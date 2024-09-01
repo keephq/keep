@@ -14,7 +14,8 @@ from sqlmodel import Session
 
 # internals
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.blackouts_bl import BlackoutsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_all_presets,
@@ -238,7 +239,26 @@ def __handle_formatted_events(
         },
     )
 
-    # first, filter out any deduplicated events
+    # first, check for blackouts
+    blackouts_bl = BlackoutsBl(tenant_id=tenant_id, session=session)
+    if blackouts_bl.blackouts:
+        formatted_events = [
+            event
+            for event in formatted_events
+            if blackouts_bl.check_if_alert_in_blackout(event) is False
+        ]
+    else:
+        logger.debug(
+            "No blackouts configured for this tenant", extra={"tenant_id": tenant_id}
+        )
+
+    if not formatted_events:
+        logger.info(
+            "No alerts to process after running blackouts",
+            extra={"tenant_id": tenant_id},
+        )
+
+    # second, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
 
     for event in formatted_events:

@@ -10,7 +10,7 @@ import pytz
 from dateutil import parser
 from dateutil.parser import ParserError
 
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_alerts_by_fingerprint
 from keep.api.models.alert import AlertStatus
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
