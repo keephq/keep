@@ -91,17 +91,17 @@ def create_graph(tenant_id: str, fingerprints: List[str], temp_dir: str, pmi_thr
             if weight > pmi_threshold:
                 graph.add_edge(fingerprint_i, fingerprint_j, weight=weight)
                 
-    nodes_to_delete = []
-    logger.info(f'Preparing candidate nodes for deletion', extra={'tenant_id': tenant_id})
+    # nodes_to_delete = []
+    # logger.info(f'Preparing candidate nodes for deletion', extra={'tenant_id': tenant_id})
     
-    for node in graph.nodes:
-        weights = sorted([edge['weight'] for edge in graph[node].values()])
+    # for node in graph.nodes:
+    #     weights = sorted([edge['weight'] for edge in graph[node].values()])
         
-        knee_index, knee_statistic = detect_knee_1d_auto_increasing(weights)
+    #     knee_index, knee_statistic = detect_knee_1d_auto_increasing(weights)
         
-        if knee_statistic < knee_threshold:
-            nodes_to_delete.append(node)
+    #     if knee_statistic < knee_threshold:
+    #         nodes_to_delete.append(node)
     
-    graph.remove_nodes_from(nodes_to_delete)
+    # graph.remove_nodes_from(nodes_to_delete)
     
     return graph

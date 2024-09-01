@@ -2573,6 +2573,21 @@ def update_incident_summary(tenant_id: str, incident_id: UUID, summary: str) -> 
         session.refresh(incident)
         
         return 
+    
+def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incident:
+    if not name:
+        return
+    
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident).where(Incident.tenant_id == tenant_id).where(Incident.id == incident_id)
+        ).first()
+
+        incident.name = name
+        session.commit()
+        session.refresh(incident)
+        
+        return incident
 
 
 # Fetch all topology data

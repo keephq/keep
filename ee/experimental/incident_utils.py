@@ -23,11 +23,10 @@ from keep.api.core.db import (
     write_pmi_matrix_to_temp_file,
     create_incident_from_dict,
     update_incident_summary,
+    update_incident_name,
 )
 
 from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
     get_pusher_client,
 )
 
@@ -35,12 +34,14 @@ logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
 SUMMARY_GENERATOR_VERBOSE_NAME = "Summary generator v0.1"
+NAME_GENERATOR_VERBOSE_NAME = "Name generator v0.1"
 USE_N_HISTORICAL_ALERTS_MINING = 10e4
 USE_N_HISTORICAL_ALERTS_PMI = 10e4
 USE_N_HISTORICAL_INCIDENTS = 10e4
 MIN_ALERT_NUMBER = 100
 DEFAULT_TEMP_DIR_LOCATION = './ee/experimental/ai_temp'
 MAX_SUMMARY_LENGTH = 900
+MAX_NAME_LENGTH = 75
 
 
 def calculate_pmi_matrix(
@@ -73,7 +74,7 @@ def calculate_pmi_matrix(
         sliding_window = os.environ.get('PMI_SLIDING_WINDOW', 4 * 60 * 60)
 
     if not stride:
-        stride = os.environ.get('PMI_STRIDE', 60 * 60)
+        stride = os.environ.get('PMI_STRIDE', int(sliding_window // 4))
 
     if not temp_dir:
         temp_dir = os.environ.get('AI_TEMP_FOLDER', DEFAULT_TEMP_DIR_LOCATION)
@@ -205,7 +206,7 @@ async def mine_incidents_and_create_objects(
     temp_dir = f'{general_temp_dir}/{tenant_id}'
     os.makedirs(temp_dir, exist_ok=True)
 
-    status = calculate_pmi_matrix(ctx, tenant_id)
+    status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number)
     if status.get('status') == 'failed':
         return {"incidents": []}
 
@@ -239,7 +240,7 @@ async def mine_incidents_and_create_objects(
         },
     )
 
-    incident_ids_for_summary_generation = []
+    incident_ids_to_update = []
 
     for component in nx.connected_components(graph):
         if len(component) > min_incident_size:
@@ -254,7 +255,7 @@ async def mine_incidents_and_create_objects(
 
                     add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [
                                                           alert.id for alert in alerts if alert.fingerprint in component])
-                    incident_ids_for_summary_generation.append(incident.id)
+                    incident_ids_to_update.append(incident.id)
 
             if not alerts_appended:
                 incident_start_time = min(
@@ -269,21 +270,32 @@ async def mine_incidents_and_create_objects(
 
                 add_alerts_to_incident_by_incident_id(tenant_id, incident.id, [
                                                       alert.id for alert in alerts if alert.fingerprint in component])
-                incident_ids_for_summary_generation.append(incident.id)
+                incident_ids_to_update.append(incident.id)
 
     if not ctx:
         pool = get_pool()
     else:
         pool = ctx["redis"]
-    for incident_id in incident_ids_for_summary_generation:
-        job = await pool.enqueue_job(
+    for incident_id in incident_ids_to_update:
+        job_summary = await pool.enqueue_job(
             "process_summary_generation",
             tenant_id=tenant_id,
             incident_id=incident_id,
         )
         logger.info(
-            f"Summary generation for incident {incident_id} scheduled, job: {job}",
-            extra={"algorithm": ALGORITHM_VERBOSE_NAME,
+            f"Summary generation for incident {incident_id} scheduled, job: {job_summary}",
+            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                   "tenant_id": tenant_id, "incident_id": incident_id},
+        )
+        
+        job_name = await pool.enqueue_job(
+            "process_name_generation",
+            tenant_id=tenant_id,
+            incident_id=incident_id,
+        )
+        logger.info(
+            f"Name generation for incident {incident_id} scheduled, job: {job_name}",
+            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME,
                    "tenant_id": tenant_id, "incident_id": incident_id},
         )
 
@@ -447,13 +459,17 @@ def shape_incidents(alerts: pd.DataFrame, unique_alert_identifier: str, incident
 def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int = -1, generate_summary: str = None, max_summary_length: int = None) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error(
-            "OpenAI API key is not set. Incident summary generation is not available.")
+            "OpenAI API key is not set. Incident summary generation is not available.", 
+            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id}
+            )
         return ""
 
     if not generate_summary:
         generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
 
     if generate_summary == "False":
+        logger.info(f"Incident summary generation is disabled. Aborting.",
+                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
         return ""
 
     if incident.user_summary:
@@ -511,11 +527,11 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
         ]).choices[0].message.content
 
         logger.info(f"Generated incident summary with length {len(summary)} symbols",
-                    extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
 
         if len(summary) > max_summary_length:
             logger.info(f"Generated incident summary is too long. Applying smart truncation",
-                        extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
 
             summary = client.chat.completions.create(model=model, messages=[
                 {
@@ -532,16 +548,119 @@ def generate_incident_summary(incident: Incident, use_n_alerts_for_summary: int 
             ]).choices[0].message.content
 
             logger.info(f"Generated new incident summary with length {len(summary)} symbols",
-                        extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
 
             if len(summary) > max_summary_length:
                 logger.info(f"Generated incident summary is too long. Applying hard truncation",
-                            extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+                            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
                 summary = summary[: max_summary_length]
 
         return summary
     except Exception as e:
         logger.error(f"Error in generating incident summary: {e}")
+        return ""
+    
+
+def generate_incident_name(incident: Incident, generate_name: str = None, max_name_length: int = None, use_n_alerts_for_name: int = -1) -> str:
+    if "OPENAI_API_KEY" not in os.environ:
+        logger.error(
+            "OpenAI API key is not set. Incident name generation is not available.", 
+            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id}
+            )
+        return ""
+
+    if not generate_name:
+        generate_name = os.environ.get("GENERATE_INCIDENT_NAME", "True")
+
+    if generate_name == "False":
+        logger.info(f"Incident name generation is disabled. Aborting.",
+                    extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+        return ""
+
+    # if incident.name:
+    #     return ""
+
+    if not max_name_length:
+        max_name_length = os.environ.get(
+            "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
+
+    if not max_name_length:
+        max_name_length = os.environ.get(
+            "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
+
+    try:
+        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+        incident = get_incident_by_id(incident.tenant_id, incident.id)
+
+        description_strings = np.unique(
+            [f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
+
+        if use_n_alerts_for_name > 0:
+            incident_description = "\n".join(
+                description_strings[:use_n_alerts_for_name])
+        else:
+            incident_description = "\n".join(description_strings)
+
+        timestamps = [alert.timestamp for alert in incident.alerts]
+        incident_start = min(timestamps).replace(microsecond=0)
+        incident_end = max(timestamps).replace(microsecond=0)
+
+        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+
+        name = client.chat.completions.create(model=model, messages=[
+            {
+                "role": "system",
+                "content": f"""You are a very skilled DevOps specialist who can name any incident based on alert descriptions. 
+                When provided with information, output a short descriptive name of incident that could cause these alerts. 
+                Add information about start time to the name. ONLY USE WHAT YOU SEE. Answer with max a {int(max_name_length * 0.9)}
+                symbols excerpt.
+                
+                EXAMPLE:
+                Kubernetes rollout stuck (started on 2022.11.17 14:11)"""
+            },
+            {
+                "role": "user",
+                "content": f"""Here are  alerts of an incident:\n{incident_description}\n This incident started  on
+                {incident_start}"""
+            }
+        ]).choices[0].message.content
+
+        logger.info(f"Generated incident name with length {len(name)} symbols",
+                    extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+
+        if len(name) > max_name_length:
+            logger.info(f"Generated incident name is too long. Applying smart truncation",
+                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+
+            name = client.chat.completions.create(model=model, messages=[
+                {
+                    "role": "system",
+                    "content": f"""You are a very skilled DevOps specialist who can name any incident based on a description.  
+                    Add information about start time to the name.When provided with information, answer with max a 
+                    {int(max_name_length * 0.9)} symbols.
+                    
+                    EXAMPLE:
+                    Kubernetes rollout stuck (started on 2022.11.17 14:11)"""
+                },
+                {
+                    "role": "user",
+                    "content": f"""Here is the description of an incident to name:\n{name}. 
+                    This incident started on {incident_start}"""
+                }
+            ]).choices[0].message.content
+
+            logger.info(f"Generated new incident name with length {len(name)} symbols",
+                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+
+            if len(name) > max_name_length:
+                logger.info(f"Generated incident name is too long. Applying hard truncation",
+                            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                name = name[: max_name_length]
+
+        return name
+    except Exception as e:
+        logger.error(f"Error in generating incident name: {e}")
         return ""
 
 
@@ -551,3 +670,11 @@ async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str
     update_incident_summary(tenant_id, incident_id, summary)
 
     return summary
+
+
+async def generate_update_incident_name(ctx, tenant_id: str, incident_id: str):
+    incident = get_incident_by_id(tenant_id, incident_id)
+    name = generate_incident_name(incident)
+    update_incident_name(tenant_id, incident_id, name)
+
+    return name
