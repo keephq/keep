@@ -1,9 +1,7 @@
 #!/bin/bash
 
-cd ../docs
-
-OPENAPI_JSON="../docs/openapi.json"
-OPENAPI_JSON_BACKUP="../docs/openapi_backup.json"
+OPENAPI_JSON="$(dirname "$0")/../docs/openapi.json"
+OPENAPI_JSON_BACKUP="$(dirname "$0")/../docs/openapi_backup.json"
 
 # Download the latest openapi.json
 curl http://localhost:8080/openapi.json > $OPENAPI_JSON_BACKUP
@@ -18,3 +16,5 @@ else
     echo "Please run the following command to regenerate the API docs: ./scripts/docs_generate_api_docs_from_openapi.sh"
     exit 1
 fi
+
+rm $OPENAPI_JSON_BACKUP
