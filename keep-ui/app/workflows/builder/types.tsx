@@ -1,6 +1,3 @@
-import { Step } from "sequential-workflow-designer";
-export interface KeepStep extends Step {}
-
 export interface LogEntry {
   timestamp: string;
   message: string;
