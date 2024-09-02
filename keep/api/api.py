@@ -41,6 +41,7 @@ from keep.api.routes import (
     settings,
     status,
     tags,
+    topology,
     whoami,
     workflows,
 )
@@ -218,6 +219,7 @@ def get_app(
     )
     app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
     app.include_router(tags.router, prefix="/tags", tags=["tags"])
+    app.include_router(topology.router, prefix="/topology", tags=["topology"])
 
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
