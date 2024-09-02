@@ -7,7 +7,7 @@ import jwt
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from opentelemetry import trace
@@ -21,7 +21,7 @@ import keep.api.observability
 from keep.api.arq_worker import get_arq_worker
 from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
 from keep.api.core.config import AuthenticationType
-from keep.api.core.db import get_api_key, get_user
+from keep.api.core.db import get_api_key
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -41,12 +41,13 @@ from keep.api.routes import (
     settings,
     status,
     tags,
-    topology,
-    users,
     whoami,
     workflows,
 )
+from keep.api.routes.auth import groups as auth_groups
+from keep.api.routes.auth import permissions, roles, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -200,14 +201,18 @@ def get_app(
     app.include_router(status.router, prefix="/status", tags=["status"])
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(preset.router, prefix="/preset", tags=["preset"])
-    app.include_router(users.router, prefix="/users", tags=["users"])
-    app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(
         mapping.router, prefix="/mapping", tags=["enrichment", "mapping"]
     )
     app.include_router(
-        metrics.router, prefix="/metrics", tags=["metrics"]
+        auth_groups.router, prefix="/auth/groups", tags=["auth", "groups"]
     )
+    app.include_router(
+        permissions.router, prefix="/auth/permissions", tags=["auth", "permissions"]
+    )
+    app.include_router(roles.router, prefix="/auth/roles", tags=["auth", "roles"])
+    app.include_router(users.router, prefix="/auth/users", tags=["auth", "users"])
+    app.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
     app.include_router(
         extraction.router, prefix="/extraction", tags=["enrichment", "extraction"]
     )
@@ -217,39 +222,11 @@ def get_app(
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
-    if AUTH_TYPE == AuthenticationType.SINGLE_TENANT.value:
-
-        @app.post("/signin")
-        def signin(body: dict):
-            # validate the user/password
-            user = get_user(body.get("username"), body.get("password"))
-
-            if not user:
-                return JSONResponse(
-                    status_code=401,
-                    content={"message": "Invalid username or password"},
-                )
-            # generate a JWT secret
-            jwt_secret = os.environ.get("KEEP_JWT_SECRET")
-            if not jwt_secret:
-                logger.info("missing KEEP_JWT_SECRET environment variable")
-                raise HTTPException(status_code=401, detail="Missing JWT secret")
-            token = jwt.encode(
-                {
-                    "email": user.username,
-                    "keep_tenant_id": SINGLE_TENANT_UUID,
-                    "role": user.role,
-                },
-                jwt_secret,
-                algorithm="HS256",
-            )
-            # return the token
-            return {
-                "accessToken": token,
-                "tenantId": SINGLE_TENANT_UUID,
-                "email": user.username,
-                "role": user.role,
-            }
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        None, None, AUTH_TYPE
+    )
+    # if any endpoints needed, add them on_start
+    identity_manager.on_start(app)
 
     @app.on_event("startup")
     async def on_startup():

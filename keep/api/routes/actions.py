@@ -1,10 +1,12 @@
-import yaml
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile
+
+import yaml
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.actions.actions_factory import ActionsCRUD
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -13,21 +15,25 @@ router = APIRouter()
 # GET all actions
 @router.get("", description="Get all actions")
 def get_actions(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:actions"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:actions"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Getting installed actions", extra={tenant_id: tenant_id})
+    logger.info("Getting installed actions", extra={"tenant_id": tenant_id})
 
     actions = ActionsCRUD.get_all_actions(tenant_id)
     try:
         return actions
     except Exception:
         logger.exception("Failed to get actions")
-        raise HTTPException(status_code=400, detail="Unknown exception when getting actions")
+        raise HTTPException(
+            status_code=400, detail="Unknown exception when getting actions"
+        )
 
 
 async def _get_action_info(request: Request, file: UploadFile) -> dict:
-    """"Get action data either from file io or form data"""
+    """ "Get action data either from file io or form data"""
     try:
         if file:
             action_inforaw = await file.read()
@@ -39,13 +45,18 @@ async def _get_action_info(request: Request, file: UploadFile) -> dict:
         raise HTTPException(status_code=400, detail="Invalid yaml format")
     return action_info
 
+
 # POST actions
-@router.post("", description="Create new actions by uploading a file", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    description="Create new actions by uploading a file",
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_actions(
     request: Request,
     file: UploadFile = None,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:actions"])
+        IdentityManagerFactory.get_auth_verifier(["write:actions"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -60,7 +71,7 @@ async def create_actions(
 def delete_action(
     action_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:actions"])
+        IdentityManagerFactory.get_auth_verifier(["write:actions"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -74,14 +85,12 @@ async def put_action(
     request: Request,
     file: UploadFile,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:actions"])
+        IdentityManagerFactory.get_auth_verifier(["write:actions"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
     action_dict: dict = await _get_action_info(request, file)
-    updated_action = ActionsCRUD.update_action(
-        tenant_id, action_id, action_dict
-    )
+    updated_action = ActionsCRUD.update_action(tenant_id, action_id, action_dict)
     if updated_action:
         return updated_action
     return JSONResponse(status_code=204, content={"message": "No content"})

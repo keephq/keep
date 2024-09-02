@@ -1,11 +1,10 @@
+import asyncio
 import logging
 import os
 import pathlib
 import sys
-import asyncio
-
-from typing import List
 from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
@@ -19,25 +18,28 @@ from keep.api.core.db import (
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
+    get_incident_unique_fingerprint_count,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
-    get_incident_unique_fingerprint_count,
 )
-from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
-    get_pusher_client,
-)
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
-from keep.api.utils.pagination import IncidentsPaginatedResultsDto, AlertPaginatedResultsDto
+from keep.api.utils.pagination import (
+    AlertPaginatedResultsDto,
+    IncidentsPaginatedResultsDto,
+)
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5))
+MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
+    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5)
+)
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
 if ee_enabled:
@@ -45,7 +47,10 @@ if ee_enabled:
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
     sys.path.insert(0, path_with_ee)
-    from ee.experimental.incident_utils import mine_incidents, ALGORITHM_VERBOSE_NAME  # noqa
+    from ee.experimental.incident_utils import (  # noqa
+        ALGORITHM_VERBOSE_NAME,
+        mine_incidents,
+    )
 
 
 def __update_client_on_incident_change(
@@ -88,7 +93,9 @@ def __update_client_on_incident_change(
 )
 def create_incident_endpoint(
     incident_dto: IncidentDtoIn,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
@@ -118,7 +125,9 @@ def get_all_incidents(
     confirmed: bool = True,
     limit: int = 25,
     offset: int = 0,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -156,7 +165,9 @@ def get_all_incidents(
 )
 def get_incident(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -182,7 +193,9 @@ def get_incident(
 def update_incident(
     incident_id: str,
     updated_incident_dto: IncidentDtoIn,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -210,7 +223,9 @@ def update_incident(
 )
 def delete_incident(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -236,7 +251,9 @@ def get_incident_alerts(
     incident_id: str,
     limit: int = 25,
     offset: int = 0,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> AlertPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -272,7 +289,9 @@ def get_incident_alerts(
         },
     )
 
-    return AlertPaginatedResultsDto(limit=limit, offset=offset, count=total_count, items=enriched_alerts_dto)
+    return AlertPaginatedResultsDto(
+        limit=limit, offset=offset, count=total_count, items=enriched_alerts_dto
+    )
 
 
 @router.post(
@@ -284,7 +303,9 @@ def get_incident_alerts(
 async def add_alerts_to_incident(
     incident_id: str,
     alert_ids: List[UUID],
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -304,7 +325,11 @@ async def add_alerts_to_incident(
 
     fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
 
-    if ee_enabled and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION and not incident.user_summary:
+    if (
+        ee_enabled
+        and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION
+        and not incident.user_summary
+    ):
         pool = await get_pool()
         job = await pool.enqueue_job(
             "process_summary_generation",
@@ -313,8 +338,11 @@ async def add_alerts_to_incident(
         )
         logger.info(
             f"Summary generation for incident {incident_id} scheduled, job: {job}",
-            extra={"algorithm": ALGORITHM_VERBOSE_NAME,
-                   "tenant_id": tenant_id, "incident_id": incident_id},
+            extra={
+                "algorithm": ALGORITHM_VERBOSE_NAME,
+                "tenant_id": tenant_id,
+                "incident_id": incident_id,
+            },
         )
 
     return Response(status_code=202)
@@ -329,7 +357,9 @@ async def add_alerts_to_incident(
 def delete_alerts_from_incident(
     incident_id: str,
     alert_ids: List[UUID],
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -347,13 +377,16 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
+
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
     include_in_schema=False,
 )
 def mine(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incidents"])
+    ),
     alert_lower_timestamp: datetime = None,
     alert_upper_timestamp: datetime = None,
     use_n_historical_alerts: int = 10e10,
@@ -364,22 +397,23 @@ def mine(
     knee_threshold: float = 0.8,
     min_incident_size: int = 5,
     incident_similarity_threshold: float = 0.8,
-) -> dict:     
-    result = asyncio.run(mine_incidents_and_create_objects(
-        None,
-        authenticated_entity.tenant_id,
-        alert_lower_timestamp,
-        alert_upper_timestamp,
-        use_n_historical_alerts,
-        incident_lower_timestamp,
-        incident_upper_timestamp,
-        use_n_hist_incidents,
-        pmi_threshold,
-        knee_threshold,
-        min_incident_size,
-        incident_similarity_threshold,
-    ))
-
+) -> dict:
+    result = asyncio.run(
+        mine_incidents_and_create_objects(
+            None,
+            authenticated_entity.tenant_id,
+            alert_lower_timestamp,
+            alert_upper_timestamp,
+            use_n_historical_alerts,
+            incident_lower_timestamp,
+            incident_upper_timestamp,
+            use_n_hist_incidents,
+            pmi_threshold,
+            knee_threshold,
+            min_incident_size,
+            incident_similarity_threshold,
+        )
+    )
     return result
 
 
@@ -387,9 +421,11 @@ def mine(
     "/{incident_id}/confirm",
     description="Confirm predicted incident by id",
 )
-def update_incident(
+def confirm_incident(
     incident_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(

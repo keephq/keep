@@ -8,7 +8,8 @@ from keep.api.core.db import create_dashboard as create_dashboard_db
 from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.db import update_dashboard as update_dashboard_db
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 
 class DashboardCreateDTO(BaseModel):
@@ -34,7 +35,9 @@ router = APIRouter()
 
 @router.get("", response_model=List[DashboardResponseDTO])
 def read_dashboards(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:dashboards"])
+    ),
 ):
     dashboards = get_dashboards_db(authenticated_entity.tenant_id)
     return dashboards
@@ -43,7 +46,9 @@ def read_dashboards(
 @router.post("", response_model=DashboardResponseDTO)
 def create_dashboard(
     dashboard_dto: DashboardCreateDTO,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:dashboards"])
+    ),
 ):
     email = authenticated_entity.email
     dashboard = create_dashboard_db(
@@ -59,7 +64,9 @@ def create_dashboard(
 def update_dashboard(
     dashboard_id: str,
     dashboard_dto: DashboardUpdateDTO,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:dashboards"])
+    ),
 ):
     # update the dashboard in the database
     dashboard = update_dashboard_db(
@@ -75,7 +82,9 @@ def update_dashboard(
 @router.delete("/{dashboard_id}")
 def delete_dashboard(
     dashboard_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:dashboards"])
+    ),
 ):
     # delete the dashboard from the database
     dashboard = delete_dashboard_db(authenticated_entity.tenant_id, dashboard_id)
