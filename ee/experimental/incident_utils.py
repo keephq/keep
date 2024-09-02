@@ -19,11 +19,11 @@ from keep.api.core.db import (
     query_alerts,
     update_incident_summary,
     update_incident_name,
+    write_pmi_matrix_to_temp_file,
 )
 
-from keep.api.core.dependencies import (
-    get_pusher_client,
-)
+from keep.api.core.dependencies import get_pusher_client
+from keep.api.models.db.alert import Alert, Incident
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +312,7 @@ async def mine_incidents_and_create_objects(
         pool = ctx["redis"]
 
     for incident_id in incident_ids_for_summary_generation:
-        job = await pool.enqueue_job(
+        job_summary = await pool.enqueue_job(
             "process_summary_generation",
             tenant_id=tenant_id,
             incident_id=incident_id,
