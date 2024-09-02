@@ -257,6 +257,7 @@ def __handle_formatted_events(
             "No alerts to process after running blackouts",
             extra={"tenant_id": tenant_id},
         )
+        return
 
     # second, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
