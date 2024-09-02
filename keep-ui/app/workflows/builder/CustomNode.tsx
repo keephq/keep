@@ -33,7 +33,7 @@ function CustomNode({ id, data }: FlowNode) {
     ?.replace("trigger_", "");
 
   const isEmptyNode = !!data?.type?.includes("empty");
-  const specialNodeCheck = ['start', 'end', 'trigger_end', 'trigger_start'].includes(type)
+  const specialNodeCheck = ['start', 'end'].includes(type)
 
   function getTriggerIcon(step: any) {
     const { type } = step;
@@ -45,28 +45,33 @@ function CustomNode({ id, data }: FlowNode) {
     }
   }
 
+ function handleNodeClick(e: React.MouseEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    if(!synced){
+      toast('Please save the previous step or wait while properties sync with the workflow.');
+      return;
+    }
+    if(data?.notClickable){
+      return;
+    }
+    if (specialNodeCheck || id?.includes('end') || id?.includes('empty')) {
+      if (id?.includes('empty')) {
+        setSelectedNode(id);
+      }
+      setOpneGlobalEditor(true);
+      return;
+    }
+    setSelectedNode(id);
+  }
+
   return (
     <>
       {!specialNodeCheck && <div
-        className={`p-2 flex shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
+        className={`flex shadow-md rounded-md bg-white border-2 w-full h-full ${id === selectedNode
           ? "border-orange-500"
           : "border-stone-400"
           }`}
-        onClick={(e) => {
-          e.stopPropagation();
-          if(!synced){
-            toast('Please save the previous step or wait while properties sync with the workflow.');
-            return;
-          }
-          if (type === 'start' || type === 'end' || id?.includes('end') || id?.includes('empty')) {
-            if (id?.includes('empty')) {
-              setSelectedNode(id);
-            }
-            setOpneGlobalEditor(true);
-            return;
-          }
-          setSelectedNode(id);
-        }}
+        onClick={handleNodeClick}
         style={{
           opacity: data.isLayouted ? 1 : 0,
           borderStyle: isEmptyNode ? 'dashed' : "",
@@ -74,7 +79,7 @@ function CustomNode({ id, data }: FlowNode) {
         }}
       >
         {isEmptyNode && (
-          <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="p-2 flex-1 flex flex-col items-center justify-center">
             <GoPlus className="w-8 h-8 text-gray-600 font-bold p-0" />
             {selectedNode === id && (
               <div className="text-gray-600 font-bold text-center">Go to Toolbox</div>
@@ -83,7 +88,7 @@ function CustomNode({ id, data }: FlowNode) {
         )}
         {errorNode === id && <BiSolidError className="size-16  text-red-500 absolute right-[-40px] top-[-40px]" />}
         {!isEmptyNode && (
-          <div className="container flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
+          <div className="container p-2 flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
             {getTriggerIcon(data)}
             {!!data && !['interval', 'manual'].includes(data.type) && <Image
               src={IconUrlProvider(data) || "/keep.png"}
@@ -126,7 +131,7 @@ function CustomNode({ id, data }: FlowNode) {
             toast('Please save the previous step or wait while properties sync with the workflow.');
             return;
           }
-          if (type === 'start' || type === 'end' || id?.includes('end')) {
+          if (specialNodeCheck || id?.includes('end')) {
             setOpneGlobalEditor(true);
             return;
           }
