@@ -48,7 +48,7 @@ class Auth0IdentityManager(BaseIdentityManager):
         ]
         return users
 
-    def create_user(self, user_email: str, role: str) -> dict:
+    def create_user(self, user_email: str, role: str, **kwargs) -> dict:
         return self._create_user_auth0(user_email, self.tenant_id, role)
 
     def delete_user(self, user_email: str) -> dict:
