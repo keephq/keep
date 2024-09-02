@@ -7,12 +7,13 @@ import { useState } from "react";
 import { MaintenanceRule } from "./model";
 import CreateOrUpdateMaintenanceRule from "./create-or-update-maintenance-rule";
 import MaintenanceRulesTable from "./maintenance-rules-table";
+import { useRouter } from "next/navigation";
 
 export default function Maintenance() {
   const { data: maintenanceRules, isLoading } = useMaintenanceRules();
-  const [maintenanceToEdit, setMaintenanceToEdit] = useState<MaintenanceRule | null>(
-    null
-  );
+  const [maintenanceToEdit, setMaintenanceToEdit] =
+    useState<MaintenanceRule | null>(null);
+  const router = useRouter();
 
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
@@ -29,7 +30,10 @@ export default function Maintenance() {
           ) : maintenanceRules && maintenanceRules.length > 0 ? (
             <MaintenanceRulesTable
               maintenanceRules={maintenanceRules}
-              editCallback={setMaintenanceToEdit}
+              editCallback={(rule) => {
+                router.replace(`/maintenance?cel=${rule.cel_query}`);
+                setMaintenanceToEdit(rule);
+              }}
             />
           ) : (
             <Callout
@@ -37,8 +41,8 @@ export default function Maintenance() {
               title="Maintenance rules do not exist"
               icon={MdWarning}
             >
-              No maintenance rules found. Configure new maintenance rule using the
-              maintenance rules wizard to the left.
+              No maintenance rules found. Configure new maintenance rule using
+              the maintenance rules wizard to the left.
             </Callout>
           )}
         </div>

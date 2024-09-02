@@ -82,6 +82,11 @@ export default function MaintenanceRulesTable({ maintenanceRules, editCallback }
         new Date(context.row.original.start_time).toLocaleString(),
     }),
     columnHelper.display({
+      id: "CEL",
+      header: "CEL",
+      cell: (context) => context.row.original.cel_query,
+    }),
+    columnHelper.display({
       id: "end_time",
       header: "End Time",
       cell: (context) =>

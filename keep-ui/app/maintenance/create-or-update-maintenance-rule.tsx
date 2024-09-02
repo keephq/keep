@@ -19,6 +19,7 @@ import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
 import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useRouter } from "next/navigation";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -39,6 +40,7 @@ export default function CreateOrUpdateMaintenanceRule({
   const [intervalType, setIntervalType] = useState<string>("minutes");
   const [enabled, setEnabled] = useState<boolean>(true);
   const editMode = maintenanceToEdit !== null;
+  const router = useRouter();
 
   useEffect(() => {
     if (maintenanceToEdit) {
@@ -60,6 +62,7 @@ export default function CreateOrUpdateMaintenanceRule({
     setStartTime(new Date());
     setEndInterval(5);
     setEnabled(true);
+    router.replace("/maintenance");
   };
 
   const calculateDurationInSeconds = () => {

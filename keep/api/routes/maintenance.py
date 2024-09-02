@@ -102,9 +102,13 @@ def delete_maintenance_rule(
     ),
     session: Session = Depends(get_session),
 ):
-    rule = session.query(MaintenanceWindowRule).filter(
-        MaintenanceWindowRule.tenant_id == authenticated_entity.tenant_id,
-        MaintenanceWindowRule.id == rule_id,
+    rule = (
+        session.query(MaintenanceWindowRule)
+        .filter(
+            MaintenanceWindowRule.tenant_id == authenticated_entity.tenant_id,
+            MaintenanceWindowRule.id == rule_id,
+        )
+        .first()
     )
     if not rule:
         raise HTTPException(
