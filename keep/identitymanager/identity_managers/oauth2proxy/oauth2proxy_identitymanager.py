@@ -1,7 +1,9 @@
 from keep.api.core.db import get_users as get_users_from_db
 from keep.api.models.user import User
 from keep.contextmanager.contextmanager import ContextManager
-from keep.identitymanager.identity_managers.db.db_authverifier import DbAuthVerifier
+from keep.identitymanager.identity_managers.oauth2proxy.oauth2proxy_authverifier import (
+    Oauth2proxyAuthVerifier,
+)
 from keep.identitymanager.identitymanager import BaseIdentityManager
 
 
@@ -24,5 +26,11 @@ class Oauth2proxyIdentityManager(BaseIdentityManager):
         ]
         return users
 
-    def get_auth_verifier(self, scopes) -> DbAuthVerifier:
-        return DbAuthVerifier(scopes)
+    def get_auth_verifier(self, scopes) -> Oauth2proxyAuthVerifier:
+        return Oauth2proxyAuthVerifier(scopes)
+
+    def create_user(self, **kawrgs) -> User:
+        raise NotImplementedError("create_user not implemented")
+
+    def delete_user(self, **kwargs) -> User:
+        raise NotImplementedError("delete_user not implemented")

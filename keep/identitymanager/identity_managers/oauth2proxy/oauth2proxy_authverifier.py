@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 
 from keep.api.core.db import create_user, user_exists
@@ -22,7 +22,19 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         # https://github.com/keephq/keep/issues/1203
         # get user name
         user_name = request.headers.get(self.impersonation_user_header)
+
+        if not user_name:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Unauthorized - no user in {self.impersonation_user_header} header found",
+            )
+
         role = request.headers.get(self.impersonation_role_header)
+        if not role:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Unauthorized - no role in {self.impersonation_role_header} header found",
+            )
 
         # auto provision user
         if self.impersonation_auto_create_user and not user_exists(user_name):
