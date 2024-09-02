@@ -22,7 +22,6 @@ from keep.api.core.db import (
     update_preset_options,
     update_provider_last_pull_time,
 )
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.preset import (
     Preset,
@@ -35,6 +34,8 @@ from keep.api.models.db.preset import (
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
@@ -139,12 +140,28 @@ def pull_data_from_providers(
     description="Get all presets for tenant",
 )
 def get_presets(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:preset"])
+    ),
+    session: Session = Depends(get_session),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="preset",
+        authenticated_entity=authenticated_entity,
+    )
     # both global and private presets
-    presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
+    presets = get_presets_db(
+        tenant_id=tenant_id,
+        email=authenticated_entity.email,
+        preset_ids=allowed_preset_ids,
+    )
     presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
     # add static presets
     presets_dto.append(STATIC_PRESETS["feed"])
@@ -170,7 +187,9 @@ class CreateOrUpdatePresetDto(BaseModel):
 @router.post("", description="Create a preset for tenant")
 def create_preset(
     body: CreateOrUpdatePresetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
@@ -237,7 +256,9 @@ def create_preset(
 )
 def delete_preset(
     uuid: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:presets"])
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -264,7 +285,9 @@ def delete_preset(
 def update_preset(
     uuid: str,
     body: CreateOrUpdatePresetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
@@ -335,7 +358,9 @@ async def get_preset_alerts(
     bg_tasks: BackgroundTasks,
     preset_name: str,
     response: Response,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:presets"])
+    ),
 ) -> list[AlertDto]:
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
@@ -381,7 +406,9 @@ class CreatePresetTab(BaseModel):
 def create_preset_tab(
     preset_id: str,
     body: CreatePresetTab,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -430,7 +457,9 @@ def create_preset_tab(
 def delete_tab(
     preset_id: str,
     tab_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:presets"])
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id

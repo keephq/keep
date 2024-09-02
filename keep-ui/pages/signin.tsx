@@ -14,7 +14,14 @@ interface Providers {
     type: string;
     signinUrl: string;
   };
+  keycloak?: {
+    // Similarly define for keycloak provider
+    name: string;
+    type: string;
+    signinUrl: string;
+  };
 }
+
 
 export async function getServerSideProps(context: any) {
   return {
@@ -51,6 +58,9 @@ export default function SignIn({ params }: { params?: { amt: string } }) {
       } else if (providers.credentials) {
         console.log("Signing in with credentials provider");
         signIn("credentials", { callbackUrl: "/" });
+      } else if (providers.keycloak) {
+        console.log('Signing in with keycloak provider');
+        signIn('keycloak', { callbackUrl: "/" });
       }
     }
   }, [providers]);
