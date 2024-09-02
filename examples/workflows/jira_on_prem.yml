@@ -1,6 +1,6 @@
 workflow:
   id: jiraonprem-example
-  description: test
+  description: JIRA on-prem example
   triggers:
   - type: manual
   name: test

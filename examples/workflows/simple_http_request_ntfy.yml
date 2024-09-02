@@ -26,7 +26,7 @@ alert:
         with:
           method: POST
           body:
-            alert: {{ alert }}
-            fingerprint: {{ alert.fingerprint }}
-            some_customized_field: {{ keep.strip(alert.some_attribute) }}
+            alert: "{{ alert }}"
+            fingerprint: "{{ alert.fingerprint }}"
+            some_customized_field: "{{ keep.strip(alert.some_attribute) }}"
           url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"
