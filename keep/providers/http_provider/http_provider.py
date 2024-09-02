@@ -1,6 +1,7 @@
 """
 HttpProvider is a class that provides a way to send HTTP requests.
 """
+
 import json
 import typing
 

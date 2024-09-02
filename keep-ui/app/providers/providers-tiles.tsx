@@ -110,12 +110,14 @@ const ProvidersTiles = ({
     return "Connect Provider";
   };
 
-  const sortedProviders = providers.sort(
-    (a, b) =>
-      Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
-      Number(b.supports_webhook) - Number(a.supports_webhook) ||
-      Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
-  );
+  const sortedProviders = providers
+    .filter(provider => Object.keys(provider.config || {}).length > 0 || (provider.tags && provider.tags.includes('alert')))
+    .sort(
+      (a, b) =>
+        Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
+        Number(b.supports_webhook) - Number(a.supports_webhook) ||
+        Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
+    );
 
   return (
     <div>

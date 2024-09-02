@@ -4,8 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-
-from tests.fixtures.client import test_app, client, setup_api_key
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 MOCK_TOKEN = "MOCKTOKEN"
 
@@ -33,13 +32,13 @@ def get_mock_jwt_payload(token, *args, **kwargs):
         raise Exception("Invalid token")
     if auth_type == "SINGLE_TENANT":
         return {
-            "keep_tenant_id": SINGLE_TENANT_UUID,
+            "tenant_id": SINGLE_TENANT_UUID,
             "keep_role": "admin",
             "email": "admin@single-tenant.com",
         }
     elif auth_type == "MULTI_TENANT":
         return {
-            "tenant_id": "multi-tenant-id",
+            "keep_tenant_id": "multi-tenant-id",
             "role": "admin",
             "email": "admin@multi-tenant.com",
         }
@@ -49,7 +48,6 @@ def get_mock_jwt_payload(token, *args, **kwargs):
     else:
         # Default payload or raise an exception if needed
         return {}
-
 
 
 @pytest.mark.parametrize(
@@ -165,3 +163,13 @@ def test_webhook_api_key(client, db_session, test_app):
         headers={"Authorization": "digest invalid_api_key"},
     )
     assert response.status_code == 401 if auth_type != "NO_AUTH" else 202
+
+
+# sanity check with keycloak
+@pytest.mark.parametrize("test_app", ["KEYCLOAK"], indirect=True)
+def test_keycloak_sanity(keycloak_client, keycloak_token, client, test_app):
+    """Tests the keycloak sanity check"""
+    # Use the token to make a request to the Keep API
+    headers = {"Authorization": f"Bearer {keycloak_token}"}
+    response = client.get("/providers", headers=headers)
+    assert response.status_code == 200
