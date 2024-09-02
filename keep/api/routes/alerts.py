@@ -20,8 +20,9 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
+
 from keep.api.arq_pool import get_pool
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts

@@ -32,6 +32,7 @@ from keep.api.routes import (
     extraction,
     healthcheck,
     incidents,
+    maintenance,
     mapping,
     metrics,
     preset,
@@ -219,6 +220,7 @@ def get_app(
     )
     app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
     app.include_router(tags.router, prefix="/tags", tags=["tags"])
+    app.include_router(maintenance.router, prefix="/maintenance", tags=["maintenance"])
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
 
     # if its single tenant with authentication, add signin endpoint

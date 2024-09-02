@@ -53,6 +53,6 @@ jobs:
         run: |
           gh release create "$tag" \
               --repo="$GITHUB_REPOSITORY" \
-              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+              --title="${{ steps.release-step.outputs.version }}" \
               --target="release/${{ steps.release-step.outputs.version }}" \
               --generate-notes
