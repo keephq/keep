@@ -47,6 +47,9 @@ export default function CreateOrUpdateBlackoutRule({
       setCelQuery(blackoutToEdit.cel_query);
       setStartTime(new Date(blackoutToEdit.start_time));
       setEnabled(blackoutToEdit.enabled);
+      if (blackoutToEdit.duration_seconds) {
+        setEndInterval(blackoutToEdit.duration_seconds / 60);
+      }
     }
   }, [blackoutToEdit]);
 
@@ -55,6 +58,7 @@ export default function CreateOrUpdateBlackoutRule({
     setDescription("");
     setCelQuery("");
     setStartTime(new Date());
+    setEndInterval(5);
     setEnabled(true);
   };
 

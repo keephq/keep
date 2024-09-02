@@ -45,7 +45,7 @@ def create_blackout_rule(
         **rule_dto.dict(),
         end_time=end_time,
         created_by=authenticated_entity.email,
-        tenant_id=authenticated_entity.tenant_id
+        tenant_id=authenticated_entity.tenant_id,
     )
     session.add(new_rule)
     session.commit()
@@ -66,9 +66,13 @@ def update_blackout_rule(
     ),
     session: Session = Depends(get_session),
 ) -> BlackoutRuleRead:
-    rule: BlackoutRule = session.query(BlackoutRule).filter(
-        BlackoutRule.tenant_id == authenticated_entity.tenant_id,
-        BlackoutRule.id == rule_id,
+    rule: BlackoutRule = (
+        session.query(BlackoutRule)
+        .filter(
+            BlackoutRule.tenant_id == authenticated_entity.tenant_id,
+            BlackoutRule.id == rule_id,
+        )
+        .first()
     )
     if not rule:
         raise HTTPException(
@@ -81,7 +85,6 @@ def update_blackout_rule(
     end_time = rule_dto.start_time + timedelta(seconds=rule_dto.duration_seconds)
     rule.end_time = end_time
 
-    session.add(rule)
     session.commit()
     session.refresh(rule)
     return BlackoutRuleRead(**rule.dict())

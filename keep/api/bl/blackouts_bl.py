@@ -65,7 +65,7 @@ class BlackoutsBl:
                         fingerprint=alert.fingerprint,
                         user_id="Keep",
                         action=AlertActionType.BLACKOUT.value,
-                        description=f"Alert is blackedout due to {blackout.name}",
+                        description=f"Alert was blacked out due to rule `{blackout.name}`",
                     )
                     self.session.add(audit)
                     self.session.commit()
