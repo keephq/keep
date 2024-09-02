@@ -46,7 +46,7 @@ class IdentityManagerFactory:
         """
         if not identity_manager_type:
             identity_manager_type = config(
-                "AUTH_TYPE", default=IdentityManagerTypes.NOAUTH
+                "AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value
             )
         elif isinstance(identity_manager_type, IdentityManagerTypes):
             identity_manager_type = identity_manager_type.value.lower()
