@@ -1,5 +1,5 @@
-workflow:
-  id: radiusai-tiering-workflow
+workfl=ow:
+  id: -tiering-workflow
   triggers:
   # when an incident is created or updated with a new alert
   - type: incident
