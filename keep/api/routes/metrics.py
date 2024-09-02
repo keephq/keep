@@ -51,9 +51,8 @@ def get_metrics(
         is_confirmed=True,
     )
     for incident in incidents:
-        incident_name = incident.user_generated_name if incident.user_generated_name else incident.ai_generated_name
-        export += f'alerts_total{{incident_name="{incident_name}" incident_id="{incident.id}"}} {incident.alerts_count}\n'
-    
+        export += f'alerts_total{{incident_name="{incident.name}" incident_id="{incident.id}"}} {incident.alerts_count}\n'
+
     # Exporting stats about open incidents
     export += "\n\n"
     export += "# HELP open_incidents_total The total number of open incidents.\r\n"

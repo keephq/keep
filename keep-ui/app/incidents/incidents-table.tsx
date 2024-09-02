@@ -60,11 +60,7 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: ({ row }) => (
-        <div className="text-wrap">
-          {row.original.user_generated_name || row.original.ai_generated_name}
-        </div>
-      ),
+      cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
     }),
     columnHelper.display({
       id: "user_summary",
