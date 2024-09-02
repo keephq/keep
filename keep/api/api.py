@@ -20,7 +20,6 @@ import keep.api.logging
 import keep.api.observability
 from keep.api.arq_worker import get_arq_worker
 from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
-from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_api_key
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
@@ -48,7 +47,10 @@ from keep.api.routes import (
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
 from keep.event_subscriber.event_subscriber import EventSubscriber
-from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.identitymanager.identitymanagerfactory import (
+    IdentityManagerFactory,
+    IdentityManagerTypes,
+)
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -61,7 +63,7 @@ PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 
-AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+AUTH_TYPE = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value)
 try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
@@ -161,7 +163,7 @@ class EventCaptureMiddleware(BaseHTTPMiddleware):
 
 
 def get_app(
-    auth_type: AuthenticationType = AuthenticationType.NO_AUTH.value,
+    auth_type: IdentityManagerTypes = IdentityManagerTypes.NOAUTH.value,
 ) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"

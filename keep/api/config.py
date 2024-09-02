@@ -3,9 +3,9 @@ import os
 
 import keep.api.logging
 from keep.api.api import AUTH_TYPE
-from keep.api.core.config import AuthenticationType
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 
 PORT = int(os.environ.get("PORT", 8080))
 
@@ -21,15 +21,15 @@ def on_starting(server=None):
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
-        AuthenticationType.SINGLE_TENANT.value,
-        AuthenticationType.NO_AUTH.value,
-        AuthenticationType.OAUTH2PROXY.value,
+        IdentityManagerTypes.DB.value,
+        IdentityManagerTypes.NOAUTH.value,
+        IdentityManagerTypes.OAUTH2PROXY.value,
     ]:
         # for oauth2proxy, we don't want to create the default user
         try_create_single_tenant(
             SINGLE_TENANT_UUID,
             create_default_user=(
-                False if AUTH_TYPE == AuthenticationType.OAUTH2PROXY.value else True
+                False if AUTH_TYPE == IdentityManagerTypes.OAUTH2PROXY.value else True
             ),
         )
 
