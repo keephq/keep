@@ -108,6 +108,7 @@ def create_workflow_execution(
     event_id: str = None,
     fingerprint: str = None,
     execution_id: str = None,
+    event_type: str = "alert",
 ) -> str:
     with Session(engine) as session:
         try:
@@ -126,13 +127,21 @@ def create_workflow_execution(
             # Ensure the object has an id
             session.flush()
             execution_id = workflow_execution.id
-            if fingerprint:
+            if fingerprint and event_type == "alert":
                 workflow_to_alert_execution = WorkflowToAlertExecution(
                     workflow_execution_id=execution_id,
                     alert_fingerprint=fingerprint,
                     event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
+            elif event_type == "incident":
+                workflow_to_alert_execution = WorkflowToIncidentExecution(
+                    workflow_execution_id=execution_id,
+                    alert_fingerprint=fingerprint,
+                    incident_id=event_id,
+                )
+                session.add(workflow_to_alert_execution)
+
             session.commit()
             return execution_id
         except IntegrityError:
@@ -687,9 +696,8 @@ def get_workflow_executions(
         ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = (
-            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-        )
+        query = (query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+)
         # Execute the query
         workflow_executions = query.all()
 

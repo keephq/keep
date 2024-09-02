@@ -71,6 +71,18 @@ class WorkflowToAlertExecution(SQLModel, table=True):
     )
 
 
+class WorkflowToIncidentExecution(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("workflow_execution_id", "incident_id"),)
+
+    # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
+    id: Optional[int] = Field(primary_key=True, default=None)
+    workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
+    incident_id: str | None
+    workflow_execution: WorkflowExecution = Relationship(
+        back_populates="workflow_to_incident_execution"
+    )
+
+
 class WorkflowExecutionLog(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")

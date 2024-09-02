@@ -303,6 +303,8 @@ export function parseWorkflow(
       return prev;
     }, {}) || {};
 
+  console.log("triggers", triggers)
+
   return generateWorkflow(
     workflow.id,
     workflow.name,
@@ -508,7 +510,12 @@ export function buildAlert(definition: Definition): Alert {
       value: alert.properties.interval,
     });
   }
-
+  if (alert.properties.incident) {
+    triggers.push({
+      type: "incident",
+      value: alert.properties.incident,
+    });
+  }
   return {
     id: alertId,
     name: name,

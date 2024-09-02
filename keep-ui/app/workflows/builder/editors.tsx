@@ -282,6 +282,19 @@ function WorkflowEditorV2({
     }
   };
 
+  interface IncidentProperties {
+    "alert": { source: string },
+    "manual": "true",
+    "incident": "created" | "updated" | "deleted" | "alert_added" | "alert_removed" | "alerts_changed" | "",
+    "interval": string
+  }
+
+  const PROPERTIES : IncidentProperties = {
+    "alert": { source: "" },
+    "manual": "true",
+    "incident": "",
+    "interval": ""
+  };
 
   const deleteFilter = (filter: string) => {
     const currentFilters = { ...properties.alert };
@@ -380,7 +393,21 @@ function WorkflowEditorV2({
                     )
                   );
 
-                case "interval":
+                case "incident" ? (
+              <>
+                <Select
+                  className="my-2.5"
+                  placeholder={`Select incident trigger action`}
+                  onValueChange={(value) => setProperties({ ...properties, [key]: value })}
+                  value={properties["incident"] as string}
+                >
+                  <SelectItem value=""></SelectItem>
+                  {Array("created", "updated", "deleted", "alert_added", "alert_removed", "alerts_changed").map((action) =>
+                    <SelectItem key={action} value={action}></SelectItem>
+                  )}
+                </Select>
+              </>
+            ) : key === "interval":
                   return (
                     selectedNode === "interval" && (
                       <TextInput
@@ -412,13 +439,13 @@ function WorkflowEditorV2({
                       onChange={(e: any) =>
                         handleChange(key, e.target.value)
                       }
-                      value={properties[key] || "" as string}
-                    />
-                  );
-              }
-            })()}
-          </div>
-        );
+                      value={properties[key] || ""as string}
+                                  />
+                              );
+                      }
+})()}
+              </div>
+          );
       })}
     </>
   );

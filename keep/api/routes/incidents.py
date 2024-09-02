@@ -118,6 +118,24 @@ def create_incident_endpoint(
         },
     )
     __update_client_on_incident_change(pusher_client, tenant_id)
+
+    try:
+        # Now run any workflow that should run based on this alert
+        # TODO: this should publish event
+        workflow_manager = WorkflowManager.get_instance()
+        # insert the events to the workflow manager process queue
+        logger.info("Adding incident to the workflow manager queue")
+        workflow_manager.insert_incident(tenant_id, new_incident_dto, "created")
+        logger.info("Added incident to the workflow manager queue")
+    except Exception:
+        logger.exception(
+            "Failed to run workflows based on incident",
+            extra={
+                "incident_id": new_incident_dto.id,
+                "tenant_id": tenant_id
+            },
+        )
+
     return new_incident_dto
 
 
