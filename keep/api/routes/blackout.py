@@ -3,12 +3,14 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier, get_session
+from keep.api.core.db import get_session
 from keep.api.models.db.blackout import (
     BlackoutRule,
     BlackoutRuleCreate,
     BlackoutRuleRead,
 )
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -18,7 +20,7 @@ router = APIRouter()
 )
 def get_blackout_rules(
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:blackout"])
+        IdentityManagerFactory.get_auth_verifier(["read:blackout"])
     ),
     session: Session = Depends(get_session),
 ) -> list[BlackoutRuleRead]:
@@ -36,7 +38,7 @@ def get_blackout_rules(
 def create_blackout_rule(
     rule_dto: BlackoutRuleCreate,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:blackout"])
+        IdentityManagerFactory.get_auth_verifier(["write:blackout"])
     ),
     session: Session = Depends(get_session),
 ) -> BlackoutRuleRead:
@@ -62,7 +64,7 @@ def update_blackout_rule(
     rule_id: int,
     rule_dto: BlackoutRuleCreate,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:blackout"])
+        IdentityManagerFactory.get_auth_verifier(["write:blackout"])
     ),
     session: Session = Depends(get_session),
 ) -> BlackoutRuleRead:
@@ -94,7 +96,7 @@ def update_blackout_rule(
 def delete_blackout_rule(
     rule_id: int,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["write:blackout"])
+        IdentityManagerFactory.get_auth_verifier(["write:blackout"])
     ),
     session: Session = Depends(get_session),
 ):
