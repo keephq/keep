@@ -24,6 +24,8 @@ def on_starting(server=None):
         IdentityManagerTypes.DB.value,
         IdentityManagerTypes.NOAUTH.value,
         IdentityManagerTypes.OAUTH2PROXY.value,
+        "no_auth",  # backwards compatibility
+        "single_tenant",  # backwards compatibility
     ]:
         # for oauth2proxy, we don't want to create the default user
         try_create_single_tenant(
