@@ -76,7 +76,7 @@ const AlertTimeline: React.FC<AlertTimelineProps> = ({ alert, auditData, isLoadi
   ));
 
   return (
-    <div className="flex-grow">
+    <div className="h-[500px] overflow-y-auto">
       <div className="flex justify-between items-center">
         <Subtitle>Timeline</Subtitle>
         <Button
