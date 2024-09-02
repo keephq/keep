@@ -57,7 +57,6 @@ export async function installWebhook(provider: Provider, accessToken: string) {
       success: `${provider.type} webhook installed 👌`,
       error: {
         render({ data }) {
-          console.log(data);
           // When the promise reject, data will contains the error
           return `Webhook installation failed 😢 Error: ${
             (data as any).detail
