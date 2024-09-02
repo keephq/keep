@@ -1,7 +1,6 @@
 import io
 import json
 import logging
-import os
 import smtplib
 from email.mime.text import MIMEText
 from typing import Optional, Tuple
@@ -26,18 +25,13 @@ from keep.api.utils.tenant_utils import (
 )
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
-from keep.identitymanager.identitymanagerfactory import (
-    IdentityManagerFactory,
-    IdentityManagerTypes,
-)
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.identitymanager.rbac import get_role_by_role_name
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
-
-auth_type = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value)
 
 
 class CreateUserRequest(BaseModel):
@@ -375,7 +369,6 @@ async def get_sso_settings(
 ):
     identity_manager = IdentityManagerFactory.get_identity_manager(
         tenant_id=authenticated_entity.tenant_id,
-        identity_manager_type=auth_type,
         context_manager=ContextManager(tenant_id=authenticated_entity.tenant_id),
     )
 
