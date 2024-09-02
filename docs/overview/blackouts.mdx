@@ -28,6 +28,17 @@ Suppose your team schedules a database upgrade that could trigger numerous non-c
 - **Time Window**: The specific start and end times or relative duration during which the blackout rule is active.
 - **Alert Suppression**: The process of ignoring alerts that match the blackout rule's conditions during the specified time window.
 
+## Status-Based Filtering in Blackouts
+
+In Keep, certain alert statuses are automatically ignored by blackout rules. Specifically, alerts with the statuses RESOLVED and ACKNOWLEDGED are not suppressed by blackout rules. This is intentional to ensure that resolving alerts can still be processed and appropriately close or update active incidents.
+
+### Why Are Some Statuses Ignored?
+
+	•	RESOLVED Alerts: These alerts indicate that an issue has been resolved. By allowing these alerts to bypass blackout rules, Keep ensures that any active incidents related to the alert can be properly closed, maintaining the integrity of the alert lifecycle.
+	•	ACKNOWLEDGED Alerts: These alerts have been acknowledged by an operator, signaling that they are being addressed. Ignoring these alerts in blackouts ensures that operators can track the progress of incidents and take necessary actions without interference.
+
+By excluding these statuses from blackout suppression, Keep allows for the continuous and accurate management of alerts, even during blackout periods, ensuring that resolution processes are not disrupted.
+
 ## Creating a Blackout Rule
 
 To create a blackout rule:

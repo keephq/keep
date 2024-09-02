@@ -101,3 +101,37 @@ def test_alert_in_blackout_with_non_matching_cel(
     result = blackout_bl.check_if_alert_in_blackout(alert_dto)
 
     assert result is False
+
+
+def test_alert_ignored_due_to_resolved_status(
+    mock_session, active_blackout_rule, alert_dto
+):
+    # Set the alert status to RESOLVED
+    alert_dto.status = "resolved"
+
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_blackout_rule
+    ]
+
+    blackout_bl = BlackoutsBl(tenant_id="test-tenant", session=mock_session)
+    result = blackout_bl.check_if_alert_in_blackout(alert_dto)
+
+    # Should return False because the alert status is RESOLVED
+    assert result is False
+
+
+def test_alert_ignored_due_to_acknowledged_status(
+    mock_session, active_blackout_rule, alert_dto
+):
+    # Set the alert status to ACKNOWLEDGED
+    alert_dto.status = "acknowledged"
+
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_blackout_rule
+    ]
+
+    blackout_bl = BlackoutsBl(tenant_id="test-tenant", session=mock_session)
+    result = blackout_bl.check_if_alert_in_blackout(alert_dto)
+
+    # Should return False because the alert status is ACKNOWLEDGED
+    assert result is False
