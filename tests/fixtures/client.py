@@ -18,6 +18,8 @@ def test_app(monkeypatch, request):
         elastic_enabled = auth_type[1]
 
     monkeypatch.setenv("AUTH_TYPE", auth_type)
+    if auth_type == "MULTI_TENANT":
+        monkeypatch.setenv("AUTH0_DOMAIN", "https//auth0domain.com")
     monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
     if elastic_enabled is not None:
         monkeypatch.setenv("ELASTIC_ENABLED", str(elastic_enabled))

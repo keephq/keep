@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, Form, HTTPException
 from pusher import Pusher
 
-from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
-    get_pusher_client,
-)
+from keep.api.core.dependencies import get_pusher_client
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -14,7 +12,9 @@ router = APIRouter()
 def pusher_authentication(
     channel_name=Form(...),
     socket_id=Form(...),
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:pusher"])
+    ),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict:
     """
