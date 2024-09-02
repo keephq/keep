@@ -114,7 +114,7 @@ const AlertAssociateIncidentModal = ({
                 incidents.items?.map((incident) => {
                   return (
                     <SelectItem key={incident.id} value={incident.id}>
-                      {incident.user_generated_name || incident.ai_generated_name}
+                      {incident.name}
                     </SelectItem>
                   );
                 })!

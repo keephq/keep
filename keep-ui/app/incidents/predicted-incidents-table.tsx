@@ -35,14 +35,14 @@ export default function PredictedIncidentsTable({
 
   const columns = [
     columnHelper.display({
-      id: "ai_generated_name",
+      id: "name",
       header: "Name",
-      cell: ({ row }) => <div className="text-wrap">{row.original.ai_generated_name}</div>,
+      cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
     }),
     columnHelper.display({
       id: "user_summary",
       header: "Summary",
-      cell: ({ row }) => <div className="text-wrap">{row.original.generated_summary}</div>,
+      cell: ({ row }) => <div className="text-wrap">{row.original.user_summary}</div>,
     }),
     columnHelper.display({
       id: "alert_count",
