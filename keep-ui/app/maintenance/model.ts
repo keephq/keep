@@ -1,4 +1,4 @@
-export interface BlackoutRule {
+export interface MaintenanceRule {
   id: number;
   name: string;
   description?: string;
@@ -11,7 +11,7 @@ export interface BlackoutRule {
   enabled: boolean;
 }
 
-export interface BlackoutRuleCreate {
+export interface MaintenanceRuleCreate {
   name: string;
   description?: string;
   cel_query: string;

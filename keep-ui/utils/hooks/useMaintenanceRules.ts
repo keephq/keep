@@ -1,10 +1,10 @@
-import { BlackoutRule } from "app/blackout/model";
+import { MaintenanceRule } from "app/maintenance/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
-export const useBlackouts = (
+export const useMaintenanceRules = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -12,8 +12,8 @@ export const useBlackouts = (
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  return useSWR<BlackoutRule[]>(
-    () => (session ? `${apiUrl}/blackout` : null),
+  return useSWR<MaintenanceRule[]>(
+    () => (session ? `${apiUrl}/maintenance` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

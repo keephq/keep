@@ -65,8 +65,8 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/blackout" icon={FaVolumeMute}>
-            <Subtitle>Blackouts</Subtitle>
+          <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
+            <Subtitle>Maintenance Windows</Subtitle>
           </LinkWithIcon>
         </li>
         <li>

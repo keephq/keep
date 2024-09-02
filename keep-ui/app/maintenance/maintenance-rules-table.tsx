@@ -20,19 +20,19 @@ import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
-import { BlackoutRule } from "./model";
+import { MaintenanceRule } from "./model";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
 
-const columnHelper = createColumnHelper<BlackoutRule>();
+const columnHelper = createColumnHelper<MaintenanceRule>();
 
 interface Props {
-  blackouts: BlackoutRule[];
-  editCallback: (rule: BlackoutRule) => void;
+  maintenanceRules: MaintenanceRule[];
+  editCallback: (rule: MaintenanceRule) => void;
 }
 
-export default function BlackoutsTable({ blackouts, editCallback }: Props) {
+export default function MaintenanceRulesTable({ maintenanceRules, editCallback }: Props) {
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -59,7 +59,7 @@ export default function BlackoutsTable({ blackouts, editCallback }: Props) {
             icon={MdRemoveCircle}
             onClick={(e: any) => {
               e.preventDefault();
-              deleteBlackout(context.row.original.id!);
+              deleteMaintenanceRule(context.row.original.id!);
             }}
           />
         </div>
@@ -102,30 +102,30 @@ export default function BlackoutsTable({ blackouts, editCallback }: Props) {
         </div>
       ),
     }),
-  ] as DisplayColumnDef<BlackoutRule>[];
+  ] as DisplayColumnDef<MaintenanceRule>[];
 
   const table = useReactTable({
     columns,
-    data: blackouts,
+    data: maintenanceRules,
     state: { expanded },
     getCoreRowModel: getCoreRowModel(),
     onExpandedChange: setExpanded,
   });
 
-  const deleteBlackout = (blackoutId: number) => {
+  const deleteMaintenanceRule = (maintenanceRuleId: number) => {
     const apiUrl = getApiURL();
-    if (confirm("Are you sure you want to delete this blackout rule?")) {
-      fetch(`${apiUrl}/blackouts/${blackoutId}`, {
+    if (confirm("Are you sure you want to delete this maintenance rule?")) {
+      fetch(`${apiUrl}/maintenance/${maintenanceRuleId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       }).then((response) => {
         if (response.ok) {
-          toast.success("Blackout rule deleted successfully");
+          toast.success("Maintenance rule deleted successfully");
         } else {
           toast.error(
-            "Failed to delete blackout rule, contact us if this persists"
+            "Failed to delete maintenance rule, contact us if this persists"
           );
         }
       });
