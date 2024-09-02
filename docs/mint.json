@@ -59,7 +59,8 @@
             "deployment/authentication/no-auth",
             "deployment/authentication/db-auth",
             "deployment/authentication/auth0-auth",
-            "deployment/authentication/keycloak-auth"
+            "deployment/authentication/keycloak-auth",
+            "deployment/authentication/oauth2proxy-auth"
           ]
         },
         "deployment/secret-manager",

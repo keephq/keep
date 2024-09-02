@@ -16,15 +16,22 @@ logger = logging.getLogger(__name__)
 def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
     logger.info("Keep server starting")
-    
+
     migrate_db()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
         AuthenticationType.SINGLE_TENANT.value,
         AuthenticationType.NO_AUTH.value,
+        AuthenticationType.OAUTH2PROXY.value,
     ]:
-        try_create_single_tenant(SINGLE_TENANT_UUID)
+        # for oauth2proxy, we don't want to create the default user
+        try_create_single_tenant(
+            SINGLE_TENANT_UUID,
+            create_default_user=(
+                False if AUTH_TYPE == AuthenticationType.OAUTH2PROXY.value else True
+            ),
+        )
 
     if os.environ.get("USE_NGROK", "false") == "true":
         from pyngrok import ngrok

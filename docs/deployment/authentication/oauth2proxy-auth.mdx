@@ -1,0 +1,29 @@
+---
+title: "oauth2-proxy Authentication"
+---
+
+Delegate authentication to Oauth2Proxy.
+
+
+### When to Use
+
+- **oauth2-proxy user:** Use this authentication method if you want to delegate authentication to an external Oauth2Proxy service.
+
+### Setup Instructions
+
+To start Keep with Oauth2Proxy authentication, set the following environment variables:
+
+#### Frontend Environment Variables
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|-----------|:--------:|:-------------:|
+| AUTH_TYPE | Set to 'OAUTH2PROXY' for OAUTH2PROXY authentication | Yes | - |
+
+#### Backend Environment Variables
+
+| Environment Variable | Description | Required | Default Value |
+|--------------------|-----------|:--------:|:-------------:|
+| AUTH_TYPE | Set to 'OAUTH2PROXY' for OAUTH2PROXY authentication | Yes | - |
+| OAUTH2_PROXY_USER_HEADER | Header for the authenticated user's email | Yes | X-Auth-Request-Email |
+| OAUTH2_PROXY_ROLE_HEADER | Header for the authenticated user's role | Yes | X-Auth-Request-Role |
+| OAUTH2_PROXY_AUTO_CREATE_USER | Automatically create user if not exists | No | True |

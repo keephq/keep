@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 engine = create_db_engine()
 
 
-def try_create_single_tenant(tenant_id: str) -> None:
+def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
     """
     Creates the single tenant and the default user if they don't exist.
     """
@@ -71,7 +71,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             # check if at least one user exists:
             user = session.exec(select(User)).first()
             # if no users exist, let's create the default user
-            if not user:
+            if not user and create_default_user:
                 logger.info("Creating default user")
                 default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
                 default_password = hashlib.sha256(
@@ -162,7 +162,7 @@ def migrate_db():
     if os.environ.get("SKIP_DB_CREATION", "false") == "true":
         logger.info("Skipping running migrations...")
         return None
-    
+
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)

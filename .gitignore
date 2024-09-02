@@ -208,3 +208,4 @@ playwright_dump_*.png
 
 ee/experimental/ai_temp/*
 !ee/experimental/ai_temp/.gitkeep
+keepnew.db
