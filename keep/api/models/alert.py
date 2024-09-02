@@ -396,6 +396,7 @@ class IncidentDto(IncidentDtoIn):
         return cls(
             id=db_incident.id,
             user_generated_name=db_incident.user_generated_name,
+            ai_generated_name = db_incident.ai_generated_name,
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
