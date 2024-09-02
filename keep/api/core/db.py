@@ -1675,18 +1675,29 @@ def get_provider_distribution(tenant_id: str) -> dict:
     return provider_distribution
 
 
-def get_presets(tenant_id: str, email) -> List[Dict[str, Any]]:
+def get_presets(
+    tenant_id: str, email, preset_ids: list[str] = None
+) -> List[Dict[str, Any]]:
     with Session(engine) as session:
-        statement = (
-            select(Preset)
-            .where(Preset.tenant_id == tenant_id)
-            .where(
-                or_(
-                    Preset.is_private == False,
-                    Preset.created_by == email,
+        # v2 with RBAC and roles
+        if preset_ids:
+            statement = (
+                select(Preset)
+                .where(Preset.tenant_id == tenant_id)
+                .where(Preset.id.in_(preset_ids))
+            )
+        # v1, no RBAC and roles
+        else:
+            statement = (
+                select(Preset)
+                .where(Preset.tenant_id == tenant_id)
+                .where(
+                    or_(
+                        Preset.is_private == False,
+                        Preset.created_by == email,
+                    )
                 )
             )
-        )
         result = session.exec(statement)
         presets = result.unique().all()
     return presets
@@ -2316,6 +2327,7 @@ def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> i
             )
         ).scalar()
 
+
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
@@ -2577,23 +2589,27 @@ def get_pmi_values(
     return pmi_values
 
 
-def update_incident_summary(tenant_id: str, incident_id: UUID, summary: str) -> Incident:
+def update_incident_summary(
+    tenant_id: str, incident_id: UUID, summary: str
+) -> Incident:
     if not summary:
         return
-    
+
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(Incident.tenant_id == tenant_id).where(Incident.id == incident_id)
+            select(Incident)
+            .where(Incident.tenant_id == tenant_id)
+            .where(Incident.id == incident_id)
         ).first()
 
         if not incident:
-            return 
+            return
 
         incident.generated_summary = summary
         session.commit()
         session.refresh(incident)
-        
-        return 
+
+        return
 
 
 # Fetch all topology data
