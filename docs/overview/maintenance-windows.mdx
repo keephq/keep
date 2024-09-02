@@ -4,7 +4,7 @@ title: "Maintenance Windows"
 
 # Alert Management: Maintenance Windows
 
-Keep's Maintenance Windows feature provides a critical mechanism for managing alert noise during scheduled maintenance periods or other planned events. By defining Maintenance Window rules, users can suppress alerts that are irrelevant during these times, ensuring that only actionable alerts reach the operations team.
+Keep's Maintenance Windows feature provides a critical mechanism for managing alert noise during scheduled maintenance periods or other planned events. By defining Maintenance Window rules, users can suppress alerts (**meaning those alerts will be dropped out by Keep and not shown in alerts feed**) that are irrelevant during these times, ensuring that only actionable alerts reach the operations team.
 
 ## Introduction
 
@@ -34,8 +34,8 @@ In Keep, certain alert statuses are automatically ignored by Maintenance Window 
 
 ### Why Are Some Statuses Ignored?
 
-	•	RESOLVED Alerts: These alerts indicate that an issue has been resolved. By allowing these alerts to bypass Maintenance Window rules, Keep ensures that any active incidents related to the alert can be properly closed, maintaining the integrity of the alert lifecycle.
-	•	ACKNOWLEDGED Alerts: These alerts have been acknowledged by an operator, signaling that they are being addressed. Ignoring these alerts in Maintenance Windows ensures that operators can track the progress of incidents and take necessary actions without interference.
+    •	RESOLVED Alerts: These alerts indicate that an issue has been resolved. By allowing these alerts to bypass Maintenance Window rules, Keep ensures that any active incidents related to the alert can be properly closed, maintaining the integrity of the alert lifecycle.
+    •	ACKNOWLEDGED Alerts: These alerts have been acknowledged by an operator, signaling that they are being addressed. Ignoring these alerts in Maintenance Windows ensures that operators can track the progress of incidents and take necessary actions without interference.
 
 By excluding these statuses from Maintenance Window suppression, Keep allows for the continuous and accurate management of alerts, even during Maintenance Window periods, ensuring that resolution processes are not disrupted.
 
