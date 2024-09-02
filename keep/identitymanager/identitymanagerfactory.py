@@ -48,7 +48,7 @@ class IdentityManagerFactory:
             identity_manager_type = config(
                 "AUTH_TYPE", default=IdentityManagerTypes.NOAUTH
             )
-            
+
         if isinstance(identity_manager_type, IdentityManagerTypes):
             identity_manager_type = identity_manager_type.value.lower()
 
@@ -93,32 +93,36 @@ class IdentityManagerFactory:
         Raises:
             NotImplementedError: If the specified manager type or class is not implemented.
         """
-        manager_type = (
-            IdentityManagerFactory._backward_compatible_get_identity_manager(
-                manager_type
-            )
-        )
         try:
-            module = importlib.import_module(
-                f"keep.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
+            manager_type = (
+                IdentityManagerFactory._backward_compatible_get_identity_manager(
+                    manager_type
+                )
             )
-        # look for the module in ee
-        except ModuleNotFoundError:
-            module = importlib.import_module(
-                f"ee.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
-            )
-        except ModuleNotFoundError:
+            try:
+                module = importlib.import_module(
+                    f"keep.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
+                )
+            # look for the module in ee
+            except ModuleNotFoundError:
+                module = importlib.import_module(
+                    f"ee.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
+                )
+            except ModuleNotFoundError:
+                raise NotImplementedError(
+                    f"{manager_class.__name__} for {manager_type} not implemented"
+                )
+            # look for the class that contains the manager_class in its name
+            for _attr in dir(module):
+                if manager_class in _attr.lower() and "base" not in _attr.lower():
+                    class_name = _attr
+                    break
+            manager_class: Type = getattr(module, class_name)
+            return manager_class(*args, **kwargs)
+        except (ImportError, AttributeError):
             raise NotImplementedError(
                 f"{manager_class.__name__} for {manager_type} not implemented"
             )
-        # look for the class that contains the manager_class in its name
-        for _attr in dir(module):
-            if manager_class in _attr.lower() and "base" not in _attr.lower():
-                class_name = _attr
-                break
-        manager_class: Type = getattr(module, class_name)
-        return manager_class(*args, **kwargs)
-       
 
     @staticmethod
     def _backward_compatible_get_identity_manager(
