@@ -90,7 +90,9 @@ class Incident(SQLModel, table=True):
 
     rule_id: UUID | None = Field(
         sa_column=Column(
-            UUIDType(binary=False), ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"), nullable=True
+            UUIDType(binary=False),
+            ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"),
+            nullable=True,
         ),
     )
 
@@ -237,3 +239,4 @@ class AlertActionType(enum.Enum):
     # commented
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
+    BLACKOUT = "Alert is blacked out"

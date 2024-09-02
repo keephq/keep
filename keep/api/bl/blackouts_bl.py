@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session_sync
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.models.db.blackout import BlackoutRule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
@@ -15,9 +16,9 @@ class BlackoutsBl:
     def __init__(self, tenant_id: str, session: Session | None) -> None:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        session = session if session else get_session_sync()
+        self.session = session if session else get_session_sync()
         self.blackouts: list[BlackoutRule] = (
-            session.query(BlackoutRule)
+            self.session.query(BlackoutRule)
             .filter(BlackoutRule.tenant_id == tenant_id)
             .filter(BlackoutRule.enabled == True)
             .filter(BlackoutRule.end_time >= datetime.datetime.now())
@@ -57,6 +58,26 @@ class BlackoutsBl:
                 self.logger.info(
                     "Alert is blacked out", extra={**extra, "blackout_id": blackout.id}
                 )
+
+                try:
+                    audit = AlertAudit(
+                        tenant_id=self.tenant_id,
+                        fingerprint=alert.fingerprint,
+                        user_id="Keep",
+                        action=AlertActionType.BLACKOUT.value,
+                        description=f"Alert is blackedout due to {blackout.name}",
+                    )
+                    self.session.add(audit)
+                    self.session.commit()
+                except Exception:
+                    self.logger.exception(
+                        "Failed to write audit for alert blackout",
+                        extra={
+                            "tenant_id": self.tenant_id,
+                            "fingerprint": alert.fingerprint,
+                        },
+                    )
+
                 return True
         self.logger.info("Alert is not blacked out", extra=extra)
         return False
