@@ -8,11 +8,11 @@ from sqlmodel import Session
 from keep.api.core.db import get_session_sync
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import AlertActionType, AlertAudit
-from keep.api.models.db.blackout import BlackoutRule
+from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
 
-class BlackoutsBl:
+class MaintenanceWindowsBl:
 
     ALERT_STATUSES_TO_IGNORE = [
         AlertStatus.RESOLVED.value,
@@ -23,41 +23,43 @@ class BlackoutsBl:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.session = session if session else get_session_sync()
-        self.blackouts: list[BlackoutRule] = (
-            self.session.query(BlackoutRule)
-            .filter(BlackoutRule.tenant_id == tenant_id)
-            .filter(BlackoutRule.enabled == True)
-            .filter(BlackoutRule.end_time >= datetime.datetime.now())
+        self.maintenance_rules: list[MaintenanceWindowRule] = (
+            self.session.query(MaintenanceWindowRule)
+            .filter(MaintenanceWindowRule.tenant_id == tenant_id)
+            .filter(MaintenanceWindowRule.enabled == True)
+            .filter(MaintenanceWindowRule.end_time >= datetime.datetime.now())
             .all()
         )
 
-    def check_if_alert_in_blackout(self, alert: AlertDto) -> bool:
+    def check_if_alert_in_maintenance_windows(self, alert: AlertDto) -> bool:
         extra = {"tenant_id": self.tenant_id, "fingerprint": alert.fingerprint}
 
-        if not self.blackouts:
+        if not self.maintenance_rules:
             self.logger.debug(
-                "No blackout rules for this tenant", extra={"tenant_id": self.tenant_id}
+                "No maintenance window rules for this tenant",
+                extra={"tenant_id": self.tenant_id},
             )
             return False
 
         if alert.status in self.ALERT_STATUSES_TO_IGNORE:
             self.logger.debug(
-                "Alert status is set to be ignored, not blacking out",
+                "Alert status is set to be ignored, ignoring maintenance windows",
                 extra={"tenant_id": self.tenant_id},
             )
             return False
 
-        self.logger.info("Checking blackout for alert", extra=extra)
+        self.logger.info("Checking maintenance window for alert", extra=extra)
         env = celpy.Environment()
 
-        for blackout in self.blackouts:
-            if blackout.end_time <= datetime.datetime.now():
+        for maintenance_rule in self.maintenance_rules:
+            if maintenance_rule.end_time <= datetime.datetime.now():
+                # this is wtf error, should not happen because of query in init
                 self.logger.error(
-                    "Fetched blackout which already ended by mistake, should not happen!"
+                    "Fetched maintenance window which already ended by mistake, should not happen!"
                 )
                 continue
 
-            cel = preprocess_cel_expression(blackout.cel_query)
+            cel = preprocess_cel_expression(maintenance_rule.cel_query)
             ast = env.compile(cel)
             prgm = env.program(ast)
 
@@ -76,7 +78,8 @@ class BlackoutsBl:
                 raise
             if cel_result:
                 self.logger.info(
-                    "Alert is blacked out", extra={**extra, "blackout_id": blackout.id}
+                    "Alert is in maintenance window",
+                    extra={**extra, "maintenance_rule_id": maintenance_rule.id},
                 )
 
                 try:
@@ -84,14 +87,14 @@ class BlackoutsBl:
                         tenant_id=self.tenant_id,
                         fingerprint=alert.fingerprint,
                         user_id="Keep",
-                        action=AlertActionType.BLACKOUT.value,
-                        description=f"Alert was blacked out due to rule `{blackout.name}`",
+                        action=AlertActionType.MAINTENANCE.value,
+                        description=f"Alert in maintenance due to rule `{maintenance_rule.name}`",
                     )
                     self.session.add(audit)
                     self.session.commit()
                 except Exception:
                     self.logger.exception(
-                        "Failed to write audit for alert blackout",
+                        "Failed to write audit for alert maintenance window",
                         extra={
                             "tenant_id": self.tenant_id,
                             "fingerprint": alert.fingerprint,
@@ -99,5 +102,5 @@ class BlackoutsBl:
                     )
 
                 return True
-        self.logger.info("Alert is not blacked out", extra=extra)
+        self.logger.info("Alert is not in maintenance window", extra=extra)
         return False

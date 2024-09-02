@@ -9,7 +9,7 @@ from sqlalchemy import DateTime
 from sqlmodel import Column, Field, Index, SQLModel, func
 
 
-class BlackoutRule(SQLModel, table=True):
+class MaintenanceWindowRule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     tenant_id: str = Field(foreign_key="tenant.id")
@@ -30,12 +30,12 @@ class BlackoutRule(SQLModel, table=True):
     enabled: bool = True
 
     __table_args__ = (
-        Index("ix_blackout_tenant_id", "tenant_id"),
-        Index("ix_blackout_tenant_id_end_time", "tenant_id", "end_time"),
+        Index("ix_maintenance_rule_tenant_id", "tenant_id"),
+        Index("ix_maintenance_rule_tenant_id_end_time", "tenant_id", "end_time"),
     )
 
 
-class BlackoutRuleCreate(BaseModel):
+class MaintenanceRuleCreate(BaseModel):
     name: str
     description: Optional[str] = None
     cel_query: str
@@ -44,7 +44,7 @@ class BlackoutRuleCreate(BaseModel):
     enabled: bool = True
 
 
-class BlackoutRuleRead(BaseModel):
+class MaintenanceRuleRead(BaseModel):
     id: int
     name: str
     description: Optional[str]

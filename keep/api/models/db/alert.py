@@ -239,4 +239,4 @@ class AlertActionType(enum.Enum):
     # commented
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
-    BLACKOUT = "Alert is blacked out"
+    MAINTENANCE = "Alert is in maintenance window"
