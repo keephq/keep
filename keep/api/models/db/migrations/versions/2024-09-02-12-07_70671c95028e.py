@@ -1,7 +1,7 @@
 """Maintenance Windows
 
 Revision ID: 70671c95028e
-Revises: 1c650a429672
+Revises: 94886bc59c11
 Create Date: 2024-09-02 12:07:09.147349
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "70671c95028e"
-down_revision = "1c650a429672"
+down_revision = "94886bc59c11"
 branch_labels = None
 depends_on = None
 
