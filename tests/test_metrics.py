@@ -14,7 +14,7 @@ from tests.fixtures.client import client, setup_api_key, test_app
 )
 def test_add_remove_alert_to_incidents(client, db_session, test_app, setup_stress_alerts_no_elastic):
     alerts = setup_stress_alerts_no_elastic(14)
-    incident = create_incident_from_dict("keep", {"name": "test", "description": "test"})
+    incident = create_incident_from_dict("keep", {"user_generated_name": "test", "description": "test"})
     valid_api_key = "valid_api_key"
     setup_api_key(db_session, valid_api_key)
 

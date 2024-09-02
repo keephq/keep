@@ -37,6 +37,7 @@ if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
         "keep.api.tasks.process_background_ai_task.process_background_ai_task",
         "keep.api.tasks.process_background_ai_task.process_correlation",
         "keep.api.tasks.process_background_ai_task.process_summary_generation",
+        "keep.api.tasks.process_background_ai_task.process_name_generation",
     ]
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
