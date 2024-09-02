@@ -1242,6 +1242,14 @@ def delete_user(username):
             session.commit()
 
 
+def user_exists(username):
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        return user is not None
+
+
 def create_user(tenant_id, username, password, role):
     from keep.api.models.db.user import User
 

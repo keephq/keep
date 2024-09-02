@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Security
@@ -62,6 +63,19 @@ class AuthVerifierBase:
         ALL_RESOURCES.update([scope.split(":")[1] for scope in scopes])
         self.scopes = scopes
         self.logger = logging.getLogger(__name__)
+        self.impersonation = (
+            os.environ.get("KEEP_IMPERSONATION", "false").lower() == "true"
+        )
+        self.impersonation_user_header = os.environ.get(
+            "KEEP_IMPERSONATION_USER_HEADER", "HTTP_X_FORWARDED_EMAIL"
+        )
+        self.impersonation_role_header = os.environ.get(
+            "KEEP_IMPERSONATION_ROLE_HEADER", "HTTP_X_FORWARDED_ROLE"
+        )
+        self.impersonation_auto_create_user = (
+            os.environ.get("KEEP_IMPERSONATION_AUTO_CREATE_USER", "false").lower()
+            == "true"
+        )
 
     def __call__(
         self,

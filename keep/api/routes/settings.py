@@ -15,7 +15,6 @@ from keep.api.core.config import AuthenticationType, config
 from keep.api.core.db import get_session
 from keep.api.models.alert import AlertDto
 from keep.api.models.smtp import SMTPSettings
-from keep.api.models.user import User
 from keep.api.models.webhook import WebhookSettings
 from keep.api.utils.tenant_utils import (
     create_api_key,
@@ -81,63 +80,6 @@ def webhook_settings(
         apiKey=webhook_api_key,
         modelSchema=AlertDto.schema(),
     )
-
-
-@router.get("/users", description="Get all users")
-def get_users(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:settings"])
-    ),
-) -> list[User]:
-    tenant_id = authenticated_entity.tenant_id
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        tenant_id=tenant_id,
-        identity_manager_type=auth_type,
-        context_manager=ContextManager(tenant_id=tenant_id),
-    )
-    users = identity_manager.get_users()
-    return users
-
-
-@router.delete("/users/{user_email}", description="Delete a user")
-def delete_user(
-    user_email: str,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["delete:settings"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        tenant_id=tenant_id,
-        identity_manager_type=auth_type,
-        context_manager=ContextManager(tenant_id=tenant_id),
-    )
-
-    return identity_manager.delete_user(user_email)
-
-
-@router.post("/users", description="Create a user")
-async def create_user(
-    request_data: CreateUserRequest,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:settings"])
-    ),
-):
-    tenant_id = authenticated_entity.tenant_id
-    user_email = request_data.email
-    password = request_data.password
-    role = request_data.role
-
-    if not user_email:
-        raise HTTPException(status_code=400, detail="Email is required")
-
-    identity_manager = IdentityManagerFactory.get_identity_manager(
-        tenant_id=tenant_id,
-        identity_manager_type=auth_type,
-        context_manager=ContextManager(tenant_id=tenant_id),
-    )
-    user = identity_manager.create_user(user_email, password, role)
-    return user
 
 
 @router.post("/smtp", description="Install or update SMTP settings")

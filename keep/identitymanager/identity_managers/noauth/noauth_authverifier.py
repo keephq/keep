@@ -25,6 +25,28 @@ class NoAuthVerifier(AuthVerifierBase):
         api_key: str,
         authorization: Optional[HTTPAuthorizationCredentials],
     ) -> AuthenticatedEntity:
+        """
+        # https://github.com/keephq/keep/issues/1203
+        if self.impersonation:
+            # get user name
+            user_name = request.headers.get(self.impersonation_user_header)
+            role = request.headers.get(self.impersonation_role_header)
+
+            # auto provision user
+            if self.impersonation_auto_create_user and not user_exists(user_name):
+                self.logger.info(f"Auto provisioning user: {user_name}")
+                create_user(
+                    tenant_id=SINGLE_TENANT_UUID, email=
+                    user_name, role, password="") # password is not used in noauth
+                self.logger.info(f"User {user_name} created")
+
+            return AuthenticatedEntity(
+                tenant_id=SINGLE_TENANT_UUID,
+                email=user_name,
+                role=role,
+            )
+        """
+
         return AuthenticatedEntity(
             tenant_id=SINGLE_TENANT_UUID,
             email=SINGLE_TENANT_EMAIL,
