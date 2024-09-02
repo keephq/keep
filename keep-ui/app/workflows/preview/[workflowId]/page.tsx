@@ -29,7 +29,7 @@ export default function PageWithId({
       {workflowPreviewData && workflowPreviewData.name === key && (
         <PageClient
           workflow={workflowPreviewData.workflow_raw || ""}
-          workflowId={key || ""}
+          isPreview={true}
         />
       )}
       {workflowPreviewData && workflowPreviewData.name !== key && (
