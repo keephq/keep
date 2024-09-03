@@ -9,8 +9,10 @@ from fastapi.security import (
     OAuth2PasswordBearer,
 )
 
+from keep.api.core.config import config
 from keep.api.core.db import get_api_key, update_key_last_used
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.rbac import Admin as AdminRole
 from keep.identitymanager.rbac import get_role_by_role_name
 
 auth_header = APIKeyHeader(name="X-API-KEY", scheme_name="API Key", auto_error=False)
@@ -62,6 +64,18 @@ class AuthVerifierBase:
         ALL_RESOURCES.update([scope.split(":")[1] for scope in scopes])
         self.scopes = scopes
         self.logger = logging.getLogger(__name__)
+        self.impersonation_enabled = (
+            config("KEEP_IMPERSONATION_ENABLED", default="false") == "true"
+        )
+        self.impersonation_user_header = config(
+            "KEEP_IMPERSONATION_USER_HEADER", default="X-KEEP-USER"
+        )
+        self.impersonation_role_header = config(
+            "KEEP_IMPERSONATION_ROLE_HEADER", default="X-KEEP-ROLE"
+        )
+        self.impersonation_auto_provision = (
+            config("KEEP_IMPERSONATION_AUTO_PROVISION", default="false") == "true"
+        )
 
     def __call__(
         self,
@@ -265,24 +279,78 @@ class AuthVerifierBase:
         if not tenant_api_key:
             self.logger.warning("Invalid API Key")
             raise HTTPException(status_code=401, detail="Invalid API Key")
-        else:
+
+        try:
             self.logger.debug("Updating API Key last used")
-            try:
-                update_key_last_used(
-                    tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
-                )
-            except Exception:
-                self.logger.exception("Failed to update API Key last used")
+            update_key_last_used(
+                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+            )
             self.logger.debug("Successfully updated API Key last used")
+        except Exception:
+            self.logger.exception("Failed to update API Key last used")
 
         request.state.tenant_id = tenant_api_key.tenant_id
-
         self.logger.debug(f"API key verified for tenant: {tenant_api_key.tenant_id}")
+        # check if impersonation is enabled, if not, return the api key's authenticated entity
+        if not self.impersonation_enabled:
+            return AuthenticatedEntity(
+                tenant_api_key.tenant_id,
+                tenant_api_key.created_by,
+                tenant_api_key.reference_id,
+                tenant_api_key.role,
+            )
+        # check if impersonation headers are present
+        user_name = request.headers.get(self.impersonation_user_header)
+        role = request.headers.get(self.impersonation_role_header)
+        # if not, return the apikey's authenticated entity
+        if not user_name or not role:
+            return AuthenticatedEntity(
+                tenant_api_key.tenant_id,
+                tenant_api_key.created_by,
+                tenant_api_key.reference_id,
+                tenant_api_key.role,
+            )
+
+        self.logger.info("Impersonating user")
+        user_name = request.headers.get(self.impersonation_user_header)
+        role = request.headers.get(self.impersonation_role_header)
+        if not user_name or not role:
+            raise HTTPException(status_code=401, detail="Impersonation headers missing")
+
+        # TODO - validate authorization meaning api key X has access to impersonate user Y
+        #        for now, only admin users can impersonate
+        if tenant_api_key.role != AdminRole.get_name():
+            self.logger.error("Impersonation not allowed for non-admin users")
+            raise HTTPException(
+                status_code=401, detail="Impersonation not allowed for non-admin users"
+            )
+
+        # auto provision user
+        if self.impersonation_auto_provision:
+            self.logger.info(f"Auto provisioning user: {user_name}")
+            self._provision_user(tenant_api_key.tenant_id, user_name, role)
+            self.logger.info(f"User {user_name} provisioned successfully")
+
+        self.logger.info("User impersonated successfully")
         return AuthenticatedEntity(
-            tenant_api_key.tenant_id,
-            tenant_api_key.created_by,
-            tenant_api_key.reference_id,
-            tenant_api_key.role,
+            tenant_id=tenant_api_key.tenant_id,
+            email=user_name,
+            api_key_name=None,
+            role=role,
+        )
+
+    def _provision_user(self, tenant_api_key, user_name, role):
+        """
+        Create a user for impersonation.
+
+        Args:
+            tenant_api_key: The API key used for impersonation.
+            user_name: The name of the user to create.
+            role: The role of the user to create.
+        """
+        raise NotImplementedError(
+            "User provisioning not implemented"
+            " for {}".format(self.__class__.__name__)
         )
 
     def _verify_bearer_token(self, token: str) -> AuthenticatedEntity:
