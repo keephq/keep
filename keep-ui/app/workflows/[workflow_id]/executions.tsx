@@ -14,12 +14,11 @@ import {
     ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import Loading from "../../loading";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowExecutionsV2 } from "utils/hooks/useWorkflowExecutions";
 
 import WorkflowGraph from "../workflow-graph";
 import { Workflow } from '../models';
-import { useWorkflows } from "utils/hooks/useWorkflows";
 import { WorkflowSteps } from "../mockworkflows";
 import { JSON_SCHEMA, load } from "js-yaml";
 import { ExecutionTable } from "./workflow-execution-table";
@@ -27,6 +26,7 @@ import SideNavBar from "./side-nav-bar";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import BuilderWorkflowTestRunModalContent from "../builder/builder-workflow-testrun-modal";
 import Modal from "react-modal";
+import { TableFilters } from "./table-filters";
 
 const tabs = [
     { name: "All Time", value: 'alltime' },
@@ -83,21 +83,20 @@ export default function WorkflowDetailPage({
 }) {
     const router = useRouter();
     const { data: session, status, update } = useSession();
-    const { data: workflows } = useWorkflows();
-    const workflowData = workflows?.find((wf) => wf.id === params.workflow_id);
 
     const [executionPagination, setExecutionPagination] = useState<Pagination>({
         limit: 10,
         offset: 0,
     });
     const [tab, setTab] = useState<number>(1)
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         setExecutionPagination({
-            limit: 10,
+            ...executionPagination,
             offset: 0,
         })
-    }, [tab]);
+    }, [tab, searchParams]);
 
 
     const {
@@ -140,12 +139,13 @@ export default function WorkflowDetailPage({
         <>
             <Card className="relative flex p-4 w-full justify-between gap-8">
                 <SideNavBar workflow={data.workflow} />
-                <div className="relative flex-1 overflow-auto p-0.5">
+                <div className="flex-1 relative overflow-auto p-0.5">
                     <div className="sticky top-0 flex justify-between items-end">
                         <div className="flex-1">
+                            {/*TO DO update searchParams for these filters*/}
                             <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
                         </div>
-                        <Button className="p-2 px-4" onClick={(e) => { e.preventDefault(); setRunModalOpen(true) }}>Run</Button>
+                        <Button className="p-2 px-4" onClick={(e) => { e.preventDefault(); setRunModalOpen(true) }}>Run now</Button>
                     </div>
                     {data?.items && (
                         <div className="mt-2 flex flex-col gap-2">
@@ -156,7 +156,7 @@ export default function WorkflowDetailPage({
                                     </Title>
                                     <div>
                                         <h1 className="text-2xl font-bold">{data.count ?? 0}</h1>
-                                        <div className="text-sm text-gray-500">__ from last month</div>
+                                        {/* <div className="text-sm text-gray-500">__ from last month</div> */}
                                     </div>
                                 </StatsCard>
                                 <StatsCard>
@@ -165,7 +165,7 @@ export default function WorkflowDetailPage({
                                     </Title>
                                     <div>
                                         <h1 className="text-2xl font-bold">{(data.passFail ?? 0).toFixed(2)}{'%'}</h1>
-                                        <div className="text-sm text-gray-500">__ from last month</div>
+                                        {/* <div className="text-sm text-gray-500">__ from last month</div> */}
                                     </div>
 
                                 </StatsCard>
@@ -175,7 +175,7 @@ export default function WorkflowDetailPage({
                                     </Title>
                                     <div>
                                         <h1 className="text-2xl font-bold">{(data.avgDuration ?? 0).toFixed(2)}</h1>
-                                        <div className="text-sm text-gray-500">__ from last month</div>
+                                        {/* <div className="text-sm text-gray-500">__ from last month</div> */}
                                     </div>
 
                                 </StatsCard>
@@ -188,6 +188,7 @@ export default function WorkflowDetailPage({
                             </div>
                             <WorkflowGraph showLastExecutionStatus={false} workflow={workflow} limit={executionPagination.limit} showAll={true} size="sm" />
                             <h1 className="text-xl font-bold mt-4">Execution History</h1>
+                            <TableFilters workflowId={data.workflow.id} />
                             <ExecutionTable
                                 executions={data}
                                 setPagination={setExecutionPagination}

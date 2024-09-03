@@ -564,7 +564,9 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         session.commit()
 
 
-def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2):
+def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, status: Optional[Union[str, List[str]]] = None,
+    trigger: Optional[Union[str, List[str]]] = None,
+    execution_id: Optional[str] = None):
     with Session(engine) as session:
         query = (
             session.query(
@@ -596,6 +598,24 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2):
                 WorkflowExecution.started >= timeframe
             )
 
+        if isinstance(status, str):
+            status = [status]
+        elif status is None:
+            status = []    
+       
+        # Normalize trigger to a list
+        if isinstance(trigger, str):
+            trigger = [trigger]
+
+
+        if execution_id:
+            query = query.filter(WorkflowExecution.id == execution_id)
+        if status:
+            query = query.filter(WorkflowExecution.status.in_(status))
+        if trigger:
+            query = query.filter(WorkflowExecution.triggered_by.in_(trigger))
+    
+
         total_count = query.count()
         status_counts = session.query(
             WorkflowExecution.status,
@@ -610,7 +630,7 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2):
         
         avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
-        # Order by start_time in descending order and limit the results
+
         query = query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
         
         # Execute the query

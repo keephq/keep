@@ -539,6 +539,9 @@ def get_workflow_by_id(
     tab: int = 1,
     limit: int = 25,
     offset: int = 0,
+    status: Optional[List[str]] = Query(None),
+    trigger: Optional[List[str]] = Query(None),
+    execution_id: Optional[str] = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
@@ -547,7 +550,7 @@ def get_workflow_by_id(
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
 
     with tracer.start_as_current_span("get_workflow_executions"):
-        total_count, workflow_executions, passFail, avgDuration = get_workflow_executions_db(tenant_id, workflow_id, limit, offset, tab)
+        total_count, workflow_executions, passFail, avgDuration = get_workflow_executions_db(tenant_id, workflow_id, limit, offset, tab, status, trigger, execution_id)
     workflow_executions_dtos = []
     with tracer.start_as_current_span("create_workflow_dtos"):
         for workflow_execution in workflow_executions:

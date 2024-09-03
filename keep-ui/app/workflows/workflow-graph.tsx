@@ -112,6 +112,8 @@ export default function WorkflowGraph({
       case "fail":
       case "failure":
       case "error":
+      case "timeout":
+      case "time_out":    
         icon = <XCircleIcon className="size-6 cover text-red-500" />;
         break;
       case "in_progress":
