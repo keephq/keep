@@ -112,10 +112,10 @@ def pull_data_from_providers(
                 f"Provider {provider.type} ({provider.id}) does not support topology data",
                 extra=extra,
             )
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                extra=extra,
+                extra={**extra, "error": str(e)},
             )
 
         # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.

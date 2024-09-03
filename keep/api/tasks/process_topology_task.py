@@ -65,11 +65,19 @@ def process_topology(
     # Then create the dependencies
     for service in topology_data:
         for dependency in service.dependencies:
+            service_id = service_to_keep_service_id_map.get(service.service)
+            depends_on_service_id = service_to_keep_service_id_map.get(dependency)
+            if not service_id or not depends_on_service_id:
+                logger.warning(
+                    "Found a dangling service, skipping",
+                    extra={"service": service.service, "dependency": dependency},
+                )
+                continue
             session.add(
                 TopologyServiceDependency(
-                    service_id=service_to_keep_service_id_map[service.service],
-                    depends_on_service_id=service_to_keep_service_id_map[dependency],
-                    protocol=service.dependencies[dependency],
+                    service_id=service_id,
+                    depends_on_service_id=depends_on_service_id,
+                    protocol=service.dependencies.get(dependency, "unknown"),
                 )
             )
 

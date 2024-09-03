@@ -106,7 +106,13 @@ const TopologyPage = ({
 
   const zoomToNode = useCallback(
     (nodeId: string) => {
-      const node = reactFlowInstance?.getNode(nodeId);
+      let node = reactFlowInstance?.getNode(nodeId);
+      if (!node) {
+        // Maybe its by display name?
+        node = reactFlowInstance
+          ?.getNodes()
+          .find((n) => n.data.display_name === nodeId);
+      }
       if (node && reactFlowInstance) {
         reactFlowInstance.setCenter(node.position.x, node.position.y);
       }
@@ -198,6 +204,7 @@ const TopologyPage = ({
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           fitView
           snapToGrid
           fitViewOptions={{ padding: 0.3 }}
