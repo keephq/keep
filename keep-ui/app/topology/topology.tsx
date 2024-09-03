@@ -183,7 +183,7 @@ const TopologyPage = ({
     );
 
   return (
-    <Card className="p-4 md:p-10 mx-auto h-full relative">
+    <Card className="p-4 md:p-10 mx-auto h-full relative mb-10">
       {showSearch && (
         <div className="flex justify-end items-center w-full absolute top-0 left-0">
           <TextInput
