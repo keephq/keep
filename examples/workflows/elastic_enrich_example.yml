@@ -9,62 +9,65 @@ workflow:
   steps:
     # first, query the ack index to check if there are any alerts that have not been acknowledged
     - name: query-ack-index
-      type: elastic
-      config: " {{ providers.elastic }} "
-      with:
-        index: your_ack_index
-        query: |
-          {
-            "query": {
-              "bool": {
-                "must": [
-                  {
-                    "match": {
-                      "acknowledged": false
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: your_ack_index
+          query: |
+            {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "acknowledged": false
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             }
-          }
     - name: query-config-index
-      type: elastic
-      config: " {{ providers.elastic }} "
-      with:
-        index: your_config_index
-        query: |
-          {
-            "query": {
-              "bool": {
-                "must": [
-                  {
-                    "match": {
-                      "config": true
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: your_config_index
+          query: |
+            {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "config": true
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             }
-          }
     - name: query-people-index
-      type: elastic
-      config: " {{ providers.elastic }} "
-      with:
-        index: your_people_index
-        query: |
-          {
-            "query": {
-              "bool": {
-                "must": [
-                  {
-                    "match": {
-                      "people": true
+      provider:
+        type: elastic
+        config: " {{ providers.elastic }} "
+        with:
+          index: your_people_index
+          query: |
+            {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "people": true
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             }
-          }
   # now, we have the results from the ack index, config index, and people index
   actions:
     - name: escalate-if-needed
@@ -75,4 +78,4 @@ workflow:
         config: " {{ providers.slack }} "
         with:
           message: |
-           "A unacknowledged alert has been found: {{ query-ack-index.hits.hits }} {{ query-config-index.hits.hits }} {{ query-people-index.hits.hits }}"
+            "A unacknowledged alert has been found: {{ query-ack-index.hits.hits }} {{ query-config-index.hits.hits }} {{ query-people-index.hits.hits }}"
