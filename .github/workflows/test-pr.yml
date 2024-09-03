@@ -56,6 +56,8 @@ jobs:
           --health-retries=4
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Check if relevant files have changed
         id: file_check
         run: |
@@ -63,8 +65,6 @@ jobs:
             echo "No relevant changes, skipping job."
             exit 0
           fi
-      - name: Checkout
-        uses: actions/checkout@v3
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
