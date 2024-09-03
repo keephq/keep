@@ -130,7 +130,8 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
     useEffect(() => {
         if (searchParams) {
             // Convert URLSearchParams to a key-value pair object
-            const params = searchParams.entries().reduce((acc, [key, value]) => {
+            const entries = Array.from(searchParams.entries());
+            const params = entries.reduce((acc, [key, value]) => {
                 if (key in acc) {
                     if (Array.isArray(acc[key])) {
                         acc[key] = [...acc[key], value]
