@@ -30,6 +30,13 @@ class DbIdentityManager(BaseIdentityManager):
 
         @app.post("/signin")
         def signin(body: dict):
+            # block empty passwords (e.g. user provisioned)
+            if not body.get("password"):
+                return JSONResponse(
+                    status_code=401,
+                    content={"message": "Empty password"},
+                )
+
             # validate the user/password
             user = get_user(body.get("username"), body.get("password"))
             if not user:
