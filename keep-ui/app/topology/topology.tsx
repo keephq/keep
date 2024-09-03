@@ -9,6 +9,10 @@ import {
   ReactFlow,
   ReactFlowInstance,
   ReactFlowProvider,
+  applyNodeChanges,
+  applyEdgeChanges,
+  NodeChange,
+  EdgeChange,
 } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
@@ -88,6 +92,15 @@ const TopologyPage = ({
     providerId,
     service,
     environment
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    []
+  );
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
   );
 
   const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
@@ -207,6 +220,8 @@ const TopologyPage = ({
           defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           fitView
           snapToGrid
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           fitViewOptions={{ padding: 0.3 }}
           onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
           onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
