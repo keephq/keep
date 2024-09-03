@@ -18,13 +18,13 @@ export default function Maintenance() {
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
       <div className="flex divide-x p-2">
-        <div className="w-1/2 pr-2.5">
+        <div className="w-2/5 pr-2.5">
           <CreateOrUpdateMaintenanceRule
             maintenanceToEdit={maintenanceToEdit}
             editCallback={setMaintenanceToEdit}
           />
         </div>
-        <div className="w-1/2 pl-2.5">
+        <div className="w-3/5 pl-2.5">
           {isLoading ? (
             <Loading />
           ) : maintenanceRules && maintenanceRules.length > 0 ? (
