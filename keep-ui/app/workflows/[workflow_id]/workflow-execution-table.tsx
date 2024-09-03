@@ -9,6 +9,9 @@ import Link from "next/link";
 import { Dispatch, SetStateAction } from "react";
 import Image from "next/image";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
+import { formatDistanceToNowStrict } from "date-fns";
+
 
 interface Pagination {
     limit: number;
@@ -78,14 +81,65 @@ export function ExecutionTable({
         columnHelper.accessor("triggered_by", {
             header: "Trigger",
         }),
-        columnHelper.accessor("execution_time", {
+        columnHelper.display({
+            id: "execution_time",
             header: "Execution time",
-        }),
+            cell: ({ row }) => {
+              const customFormatter = (seconds: number|null) => {
+                if (seconds === undefined || seconds === null) {
+                  return "";
+                }
+          
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const remainingSeconds = (seconds % 60);
+          
+                if (hours > 0) {
+                  return `${hours} hr ${minutes}m ${remainingSeconds}s`;
+                } else if (minutes > 0) {
+                  return `${minutes}m ${remainingSeconds}s`;
+                } else {
+                  return `${remainingSeconds.toFixed(2)}s`;
+                }
+              };
+          
+              return (
+                <div>
+                  {customFormatter(row.original.execution_time||null)}
+                </div>
+              );
+            },
+          }),
+          
         columnHelper.display({
             id: "started",
             header: "Started at",
-            cell: ({ row }) =>
-                new Date(row.original.started + "Z").toLocaleString(),
+            cell: ({ row }) =>{
+                const customFormatter: Formatter = (
+                    value: number,
+                    unit: Unit,
+                    suffix: Suffix
+                  ) => {
+                    if(!row?.original?.started){
+                        return ""
+                    }
+                
+                    const formattedString = formatDistanceToNowStrict(
+                      new Date(row.original.started+ "Z"),
+                      { addSuffix: true }
+                    );
+                
+                    return formattedString
+                      .replace("about ", "")
+                      .replace("minute", "min")
+                      .replace("second", "sec")
+                      .replace("hour", "hr");
+                  };
+                return <TimeAgo
+                      date={row.original.started + "Z"}
+                      formatter={customFormatter}
+                    />
+            }
         }),
         // columnHelper.display({
         //   id: "error",
