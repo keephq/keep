@@ -39,6 +39,7 @@ export default function CreateOrUpdateMaintenanceRule({
   const [endInterval, setEndInterval] = useState<number>(5);
   const [intervalType, setIntervalType] = useState<string>("minutes");
   const [enabled, setEnabled] = useState<boolean>(true);
+  const [suppress, setSuppress] = useState<boolean>(false);
   const editMode = maintenanceToEdit !== null;
   const router = useRouter();
 
@@ -156,9 +157,9 @@ export default function CreateOrUpdateMaintenanceRule({
     return !!maintenanceName && !!celQuery && !!startTime;
   };
 
-  const date = new Date();
-  const currentMins = date.getMinutes();
-  const currentHour = date.getHours();
+  const ignoreText = !suppress
+    ? "Alerts will not show in feed"
+    : "Alerts will show in suppressed status";
 
   return (
     <form
@@ -231,9 +232,23 @@ export default function CreateOrUpdateMaintenanceRule({
           calculated upon submit.
         </Text>
       </div>
-      <div className="mt-2.5">
-        <Text>Enabled</Text>
-        <Switch checked={enabled} onChange={setEnabled} />
+      <div className="flex items-center space-x-3 mt-2.5 w-[300px] justify-between">
+        <label
+          htmlFor="ignoreSwitch"
+          className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+        >
+          {ignoreText}
+        </label>
+        <Switch id="ignoreSwitch" checked={suppress} onChange={setSuppress} />
+      </div>
+      <div className="flex items-center space-x-3 w-[300px] justify-between mt-2.5">
+        <label
+          htmlFor="enabledSwitch"
+          className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+        >
+          Whether this rule is enabled or not
+        </label>
+        <Switch id="enabledSwitch" checked={enabled} onChange={setEnabled} />
       </div>
       <Divider />
       <div className={"space-x-1 flex flex-row justify-end items-center"}>

@@ -27,6 +27,7 @@ class MaintenanceWindowRule(SQLModel, table=True):
             server_default=func.now(),
         )
     )
+    suppress: bool = False
     enabled: bool = True
 
     __table_args__ = (
@@ -41,6 +42,7 @@ class MaintenanceRuleCreate(BaseModel):
     cel_query: str
     start_time: datetime
     duration_seconds: Optional[int] = None
+    suppress: bool = False
     enabled: bool = True
 
 
@@ -54,4 +56,5 @@ class MaintenanceRuleRead(BaseModel):
     end_time: datetime
     duration_seconds: Optional[int]
     updated_at: Optional[datetime]
+    suppress: bool = False
     enabled: bool = True

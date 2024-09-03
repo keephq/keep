@@ -52,7 +52,9 @@ class MaintenanceWindowsBl:
         env = celpy.Environment()
 
         for maintenance_rule in self.maintenance_rules:
-            if maintenance_rule.end_time <= datetime.datetime.now():
+            if maintenance_rule.end_time <= datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ):
                 # this is wtf error, should not happen because of query in init
                 self.logger.error(
                     "Fetched maintenance window which already ended by mistake, should not happen!"
@@ -88,7 +90,11 @@ class MaintenanceWindowsBl:
                         fingerprint=alert.fingerprint,
                         user_id="Keep",
                         action=AlertActionType.MAINTENANCE.value,
-                        description=f"Alert in maintenance due to rule `{maintenance_rule.name}`",
+                        description=(
+                            f"Alert in maintenance due to rule `{maintenance_rule.name}`"
+                            if not maintenance_rule.suppress
+                            else f"Alert suppressed due to maintenance rule `{maintenance_rule.name}`"
+                        ),
                     )
                     self.session.add(audit)
                     self.session.commit()
@@ -100,6 +106,11 @@ class MaintenanceWindowsBl:
                             "fingerprint": alert.fingerprint,
                         },
                     )
+
+                if maintenance_rule.suppress:
+                    # If user chose to suppress the alert, let it in but override the status.
+                    alert.status = AlertStatus.SUPPRESSED.value
+                    return False
 
                 return True
         self.logger.info("Alert is not in maintenance window", extra=extra)
