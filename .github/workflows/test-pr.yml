@@ -1,11 +1,7 @@
 name: Tests
 on:
   push:
-    paths:
-      - 'keep/**'
   pull_request:
-    paths:
-      - 'keep/**'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
@@ -21,7 +17,6 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
     services:
       mysql:
         image: mysql:5.7
@@ -61,6 +56,13 @@ jobs:
           --health-retries=4
 
     steps:
+      - name: Check if relevant files have changed
+        id: file_check
+        run: |
+          if ! git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep -q '^keep/'; then
+            echo "No relevant changes, skipping job."
+            exit 0
+          fi
       - name: Checkout
         uses: actions/checkout@v3
       - uses: chartboost/ruff-action@v1
