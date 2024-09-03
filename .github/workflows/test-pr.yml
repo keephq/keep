@@ -60,10 +60,13 @@ jobs:
         uses: actions/checkout@v3
       - name: Check if relevant files have changed
         id: file_check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if ! git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep -q '^keep/'; then
             echo "No relevant changes, skipping job."
             gh run cancel ${{ github.run_id }}
+            exit 0
           fi
       - uses: chartboost/ruff-action@v1
         with:
