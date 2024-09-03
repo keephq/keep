@@ -18,7 +18,7 @@ from typing import Literal, Optional
 import opentelemetry.trace as trace
 import requests
 
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import AlertActionType
