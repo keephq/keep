@@ -60,7 +60,9 @@ class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-    name: str
+    
+    user_generated_name: str | None
+    ai_generated_name: str | None
 
     user_summary: str = Field(sa_column=Column(TEXT), nullable=True)
     generated_summary: str = Field(sa_column=Column(TEXT), nullable=True)
@@ -90,7 +92,9 @@ class Incident(SQLModel, table=True):
 
     rule_id: UUID | None = Field(
         sa_column=Column(
-            UUIDType(binary=False), ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"), nullable=True
+            UUIDType(binary=False),
+            ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"),
+            nullable=True,
         ),
     )
 
@@ -237,3 +241,4 @@ class AlertActionType(enum.Enum):
     # commented
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
+    MAINTENANCE = "Alert is in maintenance window"

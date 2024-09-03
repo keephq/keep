@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import mysql.connector
 import pytest
+import requests
 from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
@@ -27,6 +28,7 @@ from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 
+original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
 
 
@@ -87,6 +89,11 @@ def docker_services(
             elif frame.function == "elastic_client":
                 docker_compose_file = docker_compose_file.replace(
                     "docker-compose.yml", "docker-compose-elastic.yml"
+                )
+                break
+            elif frame.function == "keycloak_client":
+                docker_compose_file = docker_compose_file.replace(
+                    "docker-compose.yml", "docker-compose-keycloak.yml"
                 )
                 break
 
@@ -267,6 +274,55 @@ def mocked_context_manager():
     return context_manager
 
 
+def is_keycloak_responsive(host, port, user, password):
+    try:
+        # Try to connect to Keycloak
+        from keycloak import KeycloakAdmin
+
+        print(KeycloakAdmin)
+        keycloak_admin = KeycloakAdmin(
+            server_url=f"http://{host}:{port}/auth/admin",
+            username=user,
+            password=password,
+            realm_name="keeptest",
+            verify=True,
+        )
+        keycloak_admin.get_client_id("keep")
+        return True
+    except Exception as e:
+        import time
+
+        print(f"Keycloak still not up [{e}] [{time.time()}]")
+        pass
+
+    return False
+
+
+@pytest.fixture(scope="session")
+def keycloak_container(docker_ip, docker_services):
+    try:
+        if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
+            print("Running in Github Actions or SKIP_DOCKER is set, skipping keycloak")
+            yield
+            return
+        docker_services.wait_until_responsive(
+            timeout=100.0,
+            pause=1,
+            check=lambda: is_keycloak_responsive(
+                "127.0.0.1",
+                8787,
+                os.environ["KEYCLOAK_ADMIN_USER"],
+                os.environ["KEYCLOAK_ADMIN_PASSWORD"],
+            ),
+        )
+        yield True
+    except Exception:
+        print("Exception occurred while waiting for Keycloak to be responsive")
+        raise
+    finally:
+        print("Tearing down Keycloak")
+
+
 def is_elastic_responsive(host, port, user, password):
     try:
         elastic_client = ElasticClient(
@@ -326,6 +382,74 @@ def elastic_client(request):
         elastic_client.drop_index()
     except Exception:
         pass
+
+
+@pytest.fixture
+def keycloak_client(request):
+    os.environ["KEYCLOAK_URL"] = "http://localhost:8787/auth/"
+    os.environ["KEYCLOAK_REALM"] = "keeptest"
+    os.environ["KEYCLOAK_ADMIN_USER"] = "admin@keeptest.com"
+    os.environ["KEYCLOAK_ADMIN_PASSWORD"] = "adminpassword"
+    os.environ["KEEP_USER"] = "testuser@example.com"
+    os.environ["KEEP_PASSWORD"] = "testpassword"
+    os.environ["KEYCLOAK_CLIENT_ID"] = "keep"
+    os.environ["KEYCLOAK_CLIENT_SECRET"] = "keycloaktestsecret"
+    # SHAHAR: this is a workaround since the api.py patches the request
+    #         and Keycloak's library needs to allow redirect :(
+    no_redirect_request = requests.Session.request
+    requests.Session.request = original_request
+    from keycloak import KeycloakAdmin
+
+    # load the fixture
+    request.getfixturevalue("keycloak_container")
+    keycloak_admin = KeycloakAdmin(
+        server_url=os.environ["KEYCLOAK_URL"],
+        username=os.environ["KEYCLOAK_ADMIN_USER"],
+        password=os.environ["KEYCLOAK_ADMIN_PASSWORD"],
+        realm_name=os.environ["KEYCLOAK_REALM"],
+        verify=True,
+    )
+    # assign admin role for the user
+    # SHAHAR: since the role is created on on_start, we can provision it on realm.json
+    user_id = keycloak_admin.get_user_id(os.environ["KEEP_USER"])
+    client_id = keycloak_admin.get_client_id(os.environ["KEYCLOAK_CLIENT_ID"])
+    # SHAHAR: this is a workaround since roles created on start
+    keycloak_admin.create_client_role(
+        client_id,
+        {
+            "name": "admin",
+            "description": "Role for admin",
+            # we will use this to identify the role as predefined
+            "attributes": {
+                "predefined": ["true"],
+            },
+        },
+        skip_exists=True,
+    )
+
+    role_id = keycloak_admin.get_client_role_id(client_id, "admin")
+    keycloak_admin.assign_client_role(
+        user_id, client_id, [{"id": role_id, "name": "admin"}]
+    )
+    yield keycloak_admin
+    # reset the request
+    requests.Session.request = no_redirect_request
+    print("Done with keycloak")
+
+
+@pytest.fixture
+def keycloak_token(request):
+    keycloak_token_url = f"{os.environ['KEYCLOAK_URL']}/realms/{os.environ['KEYCLOAK_REALM']}/protocol/openid-connect/token"
+    login_data = {
+        "client_id": os.environ["KEYCLOAK_CLIENT_ID"],
+        "client_secret": os.environ["KEYCLOAK_CLIENT_SECRET"],
+        "grant_type": "password",
+        "username": os.environ["KEEP_USER"],
+        "password": os.environ["KEEP_PASSWORD"],
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    response = requests.post(keycloak_token_url, data=login_data, headers=headers)
+    return response.json().get("access_token")
 
 
 @pytest.fixture(scope="session")

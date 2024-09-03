@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from keep.api.core.db import (  # Assuming this function exists to fetch topology data
     get_all_topology_data,
 )
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.topology import TopologyServiceDtoOut
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -22,7 +23,7 @@ def get_topology_data(
     service_id: Optional[str] = None,
     environment: Optional[str] = None,
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:topology"])
+        IdentityManagerFactory.get_auth_verifier(["read:topology"])
     ),
 ) -> List[TopologyServiceDtoOut]:
     tenant_id = authenticated_entity.tenant_id
