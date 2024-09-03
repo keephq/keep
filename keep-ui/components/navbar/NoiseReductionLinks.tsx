@@ -9,6 +9,7 @@ import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
 import { AILink } from "./AILink";
 import { TbTopologyRing } from "react-icons/tb";
+import { FaVolumeMute } from "react-icons/fa";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -61,6 +62,11 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
         <li>
           <LinkWithIcon href="/extraction" icon={ExportIcon}>
             <Subtitle>Extraction</Subtitle>
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
+            <Subtitle>Maintenance Windows</Subtitle>
           </LinkWithIcon>
         </li>
         <li>

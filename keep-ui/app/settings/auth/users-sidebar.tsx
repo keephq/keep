@@ -24,7 +24,6 @@ interface UserSidebarProps {
 
 const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnabled = true, identifierType }: UserSidebarProps) => {
   const { control, handleSubmit, setValue, reset, formState: { errors, isDirty }, clearErrors, setError } = useForm<{
-    email: string;
     username: string;
     name: string;
     role: string;
@@ -32,7 +31,6 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
     password: string;
   }>({
     defaultValues: {
-      email: "",
       username: "",
       name: "",
       role: "",
@@ -53,7 +51,8 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
     if (isOpen) {
       if (user) {
         if (identifierType === 'email') {
-          setValue("email", user.email);
+          // server parse as email
+          setValue("username", user.email);
           setValue("name", user.name);
         } else {
           setValue("username", user.email || user.name);
@@ -62,7 +61,6 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
         setValue("groups", user.groups?.map((group: Group) => group.id) || []);
       } else {
         reset({
-          email: "",
           username: "",
           name: "",
           role: "",
@@ -161,7 +159,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                         Email
                       </label>
                       <Controller
-                        name="email"
+                        name="username"
                         control={control}
                         rules={{
                           required: "Email is required",
@@ -173,8 +171,8 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                         render={({ field }) => (
                           <TextInput
                             {...field}
-                            error={!!errors.email}
-                            errorMessage={errors.email?.message}
+                            error={!!errors.username}
+                            errorMessage={errors.username?.message}
                             disabled={!isNewUser}
                             className={`${
                                 isNewUser ? "" : "bg-gray-200"

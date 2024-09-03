@@ -97,7 +97,7 @@ jobs:
 
           until $(curl --output /dev/null --silent --fail http://localhost:8080/healthcheck); do
             if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "Max attempts reached, exiting..."
+              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
               exit 1
             fi
             echo "Waiting for Keep backend to be ready... (Attempt: $((attempt+1)))"

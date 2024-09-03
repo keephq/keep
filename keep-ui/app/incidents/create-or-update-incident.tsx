@@ -38,7 +38,7 @@ export default function CreateOrUpdateIncident({
 
   useEffect(() => {
     if (incidentToEdit) {
-      setIncidentName(incidentToEdit.name);
+      setIncidentName(incidentToEdit.user_generated_name ?? incidentToEdit.ai_generated_name ?? "");
       setIncidentUserSummary(incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? "" );
       setIncidentAssignee(incidentToEdit.assignee ?? "");
     }
@@ -60,7 +60,7 @@ export default function CreateOrUpdateIncident({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: incidentName,
+        user_generated_name: incidentName,
         user_summary: incidentUserSummary,
         assignee: incidentAssignee,
       }),
