@@ -63,7 +63,7 @@ jobs:
         run: |
           if ! git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep -q '^keep/'; then
             echo "No relevant changes, skipping job."
-            exit 0
+            gh run cancel ${{ github.run_id }}
           fi
       - uses: chartboost/ruff-action@v1
         with:
