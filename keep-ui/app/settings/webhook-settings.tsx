@@ -88,26 +88,28 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
       language: "python",
       code: `import requests
 
-response = requests.post("https://api.keephq.dev/alerts/event",
+response = requests.post("${data.webhookApi}",
 headers={
   "Content-Type": "application/json",
   "Accept": "application/json",
   "X-API-KEY": "${data.apiKey}"
 },
-json=${exampleJson})
+data="""${exampleJson}""")
       `,
     },
     {
       title: "Node",
       language: "javascript",
       code: `const https = require('https');
+const { URL } = require('url');
 
+const url = new URL('${data.webhookApi}');
 const data = JSON.stringify(${exampleJson});
 
 const options = {
-  hostname: 'api.keephq.dev',
+  hostname: url.hostname,
   port: 443,
-  path: '/alerts/event',
+  path: url.pathname,
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
