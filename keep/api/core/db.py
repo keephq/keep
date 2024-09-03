@@ -1243,6 +1243,18 @@ def delete_user(username):
             session.commit()
 
 
+def user_exists(tenant_id, username):
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.username == username)
+        ).first()
+        return user is not None
+
+
 def create_user(tenant_id, username, password, role):
     from keep.api.models.db.user import User
 
@@ -2589,7 +2601,9 @@ def get_pmi_values(
     return pmi_values
 
 
-def update_incident_summary(tenant_id: str, incident_id: UUID, summary: str) -> Incident:
+def update_incident_summary(
+    tenant_id: str, incident_id: UUID, summary: str
+) -> Incident:
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -2598,29 +2612,38 @@ def update_incident_summary(tenant_id: str, incident_id: UUID, summary: str) -> 
         ).first()
 
         if not incident:
-            logger.error(f"Incident not found for tenant {tenant_id} and incident {incident_id}", extra={"tenant_id": tenant_id})
-            return 
+            logger.error(
+                f"Incident not found for tenant {tenant_id} and incident {incident_id}",
+                extra={"tenant_id": tenant_id},
+            )
+            return
 
         incident.generated_summary = summary
         session.commit()
         session.refresh(incident)
-        
-        return 
-    
+
+        return
+
+
 def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incident:
     with Session(engine) as session:
         incident = session.exec(
-            select(Incident).where(Incident.tenant_id == tenant_id).where(Incident.id == incident_id)
+            select(Incident)
+            .where(Incident.tenant_id == tenant_id)
+            .where(Incident.id == incident_id)
         ).first()
-        
+
         if not incident:
-            logger.error(f"Incident not found for tenant {tenant_id} and incident {incident_id}", extra={"tenant_id": tenant_id})
+            logger.error(
+                f"Incident not found for tenant {tenant_id} and incident {incident_id}",
+                extra={"tenant_id": tenant_id},
+            )
             return
 
         incident.ai_generated_name = name
         session.commit()
         session.refresh(incident)
-        
+
         return incident
 
 

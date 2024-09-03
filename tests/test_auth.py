@@ -173,3 +173,130 @@ def test_keycloak_sanity(keycloak_client, keycloak_token, client, test_app):
     headers = {"Authorization": f"Bearer {keycloak_token}"}
     response = client.get("/providers", headers=headers)
     assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {"AUTH_TYPE": "SINGLE_TENANT", "KEEP_IMPERSONATION_ENABLED": "true"},
+    ],
+    indirect=True,
+)
+def test_api_key_impersonation_without_admin(client, db_session, test_app):
+    """Tests the API key impersonation with different environment settings"""
+
+    valid_api_key = "valid_admin_api_key"
+    setup_api_key(db_session, valid_api_key, role="noc")
+    response = client.get(
+        "/providers",
+        headers={
+            "x-api-key": valid_api_key,
+            "X-KEEP-USER": "testuser",
+            "X-KEEP-ROLE": "noc",
+        },
+    )
+    assert response.status_code == 401
+    # check the message in the response
+    assert response.json()["detail"] == "Impersonation not allowed for non-admin users"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {"AUTH_TYPE": "SINGLE_TENANT", "KEEP_IMPERSONATION_ENABLED": "true"},
+    ],
+    indirect=True,
+)
+def test_api_key_impersonation_without_user_provision(client, db_session, test_app):
+    """Tests the API key impersonation with different environment settings"""
+
+    valid_api_key = "valid_admin_api_key"
+    setup_api_key(db_session, valid_api_key, role="admin")
+    response = client.get(
+        "/providers",
+        headers={
+            "x-api-key": valid_api_key,
+            "X-KEEP-USER": "testuser",
+            "X-KEEP-ROLE": "admin",
+        },
+    )
+    assert response.status_code == 200
+
+    # user should not be provisioned
+    response = client.get("/auth/users", headers={"x-api-key": valid_api_key})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_IMPERSONATION_ENABLED": "true",
+            "KEEP_IMPERSONATION_AUTO_PROVISION": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_api_key_impersonation_with_user_provision(client, db_session, test_app):
+    """Tests the API key impersonation with different environment settings"""
+
+    valid_api_key = "valid_admin_api_key"
+    setup_api_key(db_session, valid_api_key, role="admin")
+    response = client.get(
+        "/providers",
+        headers={
+            "x-api-key": valid_api_key,
+            "X-KEEP-USER": "testuser",
+            "X-KEEP-ROLE": "admin",
+        },
+    )
+    assert response.status_code == 200
+
+    # check that the user exists now
+    response = client.get("/auth/users", headers={"x-api-key": valid_api_key})
+    assert response.status_code == 200
+    assert response.json()[0].get("email") == "testuser"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_IMPERSONATION_ENABLED": "true",
+            "KEEP_IMPERSONATION_AUTO_PROVISION": "true",
+        },
+    ],
+    indirect=True,
+)
+def test_api_key_impersonation_provisioned_user_cant_login(
+    client, db_session, test_app
+):
+    """Tests the API key impersonation with different environment settings"""
+
+    valid_api_key = "valid_admin_api_key"
+    setup_api_key(db_session, valid_api_key, role="admin")
+    response = client.get(
+        "/providers",
+        headers={
+            "x-api-key": valid_api_key,
+            "X-KEEP-USER": "testuser",
+            "X-KEEP-ROLE": "admin",
+        },
+    )
+    assert response.status_code == 200
+
+    # check that the user exists now
+    response = client.get("/auth/users", headers={"x-api-key": valid_api_key})
+    assert response.status_code == 200
+    assert response.json()[0].get("email") == "testuser"
+
+    # try to login with the user
+    response = client.post(
+        "/signin",
+        json={"username": "testuser", "password": ""},
+    )
+    assert response.status_code == 401
+    assert response.json()["message"] == "Empty password"

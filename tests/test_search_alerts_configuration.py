@@ -20,7 +20,16 @@ def test_single_tenant_configuration_with_elastic(
     assert response.headers.get("x-search-type") == "elastic"
 
 
-@pytest.mark.parametrize("test_app", [("SINGLE_TENANT", "false")], indirect=True)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "ELASTIC_ENABLED": "false",
+        },
+    ],
+    indirect=True,
+)
 def test_single_tenant_configuration_without_elastic(client, db_session, test_app):
     valid_api_key = "valid_api_key"
     setup_api_key(db_session, valid_api_key)
