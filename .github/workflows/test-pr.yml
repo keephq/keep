@@ -3,6 +3,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+permissions:
+  actions: write
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
@@ -61,10 +63,17 @@ jobs:
       - name: Check if relevant files have changed
         id: file_check
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ! git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep -q '^keep/'; then
-            echo "No relevant changes, skipping job."
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA=${{ github.event.pull_request.base.sha }}
+            HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          else
+            BASE_SHA=${{ github.event.before }}
+            HEAD_SHA=${{ github.event.after }}
+          fi
+          if ! git diff --name-only $BASE_SHA $HEAD_SHA | grep -q '^keep/'; then
+            echo "No relevant changes, cancelling job."
             gh run cancel ${{ github.run_id }}
             exit 0
           fi
