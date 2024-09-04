@@ -2126,7 +2126,7 @@ def update_incident_from_dto_by_id(
             Incident.id == incident_id,
         ).update(
             {
-                "name": updated_incident_dto.name,
+                "user_generated_name": updated_incident_dto.user_generated_name,
                 "user_summary": updated_incident_dto.user_summary,
                 "assignee": updated_incident_dto.assignee,
             }
