@@ -18,24 +18,24 @@ type Filters = {
 
 
 interface PopoverContentProps {
-    options: string[];
+    options: { value: string, label: string }[];
     filterRef: React.MutableRefObject<Record<string, string[] | string>>;
     type: string;
 }
 
 
 const status = [
-    "success",
-    "error",
-    "in_progress",
-    "timeout",
-    "providers_not_configured",
+    { value: "success", label: "Success" },
+    { value: "error", label: "Error" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "timeout", label: "Timeout" },
+    { value: "providers_not_configured", label: "Providers Not Configured" },
 ];
 const triggers = [
-    "scheduler",
-    "alert",
-    "manual",
-]//not usre about the tirgger. in local i am able to get scheduler only. can be used in the future
+    { value: "scheduler", label: "Scheduler" },
+    { value: "manual", label: "Manual" },
+    { value: "type:alert", label: "Alert" },
+]
 
 const PopoverContent: React.FC<PopoverContentProps> = ({ options, filterRef, type }) => {
     // Initialize local state for selected options
@@ -71,17 +71,17 @@ const PopoverContent: React.FC<PopoverContentProps> = ({ options, filterRef, typ
             <span className="text-gray-400 text-sm">Select {type.charAt(0).toUpperCase() + type.slice(1)}</span>
             <ul className="flex flex-col mt-3 max-h-96 overflow-auto">
                 {options.map(option => (
-                    <li key={option}>
+                    <li key={option.value}>
                         <label className="cursor-pointer p-2 flex items-center">
                             <input
                                 className="mr-2"
                                 type="checkbox"
                                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                    handleCheckboxChange(option, e.target.checked)
+                                    handleCheckboxChange(option.value, e.target.checked)
                                 }
-                                checked={selectedOptions.has(option)}
+                                checked={selectedOptions.has(option.value)}
                             />
-                            {option}
+                            {option.label}
                         </label>
                     </li>
                 ))}
@@ -147,7 +147,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
             filterRef.current = params as Filters
             setExecutionId(filterRef?.current?.execution_id || '');
         }
-    }, [searchParams]); 
+    }, [searchParams]);
     // Handle textarea value change
     const onValueChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
         e.preventDefault();
@@ -192,7 +192,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
                     onApply={() => setApply(true)}
                 />
             </div>
-            <Button className="shadow-lg py-2" onClick={() => {filterRef.current = { trigger: [], status: [], execution_id: '' };setApply(true)}}>Clear Filters</Button>
+            <Button className="shadow-lg py-2" onClick={() => { filterRef.current = { trigger: [], status: [], execution_id: '' }; setApply(true) }}>Clear Filters</Button>
         </div>
     );
 };

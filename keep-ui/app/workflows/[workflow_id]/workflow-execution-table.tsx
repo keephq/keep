@@ -13,9 +13,10 @@ import { CheckCircleIcon, EllipsisHorizontalIcon, EyeIcon, WrenchIcon, XCircleIc
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Menu, Transition } from "@headlessui/react";
-import { Icon } from "@tremor/react";
+import { Button, Icon } from "@tremor/react";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import { FaHandPointer } from "react-icons/fa";
+import { HiBellAlert } from "react-icons/hi2";
 
 
 interface Pagination {
@@ -107,10 +108,11 @@ export function getIcon(status: string) {
 
 
 function getTriggerIcon(triggered_by: string) {
-    switch(triggered_by) {
-        case "manual": return <FaHandPointer size={18}/>
-        case "scheduler": return <PiDiamondsFourFill size={18}/>
-        default:  return <PiDiamondsFourFill size={18}/>
+    switch (triggered_by) {
+        case "Manual": return FaHandPointer;
+        case "Scheduler": return PiDiamondsFourFill;
+        case "Alert": return HiBellAlert;
+        default: return PiDiamondsFourFill;
     }
 }
 export function ExecutionTable({
@@ -143,12 +145,30 @@ export function ExecutionTable({
             header: "Trigger",
             cell: ({ row }) => {
                 const triggered_by = row.original.triggered_by;
-                
+                let valueToShow = 'Others';
+                if (triggered_by) {
+                    switch (true) {
+                        case triggered_by.substring(0, 9) === "scheduler":
+                            valueToShow = "Scheduler";
+                            break;
+                        case triggered_by.substring(0, 10) === "type:alert":
+                            valueToShow = "Alert";
+                            break;
+                        case triggered_by.substring(0, 6) === "manual":
+                            valueToShow = "Manual";
+                            break;
+                    }
+                }
+
                 return triggered_by ? (
-                <div className="px-3 py-0.5 bg-white rounded-xl border-2 inline-flex items-center gap-2 font-bold">
-                    {getTriggerIcon(triggered_by)}
-                    <div>{triggered_by}</div>
-                    </div>) : null
+                    <Button
+                        className="px-3 py-0.5 bg-white text-black rounded-xl border-2 border-gray-400 inline-flex items-center gap-2 font-bold hover:bg-white border-gray-400"
+                        variant="secondary"
+                        tooltip={triggered_by ?? ''}
+                        icon={getTriggerIcon(valueToShow)}
+                    >
+                        <div>{valueToShow}</div>
+                    </Button>) : null
             }
         }),
         columnHelper.display({
