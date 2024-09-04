@@ -53,6 +53,9 @@ class WorkflowExecution(SQLModel, table=True):
     workflow_to_alert_execution: "WorkflowToAlertExecution" = Relationship(
         back_populates="workflow_execution"
     )
+    workflow_to_incident_execution: "WorkflowToIncidentExecution" = Relationship(
+        back_populates="workflow_execution"
+    )
 
     class Config:
         orm_mode = True

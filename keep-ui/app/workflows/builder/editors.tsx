@@ -7,6 +7,7 @@ import {
   Subtitle,
   Icon,
   Button,
+  Switch,
   Divider,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
@@ -15,6 +16,7 @@ import {
   BackspaceIcon,
   FunnelIcon,
 } from "@heroicons/react/24/outline";
+import React from "react";
 import useStore, { V2Properties } from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 
@@ -282,17 +284,17 @@ function WorkflowEditorV2({
     }
   };
 
-  interface IncidentProperties {
+  interface TriggersProperties {
     "alert": { source: string },
     "manual": "true",
-    "incident": "created" | "updated" | "deleted" | "alert_added" | "alert_removed" | "alerts_changed" | "",
+    "incident": { events: ("created" | "updated" | "deleted" | "")[] },
     "interval": string
   }
 
-  const PROPERTIES : IncidentProperties = {
+  const PROPERTIES : TriggersProperties = {
     "alert": { source: "" },
     "manual": "true",
-    "incident": "",
+    "incident": { events: [] },
     "interval": ""
   };
 
@@ -394,32 +396,39 @@ function WorkflowEditorV2({
                   );
 
                 case "incident" ? (
-              <>
-                <Select
-                  className="my-2.5"
-                  placeholder={`Select incident trigger action`}
-                  onValueChange={(value) => setProperties({ ...properties, [key]: value })}
-                  value={properties["incident"] as string}
-                >
-                  <SelectItem value=""></SelectItem>
-                  {Array("created", "updated", "deleted", "alert_added", "alert_removed", "alerts_changed").map((action) =>
-                    <SelectItem key={action} value={action}></SelectItem>
-                  )}
-                </Select>
-              </>
-            ) : key === "interval":
-                  return (
-                    selectedNode === "interval" && (
-                      <TextInput
-                        placeholder={`Set the ${key}`}
-
-                        onChange={(e: any) =>
-                          handleChange(key, e.target.value)
-                        }
-                        value={properties[key] || "" as string}
-                      />
-                    )
-                  );
+              Array("created", "updated", "deleted").map((action) =>
+                <>
+                  <Switch
+                    id={action}
+                    key={`incident-${action}`}
+                    checked={(properties["incident"] as any).events.indexOf(action) > -1}
+                    onChange={() => {
+                      let actions = properties["incident"] as any;
+                      if (actions.events.indexOf(action) > -1) {
+                        actions.events = (actions.events as string[]).filter(e => e !== action)
+                        setProperties({ ...properties, [key]: actions })
+                      } else {
+                        console.log(actions);
+                        actions.events.push(action);
+                        setProperties({ ...properties, [key]: actions })
+                      }
+                    }}
+                    color={"orange"}
+                  />
+                  <label htmlFor={`incident-${action}`} className="text-sm text-gray-500">
+                    <Text>{action}</Text>
+                  </label>
+                </>
+              )) : key === "interval":
+                              return (
+                                  selectedNode === "interval" && (<TextInput
+                placeholder={`Set the ${key}`}
+                onChange={(e: any) =>
+                  handleChange(key, e.target.value)
+                }
+                value={properties[key] || ""as string}
+              />
+            ) );
                 case "disabled":
                   return (
                     <div key={key}>

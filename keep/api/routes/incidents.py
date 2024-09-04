@@ -120,10 +120,7 @@ def create_incident_endpoint(
     __update_client_on_incident_change(pusher_client, tenant_id)
 
     try:
-        # Now run any workflow that should run based on this alert
-        # TODO: this should publish event
         workflow_manager = WorkflowManager.get_instance()
-        # insert the events to the workflow manager process queue
         logger.info("Adding incident to the workflow manager queue")
         workflow_manager.insert_incident(tenant_id, new_incident_dto, "created")
         logger.info("Added incident to the workflow manager queue")
@@ -237,7 +234,19 @@ def update_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
-
+    try:
+        workflow_manager = WorkflowManager.get_instance()
+        logger.info("Adding incident to the workflow manager queue")
+        workflow_manager.insert_incident(tenant_id, new_incident_dto, "updated")
+        logger.info("Added incident to the workflow manager queue")
+    except Exception:
+        logger.exception(
+            "Failed to run workflows based on incident",
+            extra={
+                "incident_id": new_incident_dto.id,
+                "tenant_id": tenant_id
+            },
+        )
     return new_incident_dto
 
 
@@ -260,10 +269,30 @@ def delete_incident(
             "tenant_id": tenant_id,
         },
     )
+
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    incident_dto = IncidentDto.from_db_incident(incident)
+
     deleted = delete_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Incident not found")
     __update_client_on_incident_change(pusher_client, tenant_id)
+    try:
+        workflow_manager = WorkflowManager.get_instance()
+        logger.info("Adding incident to the workflow manager queue")
+        workflow_manager.insert_incident(tenant_id, incident_dto, "deleted")
+        logger.info("Added incident to the workflow manager queue")
+    except Exception:
+        logger.exception(
+            "Failed to run workflows based on incident",
+            extra={
+                "incident_id": incident_dto.id,
+                "tenant_id": tenant_id
+            },
+        )
     return Response(status_code=202)
 
 
@@ -346,6 +375,22 @@ async def add_alerts_to_incident(
 
     add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
     __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+
+    incident_dto = IncidentDto.from_db_incident(incident)
+
+    try:
+        workflow_manager = WorkflowManager.get_instance()
+        logger.info("Adding incident to the workflow manager queue")
+        workflow_manager.insert_incident(tenant_id, incident_dto, "updated")
+        logger.info("Added incident to the workflow manager queue")
+    except Exception:
+        logger.exception(
+            "Failed to run workflows based on incident",
+            extra={
+                "incident_id": incident_dto.id,
+                "tenant_id": tenant_id
+            },
+        )
 
     fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
 

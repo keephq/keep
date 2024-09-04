@@ -4,6 +4,8 @@ import re
 import typing
 import uuid
 
+from pandas.core.common import flatten
+
 from keep.api.core.config import AuthenticationType, config
 from keep.api.core.db import (
     get_enrichment,
@@ -112,7 +114,9 @@ class WorkflowManager:
             if workflow is None:
                 continue
 
-            incident_triggers = [t["value"] for t in workflow.workflow_triggers if t["type"] == "incident"]
+            incident_triggers = flatten(
+                [t["value"].get("events", []) for t in workflow.workflow_triggers if t["type"] == "incident"]
+            )
 
             if trigger not in incident_triggers:
                 self.logger.debug("workflow does not contain trigger %s, skipping", trigger)

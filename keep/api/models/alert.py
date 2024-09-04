@@ -4,11 +4,11 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, List
 from uuid import UUID
 
 import pytz
-from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
+from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator, PrivateAttr
 
 logger = logging.getLogger(__name__)
 
@@ -385,6 +385,8 @@ class IncidentDto(IncidentDtoIn):
 
     rule_fingerprint: str | None
 
+    _tenant_id: str = PrivateAttr()
+
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
         model_dict = self.dict()
@@ -393,11 +395,21 @@ class IncidentDto(IncidentDtoIn):
     class Config:
         extra = Extra.allow
         schema_extra = IncidentDtoIn.Config.schema_extra
+        underscore_attrs_are_private = True
 
         json_encoders = {
             # Converts UUID to their values for JSON serialization
             UUID: lambda v: str(v),
         }
+
+    @property
+    def alerts(self) -> List["AlertDto"]:
+        from keep.api.core.db import get_incident_alerts_by_incident_id
+        from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+        if not self._tenant_id:
+            return []
+        alerts, _ = get_incident_alerts_by_incident_id(self._tenant_id, str(self.id))
+        return convert_db_alerts_to_dto_alerts(alerts)
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -420,7 +432,7 @@ class IncidentDto(IncidentDtoIn):
             if isinstance(db_incident.severity, int) \
             else db_incident.severity
 
-        return cls(
+        dto = cls(
             id=db_incident.id,
             user_generated_name=db_incident.user_generated_name,
             ai_generated_name = db_incident.ai_generated_name,
@@ -440,6 +452,10 @@ class IncidentDto(IncidentDtoIn):
             services=db_incident.affected_services,
             rule_fingerprint=db_incident.rule_fingerprint,
         )
+
+        # This field is required for getting alerts when required
+        dto._tenant_id = db_incident.tenant_id
+        return dto
 
 
 class IncidentStatusChangeDto(BaseModel):

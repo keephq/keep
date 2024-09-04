@@ -331,11 +331,13 @@ class WorkflowScheduler:
                 triggered_by = f"type:alert name:{event.name} id:{event.id}"
 
             if isinstance(event, IncidentDto):
-                event_id = event.id
+                event_id = str(event.id)
                 event_type = "incident"
+                fingerprint = "incident:{}".format(event_id)
             else:
                 event_id = event.event_id
                 event_type = "alert"
+                fingerprint = event.fingerprint
 
 
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
@@ -351,14 +353,14 @@ class WorkflowScheduler:
                     # else, we want to enforce that no workflow already run with the same fingerprint
                     else:
                         workflow_execution_number = self._get_unique_execution_number(
-                            event.fingerprint
+                            fingerprint
                         )
                     workflow_execution_id = create_workflow_execution(
                         workflow_id=workflow_id,
                         tenant_id=tenant_id,
                         triggered_by=triggered_by,
                         execution_number=workflow_execution_number,
-                        fingerprint=event.fingerprint,
+                        fingerprint=fingerprint,
                         event_id=event_id,
                         execution_id=execution_id,
                         event_type=event_type,

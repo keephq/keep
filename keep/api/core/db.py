@@ -135,12 +135,12 @@ def create_workflow_execution(
                 )
                 session.add(workflow_to_alert_execution)
             elif event_type == "incident":
-                workflow_to_alert_execution = WorkflowToIncidentExecution(
+                workflow_to_incident_execution = WorkflowToIncidentExecution(
                     workflow_execution_id=execution_id,
                     alert_fingerprint=fingerprint,
                     incident_id=event_id,
                 )
-                session.add(workflow_to_alert_execution)
+                session.add(workflow_to_incident_execution)
 
             session.commit()
             return execution_id
@@ -2374,7 +2374,7 @@ def get_incidents_count(
 
 
 def get_incident_alerts_by_incident_id(
-    tenant_id: str, incident_id: str, limit: int, offset: int
+    tenant_id: str, incident_id: str, limit: Optional[int] = None, offset: Optional[int] = None
 ) -> (List[Alert], int):
     with Session(engine) as session:
         query = (
@@ -2392,7 +2392,10 @@ def get_incident_alerts_by_incident_id(
 
     total_count = query.count()
 
-    return query.limit(limit).offset(offset).all(), total_count
+    if limit and offset:
+        query = query.limit(limit).offset(offset)
+
+    return query.all(), total_count
 
 
 def get_alerts_data_for_incident(
