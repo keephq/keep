@@ -111,13 +111,25 @@ def __save_to_db(
             try:
                 enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
             except Exception:
-                logger.exception("Failed to dispose enrichments")
+                logger.exception(
+                    "Failed to dispose enrichments",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "fingerprint": formatted_event.fingerprint,
+                    },
+                )
 
             # Post format enrichment
             try:
                 formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
             except Exception:
-                logger.exception("Failed to run post-formatting extraction rules")
+                logger.exception(
+                    "Failed to run post-formatting extraction rules",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "fingerprint": formatted_event.fingerprint,
+                    },
+                )
 
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object

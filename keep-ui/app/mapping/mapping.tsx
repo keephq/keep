@@ -17,7 +17,7 @@ export default function Mapping() {
   return (
     <Card className="mt-10 p-4 md:p-10 mx-auto">
       <div className="flex divide-x p-2">
-        <div className="w-1/4 pr-2.5">
+        <div className="w-1/3 pr-2.5">
           <h2 className="text-lg">Configure</h2>
           <p className="text-slate-400">
             Add dynamic context to your alerts with mapping rules
@@ -25,7 +25,7 @@ export default function Mapping() {
           <CreateOrEditMapping editRule={editRule} editCallback={setEditRule} />
         </div>
 
-        <div className="w-3/4 pl-2.5">
+        <div className="w-2/3 pl-2.5">
           {isLoading ? (
             <Loading />
           ) : mappings && mappings.length > 0 ? (

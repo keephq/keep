@@ -249,6 +249,7 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
         matchers=["name"],
         rows=[{"name": "Test Alert", "service": "new_service"}],
         disabled=False,
+        type="csv",
     )
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
@@ -273,6 +274,7 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
             {"name": "frontend-service", "service": "frontend_service"},
         ],
         disabled=False,
+        type="csv",
     )
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
@@ -316,6 +318,7 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
             {"name": "frontend-service", "service": "frontend_service"},
         ],
         disabled=False,
+        type="csv",
     )
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
@@ -341,6 +344,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
         matchers=["name && severity"],
         rows=[{"name": "Test Alert", "severity": "high", "service": "new_service"}],
         disabled=False,
+        type="csv",
     )
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
@@ -380,6 +384,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
             {"severity": "high", "service": "high_severity_service"},
         ],
         disabled=False,
+        type="csv",
     )
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
@@ -435,6 +440,7 @@ def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
             {"severity": "high", "service": "high_severity_service"},
         ],
         disabled=False,
+        type="csv",
     )
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
@@ -462,6 +468,7 @@ def test_enrichment(client, db_session, test_app, mock_alert_dto, elastic_client
         ],
         name="new_rule",
         disabled=False,
+        type="csv",
     )
     db_session.add(rule)
     db_session.commit()
@@ -499,6 +506,7 @@ def test_disposable_enrichment(client, db_session, test_app, mock_alert_dto):
         ],
         name="new_rule",
         disabled=False,
+        type="csv",
     )
     db_session.add(rule)
     db_session.commit()
