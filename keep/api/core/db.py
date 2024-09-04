@@ -611,9 +611,9 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
 
         if execution_id:
             query = query.filter(WorkflowExecution.id == execution_id)
-        if status:
+        if status and len(status) > 0:
             query = query.filter(WorkflowExecution.status.in_(status))
-        if trigger:
+        if trigger and len(trigger) > 0:
             conditions = [WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger]
             query = query.filter(or_(*conditions))
     
