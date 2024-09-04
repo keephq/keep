@@ -17,7 +17,7 @@ import {
 import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 import CustomNode from "./custom-node";
-import { Card, TextInput } from "@tremor/react";
+import { Card } from "@tremor/react";
 import {
   edgeLabelBgPaddingNoHover,
   edgeLabelBgStyleNoHover,
@@ -33,7 +33,7 @@ import { useTopology } from "utils/hooks/useTopology";
 import Loading from "app/loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
-import { ServiceSearchContext } from "./layout";
+import { ServiceSearchContext } from "./service-search-context";
 
 interface Props {
   providerId?: string;

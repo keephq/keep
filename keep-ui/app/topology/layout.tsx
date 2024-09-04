@@ -1,8 +1,7 @@
 "use client";
 import { Subtitle, TextInput, Title } from "@tremor/react";
-import { createContext, useState } from "react";
-
-export const ServiceSearchContext = createContext("");
+import { useState } from "react";
+import { ServiceSearchContext } from "./service-search-context";
 
 export default function Layout({ children }: { children: any }) {
   const [serviceInput, setServiceInput] = useState<string>("");
