@@ -77,7 +77,7 @@ export function GenericTable<T>({
     return (
         <div className="flex flex-col w-full h-full max-h-full">
             <div className="overflow-auto h-1/2">
-                <TremorTable className="w-full border-spacing-3 border-tremor-border dark:border-dark-tremor-border">
+                <TremorTable className="w-full rounded border border-tremor-border dark:border-dark-tremor-border">
                     <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow
