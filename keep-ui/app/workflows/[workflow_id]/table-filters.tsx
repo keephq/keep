@@ -33,9 +33,8 @@ const status = [
 ];
 const triggers = [
     "scheduler",
+    "alert",
     "manual",
-    "interval",
-    "alert"
 ]//not usre about the tirgger. in local i am able to get scheduler only. can be used in the future
 
 const PopoverContent: React.FC<PopoverContentProps> = ({ options, filterRef, type }) => {
@@ -169,22 +168,15 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
 
     return (
         <div className="relative flex flex-col md:flex-row lg:flex-row gap-4 items-center mb-2">
-            <div className="w-1/2 flex relative gap-2 shadow-lg">
+            <div className="w-1/3 flex relative gap-2">
                 <Textarea
                     rows={1}
-                    className="overflow-hidden p-2"
+                    className="overflow-hidden py-2"
                     value={executionId}
                     onChange={onValueChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Enter Execution Id..."
+                    placeholder="Filter Worfklows..."
                 />
-                <Badge
-                    size="md"
-                    color="orange"
-                    className="flex-1 absolute right-2 top-1/2 transform -translate-y-1/2" // Position to the far right inside the padding area
-                >
-                    Enter to apply
-                </Badge>
             </div>
             <div className="flex-1 flex gap-4">
                 <GenericPopover
@@ -200,7 +192,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
                     onApply={() => setApply(true)}
                 />
             </div>
-            <Button className="shadow-lg" onClick={() => {filterRef.current = { trigger: [], status: [], execution_id: '' };setApply(true)}}>Clear Filters</Button>
+            <Button className="shadow-lg py-2" onClick={() => {filterRef.current = { trigger: [], status: [], execution_id: '' };setApply(true)}}>Clear Filters</Button>
         </div>
     );
 };

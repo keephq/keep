@@ -85,7 +85,7 @@ export default function WorkflowDetailPage({
     const { data: session, status, update } = useSession();
 
     const [executionPagination, setExecutionPagination] = useState<Pagination>({
-        limit: 10,
+        limit: 25,
         offset: 0,
     });
     const [tab, setTab] = useState<number>(1)
@@ -137,7 +137,7 @@ export default function WorkflowDetailPage({
     const workflow = { last_executions: data.items } as Partial<Workflow>
     return (
         <>
-            <Card className="relative flex p-4 w-full justify-between gap-8">
+            <Card className="relative flex p-4 px-8 w-full justify-between gap-8">
                 <SideNavBar workflow={data.workflow} />
                 <div className="flex-1 relative overflow-auto p-0.5">
                     <div className="sticky top-0 flex justify-between items-end">
@@ -164,7 +164,7 @@ export default function WorkflowDetailPage({
                                         Pass / Fail ratio
                                     </Title>
                                     <div>
-                                        <h1 className="text-2xl font-bold">{(data.passFail ?? 0).toFixed(2)}{'%'}</h1>
+                                        <h1 className="text-2xl font-bold">{(data.count ? (data.passFail ?? 0):0).toFixed(2)}{'%'}</h1>
                                         {/* <div className="text-sm text-gray-500">__ from last month</div> */}
                                     </div>
 

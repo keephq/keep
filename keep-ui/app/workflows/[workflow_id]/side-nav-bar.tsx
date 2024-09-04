@@ -19,7 +19,7 @@ export default function SideNavBar({ workflow }: { workflow: Workflow }) {
 
     const manageLinks = [
         { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Workflow Builder', isLink: true },
-        { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Workflow YML Definition', isLink: false, handleClick: () => { setviewYaml(true) } },
+        { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Workflow YAML definition', isLink: false, handleClick: () => { setviewYaml(true) } },
         // { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Downloads', isLink: false, handleClick: () => { console.log("triggering this") } },
     ];
 
@@ -31,7 +31,7 @@ export default function SideNavBar({ workflow }: { workflow: Workflow }) {
     return (
         <div className="flex flex-col gap-10 pt-6 flex-shrink-0 w-64 md:w-1/4 lg:w-1/6 top-20 p-1">
             <div className="flex-2 h-36">
-                <h1 className="text-2xl line-clamp-2">{workflow.name}</h1>
+                <h1 className="text-2xl line-clamp-2 font-extrabold">{workflow.name}</h1>
                 {workflow.description && (
                     <Text clamp-lines={3}>
                         <span>{workflow.description}</span>

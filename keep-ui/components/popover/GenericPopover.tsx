@@ -46,7 +46,7 @@ const GenericPopover: React.FC<PopoverProps> = ({
                         as={Button}
                         icon={triggerIcon}
                         ref={refs.setReference}
-                        className="bg-white shadow-lg rounded border border-gray-200 p-2 hover:shadow-xl transition-shadow duration-300"
+                        className="bg-white rounded-lg border-dotted border-2 py-2 px-6 border-gray-200 text-black"
                     >
                         {triggerText}
                     </Popover.Button>

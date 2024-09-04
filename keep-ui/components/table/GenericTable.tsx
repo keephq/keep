@@ -77,7 +77,7 @@ export function GenericTable<T>({
     return (
         <div className="flex flex-col w-full h-full max-h-full">
             <div className="overflow-auto h-1/2">
-                <TremorTable className="w-full border border-tremor-border dark:border-dark-tremor-border">
+                <TremorTable className="w-full border-spacing-3 border-tremor-border dark:border-dark-tremor-border">
                     <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow
@@ -86,7 +86,7 @@ export function GenericTable<T>({
                             >
                                 {headerGroup.headers.map((header) => (
                                     <TableHeaderCell
-                                        className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
+                                        className="text-gray-400 dark:text-dark-gray-400"
                                         key={header.id}
                                     >
                                         {flexRender(
@@ -98,10 +98,10 @@ export function GenericTable<T>({
                             </TableRow>
                         ))}
                     </TableHead>
-                    <TableBody>
+                    <TableBody className="bg-gray-20">
                         {table.getRowModel().rows.map((row) => (
                             <TableRow
-                                className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
+                                className=" hover:bg-slate-100 cursor-pointer"
                                 key={row.id}
                                 onClick={() => onRowClick?.(row.original)}
                             >

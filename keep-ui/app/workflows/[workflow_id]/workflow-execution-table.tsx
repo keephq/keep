@@ -1,16 +1,21 @@
 import {
     createColumnHelper,
     DisplayColumnDef,
+    Row,
 } from "@tanstack/react-table";
 import { PaginatedWorkflowExecutionDto, WorkflowExecution } from "../builder/types";
 import { GenericTable } from "@/components/table/GenericTable";
-import { PlayIcon } from "@radix-ui/react-icons";
+import { DownloadIcon, PlayIcon, TrashIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, Fragment, SetStateAction } from "react";
 import Image from "next/image";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import { CheckCircleIcon, EllipsisHorizontalIcon, EyeIcon, WrenchIcon, XCircleIcon } from "@heroicons/react/20/solid";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
 import { formatDistanceToNowStrict } from "date-fns";
+import { Menu, Transition } from "@headlessui/react";
+import { Icon } from "@tremor/react";
+import { PiDiamondsFourFill } from "react-icons/pi";
+import { FaHandPointer } from "react-icons/fa";
 
 
 interface Pagination {
@@ -22,6 +27,53 @@ interface Props {
     setPagination: Dispatch<SetStateAction<Pagination>>;
 }
 
+
+function ExecutionRowMenu({ row }: { row: Row<WorkflowExecution> }) {
+    const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+    };
+    return (
+        <Menu as="div" className="realtive inline-block text-left">
+            <div>
+                <Menu.Button className="inline-flex w-full justify-center rounded-md text-sm" onClick={stopPropagation} >
+                    <Icon
+                        size="sm"
+                        icon={EllipsisHorizontalIcon}
+                        className="hover:bg-gray-100 w-8 h-8"
+                        color="gray"
+                    />
+                </Menu.Button>
+            </div>
+            <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+            >
+                <Menu.Items className="absolute z-20 right-0 mt-2 w-36 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+
+                    {/* <Menu.Items className="absolute right-0 z-20 mb-2 w-36 divide-y  origin-middle-left divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"> */}
+                    <div className="px-1 py-1">
+                        <Menu.Item>
+                            {({ active }) => (
+                                <Link
+                                    className="flex items-center p-2"
+                                    href={`/workflows/${row.original.workflow_id}/runs/${row.original.id}`}
+                                    passHref
+                                >
+                                    View Logs
+                                </Link>
+                            )}
+                        </Menu.Item>
+                    </div>
+                </Menu.Items>
+            </Transition>
+        </Menu>
+    )
+}
 
 export function getIcon(status: string) {
     let icon = (
@@ -52,6 +104,15 @@ export function getIcon(status: string) {
     }
     return icon;
 }
+
+
+function getTriggerIcon(triggered_by: string) {
+    switch(triggered_by) {
+        case "manual": return <FaHandPointer size={18}/>
+        case "scheduler": return <PiDiamondsFourFill size={18}/>
+        default:  return <PiDiamondsFourFill size={18}/>
+    }
+}
 export function ExecutionTable({
     executions,
     setPagination,
@@ -77,91 +138,84 @@ export function ExecutionTable({
                 return <div className={`${isError ? 'text-red-500' : ''}`}>{row.original.id}</div>
             }
         }),
-
-        columnHelper.accessor("triggered_by", {
+        columnHelper.display({
+            id: "triggered_by",
             header: "Trigger",
+            cell: ({ row }) => {
+                const triggered_by = row.original.triggered_by;
+                
+                return triggered_by ? (
+                <div className="px-3 py-0.5 bg-white rounded-xl border-2 inline-flex items-center gap-2 font-bold">
+                    {getTriggerIcon(triggered_by)}
+                    <div>{triggered_by}</div>
+                    </div>) : null
+            }
         }),
         columnHelper.display({
             id: "execution_time",
-            header: "Execution time",
+            header: "Execution Duration",
             cell: ({ row }) => {
-              const customFormatter = (seconds: number|null) => {
-                if (seconds === undefined || seconds === null) {
-                  return "";
-                }
-          
-                const hours = Math.floor(seconds / 3600);
-                const minutes = Math.floor((seconds % 3600) / 60);
-                const remainingSeconds = (seconds % 60);
-          
-                if (hours > 0) {
-                  return `${hours} hr ${minutes}m ${remainingSeconds}s`;
-                } else if (minutes > 0) {
-                  return `${minutes}m ${remainingSeconds}s`;
-                } else {
-                  return `${remainingSeconds.toFixed(2)}s`;
-                }
-              };
-          
-              return (
-                <div>
-                  {customFormatter(row.original.execution_time||null)}
-                </div>
-              );
+                const customFormatter = (seconds: number | null) => {
+                    if (seconds === undefined || seconds === null) {
+                        return "";
+                    }
+
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    const remainingSeconds = (seconds % 60);
+
+                    if (hours > 0) {
+                        return `${hours} hr ${minutes}m ${remainingSeconds}s`;
+                    } else if (minutes > 0) {
+                        return `${minutes}m ${remainingSeconds}s`;
+                    } else {
+                        return `${remainingSeconds.toFixed(2)}s`;
+                    }
+                };
+
+                return (
+                    <div>
+                        {customFormatter(row.original.execution_time || null)}
+                    </div>
+                );
             },
-          }),
-          
+        }),
+
         columnHelper.display({
             id: "started",
             header: "Started at",
-            cell: ({ row }) =>{
+            cell: ({ row }) => {
                 const customFormatter: Formatter = (
                     value: number,
                     unit: Unit,
                     suffix: Suffix
-                  ) => {
-                    if(!row?.original?.started){
+                ) => {
+                    if (!row?.original?.started) {
                         return ""
                     }
-                
+
                     const formattedString = formatDistanceToNowStrict(
-                      new Date(row.original.started+ "Z"),
-                      { addSuffix: true }
+                        new Date(row.original.started + "Z"),
+                        { addSuffix: true }
                     );
-                
+
                     return formattedString
-                      .replace("about ", "")
-                      .replace("minute", "min")
-                      .replace("second", "sec")
-                      .replace("hour", "hr");
-                  };
+                        .replace("about ", "")
+                        .replace("minute", "min")
+                        .replace("second", "sec")
+                        .replace("hour", "hr");
+                };
                 return <TimeAgo
-                      date={row.original.started + "Z"}
-                      formatter={customFormatter}
-                    />
+                    date={row.original.started + "Z"}
+                    formatter={customFormatter}
+                />
             }
         }),
-        // columnHelper.display({
-        //   id: "error",
-        //   header: "Error",
-        //   cell: ({ row }) => (
-        //     <div className="max-w-xl truncate" title={row.original.error || ""}>
-        //       {row.original.error}
-        //     </div>
-        //   ),
-        // }),
-
         columnHelper.display({
-            id: "logs",
-            header: "Logs",
+            id: "menu",
+            header: "",
             cell: ({ row }) => (
-                <Link
-                    className="text-orange-500 hover:underline flex items-center"
-                    href={`/workflows/${row.original.workflow_id}/runs/${row.original.id}`}
-                    passHref
-                >
-                    <PlayIcon className="h-4 w-4 ml-1" />
-                </Link>
+                <ExecutionRowMenu row={row} />
             ),
         }),
     ] as DisplayColumnDef<WorkflowExecution>[];
