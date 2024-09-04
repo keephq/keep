@@ -71,6 +71,11 @@ export default function IncidentsTable({
       header: "Summary",
       cell: ({ row }) => <div className="text-wrap">{row.original.user_summary}</div>,
     }),
+    columnHelper.display({
+      id: "rule_fingerprint",
+      header: "Group by value",
+      cell: ({ row }) => <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>,
+    }),
     // columnHelper.display({
     //   id: "severity",
     //   header: "Severity",
