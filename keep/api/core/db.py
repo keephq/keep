@@ -2743,6 +2743,18 @@ def get_all_topology_data(
         return service_dtos
 
 
+def get_topology_data_by_dynamic_matcher(
+    tenant_id: str, matchers_value: dict[str, str]
+) -> TopologyService | None:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+        for matcher in matchers_value:
+            query = query.where(
+                getattr(TopologyService, matcher) == matchers_value[matcher]
+            )
+    return session.exec(query).first()
+
+
 def get_tags(tenant_id):
     with Session(engine) as session:
         tags = session.exec(select(Tag).where(Tag.tenant_id == tenant_id)).all()

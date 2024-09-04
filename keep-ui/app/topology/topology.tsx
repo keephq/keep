@@ -95,11 +95,13 @@ const TopologyPage = ({
   );
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) =>
+      setNodes((nds) => applyNodeChanges(changes, nds)),
     []
   );
   const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    (changes: EdgeChange[]) =>
+      setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
 
@@ -202,7 +204,7 @@ const TopologyPage = ({
     );
 
   return (
-    <Card className="p-4 md:p-10 mx-auto h-full relative mb-10">
+    <Card className="p-4 md:p-10 mx-auto h-full relative mb-10 mt-2.5">
       {showSearch && (
         <div className="flex justify-end items-center w-full absolute top-0 left-0">
           <TextInput
@@ -223,6 +225,7 @@ const TopologyPage = ({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           fitViewOptions={{ padding: 0.3 }}
+          zoomOnDoubleClick={true}
           onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
           onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
           nodeTypes={{ customNode: CustomNode }}

@@ -55,8 +55,10 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           <LinkWithIcon
             href="/topology"
             icon={TbTopologyRing}
-            isBeta={!topologyData}
-            count={topologyData?.length}
+            isBeta={!topologyData || topologyData.length === 0}
+            count={
+              topologyData?.length === 0 ? undefined : topologyData?.length
+            }
           >
             <Subtitle>Service Topology</Subtitle>
           </LinkWithIcon>
