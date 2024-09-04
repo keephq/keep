@@ -70,7 +70,7 @@ export default function Pagination<T>({ table, isRefreshAllowed }: Props<T>) {
             onChange={(selectedOption) => table.setPageSize(Number(selectedOption!.value))}
             options={[
               { value: "10", label: "10" },
-              { value: "20", label: "20" },
+              { value: "25", label: "25" },
               { value: "50", label: "50" },
               { value: "100", label: "100" },
             ]}
