@@ -5,8 +5,12 @@ import logging
 
 import celpy
 
-from keep.api.core.db import get_all_filters, get_last_alert_hash_by_fingerprint
+from keep.api.core.db import (
+    get_all_deduplication_rules,
+    get_last_alert_hash_by_fingerprint,
+)
 from keep.api.models.alert import AlertDto
+from keep.providers.providers_factory import ProvidersFactory
 
 
 # decide whether this should be a singleton so that we can keep the filters in memory
@@ -16,7 +20,7 @@ class AlertDeduplicator:
     DEFAULT_FIELDS = ["lastReceived"]
 
     def __init__(self, tenant_id):
-        self.filters = get_all_filters(tenant_id)
+        self.filters = get_all_deduplication_rules(tenant_id)
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
 
@@ -101,3 +105,49 @@ class AlertDeduplicator:
             del d[field_parts[-1]]
             setattr(alert, field_parts[0], d)
         return alert
+
+    def get_deduplications(self):
+        installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
+        # filter out the providers that are not "alert" in tags
+        installed_providers = [
+            provider for provider in installed_providers if "alert" in provider.tags
+        ]
+        linked_providers = ProvidersFactory.get_linked_providers(self.tenant_id)
+        providers = [*installed_providers, *linked_providers]
+
+        default_deduplications = ProvidersFactory.get_default_deduplications()
+        default_deduplications_dict = {
+            dd["provider_type"]: dd for dd in default_deduplications
+        }
+
+        custom_deduplications = get_all_deduplication_rules(self.tenant_id)
+        custom_deduplications_dict = {
+            filt.provider_id: filt for filt in custom_deduplications
+        }
+
+        final_deduplications = []
+        # if provider doesn't have custom deduplication, use the default one
+        for provider in providers:
+            if provider.id not in custom_deduplications_dict:
+                if provider.type not in default_deduplications_dict:
+                    self.logger.warning(
+                        f"Provider {provider.type} does not have a default deduplication"
+                    )
+                    continue
+
+                # copy the default deduplication and set the provider id
+                default_deduplication = copy.copy(
+                    default_deduplications_dict[provider.type]
+                )
+                if provider.id:
+                    default_deduplication["description"] = (
+                        f"{default_deduplication['description']} - {provider.id}"
+                    )
+
+                final_deduplications.append(default_deduplication)
+            else:
+                final_deduplications.append(custom_deduplications_dict[provider.id])
+
+        # compression = get_deduplication_ratio(self.tenant_id)
+        # combine lists
+        return final_deduplications

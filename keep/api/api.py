@@ -29,6 +29,7 @@ from keep.api.routes import (
     ai,
     alerts,
     dashboard,
+    deduplications,
     extraction,
     healthcheck,
     incidents,
@@ -222,7 +223,9 @@ def get_app(
     app.include_router(tags.router, prefix="/tags", tags=["tags"])
     app.include_router(maintenance.router, prefix="/maintenance", tags=["maintenance"])
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
-
+    app.include_router(
+        deduplications.router, prefix="/deduplications", tags=["deduplications"]
+    )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint

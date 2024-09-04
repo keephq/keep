@@ -60,7 +60,7 @@ class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-    
+
     user_generated_name: str | None
     ai_generated_name: str | None
 
@@ -176,6 +176,8 @@ class AlertDeduplicationFilter(SQLModel, table=True):
     fields: list = Field(sa_column=Column(JSON), default=[])
     # a CEL expression to match the alert
     matcher_cel: str
+    # the provider id to use for this deduplication - None for linked providers
+    provider_id: str | None
 
     class Config:
         arbitrary_types_allowed = True

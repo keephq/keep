@@ -341,6 +341,13 @@ class ProvidersFactory:
                 # not all providers have this method (yet ^^)
                 except Exception:
                     alert_example = None
+
+                # Add default fingerprint fields if available
+                if hasattr(provider_class, "FINGERPRINT_FIELDS"):
+                    default_fingerprint_fields = provider_class.FINGERPRINT_FIELDS
+                else:
+                    default_fingerprint_fields = []
+
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -359,6 +366,7 @@ class ProvidersFactory:
                         methods=provider_methods,
                         tags=provider_tags,
                         alertExample=alert_example,
+                        default_fingerprint_fields=default_fingerprint_fields,
                     )
                 )
             except ModuleNotFoundError:
@@ -511,3 +519,33 @@ class ProvidersFactory:
             _linked_providers.append(provider)
 
         return _linked_providers
+
+    @staticmethod
+    def get_default_deduplications() -> list[dict]:
+        """
+        Get the default deduplications for all providers with FINGERPRINT_FIELDS.
+
+        Returns:
+            list: The default deduplications for each provider.
+        """
+        default_deduplications = []
+        all_providers = ProvidersFactory.get_all_providers()
+
+        for provider in all_providers:
+            if provider.default_fingerprint_fields:
+                deduplication = {
+                    "name": f"{provider.type}_default",
+                    "description": f"Default deduplication for {provider.display_name}",
+                    "default": True,
+                    "distribution": {},
+                    "provider_type": provider.type,
+                    "last_updated": "",
+                    "last_updated_by": "",
+                    "created_at": "",
+                    "created_by": "",
+                    "enabled": True,
+                    "default_fingerprint_fields": provider.default_fingerprint_fields,
+                }
+                default_deduplications.append(deduplication)
+
+        return default_deduplications

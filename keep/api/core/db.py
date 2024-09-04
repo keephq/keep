@@ -1531,7 +1531,7 @@ def get_rule_distribution(tenant_id, minute=False):
         return rule_distribution
 
 
-def get_all_filters(tenant_id):
+def get_all_deduplication_rules(tenant_id):
     with Session(engine) as session:
         filters = session.exec(
             select(AlertDeduplicationFilter).where(

@@ -50,6 +50,8 @@ class GrafanaProvider(BaseProvider):
     """Pull/Push alerts from Grafana."""
 
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
+    FINGERPRINT_FIELDS = ["fingerprint"]
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="alert.rules:read",

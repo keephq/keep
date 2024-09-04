@@ -205,4 +205,6 @@ playwright_dump_*.html
 playwright_dump_*.png
 
 ee/experimental/ai_temp/*
-!ee/experimental/ai_temp/.gitkeep
+,e!ee/experimental/ai_temp/.gitkeep
+
+oauth2.cfg

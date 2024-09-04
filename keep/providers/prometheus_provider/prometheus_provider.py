@@ -82,6 +82,7 @@ receivers:
             name="connectivity", description="Connectivity Test", mandatory=True
         )
     ]
+    FINGERPRINT_FIELDS = ["fingerprint"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

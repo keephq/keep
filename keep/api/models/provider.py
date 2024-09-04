@@ -44,3 +44,4 @@ class Provider(BaseModel):
     ] = []
     alertsDistribution: dict[str, int] | None = None
     alertExample: dict | None = None
+    default_fingerprint_fields: list[str] | None = None
