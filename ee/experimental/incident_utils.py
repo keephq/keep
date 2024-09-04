@@ -1,16 +1,21 @@
 import logging
 import os
-from datetime import datetime, timedelta
-from typing import Dict, List
 
 import networkx as nx
-import numpy as np
-import pandas as pd
-from openai import OpenAI
+
+from tqdm import tqdm
+from datetime import datetime, timedelta
+from typing import Dict, List, Set, Tuple
+from arq.connections import ArqRedis
 
 from ee.experimental.graph_utils import create_graph
 from ee.experimental.statistical_utils import get_alert_pmi_matrix
+from ee.experimental.generative_utils import generate_incident_summary, generate_incident_name, \
+    SUMMARY_GENERATOR_VERBOSE_NAME, NAME_GENERATOR_VERBOSE_NAME
+
 from keep.api.arq_pool import get_pool
+from keep.api.core.dependencies import get_pusher_client
+from keep.api.models.db.alert import Alert, Incident
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     create_incident_from_dict,
@@ -20,23 +25,18 @@ from keep.api.core.db import (
     update_incident_summary,
     update_incident_name,
     write_pmi_matrix_to_temp_file,
+    write_tenant_ai_metadata_to_temp_file,
+    get_tenant_ai_metadata_from_temp_file,
 )
-
-from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.db.alert import Alert, Incident
 
 logger = logging.getLogger(__name__)
 
 ALGORITHM_VERBOSE_NAME = "Correlation algorithm v0.2"
-SUMMARY_GENERATOR_VERBOSE_NAME = "Summary generator v0.1"
-NAME_GENERATOR_VERBOSE_NAME = "Name generator v0.1"
 USE_N_HISTORICAL_ALERTS_MINING = 10e4
 USE_N_HISTORICAL_ALERTS_PMI = 10e4
 USE_N_HISTORICAL_INCIDENTS = 10e4
 MIN_ALERT_NUMBER = 100
 DEFAULT_TEMP_DIR_LOCATION = "./ee/experimental/ai_temp"
-MAX_SUMMARY_LENGTH = 900
-MAX_NAME_LENGTH = 75
 
 
 def calculate_pmi_matrix(
@@ -58,7 +58,8 @@ def calculate_pmi_matrix(
     )
 
     if not upper_timestamp:
-        upper_timestamp = os.environ.get("PMI_ALERT_UPPER_TIMESTAMP", datetime.now())
+        upper_timestamp = os.environ.get(
+            "PMI_ALERT_UPPER_TIMESTAMP", datetime.now())
 
     if not use_n_historical_alerts:
         use_n_historical_alerts = os.environ.get(
@@ -121,6 +122,125 @@ def calculate_pmi_matrix(
     return {"status": "success"}
 
 
+def is_similar_incident(incident: Incident, component: Set[str], similarity_threshold: float) -> bool:
+    incident_fingerprints = set(alert.fingerprint for alert in incident.alerts)
+    intersection = incident_fingerprints.intersection(component)
+    component_similarity = len(intersection) / len(component)
+    incident_similarity = len(intersection) / len(incident_fingerprints)
+
+    return component_similarity >= similarity_threshold or incident_similarity >= similarity_threshold
+
+
+def update_existing_incident(incident: Incident, component: Set[str], alerts: List[Alert], tenant_id: str) -> Tuple[str, bool]:
+    logger.info(f'Incident {incident.id} is similar to the alert graph component. Merging...', extra={
+                'tenant_id': tenant_id})
+    add_alerts_to_incident_by_incident_id(
+        tenant_id,
+        incident.id,
+        [alert.id for alert in alerts if alert.fingerprint in component],
+    )
+    return incident.id, True
+
+
+def create_new_incident(component: Set[str], alerts: List[Alert], tenant_id: str) -> Tuple[str, bool]:
+    logger.info(f'No incident is similar to the alert graph component. Creating new incident...', extra={
+                'tenant_id': tenant_id})
+    incident_start_time = min(
+        alert.timestamp for alert in alerts if alert.fingerprint in component)
+    incident_start_time = incident_start_time.replace(microsecond=0)
+
+    incident = create_incident_from_dict(
+        tenant_id,
+        {
+            "name": f"Incident started at {incident_start_time}",
+            "description": "Summarization is Disabled",
+            "is_predicted": True,
+        },
+    )
+    add_alerts_to_incident_by_incident_id(
+        tenant_id,
+        incident.id,
+        [alert.id for alert in alerts if alert.fingerprint in component],
+    )
+    return incident.id, False
+
+
+async def schedule_incident_processing(pool: ArqRedis, tenant_id: str, incident_id: str) -> None:
+    job_summary = await pool.enqueue_job(
+        "process_summary_generation",
+        tenant_id=tenant_id,
+        incident_id=incident_id,
+    )
+    logger.info(
+        f"Summary generation for incident {incident_id} scheduled, job: {job_summary}",
+        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+               "tenant_id": tenant_id, "incident_id": incident_id},
+    )
+
+    job_name = await pool.enqueue_job(
+        "process_name_generation",
+        tenant_id=tenant_id,
+        incident_id=incident_id,
+    )
+    logger.info(
+        f"Name generation for incident {incident_id} scheduled, job: {job_name}",
+        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME,
+               "tenant_id": tenant_id, "incident_id": incident_id},
+    )
+
+
+def process_component(component: Set[str], incidents: List[Incident], alerts: List[Alert], tenant_id: str, 
+                      incident_similarity_threshold: float, min_incident_size: int) -> Tuple[str, bool]:
+    logger.info(f'Processing alert graph component with {len(component)} nodes. Min incident size: {min_incident_size}', extra={
+                'tenant_id': tenant_id})
+
+    if len(component) < min_incident_size:
+        return None, False
+
+    for incident in incidents:
+        if is_similar_incident(incident, component, incident_similarity_threshold):
+            return update_existing_incident(incident, component, alerts, tenant_id)
+
+    return create_new_incident(component, alerts, tenant_id)
+
+
+def process_graph_components(graph: nx.Graph, incidents: List[Incident], alerts: List[Alert], tenant_id: str,
+                             incident_similarity_threshold: float, min_incident_size: int) -> Tuple[List[str], int, int]:
+    incident_ids_for_processing = []
+    new_incident_count = 0
+    updated_incident_count = 0
+
+    for component in nx.connected_components(graph):
+        incident_id, is_updated = process_component(
+            component, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size)
+        if incident_id:
+            incident_ids_for_processing.append(incident_id)
+            if is_updated:
+                updated_incident_count += 1
+            else:
+                new_incident_count += 1
+
+    return incident_ids_for_processing, new_incident_count, updated_incident_count
+
+
+async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str):
+    incident = get_incident_by_id(tenant_id, incident_id)
+    summary = generate_incident_summary(incident)
+    if summary:
+        update_incident_summary(tenant_id, incident_id, summary)
+
+    return summary
+
+
+async def generate_update_incident_name(ctx, tenant_id: str, incident_id: str):
+    incident = get_incident_by_id(tenant_id, incident_id)
+    name = generate_incident_name(incident)
+    if name:
+        update_incident_name(tenant_id, incident_id, name)
+
+    return name
+
+
 async def mine_incidents_and_create_objects(
     ctx: dict | None,  # arq context
     tenant_id: str,
@@ -131,11 +251,13 @@ async def mine_incidents_and_create_objects(
     incident_upper_timestamp: datetime = None,
     use_n_hist_incidents: int = None,
     pmi_threshold: float = None,
+    delete_nodes: bool = None,
     knee_threshold: float = None,
     min_incident_size: int = None,
     min_alert_number: int = None,
     incident_similarity_threshold: float = None,
     general_temp_dir: str = None,
+    alert_batch_size: int = None,
 ) -> Dict[str, List[Incident]]:
     """
     This function mines incidents from alerts and creates incidents in the database.
@@ -157,6 +279,15 @@ async def mine_incidents_and_create_objects(
     Dict[str, List[Incident]]: a dictionary containing the created incidents
     """
 
+    if not general_temp_dir:
+        general_temp_dir = os.environ.get(
+            "AI_TEMP_FOLDER", DEFAULT_TEMP_DIR_LOCATION)
+
+    temp_dir = f"{general_temp_dir}/{tenant_id}"
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    metadata = get_tenant_ai_metadata_from_temp_file(temp_dir)
+    
     if not incident_upper_timestamp:
         incident_upper_timestamp = os.environ.get(
             "MINE_INCIDENT_UPPER_TIMESTAMP", datetime.now()
@@ -174,7 +305,8 @@ async def mine_incidents_and_create_objects(
         )
 
     if not alert_lower_timestamp:
-        alert_window = timedelta(hours=int(os.environ.get("MINE_ALERT_WINDOW", "12")))
+        alert_window = timedelta(
+            hours=int(os.environ.get("MINE_ALERT_WINDOW", "12")))
         alert_lower_timestamp = alert_upper_timestamp - alert_window
 
     if not use_n_historical_alerts:
@@ -190,6 +322,9 @@ async def mine_incidents_and_create_objects(
     if not pmi_threshold:
         pmi_threshold = os.environ.get("PMI_THRESHOLD", 0.0)
 
+    if not delete_nodes:
+        delete_nodes = os.environ.get("DELETE_NODES", False)
+
     if not knee_threshold:
         knee_threshold = os.environ.get("KNEE_THRESHOLD", 0.8)
 
@@ -200,14 +335,12 @@ async def mine_incidents_and_create_objects(
         incident_similarity_threshold = os.environ.get(
             "INCIDENT_SIMILARITY_THRESHOLD", 0.8
         )
+        
+    if not alert_batch_size:
+        alert_batch_size = os.environ.get("ALERT_BATCH_SIZE", 60*30)
 
-    if not general_temp_dir:
-        general_temp_dir = os.environ.get("AI_TEMP_FOLDER", DEFAULT_TEMP_DIR_LOCATION)
-
-    temp_dir = f"{general_temp_dir}/{tenant_id}"
-    os.makedirs(temp_dir, exist_ok=True)
-
-    status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number)
+    status = calculate_pmi_matrix(
+        ctx, tenant_id, min_alert_number=min_alert_number)
     if status.get('status') == 'failed':
         return {"incidents": []}
 
@@ -217,12 +350,29 @@ async def mine_incidents_and_create_objects(
             "tenant_id": tenant_id,
         },
     )
+    
+    if metadata.get('last_correlated_batch_start', None):
+        alert_lower_timestamp = datetime.fromisoformat(metadata.get('last_correlated_batch_start', None))
+        alert_lower_timestamp += timedelta(seconds=alert_batch_size)
+
     alerts = query_alerts(
         tenant_id,
         limit=use_n_historical_alerts,
         upper_timestamp=alert_upper_timestamp,
         lower_timestamp=alert_lower_timestamp,
     )
+    
+    # n_batches = int((alert_upper_timestamp - alert_lower_timestamp).total_seconds() // alert_batch_size)
+    # logging.info(f'Starting alert correlatiion. Current batch size: {alert_batch_size} seconds. Number of batches to process: {n_batches}')
+    
+    # for batch_idx in tqdm(range(0, n_batches)):
+    #     batch_start_timestamp = alert_lower_timestamp + timedelta(seconds=batch_idx*alert_batch_size)
+    #     batch_end_timestamp = batch_start_timestamp + timedelta(seconds=alert_batch_size)
+        
+    #     batch_incident_lower_timestamp = batch_start_timestamp - timedelta(seconds=incident_validity_threshold)
+        
+    #     incidents, _ = get
+    
     incidents, _ = get_last_incidents(
         tenant_id,
         limit=use_n_hist_incidents,
@@ -239,7 +389,7 @@ async def mine_incidents_and_create_objects(
     )
 
     graph = create_graph(
-        tenant_id, fingerprints, temp_dir, pmi_threshold, knee_threshold
+        tenant_id, fingerprints, temp_dir, pmi_threshold, delete_nodes, knee_threshold
     )
     ids = []
 
@@ -250,104 +400,27 @@ async def mine_incidents_and_create_objects(
         },
     )
 
-    incident_ids_for_summary_generation = []
+    incident_ids_for_processing, new_incident_count, updated_incident_count = process_graph_components(
+        graph, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size
+    )
 
-    new_incident_count = 0
-    updated_incident_count = 0
-    
-    for component in nx.connected_components(graph):
-        if len(component) > min_incident_size:
-            alerts_appended = False
-            for incident in incidents:
-                incident_fingerprints = set(
-                    [alert.fingerprint for alert in incident.alerts]
-                )
-                intersection = incident_fingerprints.intersection(component)
+    pool = await get_pool() if not ctx else ctx["redis"]
 
-                if len(intersection) / len(component) >= incident_similarity_threshold:
-                    alerts_appended = True
+    for incident_id in incident_ids_for_processing:
+        await schedule_incident_processing(pool, tenant_id, incident_id)
 
-                    add_alerts_to_incident_by_incident_id(
-                        tenant_id,
-                        incident.id,
-                        [
-                            alert.id
-                            for alert in alerts
-                            if alert.fingerprint in component
-                        ],
-                    )
-                    incident_ids_for_summary_generation.append(incident.id)
-                    updated_incident_count += 1
-            if not alerts_appended:
-                incident_start_time = min(
-                    [
-                        alert.timestamp
-                        for alert in alerts
-                        if alert.fingerprint in component
-                    ]
-                )
-                incident_start_time = incident_start_time.replace(microsecond=0)
-
-                incident = create_incident_from_dict(
-                    tenant_id,
-                    {
-                        "name": f"Incident started at {incident_start_time}",
-                        "description": "Summarization is Disabled",
-                        "is_predicted": True,
-                    },
-                )
-                ids.append(incident.id)
-
-                add_alerts_to_incident_by_incident_id(
-                    tenant_id,
-                    incident.id,
-                    [alert.id for alert in alerts if alert.fingerprint in component],
-                )
-                incident_ids_for_summary_generation.append(incident.id)
-                new_incident_count += 1
-                
-    if not ctx:
-        pool = await get_pool()
-    else:
-        pool = ctx["redis"]
-
-    for incident_id in incident_ids_for_summary_generation:
-        job_summary = await pool.enqueue_job(
-            "process_summary_generation",
-            tenant_id=tenant_id,
-            incident_id=incident_id,
-        )
-        logger.info(
-            f"Summary generation for incident {incident_id} scheduled, job: {job_summary}",
-            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
-                   "tenant_id": tenant_id, "incident_id": incident_id},
-        )
-        
-        job_name = await pool.enqueue_job(
-            "process_name_generation",
-            tenant_id=tenant_id,
-            incident_id=incident_id,
-        )
-        logger.info(
-            f"Name generation for incident {incident_id} scheduled, job: {job_name}",
-            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME,
-                   "tenant_id": tenant_id, "incident_id": incident_id},
-        )
-
-    
-    
     pusher_client = get_pusher_client()
     if pusher_client:
         if new_incident_count > 0 or updated_incident_count > 0:
             log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. {new_incident_count} new incidents were created \
                 and {updated_incident_count} incidents were updated.'
-            
+
         else:
             log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. {new_incident_count} new incidents were created \
                 and {updated_incident_count} incidents were updated. This may be due to high alert sparsity or low amount \
                 of unique alert fingerprints. Increasing "sliding window size" or decreasing "minimal amount of unique \
                 fingerprints in an incident" configuration parameters may help.'
-            
+
         pusher_client.trigger(
             f"private-{tenant_id}",
             "ai-logs-change",
@@ -361,247 +434,3 @@ async def mine_incidents_and_create_objects(
     return {
         "incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]
     }
-
-
-def generate_incident_summary(
-    incident: Incident,
-    use_n_alerts_for_summary: int = -1,
-    generate_summary: str = None,
-    max_summary_length: int = None,
-) -> str:
-    if "OPENAI_API_KEY" not in os.environ:
-        logger.error(
-            "OpenAI API key is not set. Incident summary generation is not available.", 
-            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id}
-            )
-        return ""
-
-    if not generate_summary:
-        generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
-
-    if generate_summary == "False":
-        logger.info(f"Incident summary generation is disabled. Aborting.",
-                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-        return ""
-
-    if incident.user_summary:
-        return ""
-
-    if not max_summary_length:
-        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
-
-    if not max_summary_length:
-        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
-
-    try:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-        incident = get_incident_by_id(incident.tenant_id, incident.id)
-
-        description_strings = np.unique(
-            [f'{alert.event["name"]}' for alert in incident.alerts]
-        ).tolist()
-
-        if use_n_alerts_for_summary > 0:
-            incident_description = "\n".join(
-                description_strings[:use_n_alerts_for_summary]
-            )
-        else:
-            incident_description = "\n".join(description_strings)
-
-        timestamps = [alert.timestamp for alert in incident.alerts]
-        incident_start = min(timestamps).replace(microsecond=0)
-        incident_end = max(timestamps).replace(microsecond=0)
-
-        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-
-        summary = (
-            client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": f"""You are a very skilled DevOps specialist who can summarize any incident based on alert descriptions.
-                When provided with information, summarize it in a 2-3 sentences explaining what happened and when.
-                ONLY SUMMARIZE WHAT YOU SEE. In the end add information about potential scenario of the incident.
-                When provided with information, answer with max a {int(max_summary_length * 0.9)} symbols excerpt
-                describing incident thoroughly.
-
-                EXAMPLE:
-                An incident occurred between 2022-11-17 14:11:04 and 2022-11-22 22:19:04, involving a
-                total of 200 alerts. The alerts indicated critical and warning issues such as high CPU and memory
-                usage in pods and nodes, as well as stuck Kubernetes Daemonset rollout. Potential incident scenario:
-                Kubernetes Daemonset rollout stuck due to high CPU and memory usage in pods and nodes. This caused a
-                long tail of alerts on various topics.""",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""Here are  alerts of an incident for summarization:\n{incident_description}\n This incident started  on
-                {incident_start}, ended on {incident_end}, included {incident.alerts_count} alerts.""",
-                    },
-                ],
-            )
-            .choices[0]
-            .message.content
-        )
-
-        logger.info(f"Generated incident summary with length {len(summary)} symbols",
-                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-        if len(summary) > max_summary_length:
-            logger.info(f"Generated incident summary is too long. Applying smart truncation",
-                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-            summary = (
-                client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": f"""You are a very skilled DevOps specialist who can summarize any incident based on a description.
-                    When provided with information, answer with max a {int(max_summary_length * 0.9)} symbols excerpt describing
-                    incident thoroughly.
-                    """,
-                        },
-                        {
-                            "role": "user",
-                            "content": f"""Here is the description of an incident for summarization:\n{summary}""",
-                        },
-                    ],
-                )
-                .choices[0]
-                .message.content
-            )
-
-            logger.info(f"Generated new incident summary with length {len(summary)} symbols",
-                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-            if len(summary) > max_summary_length:
-                logger.info(f"Generated incident summary is too long. Applying hard truncation",
-                            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-                summary = summary[: max_summary_length]
-
-        return summary
-    except Exception as e:
-        logger.error(f"Error in generating incident summary: {e}")
-        return ""
-    
-
-def generate_incident_name(incident: Incident, generate_name: str = None, max_name_length: int = None, use_n_alerts_for_name: int = -1) -> str:
-    if "OPENAI_API_KEY" not in os.environ:
-        logger.error(
-            "OpenAI API key is not set. Incident name generation is not available.", 
-            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id}
-            )
-        return ""
-
-    if not generate_name:
-        generate_name = os.environ.get("GENERATE_INCIDENT_NAME", "True")
-
-    if generate_name == "False":
-        logger.info(f"Incident name generation is disabled. Aborting.",
-                    extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-        return ""
-
-    if incident.user_generated_name:
-        return ""
-
-    if not max_name_length:
-        max_name_length = os.environ.get(
-            "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
-
-    if not max_name_length:
-        max_name_length = os.environ.get(
-            "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
-
-    try:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-        incident = get_incident_by_id(incident.tenant_id, incident.id)
-
-        description_strings = np.unique(
-            [f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
-
-        if use_n_alerts_for_name > 0:
-            incident_description = "\n".join(
-                description_strings[:use_n_alerts_for_name])
-        else:
-            incident_description = "\n".join(description_strings)
-
-        timestamps = [alert.timestamp for alert in incident.alerts]
-        incident_start = min(timestamps).replace(microsecond=0)
-
-        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-
-        name = client.chat.completions.create(model=model, messages=[
-            {
-                "role": "system",
-                "content": f"""You are a very skilled DevOps specialist who can name any incident based on alert descriptions. 
-                When provided with information, output a short descriptive name of incident that could cause these alerts. 
-                Add information about start time to the name. ONLY USE WHAT YOU SEE. Answer with max a {int(max_name_length * 0.9)}
-                symbols excerpt.
-                
-                EXAMPLE:
-                Kubernetes rollout stuck (started on 2022.11.17 14:11)"""
-            },
-            {
-                "role": "user",
-                "content": f"""This incident started  on {incident_start}. 
-                Here are  alerts of an incident:\n{incident_description}\n"""
-            }
-        ]).choices[0].message.content
-
-        logger.info(f"Generated incident name with length {len(name)} symbols",
-                    extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-        if len(name) > max_name_length:
-            logger.info(f"Generated incident name is too long. Applying smart truncation",
-                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-            name = client.chat.completions.create(model=model, messages=[
-                {
-                    "role": "system",
-                    "content": f"""You are a very skilled DevOps specialist who can name any incident based on a description.  
-                    Add information about start time to the name.When provided with information, answer with max a 
-                    {int(max_name_length * 0.9)} symbols.
-                    
-                    EXAMPLE:
-                    Kubernetes rollout stuck (started on 2022.11.17 14:11)"""
-                },
-                {
-                    "role": "user",
-                    "content": f"""This incident started on {incident_start}.
-                    Here is the description of an incident to name:\n{name}."""
-                }
-            ]).choices[0].message.content
-
-            logger.info(f"Generated new incident name with length {len(name)} symbols",
-                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-            if len(name) > max_name_length:
-                logger.info(f"Generated incident name is too long. Applying hard truncation",
-                            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-                name = name[: max_name_length]
-
-        return name
-    except Exception as e:
-        logger.error(f"Error in generating incident name: {e}")
-        return ""
-
-
-async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str):
-    incident = get_incident_by_id(tenant_id, incident_id)
-    summary = generate_incident_summary(incident)
-    if summary:
-        update_incident_summary(tenant_id, incident_id, summary)
-
-    return summary
-
-
-async def generate_update_incident_name(ctx, tenant_id: str, incident_id: str):
-    incident = get_incident_by_id(tenant_id, incident_id)
-    name = generate_incident_name(incident)
-    if name:
-        update_incident_name(tenant_id, incident_id, name)
-
-    return name

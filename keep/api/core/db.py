@@ -4,6 +4,7 @@ Keep main database module.
 This module contains the CRUD database functions for Keep.
 """
 
+import os
 import hashlib
 import json
 import logging
@@ -37,7 +38,7 @@ from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-impo
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
+  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
@@ -2505,78 +2506,6 @@ def write_pmi_matrix_to_temp_file(
     return True
 
 
-def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
-    # TODO: add handlers for sequential launches
-    with Session(engine) as session:
-        pmi_entries_to_update = 0
-        pmi_entries_to_insert = []
-
-        # Query for existing entries to differentiate between updates and inserts
-        existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
-        existing_entries_dict = {
-            (entry.fingerprint_i, entry.fingerprint_j): entry
-            for entry in existing_entries
-        }
-
-        for fingerprint_i in pmi_matrix_df.index:
-            for fingerprint_j in pmi_matrix_df.columns:
-                if pmi_matrix_df.at[fingerprint_i, fingerprint_j] == -100:
-                    continue
-
-                pmi = float(pmi_matrix_df.at[fingerprint_i, fingerprint_j])
-
-                pmi_entry = {
-                    "tenant_id": tenant_id,
-                    "fingerprint_i": fingerprint_i,
-                    "fingerprint_j": fingerprint_j,
-                    "pmi": pmi,
-                }
-
-                if (fingerprint_i, fingerprint_j) in existing_entries_dict:
-                    existed_entry = existing_entries_dict[
-                        (fingerprint_i, fingerprint_j)
-                    ]
-                    if existed_entry.pmi != pmi:
-                        session.execute(
-                            update(PMIMatrix)
-                            .where(
-                                PMIMatrix.fingerprint_i == fingerprint_i,
-                                PMIMatrix.fingerprint_j == fingerprint_j,
-                                PMIMatrix.tenant_id == tenant_id,
-                            )
-                            .values(pmi=pmi)
-                        )
-                        pmi_entries_to_update += 1
-                else:
-                    pmi_entries_to_insert.append(pmi_entry)
-
-        if pmi_entries_to_insert:
-            session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
-
-        logger.info(
-            f"PMI matrix for tenant {tenant_id} updated. {pmi_entries_to_update} entries updated, {len(pmi_entries_to_insert)} entries inserted",
-            extra={"tenant_id": tenant_id},
-        )
-
-        session.commit()
-
-    return True
-
-
-def get_pmi_value(
-    tenant_id: str, fingerprint_i: str, fingerprint_j: str
-) -> Optional[float]:
-    with Session(engine) as session:
-        pmi_entry = session.exec(
-            select(PMIMatrix)
-            .where(PMIMatrix.tenant_id == tenant_id)
-            .where(PMIMatrix.fingerprint_i == fingerprint_i)
-            .where(PMIMatrix.fingerprint_j == fingerprint_j)
-        ).first()
-
-    return pmi_entry.pmi if pmi_entry else None
-
-
 def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, int]]:
     npzfile = np.load(f"{temp_dir}/pmi_matrix.npz", allow_pickle=True)
     pmi_matrix = npzfile["pmi_matrix"]
@@ -2587,18 +2516,17 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
     return pmi_matrix, fingerint2idx
 
 
-def get_pmi_values(
-    tenant_id: str, fingerprints: List[str]
-) -> Dict[Tuple[str, str], Optional[float]]:
-    with Session(engine) as session:
-        pmi_entries = session.exec(
-            select(PMIMatrix).where(PMIMatrix.tenant_id == tenant_id)
-        ).all()
+def write_tenant_ai_metadata_to_temp_file(tenant_id: str, metadata: dict, temp_dir: str) -> bool:
+    with open(f"{temp_dir}/tenant_ai_metadata.json", "w") as f:
+        json.dump(metadata, f)
+    return True
 
-    pmi_values = {
-        (entry.fingerprint_i, entry.fingerprint_j): entry.pmi for entry in pmi_entries
-    }
-    return pmi_values
+
+def get_tenant_ai_metadata_from_temp_file(temp_dir: str) -> dict:
+    if not os.path.exists(f"{temp_dir}/tenant_ai_metadata.json"):
+        return {'last_correlated_batch_start': None}
+    with open(f"{temp_dir}/tenant_ai_metadata.json", "r") as f:
+        return json.load(f)
 
 
 def update_incident_summary(
