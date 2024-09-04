@@ -105,7 +105,7 @@ def pull_data_from_providers(
                 logger.info("Getting topology data", extra=extra)
                 topology_data = provider_class.pull_topology()
                 logger.info("Got topology data, processing", extra=extra)
-                process_topology(tenant_id, topology_data, provider.id)
+                process_topology(tenant_id, topology_data, provider.id, provider.type)
                 logger.info("Processed topology data", extra=extra)
         except NotImplementedError:
             logger.warning(

@@ -17,7 +17,7 @@ const SHOW_N_INCIDENTS = 3;
 export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
   const { data: incidents, mutate } = useIncidents();
-  usePollIncidents(mutate)
+  usePollIncidents(mutate);
   const currentPath = usePathname();
 
   if (isNOCRole) {
@@ -52,26 +52,6 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
             <Subtitle>Incidents</Subtitle>
           </LinkWithIcon>
         </li>
-        {incidents?.items.slice(0, SHOW_N_INCIDENTS).map((incident) => (
-          <li key={incident.id} className="relative pl-8">
-            <LinkWithIcon
-              href={`/incidents/${incident.id}`}
-              icon={MdNearbyError}
-              count={incident.number_of_alerts ?? 0}
-              className={classNames("block p-2 rounded-none border-l-2", {
-                "bg-gray-200": currentPath === `/incidents/${incident.id}`,
-              })}
-            >
-
-              <Subtitle className="text-sm max-w-[7.7rem]">{incident.user_generated_name || incident.ai_generated_name}</Subtitle>
-            </LinkWithIcon>
-          </li>
-        ))}
-        {/* {incidents && incidents.items.length > SHOW_N_INCIDENTS && (
-          <li className="relative pl-8">
-            <div className="block p-2 text-gray-500">...</div>
-          </li>
-        )} */}
       </Disclosure.Panel>
     </Disclosure>
   );

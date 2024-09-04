@@ -2,6 +2,7 @@ import copy
 import logging
 
 from keep.api.core.db import get_session_sync
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.db.topology import (
     TopologyService,
     TopologyServiceDependency,
@@ -14,7 +15,10 @@ TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failur
 
 
 def process_topology(
-    tenant_id: str, topology_data: list[TopologyServiceInDto], provider_id: str
+    tenant_id: str,
+    topology_data: list[TopologyServiceInDto],
+    provider_id: str,
+    provider_type: str,
 ):
     extra = {"provider_id": provider_id, "tenant_id": tenant_id}
     if not topology_data:
@@ -90,6 +94,17 @@ def process_topology(
             "Failed to close session",
             extra={**extra, "error": str(e)},
         )
+
+    try:
+        pusher_client = get_pusher_client()
+        if pusher_client:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "topology-update",
+                {"providerId": provider_id, "providerType": provider_type},
+            )
+    except Exception:
+        logger.exception("Failed to push topology update to the client")
 
     logger.info(
         "Created new topology data",
