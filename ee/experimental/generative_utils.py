@@ -44,10 +44,6 @@ def generate_incident_summary(
         max_summary_length = os.environ.get(
             "MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
 
-    if not max_summary_length:
-        max_summary_length = os.environ.get(
-            "MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
-
     try:
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
@@ -162,10 +158,6 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
     if incident.user_generated_name:
         return ""
-
-    if not max_name_length:
-        max_name_length = os.environ.get(
-            "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
 
     if not max_name_length:
         max_name_length = os.environ.get(
