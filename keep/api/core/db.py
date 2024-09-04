@@ -2038,7 +2038,7 @@ def get_last_incidents(
             session.query(
                 Incident,
             )
-            .options(joinedload(Incident.alerts))
+            # .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
             )
