@@ -16,6 +16,7 @@ class DbAuthVerifier(AuthVerifierBase):
         # validate the token
         jwt_secret = os.environ.get("KEEP_JWT_SECRET")
         if not jwt_secret:
+            self.logger.warning("missing KEEP_JWT_SECRET environment variable")
             raise HTTPException(status_code=401, detail="Missing JWT secret")
 
         try:

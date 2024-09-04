@@ -25,6 +25,7 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         self.auto_create_user = config(
             "KEEP_OAUTH2_PROXY_AUTO_CREATE_USER", default=True
         )
+        self.logger.info("Oauth2proxy Auth Verifier initialized")
 
     def authenticate(
         self,
@@ -36,6 +37,9 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
 
         # https://github.com/keephq/keep/issues/1203
         # get user name
+        self.logger.info(
+            f"Authenticating user with {self.oauth2_proxy_user_header} header"
+        )
         user_name = request.headers.get(self.oauth2_proxy_user_header)
 
         if not user_name:
@@ -62,6 +66,7 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
             )
             self.logger.info(f"User {user_name} created")
 
+        self.logger.info(f"User {user_name} authenticated with role {role}")
         return AuthenticatedEntity(
             tenant_id=SINGLE_TENANT_UUID,
             email=user_name,
