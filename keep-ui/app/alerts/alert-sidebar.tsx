@@ -112,7 +112,6 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                   providerId={alert.providerId || ""}
                   service={alert.service || ""}
                   environment={"unknown"}
-                  showSearch={false}
                 />
               </div>
             )}

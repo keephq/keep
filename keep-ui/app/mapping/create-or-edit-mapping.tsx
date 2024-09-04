@@ -165,7 +165,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    const response = await fetch(`${apiUrl}/mapping`, {
+    const response = await fetch(`${apiUrl}/mapping/${editRule?.id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,

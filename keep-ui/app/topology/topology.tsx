@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -33,12 +33,12 @@ import { useTopology } from "utils/hooks/useTopology";
 import Loading from "app/loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
+import { ServiceSearchContext } from "./layout";
 
 interface Props {
   providerId?: string;
   service?: string;
   environment?: string;
-  showSearch?: boolean;
 }
 
 // Function to create a Dagre layout
@@ -74,17 +74,12 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
   return { nodes, edges };
 };
 
-const TopologyPage = ({
-  providerId,
-  service,
-  environment,
-  showSearch = true,
-}: Props) => {
+const TopologyPage = ({ providerId, service, environment }: Props) => {
   const router = useRouter();
   // State for nodes and edges
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [serviceInput, setServiceInput] = useState<string>("");
+  const serviceInput = useContext(ServiceSearchContext);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<Node, Edge>>();
 
@@ -192,7 +187,7 @@ const TopologyPage = ({
     return (
       <div className="flex flex-col justify-center">
         <EmptyStateCard
-          className="mb-20"
+          className="mt-20"
           title="Error Loading Topology Data"
           description="Seems like we encountred some problem while trying to load your topology data, please contact us if this issue continues"
           buttonText="Slack Us"
@@ -204,17 +199,7 @@ const TopologyPage = ({
     );
 
   return (
-    <Card className="p-4 md:p-10 mx-auto h-full relative mb-10 mt-2.5">
-      {showSearch && (
-        <div className="flex justify-end items-center w-full absolute top-0 left-0">
-          <TextInput
-            placeholder="Search for a service"
-            value={serviceInput}
-            onValueChange={setServiceInput}
-            className="w-96 mr-9 mt-2"
-          />
-        </div>
-      )}
+    <Card className="p-4 md:p-10 mx-auto h-full mb-10 mt-2.5">
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
