@@ -49,7 +49,6 @@ if ee_enabled:
     sys.path.insert(0, path_with_ee)
     from ee.experimental.incident_utils import (  # noqa
         ALGORITHM_VERBOSE_NAME,
-        mine_incidents,
     )
 
 
@@ -389,29 +388,29 @@ def mine(
     ),
     alert_lower_timestamp: datetime = None,
     alert_upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = 10e10,
+    use_n_historical_alerts: int = None,
     incident_lower_timestamp: datetime = None,
     incident_upper_timestamp: datetime = None,
-    use_n_hist_incidents: int = 10e10,
-    pmi_threshold: float = 0.0,
-    knee_threshold: float = 0.8,
-    min_incident_size: int = 5,
-    incident_similarity_threshold: float = 0.8,
+    use_n_hist_incidents: int = None,
+    pmi_threshold: float = None,
+    knee_threshold: float = None,
+    min_incident_size: int = None,
+    incident_similarity_threshold: float = None,
 ) -> dict:
     result = asyncio.run(
         mine_incidents_and_create_objects(
-            None,
-            authenticated_entity.tenant_id,
-            alert_lower_timestamp,
-            alert_upper_timestamp,
-            use_n_historical_alerts,
-            incident_lower_timestamp,
-            incident_upper_timestamp,
-            use_n_hist_incidents,
-            pmi_threshold,
-            knee_threshold,
-            min_incident_size,
-            incident_similarity_threshold,
+            ctx=None,
+            tenant_id=authenticated_entity.tenant_id,
+            alert_lower_timestamp=alert_lower_timestamp,
+            alert_upper_timestamp=alert_upper_timestamp,
+            use_n_historical_alerts=use_n_historical_alerts,
+            incident_lower_timestamp=incident_lower_timestamp,
+            incident_upper_timestamp=incident_upper_timestamp,
+            use_n_hist_incidents=use_n_hist_incidents,
+            pmi_threshold=pmi_threshold,
+            knee_threshold=knee_threshold,
+            min_incident_size=min_incident_size,
+            incident_similarity_threshold=incident_similarity_threshold,
         )
     )
     return result
