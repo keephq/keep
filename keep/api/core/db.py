@@ -2039,7 +2039,7 @@ def get_last_incidents(
             session.query(
                 Incident,
             )
-            .options(joinedload(Incident.alerts))
+            # .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
             )
@@ -2127,7 +2127,7 @@ def update_incident_from_dto_by_id(
             Incident.id == incident_id,
         ).update(
             {
-                "name": updated_incident_dto.name,
+                "user_generated_name": updated_incident_dto.user_generated_name,
                 "user_summary": updated_incident_dto.user_summary,
                 "assignee": updated_incident_dto.assignee,
             }

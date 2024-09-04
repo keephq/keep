@@ -16,7 +16,7 @@ export interface IncidentDto {
   end_time?: Date;
   creation_time: Date;
   is_confirmed: boolean;
-  is_predicted: boolean;
+  rule_fingerprint: string;
 }
 
 export interface PaginatedIncidentsDto {

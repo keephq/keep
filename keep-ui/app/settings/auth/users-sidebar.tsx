@@ -194,6 +194,10 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                             {...field}
                             error={!!errors.name}
                             errorMessage={errors.name?.message}
+                            disabled={!isNewUser}
+                            className={`${
+                              isNewUser ? "" : "bg-gray-200"
+                            }`}
                           />
                         )}
                       />
