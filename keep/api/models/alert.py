@@ -389,14 +389,16 @@ class IncidentDto(IncidentDtoIn):
     @classmethod
     def from_db_incident(cls, db_incident):
 
-        severity = IncidentSeverity.from_number(db_incident.severity) \
-            if isinstance(db_incident.severity, int) \
+        severity = (
+            IncidentSeverity.from_number(db_incident.severity)
+            if isinstance(db_incident.severity, int)
             else db_incident.severity
+        )
 
         return cls(
             id=db_incident.id,
             user_generated_name=db_incident.user_generated_name,
-            ai_generated_name = db_incident.ai_generated_name,
+            ai_generated_name=db_incident.ai_generated_name,
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
@@ -411,3 +413,20 @@ class IncidentDto(IncidentDtoIn):
             assignee=db_incident.assignee,
             services=db_incident.affected_services,
         )
+
+
+class DeduplicationRuleDto(BaseModel):
+    name: str
+    description: str
+    default: bool
+    distribution: list[dict]  # list of {hour: int, count: int}
+    provider_id: str | None  # None for default rules
+    provider_type: str
+    last_updated: str
+    last_updated_by: str
+    created_at: str
+    created_by: str
+    ingested: int
+    dedup_ratio: float
+    enabled: bool
+    fingerprint_fields: list[str]

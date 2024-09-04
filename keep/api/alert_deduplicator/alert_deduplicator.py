@@ -5,11 +5,14 @@ import logging
 
 import celpy
 
+from keep.api.core.config import config
 from keep.api.core.db import (
+    get_all_dedup_ratio,
     get_all_deduplication_rules,
     get_last_alert_hash_by_fingerprint,
+    get_provider_distribution,
 )
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, DeduplicationRuleDto
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -23,6 +26,9 @@ class AlertDeduplicator:
         self.filters = get_all_deduplication_rules(tenant_id)
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
+        self.provider_distribution_enabled = config(
+            "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
+        )
 
     def is_deduplicated(self, alert: AlertDto) -> bool:
         # Apply all deduplication filters
@@ -106,7 +112,7 @@ class AlertDeduplicator:
             setattr(alert, field_parts[0], d)
         return alert
 
-    def get_deduplications(self):
+    def get_deduplications(self) -> list[DeduplicationRuleDto]:
         installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
         # filter out the providers that are not "alert" in tags
         installed_providers = [
@@ -117,7 +123,7 @@ class AlertDeduplicator:
 
         default_deduplications = ProvidersFactory.get_default_deduplications()
         default_deduplications_dict = {
-            dd["provider_type"]: dd for dd in default_deduplications
+            dd.provider_type: dd for dd in default_deduplications
         }
 
         custom_deduplications = get_all_deduplication_rules(self.tenant_id)
@@ -136,18 +142,41 @@ class AlertDeduplicator:
                     continue
 
                 # copy the default deduplication and set the provider id
-                default_deduplication = copy.copy(
+                default_deduplication = copy.deepcopy(
                     default_deduplications_dict[provider.type]
                 )
                 if provider.id:
-                    default_deduplication["description"] = (
-                        f"{default_deduplication['description']} - {provider.id}"
+                    default_deduplication.description = (
+                        f"{default_deduplication.description} - {provider.id}"
                     )
+                    default_deduplication.provider_id = provider.id
 
                 final_deduplications.append(default_deduplication)
             else:
                 final_deduplications.append(custom_deduplications_dict[provider.id])
 
-        # compression = get_deduplication_ratio(self.tenant_id)
-        # combine lists
-        return final_deduplications
+        dedup_ratio = get_all_dedup_ratio(self.tenant_id)
+
+        result = []
+        for dedup in final_deduplications:
+            dedup.ingested = dedup_ratio.get(
+                (dedup.provider_id, dedup.provider_type), {}
+            ).get("num_alerts", 0.0)
+            dedup.dedup_ratio = dedup_ratio.get(
+                (dedup.provider_id, dedup.provider_type), {}
+            ).get("ratio", 0.0)
+            result.append(dedup)
+
+        # todo: add dedicated table
+        if self.provider_distribution_enabled:
+            providers_distribution = get_provider_distribution(self.tenant_id)
+            for dedup in result:
+                for pd in providers_distribution:
+                    if pd == f"{dedup.provider_id}_{dedup.provider_type}":
+                        distribution = providers_distribution[pd].get(
+                            "alert_last_24_hours"
+                        )
+                        dedup.distribution = distribution
+                        break
+
+        return result

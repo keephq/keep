@@ -19,6 +19,7 @@ from keep.api.core.db import (
     get_installed_providers,
     get_linked_providers,
 )
+from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
@@ -533,19 +534,21 @@ class ProvidersFactory:
 
         for provider in all_providers:
             if provider.default_fingerprint_fields:
-                deduplication = {
-                    "name": f"{provider.type}_default",
-                    "description": f"Default deduplication for {provider.display_name}",
-                    "default": True,
-                    "distribution": {},
-                    "provider_type": provider.type,
-                    "last_updated": "",
-                    "last_updated_by": "",
-                    "created_at": "",
-                    "created_by": "",
-                    "enabled": True,
-                    "default_fingerprint_fields": provider.default_fingerprint_fields,
-                }
-                default_deduplications.append(deduplication)
+                deduplication_dto = DeduplicationRuleDto(
+                    name=f"{provider.type}_default",
+                    description=f"Default deduplication for {provider.display_name}",
+                    default=True,
+                    distribution=[{"hour": i, "number": 0} for i in range(24)],
+                    provider_type=provider.type,
+                    last_updated="",
+                    last_updated_by="",
+                    created_at="",
+                    created_by="",
+                    ingested=0,
+                    dedup_ratio=0.0,
+                    enabled=True,
+                    fingerprint_fields=provider.default_fingerprint_fields,
+                )
+                default_deduplications.append(deduplication_dto)
 
         return default_deduplications

@@ -1534,11 +1534,55 @@ def get_rule_distribution(tenant_id, minute=False):
 def get_all_deduplication_rules(tenant_id):
     with Session(engine) as session:
         filters = session.exec(
-            select(AlertDeduplicationFilter).where(
-                AlertDeduplicationFilter.tenant_id == tenant_id
+            select(AlertDeduplicationRule).where(
+                AlertDeduplicationRule.tenant_id == tenant_id
             )
         ).all()
     return filters
+
+
+def get_all_dedup_ratio(tenant_id):
+    with Session(engine) as session:
+        # Query to get the count of alerts and unique fingerprints per provider_id and provider_type
+        query = (
+            select(
+                Alert.provider_id,
+                Alert.provider_type,
+                func.count(Alert.id).label("num_alerts"),
+                func.count(func.distinct(Alert.fingerprint)).label("num_fingerprints"),
+            )
+            .where(Alert.tenant_id == tenant_id)
+            .group_by(Alert.provider_id, Alert.provider_type)
+        )
+
+        results = session.exec(query).all()
+
+        # Calculate the ratio for each provider
+        stats = {}
+        total_alerts = 0
+        for result in results:
+            provider_id = result.provider_id
+            provider_type = result.provider_type
+            num_alerts = result.num_alerts
+            num_fingerprints = result.num_fingerprints
+            ratio = (
+                (1 - (num_fingerprints / num_alerts)) * 100
+                if num_fingerprints > 0
+                else 0
+            )
+
+            key = (provider_id, provider_type)
+            stats[key] = {
+                "num_alerts": num_alerts,
+                "num_fingerprints": num_fingerprints,
+                "ratio": ratio,
+            }
+            total_alerts += num_alerts
+
+        # Add total number of alerts to the stats
+        stats["total_alerts"] = total_alerts
+
+    return stats
 
 
 def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):

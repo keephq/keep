@@ -73,7 +73,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
       columnHelper.accessor("provider_type", {
         header: "",
         cell: (info) => (
-          <div className="flex items-center">
+          <div className="flex items-center w-8">
             <Image
               className="inline-block"
               key={info.getValue()}
@@ -89,7 +89,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
       columnHelper.accessor("description", {
         header: "Name",
         cell: (info) => (
-          <div className="flex items-center justify-between max-w-[300px]">
+          <div className="flex items-center justify-between max-w-[200px]">
             <span className="truncate lg:whitespace-normal">{info.getValue()}</span>
             {info.row.original.default && (
               <Badge color="orange" size="xs" className="ml-2">Default</Badge>
@@ -97,29 +97,48 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
           </div>
         ),
       }),
-      columnHelper.accessor("alertsDigested", {
-        header: "Digested",
+      columnHelper.accessor("ingested", {
+        header: "Ingested",
         cell: (info) => <Badge color="orange" className="w-16">{info.getValue() || 0}</Badge>,
       }),
-      columnHelper.accessor("dedupRatio", {
+      columnHelper.accessor("dedup_ratio", {
         header: "Dedup Ratio",
-        cell: (info) => <Badge color="orange" className="w-16">{info.getValue() || "N/A"}</Badge>,
+        cell: (info) => {
+          const value = info.getValue() || 0;
+          const formattedValue = Number(value).toFixed(1);
+          return <Badge color="orange" className="w-16">{formattedValue}%</Badge>;
+        },
       }),
       columnHelper.accessor("distribution", {
         header: "Distribution",
-        cell: (info) => (
-          <SparkAreaChart
-            data={info.getValue()}
-            categories={["value"]}
-            index="date"
-            className="h-10 w-36"
-          />
-        ),
+        cell: (info) => {
+          const rawData = info.getValue();
+          const maxNumber = Math.max(...rawData.map(item => item.number));
+          const allZero = rawData.every(item => item.number === 0);
+          const data = rawData.map(item => ({
+            ...item,
+            number: maxNumber > 0 ? (item.number / maxNumber) + 1 : 0.5
+          }));
+          const colors = ["orange"];
+          const showGradient = true;
+          return (
+            <SparkAreaChart
+              data={data}
+              categories={["number"]}
+              index="hour"
+              className="h-10 w-36"
+              colors={colors}
+              showGradient={showGradient}
+              minValue={allZero ? 0 : undefined}
+              maxValue={allZero ? 1 : undefined}
+            />
+          );
+        },
       }),
-      columnHelper.accessor("default_fingerprint_fields", {
+      columnHelper.accessor("fingerprint_fields", {
         header: "Fields",
         cell: (info) => (
-          <div className="flex flex-wrap items-center gap-2 max-w-[350px]">
+          <div className="flex flex-wrap items-center gap-2 w-[200px]">
             {info.getValue().map((field: string, index: number) => (
               <React.Fragment key={field}>
                 {index > 0 && <PlusIcon className="w-4 h-4 text-gray-400" />}
@@ -132,7 +151,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
       columnHelper.display({
         id: "actions",
         cell: (info) => (
-          <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity w-full">
             <Button
               size="xs"
               variant="secondary"

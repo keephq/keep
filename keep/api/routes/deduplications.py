@@ -1,7 +1,6 @@
 import logging
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -10,19 +9,6 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 router = APIRouter()
 
 logger = logging.getLogger(__name__)
-
-
-class DeduplicationDto(BaseModel):
-    name: str
-    description: str
-    default: bool
-    distribution: dict
-    sources: list[str]
-    last_updated: str
-    last_updated_by: str
-    created_at: str
-    created_by: str
-    enabled: bool
 
 
 @router.get(

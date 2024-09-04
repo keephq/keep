@@ -169,7 +169,7 @@ class AlertEnrichment(SQLModel, table=True):
         arbitrary_types_allowed = True
 
 
-class AlertDeduplicationFilter(SQLModel, table=True):
+class AlertDeduplicationRule(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     # the list of fields to pop from the alert before hashing
@@ -178,6 +178,39 @@ class AlertDeduplicationFilter(SQLModel, table=True):
     matcher_cel: str
     # the provider id to use for this deduplication - None for linked providers
     provider_id: str | None
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class AlertDeduplicationEvent(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
+    timestamp: datetime = Field(
+        sa_column=Column(datetime_column_type, index=True, nullable=False),
+        default_factory=datetime.utcnow,
+    )
+    deduplication_rule_id: UUID = Field(
+        foreign_key="alertdeduplicationrule.id", index=True
+    )
+    deduplication_type: str = Field(index=True)  # 'full' or 'partial'
+    date_hour: datetime = Field(
+        sa_column=Column(datetime_column_type, index=True),
+        default_factory=lambda: datetime.utcnow().replace(
+            minute=0, second=0, microsecond=0
+        ),
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_alert_deduplication_event_tenant_date_hour", "tenant_id", "date_hour"
+        ),
+        Index(
+            "ix_alert_deduplication_event_rule_date_hour",
+            "deduplication_rule_id",
+            "date_hour",
+        ),
+    )
 
     class Config:
         arbitrary_types_allowed = True
