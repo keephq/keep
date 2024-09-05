@@ -197,7 +197,7 @@ export function ExecutionTable({
 
                 return (
                     <div>
-                        {customFormatter(row.original.execution_time || null)}
+                        {customFormatter(row.original.execution_time ?? null)}
                     </div>
                 );
             },
