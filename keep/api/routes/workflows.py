@@ -43,6 +43,7 @@ from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
+from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -535,13 +536,21 @@ def get_workflow_executions_by_alert_fingerprint(
 @router.get("/{workflow_id}", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
+    tab: int = 1,
+    limit: int = 25,
+    offset: int = 0,
+    status: Optional[List[str]] = Query(None),
+    trigger: Optional[List[str]] = Query(None),
+    execution_id: Optional[str] = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
-) -> List[WorkflowExecutionDTO]:
+) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+
     with tracer.start_as_current_span("get_workflow_executions"):
-        workflow_executions = get_workflow_executions_db(tenant_id, workflow_id)
+        total_count, workflow_executions, passFail, avgDuration = get_workflow_executions_db(tenant_id, workflow_id, limit, offset, tab, status, trigger, execution_id)
     workflow_executions_dtos = []
     with tracer.start_as_current_span("create_workflow_dtos"):
         for workflow_execution in workflow_executions:
@@ -556,8 +565,15 @@ def get_workflow_by_id(
             }
             workflow_executions_dtos.append(workflow_execution_dto)
 
-    return JSONResponse(content=workflow_executions_dtos)
-
+    return WorkflowExecutionsPaginatedResultsDto(
+        limit=limit, 
+        offset=offset,
+        count=total_count,
+        items=workflow_executions_dtos,
+        passFail=passFail,
+        avgDuration=avgDuration,
+        workflow=workflow
+    )
 
 @router.delete("/{workflow_id}", description="Delete workflow")
 def delete_workflow_by_id(
