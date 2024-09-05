@@ -60,7 +60,7 @@ class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-    
+
     user_generated_name: str | None
     ai_generated_name: str | None
 
@@ -217,9 +217,11 @@ class AlertActionType(enum.Enum):
     ACKNOWLEDGE = "alert acknowledged"
     # the alert was resolved
     AUTOMATIC_RESOLVE = "alert automatically resolved"
+    API_AUTOMATIC_RESOLVE = "alert automatically resolved by API"
     # the alert was resolved manually
     MANUAL_RESOLVE = "alert manually resolved"
     MANUAL_STATUS_CHANGE = "alert status manually changed"
+    API_STATUS_CHANGE = "alert status changed by API"
     STATUS_UNENRICH = "alert status undone"
     # the alert was escalated
     WORKFLOW_ENRICH = "alert enriched by workflow"
