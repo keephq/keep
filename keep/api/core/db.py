@@ -577,7 +577,6 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
                 WorkflowExecution.tenant_id == tenant_id,
                 WorkflowExecution.workflow_id == workflow_id
             )
-            .order_by(desc(WorkflowExecution.started))
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -619,10 +618,11 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
     
 
         total_count = query.count()
-        status_counts = query.with_entities(
+        status_count_query = query.with_entities(
             WorkflowExecution.status,
             func.count().label('count')
-        ).group_by(WorkflowExecution.status).all()
+        ).group_by(WorkflowExecution.status)
+        status_counts = status_count_query.all()
 
         statusGroupbyMap = {status: count for status, count in status_counts}
         passCount = statusGroupbyMap.get('success', 0)
