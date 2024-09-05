@@ -137,9 +137,9 @@ export default function WorkflowDetailPage({
     const workflow = { last_executions: data.items } as Partial<Workflow>
     return (
         <>
-            <Card className="relative flex p-4 px-8 w-full justify-between gap-8">
+            <Card className="relative flex p-4 w-full gap-3">
                 <SideNavBar workflow={data.workflow} />
-                <div className="flex-1 relative overflow-auto p-0.5">
+                <div className="relative overflow-auto p-0.5 flex-1 flex-shrink-1">
                     <div className="sticky top-0 flex justify-between items-end">
                         <div className="flex-1">
                             {/*TO DO update searchParams for these filters*/}

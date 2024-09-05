@@ -192,7 +192,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
                     onApply={() => setApply(true)}
                 />
             </div>
-            <Button className="shadow-lg py-2" onClick={() => { filterRef.current = { trigger: [], status: [], execution_id: '' }; setApply(true) }}>Clear Filters</Button>
+            <Button className="shadow-lg p-2" onClick={() => { filterRef.current = { trigger: [], status: [], execution_id: '' }; setApply(true) }}>Clear Filters</Button>
         </div>
     );
 };

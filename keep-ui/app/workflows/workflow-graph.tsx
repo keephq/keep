@@ -155,11 +155,6 @@ export default function WorkflowGraph({
       {showLastExecutionStatus &&<div>{getIcon()}</div>}
       <div
         className={`overflow-hidden ${height} w-full`}
-        onClick={() => {
-          if (workflow.id) {
-            router.push(`/workflows/${workflow.id}`);
-          }
-        }}
       >
         <Bar data={chartData} options={chartOptions} />
       </div>

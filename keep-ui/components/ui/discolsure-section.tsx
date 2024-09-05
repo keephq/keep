@@ -36,14 +36,15 @@ export function DisclosureSection({ title, links }: DisclosureSectionProps) {
           </Disclosure.Button>
           <Disclosure.Panel
             as="ul"
-            className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
+            className="space-y-2 overflow-auto min-w-[max-content] py-2 pr-4"
           >
             {links.map((link, index) => (
-              <li key={index}>
+              <li key={index} className="w-full">
                 <LinkWithIcon 
                 href={link.isLink ? link.href : "#"}
                  icon={link.icon as IconType}
                  target= {link.newTab ? "_blank": ""}
+                 className="min-w-[max-content] px-4"
                  >
                   <Subtitle onClick={link.handleClick? link.handleClick: ()=>{}}>{link.label}</Subtitle>
                 </LinkWithIcon>

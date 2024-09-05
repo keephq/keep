@@ -29,16 +29,16 @@ export default function SideNavBar({ workflow }: { workflow: Workflow }) {
     ];
 
     return (
-        <div className="flex flex-col gap-10 pt-6 flex-shrink-0 w-64 md:w-1/4 lg:w-1/6 top-20 p-1">
-            <div className="flex-2 h-36">
+        <div className="flex flex-col gap-10 pt-6 top-20 p-1 max-w-[270px]">
+            <div className="h-36">
                 <h1 className="text-2xl line-clamp-2 font-extrabold">{workflow.name}</h1>
                 {workflow.description && (
-                    <Text clamp-lines={3}>
+                    <Text className="line-clamp-5">
                         <span>{workflow.description}</span>
                     </Text>
                 )}
             </div>
-            <div className="flex-1 space-y-8">
+            <div className="space-y-8">
                 <DisclosureSection title="Analyse" links={analyseLinks} />
                 <DisclosureSection title="Manage" links={manageLinks} />
                 <DisclosureSection title="Learn" links={learnLinks} />
