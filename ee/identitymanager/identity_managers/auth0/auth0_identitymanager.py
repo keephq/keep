@@ -88,3 +88,44 @@ class Auth0IdentityManager(BaseIdentityManager):
             picture=user["picture"],
         )
         return user_dto
+
+    def update_user(self, user_email: str, update_data: dict) -> User:
+        auth0 = getAuth0Client()
+        users = auth0.users.list(
+            q=f'email:"{user_email}" AND app_metadata.keep_tenant_id:"{self.tenant_id}"'
+        )
+        if not users.get("users", []):
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user = users["users"][0]
+        user_id = user["user_id"]
+
+        update_body = {}
+        if "email" in update_data and update_data["email"]:
+            update_body["email"] = update_data["email"]
+        if "password" in update_data and update_data["password"]:
+            update_body["password"] = update_data["password"]
+        if "role" in update_data and update_data["role"]:
+            update_body["app_metadata"] = user.get("app_metadata", {})
+            update_body["app_metadata"]["keep_role"] = update_data["role"]
+        if "groups" in update_data and update_data["groups"]:
+            # Assuming groups are stored in app_metadata
+            if "app_metadata" not in update_body:
+                update_body["app_metadata"] = user.get("app_metadata", {})
+            update_body["app_metadata"]["groups"] = update_data["groups"]
+
+        try:
+            updated_user = auth0.users.update(user_id, update_body)
+            return User(
+                email=updated_user["email"],
+                name=updated_user["name"],
+                role=updated_user.get("app_metadata", {}).get(
+                    "keep_role", AdminRole.get_name()
+                ),
+                last_login=updated_user.get("last_login", None),
+                created_at=updated_user["created_at"],
+                picture=updated_user["picture"],
+            )
+        except Exception as e:
+            self.logger.error(f"Error updating user: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to update user")
