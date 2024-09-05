@@ -23,7 +23,9 @@ class Auth0IdentityManager(BaseIdentityManager):
         self.client_secret = os.environ.get("AUTH0_CLIENT_SECRET")
         self.audience = f"https://{self.domain}/api/v2/"
         self.jwks_client = jwt.PyJWKClient(
-            f"https://{self.domain}/.well-known/jwks.json", cache_keys=True
+            f"https://{self.domain}/.well-known/jwks.json",
+            cache_keys=True,
+            headers={"User-Agent": "keep-api"},
         )
 
     def get_users(self) -> list[User]:
