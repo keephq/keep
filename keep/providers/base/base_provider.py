@@ -314,7 +314,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event)
         logger.debug("Alert formatted")
-        # check if there is a custom deduplication rule and apply
+        # after the provider calculated the default fingerprint
+        #   check if there is a custom deduplication rule and apply
         custom_deduplication_rule = get_custom_deduplication_rule(
             tenant_id=tenant_id,
             provider_id=provider_id,
@@ -326,6 +327,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # if there is a custom deduplication rule, apply it
         if not isinstance(formatted_alert, list):
             formatted_alert = [formatted_alert]
+        # apply the custom deduplication rule to calculate the fingerprint
         for alert in formatted_alert:
             logger.info(
                 "Applying custom deduplication rule",

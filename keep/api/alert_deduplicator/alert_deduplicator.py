@@ -91,10 +91,10 @@ class AlertDeduplicator:
         alert = self._apply_deduplication_rule(rule, alert)
         self.logger.debug(f"Alert after deduplication rule {rule.id}: {alert}")
         if alert.isFullDuplicate or alert.isPartialDuplicate:
+            # create deduplication event
             create_deduplication_event(
                 tenant_id=self.tenant_id,
-                rule_id=rule.id,
-                alert_fingerprint=alert.fingerprint,
+                deduplication_rule_id=rule.id,
                 deduplication_type="full" if alert.isFullDuplicate else "partial",
             )
         return alert

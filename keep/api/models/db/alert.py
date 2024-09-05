@@ -191,26 +191,38 @@ class AlertDeduplicationEvent(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     timestamp: datetime = Field(
-        sa_column=Column(datetime_column_type, index=True, nullable=False),
+        sa_column=Column(datetime_column_type, nullable=False),
         default_factory=datetime.utcnow,
     )
-    # TODO: currently rules can also be implicit (like default) so they won't exists on db Field(foreign_key="alertdeduplicationrule.id", index=True)
-    deduplication_rule_id: UUID
-    deduplication_type: str = Field(index=True)  # 'full' or 'partial'
+    deduplication_rule_id: UUID  # TODO: currently rules can also be implicit (like default) so they won't exists on db Field(foreign_key="alertdeduplicationrule.id", index=True)
+    deduplication_type: str = Field()  # 'full' or 'partial'
     date_hour: datetime = Field(
-        sa_column=Column(datetime_column_type, index=True),
+        sa_column=Column(datetime_column_type),
         default_factory=lambda: datetime.utcnow().replace(
             minute=0, second=0, microsecond=0
         ),
     )
+    # these are only soft reference since it could be linked provider
+    provider_id: str | None = Field()
+    provider_type: str | None = Field()
 
     __table_args__ = (
         Index(
-            "ix_alert_deduplication_event_tenant_date_hour", "tenant_id", "date_hour"
+            "ix_alert_deduplication_event_provider_id",
+            "provider_id",
         ),
         Index(
-            "ix_alert_deduplication_event_rule_date_hour",
-            "deduplication_rule_id",
+            "ix_alert_deduplication_event_provider_type",
+            "provider_type",
+        ),
+        Index(
+            "ix_alert_deduplication_event_provider_id_date_hour",
+            "provider_id",
+            "date_hour",
+        ),
+        Index(
+            "ix_alert_deduplication_event_provider_type_date_hour",
+            "provider_type",
             "date_hour",
         ),
     )
