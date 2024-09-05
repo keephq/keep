@@ -2519,17 +2519,25 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
     return pmi_matrix, fingerint2idx
 
 
-def write_tenant_ai_metadata_to_temp_file(metadata: dict, temp_dir: str) -> bool:
-    with open(f"{temp_dir}/tenant_ai_metadata.json", "w") as f:
-        json.dump(metadata, f)
-    return True
+def get_tenant_ai_config(tenant_id: str) -> dict:    
+    with Session(engine) as session:
+        tenant_ai_config = session.exec(
+            select(TenantAIConfig)
+            .where(TenantAIConfig.tenant_id == tenant_id)
+        ).first()
+        return tenant_ai_config.config if tenant_ai_config else {}
+    
 
-
-def get_tenant_ai_metadata_from_temp_file(temp_dir: str) -> dict:
-    if not os.path.exists(f"{temp_dir}/tenant_ai_metadata.json"):
-        return {'last_correlated_batch_start': None}
-    with open(f"{temp_dir}/tenant_ai_metadata.json", "r") as f:
-        return json.load(f)
+def write_tenant_ai_config(tenant_id: str, config: dict) -> TenantAIConfig:
+    with Session(engine) as session:
+        tenant_ai_config = session.exec(
+            select(TenantAIConfig)
+            .where(TenantAIConfig.tenant_id == tenant_id)
+        ).first()
+        tenant_ai_config.config = config
+        session.commit()
+        session.refresh(tenant_ai_config)
+        return tenant_ai_config
 
 
 def update_incident_summary(
