@@ -2019,6 +2019,7 @@ def get_last_incidents(
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
     is_confirmed: bool = False,
+    is_predicted: bool = None,
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -2044,6 +2045,9 @@ def get_last_incidents(
             )
             .order_by(desc(Incident.creation_time))
         )
+
+        if is_predicted is not None:
+            query = query.filter(Incident.is_predicted == is_predicted)
 
         if timeframe:
             query = query.filter(
@@ -2515,7 +2519,7 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
     return pmi_matrix, fingerint2idx
 
 
-def write_tenant_ai_metadata_to_temp_file(tenant_id: str, metadata: dict, temp_dir: str) -> bool:
+def write_tenant_ai_metadata_to_temp_file(metadata: dict, temp_dir: str) -> bool:
     with open(f"{temp_dir}/tenant_ai_metadata.json", "w") as f:
         json.dump(metadata, f)
     return True

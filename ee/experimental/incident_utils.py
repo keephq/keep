@@ -131,20 +131,12 @@ def is_similar_incident(incident: Incident, component: Set[str], similarity_thre
     return component_similarity >= similarity_threshold or incident_similarity >= similarity_threshold
 
 
-def update_existing_incident(incident: Incident, component: Set[str], alerts: List[Alert], tenant_id: str) -> Tuple[str, bool]:
-    logger.info(f'Incident {incident.id} is similar to the alert graph component. Merging...', extra={
-                'tenant_id': tenant_id})
-    add_alerts_to_incident_by_incident_id(
-        tenant_id,
-        incident.id,
-        [alert.id for alert in alerts if alert.fingerprint in component],
-    )
+def update_existing_incident(incident: Incident, alerts: List[Alert]) -> Tuple[str, bool]:
+    add_alerts_to_incident_by_incident_id(incident.tenant_id, incident.id, alerts)
     return incident.id, True
 
 
 def create_new_incident(component: Set[str], alerts: List[Alert], tenant_id: str) -> Tuple[str, bool]:
-    logger.info(f'No incident is similar to the alert graph component. Creating new incident...', extra={
-                'tenant_id': tenant_id})
     incident_start_time = min(
         alert.timestamp for alert in alerts if alert.fingerprint in component)
     incident_start_time = incident_start_time.replace(microsecond=0)
@@ -189,8 +181,16 @@ async def schedule_incident_processing(pool: ArqRedis, tenant_id: str, incident_
     )
 
 
+def is_incident_accepting_updates(incident: Incident, current_time: datetime, incident_validity_threshold: timedelta) -> bool:
+    return current_time - incident.last_seen_time > incident_validity_threshold
+
+
+def get_component_first_seen_time(component: Set[str], alerts: List[Alert]) -> datetime:
+    return min(alert.timestamp for alert in alerts if alert.fingerprint in component)
+
+
 def process_component(component: Set[str], incidents: List[Incident], alerts: List[Alert], tenant_id: str, 
-                      incident_similarity_threshold: float, min_incident_size: int) -> Tuple[str, bool]:
+                      incident_similarity_threshold: float, min_incident_size: int, incident_validity_threshold: timedelta) -> Tuple[str, bool]:
     logger.info(f'Processing alert graph component with {len(component)} nodes. Min incident size: {min_incident_size}', extra={
                 'tenant_id': tenant_id})
 
@@ -199,28 +199,34 @@ def process_component(component: Set[str], incidents: List[Incident], alerts: Li
 
     for incident in incidents:
         if is_similar_incident(incident, component, incident_similarity_threshold):
-            return update_existing_incident(incident, component, alerts, tenant_id)
+            current_time = get_component_first_seen_time(component, alerts)
+            if is_incident_accepting_updates(incident, current_time, incident_validity_threshold):
+                logger.info(f'Incident {incident.id} is similar to the alert graph component. Merging...', extra={
+                'tenant_id': tenant_id})
+                return update_existing_incident(incident, [alert.id for alert in alerts if alert.fingerprint in component])
 
+    logger.info(f'No incident is similar to the alert graph component. Creating new incident...', extra={
+                'tenant_id': tenant_id})
     return create_new_incident(component, alerts, tenant_id)
 
 
 def process_graph_components(graph: nx.Graph, incidents: List[Incident], alerts: List[Alert], tenant_id: str,
-                             incident_similarity_threshold: float, min_incident_size: int) -> Tuple[List[str], int, int]:
+                             incident_similarity_threshold: float, min_incident_size: int, incident_validity_threshold: timedelta) -> Tuple[List[str], List[str], List[str]]:
     incident_ids_for_processing = []
-    new_incident_count = 0
-    updated_incident_count = 0
+    new_incident_ids = []
+    updated_incident_ids = []
 
     for component in nx.connected_components(graph):
         incident_id, is_updated = process_component(
-            component, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size)
+            component, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size, incident_validity_threshold)
         if incident_id:
             incident_ids_for_processing.append(incident_id)
             if is_updated:
-                updated_incident_count += 1
+                updated_incident_ids.append(incident_id)
             else:
-                new_incident_count += 1
+                new_incident_ids.append(incident_id)
 
-    return incident_ids_for_processing, new_incident_count, updated_incident_count
+    return incident_ids_for_processing, new_incident_ids, updated_incident_ids
 
 
 async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str):
@@ -295,7 +301,7 @@ async def mine_incidents_and_create_objects(
 
     if not incident_lower_timestamp:
         incident_validity = timedelta(
-            days=int(os.environ.get("MINE_INCIDENT_VALIDITY", "1"))
+            seconds=int(os.environ.get("MINE_INCIDENT_VALIDITY", "1800"))
         )
         incident_lower_timestamp = incident_upper_timestamp - incident_validity
 
@@ -306,7 +312,7 @@ async def mine_incidents_and_create_objects(
 
     if not alert_lower_timestamp:
         alert_window = timedelta(
-            hours=int(os.environ.get("MINE_ALERT_WINDOW", "12")))
+            seconds=int(os.environ.get("MINE_ALERT_WINDOW", "1800")))
         alert_lower_timestamp = alert_upper_timestamp - alert_window
 
     if not use_n_historical_alerts:
@@ -336,8 +342,7 @@ async def mine_incidents_and_create_objects(
             "INCIDENT_SIMILARITY_THRESHOLD", 0.8
         )
         
-    if not alert_batch_size:
-        alert_batch_size = os.environ.get("ALERT_BATCH_SIZE", 60*30)
+    alert_batch_size = int(os.environ.get("MINE_ALERT_WINDOW", 1800)) // 2
 
     status = calculate_pmi_matrix(
         ctx, tenant_id, min_alert_number=min_alert_number)
@@ -345,7 +350,7 @@ async def mine_incidents_and_create_objects(
         return {"incidents": []}
 
     logger.info(
-        "Getting new alerts and past incients",
+        "Getting new alerts",
         extra={
             "tenant_id": tenant_id,
         },
@@ -354,7 +359,10 @@ async def mine_incidents_and_create_objects(
     if metadata.get('last_correlated_batch_start', None):
         alert_lower_timestamp = datetime.fromisoformat(metadata.get('last_correlated_batch_start', None))
         alert_lower_timestamp += timedelta(seconds=alert_batch_size)
-
+        
+    else: 
+        alert_lower_timestamp = None
+        
     alerts = query_alerts(
         tenant_id,
         limit=use_n_historical_alerts,
@@ -362,52 +370,120 @@ async def mine_incidents_and_create_objects(
         lower_timestamp=alert_lower_timestamp,
     )
     
-    # n_batches = int((alert_upper_timestamp - alert_lower_timestamp).total_seconds() // alert_batch_size)
-    # logging.info(f'Starting alert correlatiion. Current batch size: {alert_batch_size} seconds. Number of batches to process: {n_batches}')
+    if not alert_lower_timestamp:
+        alert_lower_timestamp = min(alert.timestamp for alert in alerts)
     
-    # for batch_idx in tqdm(range(0, n_batches)):
-    #     batch_start_timestamp = alert_lower_timestamp + timedelta(seconds=batch_idx*alert_batch_size)
-    #     batch_end_timestamp = batch_start_timestamp + timedelta(seconds=alert_batch_size)
-        
-    #     batch_incident_lower_timestamp = batch_start_timestamp - timedelta(seconds=incident_validity_threshold)
-        
-    #     incidents, _ = get
+    n_batches = int((alert_upper_timestamp - alert_lower_timestamp).total_seconds() // alert_batch_size)
+    logging.info(f'Starting alert correlatiion. Current batch size: {alert_batch_size} seconds. Number of batches to process: {n_batches}')
+    ##### WARNING: This is a temporary solution to the problem of incident validity threshold. It is not a good solution.
+    incident_validity_threshold = timedelta(seconds=4*60*60)
+    pool = await get_pool() if not ctx else ctx["redis"]
     
-    incidents, _ = get_last_incidents(
-        tenant_id,
-        limit=use_n_hist_incidents,
-        upper_timestamp=incident_upper_timestamp,
-        lower_timestamp=incident_lower_timestamp,
-    )
-    fingerprints = list(set([alert.fingerprint for alert in alerts]))
-
-    logger.info(
+    new_incident_ids = []
+    updated_incident_ids = []
+    
+    for batch_idx in tqdm(range(0, n_batches), desc='Processing batches of alerts...'):
+        batch_start_timestamp = alert_lower_timestamp + timedelta(seconds=batch_idx*alert_batch_size)
+        batch_end_timestamp = batch_start_timestamp + timedelta(seconds=alert_batch_size)
+        
+        logger.info(f'Processing batch {batch_idx} with start timestamp {batch_start_timestamp} and end timestamp {batch_end_timestamp}')
+        
+        batch_alerts = [alert for alert in alerts if alert.timestamp < batch_end_timestamp and alert.timestamp >= batch_start_timestamp]
+        batch_fingerprints = list(set([alert.fingerprint for alert in batch_alerts]))
+        
+        batch_incidents, _ = get_last_incidents(
+            tenant_id,
+            limit=use_n_hist_incidents,
+            upper_timestamp=batch_start_timestamp,
+            lower_timestamp=batch_start_timestamp - incident_validity_threshold,
+            is_predicted=True
+        )
+        
+        logger.info(f'Found {len(batch_incidents)} open incidents at {batch_start_timestamp}. Processing...')
+        for incident in batch_incidents:
+            incident_fingerprints = set(alert.fingerprint for alert in incident.alerts)
+            if len(incident_fingerprints.intersection(set(batch_fingerprints))) == 0:
+                continue
+            
+            incident_fingerprints = list(incident_fingerprints)
+            appendable_alerts = [alert for alert in batch_alerts if alert.fingerprint in incident_fingerprints]
+            appendable_alerts.sort(key=lambda x: x.timestamp)
+            
+            
+            current_time = get_component_first_seen_time(incident_fingerprints, batch_alerts)
+            # WE assume that incident validity threshold is greater than a size of a batch
+            if is_incident_accepting_updates(incident, current_time, incident_validity_threshold):
+                logger.info(f'Incident {incident.id} is accepting updates. Appending {len(appendable_alerts)} alerts.')
+                update_existing_incident(incident, appendable_alerts)
+        
+        logger.info(f'Looking for new incidents...')
+        
+        logger.info(
         "Building alert graph",
         extra={
-            "tenant_id": tenant_id,
-        },
-    )
+                "tenant_id": tenant_id,
+            },  
+        )
+        
+        batch_graph = create_graph(
+            tenant_id, batch_fingerprints, temp_dir, pmi_threshold, delete_nodes, knee_threshold
+        )
 
-    graph = create_graph(
-        tenant_id, fingerprints, temp_dir, pmi_threshold, delete_nodes, knee_threshold
-    )
-    ids = []
+        logger.info(
+            "Analyzing alert graph",
+            extra={
+                "tenant_id": tenant_id,
+            },
+        )
+        
+        batch_incident_ids_for_processing, batch_new_incident_ids, batch_updated_incident_ids = process_graph_components(
+        batch_graph, batch_incidents, batch_alerts, tenant_id, incident_similarity_threshold, min_incident_size, incident_validity_threshold
+        )
+        
 
-    logger.info(
-        "Analyzing alert graph",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
+        for incident_id in batch_incident_ids_for_processing:
+            await schedule_incident_processing(pool, tenant_id, incident_id)
+        
+        new_incident_ids.extend(batch_new_incident_ids)
+        updated_incident_ids.extend(batch_updated_incident_ids)
+        
+    metadata['last_correlated_batch_start'] = str(alert_lower_timestamp + timedelta(seconds=batch_idx*alert_batch_size))
+    write_tenant_ai_metadata_to_temp_file(metadata, temp_dir)
+    
+    new_incident_count = len(set(new_incident_ids))
+    updated_incident_count = len(set(updated_incident_ids).difference(set(new_incident_ids)))
+    
+    incident_ids = list(set(new_incident_ids + updated_incident_ids))
+        
+    # fingerprints = list(set([alert.fingerprint for alert in alerts]))
 
-    incident_ids_for_processing, new_incident_count, updated_incident_count = process_graph_components(
-        graph, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size
-    )
+    # logger.info(
+    #     "Building alert graph",
+    #     extra={
+    #         "tenant_id": tenant_id,
+    #     },
+    # )
 
-    pool = await get_pool() if not ctx else ctx["redis"]
+    # graph = create_graph(
+    #     tenant_id, fingerprints, temp_dir, pmi_threshold, delete_nodes, knee_threshold
+    # )
+    # ids = []
 
-    for incident_id in incident_ids_for_processing:
-        await schedule_incident_processing(pool, tenant_id, incident_id)
+    # logger.info(
+    #     "Analyzing alert graph",
+    #     extra={
+    #         "tenant_id": tenant_id,
+    #     },
+    # )
+
+    # incident_ids_for_processing, new_incident_count, updated_incident_count = process_graph_components(
+    #     graph, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size
+    # )
+
+    # pool = await get_pool() if not ctx else ctx["redis"]
+
+    # for incident_id in incident_ids_for_processing:
+    #     await schedule_incident_processing(pool, tenant_id, incident_id)
 
     pusher_client = get_pusher_client()
     if pusher_client:
@@ -432,5 +508,5 @@ async def mine_incidents_and_create_objects(
     )
 
     return {
-        "incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in ids]
+        "incidents": [get_incident_by_id(tenant_id, incident_id) for incident_id in incident_ids]
     }
