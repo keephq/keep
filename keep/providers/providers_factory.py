@@ -522,7 +522,7 @@ class ProvidersFactory:
         return _linked_providers
 
     @staticmethod
-    def get_default_deduplications() -> list[dict]:
+    def get_default_deduplication_rules() -> list[DeduplicationRuleDto]:
         """
         Get the default deduplications for all providers with FINGERPRINT_FIELDS.
 

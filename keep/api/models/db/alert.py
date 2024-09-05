@@ -172,12 +172,16 @@ class AlertEnrichment(SQLModel, table=True):
 class AlertDeduplicationRule(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    # the list of fields to pop from the alert before hashing
-    fields: list = Field(sa_column=Column(JSON), default=[])
-    # a CEL expression to match the alert
-    matcher_cel: str
+    # the list of fields to use for the fingerprint
+    fingerprint_fields: list = Field(sa_column=Column(JSON), default=[])
     # the provider id to use for this deduplication - None for linked providers
     provider_id: str | None
+    # full deduplication: if True, the alert will be discarded entirely if a match is found
+    full_deduplication: bool = Field(default=False)
+    # if full deduplication is enabled, the list of fields to ignore while calculating the hash for full deduplication
+    ignore_fields: list = Field(sa_column=Column(JSON), default=[])
+    # priority of the deduplication rule - the higher the number, the more important the rule is
+    priority: int = Field(default=0)
 
     class Config:
         arbitrary_types_allowed = True
@@ -190,9 +194,8 @@ class AlertDeduplicationEvent(SQLModel, table=True):
         sa_column=Column(datetime_column_type, index=True, nullable=False),
         default_factory=datetime.utcnow,
     )
-    deduplication_rule_id: UUID = Field(
-        foreign_key="alertdeduplicationrule.id", index=True
-    )
+    # TODO: currently rules can also be implicit (like default) so they won't exists on db Field(foreign_key="alertdeduplicationrule.id", index=True)
+    deduplication_rule_id: UUID
     deduplication_type: str = Field(index=True)  # 'full' or 'partial'
     date_hour: datetime = Field(
         sa_column=Column(datetime_column_type, index=True),

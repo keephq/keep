@@ -6,7 +6,6 @@ import dataclasses
 import json
 import logging
 from datetime import datetime
-from typing import Optional
 
 import pydantic
 import requests
@@ -430,9 +429,7 @@ class NewrelicProvider(BaseProvider):
         return formatted_alerts
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["NewrelicProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
         logger = logging.getLogger(__name__)
         logger.info("Got event from New Relic")

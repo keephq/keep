@@ -108,7 +108,8 @@ class AlertDto(BaseModel):
     lastReceived: str
     firingStartTime: str | None = None
     environment: str = "undefined"
-    isDuplicate: bool | None = None
+    isFullDuplicate: bool | None = None
+    isPartialDuplicate: bool | None = None
     duplicateReason: str | None = None
     service: str | None = None
     source: list[str] | None = []

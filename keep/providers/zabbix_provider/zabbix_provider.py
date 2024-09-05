@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Literal, Optional
+from typing import Literal
 
 import pydantic
 import requests
@@ -558,9 +558,7 @@ class ZabbixProvider(BaseProvider):
         self.logger.info("Finished installing webhook")
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["ZabbixProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         environment = "unknown"
         tags_raw = event.pop("tags", "[]")
         try:

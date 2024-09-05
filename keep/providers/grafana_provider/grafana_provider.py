@@ -4,7 +4,6 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import datetime
-from typing import Optional
 
 import pydantic
 import requests
@@ -195,9 +194,7 @@ class GrafanaProvider(BaseProvider):
         return GrafanaAlertFormatDescription.schema()
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["GrafanaProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:

@@ -3,43 +3,46 @@ import hashlib
 import json
 import logging
 
-import celpy
-
 from keep.api.core.config import config
 from keep.api.core.db import (
+    create_deduplication_event,
     get_all_dedup_ratio,
     get_all_deduplication_rules,
+    get_custom_full_deduplication_rules,
     get_last_alert_hash_by_fingerprint,
     get_provider_distribution,
 )
 from keep.api.models.alert import AlertDto, DeduplicationRuleDto
+from keep.api.models.db.alert import AlertDeduplicationRule
 from keep.providers.providers_factory import ProvidersFactory
 
 
-# decide whether this should be a singleton so that we can keep the filters in memory
 class AlertDeduplicator:
-    # this fields will be removed from the alert before hashing
-    # TODO: make this configurable
-    DEFAULT_FIELDS = ["lastReceived"]
 
     def __init__(self, tenant_id):
-        self.filters = get_all_deduplication_rules(tenant_id)
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
         self.provider_distribution_enabled = config(
             "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
         )
 
-    def is_deduplicated(self, alert: AlertDto) -> bool:
-        # Apply all deduplication filters
-        for filt in self.filters:
-            alert = self._apply_deduplication_filter(filt, alert)
+    def _apply_deduplication_rule(
+        self, alert: AlertDto, rule: DeduplicationRuleDto
+    ) -> bool:
+        """
+        Apply a deduplication rule to an alert.
 
-        # Remove default fields
-        for field in AlertDeduplicator.DEFAULT_FIELDS:
+        Gets an alert and a deduplication rule and apply the rule to the alert by:
+        - removing the fields that should be ignored
+        - calculating the hash
+        - checking if the hash is already in the database
+        - setting the isFullDuplicate or isPartialDuplicate flag
+        """
+        # remove the fields that should be ignored
+        for field in rule.ignore_fields:
             alert = self._remove_field(field, alert)
 
-        # Calculate the hash
+        # calculate the hash
         alert_hash = hashlib.sha256(
             json.dumps(alert.dict(), default=str).encode()
         ).hexdigest()
@@ -48,61 +51,62 @@ class AlertDeduplicator:
         last_alert_hash_by_fingerprint = get_last_alert_hash_by_fingerprint(
             self.tenant_id, alert.fingerprint
         )
-        alert_deduplicate = (
-            True
-            if last_alert_hash_by_fingerprint
+        # the hash is the same as the last alert hash by fingerprint - full deduplication
+        if (
+            last_alert_hash_by_fingerprint
             and last_alert_hash_by_fingerprint == alert_hash
-            else False
-        )
-        if alert_deduplicate:
-            self.logger.info(f"Alert {alert.id} is deduplicated {alert.source}")
-
-        return alert_hash, alert_deduplicate
-
-    def _run_matcher(self, matcher, alert: AlertDto) -> bool:
-        # run the CEL matcher
-        env = celpy.Environment()
-        ast = env.compile(matcher)
-        prgm = env.program(ast)
-        activation = celpy.json_to_cel(
-            json.loads(json.dumps(alert.dict(), default=str))
-        )
-        try:
-            r = prgm.evaluate(activation)
-        except celpy.evaluation.CELEvalError as e:
-            # this is ok, it means that the subrule is not relevant for this event
-            if "no such member" in str(e):
-                return False
-            # unknown
-            raise
-        return True if r else False
-
-    def _apply_deduplication_filter(self, filt, alert: AlertDto) -> AlertDto:
-        # check if the matcher applies
-        filter_apply = self._run_matcher(filt.matcher_cel, alert)
-        if not filter_apply:
-            self.logger.debug(f"Filter {filt.id} did not match")
-            return alert
-
-        # remove the fields
-        for field in filt.fields:
-            alert = self._remove_field(field, alert)
+        ):
+            self.logger.info(
+                "Alert is deduplicated",
+                extra={
+                    "alert_id": alert.id,
+                    "tenant_id": self.tenant_id,
+                },
+            )
+            alert.isFullDuplicate = True
+        # it means that there is another alert with the same fingerprint but different hash
+        # so its a deduplication
+        elif last_alert_hash_by_fingerprint:
+            self.logger.info(
+                "Alert is partially deduplicated",
+                extra={
+                    "alert_id": alert.id,
+                    "tenant_id": self.tenant_id,
+                },
+            )
+            alert.isPartialDuplicate = True
 
         return alert
 
+    def apply_deduplication(self, alert: AlertDto) -> bool:
+        # IMPOTRANT NOTE TO SOMEONE WORKING ON THIS CODE:
+        #   apply_deduplication runs AFTER _format_alert, so you can assume that alert fields are in the expected format.
+        #   you can also safe to assume that alert.fingerprint is set by the provider itself
+
+        # get only relevant rules
+        rule = self.get_full_deduplication_rule(
+            self.tenant_id, alert.provider_id, alert.provider_type
+        )
+        self.logger.debug(f"Applying deduplication rule {rule.id} to alert {alert.id}")
+        alert = self._apply_deduplication_rule(rule, alert)
+        self.logger.debug(f"Alert after deduplication rule {rule.id}: {alert}")
+        if alert.isFullDuplicate or alert.isPartialDuplicate:
+            create_deduplication_event(
+                tenant_id=self.tenant_id,
+                rule_id=rule.id,
+                alert_fingerprint=alert.fingerprint,
+                deduplication_type="full" if alert.isFullDuplicate else "partial",
+            )
+        return alert
+
     def _remove_field(self, field, alert: AlertDto) -> AlertDto:
-        # remove the field from the alert
         alert = copy.deepcopy(alert)
         field_parts = field.split(".")
-        # if its not a nested field
         if len(field_parts) == 1:
             try:
                 delattr(alert, field)
             except AttributeError:
-                self.logger.warning("Failed to delete attribute {field} from alert")
-                pass
-        # if its a nested field, copy the dictionaty and remove the field
-        # this is for cases such as labels/tags
+                self.logger.warning(f"Failed to delete attribute {field} from alert")
         else:
             alert_attr = field_parts[0]
             d = copy.deepcopy(getattr(alert, alert_attr))
@@ -112,27 +116,65 @@ class AlertDeduplicator:
             setattr(alert, field_parts[0], d)
         return alert
 
+    def get_full_deduplication_rule(
+        self, tenant_id, provider_id, provider_type
+    ) -> DeduplicationRuleDto:
+        # try to get the rule from the database
+        rule = get_custom_full_deduplication_rules(
+            tenant_id, provider_id, provider_type
+        )
+        if rule:
+            self.logger.debug(
+                "Using custom deduplication rule",
+                extra={
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                    "tenant_id": tenant_id,
+                },
+            )
+            return rule
+
+        # no custom rule found, let's try to use the default one
+        self.logger.debug(
+            "Using default full deduplication rule",
+            extra={
+                "provider_id": provider_id,
+                "provider_type": provider_type,
+                "tenant_id": tenant_id,
+            },
+        )
+        rule = self._get_default_full_deduplication_rule()
+        return rule
+
+    def _get_default_full_deduplication_rule(self) -> DeduplicationRuleDto:
+        # just return a default deduplication rule with lastReceived field
+        return AlertDeduplicationRule(
+            fingerprint_fields=[],
+            provider_id=None,
+            full_deduplication=True,
+            ignore_fields=["lastReceived"],
+            priority=0,
+        )
+
     def get_deduplications(self) -> list[DeduplicationRuleDto]:
         installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
-        # filter out the providers that are not "alert" in tags
         installed_providers = [
             provider for provider in installed_providers if "alert" in provider.tags
         ]
         linked_providers = ProvidersFactory.get_linked_providers(self.tenant_id)
         providers = [*installed_providers, *linked_providers]
 
-        default_deduplications = ProvidersFactory.get_default_deduplications()
+        default_deduplications = ProvidersFactory.get_default_deduplication_rules()
         default_deduplications_dict = {
             dd.provider_type: dd for dd in default_deduplications
         }
 
         custom_deduplications = get_all_deduplication_rules(self.tenant_id)
         custom_deduplications_dict = {
-            filt.provider_id: filt for filt in custom_deduplications
+            rule.provider_id: rule for rule in custom_deduplications
         }
 
         final_deduplications = []
-        # if provider doesn't have custom deduplication, use the default one
         for provider in providers:
             if provider.id not in custom_deduplications_dict:
                 if provider.type not in default_deduplications_dict:
@@ -141,7 +183,6 @@ class AlertDeduplicator:
                     )
                     continue
 
-                # copy the default deduplication and set the provider id
                 default_deduplication = copy.deepcopy(
                     default_deduplications_dict[provider.type]
                 )
@@ -167,7 +208,6 @@ class AlertDeduplicator:
             ).get("ratio", 0.0)
             result.append(dedup)
 
-        # todo: add dedicated table
         if self.provider_distribution_enabled:
             providers_distribution = get_provider_distribution(self.tenant_id)
             for dedup in result:

@@ -265,9 +265,9 @@ def __handle_formatted_events(
     alert_deduplicator = AlertDeduplicator(tenant_id)
 
     for event in formatted_events:
-        event_hash, event_deduplicated = alert_deduplicator.is_deduplicated(event)
-        event.alert_hash = event_hash
-        event.isDuplicate = event_deduplicated
+        # apply deduplication
+        # apply_deduplication set alert_hash and isDuplicate on event
+        event = alert_deduplicator.apply_deduplication(event)
 
     # filter out the deduplicated events
     deduplicated_events = list(
@@ -469,7 +469,12 @@ def process_event(
 
         if provider_type is not None and isinstance(event, dict):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
-            event = provider_class.format_alert(event, None)
+            event = provider_class.format_alert(
+                tenant_id=tenant_id,
+                event=event,
+                provider_id=provider_id,
+                provider_type=provider_type,
+            )
             # SHAHAR: for aws cloudwatch, we get a subscription notification message that we should skip
             #         todo: move it to be generic
             if event is None and provider_type == "cloudwatch":

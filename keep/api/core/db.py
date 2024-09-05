@@ -1533,12 +1533,48 @@ def get_rule_distribution(tenant_id, minute=False):
 
 def get_all_deduplication_rules(tenant_id):
     with Session(engine) as session:
-        filters = session.exec(
+        rules = session.exec(
             select(AlertDeduplicationRule).where(
                 AlertDeduplicationRule.tenant_id == tenant_id
             )
         ).all()
-    return filters
+    return rules
+
+
+def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(AlertDeduplicationRule)
+            .where(AlertDeduplicationRule.tenant_id == tenant_id)
+            .where(AlertDeduplicationRule.provider_id == provider_id)
+            .where(AlertDeduplicationRule.provider_type == provider_type)
+        ).first()
+    return rule
+
+
+def get_custom_full_deduplication_rules(tenant_id, provider_id, provider_type):
+    with Session(engine) as session:
+        rules = session.exec(
+            select(AlertDeduplicationRule)
+            .where(AlertDeduplicationRule.tenant_id == tenant_id)
+            .where(AlertDeduplicationRule.provider_id == provider_id)
+            .where(AlertDeduplicationRule.provider_type == provider_type)
+            .where(AlertDeduplicationRule.deduplication_type == "full")
+        ).all()
+    return rules
+
+
+def create_deduplication_event(tenant_id, deduplication_rule_id, deduplication_type):
+    with Session(engine) as session:
+        deduplication_event = AlertDeduplicationEvent(
+            tenant_id=tenant_id,
+            deduplication_rule_id=deduplication_rule_id,
+            deduplication_type=deduplication_type,
+            timestamp=datetime.utcnow(),
+            date_hour=datetime.utcnow().replace(minute=0, second=0, microsecond=0),
+        )
+        session.add(deduplication_event)
+        session.commit()
 
 
 def get_all_dedup_ratio(tenant_id):
@@ -2085,8 +2121,7 @@ def get_last_incidents(
             # .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
-            )
-            .order_by(desc(Incident.creation_time))
+            ).order_by(desc(Incident.creation_time))
         )
 
         if timeframe:

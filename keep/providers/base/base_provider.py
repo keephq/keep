@@ -19,7 +19,7 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import get_enrichments
+from keep.api.core.db import get_custom_deduplication_rule, get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -306,12 +306,39 @@ class BaseProvider(metaclass=abc.ABCMeta):
     def format_alert(
         cls,
         event: dict,
-        provider_instance: Optional["BaseProvider"],
+        tenant_id: str,
+        provider_type: str,
+        provider_id: str,
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event, provider_instance)
+        formatted_alert = cls._format_alert(event)
         logger.debug("Alert formatted")
+        # check if there is a custom deduplication rule and apply
+        custom_deduplication_rule = get_custom_deduplication_rule(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+        )
+        # if there is no custom deduplication rule, return the formatted alert
+        if not custom_deduplication_rule:
+            return formatted_alert
+        # if there is a custom deduplication rule, apply it
+        if not isinstance(formatted_alert, list):
+            formatted_alert = [formatted_alert]
+        for alert in formatted_alert:
+            logger.info(
+                "Applying custom deduplication rule",
+                extra={
+                    "tenant_id": tenant_id,
+                    "provider_id": provider_id,
+                    "alert_id": alert.id,
+                },
+            )
+            alert.fingerprint = cls.get_alert_fingerprint(
+                alert, custom_deduplication_rule.deduplication_fields
+            )
+
         return formatted_alert
 
     @staticmethod
