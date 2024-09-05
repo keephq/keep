@@ -372,6 +372,8 @@ class IncidentDto(IncidentDtoIn):
     generated_summary: str | None
     ai_generated_name: str | None
 
+    rule_fingerprint: str | None
+
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
         model_dict = self.dict()
@@ -412,6 +414,7 @@ class IncidentDto(IncidentDtoIn):
             severity=severity,
             assignee=db_incident.assignee,
             services=db_incident.affected_services,
+            rule_fingerprint=db_incident.rule_fingerprint,
         )
 
 
