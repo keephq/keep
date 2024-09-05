@@ -630,8 +630,7 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
         if passCount > 0:
             passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
         else: 
-           passFail = 0.0     
-        
+           passFail = 0.0        
         avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
