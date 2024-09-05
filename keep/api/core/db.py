@@ -619,17 +619,18 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
     
 
         total_count = query.count()
-        status_counts = session.query(
+        status_counts = query.with_entities(
             WorkflowExecution.status,
             func.count().label('count')
         ).group_by(WorkflowExecution.status).all()
 
         statusGroupbyMap = {status: count for status, count in status_counts}
-        
         passCount = statusGroupbyMap.get('success', 0)
         failCount = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)
-        passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
-        
+        if passCount > 0:
+            passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
+        else: 
+           passFail = 0.0        
         avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
