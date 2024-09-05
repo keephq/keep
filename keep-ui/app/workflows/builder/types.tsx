@@ -1,3 +1,5 @@
+import { Workflow } from "../models";
+
 export interface LogEntry {
   timestamp: string;
   message: string;
@@ -15,6 +17,16 @@ export interface WorkflowExecution {
   logs?: LogEntry[] | null;
   error?: string | null;
   execution_time?: number;
+}
+
+export interface PaginatedWorkflowExecutionDto {
+  limit: number;
+  offset: number;
+  count: number;
+  items: WorkflowExecution[];
+  workflow: Workflow;
+  avgDuration: number;
+  passFail: number;
 }
 
 export type WorkflowExecutionFailure = Pick<WorkflowExecution, "error">;
