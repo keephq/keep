@@ -48,6 +48,7 @@ export type V2Step = {
   edgeColor?: string;
   edgeSource?: string;
   edgeTarget?: string;
+  notClickable?: boolean;
 };
 
 export type NodeData = Node["data"] & Record<string, any>;

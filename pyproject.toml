@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.22.0"
+version = "0.23.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -76,6 +76,7 @@ cel-python = "^0.1.5"
 pymongo = "^4.6.3"
 google-cloud-trace = "1.11.3"
 hvac = "^2.1.0"
+python-keycloak = "4.2.3"
 mailchimp-transactional = "^1.0.56"
 sqlalchemy-utils = "^0.41.1"
 splunk-sdk = "^1.7.4"

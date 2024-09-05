@@ -2,7 +2,8 @@ import {AlertDto} from "../alerts/models";
 
 export interface IncidentDto {
   id: string;
-  name: string;
+  user_generated_name: string;
+  ai_generated_name: string;
   user_summary: string;
   generated_summary: string;
   assignee: string;
@@ -15,7 +16,7 @@ export interface IncidentDto {
   end_time?: Date;
   creation_time: Date;
   is_confirmed: boolean;
-  is_predicted: boolean;
+  rule_fingerprint: string;
 }
 
 export interface PaginatedIncidentsDto {

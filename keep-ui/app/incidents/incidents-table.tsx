@@ -60,12 +60,21 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "name",
       header: "Name",
-      cell: ({ row }) => <div className="text-wrap">{row.original.name}</div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">
+          {row.original.user_generated_name || row.original.ai_generated_name}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "user_summary",
       header: "Summary",
       cell: ({ row }) => <div className="text-wrap">{row.original.user_summary}</div>,
+    }),
+    columnHelper.display({
+      id: "rule_fingerprint",
+      header: "Group by value",
+      cell: ({ row }) => <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>,
     }),
     // columnHelper.display({
     //   id: "severity",

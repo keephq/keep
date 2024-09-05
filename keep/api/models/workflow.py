@@ -100,7 +100,7 @@ class WorkflowExecutionDTO(BaseModel):
     status: str
     logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
-    execution_time: Optional[int]
+    execution_time: Optional[float]
     results: Optional[dict]
 
 

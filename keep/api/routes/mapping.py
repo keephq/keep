@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
 from keep.api.models.db.mapping import (
     MappingRule,
     MappingRuleDtoIn,
     MappingRuleDtoOut,
     MappingRuleDtoUpdate,
 )
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -20,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 @router.get("", description="Get all mapping rules")
 def get_rules(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
     session: Session = Depends(get_session),
 ) -> list[MappingRuleDtoOut]:
     logger.info("Getting mapping rules")
@@ -50,7 +53,9 @@ def get_rules(
 )
 def create_rule(
     rule: MappingRuleDtoIn,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
     session: Session = Depends(get_session),
 ) -> MappingRule:
     logger.info("Creating a new mapping rule")
@@ -69,7 +74,9 @@ def create_rule(
 @router.delete("/{rule_id}", description="Delete a mapping rule")
 def delete_rule(
     rule_id: int,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
     session: Session = Depends(get_session),
 ):
     logger.info("Deleting a mapping rule", extra={"rule_id": rule_id})
@@ -90,7 +97,9 @@ def delete_rule(
 @router.put("", description="Update an existing rule")
 def update_rule(
     rule: MappingRuleDtoUpdate,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
     session: Session = Depends(get_session),
 ) -> MappingRuleDtoOut:
     logger.info("Updating a mapping rule")

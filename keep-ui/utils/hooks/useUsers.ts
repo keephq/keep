@@ -10,7 +10,7 @@ export const useUsers = (options: SWRConfiguration = {}) => {
   const { data: session } = useSession();
 
   return useSWRImmutable<User[]>(
-    () => (session ? `${apiUrl}/users` : null),
+    () => (session ? `${apiUrl}/auth/users` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

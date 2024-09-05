@@ -21,15 +21,11 @@ from fastapi.responses import JSONResponse
 from pusher import Pusher
 
 from keep.api.arq_pool import get_pool
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
-from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
-    get_pusher_client,
-)
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
@@ -42,6 +38,8 @@ from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -56,7 +54,9 @@ REDIS = os.environ.get("REDIS", "false") == "true"
     description="Get last alerts occurrence",
 )
 def get_all_alerts(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
     limit: int = 1000,
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
@@ -81,7 +81,9 @@ def get_all_alerts(
 @router.get("/{fingerprint}/history", description="Get alert history")
 def get_alert_history(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching alert history",
@@ -108,7 +110,9 @@ def get_alert_history(
 @router.delete("", description="Delete alert by finerprint and last received time")
 def delete_alert(
     delete_alert: DeleteRequestBody,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     user_email = authenticated_entity.email
@@ -180,7 +184,9 @@ def assign_alert(
     fingerprint: str,
     last_received: str,
     unassign: bool = False,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     user_email = authenticated_entity.email
@@ -256,7 +262,10 @@ async def receive_generic_event(
     bg_tasks: BackgroundTasks,
     request: Request,
     fingerprint: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -265,7 +274,6 @@ async def receive_generic_event(
         alert (AlertDto | list[AlertDto]): The alert(s) to be sent to Keep.
         bg_tasks (BackgroundTasks): Background tasks handler.
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
-        session (Session, optional): Defaults to Depends(get_session).
     """
     if REDIS:
         redis: ArqRedis = await get_pool()
@@ -329,7 +337,10 @@ async def receive_event(
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
     provider_class = ProvidersFactory.get_provider_class(provider_type)
@@ -369,7 +380,9 @@ async def receive_event(
 )
 def get_alert(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -394,7 +407,9 @@ def get_alert(
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
     dispose_on_new_alert: Optional[bool] = Query(
         False, description="Dispose on new alert"
     ),
@@ -411,13 +426,23 @@ def enrich_alert(
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         # Shahar: TODO, change to the specific action type, good enough for now
-        if "status" in enrich_data.enrichments:
+        if (
+            "status" in enrich_data.enrichments
+            and authenticated_entity.api_key_name is None
+        ):
             action_type = (
                 AlertActionType.MANUAL_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
                 else AlertActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
+        elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
+            action_type = (
+                AlertActionType.API_AUTOMATIC_RESOLVE
+                if enrich_data.enrichments["status"] == "resolved"
+                else AlertActionType.API_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = AlertActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
@@ -488,7 +513,9 @@ def enrich_alert(
 def unenrich_alert(
     enrich_data: UnEnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -591,8 +618,10 @@ def unenrich_alert(
     description="Search alerts",
 )
 async def search_alerts(
-    search_request: SearchAlertsRequest,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    search_request: SearchAlertsRequest,  # Use the model directly
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     try:
@@ -631,7 +660,9 @@ async def search_alerts(
 )
 def get_alert_audit(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(

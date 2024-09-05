@@ -29,7 +29,7 @@ const ReactFlowEditor = ({
     setIsOpen(true);
     if (selectedNode) {
       const timer = setTimeout(() => {
-        if(isTrigger){
+        if (isTrigger) {
           setOpneGlobalEditor(true);
           return;
         }
@@ -53,36 +53,32 @@ const ReactFlowEditor = ({
     setSynced(false);
 
     const handleDefinitionChange = () => {
-      if (changes > 0) {
-        let { sequence, properties } =
-          reConstructWorklowToDefinition({
-            nodes: nodes,
-            edges: edges,
-            properties: v2Properties,
-          }) || {};
-        sequence = (sequence || []) as V2Step[];
-        properties = (properties || {}) as V2Properties;
-        let isValid = true;
-        for (let step of sequence) {
-          isValid = validatorConfiguration?.step(step);
-          if (!isValid) {
-            break;
-          }
-        }
-
+      let { sequence, properties } =
+        reConstructWorklowToDefinition({
+          nodes: nodes,
+          edges: edges,
+          properties: v2Properties,
+        }) || {};
+      sequence = (sequence || []) as V2Step[];
+      properties = (properties || {}) as V2Properties;
+      let isValid = true;
+      for (let step of sequence) {
+        isValid = validatorConfiguration?.step(step);
         if (!isValid) {
-           onDefinitionChange({ sequence, properties, isValid });
-           setSynced(true);
-           return;
+          break;
         }
+      }
 
-        isValid = validatorConfiguration.root({ sequence, properties });
+      if (!isValid) {
         onDefinitionChange({ sequence, properties, isValid });
         setSynced(true);
+        return;
       }
-      setSynced(true);
-    };
 
+      isValid = validatorConfiguration.root({ sequence, properties });
+      onDefinitionChange({ sequence, properties, isValid });
+      setSynced(true);
+    }
     const debouncedHandleDefinitionChange = debounce(handleDefinitionChange, 300);
 
     debouncedHandleDefinitionChange();
@@ -116,9 +112,9 @@ const ReactFlowEditor = ({
           </button>
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
-              <GlobalEditorV2 synced={synced}/>
+              <GlobalEditorV2 synced={synced} />
               {!selectedNode?.includes('empty') && !isTrigger && <Divider ref={stepEditorRef} />}
-              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 installedProviders={providers} setSynced={setSynced}/>}
+              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 installedProviders={providers} setSynced={setSynced} />}
             </div>
           </div>
         </div>

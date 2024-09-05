@@ -637,7 +637,16 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <Card className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2">
+      <Card 
+      className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2"
+      onClick={(e)=>{
+        e.stopPropagation();
+        e.preventDefault();
+        if (workflow.id) {
+          router.push(`/workflows/${workflow.id}`);
+        }
+      }}
+      >
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {WorkflowMenuSection({
             onDelete: handleDeleteClick,
@@ -651,7 +660,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
           <WorkflowGraph workflow={workflow} />
           <div className="container flex flex-col space-between">
-            <div className="h-24">
+            <div className="h-24 cursor-default">
               <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
                 {workflow?.name || "Unkown"}
               </h2>
@@ -663,7 +672,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               {!!workflow?.interval && (
                 <Button
                   className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setOpenTriggerModal(true);
                   }}
                   icon={PiDiamondsFourFill}
@@ -675,7 +685,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               {isManualTriggerPresent && (
                 <Button
                   className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setOpenTriggerModal(true);
                   }}
                   icon={FaHandPointer}
@@ -686,7 +697,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
               {alertSource && (
                 <Button
                   className={`border bg-white border-gray-500 p-0.5 pr-1.5 pl-1.5 text-black placeholder-opacity-100 text-xs rounded-3xl hover:bg-gray-100 hover:border-gray font-bold shadow`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setOpenTriggerModal(true);
                   }}
                   tooltip={`Source: ${alertSource}`}

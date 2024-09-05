@@ -120,6 +120,7 @@ const demoLabels = [
       "success",
       "error",
       "in_progress",
+      "timeout",
       "providers_not_configured",
     ];
     return statuses[Math.floor(Math.random() * statuses.length)];

@@ -23,9 +23,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from keep.api.core.db_utils import create_db_engine
-
-# This import is required to create the tables
-from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
@@ -36,6 +33,9 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+
+# This import is required to create the tables
+from keep.identitymanager.rbac import Admin as AdminRole
 
 logger = logging.getLogger(__name__)
 

@@ -13,13 +13,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, null, update
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import expression
@@ -33,6 +32,7 @@ from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.maintenance_window import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
@@ -565,28 +565,80 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         session.commit()
 
 
-def get_workflow_executions(tenant_id, workflow_id, limit=50):
+def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, status: Optional[Union[str, List[str]]] = None,
+    trigger: Optional[Union[str, List[str]]] = None,
+    execution_id: Optional[str] = None):
     with Session(engine) as session:
-        workflow_executions = session.exec(
-            select(
-                WorkflowExecution.id,
-                WorkflowExecution.workflow_id,
-                WorkflowExecution.started,
-                WorkflowExecution.status,
-                WorkflowExecution.triggered_by,
-                WorkflowExecution.execution_time,
-                WorkflowExecution.error,
+        query = (
+            session.query(
+                WorkflowExecution,
             )
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(
-                WorkflowExecution.started
-                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            .filter(
+                WorkflowExecution.tenant_id == tenant_id,
+                WorkflowExecution.workflow_id == workflow_id
             )
-            .order_by(WorkflowExecution.started.desc())
-            .limit(limit)
-        ).all()
-    return workflow_executions
+            .order_by(desc(WorkflowExecution.started))
+        )
+
+        now = datetime.now(tz=timezone.utc)
+        timeframe = None
+
+        if tab == 1:
+            timeframe = now - timedelta(days=30)
+        elif tab == 2:
+            timeframe = now - timedelta(days=7)
+        elif tab == 3:
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(
+                WorkflowExecution.started >= start_of_day,
+                WorkflowExecution.started <= now
+            )
+
+        if timeframe:
+            query = query.filter(
+                WorkflowExecution.started >= timeframe
+            )
+
+        if isinstance(status, str):
+            status = [status]
+        elif status is None:
+            status = []
+
+        # Normalize trigger to a list
+        if isinstance(trigger, str):
+            trigger = [trigger]
+
+
+        if execution_id:
+            query = query.filter(WorkflowExecution.id == execution_id)
+        if status and len(status) > 0:
+            query = query.filter(WorkflowExecution.status.in_(status))
+        if trigger and len(trigger) > 0:
+            conditions = [WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger]
+            query = query.filter(or_(*conditions))
+
+
+        total_count = query.count()
+        status_counts = session.query(
+            WorkflowExecution.status,
+            func.count().label('count')
+        ).group_by(WorkflowExecution.status).all()
+
+        statusGroupbyMap = {status: count for status, count in status_counts}
+
+        passCount = statusGroupbyMap.get('success', 0)
+        failCount = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)
+        passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
+
+        avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
+        avgDuration = avgDuration if avgDuration else 0.0
+
+        query = query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+
+        # Execute the query
+        workflow_executions = query.all()
+
+    return total_count, workflow_executions, passFail, avgDuration
 
 
 def delete_workflow(tenant_id, workflow_id):
@@ -1243,6 +1295,18 @@ def delete_user(username):
             session.commit()
 
 
+def user_exists(tenant_id, username):
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.username == username)
+        ).first()
+        return user is not None
+
+
 def create_user(tenant_id, username, password, role):
     from keep.api.models.db.user import User
 
@@ -1433,7 +1497,7 @@ def get_incident_for_grouping_rule(
             # Create and add a new incident if it doesn't exist
             incident = Incident(
                 tenant_id=tenant_id,
-                name=f"Incident generated by rule {rule.name}",
+                user_generated_name=f"Incident generated by rule {rule.name}",
                 rule_id=rule.id,
                 rule_fingerprint=rule_fingerprint,
                 is_predicted=False,
@@ -1676,10 +1740,19 @@ def get_provider_distribution(tenant_id: str) -> dict:
 
 
 def get_presets(
-    tenant_id: str, email: str, preset_entity: PresetEntityEnum
+    tenant_id: str, email: str, preset_entity: PresetEntityEnum, preset_ids: list[str] = None
 ) -> List[Preset]:
     with Session(engine) as session:
-        statement = (
+        # v2 with RBAC and roles
+        if preset_ids:
+            statement = (
+                select(Preset)
+                .where(Preset.tenant_id == tenant_id)
+                .where(Preset.id.in_(preset_ids))
+            )
+        # v1, no RBAC and roles
+        else:
+            statement = (
             select(Preset)
             .where(Preset.tenant_id == tenant_id)
             .where(
@@ -1689,11 +1762,6 @@ def get_presets(
                 )
             )
             .where(Preset.entity == preset_entity.value)
-        )
-        print(
-            statement.compile(
-                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-            )
         )
         result = session.exec(statement)
         presets = result.unique().all()
@@ -2026,7 +2094,8 @@ def get_last_incidents(
             session.query(
                 Incident,
             )
-            .options(joinedload(Incident.alerts))
+            # TODO: ?
+            # .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
             )
@@ -2114,7 +2183,7 @@ def update_incident_from_dto_by_id(
             Incident.id == incident_id,
         ).update(
             {
-                "name": updated_incident_dto.name,
+                "user_generated_name": updated_incident_dto.user_generated_name,
                 "user_summary": updated_incident_dto.user_summary,
                 "assignee": updated_incident_dto.assignee,
             }
@@ -2326,7 +2395,6 @@ def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> i
                 AlertToIncident.incident_id == incident_id,
             )
         ).scalar()
-
 
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
@@ -2592,9 +2660,6 @@ def get_pmi_values(
 def update_incident_summary(
     tenant_id: str, incident_id: UUID, summary: str
 ) -> Incident:
-    if not summary:
-        return
-
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -2603,6 +2668,10 @@ def update_incident_summary(
         ).first()
 
         if not incident:
+            logger.error(
+                f"Incident not found for tenant {tenant_id} and incident {incident_id}",
+                extra={"tenant_id": tenant_id},
+            )
             return
 
         incident.generated_summary = summary
@@ -2610,6 +2679,28 @@ def update_incident_summary(
         session.refresh(incident)
 
         return
+
+
+def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incident:
+    with Session(engine) as session:
+        incident = session.exec(
+            select(Incident)
+            .where(Incident.tenant_id == tenant_id)
+            .where(Incident.id == incident_id)
+        ).first()
+
+        if not incident:
+            logger.error(
+                f"Incident not found for tenant {tenant_id} and incident {incident_id}",
+                extra={"tenant_id": tenant_id},
+            )
+            return
+
+        incident.ai_generated_name = name
+        session.commit()
+        session.refresh(incident)
+
+        return incident
 
 
 # Fetch all topology data

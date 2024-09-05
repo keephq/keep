@@ -10,12 +10,14 @@ import { downloadFileFromString } from "./utils";
 
 interface Props {
   closeModal: () => void;
-  compiledAlert: Alert | null;
+  compiledAlert: Alert | string | null;
+  id?:string
 }
 
 export default function BuilderModalContent({
   closeModal,
   compiledAlert,
+  id,
 }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -24,10 +26,11 @@ export default function BuilderModalContent({
     setIsLoading(false);
   }, Math.floor(Math.random() * 2500 + 1000));
 
-  const alertYaml = stringify(compiledAlert);
+  const alertYaml = typeof compiledAlert !== 'string' ? stringify(compiledAlert) : compiledAlert;
 
   function download() {
-    downloadFileFromString(alertYaml, `${compiledAlert!.id}.yaml`);
+    const fileName = typeof compiledAlert == 'string' ? id : compiledAlert!.id;
+    downloadFileFromString(alertYaml, `${fileName}.yaml`);
   }
 
   const copyBlockProps = {

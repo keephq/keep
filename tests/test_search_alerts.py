@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import AlertActionType

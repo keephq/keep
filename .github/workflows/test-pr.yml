@@ -2,11 +2,13 @@ name: Tests
 on:
   push:
     paths:
-      - 'keep/**'
+      - "keep/**"
   pull_request:
     paths:
-      - 'keep/**'
+      - "keep/**"
   workflow_dispatch:
+permissions:
+  actions: write
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
@@ -44,7 +46,20 @@ jobs:
           discovery.type: "single-node"
           ES_JAVA_OPTS: "-Xms2g -Xmx2g"
           xpack.security.enabled: "true"
-
+      keycloak:
+        image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak-test
+        env:
+          KC_DB: dev-mem
+          KC_HTTP_RELATIVE_PATH: /auth
+          KEYCLOAK_ADMIN: keep_kc_admin
+          KEYCLOAK_ADMIN_PASSWORD: keep_kc_admin
+        ports:
+          - 8787:8080
+        options: >-
+          --health-cmd="/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user keep_kc_admin --password keep_kc_admin || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=4
 
     steps:
       - name: Checkout

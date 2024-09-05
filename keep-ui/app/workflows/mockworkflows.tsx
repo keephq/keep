@@ -13,22 +13,27 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
   const isStepPresent =
     !!workflow?.steps?.length &&
     workflow?.steps?.find((step: MockStep) => step?.provider?.type);
+
   return (
-    <div className="flex gap-2 mb-4 mt-6 items-center felx-wrap">
+    <div className="container flex gap-2 mb-4 mt-6 items-center overflow-x-auto max-w-full whitespace-nowrap">
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
+        if (['threshold', 'assert', 'foreach'].includes(provider?.type)) {
+          return null;
+        }
         return (
           <>
             {provider && (
-              <div key={`step-${index}`} className="flex items-end gap-2">
+              <div key={`step-${index}`} className="flex items-center gap-2 flex-shrink-0">
                 {index > 0 && (
-                  <TiArrowRight className="text-gray-500 size-8" />
+                  <TiArrowRight size={24} className="text-gray-500" />
                 )}
                 <Image
                   src={`/icons/${provider?.type}-icon.png`}
                   width={30}
                   height={30}
                   alt={provider?.type}
+                  className="flex-shrink-0"
                 />
               </div>
             )}
@@ -37,18 +42,22 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
       })}
       {workflow?.actions?.map((action: any, index: number) => {
         const provider = action?.provider;
+        if (['threshold', 'assert', 'foreach'].includes(provider?.type)) {
+          return null;
+        }
         return (
           <>
             {provider && (
-              <div key={`action-${index}`} className="flex items-end gap-2">
+              <div key={`action-${index}`} className="flex items-center gap-2 flex-shrink-0">
                 {(index > 0 || isStepPresent) && (
-                  <TiArrowRight className="text-gray-500 size-8" />
+                  <TiArrowRight size={24} className="text-gray-500" />
                 )}
                 <Image
                   src={`/icons/${provider?.type}-icon.png`}
                   width={30}
                   height={30}
                   alt={provider?.type}
+                  className="flex-shrink-0"
                 />
               </div>
             )}

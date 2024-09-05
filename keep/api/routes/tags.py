@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 
 from keep.api.core.db import get_tags as get_tags_db
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -9,7 +10,7 @@ router = APIRouter()
 @router.get("", description="get tags")
 def get_tags(
     authenticated_entity: AuthenticatedEntity = Depends(
-        AuthVerifier(["read:settings"])
+        IdentityManagerFactory.get_auth_verifier(["read:presets"])
     ),
 ) -> list[dict]:
     tags = get_tags_db(authenticated_entity.tenant_id)

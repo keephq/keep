@@ -49,10 +49,10 @@ jobs:
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release-step.outputs.version }}
+          tag: "v${{ steps.release-step.outputs.version }}"
         run: |
           gh release create "$tag" \
               --repo="$GITHUB_REPOSITORY" \
-              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+              --title="v${{ steps.release-step.outputs.version }}" \
               --target="release/${{ steps.release-step.outputs.version }}" \
               --generate-notes

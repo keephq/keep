@@ -9,32 +9,22 @@ import {
   TextInput,
   Button,
   Subtitle,
-  SearchSelect,
-  SearchSelectItem,
   Icon,
 } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { ApiKey } from "./api-key-settings";
+import { ApiKey } from "./auth/api-key-settings";
+import { Role } from "app/settings/models";
 import Modal from "@/components/ui/Modal";
+import Select from "@/components/ui/Select";
 
-const roleOptions = [
-  {
-    value: "webhook",
-    label: "webhook",
-    tooltip: "Webhook role has ability to write alerts",
-  },
-  {
-    value: "admin",
-    label: "CLI",
-    tooltip: " CLI has admin ability for Keep management purposes",
-  },
-  {
-    value: "create_new",
-    label: "Create custom role",
-    isDisabled: true,
-    tooltip: "For custom roles, contact Keep team",
-  },
-];
+interface CreateApiKeyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  apiUrl: string;
+  setApiKeys: React.Dispatch<React.SetStateAction<ApiKey[]>>;
+  accessToken: string;
+  roles: Role[];
+}
 
 export default function CreateApiKeyModal({
   isOpen,
@@ -42,7 +32,8 @@ export default function CreateApiKeyModal({
   apiUrl,
   setApiKeys,
   accessToken,
-}: any) {
+  roles,
+}: CreateApiKeyModalProps) {
   const {
     handleSubmit,
     control,
@@ -69,7 +60,6 @@ export default function CreateApiKeyModal({
         handleClose();
       } else {
         const errorData = await response.json();
-        // if 'detail' in errorData:
         if (errorData.detail) {
           setError("apiError", { type: "manual", message: errorData.detail });
         } else {
@@ -133,55 +123,37 @@ export default function CreateApiKeyModal({
             name="role"
             control={control}
             rules={{ required: "Role is required" }}
-            render={({ field: { onChange, value, ref } }) => (
-              <>
-                <SearchSelect
-                  placeholder="Select role"
-                  value={value}
-                  onValueChange={onChange}
-                  className={`rounded-lg border ${
-                    errors.role ? "border-red-500" : "border-transparent"
-                  }`}
-                  ref={ref}
-                >
-                  {roleOptions.map((role) => (
-                    <SearchSelectItem
-                      key={role.value}
-                      value={role.value}
-                      className={
-                        role.isDisabled
-                          ? "text-gray-400 cursor-not-allowed"
-                          : ""
-                      }
-                      onClick={(e) => {
-                        if (role.isDisabled) {
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      <div className="flex items-center">
-                        {role.label}
-                        {role.tooltip && (
-                          <Icon
-                            icon={InfoCircledIcon}
-                            className="role-tooltip"
-                            tooltip={role.tooltip}
-                            color="gray"
-                            size="xs"
-                          />
-                        )}
-                      </div>
-                    </SearchSelectItem>
-                  ))}
-                </SearchSelect>
-                {errors.role && (
-                  <div className="text-sm text-rose-500 mt-1">
-                    {errors.role.message?.toString()}
+            render={({ field }) => (
+              <Select
+                {...field}
+                onChange={(selectedOption) => field.onChange(selectedOption?.name)}
+                value={roles.find(role => role.id === field.value)}
+                options={roles}
+                getOptionLabel={(role) => role.name}
+                formatOptionLabel={(option) => (
+                  <div className="flex items-center">
+                    {option.name}
+                    {option.description && (
+                      <Icon
+                        icon={InfoCircledIcon}
+                        className="role-tooltip"
+                        tooltip={option.description}
+                        color="gray"
+                        size="xs"
+                      />
+                    )}
                   </div>
                 )}
-              </>
+                getOptionValue={(role) => role.id}
+                placeholder="Select a role"
+              />
             )}
           />
+          {errors.role && (
+            <div className="text-sm text-rose-500 mt-1">
+              {errors.role.message?.toString()}
+            </div>
+          )}
         </div>
 
         {/* Display API Error */}
