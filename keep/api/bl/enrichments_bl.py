@@ -268,6 +268,7 @@ class EnrichmentsBl:
         )
 
         # Apply enrichment to the alert
+        enrichments = {}
         if rule.type == "topology":
             matcher_value = {}
             for matcher in rule.matchers:
@@ -278,7 +279,6 @@ class EnrichmentsBl:
 
             if not topology_service:
                 self.logger.warning("No topology service found to match on")
-                enrichments = {}
             else:
                 enrichments = topology_service.dict()
                 # Remove redundant fields
