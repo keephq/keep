@@ -20,7 +20,6 @@ export default function SideNavBar({ workflow }: { workflow: Workflow }) {
     const manageLinks = [
         { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Workflow Builder', isLink: true },
         { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Workflow YAML definition', isLink: false, handleClick: () => { setviewYaml(true) } },
-        // { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Downloads', isLink: false, handleClick: () => { console.log("triggering this") } },
     ];
 
     const learnLinks = [

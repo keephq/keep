@@ -17,6 +17,7 @@ import { Button, Icon } from "@tremor/react";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import { FaHandPointer } from "react-icons/fa";
 import { HiBellAlert } from "react-icons/hi2";
+import { useRouter } from "next/navigation";
 
 
 interface Pagination {
@@ -121,6 +122,7 @@ export function ExecutionTable({
 }: Props) {
 
     const columnHelper = createColumnHelper<WorkflowExecution>();
+    const router = useRouter();
 
     const columns = [
         columnHelper.display({
@@ -248,6 +250,9 @@ export function ExecutionTable({
         offset={executions.offset} // Customize as needed
         limit={executions.limit} // Customize as needed
         onPaginationChange={(newLimit: number, newOffset: number) => setPagination({ limit: newLimit, offset: newOffset })}
+        onRowClick = {(row:WorkflowExecution) => {
+            router.push(`/workflows/${row.workflow_id}/runs/${row.id}`);
+        }}
     />
 
 }

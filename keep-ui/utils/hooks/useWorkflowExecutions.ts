@@ -25,7 +25,6 @@ export const useWorkflowExecutionsV2 = (
   limit: number = 25,
   offset: number = 0,
 ) => {
-  console.log("entering this", tab, limit, offset);
   const apiUrl = getApiURL();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -33,7 +32,7 @@ export const useWorkflowExecutionsV2 = (
   offset = searchParams?.get("offset") ? Number(searchParams?.get("offset")) : offset;
   tab = searchParams?.get("tab") ? Number(searchParams?.get("tab")) : tab;
   limit = limit > 100 ? 50 : limit;
-  limit = limit <= 0 ? 50 : limit;
+  limit = limit <= 0 ? 25 : limit;
   offset = offset < 0 ? 0 : offset;
   tab = tab < 0 ? 0 : tab;
   tab = tab > 3 ? 3 : tab;
