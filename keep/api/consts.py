@@ -1,6 +1,6 @@
 import os
 
-from keep.api.models.db.preset import PresetDto, StaticPresetsId
+from keep.api.models.db.preset import PresetDto, StaticPresetsId, PresetEntityEnum
 
 RUNNING_IN_CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 PROVIDER_PULL_INTERVAL_DAYS = int(
@@ -23,6 +23,7 @@ STATIC_PRESETS = {
         should_do_noise_now=False,
         static=True,
         tags=[],
+        entity=PresetEntityEnum.ALERT
     ),
     "dismissed": PresetDto(
         id=StaticPresetsId.DISMISSED_PRESET_ID.value,
@@ -37,6 +38,7 @@ STATIC_PRESETS = {
         should_do_noise_now=False,
         static=True,
         tags=[],
+        entity=PresetEntityEnum.ALERT
     ),
 }
 

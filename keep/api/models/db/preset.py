@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, conint, constr
 from sqlalchemy import UniqueConstraint
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel, String
 
 
 class StaticPresetsId(enum.Enum):
@@ -12,6 +12,12 @@ class StaticPresetsId(enum.Enum):
     FEED_PRESET_ID = "11111111-1111-1111-1111-111111111111"
     DISMISSED_PRESET_ID = "11111111-1111-1111-1111-111111111113"
     GROUPS_PRESET_ID = "11111111-1111-1111-1111-111111111114"
+
+
+class PresetEntityEnum(enum.Enum):
+    # Entities for which presets can be created
+    ALERT = "alert"
+    INCIDENT = "incident"
 
 
 def generate_uuid():
@@ -39,13 +45,14 @@ class TagDto(BaseModel):
 
 
 class Preset(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("tenant_id", "name"),)
+    __table_args__ = (UniqueConstraint("tenant_id", "name", "entity"),)
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
     created_by: Optional[str] = Field(index=True, nullable=False)
     is_private: Optional[bool] = Field(default=False)
     is_noisy: Optional[bool] = Field(default=False)
     name: str = Field(unique=True)
+    entity: str = Field(default=PresetEntityEnum.ALERT)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
     tags: List[Tag] = Relationship(
         back_populates="presets",
@@ -83,9 +90,10 @@ class PresetDto(BaseModel, extra="ignore"):
     #   meaning is_noisy + at least one alert is doing noise
     should_do_noise_now: Optional[bool] = Field(default=False)
     # number of alerts
-    alerts_count: Optional[int] = Field(default=0)
+    entity_count: Optional[int] = Field(default=0)
     # static presets
     static: Optional[bool] = Field(default=False)
+    entity: PresetEntityEnum
     tags: List[TagDto] = []
 
     @property

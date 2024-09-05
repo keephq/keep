@@ -37,15 +37,17 @@ class RulesEngine:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
-                    
+
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
-                    incident = get_incident_for_grouping_rule(self.tenant_id, rule, rule.timeframe, rule_fingerprint)
+                    incident = get_incident_for_grouping_rule(
+                        self.tenant_id, rule, rule.timeframe, rule_fingerprint
+                    )
 
                     incident = assign_alert_to_incident(
                         alert_id=event.event_id,
                         incident_id=incident.id,
-                        tenant_id=self.tenant_id
+                        tenant_id=self.tenant_id,
                     )
 
                     incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
@@ -151,7 +153,7 @@ class RulesEngine:
         return ",".join(rule_fingerprint)
 
     @staticmethod
-    def filter_alerts(alerts: list[AlertDto], cel: str):
+    def filter_alerts(alerts: list[AlertDto], cel: str) -> list[AlertDto]:
         """This function filters alerts according to a CEL
 
         Args:
@@ -162,7 +164,6 @@ class RulesEngine:
             list[AlertDto]: list of alerts that are related to the cel
         """
         logger = logging.getLogger(__name__)
-        env = celpy.Environment()
         # tb: temp hack because this function is super slow
         if cel == STATIC_PRESETS.get("feed", {}).options[0].get("value"):
             return [
@@ -174,10 +175,7 @@ class RulesEngine:
         if not cel:
             logger.debug("No CEL expression provided")
             return alerts
-        # preprocess the cel expression
-        cel = preprocess_cel_expression(cel)
-        ast = env.compile(cel)
-        prgm = env.program(ast)
+        runner = RulesEngine.create_cel_runner(cel=cel)
         filtered_alerts = []
         for alert in alerts:
             payload = alert.dict()
@@ -187,34 +185,68 @@ class RulesEngine:
             # payload severity could be the severity itself or the order of the severity, cast it to the order
             if isinstance(payload["severity"], str):
                 payload["severity"] = AlertSeverity(payload["severity"].lower()).order
-
-            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
-            try:
-                r = prgm.evaluate(activation)
-            except celpy.evaluation.CELEvalError as e:
-                # this is ok, it means that the subrule is not relevant for this event
-                if "no such member" in str(e):
-                    continue
-                # unknown
-                elif "no such overload" in str(e):
-                    logger.debug(
-                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
-                    )
-                    continue
-                elif "found no matching overload" in str(e):
-                    logger.debug(
-                        f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
-                    )
-                    continue
-                logger.warning(
-                    f"Failed to evaluate the CEL expression {cel} for alert {alert.id} - {e}"
-                )
-                continue
-            except Exception:
-                logger.exception(
-                    f"Failed to evaluate the CEL expression {cel} for alert {alert.id}"
-                )
-                continue
-            if r:
+            result = RulesEngine.execute_cel_query(
+                runner=runner, payload=payload, cel=cel, logger=logger
+            )
+            if result:
                 filtered_alerts.append(alert)
         return filtered_alerts
+
+    @staticmethod
+    def create_cel_runner(cel: str) -> celpy.Runner:
+        env = celpy.Environment()
+        cel = preprocess_cel_expression(cel)
+        ast = env.compile(cel)
+        return env.program(ast)
+
+    @staticmethod
+    def execute_cel_query(
+        runner: celpy.Runner, payload, cel: str, logger: logging.Logger
+    ):
+        # TODO needs some explanation, why are we doing this ??
+        activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+        try:
+            r = runner.evaluate(activation)
+        except celpy.evaluation.CELEvalError as e:
+            # this is ok, it means that the subrule is not relevant for this event
+            if "no such member" in str(e):
+                ...
+            # unknown
+            elif "no such overload" in str(e):
+                logger.debug(
+                    f"Type mismatch between operator and operand in the CEL expression {cel} for alert {payload.id}"
+                )
+
+            elif "found no matching overload" in str(e):
+                logger.debug(
+                    f"Type mismatch between operator and operand in the CEL expression {cel} for alert {payload.id}"
+                )
+
+            logger.warning(
+                f"Failed to evaluate the CEL expression {cel} for alert {payload.id} - {e}"
+            )
+            return None
+        except Exception:  # NOQA
+            logger.exception(
+                f"Failed to evaluate the CEL expression {cel} for alert {payload.id}"
+            )
+            return None
+        if r:
+            return payload
+
+    @staticmethod
+    def filter_incidents(incidents: list[IncidentDto], cel: str):
+        logger = logging.getLogger(__name__)
+        if not cel:
+            return incidents
+        runner = RulesEngine.create_cel_runner(cel)
+        filtered_incidents = []
+        for incident in incidents:
+            payload = incident.dict()
+            payload["alert_sources"] = ",".join(payload["alert_sources"])
+            result = RulesEngine.execute_cel_query(
+                runner=runner, payload=payload, cel=cel, logger=logger
+            )
+            if result:
+                filtered_incidents.append(incident)
+        return filtered_incidents

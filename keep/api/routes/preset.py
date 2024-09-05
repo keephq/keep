@@ -23,7 +23,7 @@ from keep.api.core.db import (
     update_provider_last_pull_time,
 )
 from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.models.db.preset import (
     Preset,
     PresetDto,
@@ -31,6 +31,7 @@ from keep.api.models.db.preset import (
     PresetTagLink,
     Tag,
     TagDto,
+    PresetEntityEnum,
 )
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
@@ -139,16 +140,22 @@ def pull_data_from_providers(
     description="Get all presets for tenant",
 )
 def get_presets(
+    preset_entity: PresetEntityEnum,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
     # both global and private presets
-    presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
+    presets = get_presets_db(
+        tenant_id=tenant_id,
+        email=authenticated_entity.email,
+        preset_entity=preset_entity,
+    )
     presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
     # add static presets
-    presets_dto.append(STATIC_PRESETS["feed"])
-    presets_dto.append(STATIC_PRESETS["dismissed"])
+    if preset_entity == PresetEntityEnum.ALERT:
+        presets_dto.append(STATIC_PRESETS["feed"])
+        presets_dto.append(STATIC_PRESETS["dismissed"])
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset
@@ -165,6 +172,7 @@ class CreateOrUpdatePresetDto(BaseModel):
     is_private: bool = False  # if true visible to all users of that tenant
     is_noisy: bool = False  # if true, the preset will be noisy
     tags: list[TagDto] = []  # tags to assign to the preset
+    entity: PresetEntityEnum
 
 
 @router.post("", description="Create a preset for tenant")
@@ -189,6 +197,7 @@ def create_preset(
         created_by=created_by,
         is_private=body.is_private,
         is_noisy=body.is_noisy,
+        entity=body.entity.value,
     )
 
     # Handle tags
@@ -327,46 +336,62 @@ def update_preset(
 
 
 @router.get(
-    "/{preset_name}/alerts",
+    "/{preset_name}/{preset_entity}",
     description="Get a preset for tenant",
 )
-async def get_preset_alerts(
+async def get_preset_entities(
     request: Request,
     bg_tasks: BackgroundTasks,
     preset_name: str,
+    preset_entity: PresetEntityEnum,
     response: Response,
     authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
-) -> list[AlertDto]:
+) -> list[IncidentDto | AlertDto]:
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
-
-    bg_tasks.add_task(
-        pull_data_from_providers,
-        authenticated_entity.tenant_id,
-        request.state.trace_id,
-    )
-
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Getting preset alerts", extra={"preset_name": preset_name})
-    # handle static presets
-    if preset_name in STATIC_PRESETS:
-        preset = STATIC_PRESETS[preset_name]
-    else:
-        preset = get_preset_by_name_db(tenant_id, preset_name)
-    # if preset does not exist
-    if not preset:
-        raise HTTPException(404, "Preset not found")
-    if isinstance(preset, Preset):
-        preset_dto = PresetDto(**preset.to_dict())
-    else:
-        preset_dto = PresetDto(**preset.dict())
+    logger.info(
+        f"Getting preset ${preset_entity.value}", extra={"preset_name": preset_name}
+    )
     search_engine = SearchEngine(tenant_id=tenant_id)
-    preset_alerts = search_engine.search_alerts(preset_dto.query)
-    logger.info("Got preset alerts", extra={"preset_name": preset_name})
+    if preset_entity == PresetEntityEnum.ALERT:
+        bg_tasks.add_task(
+            pull_data_from_providers,
+            authenticated_entity.tenant_id,
+            request.state.trace_id,
+        )
 
-    response.headers["X-search-type"] = str(search_engine.search_mode.value)
-    return preset_alerts
+        # handle static presets
+        if preset_name in STATIC_PRESETS:
+            preset = STATIC_PRESETS[preset_name]
+        else:
+            preset = get_preset_by_name_db(
+                tenant_id=tenant_id,
+                preset_name=preset_name,
+                preset_entity=preset_entity,
+            )
+        # if preset does not exist
+        if not preset:
+            raise HTTPException(404, "Preset not found")
+        if isinstance(preset, Preset):
+            preset_dto = PresetDto(**preset.to_dict())
+        else:
+            preset_dto = PresetDto(**preset.dict())
+
+        preset_alerts = search_engine.search_alerts(preset_dto.query)
+        logger.info("Got preset alerts", extra={"preset_name": preset_name})
+
+        response.headers["X-search-type"] = str(search_engine.search_mode.value)
+        return preset_alerts
+    if preset_entity == PresetEntityEnum.INCIDENT:
+        preset = get_preset_by_name_db(
+            tenant_id=tenant_id, preset_name=preset_name, preset_entity=preset_entity
+        )
+        preset_dto = PresetDto(**preset.to_dict())
+        preset_incidents = search_engine.search_incidents(preset_dto.query)
+        logger.info("Got preset incidents", extra={"preset_name": preset_name})
+        return preset_incidents
 
 
 class CreatePresetTab(BaseModel):

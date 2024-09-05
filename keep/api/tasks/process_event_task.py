@@ -362,7 +362,7 @@ def __handle_formatted_events(
             if not filtered_alerts:
                 continue
             presets_do_update.append(preset_dto)
-            preset_dto.alerts_count = len(filtered_alerts)
+            preset_dto.entity_count = len(filtered_alerts)
             # update noisy
             if preset.is_noisy:
                 firing_filtered_alerts = list(

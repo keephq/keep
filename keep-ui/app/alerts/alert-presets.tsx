@@ -124,6 +124,9 @@ export default function AlertPresets({
                 value: sqlQuery,
               },
             ],
+
+            // TODO: add an Enum here
+            entity: "alert",
             is_private: isPrivate,
             is_noisy: isNoisy,
             tags: selectedTags.map((tag) => ({

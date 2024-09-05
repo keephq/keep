@@ -1,11 +1,11 @@
 import enum
 import logging
 
-from keep.api.core.db import get_last_alerts
+from keep.api.core.db import get_last_alerts, get_last_incidents
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.tenant_configuration import TenantConfiguration
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.preset import PresetDto, PresetSearchQuery
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
@@ -92,6 +92,21 @@ class SearchEngine:
         self.logger.info("Finished searching alerts by CEL")
         return filtered_alerts
 
+    def search_incidents_by_cel(self, cel_query, limit: int = 1000):
+        self.logger.info("Searching incidents by CEL")
+        incidents, total_count = get_last_incidents(
+            tenant_id=self.tenant_id,
+            is_confirmed=True,
+            limit=limit,
+        )
+
+        incidents_dto = []
+        for incident in incidents:
+            incidents_dto.append(IncidentDto.from_db_incident(incident))
+        filtered_incidents = self.rule_engine.filter_incidents(incidents_dto, cel_query)
+        self.logger.info("Finished searching alerts by CEL")
+        return filtered_incidents
+
     def _search_alerts_by_sql(
         self, sql_query: dict, limit=1000, timeframe: int = 0
     ) -> list[AlertDto]:
@@ -149,6 +164,13 @@ class SearchEngine:
         self.logger.info("Finished searching alerts")
         return filtered_alerts
 
+    def search_incidents(self, query: PresetSearchQuery):
+        self.logger.info("Searching alerts")
+        filtered_incidents = self.search_incidents_by_cel(
+            query.cel_query, limit=query.limit
+        )
+        return filtered_incidents
+
     def search_preset_alerts(
         self, presets: list[PresetDto]
     ) -> dict[str, list[AlertDto]]:
@@ -173,7 +195,7 @@ class SearchEngine:
                 filtered_alerts = self.rule_engine.filter_alerts(
                     alerts_dto, preset.cel_query
                 )
-                preset.alerts_count = len(filtered_alerts)
+                preset.entity_count = len(filtered_alerts)
                 # update noisy
                 if preset.is_noisy:
                     firing_filtered_alerts = list(
@@ -214,14 +236,14 @@ class SearchEngine:
                     elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "{self.elastic_client.alerts_index}" where {query}"""
                     results = self.elastic_client.run_query(elastic_sql_query)
                     if results:
-                        preset.alerts_count = results["rows"][0][0]
+                        preset.entity_count = results["rows"][0][0]
                         preset.should_do_noise_now = results["rows"][0][1] == 1
                     else:
                         self.logger.warning(
                             "No results found for preset",
                             extra={"preset_id": preset.id, "preset_name": preset.name},
                         )
-                        preset.alerts_count = 0
+                        preset.entity_count = 0
                         preset.should_do_noise_now = False
                 except Exception:
                     self.logger.exception(
@@ -234,6 +256,12 @@ class SearchEngine:
             extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
         )
         return presets
+
+    def search_preset_incidents(self):
+        self.logger.info(
+            "Searching incidents for presets",
+            extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
+        )
 
     def _create_raw_sql(self, sql_template, params):
         """

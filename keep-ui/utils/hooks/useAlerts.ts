@@ -33,7 +33,7 @@ export const useAlerts = () => {
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
-      () => (session && presetName ? `${apiUrl}/preset/${presetName}/alerts` : null),
+      () => (session && presetName ? `${apiUrl}/preset/${presetName}/alert` : null),
       (url) => fetcher(url, session?.accessToken),
       options
     );

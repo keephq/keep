@@ -388,9 +388,11 @@ class IncidentDto(IncidentDtoIn):
     @classmethod
     def from_db_incident(cls, db_incident):
 
-        severity = IncidentSeverity.from_number(db_incident.severity) \
-            if isinstance(db_incident.severity, int) \
+        severity = (
+            IncidentSeverity.from_number(db_incident.severity)
+            if isinstance(db_incident.severity, int)
             else db_incident.severity
+        )
 
         return cls(
             id=db_incident.id,

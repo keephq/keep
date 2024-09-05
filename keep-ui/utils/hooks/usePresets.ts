@@ -101,9 +101,9 @@ export const usePresets = () => {
     { revalidateOnFocus: false }
   );
 
-  const useFetchAllPresets = (options?: SWRConfiguration) => {
+  const useFetchAllPresets = (entity: string, options?: SWRConfiguration) => {
     return useSWR<Preset[]>(
-      () => (session ? `${apiUrl}/preset` : null),
+      () => (session ? `${apiUrl}/preset?preset_entity=${entity}` : null),
       (url) => fetcher(url, session?.accessToken),
       {
         ...options,
@@ -163,13 +163,14 @@ export const usePresets = () => {
     setIsLocalStorageReady(true);
   };
 
-  const useAllPresets = (options?: SWRConfiguration) => {
+  const useAllPresets = (options?: SWRConfiguration, entity?: string) => {
     const {
       data: presets,
       error,
       isValidating,
       mutate,
-    } = useFetchAllPresets(options);
+    } = useFetchAllPresets(entity ? entity : "alert", options);
+
     const filteredPresets = presets?.filter(
       (preset) =>
         !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
@@ -182,13 +183,13 @@ export const usePresets = () => {
     };
   };
 
-  const useStaticPresets = (options?: SWRConfiguration) => {
+  const useStaticPresets = (options?: SWRConfiguration, entity?: string) => {
     const {
       data: presets,
       error,
       isValidating,
       mutate,
-    } = useFetchAllPresets(options);
+    } = useFetchAllPresets(entity ? entity : "alert", options);
     const staticPresets = presets?.filter((preset) =>
       ["feed", "deleted", "dismissed", "groups"].includes(preset.name)
     );
