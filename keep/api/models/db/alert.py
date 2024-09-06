@@ -176,6 +176,7 @@ class AlertDeduplicationRule(SQLModel, table=True):
     fingerprint_fields: list = Field(sa_column=Column(JSON), default=[])
     # the provider id to use for this deduplication - None for linked providers
     provider_id: str | None
+    provider_type: str | None
     # full deduplication: if True, the alert will be discarded entirely if a match is found
     full_deduplication: bool = Field(default=False)
     # if full deduplication is enabled, the list of fields to ignore while calculating the hash for full deduplication

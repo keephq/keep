@@ -38,15 +38,17 @@ class AlertDeduplicator:
         - checking if the hash is already in the database
         - setting the isFullDuplicate or isPartialDuplicate flag
         """
+        # we don't want to remove fields from the original alert
+        alert_copy = copy.deepcopy(alert)
         # remove the fields that should be ignored
         for field in rule.ignore_fields:
-            alert = self._remove_field(field, alert)
+            alert_copy = self._remove_field(field, alert_copy)
 
         # calculate the hash
         alert_hash = hashlib.sha256(
-            json.dumps(alert.dict(), default=str).encode()
+            json.dumps(alert_copy.dict(), default=str).encode()
         ).hexdigest()
-
+        alert.alert_hash = alert_hash
         # Check if the hash is already in the database
         last_alert_hash_by_fingerprint = get_last_alert_hash_by_fingerprint(
             self.tenant_id, alert.fingerprint
@@ -85,10 +87,10 @@ class AlertDeduplicator:
 
         # get only relevant rules
         rule = self.get_full_deduplication_rule(
-            self.tenant_id, alert.provider_id, alert.provider_type
+            self.tenant_id, alert.providerId, alert.providerType
         )
         self.logger.debug(f"Applying deduplication rule {rule.id} to alert {alert.id}")
-        alert = self._apply_deduplication_rule(rule, alert)
+        alert = self._apply_deduplication_rule(alert, rule)
         self.logger.debug(f"Alert after deduplication rule {rule.id}: {alert}")
         if alert.isFullDuplicate or alert.isPartialDuplicate:
             # create deduplication event
