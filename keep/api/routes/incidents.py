@@ -462,21 +462,21 @@ def mine(
 ) -> dict:
     result = asyncio.run(
         mine_incidents_and_create_objects(
-            None,
-            authenticated_entity.tenant_id,
-            config.alert_lower_timestamp,
-            config.alert_upper_timestamp,
-            config.use_n_historical_alerts,
-            config.incident_lower_timestamp,
-            config.incident_upper_timestamp,
-            config.use_n_hist_incidents,
-            config.pmi_threshold,
-            config.knee_threshold,
-            config.min_incident_size,
-            config.min_alert_number,
-            config.incident_similarity_threshold,
-            config.general_temp_dir,
-            config.sliding_window,
+            ctx=None,
+            tenant_id=authenticated_entity.tenant_id,
+            alert_lower_timestamp=config.alert_lower_timestamp,
+            alert_upper_timestamp=config.alert_upper_timestamp,
+            use_n_historical_alerts=config.use_n_historical_alerts,
+            incident_lower_timestamp=config.incident_lower_timestamp,
+            incident_upper_timestamp=config.incident_upper_timestamp,
+            use_n_historical_incidents=config.use_n_hist_incidents,
+            pmi_threshold=config.pmi_threshold,
+            knee_threshold=config.knee_threshold,
+            min_incident_size=config.min_incident_size,
+            min_alert_number=config.min_alert_number,
+            incident_similarity_threshold=config.incident_similarity_threshold,
+            general_temp_dir=config.general_temp_dir,
+            sliding_window=config.sliding_window,
         )
     )
     return result
