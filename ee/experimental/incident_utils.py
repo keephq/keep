@@ -147,54 +147,54 @@ def process_graph_component(component: Set[str], batch_incidents: List[Incident]
         if incident_fingerprints.issubset(component):
             if not incident_fingerprints.intersection(batch_fingerprints):
                 continue
-            logger.info(f"Found possible extension for incident {incident.id}", 
+            logger.info(f"Found possible extension for incident {incident.id}",
                         extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-                    
+
             amendment_time = get_component_first_seen_time(component, batch_alerts)
             if is_incident_accepting_updates(incident, amendment_time, incident_validity_threshold):
-                logger.info(f"Incident {incident.id} is accepting updates.", 
+                logger.info(f"Incident {incident.id} is accepting updates.",
                                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-                        
+
                 existing_alert_ids = set([alert.id for alert in incident.alerts])
                 appendable_alerts = [alert for alert in batch_alerts if alert.fingerprint in component and not alert.id in existing_alert_ids]
-                        
-                logger.info(f"Appending {len(appendable_alerts)} alerts to incident {incident.id}", 
+
+                logger.info(f"Appending {len(appendable_alerts)} alerts to incident {incident.id}",
                                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
                 is_component_merged = True
                 return update_existing_incident_inmem(incident, appendable_alerts)
             else:
-                logger.info(f"Incident {incident.id} is not accepting updates. Aborting merge operation.", 
+                logger.info(f"Incident {incident.id} is not accepting updates. Aborting merge operation.",
                                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-            
+
     if not is_component_merged:
         if len(component) >= min_incident_size:
-            logger.info(f"Creating new incident with {len(component)} alerts", 
+            logger.info(f"Creating new incident with {len(component)} alerts",
                         extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
             return create_new_incident_inmem(component, batch_alerts, tenant_id)
         else:
             return None, False
-        
-        
-def process_alert_batch(batch_alerts: List[Alert], batch_incidents: list[Incident], tenant_id: str, min_incident_size: int, 
+
+
+def process_alert_batch(batch_alerts: List[Alert], batch_incidents: list[Incident], tenant_id: str, min_incident_size: int,
                         incident_validity_threshold: timedelta, pmi_values, fingerpint2idx, pmi_threshold, delete_nodes, knee_threshold) -> Tuple[str, bool]:
-    
+
     batch_fingerprints = set([alert.fingerprint for alert in batch_alerts])
-        
+
     amended_fingerprints = set(batch_fingerprints)
     for incident in batch_incidents:
         incident_fingerprints = set(alert.fingerprint for alert in incident.alerts)
-            
+
         amended_fingerprints = incident_fingerprints.union(batch_fingerprints)
-            
-    logger.info("Building alert graph", extra={"tenant_id": tenant_id, "algorithm": NAME_GENERATOR_VERBOSE_NAME})            
-    amended_graph = create_graph(tenant_id, list(amended_fingerprints), pmi_values, 
+
+    logger.info("Building alert graph", extra={"tenant_id": tenant_id, "algorithm": NAME_GENERATOR_VERBOSE_NAME})
+    amended_graph = create_graph(tenant_id, list(amended_fingerprints), pmi_values,
                                                   fingerpint2idx, pmi_threshold, delete_nodes, knee_threshold)
-        
+
     logger.info("Analyzing alert graph", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     batch_incident_ids_for_processing = []
     batch_new_incidents = []
     batch_updated_incidents = []
-        
+
     for component in nx.connected_components(amended_graph):
             incident, is_updated = process_graph_component(component, batch_incidents, batch_alerts, batch_fingerprints, tenant_id, min_incident_size, incident_validity_threshold)
             if incident:
@@ -203,7 +203,7 @@ def process_alert_batch(batch_alerts: List[Alert], batch_incidents: list[Inciden
                     batch_updated_incidents.append(incident)
                 else:
                     batch_new_incidents.append(incident)
-    
+
     return batch_incident_ids_for_processing, batch_new_incidents, batch_updated_incidents
 
 
@@ -234,8 +234,8 @@ def get_last_incidents_inmem(incidents: List[Incident], upper_timestamp: datetim
 def add_alerts_to_incident_by_incident_id_inmem(incident: Incident, alerts: List[str]):
     incident.alerts.extend(alerts)
     return incident
-    
-    
+
+
 def create_incident_from_dict_inmem(tenant_id: str, incident_dict: Dict[str, Any]) -> Incident:
     return Incident(tenant_id=tenant_id, **incident_dict)
 
@@ -248,11 +248,11 @@ def create_new_incident_inmem(component: Set[str], alerts: List[Alert], tenant_i
                                          {"name": f"Incident started at {incident_start_time}",
                                           "description": "Summarization is Disabled",
                                           "is_predicted": True})
-    
+
     incident = add_alerts_to_incident_by_incident_id_inmem(
         incident, [alert for alert in alerts if alert.fingerprint in component],)
     incident.last_seen_time = max([alert.timestamp for alert in incident.alerts])
-    
+
     return incident, False
 
 
@@ -290,6 +290,7 @@ async def mine_incidents_and_create_objects(
     incident_validity_threshold: timedelta = None,
     general_temp_dir: str = None,
     alert_validity_threshold: int = None,
+    sliding_window: int = None,
 ) -> Dict[str, List[Incident]]:
     """
     This function mines incidents from alerts and creates incidents in the database.
@@ -305,11 +306,14 @@ async def mine_incidents_and_create_objects(
     pmi_threshold (float): PMI threshold used for incident graph edges creation
     knee_threshold (float): knee threshold used for incident graph nodes creation
     min_incident_size (int): minimum incident size
+    min_alert_number (int):  minimal amount of unique alert fingerprints
     incident_similarity_threshold (float): incident similarity threshold
+    general_temp_dir (str):
+    sliding_window (int): maximal acceptable gap between alerts of the same incident
 
     Returns:
     Dict[str, List[Incident]]: a dictionary containing the created incidents
-    """    
+    """
     # obtain tenant_config
     if not general_temp_dir:
         general_temp_dir = os.environ.get(
@@ -323,7 +327,7 @@ async def mine_incidents_and_create_objects(
     # obtain alert-related parameters
     alert_validity_threshold = int(os.environ.get("ALERT_VALIDITY_THRESHOLD", ALERT_VALIDITY_THRESHOLD))
     alert_batch_stride = alert_validity_threshold // STRIDE_DENOMINATOR
-    
+
     if not alert_upper_timestamp:
         alert_upper_timestamp = os.environ.get(
             "MINE_ALERT_UPPER_TIMESTAMP", datetime.now())
@@ -365,20 +369,20 @@ async def mine_incidents_and_create_objects(
     if not knee_threshold:
         knee_threshold = os.environ.get("KNEE_THRESHOLD", 0.8)
 
-    status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number)
+    status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number, sliding_window=sliding_window)
     if status.get("status") == "failed":
         pusher_client = get_pusher_client()
         if pusher_client:
             log_string = f"{ALGORITHM_VERBOSE_NAME} failed to calculate PMI matrix"
             pusher_client.trigger(f"private-{tenant_id}", "ai-logs-change", {"log": "Failed to calculate PMI matrix"})
-            
+
         return {"incidents": []}
-    
+
     elif status.get("status") == "success":
         logger.info(
         f"Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database. Total number of PMI coefficients: {status.get('pmi_matrix').size}",
         extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-        
+
         pmi_values = status.get("pmi_matrix")
         fingerprints = status.get("pmi_columns")
         write_pmi_matrix_to_temp_file(tenant_id, pmi_values, fingerprints, temp_dir)
@@ -389,24 +393,24 @@ async def mine_incidents_and_create_objects(
 
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp,
         lower_timestamp=alert_lower_timestamp, sort_ascending=True)
-    
+
     if not alert_lower_timestamp:
         alert_lower_timestamp = min(alert.timestamp for alert in alerts)
-    
-    incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp + incident_validity_threshold, 
+
+    incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp + incident_validity_threshold,
                                    lower_timestamp=alert_upper_timestamp - incident_validity_threshold, with_alerts=True)
 
     n_batches = int(math.ceil((alert_upper_timestamp - alert_lower_timestamp).total_seconds() / alert_batch_stride)) - (STRIDE_DENOMINATOR - 1)
     logging.info(
         f"Starting alert correlation. Current batch size: {alert_validity_threshold} seconds. Current \
             batch stride: {alert_batch_stride} seconds. Number of batches to process: {n_batches}")
-    
+
     pool = await get_pool() if not ctx else ctx["redis"]
 
     new_incident_ids = []
     updated_incident_ids = []
     incident_ids_for_processing = []
-    
+
     alert_timestamps = np.array([alert.timestamp.timestamp() for alert in alerts])
     batch_indices = np.arange(0, n_batches)
     batch_start_ts = alert_lower_timestamp.timestamp() + np.array([batch_idx * alert_batch_stride for batch_idx in batch_indices])
@@ -415,24 +419,24 @@ async def mine_incidents_and_create_objects(
     start_indices = np.searchsorted(alert_timestamps, batch_start_ts, side='left')
     end_indices = np.searchsorted(alert_timestamps, batch_end_ts, side='right')
 
-    for batch_idx, (start_idx, end_idx) in tqdm(enumerate(zip(start_indices, end_indices)), total=n_batches, desc="Processing alert batches.."):                
+    for batch_idx, (start_idx, end_idx) in tqdm(enumerate(zip(start_indices, end_indices)), total=n_batches, desc="Processing alert batches.."):
         batch_alerts = alerts[start_idx:end_idx]
 
         logger.info(
             f"Processing batch {batch_idx} with start timestamp {datetime.fromtimestamp(batch_start_ts[batch_idx])} \
-                and end timestamp {min(datetime.fromtimestamp(batch_end_ts[batch_idx]), alert_upper_timestamp)}. Batch size: {len(batch_alerts)}", 
+                and end timestamp {min(datetime.fromtimestamp(batch_end_ts[batch_idx]), alert_upper_timestamp)}. Batch size: {len(batch_alerts)}",
             extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-        
+
         if len(batch_alerts) == 0:
             continue
-        
-        batch_incidents = get_last_incidents_inmem(incidents, datetime.fromtimestamp(batch_end_ts[batch_idx]), 
+
+        batch_incidents = get_last_incidents_inmem(incidents, datetime.fromtimestamp(batch_end_ts[batch_idx]),
                                                        datetime.fromtimestamp(batch_start_ts[batch_idx]) - incident_validity_threshold)
 
         logger.info(
-            f"Found {len(batch_incidents)} incidents that accept updates by {datetime.fromtimestamp(batch_start_ts[batch_idx])}.", 
+            f"Found {len(batch_incidents)} incidents that accept updates by {datetime.fromtimestamp(batch_start_ts[batch_idx])}.",
             extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-        
+
         batch_incident_ids_for_processing, batch_new_incidents, batch_updated_incidents = process_alert_batch(
             batch_alerts, batch_incidents, tenant_id, min_incident_size, incident_validity_threshold, pmi_values, fingerprint2idx, pmi_threshold, delete_nodes, knee_threshold)
 
@@ -440,13 +444,13 @@ async def mine_incidents_and_create_objects(
         incidents.extend(batch_new_incidents)
         updated_incident_ids.extend([incident.id for incident in batch_updated_incidents])
         incident_ids_for_processing.extend(batch_incident_ids_for_processing)
-        
-    logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}", 
+
+    logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}",
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     tenant_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
     write_tenant_config(tenant_id, tenant_config)
     
-    logger.info(f"Writing {len(incidents)} incidents to database", 
+    logger.info(f"Writing {len(incidents)} incidents to database",
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     db_incident_ids_for_processing = []
     db_new_incident_ids = []
@@ -459,24 +463,24 @@ async def mine_incidents_and_create_objects(
                 "is_predicted": True,
             }
             db_incident = create_incident_from_dict(tenant_id, incident_dict)
-            
+
             incident_id = db_incident.id
-        else: 
+        else:
             incident_id = incident.id
-            
+
         if incident.id in incident_ids_for_processing:
-            db_incident_ids_for_processing.append(incident_id)     
+            db_incident_ids_for_processing.append(incident_id)
         
         if incident.id in new_incident_ids:
             db_new_incident_ids.append(incident_id)
-        
+
         if incident.id in updated_incident_ids:
             db_updated_incident_ids.append(incident_id)
-        
-                
+
+
         add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert.id for alert in incident.alerts])
-        
-    logger.info(f"Scheduling {len(db_incident_ids_for_processing)} incidents for name / summary generation", 
+
+    logger.info(f"Scheduling {len(db_incident_ids_for_processing)} incidents for name / summary generation",
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     new_incident_count = len(set(new_incident_ids))
     updated_incident_count = len(set(updated_incident_ids).difference(set(new_incident_ids)))
@@ -500,7 +504,7 @@ async def mine_incidents_and_create_objects(
                         {updated_incident_count}. This may be due to high alert sparsity or low amount of unique \
                             alert fingerprints. Adding more alerts, increasing "sliding window size" or decreasing minimal amount of \
                             "minimal amount of unique fingerprints in an incident" configuration parameters may help.'
-                            
+
         else:
             log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. Alerts from {alert_lower_timestamp.replace(microsecond=0)} \
                 till {alert_upper_timestamp.replace(microsecond=0)} were processed. Total count of processed alerts: {len(alerts)}. \

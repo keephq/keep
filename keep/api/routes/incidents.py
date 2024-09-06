@@ -27,6 +27,7 @@ from keep.api.core.db import (
     IncidentSorting,
 )
 from keep.api.core.dependencies import get_pusher_client
+from keep.api.models.ai import IncidentMineConfiguration
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn, IncidentStatusChangeDto, IncidentStatus, \
     EnrichAlertRequestBody
 from keep.api.routes.alerts import _enrich_alert
@@ -447,41 +448,36 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
-
+from fastapi import FastAPI, Request
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
     include_in_schema=False,
 )
 def mine(
+    config: IncidentMineConfiguration,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
-    alert_lower_timestamp: datetime = None,
-    alert_upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = None,
-    incident_lower_timestamp: datetime = None,
-    incident_upper_timestamp: datetime = None,
-    use_n_historical_incidents: int = None,
-    pmi_threshold: float = None,
-    knee_threshold: float = None,
-    min_incident_size: int = None,
-    incident_similarity_threshold: float = None,
+
 ) -> dict:
     result = asyncio.run(
         mine_incidents_and_create_objects(
-            ctx=None,
-            tenant_id=authenticated_entity.tenant_id,
-            alert_lower_timestamp=alert_lower_timestamp,
-            alert_upper_timestamp=alert_upper_timestamp,
-            use_n_historical_alerts=use_n_historical_alerts,
-            incident_lower_timestamp=incident_lower_timestamp,
-            incident_upper_timestamp=incident_upper_timestamp,
-            use_n_historical_incidents=use_n_historical_incidents,
-            pmi_threshold=pmi_threshold,
-            knee_threshold=knee_threshold,
-            min_incident_size=min_incident_size,
-            incident_similarity_threshold=incident_similarity_threshold,
+            None,
+            authenticated_entity.tenant_id,
+            config.alert_lower_timestamp,
+            config.alert_upper_timestamp,
+            config.use_n_historical_alerts,
+            config.incident_lower_timestamp,
+            config.incident_upper_timestamp,
+            config.use_n_hist_incidents,
+            config.pmi_threshold,
+            config.knee_threshold,
+            config.min_incident_size,
+            config.min_alert_number,
+            config.incident_similarity_threshold,
+            config.general_temp_dir,
+            config.sliding_window,
         )
     )
     return result
