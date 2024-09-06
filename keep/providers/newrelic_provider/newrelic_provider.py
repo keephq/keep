@@ -461,7 +461,7 @@ class NewrelicProvider(BaseProvider):
             severity.lower(), AlertSeverity.INFO
         )
 
-        name = event.get("name", "")
+        name = event.pop("name", "")
         if not name:
             name = event.get("title", "")
 
