@@ -277,7 +277,7 @@ async def receive_generic_event(
     """
     if REDIS:
         redis: ArqRedis = await get_pool()
-        await redis.enqueue_job(
+        job = await redis.enqueue_job(
             "async_process_event",
             authenticated_entity.tenant_id,
             None,
@@ -286,6 +286,13 @@ async def receive_generic_event(
             authenticated_entity.api_key_name,
             request.state.trace_id,
             event,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+            },
         )
     else:
         bg_tasks.add_task(
@@ -349,7 +356,7 @@ async def receive_event(
 
     if REDIS:
         redis: ArqRedis = await get_pool()
-        await redis.enqueue_job(
+        job = await redis.enqueue_job(
             "async_process_event",
             authenticated_entity.tenant_id,
             provider_type,
@@ -358,6 +365,13 @@ async def receive_event(
             authenticated_entity.api_key_name,
             trace_id,
             event,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+            },
         )
     else:
         bg_tasks.add_task(

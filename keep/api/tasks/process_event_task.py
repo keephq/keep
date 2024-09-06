@@ -452,6 +452,7 @@ def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
+        "job_id": ctx.get("job_id"),
         "raw_event": (
             event if KEEP_STORE_RAW_ALERTS else None
         ),  # Let's log the events if we store it for debugging
