@@ -3,7 +3,6 @@ import logging
 import os
 import pathlib
 import sys
-from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -448,7 +447,6 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
-from fastapi import FastAPI, Request
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
