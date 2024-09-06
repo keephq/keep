@@ -136,6 +136,7 @@ async def mine_incidents_and_create_objects(
     min_alert_number: int = None,
     incident_similarity_threshold: float = None,
     general_temp_dir: str = None,
+    sliding_window: int = None,
 ) -> Dict[str, List[Incident]]:
     """
     This function mines incidents from alerts and creates incidents in the database.
@@ -151,7 +152,10 @@ async def mine_incidents_and_create_objects(
     pmi_threshold (float): PMI threshold used for incident graph edges creation
     knee_threshold (float): knee threshold used for incident graph nodes creation
     min_incident_size (int): minimum incident size
+    min_alert_number (int):  minimal amount of unique alert fingerprints
     incident_similarity_threshold (float): incident similarity threshold
+    general_temp_dir (str):
+    sliding_window (int): maximal acceptable gap between alerts of the same incident
 
     Returns:
     Dict[str, List[Incident]]: a dictionary containing the created incidents
@@ -207,12 +211,12 @@ async def mine_incidents_and_create_objects(
     temp_dir = f"{general_temp_dir}/{tenant_id}"
     os.makedirs(temp_dir, exist_ok=True)
 
-    status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number)
+    status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number, sliding_window=sliding_window)
     if status.get('status') == 'failed':
         return {"incidents": []}
 
     logger.info(
-        "Getting new alerts and past incients",
+        "Getting new alerts and past incidents",
         extra={
             "tenant_id": tenant_id,
         },
@@ -334,8 +338,6 @@ async def mine_incidents_and_create_objects(
                    "tenant_id": tenant_id, "incident_id": incident_id},
         )
 
-    
-    
     pusher_client = get_pusher_client()
     if pusher_client:
         if new_incident_count > 0 or updated_incident_count > 0:

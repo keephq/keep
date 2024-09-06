@@ -14,6 +14,9 @@ export default function Ai() {
   const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
   const [newText, setNewText] = useState("Mine incidents");
   const [animate, setAnimate] = useState(false);
+  const [slidingWindow, setSlidingWindow] = useState(1);
+  const [minFingerprints, setMinFingerprints] = useState(3);
+
   const onlyOnce = useRef(false);
 
   const mutateAILogs = (logs: AILogs) => {
@@ -49,11 +52,15 @@ export default function Ai() {
         Authorization: `Bearer ${session?.accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        sliding_window: slidingWindow * 60 * 60,
+        min_alert_number: minFingerprints,
+      }),
     });
     if (!response.ok) {
       toast.error(
-        "Failed to mine incidents, please contact us if this issue persists."
+        "Failed to mine incidents, please contact us if this issue persists.",
+        {autoClose: false}
       );
     }
 
@@ -139,10 +146,37 @@ export default function Ai() {
                   </p>
 
                   <div className="mt-4">
+
+                    <Subtitle>Sliding window size, hours.</Subtitle>
+                    <p className="text-sm">
+                      What is the maximal acceptable gap between alerts of the same incident in your system?
+                    </p>
+
+                    <input type="range" className="w-full accent-orange-600" min={1} max={24} value={slidingWindow} onChange={(e) => setSlidingWindow(parseInt(e.currentTarget.value))} />
+
+                    {slidingWindow}
+
+                  </div>
+
+                  <div className="mt-4">
+
+                    <Subtitle>Minimal amount of fingerprints in an incident.</Subtitle>
+                    <p className="text-sm">
+                      What minimal amount of unique alert fingerprints should a group contain to be considered an
+                      incident?
+                    </p>
+
+                    <input type="range"  min={3} max={20} className="w-full accent-orange-600" value={minFingerprints} onChange={(e) => setMinFingerprints(parseInt(e.currentTarget.value))} />
+                    {minFingerprints}
+                  </div>
+
+
+                  <div className="mt-4">
                     <Subtitle>Log:</Subtitle>
                     {!basicAlgorithmLog && <p>No recent logs found.</p>}
                     {basicAlgorithmLog}
                   </div>
+
 
                   <button
                     className={

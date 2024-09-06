@@ -24,6 +24,7 @@ from keep.api.core.db import (
     update_incident_from_dto_by_id,
 )
 from keep.api.core.dependencies import get_pusher_client
+from keep.api.models.ai import IncidentMineConfiguration
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -377,41 +378,36 @@ def delete_alerts_from_incident(
 
     return Response(status_code=202)
 
-
+from fastapi import FastAPI, Request
 @router.post(
     "/mine",
     description="Create incidents using historical alerts",
     include_in_schema=False,
 )
 def mine(
+    config: IncidentMineConfiguration,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incidents"])
     ),
-    alert_lower_timestamp: datetime = None,
-    alert_upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = 10e10,
-    incident_lower_timestamp: datetime = None,
-    incident_upper_timestamp: datetime = None,
-    use_n_hist_incidents: int = 10e10,
-    pmi_threshold: float = 0.0,
-    knee_threshold: float = 0.8,
-    min_incident_size: int = 5,
-    incident_similarity_threshold: float = 0.8,
+
 ) -> dict:
     result = asyncio.run(
         mine_incidents_and_create_objects(
             None,
             authenticated_entity.tenant_id,
-            alert_lower_timestamp,
-            alert_upper_timestamp,
-            use_n_historical_alerts,
-            incident_lower_timestamp,
-            incident_upper_timestamp,
-            use_n_hist_incidents,
-            pmi_threshold,
-            knee_threshold,
-            min_incident_size,
-            incident_similarity_threshold,
+            config.alert_lower_timestamp,
+            config.alert_upper_timestamp,
+            config.use_n_historical_alerts,
+            config.incident_lower_timestamp,
+            config.incident_upper_timestamp,
+            config.use_n_hist_incidents,
+            config.pmi_threshold,
+            config.knee_threshold,
+            config.min_incident_size,
+            config.min_alert_number,
+            config.incident_similarity_threshold,
+            config.general_temp_dir,
+            config.sliding_window,
         )
     )
     return result
