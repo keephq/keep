@@ -1,18 +1,20 @@
 """add WorkflowToIncidentExecution
 
-Revision ID: 3ccad45f29ec
-Revises: 1c650a429672
-Create Date: 2024-09-01 13:08:17.141139
+Revision ID: 772790c2e50a
+Revises: 49e7c02579db
+Create Date: 2024-09-08 02:05:42.739163
 
 """
 
 import sqlalchemy as sa
+import sqlalchemy_utils
 import sqlmodel
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = "3ccad45f29ec"
-down_revision = "1c650a429672"
+revision = "772790c2e50a"
+down_revision = "49e7c02579db"
 branch_labels = None
 depends_on = None
 
