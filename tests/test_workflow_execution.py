@@ -4,10 +4,11 @@ from datetime import datetime, timedelta
 
 import pytest
 import pytz
+from asyncio import sleep
 
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus, IncidentDtoIn, IncidentDto
 from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -575,3 +576,135 @@ def test_workflow_execution_with_disabled_workflow(
     assert enabled_workflow_execution.status == "success"
 
     assert disabled_workflow_execution is None
+
+
+
+workflow_definition_4 = """workflow:
+id: incident-triggers-test-created-updated
+description: test incident triggers 
+triggers:
+- type: incident
+  events:
+  - updated
+  - created
+name: created-updated
+owners: []
+services: []
+steps: []
+actions:
+- name: mock-action
+  provider:
+    type: console
+    with:
+      message: |
+        "incident: {{ incident.name }}"
+"""
+
+workflow_definition_5 = """workflow:
+id: incident-incident-triggers-test-deleted
+description: test incident triggers
+triggers:
+- type: incident
+  events:
+  - deleted
+name: deleted
+owners: []
+services: []
+steps: []
+actions:
+- name: mock-action
+  provider:
+    type: console
+    with:
+      message: |
+        "deleted incident: {{ incident.name }}"
+"""
+
+
+def test_workflow_incident_triggers(
+    db_session,
+    workflow_manager,
+):
+    workflow_created = Workflow(
+        id="incident-triggers-test-created-updated",
+        name="incident-triggers-test-created-updated",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Check that incident triggers works",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_4,
+    )
+    db_session.add(workflow_created)
+    db_session.commit()
+
+    # Create the current alert
+    incident = IncidentDto(
+        id="ba9ddbb9-3a83-40fc-9ace-1e026e08ca2b",
+        user_generated_name="incident",
+        number_of_alerts=0,
+        alert_sources=[],
+        services=[],
+        severity="critical",
+        is_predicted=False,
+        is_confirmed=True,
+    )
+
+    # Insert the current alert into the workflow manager
+
+    def wait_workflow_execution(workflow_id):
+        # Wait for the workflow execution to complete
+        workflow_execution = None
+        count = 0
+        status = None
+        while workflow_execution is None and count < 30 and status != "success":
+            workflow_execution = get_last_workflow_execution_by_workflow_id(
+                SINGLE_TENANT_UUID, workflow_id
+            )
+            if workflow_execution is not None:
+                status = workflow_execution.status
+            time.sleep(1)
+            count += 1
+        return workflow_execution
+
+    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "created")
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
+
+    workflow_execution_created = wait_workflow_execution("incident-triggers-test-created-updated")
+    assert workflow_execution_created is not None
+    assert workflow_execution_created.status == "success"
+    assert workflow_execution_created.results['mock-action'] == ['"incident: incident"\n']
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+
+    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "updated")
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
+    workflow_execution_updated = wait_workflow_execution("incident-triggers-test-created-updated")
+    assert workflow_execution_updated is not None
+    assert workflow_execution_updated.status == "success"
+    assert workflow_execution_updated.results['mock-action'] == ['"incident: incident"\n']
+
+    # incident-triggers-test-created-updated should not be triggered
+    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+
+    workflow_deleted = Workflow(
+        id="incident-triggers-test-deleted",
+        name="incident-triggers-test-deleted",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="Check that incident triggers works",
+        created_by="test@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_5,
+    )
+    db_session.add(workflow_deleted)
+    db_session.commit()
+
+    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
+
+    # incident-triggers-test-deleted should be triggered now
+    workflow_execution_deleted = wait_workflow_execution("incident-triggers-test-deleted")
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
+
+    assert workflow_execution_deleted is not None
+    assert workflow_execution_deleted.status == "success"
+    assert workflow_execution_deleted.results['mock-action'] == ['"deleted incident: incident"\n']
