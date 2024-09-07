@@ -436,7 +436,7 @@ class NewrelicProvider(BaseProvider):
         """We are already registering template same as generic AlertDTO"""
         logger = logging.getLogger(__name__)
         logger.info("Got event from New Relic")
-        lastReceived = event.get("lastReceived", None)
+        lastReceived = event.pop("lastReceived", None)
         # from Keep policy
         if lastReceived:
             if isinstance(lastReceived, int):
