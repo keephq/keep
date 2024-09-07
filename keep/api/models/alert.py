@@ -403,6 +403,10 @@ class IncidentDto(IncidentDtoIn):
         }
 
     @property
+    def name(self):
+        return self.user_generated_name or self.ai_generated_name
+
+    @property
     def alerts(self) -> List["AlertDto"]:
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts

@@ -69,6 +69,17 @@ export function getToolboxConfiguration(providers: Provider[]) {
               }
             },
           },
+          {
+            type: "incident",
+            componentType: "trigger",
+            name: "Incident",
+            id: 'incident',
+            properties: {
+              incident: {
+                events: [],
+              }
+            },
+          },
         ],
       },
       {
@@ -516,6 +527,7 @@ export function buildAlert(definition: Definition): Alert {
       value: alert.properties.incident,
     });
   }
+  console.log("alert.properties", alert.properties);
   return {
     id: alertId,
     name: name,

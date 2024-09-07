@@ -265,8 +265,6 @@ function WorkflowEditorV2({
   selectedNode: string | null;
   saveRef: React.MutableRefObject<boolean>;
 }) {
-  const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
-
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
@@ -282,20 +280,6 @@ function WorkflowEditorV2({
     if (filterName) {
       updateAlertFilter(filterName, "");
     }
-  };
-
-  interface TriggersProperties {
-    "alert": { source: string },
-    "manual": "true",
-    "incident": { events: ("created" | "updated" | "deleted" | "")[] },
-    "interval": string
-  }
-
-  const PROPERTIES : TriggersProperties = {
-    "alert": { source: "" },
-    "manual": "true",
-    "incident": { events: [] },
-    "interval": ""
   };
 
   const deleteFilter = (filter: string) => {
@@ -325,7 +309,7 @@ function WorkflowEditorV2({
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
       {propertyKeys.map((key, index) => {
-        const isTrigger = ["manual", "alert", 'interval'].includes(key) ;
+        const isTrigger = ["manual", "alert", 'interval', 'incident'].includes(key);
         renderDivider = isTrigger && key ===  selectedNode ? !renderDivider : false;
         return (
           <div key={key}>
@@ -396,30 +380,32 @@ function WorkflowEditorV2({
                   );
 
                 case "incident" ? (
-              Array("created", "updated", "deleted").map((action) =>
-                <>
-                  <Switch
-                    id={action}
-                    key={`incident-${action}`}
-                    checked={(properties["incident"] as any).events.indexOf(action) > -1}
-                    onChange={() => {
-                      let actions = properties["incident"] as any;
-                      if (actions.events.indexOf(action) > -1) {
-                        actions.events = (actions.events as string[]).filter(e => e !== action)
-                        setProperties({ ...properties, [key]: actions })
-                      } else {
-                        console.log(actions);
-                        actions.events.push(action);
-                        setProperties({ ...properties, [key]: actions })
-                      }
-                    }}
-                    color={"orange"}
-                  />
-                  <label htmlFor={`incident-${action}`} className="text-sm text-gray-500">
-                    <Text>{action}</Text>
-                  </label>
-                </>
-              )) : key === "interval":
+              <>
+                <Subtitle className="mt-2.5">Incident events</Subtitle>
+                {Array("created", "updated", "deleted").map((event) =>
+                  <div key={`incident-${event}`} className="flex">
+                    <Switch
+                      id={event}
+                      checked={properties.incident.events?.indexOf(event) > -1}
+                      onChange={() => {
+                        let events = properties.incident.events || [];
+                        if (events.indexOf(event) > -1) {
+                          events = (events as string[]).filter(e => e !== event)
+                          setProperties({ ...properties, [key]: {events: events } })
+                        } else {
+                          events.push(event);
+                          setProperties({ ...properties, [key]: {events: events} })
+                        }
+                      }}
+                      color={"orange"}
+                    />
+                    <label htmlFor={`incident-${event}`} className="text-sm text-gray-500">
+                      <Text>{event}</Text>
+                    </label>
+                  </div>
+                )}
+              </>
+            ) : key === "interval":
                               return (
                                   selectedNode === "interval" && (<TextInput
                 placeholder={`Set the ${key}`}
@@ -525,7 +511,7 @@ export function StepEditorV2({
 
   return (
     <EditorLayout>
-      <Title className="capitalize">{providerType} Editor</Title>
+      <Title className="capitalize">{providerType}1 Editor</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"
