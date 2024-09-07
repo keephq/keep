@@ -160,7 +160,7 @@ export function ExecutionTable({
                         case triggered_by.substring(0, 6) === "manual":
                             valueToShow = "Manual";
                             break;
-                        case triggered_by.substring(0, 6) === "incident":
+                        case triggered_by.substring(0, 8) === "incident":
                             valueToShow = "Incident";
                             break;
                     }
