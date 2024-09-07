@@ -19,7 +19,15 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 from keep.api.arq_worker import get_arq_worker
-from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
+from keep.api.consts import (
+    KEEP_ARQ_QUEUE_AI,
+    KEEP_ARQ_QUEUE_BASIC,
+    KEEP_ARQ_TASK_POOL,
+    KEEP_ARQ_TASK_POOL_AI,
+    KEEP_ARQ_TASK_POOL_ALL,
+    KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
+    KEEP_ARQ_TASK_POOL_NONE,
+)
 from keep.api.core.config import AuthenticationType
 from keep.api.core.db import get_api_key
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -262,8 +270,19 @@ def get_app(
             logger.info("Consumer started successfully")
         if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
             event_loop = asyncio.get_event_loop()
-            arq_worker = get_arq_worker()
-            event_loop.create_task(arq_worker.async_run())
+            if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
+                basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
+                ai_worker = get_arq_worker(KEEP_ARQ_QUEUE_AI)
+                event_loop.create_task(basic_worker.async_run())
+                event_loop.create_task(ai_worker.async_run())
+            elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+                arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_AI)
+                event_loop.create_task(arq_worker.async_run())
+            elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
+                arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
+                event_loop.create_task(arq_worker.async_run())
+            else:
+                raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
         logger.info("Services started successfully")
 
     @app.exception_handler(Exception)
