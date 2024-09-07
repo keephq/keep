@@ -65,9 +65,12 @@ export const FilterTabs = ({
     );
 };
 
-export function StatsCard({ children }: { children: any }) {
-    return <Card className="container flex flex-col p-4 space-y-2">
-        {children}
+export function StatsCard({ children, data }: { children: any, data?: string }) {
+    return <Card className="group relative container flex flex-col p-4 space-y-2 min-w-1/5">
+            {!!data && <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white rounded py-1 p-2 text-2xl font-bold">
+                {data}
+            </div>}
+            {children}
     </Card>
 }
 
@@ -134,6 +137,17 @@ export default function WorkflowDetailPage({
         schema: JSON_SCHEMA,
     }) as any;
 
+
+    const formatNumber = (num: number) => {
+        if (num >= 1_000_000) {
+            return `${(num / 1_000_000).toFixed(1)}m`;
+        } else if (num >= 1_000) {
+            return `${(num / 1_000).toFixed(1)}k`;
+        } else {
+            return num.toString();
+        }
+    };
+
     const workflow = { last_executions: data.items } as Partial<Workflow>
     return (
         <>
@@ -149,22 +163,32 @@ export default function WorkflowDetailPage({
                     </div>
                     {data?.items && (
                         <div className="mt-2 flex flex-col gap-2">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-0.5">
-                                <StatsCard>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
+                                <StatsCard data={`${data.count ?? 0}`}>
                                     <Title>
                                         Total Executions
                                     </Title>
                                     <div>
-                                        <h1 className="text-2xl font-bold">{data.count ?? 0}</h1>
+                                        <h1 className="text-2xl font-bold">{formatNumber(data.count ?? 0)}</h1>
                                         {/* <div className="text-sm text-gray-500">__ from last month</div> */}
                                     </div>
                                 </StatsCard>
-                                <StatsCard>
+                                <StatsCard data= {`${data.passCount}/${data.failCount}`}>
                                     <Title>
                                         Pass / Fail ratio
                                     </Title>
                                     <div>
-                                        <h1 className="text-2xl font-bold">{(data.count ? (data.passFail ?? 0):0).toFixed(2)}{'%'}</h1>
+                                        <h1 className="text-2xl font-bold">{formatNumber(data.passCount)}{'/'}{formatNumber(data.failCount)}</h1>
+                                        {/* <div className="text-sm text-gray-500">__ from last month</div> */}
+                                    </div>
+
+                                </StatsCard>
+                                <StatsCard>
+                                    <Title>
+                                        Success %
+                                    </Title>
+                                    <div>
+                                        <h1 className="text-2xl font-bold">{(data.count ? (data.passCount / data.count) * 100 : 0).toFixed(2)}{"%"}</h1>
                                         {/* <div className="text-sm text-gray-500">__ from last month</div> */}
                                     </div>
 

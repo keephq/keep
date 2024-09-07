@@ -1,7 +1,10 @@
 import os
 
+from dotenv import find_dotenv, load_dotenv
+
 from keep.api.models.db.preset import PresetDto, StaticPresetsId
 
+load_dotenv(find_dotenv())
 RUNNING_IN_CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 PROVIDER_PULL_INTERVAL_DAYS = int(
     os.environ.get("KEEP_PULL_INTERVAL", 7)
