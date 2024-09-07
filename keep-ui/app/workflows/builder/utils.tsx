@@ -309,12 +309,12 @@ export function parseWorkflow(
         }, {});
       } else if (currType === "manual") {
         value = "true";
+      } else if (currType === "incident") {
+        value = {events: curr.events};
       }
       prev[currType] = value;
       return prev;
     }, {}) || {};
-
-  console.log("triggers", triggers)
 
   return generateWorkflow(
     workflow.id,
@@ -524,10 +524,9 @@ export function buildAlert(definition: Definition): Alert {
   if (alert.properties.incident) {
     triggers.push({
       type: "incident",
-      value: alert.properties.incident,
+      events: alert.properties.incident.events,
     });
   }
-  console.log("alert.properties", alert.properties);
   return {
     id: alertId,
     name: name,

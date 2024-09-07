@@ -379,43 +379,42 @@ function WorkflowEditorV2({
                     )
                   );
 
-                case "incident" ? (
-              <>
-                <Subtitle className="mt-2.5">Incident events</Subtitle>
-                {Array("created", "updated", "deleted").map((event) =>
-                  <div key={`incident-${event}`} className="flex">
-                    <Switch
-                      id={event}
-                      checked={properties.incident.events?.indexOf(event) > -1}
-                      onChange={() => {
-                        let events = properties.incident.events || [];
-                        if (events.indexOf(event) > -1) {
-                          events = (events as string[]).filter(e => e !== event)
-                          setProperties({ ...properties, [key]: {events: events } })
-                        } else {
-                          events.push(event);
-                          setProperties({ ...properties, [key]: {events: events} })
-                        }
-                      }}
-                      color={"orange"}
-                    />
-                    <label htmlFor={`incident-${event}`} className="text-sm text-gray-500">
-                      <Text>{event}</Text>
-                    </label>
-                  </div>
-                )}
-              </>
-            ) : key === "interval":
-                              return (
-                                  selectedNode === "interval" && (<TextInput
-                placeholder={`Set the ${key}`}
-                onChange={(e: any) =>
-                  handleChange(key, e.target.value)
-                }
-                value={properties[key] || ""as string}
-              />
-            ) );
-                case "disabled":
+                          case "incident":
+                            return selectedNode === 'incident' && <>
+                              <Subtitle className="mt-2.5">Incident events</Subtitle>
+                              {Array("created", "updated", "deleted").map((event) =>
+                                <div key={`incident-${event}`} className="flex">
+                                  <Switch
+                                    id={event}
+                                    checked={properties.incident.events?.indexOf(event) > -1}
+                                    onChange={() => {
+                                      let events = properties.incident.events || [];
+                                      if (events.indexOf(event) > -1) {
+                                        events = (events as string[]).filter(e => e !== event)
+                                        setProperties({ ...properties, [key]: {events: events } })
+                                      } else {
+                                        events.push(event);
+                                        setProperties({ ...properties, [key]: {events: events} })
+                                      }
+                                    }}
+                                    color={"orange"}
+                                  />
+                                  <label htmlFor={`incident-${event}`} className="text-sm text-gray-500">
+                                    <Text>{event}</Text>
+                                  </label>
+                                </div>
+                              )}
+                            </>;
+                          case "interval":
+                              return selectedNode === "interval" && (<TextInput
+                                  placeholder={`Set the ${key}`}
+                                  onChange={(e: any) =>
+                                    handleChange(key, e.target.value)
+                                  }
+                                  value={properties[key] || ""as string}
+                                />
+                              );
+                case "isabled":
                   return (
                     <div key={key}>
                       <input
@@ -438,7 +437,7 @@ function WorkflowEditorV2({
                                   />
                               );
                       }
-})()}
+                  })()}
               </div>
           );
       })}

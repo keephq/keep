@@ -115,7 +115,7 @@ class WorkflowManager:
                 continue
 
             incident_triggers = flatten(
-                [t["value"].get("events", []) for t in workflow.workflow_triggers if t["type"] == "incident"]
+                [t.get("events", []) for t in workflow.workflow_triggers if t["type"] == "incident"]
             )
 
             if trigger not in incident_triggers:
