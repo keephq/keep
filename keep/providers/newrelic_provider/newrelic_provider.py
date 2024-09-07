@@ -453,10 +453,10 @@ class NewrelicProvider(BaseProvider):
             ).isoformat()
 
         # format status and severity to Keep format
-        status = event.get("status", "") or event.get("state", "")
+        status = event.pop("status", "") or event.pop("state", "")
         status = NewrelicProvider.STATUS_MAP.get(status.lower(), AlertStatus.FIRING)
 
-        severity = event.get("severity", "") or event.get("priority", "")
+        severity = event.pop("severity", "") or event.pop("priority", "")
         severity = NewrelicProvider.SEVERITIES_MAP.get(
             severity.lower(), AlertSeverity.INFO
         )
