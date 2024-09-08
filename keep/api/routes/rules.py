@@ -21,7 +21,7 @@ class RuleCreateDto(BaseModel):
     sqlQuery: dict
     celQuery: str
     timeframeInSeconds: int
-    timeunit: str
+    timeUnit: str
     groupingCriteria: list = []
     groupDescription: str = None
     requireApprove: bool = False
@@ -66,7 +66,7 @@ async def create_rule(
     rule_name = rule_create_request.ruleName
     cel_query = rule_create_request.celQuery
     timeframe = rule_create_request.timeframeInSeconds
-    timeunit = rule_create_request.timeunit
+    timeunit = rule_create_request.timeUnit
     grouping_criteria = rule_create_request.groupingCriteria
     group_description = rule_create_request.groupDescription
     require_approve = rule_create_request.requireApprove

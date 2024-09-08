@@ -18,7 +18,7 @@ TEST_RULE_DATA = {
     "created_by": "test@keephq.dev",
 }
 
-INVALIDA_DATA_STEPS = [{
+INVALID_DATA_STEPS = [{
     "update": {"sqlQuery": {"sql": "", "params": []}},
     "error": "SQL is required",
 }, {
@@ -74,7 +74,7 @@ def test_create_rule_api(client, db_session, test_app):
         "sqlQuery": {"sql": "SELECT * FROM alert where severity = %s", "params": ["critical"]},
         "celQuery": "severity = 'critical'",
         "timeframeInSeconds": 300,
-        "timeunit": "seconds",
+        "timeUnit": "seconds",
         "requireApprove": False,
     }
 
@@ -104,7 +104,7 @@ def test_create_rule_api(client, db_session, test_app):
     assert data["detail"][0]["loc"] == ["body", "ruleName"]
     assert data["detail"][0]["msg"] == "field required"
 
-    for invalid_data_step in INVALIDA_DATA_STEPS:
+    for invalid_data_step in INVALID_DATA_STEPS:
         current_step = "Invalid data step: {}".format(invalid_data_step["error"])
         invalid_data_response_2 = client.post(
             "/rules",
@@ -145,7 +145,7 @@ def test_delete_rule_api(client, db_session, test_app):
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_create_rule_api(client, db_session, test_app):
+def test_update_rule_api(client, db_session, test_app):
 
     rule = create_rule_db(**TEST_RULE_DATA)
 
@@ -169,7 +169,7 @@ def test_create_rule_api(client, db_session, test_app):
     assert data["name"] == "test rule"
     assert data["definition_cel"] == "severity = 'critical'"
 
-    for invalid_data_step in INVALIDA_DATA_STEPS:
+    for invalid_data_step in INVALID_DATA_STEPS:
         current_step = "Invalid data step: {}".format(invalid_data_step["error"])
         invalid_data_response_2 = client.put(
             "/rules/{}".format(rule.id),
