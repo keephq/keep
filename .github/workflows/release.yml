@@ -2,6 +2,11 @@ name: Keep Release
 
 on:
   workflow_dispatch:
+    inputs:
+      force_version:
+        description: 'Force a specific version (leave empty for automatic versioning)'
+        required: false
+        type: string
 
 jobs:
   release:
@@ -29,6 +34,7 @@ jobs:
           push: false
           tag: true
           commit: true
+          force_version: ${{ github.event.inputs.force_version }}
 
       - name: Open PR for release branch
         id: pr-step
