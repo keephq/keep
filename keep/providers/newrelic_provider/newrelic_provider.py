@@ -466,12 +466,17 @@ class NewrelicProvider(BaseProvider):
             name = event.get("title", "")
 
         logger.info("Formatted event from New Relic")
+        # TypeError: keep.api.models.alert.AlertDto() got multiple values for keyword argument 'source'"
+        if "source" in event:
+            newrelic_source = event.pop("source")
+
         return AlertDto(
             source=["newrelic"],
             name=name,
             lastReceived=lastReceived,
             status=status,
             severity=severity,
+            newrelic_source=newrelic_source,
             **event,
         )
 
