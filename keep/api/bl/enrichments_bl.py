@@ -280,7 +280,7 @@ class EnrichmentsBl:
             if not topology_service:
                 self.logger.warning("No topology service found to match on")
             else:
-                enrichments = topology_service.dict()
+                enrichments = topology_service.dict(exclude_none=True)
                 # Remove redundant fields
                 enrichments.pop("tenant_id", None)
                 enrichments.pop("id", None)
@@ -294,7 +294,7 @@ class EnrichmentsBl:
                     enrichments = {
                         key: value
                         for key, value in row.items()
-                        if key not in rule.matchers
+                        if key not in rule.matchers and value is not None
                     }
                     break
 

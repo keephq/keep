@@ -6,8 +6,10 @@ import pytest
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
+from keep.api.models.db.topology import TopologyService
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 
@@ -556,3 +558,62 @@ def test_disposable_enrichment(client, db_session, test_app, mock_alert_dto):
     assert len(alerts) == 1
     alert = alerts[0]
     assert alert["status"] == "firing"
+
+
+def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
+    # Mock a TopologyService with dependencies to simulate the DB structure
+    mock_topology_service = TopologyService(
+        id=1, tenant_id="keep", service="test-service", display_name="Test Service"
+    )
+
+    # Create a mock MappingRule for topology
+    rule = MappingRule(
+        id=3,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=["service"],
+        name="topology_rule",
+        disabled=False,
+        type="topology",
+    )
+
+    # Mock the session to return this topology mapping rule
+    mock_session.query.return_value.filter.return_value.all.return_value = [rule]
+
+    # Initialize the EnrichmentsBl class with the mock session
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    mock_alert_dto.service = "test-service"
+
+    # Mock the get_topology_data_by_dynamic_matcher to return the mock topology service
+    with patch(
+        "keep.api.bl.enrichments_bl.get_topology_data_by_dynamic_matcher",
+        return_value=mock_topology_service,
+    ):
+        # Mock the enrichment database function so no actual DB actions occur
+        with patch(
+            "keep.api.bl.enrichments_bl.enrich_alert_db"
+        ) as mock_enrich_alert_db:
+            # Run the mapping rule logic for the topology
+            result_event = enrichment_bl.run_mapping_rules(mock_alert_dto)
+
+            # Check that the topology enrichment was applied correctly
+            assert getattr(result_event, "display_name", None) == "Test Service"
+
+            # Verify that the DB enrichment function was called correctly
+            mock_enrich_alert_db.assert_called_once_with(
+                "test_tenant",
+                mock_alert_dto.fingerprint,
+                {
+                    "source_provider_id": "unknown",
+                    "service": "test-service",
+                    "environment": "unknown",
+                    "display_name": "Test Service",
+                },
+                action_callee="system",
+                action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                action_description="Alert enriched with mapping from rule `topology_rule`",
+                session=mock_session,
+                force=False,
+                audit_enabled=True,
+            )
