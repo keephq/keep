@@ -203,3 +203,30 @@ receivers:
         else:
             self.logger.error("Failed to get alerts", extra=response.json())
             raise Exception("Could not get alerts")
+
+    def _query(self, query="", start="", end="", step="", queryType="", **kwargs:dict):
+        if queryType == "query":
+            response = requests.get(
+                f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/query",
+                params={"query": query, "time": start},
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.logger.error("Failed to perform instant query", extra=response.json())
+                raise Exception("Could not perform instant query")
+            
+        elif queryType == "query_range":
+            response = requests.get(
+                f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/query_range",
+                params={"query": query, "start": start, "end": end, "step": step},
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.logger.error("Failed to perform range query", extra=response.json())
+                raise Exception("Could not range query")
+            
+        else:
+            self.logger.error("Invalid query type")
+            raise Exception("Invalid query type")
