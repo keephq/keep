@@ -25,6 +25,11 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         self.auto_create_user = config(
             "KEEP_OAUTH2_PROXY_AUTO_CREATE_USER", default=True
         )
+        self.role_mappings = {
+            config("KEEP_OAUTH2_PROXY_ADMIN_ROLE", default=""): "admin",
+            config("KEEP_OAUTH2_PROXY_NOC_ROLE", default=""): "noc",
+            config("KEEP_OAUTH2_PROXY_WEBHOOK_ROLE", default=""): "webhook",
+        }
         self.logger.info("Oauth2proxy Auth Verifier initialized")
 
     def authenticate(
@@ -55,20 +60,27 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
                 detail=f"Unauthorized - no role in {self.oauth2_proxy_role_header} header found",
             )
 
-        # will raise exception if role not found
-        get_role_by_role_name(role)
+        # map the role from the header to Keep's internal role
+        mapped_role = self.role_mappings.get(role)
+        # if not mapped role, check if the role is just the internal role
+        if not mapped_role:
+            # will throw 403 exception if role is not found
+            mapped_role = get_role_by_role_name(role)
 
         # auto provision user
-        if self.auto_create_user and not user_exists(user_name):
+        if self.auto_create_user and not user_exists(username=user_name):
             self.logger.info(f"Auto provisioning user: {user_name}")
             create_user(
-                tenant_id=SINGLE_TENANT_UUID, username=user_name, role=role, password=""
+                tenant_id=SINGLE_TENANT_UUID,
+                username=user_name,
+                role=mapped_role,
+                password="",
             )
             self.logger.info(f"User {user_name} created")
 
-        self.logger.info(f"User {user_name} authenticated with role {role}")
+        self.logger.info(f"User {user_name} authenticated with role {mapped_role}")
         return AuthenticatedEntity(
             tenant_id=SINGLE_TENANT_UUID,
             email=user_name,
-            role=role,
+            role=mapped_role,
         )
