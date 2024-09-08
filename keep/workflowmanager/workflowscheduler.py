@@ -52,8 +52,8 @@ class WorkflowScheduler:
         try:
             # get all workflows that should run due to interval
             workflows = get_workflows_that_should_run()
-        except Exception as e:
-            self.logger.error(f"Error getting workflows that should run: {e}")
+        except Exception:
+            self.logger.exception("Error getting workflows that should run")
             pass
         for workflow in workflows:
             self.logger.debug("Running workflow on background")
@@ -464,10 +464,10 @@ class WorkflowScheduler:
             try:
                 self._handle_interval_workflows()
                 self._handle_event_workflows()
-            except Exception as e:
+            except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
-                self.logger.error(f"Error getting workflows that should run: {e}")
+                self.logger.exception("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
             time.sleep(1)
