@@ -25,6 +25,7 @@ from keep.api.core.db import (
     update_incident_summary,
     update_incident_name,
     write_pmi_matrix_to_temp_file,
+    get_pmi_values_from_temp_file,
     get_tenant_ai_config,
     write_tenant_ai_config,
 )
@@ -150,7 +151,7 @@ async def schedule_incident_processing(pool: ArqRedis, tenant_id: str, incident_
 
 def is_incident_accepting_updates(incident: Incident, current_time: datetime,
                                   incident_validity_threshold: timedelta) -> bool:
-    return current_time - incident.last_seen_time > incident_validity_threshold
+    return current_time - incident.last_seen_time < incident_validity_threshold
 
 
 def get_component_first_seen_time(component: Set[str], alerts: List[Alert]) -> datetime:
@@ -334,11 +335,13 @@ async def mine_incidents_and_create_objects(
         upper_timestamp=alert_upper_timestamp,
         lower_timestamp=alert_lower_timestamp)
 
+    pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
+    logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
+    
     if not alert_lower_timestamp:
         alert_lower_timestamp = min(alert.timestamp for alert in alerts)
 
     n_batches = int((alert_upper_timestamp - alert_lower_timestamp).total_seconds() // alert_batch_stride) - (STRIDE_DENOMINATOR - 1)
-    
     logging.info(
         f"Starting alert correlatiion. Current batch size: {alert_validity_threshold} seconds. Current \
             batch stride: {alert_batch_stride} seconds. Number of batches to process: {n_batches}")
@@ -360,7 +363,7 @@ async def mine_incidents_and_create_objects(
                         batch_end_timestamp and alert.timestamp >= batch_start_timestamp]
         batch_fingerprints = list(set([alert.fingerprint for alert in batch_alerts]))
 
-        batch_incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=batch_start_timestamp,
+        batch_incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=batch_end_timestamp,
                                                 lower_timestamp=batch_start_timestamp - incident_validity_threshold, is_predicted=True)
 
         logger.info(
@@ -382,14 +385,15 @@ async def mine_incidents_and_create_objects(
                 logger.info(
                     f"Incident {incident.id} is accepting updates. Appending {len(appendable_alerts)} alerts.", 
                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-                update_existing_incident(incident, appendable_alerts)
+                update_existing_incident(incident, [alert.id for alert in appendable_alerts])
 
         logger.info("Building alert graph", extra={"tenant_id": tenant_id, "algorithm": NAME_GENERATOR_VERBOSE_NAME})
 
         batch_graph = create_graph(
             tenant_id,
             batch_fingerprints,
-            temp_dir,
+            pmi_values,
+            fingerpint2idx,
             pmi_threshold,
             delete_nodes,
             knee_threshold)
@@ -405,6 +409,9 @@ async def mine_incidents_and_create_objects(
 
         new_incident_ids.extend(batch_new_incident_ids)
         updated_incident_ids.extend(batch_updated_incident_ids)
+        
+        tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(batch_start_timestamp)
+        write_tenant_ai_config(tenant_id, tenant_ai_config)
 
     new_incident_count = len(set(new_incident_ids))
     updated_incident_count = len(set(updated_incident_ids).difference(set(new_incident_ids)))
@@ -428,10 +435,6 @@ async def mine_incidents_and_create_objects(
                             "minimal amount of unique fingerprints in an incident" configuration parameters may help.'
 
         pusher_client.trigger(f"private-{tenant_id}", "ai-logs-change", {"log": log_string})
-        
-    tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(
-        alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
-    write_tenant_ai_config(tenant_id, tenant_ai_config)
 
     logger.info("Client notified on new AI log", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
 
