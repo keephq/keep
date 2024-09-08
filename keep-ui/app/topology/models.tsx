@@ -17,4 +17,7 @@ export interface TopologyService {
   email?: string;
   slack?: string;
   dependencies: TopologyServiceDependency[];
+  ip_address?: string;
+  mac_address?: string;
+  manufacturer?: string;
 }

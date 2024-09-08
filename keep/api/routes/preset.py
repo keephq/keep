@@ -105,17 +105,17 @@ def pull_data_from_providers(
                 logger.info("Getting topology data", extra=extra)
                 topology_data = provider_class.pull_topology()
                 logger.info("Got topology data, processing", extra=extra)
-                process_topology(tenant_id, topology_data, provider.id)
+                process_topology(tenant_id, topology_data, provider.id, provider.type)
                 logger.info("Processed topology data", extra=extra)
         except NotImplementedError:
             logger.warning(
                 f"Provider {provider.type} ({provider.id}) does not support topology data",
                 extra=extra,
             )
-        except Exception:
+        except Exception as e:
             logger.error(
                 f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                extra=extra,
+                extra={**extra, "error": str(e)},
             )
 
         # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
