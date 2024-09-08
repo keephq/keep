@@ -1,0 +1,15 @@
+workflow:
+  id: query-victoriametrics
+  name: victoriametrics
+  description: victoriametrics
+  triggers:
+    - type: manual
+  steps:
+    - name: victoriametrics-step
+      provider:
+        config: "{{ providers.victoriametrics }}"
+        type: victoriametrics
+        with:
+          query: process_memory_limit_bytes
+          queryType: query
+  actions: []
