@@ -82,7 +82,8 @@
         "platform/alertseverityandstatus",
         "platform/workflows",
         "platform/settings",
-        "platform/metrics"
+        "platform/metrics",
+        "platform/support"
       ]
     },
     {
