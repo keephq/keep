@@ -33,7 +33,8 @@ export const useAlerts = () => {
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR<AlertDto[]>(
-      () => (session && presetName ? `${apiUrl}/preset/${presetName}/alerts` : null),
+      () =>
+        session && presetName ? `${apiUrl}/preset/${presetName}/alerts` : null,
       (url) => fetcher(url, session?.accessToken),
       options
     );
@@ -78,12 +79,32 @@ export const useAlerts = () => {
     };
   };
 
+  const useMultipleFingerprintsAlertAudit = (
+    fingerprints: string[] | undefined,
+    options: SWRConfiguration = { revalidateOnFocus: false }
+  ) => {
+    return useSWR(
+      () => (session && fingerprints ? `${apiUrl}/alerts/audit` : null),
+      (url) =>
+        fetcher(url, session?.accessToken, {
+          method: "POST",
+          body: JSON.stringify(fingerprints),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }),
+      options
+    );
+  };
+
   const useAlertAudit = (
     fingerprint: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
     return useSWR(
-      () => (session && fingerprint ? `${apiUrl}/alerts/${fingerprint}/audit` : null),
+      () =>
+        session && fingerprint ? `${apiUrl}/alerts/${fingerprint}/audit` : null,
       (url) => fetcher(url, session?.accessToken),
       options
     );
@@ -93,6 +114,7 @@ export const useAlerts = () => {
     useAlertHistory,
     useAllAlerts,
     usePresetAlerts,
-    useAlertAudit
+    useAlertAudit,
+    useMultipleFingerprintsAlertAudit,
   };
 };

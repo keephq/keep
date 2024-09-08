@@ -2091,16 +2091,38 @@ def get_incidents(tenant_id) -> List[Incident]:
 
 
 def get_alert_audit(
-    tenant_id: str, fingerprint: str, limit: int = 50
+    tenant_id: str, fingerprint: str | list[str], limit: int = 50
 ) -> List[AlertAudit]:
+    """
+    Get the alert audit for the given fingerprint(s).
+
+    Args:
+        tenant_id (str): the tenant_id to filter the alert audit by
+        fingerprint (str | list[str]): the fingerprint(s) to filter the alert audit by
+        limit (int, optional): the maximum number of alert audits to return. Defaults to 50.
+
+    Returns:
+        List[AlertAudit]: the alert audit for the given fingerprint(s)
+    """
     with Session(engine) as session:
-        audit = session.exec(
-            select(AlertAudit)
-            .where(AlertAudit.tenant_id == tenant_id)
-            .where(AlertAudit.fingerprint == fingerprint)
-            .order_by(desc(AlertAudit.timestamp))
-            .limit(limit)
-        ).all()
+        if isinstance(fingerprint, list):
+            query = (
+                select(AlertAudit)
+                .where(AlertAudit.tenant_id == tenant_id)
+                .where(AlertAudit.fingerprint.in_(fingerprint))
+                .order_by(desc(AlertAudit.timestamp), AlertAudit.fingerprint)
+            )
+            if limit:
+                query = query.limit(limit)
+            audit = session.exec(query).all()
+        else:
+            audit = session.exec(
+                select(AlertAudit)
+                .where(AlertAudit.tenant_id == tenant_id)
+                .where(AlertAudit.fingerprint == fingerprint)
+                .order_by(desc(AlertAudit.timestamp))
+                .limit(limit)
+            ).all()
     return audit
 
 
