@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -9,11 +9,15 @@ import {
   ReactFlow,
   ReactFlowInstance,
   ReactFlowProvider,
+  applyNodeChanges,
+  applyEdgeChanges,
+  NodeChange,
+  EdgeChange,
 } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 import CustomNode from "./custom-node";
-import { Card, TextInput } from "@tremor/react";
+import { Card } from "@tremor/react";
 import {
   edgeLabelBgPaddingNoHover,
   edgeLabelBgStyleNoHover,
@@ -29,12 +33,12 @@ import { useTopology } from "utils/hooks/useTopology";
 import Loading from "app/loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
+import { ServiceSearchContext } from "./service-search-context";
 
 interface Props {
   providerId?: string;
   service?: string;
   environment?: string;
-  showSearch?: boolean;
 }
 
 // Function to create a Dagre layout
@@ -70,17 +74,12 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
   return { nodes, edges };
 };
 
-const TopologyPage = ({
-  providerId,
-  service,
-  environment,
-  showSearch = true,
-}: Props) => {
+const TopologyPage = ({ providerId, service, environment }: Props) => {
   const router = useRouter();
   // State for nodes and edges
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [serviceInput, setServiceInput] = useState<string>("");
+  const serviceInput = useContext(ServiceSearchContext);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<Node, Edge>>();
 
@@ -88,6 +87,17 @@ const TopologyPage = ({
     providerId,
     service,
     environment
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) =>
+      setNodes((nds) => applyNodeChanges(changes, nds)),
+    []
+  );
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) =>
+      setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
   );
 
   const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
@@ -106,7 +116,13 @@ const TopologyPage = ({
 
   const zoomToNode = useCallback(
     (nodeId: string) => {
-      const node = reactFlowInstance?.getNode(nodeId);
+      let node = reactFlowInstance?.getNode(nodeId);
+      if (!node) {
+        // Maybe its by display name?
+        node = reactFlowInstance
+          ?.getNodes()
+          .find((n) => n.data.display_name === nodeId);
+      }
       if (node && reactFlowInstance) {
         reactFlowInstance.setCenter(node.position.x, node.position.y);
       }
@@ -171,7 +187,7 @@ const TopologyPage = ({
     return (
       <div className="flex flex-col justify-center">
         <EmptyStateCard
-          className="mb-20"
+          className="mt-20"
           title="Error Loading Topology Data"
           description="Seems like we encountred some problem while trying to load your topology data, please contact us if this issue continues"
           buttonText="Slack Us"
@@ -183,24 +199,18 @@ const TopologyPage = ({
     );
 
   return (
-    <Card className="p-4 md:p-10 mx-auto h-full relative mb-10">
-      {showSearch && (
-        <div className="flex justify-end items-center w-full absolute top-0 left-0">
-          <TextInput
-            placeholder="Search for a service"
-            value={serviceInput}
-            onValueChange={setServiceInput}
-            className="w-96 mr-9 mt-2"
-          />
-        </div>
-      )}
+    <Card className="p-4 md:p-10 mx-auto h-full mb-10 mt-2.5">
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          defaultViewport={{ x: 0, y: 0, zoom: 2 }}
           fitView
           snapToGrid
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           fitViewOptions={{ padding: 0.3 }}
+          zoomOnDoubleClick={true}
           onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
           onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
           nodeTypes={{ customNode: CustomNode }}
