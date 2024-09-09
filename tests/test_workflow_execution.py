@@ -208,7 +208,7 @@ def test_workflow_execution(
 
 
 workflow_definition2 = """workflow:
-id: alert-first-time
+id: %s
 description: send slack message only the first time an alert fires
 triggers:
   - type: alert
@@ -228,32 +228,37 @@ actions:
 
 
 @pytest.mark.parametrize(
-    "test_case, alert_statuses, expected_action",
+    "workflow_id, test_case, alert_statuses, expected_action",
     [
-        ("First firing", [[0, "firing"]], True),
-        ("Second firing within 24h", [[0, "firing"], [1, "firing"]], False),
+        ("alert-first-firing", "First firing", [[0, "firing"]], True),
+        ("alert-second-firing", "Second firing within 24h", [[0, "firing"], [1, "firing"]], False),
         (
+            "firing-resolved-firing-24",
             "First firing, resolved, and fired again after 24h",
             [[0, "firing"], [1, "resolved"], [25, "firing"]],
             True,
         ),
         (
+            "multiple-firings-24",
             "Multiple firings within 24h",
             [[0, "firing"], [1, "firing"], [2, "firing"], [3, "firing"]],
             False,
         ),
         (
+            "resolved-fired-24",
             "Resolved and fired again within 24h",
             [[0, "firing"], [1, "resolved"], [2, "firing"]],
             False,
         ),
         (
+            "first-firing-multiple-resolutions",
             "First firing after multiple resolutions",
             [[0, "resolved"], [1, "resolved"], [2, "firing"]],
             True,
         ),
-        ("Firing exactly at 24h boundary", [[0, "firing"], [24, "firing"]], True),
+        ("firing-exactly-24", "Firing exactly at 24h boundary", [[0, "firing"], [24, "firing"]], True),
         (
+            "complex-scenario",
             "Complex scenario with multiple status changes",
             [
                 [0, "firing"],
@@ -270,6 +275,7 @@ def test_workflow_execution_2(
     db_session,
     create_alert,
     workflow_manager,
+    workflow_id,
     test_case,
     alert_statuses,
     expected_action,
@@ -296,13 +302,13 @@ def test_workflow_execution_2(
     - Firing of an alert after resolving and firing again after 24 hours
     """
     workflow = Workflow(
-        id="alert-first-time",
-        name="alert-first-time",
+        id=workflow_id,
+        name=workflow_id,
         tenant_id=SINGLE_TENANT_UUID,
         description="Send slack message only the first time an alert fires",
         created_by="test@keephq.dev",
         interval=0,
-        workflow_raw=workflow_definition2,
+        workflow_raw=workflow_definition2 % workflow_id,
     )
     db_session.add(workflow)
     db_session.commit()
@@ -334,7 +340,7 @@ def test_workflow_execution_2(
     status = None
     while workflow_execution is None and count < 30 and status != "success":
         workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "alert-first-time"
+            SINGLE_TENANT_UUID, workflow_id,
         )
         if workflow_execution is not None:
             status = workflow_execution.status
