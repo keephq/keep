@@ -1,0 +1,12 @@
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 20px;
+}
+
+.fingerprint-timeline {
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+}

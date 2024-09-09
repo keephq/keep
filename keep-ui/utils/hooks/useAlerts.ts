@@ -6,6 +6,14 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { toDateObjectWithFallback } from "utils/helpers";
 
+export type AuditEvent = {
+  user_id: string;
+  action: string;
+  description: string;
+  timestamp: string;
+  fingerprint: string;
+};
+
 export const useAlerts = () => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
@@ -83,7 +91,7 @@ export const useAlerts = () => {
     fingerprints: string[] | undefined,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    return useSWR(
+    return useSWR<AuditEvent[]>(
       () => (session && fingerprints ? `${apiUrl}/alerts/audit` : null),
       (url) =>
         fetcher(url, session?.accessToken, {
@@ -102,7 +110,7 @@ export const useAlerts = () => {
     fingerprint: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    return useSWR(
+    return useSWR<AuditEvent[]>(
       () =>
         session && fingerprint ? `${apiUrl}/alerts/${fingerprint}/audit` : null,
       (url) => fetcher(url, session?.accessToken),
