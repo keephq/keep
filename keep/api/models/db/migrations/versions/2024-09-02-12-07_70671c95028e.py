@@ -7,7 +7,6 @@ Create Date: 2024-09-02 12:07:09.147349
 """
 
 import sqlalchemy as sa
-import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -28,11 +27,11 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("created_by", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("cel_query", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("tenant_id", sa.String(36), nullable=False),
+        sa.Column("description", sa.String(1000), nullable=True),
+        sa.Column("created_by", sa.String(255), nullable=False),
+        sa.Column("cel_query", sa.Text(), nullable=False),
         sa.Column("start_time", sa.DateTime(), nullable=False),
         sa.Column("end_time", sa.DateTime(), nullable=False),
         sa.Column("duration_seconds", sa.Integer(), nullable=True),

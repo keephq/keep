@@ -7,7 +7,6 @@ Create Date: 2024-08-14 18:30:09.052273
 """
 
 import sqlalchemy as sa
-import sqlalchemy_utils
 import sqlmodel
 from alembic import op
 
@@ -24,18 +23,27 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column(
                 "rule_id",
-                sqlalchemy_utils.types.uuid.UUIDType(binary=False),
+                sa.String(36),  # Changed to match the data type of rule.id
                 nullable=True,
             )
         )
         batch_op.add_column(
             sa.Column(
-                "rule_fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False,
-                default="", server_default=""
+                "rule_fingerprint",
+                sqlmodel.sql.sqltypes.AutoString(),
+                nullable=False,
+                default="",
+                server_default="",
             )
         )
         batch_op.add_column(
-            sa.Column("severity", sa.Integer(), nullable=False, server_default=sa.text("(5)"), default=5)
+            sa.Column(
+                "severity",
+                sa.Integer(),
+                nullable=False,
+                server_default=sa.text("5"),
+                default=5,
+            )
         )
 
         batch_op.create_foreign_key(
@@ -45,7 +53,9 @@ def upgrade() -> None:
     with op.batch_alter_table("rule", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
-                "require_approve", sa.Boolean(), nullable=False,
+                "require_approve",
+                sa.Boolean(),
+                nullable=False,
                 server_default=sa.text("(FALSE)"),
             )
         )
@@ -54,8 +64,14 @@ def upgrade() -> None:
     # op.drop_table("group")
 
     with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("timestamp", sa.DateTime(), nullable=False,
-                                      server_default=sa.func.current_timestamp()))
+        batch_op.add_column(
+            sa.Column(
+                "timestamp",
+                sa.DateTime(),
+                nullable=False,
+                server_default=sa.func.current_timestamp(),
+            )
+        )
 
     # ### end Alembic commands ###
 

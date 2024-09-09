@@ -8,6 +8,7 @@
 # 1. Spin up the environment using docker-compose.
 #   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 #   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
+#   for mssql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mssql.yml up keep-database
 # 2. Run the tests using pytest.
 # NOTE: to clean the database, run docker volume rm keep_postgres_data keep_mysql-data
 # NOTE 2: to run the tests with a browser, uncomment this:

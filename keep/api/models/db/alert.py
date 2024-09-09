@@ -52,7 +52,6 @@ class AlertToIncident(SQLModel, table=True):
             UUIDType(binary=False),
             ForeignKey("incident.id", ondelete="CASCADE"),
             primary_key=True,
-            max_length=36,
         )
     )
 
@@ -96,7 +95,6 @@ class Incident(SQLModel, table=True):
             UUIDType(binary=False),
             ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"),
             nullable=True,
-            max_length=36,
         ),
     )
 
