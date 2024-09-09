@@ -1797,7 +1797,7 @@ def update_key_last_used(
             # shouldn't happen but somehow happened to specific tenant so logging it
             logger.error(
                 "API key not found",
-                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+                extra={"tenant_id": tenant_id, "unique_api_key_id": reference_id},
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
