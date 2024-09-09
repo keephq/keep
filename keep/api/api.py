@@ -288,6 +288,22 @@ def get_app(
                 raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
         logger.info("Services started successfully")
 
+    @app.on_event("shutdown")
+    async def on_shutdown():
+        logger.info("Shutting down Keep")
+        if SCHEDULER:
+            logger.info("Stopping the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            await wf_manager.stop()
+            logger.info("Scheduler stopped successfully")
+        if CONSUMER:
+            logger.info("Stopping the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            await event_subscriber.stop()
+            logger.info("Consumer stopped successfully")
+        # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
+        logger.info("Keep shutdown complete")
+
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
