@@ -1,13 +1,7 @@
-import { Title } from "@tremor/react";
 import TopologyPage from "./topology";
 
 export default function Page() {
-  return (
-    <>
-      <Title className="mb-5">Service Topology</Title>
-      <TopologyPage />
-    </>
-  );
+  return <TopologyPage />;
 }
 
 export const metadata = {

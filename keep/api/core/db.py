@@ -577,7 +577,6 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
                 WorkflowExecution.tenant_id == tenant_id,
                 WorkflowExecution.workflow_id == workflow_id
             )
-            .order_by(desc(WorkflowExecution.started))
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -619,17 +618,15 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
 
 
         total_count = query.count()
-        status_counts = session.query(
+        status_count_query = query.with_entities(
             WorkflowExecution.status,
             func.count().label('count')
-        ).group_by(WorkflowExecution.status).all()
+        ).group_by(WorkflowExecution.status)
+        status_counts = status_count_query.all()
 
         statusGroupbyMap = {status: count for status, count in status_counts}
-
-        passCount = statusGroupbyMap.get('success', 0)
-        failCount = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)
-        passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
-
+        pass_count = statusGroupbyMap.get('success', 0)
+        fail_count = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)
         avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
@@ -638,7 +635,7 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
         # Execute the query
         workflow_executions = query.all()
 
-    return total_count, workflow_executions, passFail, avgDuration
+    return total_count, workflow_executions, pass_count, fail_count, avgDuration
 
 
 def delete_workflow(tenant_id, workflow_id):
@@ -1369,6 +1366,7 @@ def create_rule(
     tenant_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     created_by,
@@ -1382,6 +1380,7 @@ def create_rule(
             tenant_id=tenant_id,
             name=name,
             timeframe=timeframe,
+            timeunit=timeunit,
             definition=definition,
             definition_cel=definition_cel,
             created_by=created_by,
@@ -1401,6 +1400,7 @@ def update_rule(
     rule_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     updated_by,
@@ -1415,6 +1415,7 @@ def update_rule(
         if rule:
             rule.name = name
             rule.timeframe = timeframe
+            rule.timeunit = timeunit
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.grouping_criteria = grouping_criteria
@@ -2744,6 +2745,18 @@ def get_all_topology_data(
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
         return service_dtos
+
+
+def get_topology_data_by_dynamic_matcher(
+    tenant_id: str, matchers_value: dict[str, str]
+) -> TopologyService | None:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+        for matcher in matchers_value:
+            query = query.where(
+                getattr(TopologyService, matcher) == matchers_value[matcher]
+            )
+    return session.exec(query).first()
 
 
 def get_tags(tenant_id):

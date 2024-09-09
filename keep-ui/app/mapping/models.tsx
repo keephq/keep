@@ -11,6 +11,7 @@ export interface MappingRule {
   last_updated_at: Date;
   disabled: boolean;
   override: boolean;
+  type: "csv" | "topology";
   condition?: string;
   matchers: string[];
   rows: { [key: string]: any }[];

@@ -3,8 +3,16 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
+import { useWebsocket } from "./usePusher";
+import { useCallback, useEffect } from "react";
+import { toast } from "react-toastify";
 
 const isNullOrUndefined = (value: any) => value === null || value === undefined;
+
+interface TopologyUpdate {
+  providerType: string;
+  providerId: string;
+}
 
 export const useTopology = (
   providerId?: string,
@@ -12,6 +20,7 @@ export const useTopology = (
   environment?: string
 ) => {
   const { data: session } = useSession();
+  useTopologyPolling();
   const apiUrl = getApiURL();
 
   const url = !session
@@ -33,4 +42,22 @@ export const useTopology = (
     isLoading: !data && !error,
     mutate,
   };
+};
+
+export const useTopologyPolling = () => {
+  const { bind, unbind } = useWebsocket();
+
+  const handleIncoming = useCallback((data: TopologyUpdate) => {
+    toast.success(
+      `Topology pulled from ${data.providerId} (${data.providerType})`,
+      { position: "top-right" }
+    );
+  }, []);
+
+  useEffect(() => {
+    bind("topology-update", handleIncoming);
+    return () => {
+      unbind("topology-update", handleIncoming);
+    };
+  }, [bind, unbind, handleIncoming]);
 };

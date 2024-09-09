@@ -1,7 +1,9 @@
 import os
 
+from dotenv import find_dotenv, load_dotenv
 from keep.api.models.db.preset import PresetDto, StaticPresetsId, PresetEntityEnum
 
+load_dotenv(find_dotenv())
 RUNNING_IN_CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 PROVIDER_PULL_INTERVAL_DAYS = int(
     os.environ.get("KEEP_PULL_INTERVAL", 7)
@@ -51,6 +53,9 @@ KEEP_ARQ_TASK_POOL_NONE = "none"  # Arq workers explicitly disabled for this ser
 KEEP_ARQ_TASK_POOL_ALL = "all"  # All arq workers enabled for this service
 KEEP_ARQ_TASK_POOL_BASIC_PROCESSING = "basic_processing"  # Everything except AI
 KEEP_ARQ_TASK_POOL_AI = "ai"  # Only AI
+# Define queues for different task types
+KEEP_ARQ_QUEUE_BASIC = "basic_processing"
+KEEP_ARQ_QUEUE_AI = "ai_processing"
 
 REDIS = os.environ.get("REDIS", "false") == "true"
 KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)

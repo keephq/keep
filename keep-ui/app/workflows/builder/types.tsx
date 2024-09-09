@@ -26,7 +26,8 @@ export interface PaginatedWorkflowExecutionDto {
   items: WorkflowExecution[];
   workflow: Workflow;
   avgDuration: number;
-  passFail: number;
+  passCount: number;
+  failCount: number;
 }
 
 export type WorkflowExecutionFailure = Pick<WorkflowExecution, "error">;
