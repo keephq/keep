@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+from uuid import uuid4
 
 from arq import Worker, cron
 from arq.connections import RedisSettings
@@ -17,14 +18,13 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
 )
 from keep.api.core.config import config
-from keep.api.tasks.healthcheck_task import healthcheck_task
 from keep.api.tasks.process_background_ai_task import process_background_ai_task
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
 # Current worker will pick up tasks only according to its execution pool:
-all_tasks_for_the_worker = [("keep.api.tasks.healthcheck_task.healthcheck_task", None)]
+all_tasks_for_the_worker = []
 
 if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_BASIC_PROCESSING]:
     all_tasks_for_the_worker += [
@@ -86,12 +86,17 @@ def get_arq_worker(queue_name: str) -> Worker:
     expires = config(
         "ARQ_EXPIRES", cast=int, default=3600
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
-    return create_worker(
+
+    # generate a worker id so each worker will have a different health check key
+    worker_id = str(uuid4()).replace("-", "")
+    worker = create_worker(
         WorkerSettings,
         keep_result=keep_result,
         expires_extra_ms=expires,
         queue_name=queue_name,
+        health_check_key=f"{queue_name}:{worker_id}:health-check",
     )
+    return worker
 
 
 def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
@@ -118,20 +123,13 @@ class WorkerSettings:
     timeout = 60 * 15 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 30
     functions: list = FUNCTIONS
     queue_name: str
+    health_check_interval: int = 10
+    health_check_key: str
 
     def __init__(self, queue_name: str):
         self.queue_name = queue_name
 
-    cron_jobs = [
-        cron(
-            healthcheck_task,
-            minute=at_every_x_minutes(1),
-            unique=True,
-            timeout=30,
-            max_tries=1,
-            run_at_startup=True,
-        ),
-    ]
+    cron_jobs = []
     if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_AI]:
         cron_jobs.append(
             cron(
