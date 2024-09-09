@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+from typing import List
 
 import dateutil
 
@@ -13,13 +14,23 @@ from sqlmodel import Session
 
 # internals
 from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
-from keep.api.bl.enrichments import EnrichmentsBl
-from keep.api.core.db import get_all_presets, get_enrichment, get_session_sync
+from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
+from keep.api.core.db import (
+    get_alerts_by_fingerprint,
+    get_all_presets,
+    get_enrichment_with_session,
+    get_session_sync,
+)
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
 from keep.api.models.db.preset import PresetDto
+from keep.api.utils.enrichment_helpers import (
+    calculated_start_firing_time,
+    convert_db_alerts_to_dto_alerts,
+)
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -60,6 +71,7 @@ def __save_to_db(
     formatted_events: list[AlertDto],
     deduplicated_events: list[AlertDto],
     provider_id: str | None = None,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     try:
         # keep raw events in the DB if the user wants to
@@ -85,19 +97,39 @@ def __save_to_db(
         enriched_formatted_events = []
         for formatted_event in formatted_events:
             formatted_event.pushed = True
+            # calculate startFiring time
+            previous_alert = get_alerts_by_fingerprint(
+                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint, limit=1
+            )
+            previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
+            formatted_event.firingStartTime = calculated_start_firing_time(
+                formatted_event, previous_alert
+            )
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Dispose enrichments that needs to be disposed
             try:
                 enrichments_bl.dispose_enrichments(formatted_event.fingerprint)
             except Exception:
-                logger.exception("Failed to dispose enrichments")
+                logger.exception(
+                    "Failed to dispose enrichments",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "fingerprint": formatted_event.fingerprint,
+                    },
+                )
 
             # Post format enrichment
             try:
                 formatted_event = enrichments_bl.run_extraction_rules(formatted_event)
             except Exception:
-                logger.exception("Failed to run post-formatting extraction rules")
+                logger.exception(
+                    "Failed to run post-formatting extraction rules",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "fingerprint": formatted_event.fingerprint,
+                    },
+                )
 
             # Make sure the lastReceived is a valid date string
             # tb: we do this because `AlertDto` object lastReceived is a string and not a datetime object
@@ -115,17 +147,24 @@ def __save_to_db(
                         tz=datetime.timezone.utc
                     ).isoformat()
 
-            alert = Alert(
-                tenant_id=tenant_id,
-                provider_type=(
+            alert_args = {
+                "tenant_id": tenant_id,
+                "provider_type": (
                     provider_type if provider_type else formatted_event.source[0]
                 ),
-                event=formatted_event.dict(),
-                provider_id=provider_id,
-                fingerprint=formatted_event.fingerprint,
-                alert_hash=formatted_event.alert_hash,
-            )
+                "event": formatted_event.dict(),
+                "provider_id": provider_id,
+                "fingerprint": formatted_event.fingerprint,
+                "alert_hash": formatted_event.alert_hash,
+            }
+            if timestamp_forced is not None:
+                alert_args["timestamp"] = timestamp_forced
+
+            alert = Alert(**alert_args)
             session.add(alert)
+            session.flush()
+            alert_id = alert.id
+            formatted_event.event_id = str(alert_id)
             audit = AlertAudit(
                 tenant_id=tenant_id,
                 fingerprint=formatted_event.fingerprint,
@@ -138,19 +177,17 @@ def __save_to_db(
                 description=f"Alert recieved from provider with status {formatted_event.status}",
             )
             session.add(audit)
-            session.flush()
-            session.refresh(alert)
-            formatted_event.event_id = str(alert.id)
             alert_dto = AlertDto(**formatted_event.dict())
-
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
             except Exception:
                 logger.exception("Failed to run mapping rules")
 
-            alert_enrichment = get_enrichment(
-                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint
+            alert_enrichment = get_enrichment_with_session(
+                session=session,
+                tenant_id=tenant_id,
+                fingerprint=formatted_event.fingerprint,
             )
             if alert_enrichment:
                 for enrichment in alert_enrichment.enrichments:
@@ -189,6 +226,8 @@ def __handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     provider_id: str | None = None,
+    notify_client: bool = True,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     """
     this is super important function and does five things:
@@ -211,9 +250,30 @@ def __handle_formatted_events(
             "tenant_id": tenant_id,
         },
     )
-    pusher_client = get_pusher_client()
 
-    # first, filter out any deduplicated events
+    # first, check for maintenance windows
+    maintenance_windows_bl = MaintenanceWindowsBl(tenant_id=tenant_id, session=session)
+    if maintenance_windows_bl.maintenance_rules:
+        formatted_events = [
+            event
+            for event in formatted_events
+            if maintenance_windows_bl.check_if_alert_in_maintenance_windows(event)
+            is False
+        ]
+    else:
+        logger.debug(
+            "No maintenance windows configured for this tenant",
+            extra={"tenant_id": tenant_id},
+        )
+
+    if not formatted_events:
+        logger.info(
+            "No alerts to process after running maintenance windows check",
+            extra={"tenant_id": tenant_id},
+        )
+        return
+
+    # second, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
 
     for event in formatted_events:
@@ -238,6 +298,7 @@ def __handle_formatted_events(
         formatted_events,
         deduplicated_events,
         provider_id,
+        timestamp_forced,
     )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
@@ -285,15 +346,18 @@ def __handle_formatted_events(
             },
         )
 
+    incidents = []
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        grouped_alerts = rules_engine.run_rules(formatted_events)
-        # if new grouped alerts were created, we need to push them to the client
-        if grouped_alerts:
-            logger.info("Adding group alerts to the workflow manager queue")
-            workflow_manager.insert_events(tenant_id, grouped_alerts)
-            logger.info("Added group alerts to the workflow manager queue")
+        incidents: List[IncidentDto] = rules_engine.run_rules(enriched_formatted_events)
+
+        # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
+        # if new grouped incidents were created, we need to push them to the client
+        # if incidents:
+        #     logger.info("Adding group alerts to the workflow manager queue")
+        #     workflow_manager.insert_events(tenant_id, grouped_alerts)
+        #     logger.info("Added group alerts to the workflow manager queue")
     except Exception:
         logger.exception(
             "Failed to run rules engine",
@@ -306,12 +370,15 @@ def __handle_formatted_events(
         )
 
     # Tell the client to poll alerts
-    if pusher_client:
+    if notify_client and incidents:
+        pusher_client = get_pusher_client()
+        if not pusher_client:
+            return
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
-                "poll-alerts",
-                "{}",
+                "incident-change",
+                {},
             )
         except Exception:
             logger.exception("Failed to push alert to the client")
@@ -322,7 +389,7 @@ def __handle_formatted_events(
         presets_do_update = []
         for preset in presets:
             # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.dict())
+            preset_dto = PresetDto(**preset.to_dict())
             filtered_alerts = RulesEngine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )
@@ -352,7 +419,10 @@ def __handle_formatted_events(
                 logger.info("Noisy preset is noisy")
                 preset_dto.should_do_noise_now = True
         # send with pusher
-        if pusher_client:
+        if notify_client:
+            pusher_client = get_pusher_client()
+            if not pusher_client:
+                return
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
@@ -384,6 +454,8 @@ def process_event(
     event: (
         AlertDto | list[AlertDto] | dict
     ),  # the event to process, either plain (generic) or from a specific provider
+    notify_client: bool = True,
+    timestamp_forced: datetime.datetime | None = None,
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -392,6 +464,7 @@ def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
+        "job_id": ctx.get("job_id"),
         "raw_event": (
             event if KEEP_STORE_RAW_ALERTS else None
         ),  # Let's log the events if we store it for debugging
@@ -403,21 +476,30 @@ def process_event(
         # Pre alert formatting extraction rules
         enrichments_bl = EnrichmentsBl(tenant_id, session)
         try:
-            event = enrichments_bl.run_extraction_rules(event)
+            event = enrichments_bl.run_extraction_rules(event, pre=True)
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
         if provider_type is not None and isinstance(event, dict):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(event, None)
+            # SHAHAR: for aws cloudwatch, we get a subscription notification message that we should skip
+            #         todo: move it to be generic
+            if event is None and provider_type == "cloudwatch":
+                logger.info(
+                    "This is a subscription notification message from AWS - skipping processing"
+                )
+                return
 
         # In case when provider_type is not set
         if isinstance(event, dict):
             event = [AlertDto(**event)]
+            raw_event = [raw_event]
 
         # Prepare the event for the digest
         if isinstance(event, AlertDto):
             event = [event]
+            raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
         __handle_formatted_events(
@@ -427,10 +509,18 @@ def process_event(
             raw_event,
             event,
             provider_id,
+            notify_client,
+            timestamp_forced,
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
-        raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
+        # Retrying only if context is present (running the job in arq worker)
+        if bool(ctx):
+            raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
+
+
+async def async_process_event(*args, **kwargs):
+    return process_event(*args, **kwargs)

@@ -3,10 +3,10 @@ import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "./models";
 import { Button, Title, Card, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import AlertMenu from "./alert-menu";
-import GraphVisualization from "./alert-graph-viz";
+// import AlertMenu from "./alert-menu";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
+import TopologyPage from "app/topology/topology";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -16,7 +16,11 @@ type AlertSidebarProps = {
 
 const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
   const { useAlertAudit } = useAlerts();
-  const { data: auditData, isLoading, mutate } = useAlertAudit(alert?.fingerprint || "");
+  const {
+    data: auditData,
+    isLoading,
+    mutate,
+  } = useAlertAudit(alert?.fingerprint || "");
 
   const handleRefresh = async () => {
     console.log("Refresh button clicked");
@@ -46,7 +50,7 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
           leaveFrom="translate-x-0"
           leaveTo="translate-x-full"
         >
-          <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
+          <Dialog.Panel className="fixed right-0 inset-y-0 w-2/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <div>
                 {/*Will add soon*/}
@@ -54,7 +58,9 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                 {/*<Divider></Divider>*/}
                 <Dialog.Title className="text-3xl font-bold" as={Title}>
                   Alert Details
-                  <Badge className="ml-4" color="orange">Beta</Badge>
+                  <Badge className="ml-4" color="orange">
+                    Beta
+                  </Badge>
                 </Dialog.Title>
               </div>
               <div>
@@ -68,7 +74,10 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                 <Card>
                   <div className="mt-4 space-y-2">
                     <p>
-                    <strong>Name:</strong> {alert.name}
+                      <strong>Name:</strong> {alert.name}
+                    </p>
+                    <p>
+                      <strong>Service:</strong> {alert.service}
                     </p>
                     <p>
                       <strong>Severity:</strong> {alert.severity}
@@ -90,12 +99,20 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                   </div>
                 </Card>
                 <Card className="flex-grow">
-                  <AlertTimeline key={auditData? auditData.length : 1} alert={alert} auditData={auditData} isLoading={isLoading} onRefresh={handleRefresh} />
+                  <AlertTimeline
+                    key={auditData ? auditData.length : 1}
+                    alert={alert}
+                    auditData={auditData}
+                    isLoading={isLoading}
+                    onRefresh={handleRefresh}
+                  />
                 </Card>
-                <Card>
-                  <Title>Related Services</Title>
-                  <GraphVisualization demoMode={true} />
-                </Card>
+                <Title>Related Services</Title>
+                <TopologyPage
+                  providerId={alert.providerId || ""}
+                  service={alert.service || ""}
+                  environment={"unknown"}
+                />
               </div>
             )}
           </Dialog.Panel>

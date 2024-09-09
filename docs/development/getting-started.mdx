@@ -13,8 +13,47 @@ git clone https://github.com/keephq/keep.git && cd keep
 
 Next, run
 ```
-docker-compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up
 ```
+
+### Install Keep CLI
+
+First, clone Keep repository:
+
+```shell
+git clone https://github.com/keephq/keep.git && cd keep
+```
+
+Install Keep CLI
+
+```shell
+poetry install
+```
+
+From now on, Keep should be installed locally and accessible from your CLI, test it by executing:
+
+```
+keep version
+```
+
+## Enable Auto Completion
+
+**Keep's CLI supports shell auto-completion, which can make your life a whole lot easier 😌**
+
+If you're using zsh
+
+```shell title=~/.zshrc
+eval "$(_KEEP_COMPLETE=zsh_source keep)"
+```
+
+If you're using bash
+
+```bash title=~/.bashrc
+eval "$(_KEEP_COMPLETE=bash_source keep)"
+```
+
+> Using eval means that the command is invoked and evaluated every time a shell is started, which can delay shell responsiveness. To speed it up, write the generated script to a file, then source that.
+
 
 ### Testing
 
@@ -33,7 +72,7 @@ poetry run coverage run --branch -m pytest -s tests/e2e_tests/
 
 Migrations are automatically executed on a server startup. To create a migration:
 ```bash
-cd keep && alembic revision --autogenerate -m "Your message"
+alembic -c keep/alembic.ini revision --autogenerate -m "Your message"
 ```
 
 Hint: make sure your models are imported at `./api/models/db/migrations/env.py` for autogenerator to pick them up.
@@ -52,6 +91,7 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
         "program": "keep/cli/cli.py",
         "console": "integratedTerminal",
         "justMyCode": false,
+        "python": "venv/bin/python",
         "args": ["--json", "api","--multi-tenant"],
         "env": {
             "PYDEVD_DISABLE_FILE_VALIDATION": "1",
@@ -72,6 +112,7 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
         "program": "scripts/simulate_alerts.py",
         "console": "integratedTerminal",
         "justMyCode": false,
+        "python": "venv/bin/python",
         "env": {
           "PYDEVD_DISABLE_FILE_VALIDATION": "1",
           "PYTHONPATH": "${workspaceFolder}/",
@@ -92,9 +133,17 @@ You can run Keep from your VSCode (after cloning the repo) by adding this config
 
 Install dependencies:
 ```
+python3.11 -m venv venv;
+source venv/bin/activate;
 pip install poetry;
 poetry install;
-cd keep-ui && npm i;
+cd keep-ui && npm i && cd ..;
+```
+
+Set frontend envs:
+```
+cp keep-ui/.env.local.example keep-ui/.env.local;
+echo "\n\n\n\nNEXTAUTH_SECRET="$(openssl rand -hex 32) >> keep-ui/.env.local;
 ```
 
 Launch Pusher ([soketi](https://soketi.app/)) container in parallel:

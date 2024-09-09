@@ -7,11 +7,16 @@ import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
+import { AILink } from "./AILink";
+import { TbTopologyRing } from "react-icons/tb";
+import { FaVolumeMute } from "react-icons/fa";
+import { useTopology } from "utils/hooks/useTopology";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
 export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
+  const { topologyData } = useTopology();
 
   if (isNOCRole) {
     return null;
@@ -38,31 +43,43 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
       <Disclosure.Panel as="ul" className="space-y-2 p-2 pr-4">
         <li>
           <LinkWithIcon href="/rules" icon={Rules}>
-            <Subtitle>
-              Alert Groups
-            </Subtitle>
+            <Subtitle>Correlations</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/workflows" icon={Workflows}>
-            <Subtitle>
-            Workflows
-            </Subtitle>
+            <Subtitle>Workflows</Subtitle>
+          </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon
+            href="/topology"
+            icon={TbTopologyRing}
+            isBeta={!topologyData || topologyData.length === 0}
+            count={
+              topologyData?.length === 0 ? undefined : topologyData?.length
+            }
+          >
+            <Subtitle>Service Topology</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/mapping" icon={Mapping}>
-            <Subtitle>
-              Mapping
-            </Subtitle>
+            <Subtitle>Mapping</Subtitle>
           </LinkWithIcon>
         </li>
         <li>
           <LinkWithIcon href="/extraction" icon={ExportIcon}>
-            <Subtitle>
-            Extraction
-            </Subtitle>
+            <Subtitle>Extraction</Subtitle>
           </LinkWithIcon>
+        </li>
+        <li>
+          <LinkWithIcon href="/maintenance" icon={FaVolumeMute}>
+            <Subtitle>Maintenance Windows</Subtitle>
+          </LinkWithIcon>
+        </li>
+        <li>
+          <AILink></AILink>
         </li>
       </Disclosure.Panel>
     </Disclosure>

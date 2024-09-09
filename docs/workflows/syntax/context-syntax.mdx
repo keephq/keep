@@ -41,7 +41,7 @@ The output of steps can be accessed from anywhere in the YAML using `{{ steps.st
 
 Keep's syntax allow to use functions on context blocks. For example, `keep.len({{ steps.step-name.results }})` will return the number of results of `step-name` step.
 
-- [See supported functions](/core/functions/what-is-a-function)
-- [Create new functions](core/functions/what-is-a-function#how-to-create-a-new-function)
+- [See supported functions](/workflows/functions/what-is-a-function)
+- [Create new functions](/workflows/functions/what-is-a-function#how-to-create-a-new-function)
 
 Under the hood, Keep uses Python's `ast` module to parse these expressions and evaluate them as best as possible.

@@ -3,6 +3,9 @@ OpenObserve Provider is a class that allows to install webhooks in OpenObserve.
 """
 
 import dataclasses
+import json
+import logging
+import uuid
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlencode, urljoin
@@ -370,26 +373,177 @@ class OpenobserveProvider(BaseProvider):
         event: dict,
         provider_instance: Optional["OpenobserveProvider"] = None,
     ) -> AlertDto:
-        return AlertDto(
-            id=event["org_name"],  # Mapping 'org_name' to 'id'
-            name=event["alert_name"],  # Mapping 'alert_name' to 'name'
-            severity=AlertSeverity.WARNING,
-            environment=event["stream_name"],  # Mapping 'stream_name' to 'environment'
-            startedAt=event[
-                "alert_start_time"
-            ],  # Mapping 'alert_start_time' to 'startedAt'
-            lastReceived=event[
-                "alert_start_time"
-            ],  # Mapping 'alert_start_time' to 'startedAt'
-            description=event["alert_type"],  # Mapping 'alert_type' to 'description'
-            labels={
-                "url": event["alert_url"],
-                "alert_period": event["alert_period"],
-                "alert_operator": event["alert_operator"],
-                "alert_threshold": event["alert_threshold"],
-                "alert_count": event["alert_count"],
-                "alert_agg_value": event["alert_agg_value"],
-                "alert_end_time": event["alert_end_time"],
-            },
-            source=["openobserve"],
-        )
+        logger = logging.getLogger(__name__)
+        name = event.pop("alert_name", "")
+        # openoboserve does not provide severity
+        severity = AlertSeverity.WARNING
+        # Mapping 'stream_name' to 'environment'
+        environment = event.pop("stream_name", "")
+        # Mapping 'alert_start_time' to 'startedAt'
+        startedAt = event.pop("alert_start_time", "")
+        # Mapping 'alert_start_time' to 'startedAt'
+        lastReceived = event.pop("alert_start_time", "")
+        # Mapping 'alert_type' to 'description'
+        description = event.pop("alert_type", "")
+
+        alert_url = event.pop("alert_url", "")
+
+        org_name = event.pop("org_name", "")
+        # Our only way to distinguish between non aggregated alert and aggregated alerts is the alert_agg_value
+        if "alert_agg_value" in event and len(
+            event["alert_agg_value"].split(",")
+        ) == int(event.get("alert_count", -1)):
+            logger.info("Formatting openobserve aggregated alert")
+            rows = event.pop("rows", "")
+            if not rows:
+                logger.exception(
+                    "Rows not found in the aggregated alert event",
+                    extra={"event": event},
+                )
+                raise ValueError("Rows not found in the aggregated alert event")
+            alerts = []
+            number_of_rows = event.pop("alert_count", "")
+            rows = rows.split("\n")
+            agg_values = event.pop("alert_agg_value", "").split(",")
+            # trim
+            agg_values = [agg_value.strip() for agg_value in agg_values]
+            for i in range(int(number_of_rows)):
+                try:
+                    logger.info(
+                        "Formatting aggregated alert",
+                        extra={"row": rows[i]},
+                    )
+                    row = rows[i]
+                    value = agg_values[i]
+                    # try to parse value as a number since its metric
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        pass
+                    try:
+                        row_data = json.loads(row)
+                    except json.JSONDecodeError:
+                        try:
+                            row_data = json.loads(row.replace("'", '"'))
+                        except json.JSONDecodeError:
+                            logger.exception(f"Failed to parse row: {row}")
+                            continue
+                    group_by_key, group_by_value = row_data.popitem()
+                    logger.info(
+                        "Formatting aggergated alert with group by key",
+                        extra={
+                            "group_by_key": group_by_key,
+                            "group_by_value": group_by_value,
+                        },
+                    )
+
+                    alert_id = str(uuid.uuid4())
+
+                    # we already take the value from the agg_value
+                    event.pop("value", "")
+                    # if the group_by_key is already in the event, remove it
+                    #   since we are adding it to the alert_dto
+                    event.pop(group_by_key, "")
+
+                    alert_dto = AlertDto(
+                        id=f"{alert_id}",
+                        name=f"{name}",
+                        severity=severity,
+                        environment=environment,
+                        startedAt=startedAt,
+                        lastReceived=lastReceived,
+                        description=description,
+                        row_data=row_data,
+                        source=["openobserve"],
+                        org_name=org_name,
+                        value=value,
+                        alert_url=alert_url,  # I'm not putting on URL since sometimes it doesn't return full URL so pydantic will throw an error
+                        **event,
+                        **{group_by_key: group_by_value},
+                    )
+                    # calculate the fingerprint based on name + group_by_value
+                    alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
+                        alert_dto, fingerprint_fields=["name", group_by_key]
+                    )
+                    logger.info(
+                        "Formatted openobserve aggregated alert",
+                        extra={"fingerprint": alert_dto.fingerprint},
+                    )
+                    alerts.append(alert_dto)
+                except json.JSONDecodeError:
+                    logger.error(f"Failed to parse row: {row}")
+            return alerts
+        # else, one alert, one row, old calculation
+        else:
+            alert_id = str(uuid.uuid4())
+            labels = {
+                "url": event.pop("alert_url", ""),
+                "alert_period": event.pop("alert_period", ""),
+                "alert_operator": event.pop("alert_operator", ""),
+                "alert_threshold": event.pop("alert_threshold", ""),
+                "alert_count": event.pop("alert_count", ""),
+                "alert_agg_value": event.pop("alert_agg_value", ""),
+                "alert_end_time": event.pop("alert_end_time", ""),
+            }
+            alert_dto = AlertDto(
+                id=alert_id,
+                name=name,
+                severity=severity,
+                environment=environment,
+                startedAt=startedAt,
+                lastReceived=lastReceived,
+                description=description,
+                labels=labels,
+                source=["openobserve"],
+                org_name=org_name,
+                alert_url=alert_url,  # I'm not putting on URL since sometimes it doesn't return full URL so pydantic will throw an error
+                **event,  # any other fields
+            )
+            # calculate fingerprint based on name + environment + event keys (e.g. host)
+            fingerprint_fields = ["name", "environment", *event.keys()]
+            # remove 'value' as its too dynamic
+            try:
+                fingerprint_fields.remove("value")
+            except ValueError:
+                pass
+            logger.info(
+                "Calculating fingerprint fields",
+                extra={"fingerprint_fields": fingerprint_fields},
+            )
+
+            # sort the fields to ensure the fingerprint is consistent
+            # for e.g. host1, host2 is the same as host2, host1
+            for field in fingerprint_fields:
+                try:
+                    field_attr = getattr(alert_dto, field)
+                    if "," not in field_attr:
+                        continue
+                    # sort it lexographically
+                    logger.info(
+                        "Sorting field attributes",
+                        extra={"field": field, "field_attr": field_attr},
+                    )
+                    sorted_field_attr = sorted(field_attr.replace(" ", "").split(","))
+                    sorted_field_attr = ", ".join(sorted_field_attr)
+                    logger.info(
+                        "Sorted field attributes",
+                        extra={"field": field, "sorted_field_attr": sorted_field_attr},
+                    )
+                    # set the attr
+                    setattr(alert_dto, field, sorted_field_attr)
+                except AttributeError:
+                    pass
+                except Exception as e:
+                    logger.error(
+                        "Error while sorting field attributes",
+                        extra={"field": field, "error": e},
+                    )
+
+            alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(
+                alert_dto, fingerprint_fields=fingerprint_fields
+            )
+            logger.info(
+                "Formatted openobserve alert",
+                extra={"fingerprint": alert_dto.fingerprint},
+            )
+            return alert_dto

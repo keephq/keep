@@ -36,6 +36,8 @@ class WorkflowDTO(BaseModel):
     revision: int = 1
     last_updated: datetime = None
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
+    last_executions: List[dict] = None
+    last_execution_started: datetime = None
 
     @property
     def workflow_raw_id(self):
@@ -98,7 +100,7 @@ class WorkflowExecutionDTO(BaseModel):
     status: str
     logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
-    execution_time: Optional[int]
+    execution_time: Optional[float]
     results: Optional[dict]
 
 

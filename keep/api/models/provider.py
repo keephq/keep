@@ -7,6 +7,10 @@ from keep.providers.models.provider_config import ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
 
+class ProviderAlertsCountResponseDTO(BaseModel):
+    count: int
+
+
 class Provider(BaseModel):
     id: str | None = None
     display_name: str
@@ -33,6 +37,10 @@ class Provider(BaseModel):
     methods: list[ProviderMethod] = []
     installed_by: str | None = None
     installation_time: datetime | None = None
+    last_pull_time: datetime | None = None
     docs: str | None = None
-    tags: list[Literal["alert", "ticketing", "messaging", "data", "queue"]] = []
+    tags: list[
+        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+    ] = []
     alertsDistribution: dict[str, int] | None = None
+    alertExample: dict | None = None

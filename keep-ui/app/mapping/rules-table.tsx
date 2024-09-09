@@ -14,14 +14,15 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  useReactTable, ExpandedState,
+  useReactTable,
+  ExpandedState,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
-import {useState} from "react";
+import { useState } from "react";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -68,6 +69,11 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       id: "name",
       header: "Name",
       cell: (context) => context.row.original.name,
+    }),
+    columnHelper.display({
+      id: "type",
+      header: "Type",
+      cell: (context) => context.row.original.type,
     }),
     columnHelper.display({
       id: "description",
@@ -153,17 +159,17 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       <TableBody>
         {table.getRowModel().rows.map((row) => (
           <>
-          <TableRow
-            className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
-            key={row.id}
-            onClick={() => row.toggleExpanded()}
-          >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
+            <TableRow
+              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100"
+              key={row.id}
+              onClick={() => row.toggleExpanded()}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
             {row.getIsExpanded() && (
               <TableRow className="pl-2.5">
                 <TableCell colSpan={columns.length}>

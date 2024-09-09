@@ -24,9 +24,6 @@ from sqlalchemy_utils import create_database, database_exists
 from sqlmodel import Session, select
 
 from keep.api.core.db_utils import create_db_engine
-
-# This import is required to create the tables
-from keep.api.core.rbac import Admin as AdminRole
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.extraction import *  # pylint: disable=unused-wildcard-import
@@ -34,8 +31,12 @@ from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-impo
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+
+# This import is required to create the tables
+from keep.identitymanager.rbac import Admin as AdminRole
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             user = session.exec(select(User)).first()
             # if no users exist, let's create the default user
             if not user:
+                logger.info("Creating default user")
                 default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
                 default_password = hashlib.sha256(
                     os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
@@ -82,20 +84,73 @@ def try_create_single_tenant(tenant_id: str) -> None:
                     role=AdminRole.get_name(),
                 )
                 session.add(default_user)
+                logger.info("Default user created")
             # else, if the user want to force the refresh of the default user password
             elif os.environ.get("KEEP_FORCE_RESET_DEFAULT_PASSWORD", "false") == "true":
                 # update the password of the default user
+                logger.info("Forcing reset of default user password")
                 default_password = hashlib.sha256(
                     os.environ.get("KEEP_DEFAULT_PASSWORD", "keep").encode()
                 ).hexdigest()
                 user.password_hash = default_password
+                logger.info("Default user password updated")
+
+            # provision default api keys
+            if os.environ.get("KEEP_DEFAULT_API_KEYS", ""):
+                logger.info("Provisioning default api keys")
+                from keep.contextmanager.contextmanager import ContextManager
+                from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
+                default_api_keys = os.environ.get("KEEP_DEFAULT_API_KEYS").split(",")
+                for default_api_key in default_api_keys:
+                    try:
+                        api_key_name, api_key_role, api_key_secret = (
+                            default_api_key.strip().split(":")
+                        )
+                    except ValueError:
+                        logger.error(
+                            "Invalid format for default api key. Expected format: name:role:secret"
+                        )
+                    # Create the default api key for the default user
+                    api_key = session.exec(
+                        select(TenantApiKey).where(
+                            TenantApiKey.reference_id == api_key_name
+                        )
+                    ).first()
+                    if api_key:
+                        logger.info(f"Api key {api_key_name} already exists")
+                        continue
+                    logger.info(f"Provisioning api key {api_key_name}")
+                    hashed_api_key = hashlib.sha256(
+                        api_key_secret.encode("utf-8")
+                    ).hexdigest()
+                    new_installation_api_key = TenantApiKey(
+                        tenant_id=tenant_id,
+                        reference_id=api_key_name,
+                        key_hash=hashed_api_key,
+                        is_system=True,
+                        created_by="system",
+                        role=api_key_role,
+                    )
+                    session.add(new_installation_api_key)
+                    # write to the secret manager
+                    context_manager = ContextManager(tenant_id=tenant_id)
+                    secret_manager = SecretManagerFactory.get_secret_manager(
+                        context_manager
+                    )
+                    secret_manager.write_secret(
+                        secret_name=f"{tenant_id}-{api_key_name}",
+                        secret_value=api_key_secret,
+                    )
+                    logger.info(f"Api key {api_key_name} provisioned")
+                logger.info("Api keys provisioned")
             # commit the changes
             session.commit()
             logger.info("Single tenant created")
         except IntegrityError:
             # Tenant already exists
-            logger.info("Single tenant already exists")
-            pass
+            logger.exception("Failed to provision single tenant")
+            raise
         except Exception:
             logger.exception("Failed to create single tenant")
             pass
@@ -105,6 +160,10 @@ def migrate_db():
     """
     Run migrations to make sure the DB is up-to-date.
     """
+    if os.environ.get("SKIP_DB_CREATION", "false") == "true":
+        logger.info("Skipping running migrations...")
+        return None
+
     logger.info("Running migrations...")
     # create database if not exists
     if not database_exists(engine.url):

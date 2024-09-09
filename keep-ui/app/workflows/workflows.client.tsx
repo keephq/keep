@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Subtitle } from "@tremor/react";
+import { Callout, Subtitle, Switch } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   ExclamationCircleIcon,
@@ -10,16 +10,17 @@ import {
 } from "@heroicons/react/24/outline";
 import { useSession } from "next-auth/react";
 import { fetcher } from "../../utils/fetcher";
-import { Workflow } from "./models";
+import { Workflow, MockWorkflow } from "./models";
 import { getApiURL } from "../../utils/apiUrl";
 import Loading from "../loading";
 import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
-import WorkflowTile from "./workflow-tile";
+import WorkflowTile, { WorkflowTileOld } from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
+import MockWorkflowCardSection from "./mockworkflows";
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
@@ -28,10 +29,41 @@ export default function WorkflowsPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSwitchOn, setIsSwitchOn] = useState<boolean>(true);
 
   // Only fetch data when the user is authenticated
+  /**
+    Redesign the workflow Card
+      The workflow card needs execution records (currently limited to 15) for the graph. To achieve this, the following changes
+      were made in the backend:
+      1. Query Search Parameter: A new query search parameter called is_v2 has been added, which accepts a boolean
+        (default is false).
+      2. Grouped Workflow Executions: When a request is made with /workflows?is_v2=true, workflow executions are grouped
+         by workflow.id.
+      3. Response Updates: The response includes the following new keys and their respective information:
+          -> last_executions: Used for the workflow execution graph.
+          ->last_execution_started: Used for showing the start time of execution in real-time.
+  **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
-    status === "authenticated" ? `${apiUrl}/workflows` : null,
+    status === "authenticated"
+      ? `${apiUrl}/workflows?is_v2=${isSwitchOn}`
+      : null,
+    (url: string) => fetcher(url, session?.accessToken!)
+  );
+
+  /**
+    Add Mock Workflows (6 Random Workflows on Every Request)
+      To add mock workflows, a new backend API endpoint has been created: /workflows/random-templates.
+        1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
+           shuffled randomly.
+        2. Response: Only the first 6 files are parsed and sent in the response.
+   **/
+  const {
+    data: mockWorkflows,
+    error: mockError,
+    isLoading: mockLoading,
+  } = useSWR<MockWorkflow[]>(
+    status === "authenticated" ? `${apiUrl}/workflows/random-templates` : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
 
@@ -60,7 +92,7 @@ export default function WorkflowsPage() {
           },
           body: formData,
         });
-  
+
         if (response.ok) {
           setFileError(null);
           if (fileInputRef.current) {
@@ -94,8 +126,8 @@ export default function WorkflowsPage() {
         reload = true;
       }
       await fileUpload(formData, reload);
-    };
-  }
+    }
+  };
 
   function handleStaticExampleSelect(example: string) {
     // todo: something less static
@@ -153,8 +185,12 @@ export default function WorkflowsPage() {
     setIsModalOpen(false);
   }
 
+  const handleSwitchChange = (value: boolean) => {
+    setIsSwitchOn(value);
+  };
+
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-full">
+    <main className="pt-4">
       <div className="flex justify-between items-center">
         <div>
           <Title>Workflows</Title>
@@ -240,17 +276,45 @@ export default function WorkflowsPage() {
           </div>
         </Modal>
       </div>
-      <Card className="mt-10 p-4 md:p-10 mx-auto">
+      <Card className="mt-10 p-4 md:p-10 mx-auto w-full">
         <div>
+          {/*switch to toggle between new UI and old UI */}
+          <div className="pl-4 flex items-center space-x-3">
+            <Switch
+              id="switch"
+              name="switch"
+              checked={isSwitchOn}
+              onChange={handleSwitchChange}
+            />
+            <label
+              htmlFor="switch"
+              className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
+            >
+              Switch to New UI
+            </label>
+          </div>
           <div>
             {data.length === 0 ? (
-              <WorkflowsEmptyState />
-            ) : (
+              <WorkflowsEmptyState isNewUI={isSwitchOn} />
+            ) : !isSwitchOn ? (
               <div className="flex flex-wrap gap-2">
+                {data.map((workflow) => (
+                  <WorkflowTileOld key={workflow.id} workflow={workflow} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full gap-4 p-4">
                 {data.map((workflow) => (
                   <WorkflowTile key={workflow.id} workflow={workflow} />
                 ))}
               </div>
+            )}
+            {isSwitchOn && (
+              <MockWorkflowCardSection
+                mockWorkflows={mockWorkflows || []}
+                mockError={mockError}
+                mockLoading={mockLoading}
+              />
             )}
           </div>
         </div>

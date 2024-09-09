@@ -5,13 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
-from keep.api.models.db.mapping import (
-    MappingRule,
-    MappingRuleDtoIn,
-    MappingRuleDtoOut,
-    MappingRuleDtoUpdate,
-)
+from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
+from keep.api.models.db.topology import TopologyService
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 router = APIRouter()
 
@@ -20,7 +17,9 @@ logger = logging.getLogger(__name__)
 
 @router.get("", description="Get all mapping rules")
 def get_rules(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:rules"])
+    ),
     session: Session = Depends(get_session),
 ) -> list[MappingRuleDtoOut]:
     logger.info("Getting mapping rules")
@@ -35,9 +34,22 @@ def get_rules(
     if rules:
         for rule in rules:
             rule_dto = MappingRuleDtoOut(**rule.dict())
-            rule_dto.attributes = [
-                key for key in rule.rows[0].keys() if key not in rule.matchers
-            ]
+
+            attributes = []
+            if rule_dto.type == "csv":
+                attributes = [
+                    key for key in rule.rows[0].keys() if key not in rule.matchers
+                ]
+            elif rule_dto.type == "topology":
+                attributes = [
+                    field
+                    for field in TopologyService.__fields__
+                    if field not in rule.matchers
+                    and field != "tenant_id"
+                    and field != "id"
+                ]
+
+            rule_dto.attributes = attributes
             rules_dtos.append(rule_dto)
 
     return rules_dtos
@@ -50,7 +62,9 @@ def get_rules(
 )
 def create_rule(
     rule: MappingRuleDtoIn,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
     session: Session = Depends(get_session),
 ) -> MappingRule:
     logger.info("Creating a new mapping rule")
@@ -69,7 +83,9 @@ def create_rule(
 @router.delete("/{rule_id}", description="Delete a mapping rule")
 def delete_rule(
     rule_id: int,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
     session: Session = Depends(get_session),
 ):
     logger.info("Deleting a mapping rule", extra={"rule_id": rule_id})
@@ -87,10 +103,13 @@ def delete_rule(
     return {"message": "Rule deleted successfully"}
 
 
-@router.put("", description="Update an existing rule")
+@router.put("/{rule_id}", description="Update an existing rule")
 def update_rule(
-    rule: MappingRuleDtoUpdate,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:rules"])),
+    rule_id: int,
+    rule: MappingRuleDtoIn,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:rules"])
+    ),
     session: Session = Depends(get_session),
 ) -> MappingRuleDtoOut:
     logger.info("Updating a mapping rule")
@@ -98,7 +117,7 @@ def update_rule(
         session.query(MappingRule)
         .filter(
             MappingRule.tenant_id == authenticated_entity.tenant_id,
-            MappingRule.id == rule.id,
+            MappingRule.id == rule_id,
         )
         .first()
     )

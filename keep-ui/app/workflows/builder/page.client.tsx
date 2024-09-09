@@ -16,9 +16,11 @@ import Loading from "../../loading";
 export default function PageClient({
   workflow,
   workflowId,
+  isPreview,
 }: {
   workflow?: string;
   workflowId?: string;
+  isPreview?: boolean;
 }) {
   const [buttonsEnabled, setButtonsEnabled] = useState(false);
   const [generateEnabled, setGenerateEnabled] = useState(false);
@@ -67,7 +69,7 @@ export default function PageClient({
   const incrementState = (s: number) => s + 1;
 
   return (
-    <main className="p-4 md:p-10 mx-auto max-w-full h-full">
+    <main className="p-4 md:p-5 mx-auto max-w-full h-[98%]">
       <div className="flex justify-between">
         <div className="flex flex-col">
           <Title>
@@ -160,6 +162,7 @@ export default function PageClient({
         triggerSave={triggerSave}
         workflow={workflow}
         workflowId={workflowId}
+        isPreview={isPreview}
       />
     </main>
   );

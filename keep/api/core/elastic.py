@@ -4,10 +4,12 @@ import os
 from elasticsearch import ApiError, BadRequestError, Elasticsearch
 from elasticsearch.helpers import BulkIndexError, bulk
 
+from keep.api.core.db import get_enrichments
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertSeverity
-from keep.rulesengine.rulesengine import RulesEngine
+from keep.api.utils.cel_utils import preprocess_cel_expression
+from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 
 
 class ElasticClient:
@@ -60,6 +62,14 @@ class ElasticClient:
                 "No Elastic configuration found although Elastic is enabled"
             )
 
+        # single tenant id should have an index suffix
+        if tenant_id == SINGLE_TENANT_UUID and not os.environ.get(
+            "ELASTIC_INDEX_SUFFIX"
+        ):
+            raise ValueError(
+                "No Elastic index suffix found although Elastic is enabled for single tenant"
+            )
+
         if any(basic_auth):
             self.logger.debug("Using basic auth for Elastic")
             self._client = Elasticsearch(
@@ -71,16 +81,35 @@ class ElasticClient:
                 api_key=self.api_key, hosts=self.hosts, **kwargs
             )
 
-    def _construct_alert_dto_from_results(self, results, fields):
+    @property
+    def alerts_index(self):
+        if self.tenant_id == SINGLE_TENANT_UUID:
+            suffix = os.environ.get("ELASTIC_INDEX_SUFFIX")
+            return f"keep-alerts-{suffix}"
+        else:
+            return f"keep-alerts-{self.tenant_id}"
+
+    def _construct_alert_dto_from_results(self, results):
         if not results:
             return []
-
         alert_dtos = []
 
+        fingerprints = [
+            result["_source"]["fingerprint"] for result in results["hits"]["hits"]
+        ]
+        enrichments = get_enrichments(self.tenant_id, fingerprints)
+        enrichments_by_fingerprint = {
+            enrichment.alert_fingerprint: enrichment.enrichments
+            for enrichment in enrichments
+        }
         for result in results["hits"]["hits"]:
             alert = result["_source"]
-            alert_dtos.append(AlertDto(**alert))
-
+            alert_dto = AlertDto(**alert)
+            if alert_dto.fingerprint in enrichments_by_fingerprint:
+                parse_and_enrich_deleted_and_assignees(
+                    alert_dto, enrichments_by_fingerprint[alert_dto.fingerprint]
+                )
+            alert_dtos.append(alert_dto)
         return alert_dtos
 
     def run_query(self, query: str, limit: int = 1000):
@@ -88,7 +117,7 @@ class ElasticClient:
             return
 
         # preprocess severity
-        query = RulesEngine.preprocess_cel_expression(query)
+        query = preprocess_cel_expression(query)
 
         try:
             # TODO - handle source (array)
@@ -136,19 +165,18 @@ class ElasticClient:
             #           3. wait for ES to support array fields in SQL
             # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
             # preprocess severity
-            query = RulesEngine.preprocess_cel_expression(query)
+            query = preprocess_cel_expression(query)
             dsl_query = self._client.sql.translate(
                 body={"query": query, "fetch_size": limit}
             )
-            fields = [f.get("field") for f in dict(dsl_query)["fields"]]
             # get all fields
             dsl_query = dict(dsl_query)
             dsl_query["_source"] = True
             dsl_query["fields"] = ["*"]
-            raw_alerts = self._client.search(
-                index=f"keep-alerts-{self.tenant_id}", body=dsl_query
-            )
-            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts, fields)
+
+            raw_alerts = self._client.search(index=self.alerts_index, body=dsl_query)
+            alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
+
             return alerts_dtos
         except BadRequestError as e:
             # means no index. if no alert was indexed, the index is not exist
@@ -170,9 +198,11 @@ class ElasticClient:
             # change severity to number so we can sort by it
             alert.severity = AlertSeverity(alert.severity.lower()).order
             # query
+            alert_dict = alert.dict()
+            alert_dict["dismissed"] = bool(alert_dict["dismissed"])
             self._client.index(
-                index=f"keep-alerts-{self.tenant_id}",
-                body=alert.dict(),
+                index=self.alerts_index,
+                body=alert_dict,
                 id=alert.fingerprint,  # we want to update the alert if it already exists so that elastic will have the latest version
                 refresh="true",
             )
@@ -191,7 +221,7 @@ class ElasticClient:
         actions = []
         for alert in alerts:
             action = {
-                "_index": f"keep-alerts-{self.tenant_id}",
+                "_index": self.alerts_index,
                 "_id": alert.fingerprint,  # use fingerprint as the document ID
                 "_source": alert.dict(),
             }
@@ -222,9 +252,7 @@ class ElasticClient:
 
         self.logger.debug(f"Enriching alert {alert_fingerprint}")
         # get the alert, enrich it and index it
-        alert = self._client.get(
-            index=f"keep-alerts-{self.tenant_id}", id=alert_fingerprint
-        )
+        alert = self._client.get(index=self.alerts_index, id=alert_fingerprint)
         if not alert:
             self.logger.error(f"Alert with fingerprint {alert_fingerprint} not found")
             return
@@ -240,4 +268,4 @@ class ElasticClient:
         if not self.enabled:
             return
 
-        self._client.indices.delete(index=f"keep-alerts-{self.tenant_id}")
+        self._client.indices.delete(index=self.alerts_index)

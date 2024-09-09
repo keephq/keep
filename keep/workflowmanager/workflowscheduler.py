@@ -52,8 +52,8 @@ class WorkflowScheduler:
         try:
             # get all workflows that should run due to interval
             workflows = get_workflows_that_should_run()
-        except Exception as e:
-            self.logger.error(f"Error getting workflows that should run: {e}")
+        except Exception:
+            self.logger.exception("Error getting workflows that should run")
             pass
         for workflow in workflows:
             self.logger.debug("Running workflow on background")
@@ -323,6 +323,9 @@ class WorkflowScheduler:
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here
             if not workflow_execution_id:
+                # creating the execution id here to be able to trace it in logs even in case of IntegrityError
+                # eventually, workflow_execution_id == execution_id
+                execution_id = str(uuid.uuid4())
                 try:
                     # if the workflow can run in parallel, we just to create a some random execution number
                     if workflow.workflow_strategy == WorkflowStrategy.PARALLEL.value:
@@ -339,6 +342,7 @@ class WorkflowScheduler:
                         execution_number=workflow_execution_number,
                         fingerprint=event.fingerprint,
                         event_id=event.event_id,
+                        execution_id=execution_id,
                     )
                 # If there is already running workflow from the same event
                 except IntegrityError:
@@ -348,7 +352,11 @@ class WorkflowScheduler:
                         == WorkflowStrategy.NONPARALLEL_WITH_RETRY.value
                     ):
                         self.logger.info(
-                            "Collision with workflow execution! will retry next time"
+                            "Collision with workflow execution! will retry next time",
+                            extra={
+                                "workflow_id": workflow_id,
+                                "tenant_id": tenant_id,
+                            },
                         )
                         with self.lock:
                             self.workflows_to_run.append(
@@ -367,7 +375,11 @@ class WorkflowScheduler:
                         workflow.workflow_strategy == WorkflowStrategy.NONPARALLEL.value
                     ):
                         self.logger.error(
-                            "Collision with workflow execution! will not retry"
+                            "Collision with workflow execution! will not retry",
+                            extra={
+                                "workflow_id": workflow_id,
+                                "tenant_id": tenant_id,
+                            },
                         )
                         self._finish_workflow_execution(
                             tenant_id=tenant_id,
@@ -394,16 +406,40 @@ class WorkflowScheduler:
             #                    and will trigger a workflow that will update the ticket with "resolved"
             if workflow_to_run.get("retry", False):
                 try:
-                    self.logger.info("Updating enrichment")
-                    new_enrichment = get_enrichment(tenant_id, event.fingerprint)
+                    self.logger.info(
+                        "Updating enrichments for workflow after retry",
+                        extra={
+                            "workflow_id": workflow_id,
+                            "workflow_execution_id": workflow_execution_id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
+                    new_enrichment = get_enrichment(
+                        tenant_id, event.fingerprint, refresh=True
+                    )
                     # merge the new enrichment with the original event
                     if new_enrichment:
                         new_event = event.dict()
                         new_event.update(new_enrichment.enrichments)
                         event = AlertDto(**new_event)
-                    self.logger.info("Enrichment updated")
+                    self.logger.info(
+                        "Enrichments updated for workflow after retry",
+                        extra={
+                            "workflow_id": workflow_id,
+                            "workflow_execution_id": workflow_execution_id,
+                            "tenant_id": tenant_id,
+                            "new_enrichment": new_enrichment,
+                        },
+                    )
                 except Exception as e:
-                    self.logger.error(f"Failed to get enrichment: {e}")
+                    self.logger.error(
+                        f"Failed to get enrichment: {e}",
+                        extra={
+                            "workflow_id": workflow_id,
+                            "workflow_execution_id": workflow_execution_id,
+                            "tenant_id": tenant_id,
+                        },
+                    )
                     self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
@@ -428,10 +464,10 @@ class WorkflowScheduler:
             try:
                 self._handle_interval_workflows()
                 self._handle_event_workflows()
-            except Exception as e:
+            except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
-                self.logger.error(f"Error getting workflows that should run: {e}")
+                self.logger.exception("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
             time.sleep(1)

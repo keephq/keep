@@ -1,0 +1,16 @@
+workflow:
+  id: sendgrid-basic-demo
+  description: send an email
+  triggers:
+    - type: manual
+  actions:
+    - name: trigger-email
+      provider:
+        type: sendgrid
+        config: " {{ providers.Sendgrid }} "
+        with:
+         to:
+          - "youremail@gmail.com"
+          - "youranotheremail@gmail.com"
+         subject: "Hello from Keep!"
+         html: "<strong>Test</strong> with HTML"

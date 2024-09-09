@@ -26,5 +26,7 @@ alert:
         with:
           method: POST
           body:
-            message: "Time difference: {{ steps.get-max-datetime.conditions.threshold.0.value }}"
+            alert: "{{ alert }}"
+            fingerprint: "{{ alert.fingerprint }}"
+            some_customized_field: "{{ keep.strip(alert.some_attribute) }}"
           url: "https://ntfy.sh/MoRen5UlPEQr8s4Y"

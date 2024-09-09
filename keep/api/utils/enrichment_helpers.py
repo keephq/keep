@@ -3,7 +3,7 @@ from datetime import datetime
 
 from opentelemetry import trace
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert
 
 tracer = trace.get_tracer(__name__)
@@ -39,6 +39,42 @@ def parse_and_enrich_deleted_and_assignees(alert: AlertDto, enrichments: dict):
     if assignee:
         alert.assignee = assignee
 
+    alert.enriched_fields = list(
+        filter(lambda x: not x.startswith("disposable_"), list(enrichments.keys()))
+    )
+    if "assignees" in alert.enriched_fields:
+        # User can't be un-assigned. Just re-assigned to someone else
+        alert.enriched_fields.remove("assignees")
+
+
+def calculated_start_firing_time(
+    alert: AlertDto, previous_alert: AlertDto | list[AlertDto]
+) -> str:
+    """
+    Calculate the start firing time of an alert based on the previous alert.
+
+    Args:
+        alert (AlertDto): The alert to calculate the start firing time for.
+        previous_alert (AlertDto): The previous alert.
+
+    Returns:
+        str: The calculated start firing time.
+    """
+    # if the alert is not firing, there is no start firing time
+    if alert.status != AlertStatus.FIRING.value:
+        return None
+    # if this is the first alert, the start firing time is the same as the last received time
+    if not previous_alert:
+        return alert.lastReceived
+    elif isinstance(previous_alert, list):
+        previous_alert = previous_alert[0]
+    # else, if the previous alert was firing, the start firing time is the same as the previous alert
+    if previous_alert.status == AlertStatus.FIRING.value:
+        return previous_alert.firingStartTime
+    # else, if the previous alert was resolved, the start firing time is the same as the last received time
+    else:
+        return alert.lastReceived
+
 
 def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
     """
@@ -71,6 +107,11 @@ def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
                     },
                 )
                 continue
+
+            # include the db event id if it's not present
+            if alert_dto.event_id is None:
+                alert_dto.event_id = str(alert.id)
+
             # enrich provider id when it's possible
             if alert_dto.providerId is None:
                 alert_dto.providerId = alert.provider_id

@@ -21,7 +21,7 @@ from keep.api.core.db import (
 )
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -224,7 +224,7 @@ class ProvidersFactory:
         logger = logging.getLogger(__name__)
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
-            logger.info("Using cached providers")
+            logger.debug("Using cached providers")
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -299,22 +299,23 @@ class ProvidersFactory:
                         ).keys()
                     )[1:]
                 )
-                config = (
-                    {
-                        field.name: dict(field.metadata)
-                        for field in fields(provider_auth_config_class)
-                    }
-                    if provider_auth_config_class
-                    else {}
-                )
+                config = {}
+                if provider_auth_config_class:
+                    for field in fields(provider_auth_config_class):
+                        config[field.name] = dict(field.metadata)
+                        if field.default is not None:
+                            config[field.name]["default"] = field.default
                 provider_description = provider_class.__dict__.get(
                     "provider_description"
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
+                can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
 
                 provider_tags = []
                 provider_tags.extend(provider_class.PROVIDER_TAGS)
+                if can_fetch_topology:
+                    provider_tags.append("topology")
                 if can_query and "data" not in provider_tags:
                     provider_tags.append("data")
                 if (
@@ -333,6 +334,13 @@ class ProvidersFactory:
                     "PROVIDER_DISPLAY_NAME",
                     provider_type,
                 )
+
+                # Load alert examples if available
+                try:
+                    alert_example = provider_class.simulate_alert()
+                # not all providers have this method (yet ^^)
+                except Exception:
+                    alert_example = None
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -350,6 +358,7 @@ class ProvidersFactory:
                         docs=docs,
                         methods=provider_methods,
                         tags=provider_tags,
+                        alertExample=alert_example,
                     )
                 )
             except ModuleNotFoundError:
@@ -389,6 +398,7 @@ class ProvidersFactory:
             provider_copy.id = p.id
             provider_copy.installed_by = p.installed_by
             provider_copy.installation_time = p.installation_time
+            provider_copy.last_pull_time = p.last_pull_time
             try:
                 provider_auth = {"name": p.name}
                 if include_details:

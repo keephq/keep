@@ -98,18 +98,33 @@ const ProvidersTiles = ({
     if (isConnected) handleCloseModal();
   };
 
+  const getSectionTitle = () => {
+    if (installedProvidersMode) {
+      return "Installed Providers";
+    }
+
+    if (linkedProvidersMode) {
+      return "Linked Providers";
+    }
+
+    return "Connect Provider";
+  };
+
+  const sortedProviders = providers
+    .filter(provider => Object.keys(provider.config || {}).length > 0 || (provider.tags && provider.tags.includes('alert')))
+    .sort(
+      (a, b) =>
+        Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
+        Number(b.supports_webhook) - Number(a.supports_webhook) ||
+        Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
+    );
+
   return (
     <div>
       <div className="flex items-center mb-2.5">
-        <Title>
-          {installedProvidersMode
-            ? "Installed Providers"
-            : linkedProvidersMode
-            ? "Linked Providers"
-            : "Available Providers"}
-        </Title>
+        <Title>{getSectionTitle()}</Title>
         {linkedProvidersMode && (
-          <div className="ml-2 relative">
+          <div className="relative">
             <Icon
               icon={QuestionMarkCircleIcon} // Use the appropriate icon for your use case
               className="text-gray-400 hover:text-gray-600"
@@ -121,21 +136,13 @@ const ProvidersTiles = ({
       </div>
 
       <div className="flex flex-wrap mb-5 gap-5">
-        {providers
-          .sort(
-            (a, b) =>
-              Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
-              Number(b.supports_webhook) - Number(a.supports_webhook) ||
-              Number(b.oauth2_url ? true : false) -
-                Number(a.oauth2_url ? true : false)
-          )
-          .map((provider) => (
-            <ProviderTile
-              key={provider.id}
-              provider={provider}
-              onClick={() => handleConnectProvider(provider)}
-            ></ProviderTile>
-          ))}
+        {sortedProviders.map((provider) => (
+          <ProviderTile
+            key={provider.id}
+            provider={provider}
+            onClick={() => handleConnectProvider(provider)}
+          ></ProviderTile>
+        ))}
       </div>
 
       <SlidingPanel

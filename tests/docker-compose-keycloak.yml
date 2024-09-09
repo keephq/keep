@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak-test
+    ports:
+      - "8787:8080"

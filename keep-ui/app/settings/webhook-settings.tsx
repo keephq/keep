@@ -12,6 +12,8 @@ import {
   Title,
   TabPanels,
   TabPanel,
+  Callout
+
 } from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
@@ -21,6 +23,7 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
+import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 interface Webhook {
   webhookApi: string;
@@ -45,8 +48,19 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   );
   const router = useRouter();
 
+  if (error) return <Callout
+        className="mt-4"
+        title="Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        Failed to load webhook settings.
+        <br></br><br></br>
+        {error.message}
+      </Callout>
+
   if (!data || isLoading) return <Loading />;
-  if (error) return <div>{error.message}</div>;
+
 
   const [example] = data.modelSchema.examples;
 
@@ -72,30 +86,30 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
     {
       title: "Python",
       language: "python",
-      code: `
-import requests
+      code: `import requests
 
-response = requests.post("https://api.keephq.dev/alerts/event",
+response = requests.post("${data.webhookApi}",
 headers={
   "Content-Type": "application/json",
   "Accept": "application/json",
   "X-API-KEY": "${data.apiKey}"
 },
-json=${exampleJson})
+data="""${exampleJson}""")
       `,
     },
     {
       title: "Node",
       language: "javascript",
-      code: `
-const https = require('https');
+      code: `const https = require('https');
+const { URL } = require('url');
 
+const url = new URL('${data.webhookApi}');
 const data = JSON.stringify(${exampleJson});
 
 const options = {
-  hostname: 'api.keephq.dev',
+  hostname: url.hostname,
   port: 443,
-  path: '/alerts/event',
+  path: url.pathname,
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -171,7 +185,7 @@ req.end();
             </div>
           </div>
           <TabGroup
-            className="flex-1 pl-2"
+            className="flex-1 min-w-0 pl-2"
             index={codeTabIndex}
             onIndexChange={setCodeTabIndex}
           >

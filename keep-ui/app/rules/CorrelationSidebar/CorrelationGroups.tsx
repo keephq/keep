@@ -9,16 +9,16 @@ export const CorrelationGroups = () => {
   const { control } = useFormContext<CorrelationForm>();
 
   return (
-    <div>
+    <div className="col-span-2">
       <div className="flex justify-between items-center">
         <p className="text-tremor-default font-medium text-tremor-content-strong mb-2">
-          Add group(s) of conditions
+          Add filters
         </p>
 
         <Button
           className="cursor-default"
           type="button"
-          tooltip="Any Rule consists of one or more Alert Groups. Each alert group is evaluated separately and the results are combined using AND combinator. 
+          tooltip="Any Rule consists of one or more Correlations. Each alert group is evaluated separately and the results are combined using AND combinator.
                   For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups. 
                   The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
           icon={QuestionMarkCircleIcon}

@@ -1,6 +1,7 @@
 """
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
 """
+
 import dataclasses
 import json
 
@@ -8,10 +9,10 @@ import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
 
-from keep.api.models.alert import AlertDto
+from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -45,7 +46,7 @@ class ServicenowProviderAuthConfig:
     )
 
 
-class ServicenowProvider(BaseProvider):
+class ServicenowProvider(BaseTopologyProvider):
     """Manage ServiceNow tickets."""
 
     PROVIDER_SCOPES = [
@@ -111,6 +112,119 @@ class ServicenowProvider(BaseProvider):
             **self.config.authentication
         )
 
+    def pull_topology(self) -> list[TopologyServiceInDto]:
+        # TODO: in scable, we'll need to use pagination around here
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        auth = (
+            self.authentication_config.username,
+            self.authentication_config.password,
+        )
+        topology = []
+        self.logger.info(
+            "Pulling topology", extra={"tenant_id": self.context_manager.tenant_id}
+        )
+
+        self.logger.info("Pulling CMDB items")
+        fields = [
+            "name",
+            "sys_id",
+            "ip_address",
+            "mac_address",
+            "owned_by.name"
+            "manufacturer.name",  # Retrieve the name of the manufacturer
+            "short_description",
+            "environment",
+        ]
+
+        # Set parameters for the request
+        cmdb_params = {
+            "sysparm_fields": ",".join(fields),
+            "sysparm_query": "active=true",
+        }
+        cmdb_response = requests.get(
+            f"{self.authentication_config.service_now_base_url}/api/now/table/cmdb_ci",
+            headers=headers,
+            auth=auth,
+            params=cmdb_params,
+        )
+
+        if not cmdb_response.ok:
+            self.logger.error(
+                "Failed to pull topology",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "status_code": cmdb_response.status_code,
+                },
+            )
+            return topology
+
+        cmdb_data = cmdb_response.json().get("result", [])
+        self.logger.info(
+            "Pulling CMDB items completed", extra={"len_of_cmdb_items": len(cmdb_data)}
+        )
+
+        self.logger.info("Pulling relationship types")
+        relationship_types = {}
+        rel_type_response = requests.get(
+            f"{self.authentication_config.service_now_base_url}/api/now/table/cmdb_rel_type",
+            auth=auth,
+            headers=headers,
+        )
+        if not rel_type_response.ok:
+            self.logger.error("Failed to get topology types")
+        else:
+            rel_type_json = rel_type_response.json()
+            for result in rel_type_json.get("result", []):
+                relationship_types[result.get("sys_id")] = result.get("sys_name")
+            self.logger.info("Pulling relationship types completed")
+
+        self.logger.info("Pulling relationships")
+        relationships = {}
+        rel_response = requests.get(
+            f"{self.authentication_config.service_now_base_url}/api/now/table/cmdb_rel_ci",
+            auth=auth,
+            headers=headers,
+        )
+        if not rel_response.ok:
+            self.logger.error("Failed to get topology relationships")
+        else:
+            rel_json = rel_response.json()
+            for relationship in rel_json.get("result", []):
+                parent_id = relationship.get("parent", {}).get("value")
+                child_id = relationship.get("child", {}).get("value")
+                relationship_type_id = relationship.get("type", {}).get("value")
+                relationship_type = relationship_types.get(relationship_type_id)
+                if parent_id not in relationships:
+                    relationships[parent_id] = {}
+                relationships[parent_id][child_id] = relationship_type
+            self.logger.info("Pulling relationships completed")
+
+        self.logger.info("Mixing up all topology data")
+        for entity in cmdb_data:
+            sys_id = entity.get("sys_id")
+            owned_by = entity.get("owned_by.name")
+            topology_service = TopologyServiceInDto(
+                source_provider_id=self.provider_id,
+                service=sys_id,
+                display_name=entity.get("name"),
+                description=entity.get("short_description"),
+                environment=entity.get("environment"),
+                team=owned_by,
+                dependencies=relationships.get(sys_id, {}),
+                ip_address=entity.get("ip_address"),
+                mac_address=entity.get("mac_address"),
+            )
+            topology.append(topology_service)
+
+        self.logger.info(
+            "Topology pulling completed",
+            extra={
+                "tenant_id": self.context_manager.tenant_id,
+                "len_of_topology": len(topology),
+            },
+        )
+        return topology
+
     def dispose(self):
         """
         No need to dispose of anything, so just do nothing.
@@ -152,9 +266,9 @@ class ServicenowProvider(BaseProvider):
             self.logger.info(f"Created ticket: {resp}")
             result = resp.get("result")
             # Add link to ticket
-            result[
-                "link"
-            ] = f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
+            result["link"] = (
+                f"{self.authentication_config.service_now_base_url}/now/nav/ui/classic/params/target/{table_name}.do%3Fsys_id%3D{result['sys_id']}"
+            )
             return result
         # if the instance is down due to hibranate you'll get 200 instead of 201
         elif response.status_code == 200:
@@ -226,21 +340,5 @@ if __name__ == "__main__":
         context_manager, provider_id="servicenow", config=config
     )
 
-    # mock alert
-    context_manager = provider.context_manager
-
-    alert = AlertDto.parse_obj(
-        json.loads(
-            '{"id": "4c54ce9a0d458b574d0aaa5fad23f44ce006e45bdf16fa65207cc6131979c000", "name": "Error in lambda", "status": "ALARM", "lastReceived": "2023-09-18 12:26:21.408000+00:00", "environment": "undefined", "isDuplicate": null, "duplicateReason": null, "service": null, "source": ["cloudwatch"], "message": null, "description": "Hey Shahar\\n\\nThis is a test alarm!", "severity": null, "pushed": true, "event_id": "3cbf2024-a1f0-42ac-9754-b9157c00b95e", "url": null, "AWSAccountId": "1234", "AlarmActions": ["arn:aws:sns:us-west-2:1234:Default_CloudWatch_Alarms_Topic"], "AlarmArn": "arn:aws:cloudwatch:us-west-2:1234:alarm:Error in lambda", "Trigger": {"MetricName": "Errors", "Namespace": "AWS/Lambda", "StatisticType": "Statistic", "Statistic": "AVERAGE", "Unit": null, "Dimensions": [{"value": "helloWorld", "name": "FunctionName"}], "Period": 300, "EvaluationPeriods": 1, "DatapointsToAlarm": 1, "ComparisonOperator": "GreaterThanThreshold", "Threshold": 0.0, "TreatMissingData": "missing", "EvaluateLowSampleCountPercentile": ""}, "Region": "US West (Oregon)", "InsufficientDataActions": [], "AlarmConfigurationUpdatedTimestamp": "2023-08-17T14:29:12.272+0000", "NewStateReason": "Setting state to ALARM for testing", "AlarmName": "Error in lambda", "NewStateValue": "ALARM", "OldStateValue": "INSUFFICIENT_DATA", "AlarmDescription": "Hey Shahar\\n\\nThis is a test alarm!", "OKActions": [], "StateChangeTime": "2023-09-18T12:26:21.408+0000", "trigger": "alert"}'
-        )
-    )
-    context_manager.set_event_context(alert)
-    r = provider.notify(
-        table_name="incident",
-        payload={
-            "short_description": "My new incident",
-            "category": "software",
-            "created_by": "keep",
-        },
-    )
+    r = provider.pull_topology()
     print(r)

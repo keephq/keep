@@ -11,11 +11,14 @@ from keep.api.models.db.action import *
 from keep.api.models.db.alert import *
 from keep.api.models.db.dashboard import *
 from keep.api.models.db.extraction import *
+from keep.api.models.db.maintenance_window import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
 from keep.api.models.db.rule import *
+from keep.api.models.db.statistics import *
 from keep.api.models.db.tenant import *
+from keep.api.models.db.topology import *
 from keep.api.models.db.user import *
 from keep.api.models.db.workflow import *
 
@@ -52,6 +55,7 @@ async def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=True,
     )
 
     with context.begin_transaction():
@@ -64,7 +68,9 @@ def do_run_migrations(connection: Connection) -> None:
 
     :param connection: connection to the database.
     """
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, render_as_batch=True
+    )
 
     with context.begin_transaction():
         context.run_migrations()

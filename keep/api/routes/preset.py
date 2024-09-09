@@ -1,5 +1,7 @@
 import logging
+import os
 import uuid
+from datetime import datetime
 
 from fastapi import (
     APIRouter,
@@ -12,15 +14,29 @@ from fastapi import (
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from keep.api.consts import STATIC_PRESETS
+from keep.api.consts import PROVIDER_PULL_INTERVAL_DAYS, STATIC_PRESETS
 from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
 from keep.api.core.db import get_presets as get_presets_db
-from keep.api.core.db import get_session, update_preset_options
-from keep.api.core.dependencies import AuthenticatedEntity, AuthVerifier
+from keep.api.core.db import (
+    get_session,
+    update_preset_options,
+    update_provider_last_pull_time,
+)
 from keep.api.models.alert import AlertDto
-from keep.api.models.db.preset import Preset, PresetDto, PresetOption
+from keep.api.models.db.preset import (
+    Preset,
+    PresetDto,
+    PresetOption,
+    PresetTagLink,
+    Tag,
+    TagDto,
+)
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -30,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 # SHAHAR: this function runs as background tasks as a seperate thread
 #         DO NOT ADD async HERE as it will run in the main thread and block the whole server
-def pull_alerts_from_providers(
+def pull_data_from_providers(
     tenant_id: str,
     trace_id: str,
 ) -> list[AlertDto]:
@@ -39,29 +55,72 @@ def pull_alerts_from_providers(
 
     "Get or create logics".
     """
+    if os.environ.get("KEEP_PULL_DATA_ENABLED", "true") != "true":
+        logger.debug("Pull data from providers is disabled")
+        return
+
     context_manager = ContextManager(
         tenant_id=tenant_id,
         workflow_id=None,
     )
 
     for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
+        extra = {
+            "provider_type": provider.type,
+            "provider_id": provider.id,
+            "tenant_id": tenant_id,
+        }
+
+        if provider.last_pull_time is not None:
+            now = datetime.now()
+            days_passed = (now - provider.last_pull_time).days
+            if days_passed <= PROVIDER_PULL_INTERVAL_DAYS:
+                logger.info(
+                    "Skipping provider data pulling since not enough time has passed",
+                    extra={
+                        **extra,
+                        "days_passed": days_passed,
+                        "provider_last_pull_time": str(provider.last_pull_time),
+                    },
+                )
+                continue
+
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
             provider_id=provider.id,
             provider_type=provider.type,
             provider_config=provider.details,
         )
+
         logger.info(
             f"Pulling alerts from provider {provider.type} ({provider.id})",
-            extra={
-                "provider_type": provider.type,
-                "provider_id": provider.id,
-                "tenant_id": tenant_id,
-            },
+            extra=extra,
         )
         sorted_provider_alerts_by_fingerprint = (
             provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
         )
+
+        try:
+            if isinstance(provider_class, BaseTopologyProvider):
+                logger.info("Getting topology data", extra=extra)
+                topology_data = provider_class.pull_topology()
+                logger.info("Got topology data, processing", extra=extra)
+                process_topology(tenant_id, topology_data, provider.id, provider.type)
+                logger.info("Processed topology data", extra=extra)
+        except NotImplementedError:
+            logger.warning(
+                f"Provider {provider.type} ({provider.id}) does not support topology data",
+                extra=extra,
+            )
+        except Exception as e:
+            logger.error(
+                f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
+                extra={**extra, "error": str(e)},
+            )
+
+        # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
+        update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+
         for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
             process_event(
                 {},
@@ -72,6 +131,7 @@ def pull_alerts_from_providers(
                 None,
                 trace_id,
                 alert,
+                notify_client=False,
             )
 
 
@@ -80,16 +140,31 @@ def pull_alerts_from_providers(
     description="Get all presets for tenant",
 )
 def get_presets(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:preset"])
+    ),
+    session: Session = Depends(get_session),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting all presets")
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="preset",
+        authenticated_entity=authenticated_entity,
+    )
     # both global and private presets
-    presets = get_presets_db(tenant_id=tenant_id, email=authenticated_entity.email)
-    presets_dto = [PresetDto(**preset.dict()) for preset in presets]
+    presets = get_presets_db(
+        tenant_id=tenant_id,
+        email=authenticated_entity.email,
+        preset_ids=allowed_preset_ids,
+    )
+    presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
     # add static presets
     presets_dto.append(STATIC_PRESETS["feed"])
-    presets_dto.append(STATIC_PRESETS["groups"])
     presets_dto.append(STATIC_PRESETS["dismissed"])
     logger.info("Got all presets")
 
@@ -106,12 +181,15 @@ class CreateOrUpdatePresetDto(BaseModel):
     options: list[PresetOption]
     is_private: bool = False  # if true visible to all users of that tenant
     is_noisy: bool = False  # if true, the preset will be noisy
+    tags: list[TagDto] = []  # tags to assign to the preset
 
 
 @router.post("", description="Create a preset for tenant")
 def create_preset(
     body: CreateOrUpdatePresetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
@@ -132,11 +210,44 @@ def create_preset(
         is_noisy=body.is_noisy,
     )
 
+    # Handle tags
+    tags = []
+    for tag in body.tags:
+        # New tag, create it
+        if not tag.id:
+            # check if tag with the same name already exists
+            # (can happen due to some sync problems)
+            existing_tag = session.query(Tag).filter(Tag.name == tag.name).first()
+            if existing_tag:
+                tags.append(existing_tag)
+                continue
+            new_tag = Tag(name=tag.name, tenant_id=tenant_id)
+            session.add(new_tag)
+            session.commit()
+            session.refresh(new_tag)
+            tags.append(new_tag)
+        else:
+            existing_tag = session.get(Tag, tag.id)
+            if existing_tag is None:
+                raise HTTPException(400, f"Tag with id {tag.id} does not exist")
+            tags.append(existing_tag)
+
+    # Add preset and commit to generate preset ID
     session.add(preset)
     session.commit()
     session.refresh(preset)
+
+    # Explicitly create PresetTagLink entries
+    for tag in tags:
+        preset_tag_link = PresetTagLink(
+            tenant_id=tenant_id, preset_id=preset.id, tag_id=tag.id
+        )
+        session.add(preset_tag_link)
+
+    session.commit()
+    session.refresh(preset)
     logger.info("Created preset")
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
 
 
 @router.delete(
@@ -145,11 +256,16 @@ def create_preset(
 )
 def delete_preset(
     uuid: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:presets"])
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("Deleting preset", extra={"uuid": uuid})
+    # Delete links
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == uuid).delete()
+
     statement = (
         select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
     )
@@ -169,7 +285,9 @@ def delete_preset(
 def update_preset(
     uuid: str,
     body: CreateOrUpdatePresetDto,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
@@ -192,10 +310,43 @@ def update_preset(
     if not options_dict:
         raise HTTPException(400, "Options cannot be empty")
     preset.options = options_dict
+
+    # Handle tags
+    tags = []
+    for tag in body.tags:
+        # New tag, create it
+        if not tag.id:
+            # check if tag with the same name already exists
+            # (can happen due to some sync problems)
+            existing_tag = session.query(Tag).filter(Tag.name == tag.name).first()
+            if existing_tag:
+                tags.append(existing_tag)
+                continue
+            new_tag = Tag(name=tag.name, tenant_id=tenant_id)
+            session.add(new_tag)
+            session.commit()
+            session.refresh(new_tag)
+            tags.append(new_tag)
+        else:
+            existing_tag = session.get(Tag, tag.id)
+            if existing_tag is None:
+                raise HTTPException(400, f"Tag with id {tag.id} does not exist")
+            tags.append(existing_tag)
+
+    # Clear existing tag links
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == preset.id).delete()
+
+    # Explicitly create PresetTagLink entries
+    for tag in tags:
+        preset_tag_link = PresetTagLink(
+            tenant_id=tenant_id, preset_id=preset.id, tag_id=tag.id
+        )
+        session.add(preset_tag_link)
+
     session.commit()
     session.refresh(preset)
     logger.info("Updated preset", extra={"uuid": uuid})
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
 
 
 @router.get(
@@ -207,14 +358,16 @@ async def get_preset_alerts(
     bg_tasks: BackgroundTasks,
     preset_name: str,
     response: Response,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:presets"])
+    ),
 ) -> list[AlertDto]:
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
 
     bg_tasks.add_task(
-        pull_alerts_from_providers,
+        pull_data_from_providers,
         authenticated_entity.tenant_id,
         request.state.trace_id,
     )
@@ -229,7 +382,10 @@ async def get_preset_alerts(
     # if preset does not exist
     if not preset:
         raise HTTPException(404, "Preset not found")
-    preset_dto = PresetDto(**preset.dict())
+    if isinstance(preset, Preset):
+        preset_dto = PresetDto(**preset.to_dict())
+    else:
+        preset_dto = PresetDto(**preset.dict())
     search_engine = SearchEngine(tenant_id=tenant_id)
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
@@ -250,7 +406,9 @@ class CreatePresetTab(BaseModel):
 def create_preset_tab(
     preset_id: str,
     body: CreatePresetTab,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:presets"])
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -289,7 +447,7 @@ def create_preset_tab(
         authenticated_entity.tenant_id, preset_id, preset.options
     )
     logger.info("Created preset tab", extra={"preset_id": preset_id})
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())
 
 
 @router.delete(
@@ -299,7 +457,9 @@ def create_preset_tab(
 def delete_tab(
     preset_id: str,
     tab_id: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier()),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:presets"])
+    ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -339,4 +499,4 @@ def delete_tab(
         authenticated_entity.tenant_id, preset_id, preset.options
     )
     logger.info("Deleted tab", extra={"tab_id": tab_id})
-    return PresetDto(**preset.dict())
+    return PresetDto(**preset.to_dict())

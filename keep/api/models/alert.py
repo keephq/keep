@@ -2,20 +2,33 @@ import datetime
 import hashlib
 import json
 import logging
+import uuid
 from enum import Enum
 from typing import Any, Dict
+from uuid import UUID
 
+import pytz
 from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 logger = logging.getLogger(__name__)
 
 
-class AlertSeverity(Enum):
-    CRITICAL = ("critical", 5)
-    HIGH = ("high", 4)
-    WARNING = ("warning", 3)
-    INFO = ("info", 2)
-    LOW = ("low", 1)
+def get_fingerprint(fingerprint, values):
+    # if its none, use the name
+    if fingerprint is None:
+        fingerprint_payload = values.get("name")
+        # if the alert name is None, than use the entire payload
+        if not fingerprint_payload:
+            logger.warning("No name to alert, using the entire payload")
+            fingerprint_payload = json.dumps(values)
+        fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()
+    # take only the first 255 characters
+    else:
+        fingerprint = fingerprint[:255]
+    return fingerprint
+
+
+class SeverityBaseInterface(Enum):
 
     def __new__(cls, severity_name, severity_order):
         obj = object.__new__(cls)
@@ -38,24 +51,32 @@ class AlertSeverity(Enum):
         raise ValueError(f"No AlertSeverity with order {n}")
 
     def __lt__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order < other.order
         return NotImplemented
 
     def __le__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order <= other.order
         return NotImplemented
 
     def __gt__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order > other.order
         return NotImplemented
 
     def __ge__(self, other):
-        if isinstance(other, AlertSeverity):
+        if isinstance(other, SeverityBaseInterface):
             return self.order >= other.order
         return NotImplemented
+
+
+class AlertSeverity(SeverityBaseInterface):
+    CRITICAL = ("critical", 5)
+    HIGH = ("high", 4)
+    WARNING = ("warning", 3)
+    INFO = ("info", 2)
+    LOW = ("low", 1)
 
 
 class AlertStatus(Enum):
@@ -71,12 +92,21 @@ class AlertStatus(Enum):
     PENDING = "pending"
 
 
+class IncidentSeverity(SeverityBaseInterface):
+    CRITICAL = ("critical", 5)
+    HIGH = ("high", 4)
+    WARNING = ("warning", 3)
+    INFO = ("info", 2)
+    LOW = ("low", 1)
+
+
 class AlertDto(BaseModel):
-    id: str
+    id: str | None
     name: str
     status: AlertStatus
     severity: AlertSeverity
     lastReceived: str
+    firingStartTime: str | None = None
     environment: str = "undefined"
     isDuplicate: bool | None = None
     duplicateReason: str | None = None
@@ -101,12 +131,13 @@ class AlertDto(BaseModel):
     assignee: str | None = None  # The assignee of the alert
     providerId: str | None = None  # The provider id
     providerType: str | None = None  # The provider type
-    group: bool = False  # Whether the alert is a group alert
     note: str | None = None  # The note of the alert
     startedAt: str | None = (
         None  # The time the alert started - e.g. if alert triggered multiple times, it will be the time of the first trigger (calculated on querying)
     )
     isNoisy: bool = False  # Whether the alert is noisy
+
+    enriched_fields: list = []
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -137,18 +168,7 @@ class AlertDto(BaseModel):
 
     @validator("fingerprint", pre=True, always=True)
     def assign_fingerprint_if_none(cls, fingerprint, values):
-        # if its none, use the name
-        if fingerprint is None:
-            fingerprint_payload = values.get("name")
-            # if the alert name is None, than use the entire payload
-            if not fingerprint_payload:
-                logger.warning("No name to alert, using the entire payload")
-                fingerprint_payload = json.dumps(values)
-            fingerprint = hashlib.sha256(fingerprint_payload.encode()).hexdigest()
-        # take only the first 255 characters
-        else:
-            fingerprint = fingerprint[:255]
-        return fingerprint
+        return get_fingerprint(fingerprint, values)
 
     @validator("deleted", pre=True, always=True)
     def validate_deleted(cls, deleted, values):
@@ -158,10 +178,24 @@ class AlertDto(BaseModel):
             return values.get("lastReceived") in deleted
 
     @validator("lastReceived", pre=True, always=True)
-    def validate_last_received(cls, last_received, values):
+    def validate_last_received(cls, last_received):
+        def convert_to_iso_format(date_string):
+            try:
+                dt = datetime.datetime.fromisoformat(date_string)
+                dt_utc = dt.astimezone(pytz.UTC)
+                return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            except ValueError:
+                return None
+
         if not last_received:
-            last_received = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        return last_received
+            return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Try to convert the date to iso format
+        # see: https://github.com/keephq/keep/issues/1397
+        if convert_to_iso_format(last_received):
+            return convert_to_iso_format(last_received)
+
+        raise ValueError(f"Invalid date format: {last_received}")
 
     @validator("dismissed", pre=True, always=True)
     def validate_dismissed(cls, dismissed, values):
@@ -190,6 +224,10 @@ class AlertDto(BaseModel):
 
     @root_validator(pre=True)
     def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set id:
+        if not values.get("id"):
+            values["id"] = str(uuid.uuid4())
+
         # Check and set default severity
         severity = values.get("severity")
         try:
@@ -217,7 +255,11 @@ class AlertDto(BaseModel):
             values["status"] = AlertStatus.FIRING
 
         # this is code duplication of enrichment_helpers.py and should be refactored
-        lastReceived = values["lastReceived"]
+        lastReceived = values.get("lastReceived", None)
+        if not lastReceived:
+            lastReceived = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            values["lastReceived"] = lastReceived
+
         assignees = values.pop("assignees", None)
         if assignees:
             dt = datetime.datetime.fromisoformat(lastReceived)
@@ -286,3 +328,89 @@ class DismissRequestBody(BaseModel):
 class EnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
     fingerprint: str
+
+
+class UnEnrichAlertRequestBody(BaseModel):
+    enrichments: list[str]
+    fingerprint: str
+
+
+class IncidentDtoIn(BaseModel):
+    user_generated_name: str | None
+    assignee: str | None
+    user_summary: str | None
+
+    class Config:
+        extra = Extra.allow
+        schema_extra = {
+            "examples": [
+                {
+                    "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
+                    "name": "Incident name",
+                    "user_summary": "Keep: Incident description",
+                }
+            ]
+        }
+
+
+class IncidentDto(IncidentDtoIn):
+    id: UUID
+
+    start_time: datetime.datetime | None
+    last_seen_time: datetime.datetime | None
+    end_time: datetime.datetime | None
+
+    number_of_alerts: int
+    alert_sources: list[str]
+    severity: IncidentSeverity
+    assignee: str | None
+    services: list[str]
+
+    is_predicted: bool
+    is_confirmed: bool
+
+    generated_summary: str | None
+    ai_generated_name: str | None
+
+    rule_fingerprint: str | None
+
+    def __str__(self) -> str:
+        # Convert the model instance to a dictionary
+        model_dict = self.dict()
+        return json.dumps(model_dict, indent=4, default=str)
+
+    class Config:
+        extra = Extra.allow
+        schema_extra = IncidentDtoIn.Config.schema_extra
+
+        json_encoders = {
+            # Converts UUID to their values for JSON serialization
+            UUID: lambda v: str(v),
+        }
+
+    @classmethod
+    def from_db_incident(cls, db_incident):
+
+        severity = IncidentSeverity.from_number(db_incident.severity) \
+            if isinstance(db_incident.severity, int) \
+            else db_incident.severity
+
+        return cls(
+            id=db_incident.id,
+            user_generated_name=db_incident.user_generated_name,
+            ai_generated_name = db_incident.ai_generated_name,
+            user_summary=db_incident.user_summary,
+            generated_summary=db_incident.generated_summary,
+            is_predicted=db_incident.is_predicted,
+            is_confirmed=db_incident.is_confirmed,
+            creation_time=db_incident.creation_time,
+            start_time=db_incident.start_time,
+            last_seen_time=db_incident.last_seen_time,
+            end_time=db_incident.end_time,
+            number_of_alerts=db_incident.alerts_count,
+            alert_sources=db_incident.sources,
+            severity=severity,
+            assignee=db_incident.assignee,
+            services=db_incident.affected_services,
+            rule_fingerprint=db_incident.rule_fingerprint,
+        )

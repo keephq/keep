@@ -51,6 +51,8 @@ interface AlertDistritbuionData {
   number: number;
 }
 
+export type TProviderLabels = 'alert' | 'topology' | 'messaging' | 'ticketing' | 'data' | 'queue';
+
 export interface Provider {
   // key value pair of auth method name and auth method config
   config: {
@@ -85,8 +87,9 @@ export interface Provider {
   scopes?: ProviderScope[];
   validatedScopes: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
-  tags: ("alert" | "ticketing" | "messaging" | "data" | "queue")[];
+  tags: TProviderLabels[];
   alertsDistribution?: AlertDistritbuionData[];
+  alertExample?: { [key: string]: string };
 }
 
 export type Providers = Provider[];

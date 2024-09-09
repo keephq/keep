@@ -2,6 +2,7 @@ import io
 import logging
 import os
 import uuid
+import random
 
 import requests
 import validators
@@ -16,6 +17,7 @@ from keep.api.core.db import (
     get_raw_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
+    get_workflows_with_last_executions_v2,
 )
 from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.parser.parser import Parser
@@ -125,9 +127,13 @@ class WorkflowStore:
         workflows = get_all_workflows(tenant_id)
         return workflows
 
-    def get_all_workflows_with_last_execution(self, tenant_id: str) -> list[Workflow]:
+    def get_all_workflows_with_last_execution(self, tenant_id: str, is_v2: bool = False) -> list[dict]:
         # list all tenant's workflows
-        workflows = get_workflows_with_last_execution(tenant_id)
+        if is_v2:
+            workflows = get_workflows_with_last_executions_v2(tenant_id, 15)
+        else:
+            workflows = get_workflows_with_last_execution(tenant_id)
+
         return workflows
 
     def get_all_workflows_yamls(self, tenant_id: str) -> list[str]:
@@ -234,3 +240,92 @@ class WorkflowStore:
             self.logger.error(f"Error parsing workflow: {e}")
             raise e
         return workflow
+
+    def get_random_workflow_templates(self, tenant_id: str, workflows_dir: str, limit: int) -> list[dict]:
+        """
+        Get random workflows from a directory.
+        Args:
+            tenant_id (str): The tenant to which the workflows belong.
+            workflows_dir (str): A directory containing workflows yamls.
+            limit (int): The number of workflows to return.
+
+        Returns:
+            List[dict]: A list of workflows
+        """
+        if not os.path.isdir(workflows_dir):
+            raise FileNotFoundError(f"Directory {workflows_dir} does not exist")
+
+        workflow_yaml_files = [f for f in os.listdir(workflows_dir) if f.endswith(('.yaml', '.yml'))]
+        if not workflow_yaml_files:
+            raise FileNotFoundError(f"No workflows found in directory {workflows_dir}")
+
+        random.shuffle(workflow_yaml_files)
+        workflows = []
+        count = 0
+        for file in workflow_yaml_files:
+            if count == limit:
+                break
+            try:
+                file_path = os.path.join(workflows_dir, file)
+                workflow_yaml = self._parse_workflow_to_dict(file_path)
+                if "workflow" in workflow_yaml:
+                    workflow_yaml['name'] = workflow_yaml['workflow']['id']
+                    workflow_yaml['workflow_raw'] = yaml.dump(workflow_yaml)
+                    workflow_yaml['workflow_raw_id'] = workflow_yaml['workflow']['id']
+                    workflows.append(workflow_yaml)
+                    count += 1
+
+                self.logger.info(f"Workflow from {file} fetched successfully")
+            except Exception as e:
+                self.logger.error(f"Error parsing or fetching workflow from {file}: {e}")
+        return workflows
+
+    def group_last_workflow_executions(self, workflows: list[dict]) -> list[dict]:
+        """
+        Group last workflow executions by workflow id
+        """
+
+        self.logger.info(f"workflow_executions: {workflows}")
+        workflow_dict = {}
+        for item in workflows:
+            workflow,started,execution_time,status = item
+            workflow_id = workflow.id
+
+            # Initialize the workflow if not already in the dictionary
+            if workflow_id not in workflow_dict:
+                workflow_dict[workflow_id] = {
+                    "workflow": workflow,
+                    "workflow_last_run_started": None,
+                    "workflow_last_run_time": None,
+                    "workflow_last_run_status": None,
+                    "workflow_last_executions": []
+                }
+
+            # Update the latest execution details if available
+            if workflow_dict[workflow_id]["workflow_last_run_started"] is None :
+                workflow_dict[workflow_id]["workflow_last_run_status"] = status
+                workflow_dict[workflow_id]["workflow_last_run_started"] = started
+                workflow_dict[workflow_id]["workflow_last_run_time"] = started    
+
+            # Add the execution to the list of executions
+            if started is not None:
+                workflow_dict[workflow_id]["workflow_last_executions"].append(
+                    {
+                        "status": status,
+                        "execution_time": execution_time,
+                        "started": started
+                    }
+                )
+        # Convert the dictionary to a list of results
+        results = [
+            {
+                "workflow": workflow_info["workflow"],
+                "workflow_last_run_status": workflow_info["workflow_last_run_status"],
+                "workflow_last_run_time": workflow_info["workflow_last_run_time"],
+                "workflow_last_run_started": workflow_info["workflow_last_run_started"],
+                "workflow_last_executions": workflow_info["workflow_last_executions"]
+            }
+            for workflow_id, workflow_info in workflow_dict.items()
+        ]
+
+        return results

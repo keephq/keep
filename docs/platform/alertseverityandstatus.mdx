@@ -7,24 +7,24 @@ In Keep, alerts are treated as first-class citizens, with clearly defined severi
 ## Alert Severity
 Alert severity in Keep is classified into five categories, helping teams prioritize their response based on the urgency and impact of the alert.
 
-| Severity Level | Description                                           |
-|----------------|-------------------------------------------------------|
-| CRITICAL       | Requires immediate action.                            |
-| HIGH           | Needs to be addressed soon.                           |
-| WARNING        | Indicates a potential problem.                        |
-| INFO           | Provides information, no immediate action required.   |
-| LOW            | Minor issues or lowest priority.
+| Severity Level | Description                                           | Expected Value |
+|----------------|-------------------------------------------------------|----------------|
+| CRITICAL       | Requires immediate action.                            | "critical"     |
+| HIGH           | Needs to be addressed soon.                           | "high"         |
+| WARNING        | Indicates a potential problem.                        | "warning"      |
+| INFO           | Provides information, no immediate action required.   | "info"         |
+| LOW            | Minor issues or lowest priority.                      | "low"          |
 
 ## Alert Status
 The status of an alert in Keep reflects its current state in the alert lifecycle.
 
-| Status       | Description                                                                 |
-|--------------|-----------------------------------------------------------------------------|
-| FIRING       | Active alert indicating an ongoing issue.                                   |
-| RESOLVED     | The issue has been resolved, and the alert is no longer active.             |
-| ACKNOWLEDGED | The alert has been acknowledged but not resolved.                           |
-| SUPPRESSED   | Alert is suppressed due to various reasons.                                 |
-| PENDING      | No Data or insufficient data to determine the alert state.                  |
+| Status       | Description                                                                 | Expected Value |
+|--------------|-----------------------------------------------------------------------------|----------------|
+| FIRING       | Active alert indicating an ongoing issue.                                   | "firing"       |
+| RESOLVED     | The issue has been resolved, and the alert is no longer active.             | "resolved"     |
+| ACKNOWLEDGED | The alert has been acknowledged but not resolved.                           | "acknowledged" |
+| SUPPRESSED   | Alert is suppressed due to various reasons.                                 | "suppressed"   |
+| PENDING      | No Data or insufficient data to determine the alert state.                  | "pending"      |
 
 
 ## Provider Alert Mappings

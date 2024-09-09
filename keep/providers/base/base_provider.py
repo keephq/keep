@@ -18,10 +18,11 @@ from typing import Literal, Optional
 import opentelemetry.trace as trace
 import requests
 
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -126,15 +127,18 @@ class BaseProvider(metaclass=abc.ABCMeta):
         if not enrich_alert or results is None:
             return results if results else None
 
-        self._enrich_alert(enrich_alert, results)
+        audit_enabled = bool(kwargs.get("audit_enabled", True))
+
+        self._enrich_alert(enrich_alert, results, audit_enabled=audit_enabled)
         return results
 
-    def _enrich_alert(self, enrichments, results):
+    def _enrich_alert(self, enrichments, results, audit_enabled=True):
         """
         Enrich alert with provider specific data.
 
         """
         self.logger.debug("Extracting the fingerprint from the alert")
+        event = None
         if "fingerprint" in results:
             fingerprint = results["fingerprint"]
         elif self.context_manager.foreach_context.get("value", {}):
@@ -144,11 +148,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
             if isinstance(foreach_context, tuple):
                 # This is when we are in a foreach context that is zipped
                 foreach_context: dict = foreach_context[0]
-            fingerprint = foreach_context.get("fingerprint")
+                event = foreach_context
+
+            if isinstance(foreach_context, AlertDto):
+                fingerprint = foreach_context.fingerprint
+            else:
+                fingerprint = foreach_context.get("fingerprint")
         # else, if we are in an event context, use the event fingerprint
         elif self.context_manager.event_context:
             # TODO: map all casses event_context is dict and update them to the DTO
             #       and remove this if statement
+            event = self.context_manager.event_context
             if isinstance(self.context_manager.event_context, dict):
                 fingerprint = self.context_manager.event_context.get("fingerprint")
             # Alert DTO
@@ -166,18 +176,28 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.debug("Fingerprint extracted", extra={"fingerprint": fingerprint})
 
         _enrichments = {}
+        disposable_enrichments = {}
         # enrich only the requested fields
         for enrichment in enrichments:
             try:
-                if enrichment["value"].startswith("results."):
+                value = enrichment["value"]
+                disposable = bool(enrichment.get("disposable", False))
+                if value.startswith("results."):
                     val = enrichment["value"].replace("results.", "")
                     parts = val.split(".")
                     r = copy.copy(results)
                     for part in parts:
                         r = r[part]
-                    _enrichments[enrichment["key"]] = r
+                    value = r
+                if disposable:
+                    disposable_enrichments[enrichment["key"]] = value
                 else:
-                    _enrichments[enrichment["key"]] = enrichment["value"]
+                    _enrichments[enrichment["key"]] = value
+                if event is not None:
+                    if isinstance(event, dict):
+                        event[enrichment["key"]] = value
+                    else:
+                        setattr(event, enrichment["key"], value)
             except Exception:
                 self.logger.error(
                     f"Failed to enrich alert - enrichment: {enrichment}",
@@ -192,12 +212,29 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 enrichment_string += f"{key}={value}, "
             # remove the last comma
             enrichment_string = enrichment_string[:-2]
+            # enrich the alert with _enrichments
             enrichments_bl.enrich_alert(
                 fingerprint,
                 _enrichments,
                 action_type=AlertActionType.WORKFLOW_ENRICH,  # shahar: todo: should be specific, good enough for now
                 action_callee="system",
                 action_description=f"Workflow enriched the alert with {enrichment_string}",
+                audit_enabled=audit_enabled,
+            )
+            # enrich with disposable enrichments
+            enrichment_string = ""
+            for key, value in disposable_enrichments.items():
+                enrichment_string += f"{key}={value}, "
+            # remove the last comma
+            enrichment_string = enrichment_string[:-2]
+            enrichments_bl.enrich_alert(
+                fingerprint,
+                disposable_enrichments,
+                action_type=AlertActionType.WORKFLOW_ENRICH,
+                action_callee="system",
+                action_description=f"Workflow enriched the alert with {enrichment_string}",
+                dispose_on_new_alert=True,
+                audit_enabled=audit_enabled,
             )
 
         except Exception as e:
@@ -241,7 +278,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         enrich_alert = kwargs.get("enrich_alert", [])
         if enrich_alert:
-            self._enrich_alert(enrich_alert, results)
+            audit_enabled = bool(kwargs.get("audit_enabled", True))
+            self._enrich_alert(enrich_alert, results, audit_enabled=audit_enabled)
         # and return the results
         return results
 
@@ -583,3 +621,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         simulated_alert = alert_data["payload"].copy()
 
         return simulated_alert
+
+
+class BaseTopologyProvider(BaseProvider):
+    def pull_topology(self) -> list[TopologyServiceInDto]:
+        raise NotImplementedError("get_topology() method not implemented")

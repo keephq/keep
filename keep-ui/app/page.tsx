@@ -1,8 +1,8 @@
 import ProvidersPage from "./providers/page";
 
 export const metadata = {
-  title: "Keep Console",
-  description: "Alerting and on-call management for modern engineering teams.",
+  title: "Keep",
+  description: "The open-source AIOps and alert management platform.",
 };
 
 export default ProvidersPage;

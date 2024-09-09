@@ -163,12 +163,16 @@ export function AlertTable({
   let showEmptyState = !isAsyncLoading && showSkeleton;
 
   const handleRowClick = (alert: AlertDto) => {
+    // if presetName is alert-history, do not open sidebar
+    if (presetName === "alert-history") {
+      return;
+    }
     setSelectedAlert(alert);
     setIsSidebarOpen(true);
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full">
       <TitleAndFilters
         table={table}
         alerts={alerts}
@@ -218,6 +222,7 @@ export function AlertTable({
             showEmptyState={showEmptyState}
             theme={theme}
             onRowClick={handleRowClick}
+            presetName={presetName}
           />
         </Table>
       </Card>

@@ -4,7 +4,7 @@ import re
 import typing
 import uuid
 
-from keep.api.core.config import AuthenticationType
+from keep.api.core.config import AuthenticationType, config
 from keep.api.core.db import (
     get_enrichment,
     get_previous_alert_by_fingerprint,
@@ -29,6 +29,9 @@ class WorkflowManager:
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
+        if self.debug:
+            self.logger.setLevel(logging.DEBUG)
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
@@ -48,7 +51,7 @@ class WorkflowManager:
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
-        if filter_val.startswith('r"'):
+        if isinstance(filter_val, str) and filter_val.startswith('r"'):
             try:
                 # remove the r" and the last "
                 pattern = re.compile(filter_val[2:-1])
@@ -60,20 +63,29 @@ class WorkflowManager:
                 )
                 return False
         else:
+            # For cases like `dismissed`
+            if isinstance(filter_val, bool) and isinstance(value, str):
+                return value == str(filter_val)
             return value == filter_val
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto]):
         for event in events:
+            self.logger.info("Getting all workflows")
             all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
+            self.logger.info(
+                "Got all workflows",
+                extra={
+                    "num_of_workflows": len(all_workflow_models),
+                },
+            )
             for workflow_model in all_workflow_models:
                 try:
                     # get the actual workflow that can be triggered
+                    self.logger.info("Getting workflow from store")
                     workflow = self.workflow_store.get_workflow(
                         tenant_id, workflow_model.id
                     )
-                # the provider is not configured, hence the workflow cannot be triggered
-                # todo - handle it better
-                # todo2 - handle if more than one provider is not configured
+                    self.logger.info("Got workflow from store")
                 except ProviderConfigurationException:
                     self.logger.exception(
                         "Workflow have a provider that is not configured",
@@ -84,7 +96,6 @@ class WorkflowManager:
                     )
                     continue
                 except Exception:
-                    # TODO: how to handle workflows that aren't properly parsed/configured?
                     self.logger.exception(
                         "Error getting workflow",
                         extra={
@@ -96,17 +107,33 @@ class WorkflowManager:
                 for trigger in workflow.workflow_triggers:
                     # TODO: handle it better
                     if not trigger.get("type") == "alert":
+                        self.logger.debug("trigger type is not alert, skipping")
                         continue
                     should_run = True
                     # apply filters
                     for filter in trigger.get("filters", []):
                         # TODO: more sophisticated filtering/attributes/nested, etc
+                        self.logger.debug(f"Running filter {filter}")
                         filter_key = filter.get("key")
                         filter_val = filter.get("value")
                         event_val = self._get_event_value(event, filter_key)
-                        if not event_val:
+                        self.logger.debug(
+                            "Filtering",
+                            extra={
+                                "filter_key": filter_key,
+                                "filter_val": filter_val,
+                                "event": event,
+                            },
+                        )
+                        if event_val is None:
                             self.logger.warning(
-                                "Failed to run filter, skipping the event. Probably misconfigured workflow."
+                                "Failed to run filter, skipping the event. Probably misconfigured workflow.",
+                                extra={
+                                    "tenant_id": tenant_id,
+                                    "filter_key": filter_key,
+                                    "filter_val": filter_val,
+                                    "workflow_id": workflow_model.id,
+                                },
                             )
                             should_run = False
                             continue
@@ -115,15 +142,27 @@ class WorkflowManager:
                             for val in event_val:
                                 # if one filter applies, it should run
                                 if self._apply_filter(filter_val, val):
+                                    self.logger.debug(
+                                        "Filter matched, running",
+                                        extra={
+                                            "filter_key": filter_key,
+                                            "filter_val": filter_val,
+                                            "event": event,
+                                        },
+                                    )
                                     should_run = True
                                     break
+                                self.logger.debug(
+                                    "Filter didn't match, skipping",
+                                    extra={
+                                        "filter_key": filter_key,
+                                        "filter_val": filter_val,
+                                        "event": event,
+                                    },
+                                )
                                 should_run = False
                         # elif the filter is string/int/float, compare them:
-                        elif type(event_val) in [
-                            int,
-                            str,
-                            float,
-                        ]:
+                        elif type(event_val) in [int, str, float, bool]:
                             if not self._apply_filter(filter_val, event_val):
                                 self.logger.debug(
                                     "Filter didn't match, skipping",
@@ -144,6 +183,7 @@ class WorkflowManager:
                             break
 
                     if not should_run:
+                        self.logger.debug("Skipping the workflow")
                         continue
                     # enrich the alert with more data
                     self.logger.info("Found a workflow to run")

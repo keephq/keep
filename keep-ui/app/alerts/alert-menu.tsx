@@ -170,7 +170,7 @@ export default function AlertMenu({
           <button
             className={`${
               active ? "bg-slate-200" : "text-gray-900"
-            } group flex items-center rounded-md px-2 py-2 text-xs`}
+            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
             onClick={() => {
               setRunWorkflowModalAlert?.(alert);
               handleCloseMenu();
@@ -210,7 +210,7 @@ export default function AlertMenu({
             }}
             className={`${
               active ? "bg-slate-200" : "text-gray-900"
-            } group flex items-center rounded-md px-2 py-2 text-xs`}
+            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <ArchiveBoxIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             History
@@ -227,7 +227,7 @@ export default function AlertMenu({
               }}
               className={`${
                 active ? "bg-slate-200" : "text-gray-900"
-              } group flex items-center rounded-md px-2 py-2 text-xs`}
+              } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
             >
               <UserPlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Self-Assign
@@ -241,7 +241,7 @@ export default function AlertMenu({
             onClick={openAlertPayloadModal}
             className={`${
               active ? "bg-slate-200" : "text-gray-900"
-            } group flex items-center rounded-md px-2 py-2 text-xs`}
+            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             View Alert
@@ -260,7 +260,7 @@ export default function AlertMenu({
                       active ? "bg-slate-200" : "text-gray-900"
                     } ${
                       !methodEnabled ? "text-slate-300 cursor-not-allowed" : ""
-                    } group flex items-center rounded-md px-2 py-2 text-xs`}
+                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     disabled={!methodEnabled}
                     title={!methodEnabled ? "Missing required scopes" : ""}
                     onClick={() => {
@@ -285,7 +285,7 @@ export default function AlertMenu({
             }}
             className={`${
               active ? "bg-slate-200" : "text-gray-900"
-            } group flex items-center rounded-md px-2 py-2 text-xs`}
+            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <IoNotificationsOffOutline className="mr-2 h-4 w-4" aria-hidden="true" />
             {alert.dismissed ? "Restore" : "Dismiss"}
@@ -301,7 +301,7 @@ export default function AlertMenu({
             }}
             className={`${
               active ? "bg-slate-200" : "text-gray-900"
-            } group flex items-center rounded-md px-2 py-2 text-xs`}
+            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <ChevronDoubleRightIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             Change Status

@@ -20,23 +20,27 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
-from keep.api.arq_worker import get_pool
-from keep.api.bl.enrichments import EnrichmentsBl
+from keep.api.arq_pool import get_pool
+from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
-from keep.api.core.dependencies import (
-    AuthenticatedEntity,
-    AuthVerifier,
-    get_pusher_client,
-)
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
-from keep.api.models.alert import AlertDto, DeleteRequestBody, EnrichAlertRequestBody
+from keep.api.models.alert import (
+    AlertDto,
+    DeleteRequestBody,
+    EnrichAlertRequestBody,
+    UnEnrichAlertRequestBody,
+)
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.identitymanager.authenticatedentity import AuthenticatedEntity
+from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -51,7 +55,10 @@ REDIS = os.environ.get("REDIS", "false") == "true"
     description="Get last alerts occurrence",
 )
 def get_all_alerts(
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    limit: int = 1000,
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -60,7 +67,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id)
+    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
@@ -75,9 +82,9 @@ def get_all_alerts(
 @router.get("/{fingerprint}/history", description="Get alert history")
 def get_alert_history(
     fingerprint: str,
-    provider_id: str | None = None,
-    provider_type: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[AlertDto]:
     logger.info(
         "Fetching alert history",
@@ -90,27 +97,6 @@ def get_alert_history(
         tenant_id=authenticated_entity.tenant_id, fingerprint=fingerprint, limit=1000
     )
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
-
-    if provider_id is not None and provider_type is not None:
-        try:
-            installed_provider = ProvidersFactory.get_installed_provider(
-                tenant_id=authenticated_entity.tenant_id,
-                provider_id=provider_id,
-                provider_type=provider_type,
-            )
-            pulled_alerts_history = installed_provider.get_alerts_by_fingerprint(
-                tenant_id=authenticated_entity.tenant_id
-            ).get(fingerprint, [])
-            enriched_alerts_dto.extend(pulled_alerts_history)
-        except Exception:
-            logger.warning(
-                "Failed to pull alerts history from installed provider",
-                extra={
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                    "tenant_id": authenticated_entity.tenant_id,
-                },
-            )
 
     logger.info(
         "Fetched alert history",
@@ -125,7 +111,9 @@ def get_alert_history(
 @router.delete("", description="Delete alert by finerprint and last received time")
 def delete_alert(
     delete_alert: DeleteRequestBody,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["delete:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     user_email = authenticated_entity.email
@@ -197,7 +185,9 @@ def assign_alert(
     fingerprint: str,
     last_received: str,
     unassign: bool = False,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     user_email = authenticated_entity.email
@@ -273,7 +263,10 @@ async def receive_generic_event(
     bg_tasks: BackgroundTasks,
     request: Request,
     fingerprint: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -282,12 +275,11 @@ async def receive_generic_event(
         alert (AlertDto | list[AlertDto]): The alert(s) to be sent to Keep.
         bg_tasks (BackgroundTasks): Background tasks handler.
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
-        session (Session, optional): Defaults to Depends(get_session).
     """
     if REDIS:
         redis: ArqRedis = await get_pool()
-        await redis.enqueue_job(
-            "process_event",
+        job = await redis.enqueue_job(
+            "async_process_event",
             authenticated_entity.tenant_id,
             None,
             None,
@@ -295,6 +287,15 @@ async def receive_generic_event(
             authenticated_entity.api_key_name,
             request.state.trace_id,
             event,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
         )
     else:
         bg_tasks.add_task(
@@ -346,7 +347,10 @@ async def receive_event(
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
     provider_class = ProvidersFactory.get_provider_class(provider_type)
@@ -355,8 +359,8 @@ async def receive_event(
 
     if REDIS:
         redis: ArqRedis = await get_pool()
-        await redis.enqueue_job(
-            "process_event",
+        job = await redis.enqueue_job(
+            "async_process_event",
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
@@ -364,6 +368,15 @@ async def receive_event(
             authenticated_entity.api_key_name,
             trace_id,
             event,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
         )
     else:
         bg_tasks.add_task(
@@ -386,7 +399,9 @@ async def receive_event(
 )
 def get_alert(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> AlertDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -411,7 +426,9 @@ def get_alert(
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["write:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
     dispose_on_new_alert: Optional[bool] = Query(
         False, description="Dispose on new alert"
     ),
@@ -428,14 +445,24 @@ def enrich_alert(
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         # Shahar: TODO, change to the specific action type, good enough for now
-        if "status" in enrich_data.enrichments:
+        if (
+            "status" in enrich_data.enrichments
+            and authenticated_entity.api_key_name is None
+        ):
             action_type = (
                 AlertActionType.MANUAL_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
                 else AlertActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
-        elif "note" in enrich_data.enrichments:
+        elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
+            action_type = (
+                AlertActionType.API_AUTOMATIC_RESOLVE
+                if enrich_data.enrichments["status"] == "resolved"
+                else AlertActionType.API_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
+        elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = AlertActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
         elif "ticket_url" in enrich_data.enrichments:
@@ -499,12 +526,121 @@ def enrich_alert(
 
 
 @router.post(
+    "/unenrich",
+    description="Un-Enrich an alert",
+)
+def unenrich_alert(
+    enrich_data: UnEnrichAlertRequestBody,
+    pusher_client: Pusher = Depends(get_pusher_client),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> dict[str, str]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Un-Enriching alert",
+        extra={
+            "fingerprint": enrich_data.fingerprint,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    if "assignees" in enrich_data.enrichments:
+        return {"status": "failed"}
+
+    alert = get_alerts_by_fingerprint(
+        authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1
+    )
+    if not alert:
+        logger.warning(
+            "Alert not found", extra={"fingerprint": enrich_data.fingerprint}
+        )
+        return {"status": "failed"}
+
+    try:
+        enrichement_bl = EnrichmentsBl(tenant_id)
+        if "status" in enrich_data.enrichments:
+            action_type = AlertActionType.STATUS_UNENRICH
+            action_description = (
+                f"Alert status was un-enriched by {authenticated_entity.email}"
+            )
+        elif "note" in enrich_data.enrichments:
+            action_type = AlertActionType.UNCOMMENT
+            action_description = f"Comment removed by {authenticated_entity.email}"
+        elif "ticket_url" in enrich_data.enrichments:
+            action_type = AlertActionType.TICKET_UNASSIGNED
+            action_description = f"Ticket unassigned by {authenticated_entity.email}"
+        else:
+            action_type = AlertActionType.GENERIC_UNENRICH
+            action_description = f"Alert en-enriched by {authenticated_entity.email}"
+
+        enrichments_object = get_enrichment(tenant_id, enrich_data.fingerprint)
+        enrichments = enrichments_object.enrichments
+
+        new_enrichments = {
+            key: value
+            for key, value in enrichments.items()
+            if key not in enrich_data.enrichments
+        }
+
+        enrichement_bl.enrich_alert(
+            fingerprint=enrich_data.fingerprint,
+            enrichments=new_enrichments,
+            action_type=action_type,
+            action_callee=authenticated_entity.email,
+            action_description=action_description,
+            force=True,
+        )
+
+        alert = get_alerts_by_fingerprint(
+            authenticated_entity.tenant_id, enrich_data.fingerprint, limit=1
+        )
+
+        enriched_alerts_dto = convert_db_alerts_to_dto_alerts(alert)
+        # push the enriched alert to the elasticsearch
+        try:
+            logger.info("Pushing enriched alert to elasticsearch")
+            elastic_client = ElasticClient(tenant_id)
+            elastic_client.index_alert(
+                alert=enriched_alerts_dto[0],
+            )
+            logger.info("Pushed un-enriched alert to elasticsearch")
+        except Exception:
+            logger.exception("Failed to push alert to elasticsearch")
+            pass
+        # use pusher to push the enriched alert to the client
+        if pusher_client:
+            logger.info("Telling client to poll alerts")
+            try:
+                pusher_client.trigger(
+                    f"private-{tenant_id}",
+                    "poll-alerts",
+                    "{}",
+                )
+                logger.info("Told client to poll alerts")
+            except Exception:
+                logger.exception("Failed to tell client to poll alerts")
+                pass
+        logger.info(
+            "Alert un-enriched successfully",
+            extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
+        )
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.exception("Failed to un-enrich alert", extra={"error": str(e)})
+        return {"status": "failed"}
+
+
+@router.post(
     "/search",
     description="Search alerts",
 )
 async def search_alerts(
-    search_request: SearchAlertsRequest,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    search_request: SearchAlertsRequest,  # Use the model directly
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ) -> list[AlertDto]:
     tenant_id = authenticated_entity.tenant_id
     try:
@@ -543,7 +679,9 @@ async def search_alerts(
 )
 def get_alert_audit(
     fingerprint: str,
-    authenticated_entity: AuthenticatedEntity = Depends(AuthVerifier(["read:alert"])),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info(
