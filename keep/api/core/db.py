@@ -1685,16 +1685,16 @@ def get_rule_distribution(tenant_id, minute=False):
             timestamp_format = func.to_char(AlertToIncident.timestamp, time_format)
         elif session.bind.dialect.name == "sqlite":
             time_format = "%Y-%m-%d %H:%M" if minute else "%Y-%m-%d %H"
-            timestamp_format = func.strftime(time_format, AlertToGroup.timestamp)
+            timestamp_format = func.strftime(time_format, AlertToIncident.timestamp)
         elif session.bind.dialect.name == "mssql":
             # For MSSQL, using CONVERT to format date
             if minute:
                 timestamp_format = func.format(
-                    AlertToGroup.timestamp, "yyyy-MM-dd HH:mm"
+                    AlertToIncident.timestamp, "yyyy-MM-dd HH:mm"
                 )
             else:
                 timestamp_format = (
-                    func.format(AlertToGroup.timestamp, "yyyy-MM-dd HH") + ":00"
+                    func.format(AlertToIncident.timestamp, "yyyy-MM-dd HH") + ":00"
                 )
         else:
             raise ValueError("Unsupported database dialect")
