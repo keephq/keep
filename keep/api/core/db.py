@@ -2427,12 +2427,11 @@ def add_alerts_to_incident_by_incident_id(
                 extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}})
     
     with Session(engine) as session:
-        incident = session.exec(
-            select(Incident).where(
-                Incident.tenant_id == tenant_id,
-                Incident.id == incident_id,
-            )
-        ).first()
+        query = select(Incident).where(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
+        )
+        incident = session.exec(query).first()
 
         if not incident:
             return None
@@ -2537,25 +2536,27 @@ def remove_alerts_to_incident_by_incident_id(
 
         # checking if services of removed alerts are still presented in alerts
         # which still assigned with the incident
-        services_existed = session.exec(
-            session.query(func.distinct(service_field))
+        existed_services_query = (
+            select(func.distinct(service_field))
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 AlertToIncident.incident_id == incident_id,
                 service_field.in_(alerts_data_for_incident["services"]),
             )
-        ).scalars()
+        )
+        services_existed = session.exec(existed_services_query)
 
         # checking if sources (providers) of removed alerts are still presented in alerts
         # which still assigned with the incident
-        sources_existed = session.exec(
-            session.query(col(Alert.provider_type).distinct())
+        existed_sources_query = (
+            select(col(Alert.provider_type).distinct())
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 AlertToIncident.incident_id == incident_id,
                 col(Alert.provider_type).in_(alerts_data_for_incident["sources"]),
             )
-        ).scalars()
+        )
+        sources_existed = session.exec(existed_sources_query)
 
         # Making lists of services and sources to remove from the incident
         services_to_remove = [
