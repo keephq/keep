@@ -28,6 +28,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
 
+
+const TIMEFRAME_UNITS_FROM_SECONDS= {
+  seconds: (amount: number) => amount,
+  minutes: (amount: number) => amount / 60,
+  hours: (amount: number) => amount / 3600,
+  days: (amount: number) => amount  / 86400,
+} as const;
+
 const columnHelper = createColumnHelper<Rule>();
 
 type CorrelationTableProps = {
@@ -57,11 +65,13 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
             ],
       };
 
+      const timeunit = selectedRule.timeunit ?? "seconds";
+
       return {
         name: selectedRule.name,
         description: selectedRule.group_description ?? "",
-        timeAmount: selectedRule.timeframe,
-        timeUnit: "seconds",
+        timeAmount: TIMEFRAME_UNITS_FROM_SECONDS[timeunit](selectedRule.timeframe),
+        timeUnit: timeunit,
         groupedAttributes: selectedRule.grouping_criteria,
         requireApprove: selectedRule.require_approve,
         query: queryInGroup,
