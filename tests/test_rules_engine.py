@@ -44,6 +44,7 @@ def test_sanity(db_session):
             "params": {},
         },
         timeframe=600,
+        timeunit="seconds",
         definition_cel='(source == "sentry") || (source == "grafana" && severity == "critical")',
         created_by="test@keephq.dev",
     )
@@ -90,6 +91,7 @@ def test_sanity_2(db_session):
             "params": {},
         },
         timeframe=600,
+        timeunit="seconds",
         definition_cel='(source == "sentry" && labels.label_1 == "a")',
         created_by="test@keephq.dev",
     )
@@ -137,6 +139,7 @@ def test_sanity_3(db_session):
             "params": {},
         },
         timeframe=600,
+        timeunit="seconds",
         definition_cel='(source == "sentry" && labels.label_1 == "a" && tags.tag_1.contains("tag"))',
         created_by="test@keephq.dev",
     )
@@ -184,6 +187,7 @@ def test_sanity_4(db_session):
             "params": {},
         },
         timeframe=600,
+        timeunit="seconds",
         definition_cel='(source == "sentry" && labels.label_1 == "a" && tags.tag_1.contains("1234"))',
         created_by="test@keephq.dev",
     )
@@ -231,6 +235,7 @@ def test_incident_attributes(db_session):
             "params": {},
         },
         timeframe=600,
+        timeunit="seconds",
         definition_cel='(source == "grafana" && labels.label_1 == "a")',
         created_by="test@keephq.dev",
     )
@@ -287,6 +292,7 @@ def test_incident_severity(db_session):
             "params": {},
         },
         timeframe=600,
+        timeunit="seconds",
         definition_cel='(source == "grafana" && labels.label_1 == "a")',
         created_by="test@keephq.dev",
     )

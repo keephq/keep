@@ -12,6 +12,7 @@ export type Rule = {
   definition_cel: string;
   definition: { sql: string; params: {} };
   timeframe: number;
+  timeunit: "minutes" | "seconds" | "hours" | "days";
   created_by: string;
   creation_time: string;
   tenant_id: string;

@@ -21,6 +21,7 @@ class Rule(SQLModel, table=True):
     definition: dict = Field(sa_column=Column(JSON))  # sql / params
     definition_cel: str  # cel
     timeframe: int  # time in seconds
+    timeunit: str = Field(default="seconds")
     created_by: str
     creation_time: datetime
     updated_by: str = None
