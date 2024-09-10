@@ -1598,6 +1598,8 @@ def get_all_deduplication_rules(tenant_id):
                 AlertDeduplicationRule.tenant_id == tenant_id
             )
         ).all()
+        # cast to dto
+
     return rules
 
 

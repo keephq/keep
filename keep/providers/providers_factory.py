@@ -548,6 +548,10 @@ class ProvidersFactory:
                     dedup_ratio=0.0,
                     enabled=True,
                     fingerprint_fields=provider.default_fingerprint_fields,
+                    # default provider deduplication rules are not full deduplication
+                    full_deduplication=False,
+                    # not relevant for default deduplication rules
+                    ignore_fields=[],
                 )
                 default_deduplications.append(deduplication_dto)
 

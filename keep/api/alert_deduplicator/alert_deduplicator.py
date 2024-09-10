@@ -62,6 +62,7 @@ class AlertDeduplicator:
                 "Alert is deduplicated",
                 extra={
                     "alert_id": alert.id,
+                    "rule_id": rule.id,
                     "tenant_id": self.tenant_id,
                 },
             )
@@ -159,45 +160,57 @@ class AlertDeduplicator:
         )
 
     def get_deduplications(self) -> list[DeduplicationRuleDto]:
+        # get all providers
         installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
         installed_providers = [
             provider for provider in installed_providers if "alert" in provider.tags
         ]
+        # get all linked providers
         linked_providers = ProvidersFactory.get_linked_providers(self.tenant_id)
         providers = [*installed_providers, *linked_providers]
 
+        # get default deduplication rules
         default_deduplications = ProvidersFactory.get_default_deduplication_rules()
         default_deduplications_dict = {
             dd.provider_type: dd for dd in default_deduplications
         }
-
+        # get custom deduplication rules
         custom_deduplications = get_all_deduplication_rules(self.tenant_id)
         custom_deduplications_dict = {
             rule.provider_id: rule for rule in custom_deduplications
         }
 
+        # calculate the deduplciations
+        # if a provider has custom deduplication rule, use it
+        # else, use the default deduplication rule of the provider
         final_deduplications = []
         for provider in providers:
+            # if the provider doesn't have a deduplication rule, use the default one
             if provider.id not in custom_deduplications_dict:
+                # no default deduplication rule found [if provider doesn't have FINGERPRINT_FIELDS]
                 if provider.type not in default_deduplications_dict:
                     self.logger.warning(
                         f"Provider {provider.type} does not have a default deduplication"
                     )
                     continue
 
+                # create a copy of the default deduplication rule
                 default_deduplication = copy.deepcopy(
                     default_deduplications_dict[provider.type]
                 )
+                # copy the provider id to the description
                 if provider.id:
                     default_deduplication.description = (
                         f"{default_deduplication.description} - {provider.id}"
                     )
                     default_deduplication.provider_id = provider.id
-
+                # set the provider type
                 final_deduplications.append(default_deduplication)
+            # else, just use the custom deduplication rule
             else:
                 final_deduplications.append(custom_deduplications_dict[provider.id])
 
+        # now calculate some statistics
         dedup_ratio = get_all_dedup_ratio(self.tenant_id)
 
         result = []

@@ -434,3 +434,5 @@ class DeduplicationRuleDto(BaseModel):
     dedup_ratio: float
     enabled: bool
     fingerprint_fields: list[str]
+    full_deduplication: bool
+    ignore_fields: list[str]

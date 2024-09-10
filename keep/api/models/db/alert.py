@@ -172,17 +172,18 @@ class AlertEnrichment(SQLModel, table=True):
 class AlertDeduplicationRule(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
-    # the list of fields to use for the fingerprint
-    fingerprint_fields: list = Field(sa_column=Column(JSON), default=[])
-    # the provider id to use for this deduplication - None for linked providers
-    provider_id: str | None
-    provider_type: str | None
-    # full deduplication: if True, the alert will be discarded entirely if a match is found
+    name: str = Field(index=True)
+    description: str
+    provider_id: str | None = Field(default=None)  # None for default rules
+    provider_type: str
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated_by: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by: str
+    enabled: bool = Field(default=True)
+    fingerprint_fields: list[str] = Field(sa_column=Column(JSON), default=[])
     full_deduplication: bool = Field(default=False)
-    # if full deduplication is enabled, the list of fields to ignore while calculating the hash for full deduplication
-    ignore_fields: list = Field(sa_column=Column(JSON), default=[])
-    # priority of the deduplication rule - the higher the number, the more important the rule is
-    priority: int = Field(default=0)
+    ignore_fields: list[str] = Field(sa_column=Column(JSON), default=[])
 
     class Config:
         arbitrary_types_allowed = True

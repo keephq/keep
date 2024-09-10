@@ -13,4 +13,7 @@ export interface DeduplicationRule {
   fingerprint_fields: string[];
   ingested: number;
   dedup_ratio: number;
+  // full_deduplication is true if the deduplication rule is a full deduplication rule
+  full_deduplication: boolean;
+  ignore_fields: string[];
 }
