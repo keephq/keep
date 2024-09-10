@@ -333,6 +333,7 @@ def test_workflow_execution_2(
 
     # Insert the current alert into the workflow manager
     workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # Wait for the workflow execution to complete
     workflow_execution = None
@@ -347,6 +348,7 @@ def test_workflow_execution_2(
         time.sleep(1)
         count += 1
 
+    assert len(workflow_manager.scheduler.workflows_to_run) == 0
     # Check if the workflow execution was successful
     assert workflow_execution is not None
     assert workflow_execution.status == "success"

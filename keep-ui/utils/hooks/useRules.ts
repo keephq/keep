@@ -20,6 +20,7 @@ export type Rule = {
   update_time: string | null;
   require_approve: boolean;
   distribution: { [group: string]: { [timestamp: string]: number } };
+  incidents: number
 };
 
 export const useRules = (options?: SWRConfiguration) => {
