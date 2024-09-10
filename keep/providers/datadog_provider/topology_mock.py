@@ -37,4 +37,4 @@ if __name__ == "__main__":
     topology_data = list(services.values())
     print(topology_data)
 
-    process_topology("keep", topology_data, "datadog")
+    process_topology("keep", topology_data, "datadog", "datadog")

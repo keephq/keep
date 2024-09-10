@@ -1366,6 +1366,7 @@ def create_rule(
     tenant_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     created_by,
@@ -1379,6 +1380,7 @@ def create_rule(
             tenant_id=tenant_id,
             name=name,
             timeframe=timeframe,
+            timeunit=timeunit,
             definition=definition,
             definition_cel=definition_cel,
             created_by=created_by,
@@ -1398,6 +1400,7 @@ def update_rule(
     rule_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     updated_by,
@@ -1412,6 +1415,7 @@ def update_rule(
         if rule:
             rule.name = name
             rule.timeframe = timeframe
+            rule.timeunit = timeunit
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.grouping_criteria = grouping_criteria
@@ -1519,6 +1523,20 @@ def get_rule(tenant_id, rule_id):
             select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
         ).first()
     return rule
+
+
+def get_rule_incidents_count_db(tenant_id):
+    with Session(engine) as session:
+        query = (
+            session.query(Incident.rule_id, func.count(Incident.id))
+            .select_from(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+                col(Incident.rule_id).isnot(None)
+            )
+            .group_by(Incident.rule_id)
+        )
+        return dict(query.all())
 
 
 def get_rule_distribution(tenant_id, minute=False):
@@ -1633,7 +1651,7 @@ def update_key_last_used(
             # shouldn't happen but somehow happened to specific tenant so logging it
             logger.error(
                 "API key not found",
-                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+                extra={"tenant_id": tenant_id, "unique_api_key_id": reference_id},
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
@@ -2737,6 +2755,18 @@ def get_all_topology_data(
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
         return service_dtos
+
+
+def get_topology_data_by_dynamic_matcher(
+    tenant_id: str, matchers_value: dict[str, str]
+) -> TopologyService | None:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+        for matcher in matchers_value:
+            query = query.where(
+                getattr(TopologyService, matcher) == matchers_value[matcher]
+            )
+    return session.exec(query).first()
 
 
 def get_tags(tenant_id):

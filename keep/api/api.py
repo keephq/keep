@@ -271,19 +271,38 @@ def get_app(
         if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
             event_loop = asyncio.get_event_loop()
             if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
+                logger.info("Starting all task pools")
                 basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
                 ai_worker = get_arq_worker(KEEP_ARQ_QUEUE_AI)
                 event_loop.create_task(basic_worker.async_run())
                 event_loop.create_task(ai_worker.async_run())
             elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+                logger.info("Starting AI task pool")
                 arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_AI)
                 event_loop.create_task(arq_worker.async_run())
             elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
+                logger.info("Starting Basic Processing task pool")
                 arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
                 event_loop.create_task(arq_worker.async_run())
             else:
                 raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
         logger.info("Services started successfully")
+
+    @app.on_event("shutdown")
+    async def on_shutdown():
+        logger.info("Shutting down Keep")
+        if SCHEDULER:
+            logger.info("Stopping the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            await wf_manager.stop()
+            logger.info("Scheduler stopped successfully")
+        if CONSUMER:
+            logger.info("Stopping the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            await event_subscriber.stop()
+            logger.info("Consumer stopped successfully")
+        # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
+        logger.info("Keep shutdown complete")
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
