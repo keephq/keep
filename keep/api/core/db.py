@@ -1525,6 +1525,20 @@ def get_rule(tenant_id, rule_id):
     return rule
 
 
+def get_rule_incidents_count_db(tenant_id):
+    with Session(engine) as session:
+        query = (
+            session.query(Incident.rule_id, func.count(Incident.id))
+            .select_from(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+                col(Incident.rule_id).isnot(None)
+            )
+            .group_by(Incident.rule_id)
+        )
+        return dict(query.all())
+
+
 def get_rule_distribution(tenant_id, minute=False):
     """Returns hits per hour for each rule, optionally breaking down by groups if the rule has 'group by', limited to the last 7 days."""
     with Session(engine) as session:
@@ -1637,7 +1651,7 @@ def update_key_last_used(
             # shouldn't happen but somehow happened to specific tenant so logging it
             logger.error(
                 "API key not found",
-                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+                extra={"tenant_id": tenant_id, "unique_api_key_id": reference_id},
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
