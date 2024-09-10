@@ -20,6 +20,11 @@ class TopologyService(SQLModel, table=True):
     application: Optional[str]
     email: Optional[str]
     slack: Optional[str]
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
+    category: Optional[str] = None
+    manufacturer: Optional[str] = None
+
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -84,6 +89,10 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     application: Optional[str] = None
     email: Optional[str] = None
     slack: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
+    category: Optional[str] = None
+    manufacturer: Optional[str] = None
 
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
@@ -116,6 +125,10 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             application=service.application,
             email=service.email,
             slack=service.slack,
+            ip_address=service.ip_address,
+            mac_address=service.mac_address,
+            manufacturer=service.manufacturer,
+            category=service.category,
             dependencies=[
                 TopologyServiceDependencyDto(
                     serviceId=dep.depends_on_service_id,

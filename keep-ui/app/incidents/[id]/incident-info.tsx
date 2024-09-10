@@ -89,6 +89,8 @@ export default function IncidentInformation({ incident }: Props) {
         <p>Summary: {incident.user_summary || incident.generated_summary}</p>
         {!!incident.start_time && <p>Started at: {new Date(incident.start_time + "Z").toLocaleString()}</p>}
         {!!incident.last_seen_time && <p>Last seen at: {new Date(incident.last_seen_time + "Z").toLocaleString()}</p>}
+        {!!incident.rule_fingerprint && <p>Group by value: {incident.rule_fingerprint}</p>}
+
       </div>
       <Modal
         isOpen={isFormOpen}

@@ -12,8 +12,9 @@ import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
+import {AlertsFoundBadge} from "./AlertsFoundBadge";
 
-export const TIMEFRAME_UNITS = {
+export const TIMEFRAME_UNITS_TO_SECONDS= {
   seconds: (amount: number) => amount,
   minutes: (amount: number) => 60 * amount,
   hours: (amount: number) => 3600 * amount,
@@ -35,9 +36,9 @@ export const CorrelationSidebarBody = ({
     defaultValues: defaultValue,
     mode: "onChange",
   });
-  const timeframeInSeconds = TIMEFRAME_UNITS[methods.watch("timeUnit")](
+  const timeframeInSeconds = methods.watch("timeUnit") ? TIMEFRAME_UNITS_TO_SECONDS[methods.watch("timeUnit")](
     +methods.watch("timeAmount")
-  );
+  ) : 0;
 
   const { mutate } = useRules();
   const { data: session } = useSession();
@@ -62,6 +63,7 @@ export const CorrelationSidebarBody = ({
     const {
       name,
       query,
+      timeUnit,
       description,
       groupedAttributes,
       requireApprove } = correlationFormData;
@@ -81,6 +83,7 @@ export const CorrelationSidebarBody = ({
             ruleName: name,
             celQuery: formatQuery(query, "cel"),
             timeframeInSeconds,
+            timeUnit: timeUnit,
             groupingCriteria: alertsFound.length ? groupedAttributes : [],
             requireApprove: requireApprove
           }),
@@ -117,24 +120,34 @@ export const CorrelationSidebarBody = ({
           </Button>
         </Callout>
       )}
-      <Callout
-        className="mb-10 relative"
-        title="Rules will be applied only to new alerts. Historical data will be ignored"
-        color="orange"
-      />
       <FormProvider {...methods}>
         <form
-          className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-1"
+          // className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-2"
           onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
         >
-          <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
-          <CorrelationGroups />
+          <div className="mb-10">
+            <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
+          </div>
+          <div className="grid grid-cols-3 gap-x-10 flex-1">
+            <CorrelationGroups />
 
-          <CorrelationSubmission
-            toggle={toggle}
-            alertsFound={alertsFound}
-            timeframeInSeconds={timeframeInSeconds}
-          />
+            <div className="flex flex-col items-center justify-between gap-5 py-5" id="total-results">
+              <div className="grow justify-center flex">
+                {alertsFound.length > 0 && (
+                  <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} vertical={true}/>
+                )}
+              </div>
+              <span className="text-xs">Rules will be applied only to new alerts. Historical data will be ignored</span>
+              <div className="flex justify-end w-full">
+                <CorrelationSubmission
+                  toggle={toggle}
+                  timeframeInSeconds={timeframeInSeconds}
+                />
+              </div>
+            </div>
+
+          </div>
+
         </form>
       </FormProvider>
     </div>

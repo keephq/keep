@@ -11,11 +11,13 @@ import { AILink } from "./AILink";
 import { TbTopologyRing } from "react-icons/tb";
 import { FaVolumeMute } from "react-icons/fa";
 import { IoMdGitMerge } from "react-icons/io";
+import { useTopology } from "utils/hooks/useTopology";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
 export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
   const isNOCRole = session?.userRole === "noc";
+  const { topologyData } = useTopology();
 
   if (isNOCRole) {
     return null;
@@ -56,7 +58,14 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
           </LinkWithIcon>
         </li>
         <li>
-          <LinkWithIcon href="/topology" icon={TbTopologyRing} isBeta={true}>
+          <LinkWithIcon
+            href="/topology"
+            icon={TbTopologyRing}
+            isBeta={!topologyData || topologyData.length === 0}
+            count={
+              topologyData?.length === 0 ? undefined : topologyData?.length
+            }
+          >
             <Subtitle>Service Topology</Subtitle>
           </LinkWithIcon>
         </li>

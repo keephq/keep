@@ -26,6 +26,7 @@ class AlertPaginatedResultsDto(PaginatedResultsDto):
 
 class WorkflowExecutionsPaginatedResultsDto(PaginatedResultsDto):
     items: list[WorkflowExecutionDTO]
-    passFail: float = 0.0
+    passCount: int = 0
     avgDuration: float = 0.0
     workflow: Optional[Workflow] = None
+    failCount: int = 0

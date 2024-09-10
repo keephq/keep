@@ -576,15 +576,11 @@ def get_workflow_executions(
     execution_id: Optional[str] = None,
 ):
     with Session(engine) as session:
-        query = (
-            session.query(
-                WorkflowExecution,
-            )
-            .filter(
-                WorkflowExecution.tenant_id == tenant_id,
-                WorkflowExecution.workflow_id == workflow_id,
-            )
-            .order_by(desc(WorkflowExecution.started))
+        query = session.query(
+            WorkflowExecution,
+        ).filter(
+            WorkflowExecution.tenant_id == tenant_id,
+            WorkflowExecution.workflow_id == workflow_id,
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -624,21 +620,16 @@ def get_workflow_executions(
             query = query.filter(or_(*conditions))
 
         total_count = query.count()
-        status_counts = (
-            query.with_entities(WorkflowExecution.status, func.count().label("count"))
-            .group_by(WorkflowExecution.status)
-            .all()
-        )
+        status_count_query = query.with_entities(
+            WorkflowExecution.status, func.count().label("count")
+        ).group_by(WorkflowExecution.status)
+        status_counts = status_count_query.all()
 
         statusGroupbyMap = {status: count for status, count in status_counts}
-        passCount = statusGroupbyMap.get("success", 0)
-        failCount = statusGroupbyMap.get("error", 0) + statusGroupbyMap.get(
+        pass_count = statusGroupbyMap.get("success", 0)
+        fail_count = statusGroupbyMap.get("error", 0) + statusGroupbyMap.get(
             "timeout", 0
         )
-        if passCount > 0:
-            passFail = (passCount / failCount) * 100 if failCount > 0 else 100.00
-        else:
-            passFail = 0.0
         avgDuration = query.with_entities(
             func.avg(WorkflowExecution.execution_time)
         ).scalar()
@@ -651,7 +642,7 @@ def get_workflow_executions(
         # Execute the query
         workflow_executions = query.all()
 
-    return total_count, workflow_executions, passFail, avgDuration
+    return total_count, workflow_executions, pass_count, fail_count, avgDuration
 
 
 def delete_workflow(tenant_id, workflow_id):
@@ -1382,6 +1373,7 @@ def create_rule(
     tenant_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     created_by,
@@ -1395,6 +1387,7 @@ def create_rule(
             tenant_id=tenant_id,
             name=name,
             timeframe=timeframe,
+            timeunit=timeunit,
             definition=definition,
             definition_cel=definition_cel,
             created_by=created_by,
@@ -1414,6 +1407,7 @@ def update_rule(
     rule_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     updated_by,
@@ -1428,6 +1422,7 @@ def update_rule(
         if rule:
             rule.name = name
             rule.timeframe = timeframe
+            rule.timeunit = timeunit
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.grouping_criteria = grouping_criteria
@@ -1729,7 +1724,7 @@ def update_key_last_used(
             # shouldn't happen but somehow happened to specific tenant so logging it
             logger.error(
                 "API key not found",
-                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+                extra={"tenant_id": tenant_id, "unique_api_key_id": reference_id},
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
@@ -2832,6 +2827,18 @@ def get_all_topology_data(
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
         return service_dtos
+
+
+def get_topology_data_by_dynamic_matcher(
+    tenant_id: str, matchers_value: dict[str, str]
+) -> TopologyService | None:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+        for matcher in matchers_value:
+            query = query.where(
+                getattr(TopologyService, matcher) == matchers_value[matcher]
+            )
+    return session.exec(query).first()
 
 
 def get_tags(tenant_id):
