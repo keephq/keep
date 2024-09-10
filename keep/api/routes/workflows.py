@@ -30,7 +30,6 @@ from keep.api.core.db import get_workflow_executions as get_workflow_executions_
 from keep.api.core.db import get_workflow_id_by_name
 from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
-    ProviderDTO,
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
     WorkflowExecutionDTO,
@@ -40,7 +39,6 @@ from keep.api.models.workflow import (
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
-from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
@@ -72,7 +70,6 @@ def get_workflows(
 ) -> list[WorkflowDTO] | list[dict]:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
-    parser = Parser()
     workflows_dto = []
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
