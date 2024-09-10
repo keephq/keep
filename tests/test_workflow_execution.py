@@ -477,32 +477,62 @@ def test_workflow_execution3(
         assert "Tier 1" in workflow_execution.results["send-slack-message-tier-1"][0]
 
 
+
+workflow_definition_for_enabled_disabled = """workflow:
+id: %s
+description: Handle alerts based on startedAt timestamp
+triggers:
+- type: alert
+  filters:
+  - key: name
+    value: "server-is-down"
+actions:
+- name: send-slack-message-tier-0
+  if: keep.get_firing_time('{{ alert }}', 'minutes') > 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 0 Alert: {{ alert.name }} - {{ alert.description }}
+        Alert details: {{ alert }}"
+- name: send-slack-message-tier-1
+  if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 30"
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+         Alert details: {{ alert }}"
+"""
+
+
 def test_workflow_execution_with_disabled_workflow(
     db_session,
     create_alert,
     workflow_manager,
 ):
+    enabled_id = "enabled-workflow"
     enabled_workflow = Workflow(
-        id="enabled-workflow",
+        id=enabled_id,
         name="enabled-workflow",
         tenant_id=SINGLE_TENANT_UUID,
         description="This workflow is enabled and should be executed",
         created_by="test@keephq.dev",
         interval=0,
         is_disabled=False,
-        workflow_raw=workflow_definition_3,
+        workflow_raw=workflow_definition_for_enabled_disabled % enabled_id
     )
 
+    disabled_id = "disabled-workflow"
     disabled_workflow = Workflow(
-        id="disabled-workflow",
+        id=disabled_id,
         name="disabled-workflow",
         tenant_id=SINGLE_TENANT_UUID,
         description="This workflow is disabled and should not be executed",
         created_by="test@keephq.dev",
         interval=0,
         is_disabled=True,
-        # We reused the same template. In practice that won't happen since is_disabled always comes from add_or_update_workflow
-        workflow_raw=workflow_definition_3,
+        workflow_raw=workflow_definition_for_enabled_disabled % disabled_id
     )
 
     db_session.add(enabled_workflow)
@@ -530,12 +560,12 @@ def test_workflow_execution_with_disabled_workflow(
     disabled_workflow_execution = None
     count = 0
 
-    while (enabled_workflow_execution is None or disabled_workflow_execution is None) and count < 30:
+    while (enabled_workflow_execution is None and disabled_workflow_execution is None) and count < 30:
         enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "enabled-workflow"
+            SINGLE_TENANT_UUID, enabled_id
         )
         disabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "disabled-workflow"
+            SINGLE_TENANT_UUID, disabled_id
         )
 
         time.sleep(1)
