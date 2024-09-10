@@ -1,6 +1,7 @@
 import {
+  Badge,
   Button,
-  Card,
+  Card, Icon,
   Subtitle,
   Table,
   TableBody,
@@ -27,6 +28,7 @@ import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
+import {PlusIcon} from "@radix-ui/react-icons";
 
 
 const TIMEFRAME_UNITS_FROM_SECONDS= {
@@ -75,6 +77,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         groupedAttributes: selectedRule.grouping_criteria,
         requireApprove: selectedRule.require_approve,
         query: queryInGroup,
+        incidents: selectedRule.incidents,
       };
     }
 
@@ -109,6 +112,25 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         header: "Description",
         cell: (context) => (
           <FormattedQueryCell query={parseCEL(context.getValue())} />
+        ),
+      }),
+      columnHelper.accessor("grouping_criteria", {
+        header: "Grouped by",
+        cell: (context) => (
+          context.getValue().map((group, index) =>
+            <>
+              <Badge color="orange" key={group}>{group}</Badge>
+              {context.getValue().length !== index + 1 && (
+              <Icon  icon={PlusIcon} size="xs" color="slate" />
+            )}
+            </>
+          )
+        ),
+      }),
+      columnHelper.accessor("incidents", {
+        header: "Incidents",
+        cell: (context) => (
+          context.getValue()
         ),
       }),
       columnHelper.display({
