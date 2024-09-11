@@ -63,8 +63,7 @@ ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
 
 FUNCTIONS: list = (
     [
-        import_string(background_function)
-        for background_function in list(ARQ_BACKGROUND_FUNCTIONS)
+        import_string(background_function) for background_function in list(ARQ_BACKGROUND_FUNCTIONS)
     ]
     if ARQ_BACKGROUND_FUNCTIONS is not None
     else list()
@@ -84,7 +83,7 @@ def get_arq_worker(queue_name: str) -> Worker:
         "ARQ_KEEP_RESULT", cast=int, default=3600
     )  # duration to keep job results for
     expires = config(
-        "ARQ_EXPIRES", cast=int, default=3600
+        "ARQ_EXPIRES", cast=int, default=3600*1000
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
 
     # generate a worker id so each worker will have a different health check key

@@ -1,7 +1,7 @@
 """TenantAIConfig added
 
 Revision ID: 081c538eab67
-Revises: 49e7c02579db
+Revises: 710b4ff1d19e
 Create Date: 2024-09-05 18:09:49.372229
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "081c538eab67"
-down_revision = "49e7c02579db"
+down_revision = "710b4ff1d19e"
 branch_labels = None
 depends_on = None
 
