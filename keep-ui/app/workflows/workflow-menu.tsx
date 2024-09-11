@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { EyeIcon, PencilIcon, PlayIcon, TrashIcon, WrenchIcon } from "@heroicons/react/24/outline";
-import { DownloadIcon } from "@radix-ui/react-icons";
+import {DownloadIcon, LockClosedIcon, LockOpen1Icon} from "@radix-ui/react-icons";
 
 interface WorkflowMenuProps {
   onDelete?: () => Promise<void>;
@@ -13,6 +13,7 @@ interface WorkflowMenuProps {
   onBuilder?: () => void;
   isRunButtonDisabled: boolean;
   runButtonToolTip?: string; 
+  isWorkflowDisabled:boolean
 }
 
 
@@ -24,10 +25,17 @@ export default function WorkflowMenu({
   onBuilder,
   isRunButtonDisabled,
   runButtonToolTip,
+  isWorkflowDisabled,
 }: WorkflowMenuProps) {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       };
+  
+ if(isWorkflowDisabled){
+   runButtonToolTip = "Workflow is Disabled"
+ }
+  
+ isRunButtonDisabled = isRunButtonDisabled || isWorkflowDisabled 
 
   return (
     <div className="w-44 text-right">

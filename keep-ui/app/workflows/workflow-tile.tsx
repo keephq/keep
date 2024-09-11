@@ -49,7 +49,8 @@ function WorkflowMenuSection({
   onView,
   onBuilder,
   isRunButtonDisabled,
-  runButtonToolTip
+  runButtonToolTip,
+  isWorkflowDisabled,
 }: {
   onDelete: () => Promise<void>;
   onRun: () => Promise<void>;
@@ -57,7 +58,8 @@ function WorkflowMenuSection({
   onView: () => void;
   onBuilder: () => void;
   isRunButtonDisabled: boolean;
-  runButtonToolTip?: string
+  runButtonToolTip?: string;
+  isWorkflowDisabled: boolean
 }) {
   // Determine if all providers are installed
 
@@ -70,6 +72,7 @@ function WorkflowMenuSection({
       onBuilder={onBuilder}
       isRunButtonDisabled={isRunButtonDisabled}
       runButtonToolTip={runButtonToolTip}
+      isWorkflowDisabled={isWorkflowDisabled}
     />
   );
 }
@@ -565,7 +568,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             onView: handleViewClick,
             onBuilder: handleBuilderClick,
             runButtonToolTip: message,
-            isRunButtonDisabled: isRunButtonDisabled
+            isRunButtonDisabled: !!isRunButtonDisabled,
+            isWorkflowDisabled: !!workflow.disabled,
           })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
@@ -861,7 +865,8 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
             onView: handleViewClick,
             onBuilder: handleBuilderClick,
             runButtonToolTip: message,
-            isRunButtonDisabled: isRunButtonDisabled,
+            isRunButtonDisabled: !!isRunButtonDisabled,
+            isWorkflowDisabled: !!workflow.disabled
           })}
         </div>
 
@@ -906,6 +911,12 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
               {workflow.last_execution_status
                 ? workflow.last_execution_status
                 : "N/A"}
+            </span>
+          </ListItem>
+          <ListItem>
+            <span>Disabled</span>
+            <span className="text-right">
+              {workflow?.disabled?.toString()}
             </span>
           </ListItem>
         </List>
