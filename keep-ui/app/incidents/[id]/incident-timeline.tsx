@@ -15,6 +15,7 @@ import {
 import { FaGear } from "react-icons/fa6";
 import { AlertDto } from "app/alerts/models";
 import Image from "next/image";
+import AlertSeverity from "app/alerts/alert-severity";
 
 // Helper to format time for display
 const formatTime = timeFormat("%b %d, %I:%M %p");
@@ -26,11 +27,16 @@ interface Props {
 
 // Helper function to get icon based on event action
 const getEventIcon = (action: string): React.ReactNode => {
-  if (action.includes("triggered")) return <FaBell color="orange" />;
-  if (action.includes("enriched")) return <FaGear color="orange" />;
-  if (action.includes("resolved")) return <FaCheck color="orange" />;
-  if (action.includes("suppressed")) return <FaBan color="orange" />;
-  if (action.includes("deduplicated")) return <FaRecycle color="orange" />;
+  if (action.includes("triggered"))
+    return <FaBell title="Triggered" color="orange" />;
+  if (action.includes("enriched"))
+    return <FaGear title="Enriched" color="orange" />;
+  if (action.includes("resolved"))
+    return <FaCheck title="Resolved" color="orange" />;
+  if (action.includes("suppressed"))
+    return <FaBan title="Suppressed" color="orange" />;
+  if (action.includes("deduplicated"))
+    return <FaRecycle title="Deduplicated" color="orange" />;
   return <FaQuestion color="orange" />;
 };
 
@@ -53,9 +59,6 @@ const DetailsComponent = ({
           </p>
           <p>
             <span className="font-semibold">Status:</span> {alert.status}
-          </p>
-          <p>
-            <span className="font-semibold">Severity:</span> {alert.severity}
           </p>
         </div>
       )}
@@ -104,17 +107,20 @@ const IncidentTimeline: React.FC<Props> = ({ incident }) => {
           cardTitle: (
             <div className="flex w-full justify-between items-center">
               {getEventIcon(event.action)}
-              {alert?.source.map((source, index) => (
-                <Image
-                  className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-                  key={source}
-                  alt={source}
-                  height={24}
-                  width={24}
-                  title={source}
-                  src={`/icons/${source}-icon.png`}
-                />
-              ))}
+              <div className="flex items-center">
+                <AlertSeverity severity={alert?.severity} />
+                {alert?.source.map((source, index) => (
+                  <Image
+                    className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+                    key={source}
+                    alt={source}
+                    height={24}
+                    width={24}
+                    title={source}
+                    src={`/icons/${source}-icon.png`}
+                  />
+                ))}
+              </div>
             </div>
           ),
           cardSubtitle: `Action: ${event.action}`,
@@ -127,7 +133,7 @@ const IncidentTimeline: React.FC<Props> = ({ incident }) => {
     <Chrono
       items={timelineItems}
       mode="VERTICAL" // Can be "VERTICAL" or "VERTICAL_ALTERNATING"
-      cardHeight="50"
+      cardHeight="30"
       theme={{
         primary: "orange",
         secondary: "rgb(255 247 237)",
