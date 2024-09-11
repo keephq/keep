@@ -1,11 +1,14 @@
 import logging
 import os
+import yappi
 
 import networkx as nx
+import numpy as np
+
 
 from tqdm import tqdm
 from datetime import datetime, timedelta
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Any
 from arq.connections import ArqRedis
 
 from ee.experimental.graph_utils import create_graph
@@ -28,6 +31,7 @@ from keep.api.core.db import (
     get_pmi_values_from_temp_file,
     get_tenant_ai_config,
     write_tenant_ai_config,
+    write_incidents_to_db,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,9 +48,10 @@ STRIDE_DENOMINATOR = 4
 DEFAULT_TEMP_DIR_LOCATION = "./ee/experimental/ai_temp"
 PMI_SLIDING_WINDOW = 3600
 
-# TODO: check incident merging
-# TODO: check background worker
 # TODO: check remote db compatibility 
+# TODO: make sure that local incident creation and etc and dump works well
+# check incident compatibility with the old one
+# check whether button works well
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
@@ -90,7 +95,7 @@ def calculate_pmi_matrix(
         min_alert_number = os.environ.get("MIN_ALERT_NUMBER", MIN_ALERT_NUMBER)
 
     alerts = query_alerts(
-        tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp)
+        tenant_id, limit=use_n_historical_alerts, upper_timestamp=upper_timestamp, sort_ascending=True)
 
     if len(alerts) < min_alert_number:
         logger.info("Not enough alerts to mine incidents", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
@@ -130,8 +135,8 @@ def create_new_incident(component: Set[str], alerts: List[Alert],
     incident_start_time = incident_start_time.replace(microsecond=0)
 
     incident = create_incident_from_dict(tenant_id,
-                                         {"name": f"Incident started at {incident_start_time}",
-                                          "description": "Summarization is Disabled",
+                                         {"ai_generated_name": f"Incident started at {incident_start_time}",
+                                          "generated_summary": "Summarization is Disabled",
                                           "is_predicted": True})
     add_alerts_to_incident_by_incident_id(
         tenant_id, incident.id, [
@@ -175,33 +180,36 @@ def process_component(component: Set[str], incidents: List[Incident], alerts: Li
                 logger.info(
                     f"Incident {incident.id} is similar to the alert graph component. Merging.",
                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-                return update_existing_incident(
-                    incident, [alert.id for alert in alerts if alert.fingerprint in component])
+                
+                existing_alert_ids = set([alert.id for alert in incident.alerts])
+                return update_existing_incident_inmem(
+                    incident, [alert for alert in alerts if alert.fingerprint in component and not alert.id in existing_alert_ids])
 
     logger.info(
         f"No incident is similar to the alert graph component. Creating new incident.",
         extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-    return create_new_incident(component, alerts, tenant_id)
+    return create_new_incident_inmem(component, alerts, tenant_id)
 
 
 def process_graph_components(graph: nx.Graph, incidents: List[Incident], alerts: List[Alert], tenant_id: str, incident_similarity_threshold: float,
-                             min_incident_size: int, incident_validity_threshold: timedelta) -> Tuple[List[str], List[str], List[str]]:
+                             min_incident_size: int, incident_validity_threshold: timedelta) -> Tuple[List[str], List[Incident], List[Incident]]:
+
     incident_ids_for_processing = []
-    new_incident_ids = []
+    new_incidents = []
     updated_incident_ids = []
 
     for component in nx.connected_components(graph):
-        incident_id, is_updated = process_component(
+        incident, is_updated = process_component(
             component, incidents, alerts, tenant_id, incident_similarity_threshold, min_incident_size, incident_validity_threshold)
-        if incident_id:
-            incident_ids_for_processing.append(incident_id)
+        if incident:
+            incident_ids_for_processing.append(incident.id)
 
             if is_updated:
-                updated_incident_ids.append(incident_id)
+                updated_incident_ids.append(incident)
             else:
-                new_incident_ids.append(incident_id)
+                new_incidents.append(incident)
 
-    return incident_ids_for_processing, new_incident_ids, updated_incident_ids
+    return incident_ids_for_processing, new_incidents, updated_incident_ids
 
 
 async def generate_update_incident_summary(ctx, tenant_id: str, incident_id: str):
@@ -224,7 +232,52 @@ async def generate_update_incident_name(ctx, tenant_id: str, incident_id: str):
     return name
 
 
-async def mine_incidents_and_create_objects(
+def get_last_incidents_inmem(incidents: List[Incident], upper_timestamp: datetime, lower_timestamp: datetime) -> List[Incident]:
+    return [incident for incident in incidents if lower_timestamp < incident.last_seen_time < upper_timestamp]
+
+
+def add_alerts_to_incident_by_incident_id_inmem(incident: Incident, alerts: List[str]):
+    incident.alerts.extend(alerts)
+    return incident
+    
+    
+def create_incident_from_dict_inmem(tenant_id: str, incident_dict: Dict[str, Any]) -> Incident:
+    return Incident(tenant_id=tenant_id, **incident_dict)
+
+
+def create_new_incident_inmem(component: Set[str], alerts: List[Alert], tenant_id: str) -> Tuple[Incident, bool]:
+    incident_start_time = min(alert.timestamp for alert in alerts if alert.fingerprint in component)
+    incident_start_time = incident_start_time.replace(microsecond=0)
+
+    incident = create_incident_from_dict_inmem(tenant_id,
+                                         {"name": f"Incident started at {incident_start_time}",
+                                          "description": "Summarization is Disabled",
+                                          "is_predicted": True})
+    
+    incident = add_alerts_to_incident_by_incident_id_inmem(
+        incident, [alert for alert in alerts if alert.fingerprint in component],)
+    incident.last_seen_time = max([alert.timestamp for alert in incident.alerts])
+    
+    return incident, False
+
+
+def update_existing_incident_inmem(incident: Incident, alerts: List[str]) -> Tuple[str, bool]:
+    incident = add_alerts_to_incident_by_incident_id_inmem(incident, alerts)
+    incident.last_seen_time = max([alert.timestamp for alert in incident.alerts])
+    return incident, True
+
+
+def update_incident_summary_inmem(incident: Incident, summary: str):
+    incident.summary = summary
+    return incident
+
+
+def update_incident_name_inmem(incident: Incident, name: str):
+    incident.name = name
+    return incident
+
+
+async def original_mine_incidents_and_create_objects(
     ctx: dict | None,  # arq context
     tenant_id: str,
     alert_lower_timestamp: datetime = None,
@@ -327,13 +380,17 @@ async def mine_incidents_and_create_objects(
             
         return {"incidents": []}
 
-    logger.info("Getting new alerts", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
+    logger.info("Getting new alerts and incidents", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
 
     alerts = query_alerts(
         tenant_id,
         limit=use_n_historical_alerts,
         upper_timestamp=alert_upper_timestamp,
-        lower_timestamp=alert_lower_timestamp)
+        lower_timestamp=alert_lower_timestamp, 
+        sort_ascending=True)
+    
+    incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp, 
+                                   lower_timestamp=alert_upper_timestamp - incident_validity_threshold)
 
     pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
     logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
@@ -343,31 +400,41 @@ async def mine_incidents_and_create_objects(
 
     n_batches = int((alert_upper_timestamp - alert_lower_timestamp).total_seconds() // alert_batch_stride) - (STRIDE_DENOMINATOR - 1)
     logging.info(
-        f"Starting alert correlatiion. Current batch size: {alert_validity_threshold} seconds. Current \
+        f"Starting alert correlation. Current batch size: {alert_validity_threshold} seconds. Current \
             batch stride: {alert_batch_stride} seconds. Number of batches to process: {n_batches}")
     
     pool = await get_pool() if not ctx else ctx["redis"]
 
     new_incident_ids = []
     updated_incident_ids = []
+    incident_ids_for_processing = []
+    
+    alert_timestamps = np.array([alert.timestamp.timestamp() for alert in alerts])
+    batch_indices = np.arange(0, n_batches)  # Create an array of batch indices
+    batch_start_ts = alert_lower_timestamp.timestamp() + np.array([batch_idx * alert_batch_stride for batch_idx in batch_indices])
+    batch_end_ts = batch_start_ts + alert_validity_threshold
 
-    for batch_idx in tqdm(range(0, n_batches), desc="Processing batches of alerts..."):
-        batch_start_timestamp = alert_lower_timestamp + timedelta(seconds=batch_idx * alert_batch_stride)
-        batch_end_timestamp = batch_start_timestamp + timedelta(seconds=alert_validity_threshold)
+    start_indices = np.searchsorted(alert_timestamps, batch_start_ts, side='left')
+    end_indices = np.searchsorted(alert_timestamps, batch_end_ts, side='right')
+
+    for batch_idx, (start_idx, end_idx) in tqdm(enumerate(zip(start_indices, end_indices)), total=n_batches, desc="Processing alert batches.."):                
+        batch_alerts = alerts[start_idx:end_idx]
 
         logger.info(
-            f"Processing batch {batch_idx} with start timestamp {batch_start_timestamp} and end timestamp {batch_end_timestamp}", 
+            f"Processing batch {batch_idx} with start timestamp {datetime.fromtimestamp(batch_start_ts[batch_idx])} \
+                and end timestamp {datetime.fromtimestamp(batch_end_ts[batch_idx])}. Batch size: {len(batch_alerts)}", 
             extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-
-        batch_alerts = [alert for alert in alerts if alert.timestamp <
-                        batch_end_timestamp and alert.timestamp >= batch_start_timestamp]
+        
+        if len(batch_alerts) == 0:
+            continue
+        
         batch_fingerprints = list(set([alert.fingerprint for alert in batch_alerts]))
-
-        batch_incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=batch_end_timestamp,
-                                                lower_timestamp=batch_start_timestamp - incident_validity_threshold, is_predicted=True)
+        
+        batch_incidents = get_last_incidents_inmem(incidents, datetime.fromtimestamp(batch_end_ts[batch_idx]), 
+                                                       datetime.fromtimestamp(batch_start_ts[batch_idx]) - incident_validity_threshold)
 
         logger.info(
-            f"Found {len(batch_incidents)} incidents that accept updates by {batch_start_timestamp}.", 
+            f"Found {len(batch_incidents)} incidents that accept updates by {datetime.fromtimestamp(batch_start_ts[batch_idx])}.", 
             extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
         for incident in batch_incidents:
             incident_fingerprints = set(
@@ -382,10 +449,15 @@ async def mine_incidents_and_create_objects(
 
             current_time = get_component_first_seen_time(incident_fingerprints, batch_alerts)
             if is_incident_accepting_updates(incident, current_time, incident_validity_threshold):
+                # here
+                existing_alert_ids = set([alert.id for alert in incident.alerts])
+                
+                appendable_alerts = [alert for alert in appendable_alerts if not alert.id in existing_alert_ids]
                 logger.info(
                     f"Incident {incident.id} is accepting updates. Appending {len(appendable_alerts)} alerts.", 
                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-                update_existing_incident(incident, [alert.id for alert in appendable_alerts])
+                
+                update_existing_incident_inmem(incident, appendable_alerts)
 
         logger.info("Building alert graph", extra={"tenant_id": tenant_id, "algorithm": NAME_GENERATOR_VERBOSE_NAME})
 
@@ -400,23 +472,59 @@ async def mine_incidents_and_create_objects(
 
         logger.info("Analyzing alert graph", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
 
-        batch_incident_ids_for_processing, batch_new_incident_ids, batch_updated_incident_ids \
+        batch_incident_ids_for_processing, batch_new_incidents, batch_updated_incidents \
             = process_graph_components(batch_graph, batch_incidents, batch_alerts, tenant_id, \
                 incident_similarity_threshold, min_incident_size, incident_validity_threshold)
 
-        for incident_id in batch_incident_ids_for_processing:
-            await schedule_incident_processing(pool, tenant_id, incident_id)
-
-        new_incident_ids.extend(batch_new_incident_ids)
-        updated_incident_ids.extend(batch_updated_incident_ids)
+        new_incident_ids.extend([incident.id for incident in batch_new_incidents])
+        incidents.extend(batch_new_incidents)
+        updated_incident_ids.extend([incident.id for incident in batch_updated_incidents])
+        incident_ids_for_processing.extend(batch_incident_ids_for_processing)
         
-        tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(batch_start_timestamp)
-        write_tenant_ai_config(tenant_id, tenant_ai_config)
-
+        
+    tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
+    # UNCOMMENT TO SAVE LAST CORRELATED BATCH START TIMESTAMP
+    # write_tenant_ai_config(tenant_id, tenant_ai_config)
+    
+    db_incident_ids_for_processing = []
+    db_new_incident_ids = []
+    db_updated_incident_ids = []
+    for incident in incidents:
+        # if not new then check
+        if not get_incident_by_id(tenant_id, incident.id):
+            incident_dict = {
+                "ai_generated_name": incident.ai_generated_name,
+                "generated_summary": incident.generated_summary,
+                "is_predicted": True,
+            }
+            db_incident = create_incident_from_dict(tenant_id, incident_dict)
+            
+            incident_id = db_incident.id
+        else: 
+            incident_id = incident.id
+            
+        if incident.id in incident_ids_for_processing:
+            db_incident_ids_for_processing.append(incident_id)     
+        
+        if incident.id in new_incident_ids:
+            db_new_incident_ids.append(incident_id)
+        
+        if incident.id in updated_incident_ids:
+            db_updated_incident_ids.append(incident_id)
+        
+                
+        add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert.id for alert in incident.alerts])
+        
+    
+    # write_incidents_to_db(tenant_id, incidents)
+    
     new_incident_count = len(set(new_incident_ids))
     updated_incident_count = len(set(updated_incident_ids).difference(set(new_incident_ids)))
+    db_incident_ids_for_processing = list(set(db_incident_ids_for_processing))
+    for incident_id in db_incident_ids_for_processing:
+        await schedule_incident_processing(pool, tenant_id, incident_id)
 
-    incident_ids = list(set(new_incident_ids + updated_incident_ids))
+    incident_ids = list(set(db_new_incident_ids + db_updated_incident_ids))
 
     pusher_client = get_pusher_client()
     if pusher_client:
@@ -440,3 +548,21 @@ async def mine_incidents_and_create_objects(
 
     return {"incidents": [get_incident_by_id(tenant_id, incident_id)
                           for incident_id in incident_ids]}
+
+
+async def mine_incidents_and_create_objects(*args, **kwargs):
+    # Start profiling
+    yappi.start()
+
+    try:
+        # Your function logic goes here (ensure all awaits are captured)
+        result = await original_mine_incidents_and_create_objects(*args, **kwargs)
+        return result
+    finally:
+        # Stop profiling
+        yappi.stop()
+        # yappi.get_func_stats().print_all()
+        # yappi.get_thread_stats().print_all()
+
+        # Save the results to a file to explore with snakeviz
+        yappi.get_func_stats().save('profile_results.prof', type='pstat')

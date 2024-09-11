@@ -955,6 +955,7 @@ def query_alerts(
     upper_timestamp=None,
     lower_timestamp=None,
     skip_alerts_with_null_timestamp=True,
+    sort_ascending=False,
 ) -> list[Alert]:
     """
     Get all alerts for a given tenant_id.
@@ -1004,9 +1005,14 @@ def query_alerts(
 
         if skip_alerts_with_null_timestamp:
             query = query.filter(Alert.timestamp.isnot(None))
-
-        # Order by timestamp in descending order and limit the results
-        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+            
+        if sort_ascending:
+            query = query.order_by(Alert.timestamp.asc())
+        else:
+            query = query.order_by(Alert.timestamp.desc())
+            
+        if limit:
+            query = query.limit(limit)
 
         # Execute the query
         alerts = query.all()
@@ -2278,39 +2284,35 @@ def add_alerts_to_incident_by_incident_id(
         if not incident:
             return None
 
-        existed_alert_ids = session.exec(
-            select(AlertToIncident.alert_id).where(
-                AlertToIncident.tenant_id == tenant_id,
-                AlertToIncident.incident_id == incident.id,
-                col(AlertToIncident.alert_id).in_(alert_ids),
-            )
-        ).all()
+        # Use a set for faster membership checks
+        existing_alert_ids = set(
+            session.exec(
+                select(AlertToIncident.alert_id).where(
+                    AlertToIncident.tenant_id == tenant_id,
+                    AlertToIncident.incident_id == incident.id,
+                    col(AlertToIncident.alert_id).in_(alert_ids),
+                )
+            ).all()
+        )
 
-        new_alert_ids = [
-            alert_id for alert_id in alert_ids if alert_id not in existed_alert_ids
-        ]
+        new_alert_ids = [alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids]
 
         if not new_alert_ids:
             return incident
 
         alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 
-        incident.sources = list(
-            set(incident.sources) | set(alerts_data_for_incident["sources"])
-        )
-        incident.affected_services = list(
-            set(incident.affected_services) | set(alerts_data_for_incident["services"])
-        )
+        incident.sources = list(set(incident.sources) | set(alerts_data_for_incident["sources"]))
+        incident.affected_services = list(set(incident.affected_services) | set(alerts_data_for_incident["services"]))
         incident.alerts_count += alerts_data_for_incident["count"]
 
         alert_to_incident_entries = [
-            AlertToIncident(
-                alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
-            )
+            AlertToIncident(alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id)
             for alert_id in new_alert_ids
         ]
 
-        session.bulk_save_objects(alert_to_incident_entries)
+        session.bulk_insert_mappings(AlertToIncident, 
+                                     [entry.__dict__ for entry in alert_to_incident_entries])
 
         started_at, last_seen_at = session.exec(
             select(func.min(Alert.timestamp), func.max(Alert.timestamp))
@@ -2320,9 +2322,9 @@ def add_alerts_to_incident_by_incident_id(
                 AlertToIncident.incident_id == incident.id,
             )
         ).one()
+
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
-
         incident.severity = alerts_data_for_incident["max_severity"].order
 
         session.add(incident)
@@ -2436,6 +2438,18 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         return deleted
+    
+
+def write_incidents_to_db(tenant_id: str, incidents: List[Incident]):
+    with Session(engine) as session:
+        for incident in incidents:
+            
+            incident.is_confirmed = not incident.is_predicted
+            session.add(incident)
+            
+            # add alert2
+            
+        session.commit()
 
 
 def get_alerts_count(
@@ -2534,7 +2548,13 @@ def write_tenant_ai_config(tenant_id: str, config: dict) -> TenantAIConfig:
             select(TenantAIConfig)
             .where(TenantAIConfig.tenant_id == tenant_id)
         ).first()
-        tenant_ai_config.config = config
+        
+        if not tenant_ai_config:
+            tenant_ai_config = TenantAIConfig(tenant_id=tenant_id, config=config)
+            session.add(tenant_ai_config)
+        else:
+            tenant_ai_config.config = config
+            
         session.commit()
         session.refresh(tenant_ai_config)
         return tenant_ai_config
