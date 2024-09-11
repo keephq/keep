@@ -122,7 +122,6 @@ def get_workflows(
             last_execution_time=workflow_last_run_time,
             last_execution_status=workflow_last_run_status,
             interval=workflow.interval,
-            disabled=workflow.is_disabled or False,
             providers=providers_dto,
             triggers=triggers,
             workflow_raw=workflow.workflow_raw,
