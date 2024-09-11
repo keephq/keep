@@ -11,10 +11,8 @@ interface WorkflowMenuProps {
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;
-  allProvidersInstalled: boolean;
-  hasManualTrigger: boolean;
-  hasAlertTrigger: boolean;
-  isWorkflowDisabled:boolean
+  isRunButtonDisabled: boolean;
+  runButtonToolTip?: string; 
 }
 
 
@@ -24,23 +22,12 @@ export default function WorkflowMenu({
   onView,
   onDownload,
   onBuilder,
-  allProvidersInstalled,
-  hasManualTrigger,
-  hasAlertTrigger,
-  isWorkflowDisabled,
+  isRunButtonDisabled,
+  runButtonToolTip,
 }: WorkflowMenuProps) {
-  const getDisabledTooltip = () => {
-    if (!allProvidersInstalled) return "Not all providers are installed.";
-    if (!hasManualTrigger) return "No manual trigger available.";
-    if (isWorkflowDisabled) return "Workflow is disabled";
-    return "";
-  };
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       };
-
-  const isRunButtonDisabled = !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger) || isWorkflowDisabled;
-
 
   return (
     <div className="w-44 text-right">
@@ -79,9 +66,9 @@ export default function WorkflowMenu({
                     <PlayIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                     Run
                   </button>
-                  {isRunButtonDisabled && (
+                  {isRunButtonDisabled && !!runButtonToolTip &&(
                     <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
-                      {getDisabledTooltip()}
+                      {runButtonToolTip}
                     </div>
                   )}
                 </div>
