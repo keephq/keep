@@ -111,6 +111,7 @@ def get_workflows(
         except Exception as e:
             logger.error(f"Error fetching workflow meta data: {e}")
             providers_dto, triggers = [], []  # Default in case of failure
+
         # create the workflow DTO
         workflow_dto = WorkflowDTO(
             id=workflow.id,
@@ -121,6 +122,7 @@ def get_workflows(
             last_execution_time=workflow_last_run_time,
             last_execution_status=workflow_last_run_status,
             interval=workflow.interval,
+            disabled=workflow.is_disabled or False,
             providers=providers_dto,
             triggers=triggers,
             workflow_raw=workflow.workflow_raw,
@@ -535,7 +537,6 @@ def get_workflow_by_id(
         logger.error(f"Error fetching workflow meta data: {e}")
         providers_dto, triggers = [], []  # Default in case of failure
     
-
     final_workflow = WorkflowDTO(
             id=workflow.id,
             name=workflow.name,
@@ -543,6 +544,7 @@ def get_workflow_by_id(
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
             interval=workflow.interval,
+            disabled=workflow.is_disabled or False,
             providers=providers_dto,
             triggers=triggers,
             workflow_raw=workflow.workflow_raw,
