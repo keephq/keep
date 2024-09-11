@@ -21,10 +21,15 @@ from keep.api.core.db import (
     get_incident_unique_fingerprint_count,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id, IncidentSorting,
+    update_incident_from_dto_by_id,
+    change_incident_status_by_id,
+    update_incident_from_dto_by_id,
+    IncidentSorting,
 )
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
+from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn, IncidentStatusChangeDto, IncidentStatus, \
+    EnrichAlertRequestBody
+from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
@@ -93,7 +98,7 @@ def __update_client_on_incident_change(
 def create_incident_endpoint(
     incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ) -> IncidentDto:
@@ -167,7 +172,7 @@ def get_all_incidents(
 def get_incident(
     incident_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
@@ -195,7 +200,7 @@ def update_incident(
     incident_id: str,
     updated_incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
@@ -225,7 +230,7 @@ def update_incident(
 def delete_incident(
     incident_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
@@ -253,7 +258,7 @@ def get_incident_alerts(
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
     ),
 ) -> AlertPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
@@ -305,7 +310,7 @@ async def add_alerts_to_incident(
     incident_id: str,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
@@ -359,7 +364,7 @@ def delete_alerts_from_incident(
     incident_id: str,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
@@ -386,7 +391,7 @@ def delete_alerts_from_incident(
 )
 def mine(
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incidents"])
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     alert_lower_timestamp: datetime = None,
     alert_upper_timestamp: datetime = None,
@@ -421,12 +426,13 @@ def mine(
 @router.post(
     "/{incident_id}/confirm",
     description="Confirm predicted incident by id",
+    response_model=IncidentDto
 )
 def confirm_incident(
     incident_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:alert"])
-    ),
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    )
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -440,6 +446,52 @@ def confirm_incident(
     incident = confirm_predicted_incident_by_id(tenant_id, incident_id)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident candidate not found")
+
+    new_incident_dto = IncidentDto.from_db_incident(incident)
+
+    return new_incident_dto
+
+@router.post(
+    "/{incident_id}/status",
+    description="Change incident status",
+    response_model=IncidentDto
+)
+def change_incident_status(
+    incident_id: str,
+    change: IncidentStatusChangeDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    )
+) -> IncidentDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=True)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    # We need to do something only if status really changed
+    if not change.status == incident.status:
+        result = change_incident_status_by_id(tenant_id, incident_id, change.status)
+        if not result:
+            raise HTTPException(status_code=500, detail="Error changing incident status")
+        # TODO: same this change to audit table with the comment
+
+        if change.status == IncidentStatus.RESOLVED:
+            for  alert in incident.alerts:
+                _enrich_alert(EnrichAlertRequestBody(
+                    enrichments={"status": "resolved"},
+                    fingerprint=alert.fingerprint
+                ), authenticated_entity=authenticated_entity)
+
+
+        incident.status = change.status
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
 

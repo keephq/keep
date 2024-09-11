@@ -1,7 +1,7 @@
 import {Icon, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow} from "@tremor/react";
 import {flexRender, Header, Table as ReactTable} from "@tanstack/react-table";
 import React, {ReactNode} from "react";
-import { IncidentDto } from "./model";
+import { IncidentDto } from "./models";
 import { useRouter } from "next/navigation";
 import {FaArrowDown, FaArrowRight, FaArrowUp} from "react-icons/fa";
 interface Props {

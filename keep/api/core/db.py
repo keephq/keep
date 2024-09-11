@@ -1125,12 +1125,12 @@ def query_alerts(
 
         if skip_alerts_with_null_timestamp:
             query = query.filter(Alert.timestamp.isnot(None))
-            
+
         if sort_ascending:
             query = query.order_by(Alert.timestamp.asc())
         else:
             query = query.order_by(Alert.timestamp.desc())
-            
+
         if limit:
             query = query.limit(limit)
 
@@ -2230,7 +2230,7 @@ def get_last_incidents(
     return incidents, total_count
 
 
-def get_incident_by_id(tenant_id: str, incident_id: str | UUID) -> Optional[Incident]:
+def get_incident_by_id(tenant_id: str, incident_id: str | UUID, with_alerts: bool = False) -> Optional[Incident]:
     with Session(engine) as session:
         query = session.query(
             Incident,
@@ -2238,6 +2238,8 @@ def get_incident_by_id(tenant_id: str, incident_id: str | UUID) -> Optional[Inci
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
         )
+        if with_alerts:
+            query= query.options(joinedload(Incident.alerts))
 
     return query.first()
 
@@ -2423,9 +2425,9 @@ def get_alerts_data_for_incident(
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[Incident]:
-    logger.info(f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts", 
+    logger.info(f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts",
                 extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}})
-    
+
     with Session(engine) as session:
         query = select(Incident).where(
             Incident.tenant_id == tenant_id,
@@ -2466,7 +2468,7 @@ def add_alerts_to_incident_by_incident_id(
         for idx, entry in enumerate(alert_to_incident_entries):
             session.add(entry)
             if (idx + 1) % 100 == 0:
-                logger.info(f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database", 
+                logger.info(f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
                             extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
                 session.commit()
                 session.flush()
@@ -2680,14 +2682,14 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
     return pmi_matrix, fingerint2idx
 
 
-def get_tenant_config(tenant_id: str) -> dict:    
+def get_tenant_config(tenant_id: str) -> dict:
     with Session(engine) as session:
         tenant_data = session.exec(
             select(Tenant)
             .where(Tenant.id == tenant_id)
         ).first()
         return tenant_data.configuration if tenant_data else {}
-    
+
 
 def write_tenant_config(tenant_id: str, config: dict) -> None:
     with Session(engine) as session:
@@ -2843,3 +2845,18 @@ def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
             .where(Provider.name == provider_name)
         ).first()
     return provider
+
+
+def change_incident_status_by_id(tenant_id: str, incident_id: UUID | str, status: IncidentStatus) -> bool:
+    with Session(engine) as session:
+        stmt = (
+            update(Incident)
+            .where(
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident_id,
+            )
+            .values(status=status.value)
+        )
+        updated = session.execute(stmt)
+        session.commit()
+        return updated.rowcount > 0
