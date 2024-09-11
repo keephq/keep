@@ -27,7 +27,7 @@ from keep.api.core.db import (
     get_workflow,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.core.db import get_workflow_id_by_name
+from keep.api.core.db import get_workflow_by_name
 from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
@@ -215,7 +215,7 @@ def run_workflow(
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
-        workflow_id = get_workflow_id_by_name(tenant_id, workflow_id)
+        workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), 'id', None)
     workflowmanager = WorkflowManager.get_instance()
 
     # Finally, run it
