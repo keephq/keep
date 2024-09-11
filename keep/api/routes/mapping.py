@@ -5,12 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from keep.api.core.db import get_session
-from keep.api.models.db.mapping import (
-    MappingRule,
-    MappingRuleDtoIn,
-    MappingRuleDtoOut,
-    MappingRuleDtoUpdate,
-)
+from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn, MappingRuleDtoOut
+from keep.api.models.db.topology import TopologyService
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -38,9 +34,22 @@ def get_rules(
     if rules:
         for rule in rules:
             rule_dto = MappingRuleDtoOut(**rule.dict())
-            rule_dto.attributes = [
-                key for key in rule.rows[0].keys() if key not in rule.matchers
-            ]
+
+            attributes = []
+            if rule_dto.type == "csv":
+                attributes = [
+                    key for key in rule.rows[0].keys() if key not in rule.matchers
+                ]
+            elif rule_dto.type == "topology":
+                attributes = [
+                    field
+                    for field in TopologyService.__fields__
+                    if field not in rule.matchers
+                    and field != "tenant_id"
+                    and field != "id"
+                ]
+
+            rule_dto.attributes = attributes
             rules_dtos.append(rule_dto)
 
     return rules_dtos
@@ -94,9 +103,10 @@ def delete_rule(
     return {"message": "Rule deleted successfully"}
 
 
-@router.put("", description="Update an existing rule")
+@router.put("/{rule_id}", description="Update an existing rule")
 def update_rule(
-    rule: MappingRuleDtoUpdate,
+    rule_id: int,
+    rule: MappingRuleDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:rules"])
     ),
@@ -107,7 +117,7 @@ def update_rule(
         session.query(MappingRule)
         .filter(
             MappingRule.tenant_id == authenticated_entity.tenant_id,
-            MappingRule.id == rule.id,
+            MappingRule.id == rule_id,
         )
         .first()
     )

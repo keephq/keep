@@ -36,10 +36,8 @@ export default function Mapping() {
               title="Mapping rules does not exist"
               icon={MdWarning}
             >
-              <p className="text-slate-400">No mapping rules found</p>
-              <p className="text-slate-400">
-                Configure new mapping rule using the mapping rules wizard.
-              </p>
+              No mapping rules found. Configure new mapping rule using the
+              mapping rules wizard.
             </Callout>
           )}
         </div>

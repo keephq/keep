@@ -175,6 +175,7 @@ const useWorkflowInitialization = (
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
+      const name = parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
 
       const sequences = [
         {
@@ -203,7 +204,7 @@ const useWorkflowInitialization = (
       setIsLayouted(false);
       setNodes(nodes);
       setEdges(edges);
-      setV2Properties(parsedWorkflow?.properties ?? {});
+      setV2Properties({...(parsedWorkflow?.properties ?? {}),name});
       setChanges(1);
       setToolBoxConfig(toolboxConfiguration);
       setIsLoading(false);

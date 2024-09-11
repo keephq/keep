@@ -22,6 +22,7 @@ def get_topology_data(
     provider_id: Optional[str] = None,
     service_id: Optional[str] = None,
     environment: Optional[str] = None,
+    includeEmptyDeps: Optional[bool] = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:topology"])
     ),
@@ -43,6 +44,10 @@ def get_topology_data(
         topology_data = get_all_topology_data(
             tenant_id, provider_id, service_id, environment
         )
+        if not includeEmptyDeps:
+            topology_data = [
+                topology for topology in topology_data if topology.dependencies
+            ]
         return topology_data
     except Exception:
         logger.exception("Failed to get topology data")

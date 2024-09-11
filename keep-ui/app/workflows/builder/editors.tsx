@@ -292,81 +292,118 @@ function WorkflowEditorV2({
         const isTrigger = ["manual", "alert", 'interval'].includes(key) ;
         renderDivider = isTrigger && key ===  selectedNode ? !renderDivider : false;
         return (
-           <div key={key}>
-            { renderDivider && <Divider />}
-            {((key ===  selectedNode)||(!isTrigger)) && <Text className="capitalize">{key}</Text>}
-            {key === "manual" ? (
-              selectedNode === 'manual' && <div key={key}>
-                <input
-                  type="checkbox"
-                  checked={true}
-                  onChange={(e) =>
-                    setProperties({
-                      ...properties,
-                      [key]: e.target.checked ? "true" : "false",
-                    })
-                  }
-                  disabled={true}
-                />
+              <div key={key}>
+                  {renderDivider && <Divider />}
+                  {((key === selectedNode) || (!isTrigger)) && <Text className="capitalize">{key}</Text>}
+
+                  {(() => {
+                      switch (key) {
+                          case "manual":
+                              return (
+                                  selectedNode === "manual" && (
+                                      <div key={key}>
+                                          <input
+                                              type="checkbox"
+                                              checked={true}
+                                              onChange={(e) =>
+                                                  setProperties({
+                                                      ...properties,
+                                                      [key]: e.target.checked ? "true" : "false",
+                                                  })
+                                              }
+                                              disabled={true}
+                                          />
+                                      </div>
+                                  )
+                              );
+
+                          case "alert":
+                              return (
+                                  selectedNode === "alert" && (
+                                      <>
+                                          <div className="w-1/2">
+                                              <Button
+                                                  onClick={addFilter}
+                                                  size="xs"
+                                                  className="ml-1 mt-1"
+                                                  variant="light"
+                                                  color="gray"
+                                                  icon={FunnelIcon}
+                                              >
+                                                  Add Filter
+                                              </Button>
+                                          </div>
+                                          {properties.alert &&
+                                              Object.keys(properties.alert as {}).map((filter) => {
+                                                  return (
+                                                      <>
+                                                          <Subtitle className="mt-2.5">{filter}</Subtitle>
+                                                          <div className="flex items-center mt-1" key={filter}>
+                                                              <TextInput
+                                                                  key={filter}
+                                                                  placeholder={`Set alert ${filter}`}
+                                                                  onChange={(e: any) =>
+                                                                      updateAlertFilter(filter, e.target.value)
+                                                                  }
+                                                                  value={(properties.alert as any)[filter] as string}
+                                                              />
+                                                              <Icon
+                                                                  icon={BackspaceIcon}
+                                                                  className="cursor-pointer"
+                                                                  color="red"
+                                                                  tooltip={`Remove ${filter} filter`}
+                                                                  onClick={() => deleteFilter(filter)}
+                                                              />
+                                                          </div>
+                                                      </>
+                                                  );
+                                              })}
+                                      </>
+                                  )
+                              );
+
+                          case "interval":
+                              return (
+                                  selectedNode === "interval" && (
+                                      <TextInput
+                                          placeholder={`Set the ${key}`}
+                                          onChange={(e: any) =>
+                                              setProperties({ ...properties, [key]: e.target.value })
+                                          }
+                                          value={properties[key] as string}
+                                      />
+                                  )
+                              );
+                          case "disabled":
+                              return (
+                                  <div key={key}>
+                                      <input
+                                          type="checkbox"
+                                          checked={properties[key] === "true"}
+                                          onChange={(e) =>
+                                              setProperties({
+                                                  ...properties,
+                                                  [key]: e.target.checked ? "true" : "false",
+                                              })
+                                          }
+                                      />
+                                  </div>
+                              );
+                          default:
+                              return (
+                                  <TextInput
+                                      placeholder={`Set the ${key}`}
+                                      onChange={(e: any) =>
+                                          setProperties({ ...properties, [key]: e.target.value })
+                                      }
+                                      value={properties[key] as string}
+                                  />
+                              );
+                      }
+                  })()}
               </div>
-            ) : key === "alert" ? (
-              selectedNode === 'alert' && <>
-                 <div className="w-1/2">
-                  <Button
-                    onClick={addFilter}
-                    size="xs"
-                    className="ml-1 mt-1"
-                    variant="light"
-                    color="gray"
-                    icon={FunnelIcon}
-                  >
-                    Add Filter
-                  </Button>
-                </div>
-                {properties.alert &&
-                  Object.keys(properties.alert as {}).map((filter) => {
-                    return (
-                      <>
-                        <Subtitle className="mt-2.5">{filter}</Subtitle>
-                        <div className="flex items-center mt-1" key={filter}>
-                          <TextInput
-                            key={filter}
-                            placeholder={`Set alert ${filter}`}
-                            onChange={(e: any) =>
-                              updateAlertFilter(filter, e.target.value)
-                            }
-                            value={(properties.alert as any)[filter] as string}
-                          />
-                          <Icon
-                            icon={BackspaceIcon}
-                            className="cursor-pointer"
-                            color="red"
-                            tooltip={`Remove ${filter} filter`}
-                            onClick={() => deleteFilter(filter)}
-                          />
-                        </div>
-                      </>
-                    );
-                  })}
-              </>
-            ) : key === "interval" ? (
-               selectedNode === 'interval' && <TextInput
-                placeholder={`Set the ${key}`}
-                onChange={(e: any) =>
-                  setProperties({ ...properties, [key]: e.target.value })
-                }
-                value={properties[key] as string}
-              />
-            ): <TextInput
-            placeholder={`Set the ${key}`}
-            onChange={(e: any) =>
-              setProperties({ ...properties, [key]: e.target.value })
-            }
-            value={properties[key] as string}
-          />}
-            
-          </div>
-        );
+          );
+
       })}
     </>
   );

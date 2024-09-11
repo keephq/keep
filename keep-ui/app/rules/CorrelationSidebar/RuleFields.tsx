@@ -19,7 +19,7 @@ import {
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useFormContext } from "react-hook-form";
 import { CorrelationForm } from ".";
-import { TIMEFRAME_UNITS } from "./CorrelationSidebarBody";
+import { TIMEFRAME_UNITS_TO_SECONDS } from "./CorrelationSidebarBody";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
@@ -236,9 +236,9 @@ export const RuleFields = ({
   };
 
   const { watch } = useFormContext<CorrelationForm>();
-  const timeframeInSeconds = TIMEFRAME_UNITS[watch("timeUnit")](
+  const timeframeInSeconds = watch("timeUnit") ? TIMEFRAME_UNITS_TO_SECONDS[watch("timeUnit")](
     +watch("timeAmount")
-  );
+  ) : 0;
 
   const { data: alertsFound = [], isLoading } = useSearchAlerts({
     query: { combinator: "and", rules: ruleFields },
@@ -254,20 +254,24 @@ export const RuleFields = ({
             groupsLength === 1 && ruleFields.length < 2;
 
           return (
-            <Field
-              key={ruleField.id}
-              ruleField={ruleField}
-              onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
-              // add the rule field as an available selection
-              avaliableFields={availableFields.concat({
-                label: ruleField.field,
-                name: ruleField.field,
-              })}
-              onFieldChange={(prop, value) =>
-                onFieldChange(prop, value, ruleFieldIndex)
-              }
-              isInputRemovalDisabled={isInputRemovalDisabled}
-            />
+            <div key={ruleFieldIndex}>
+              <div className="mb-2">{ruleFieldIndex > 0 ? "AND" : ""}</div>
+
+              <Field
+                ruleField={ruleField}
+                key={ruleField.id}
+                onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
+                // add the rule field as an available selection
+                avaliableFields={availableFields.concat({
+                  label: ruleField.field,
+                  name: ruleField.field,
+                })}
+                onFieldChange={(prop, value) =>
+                  onFieldChange(prop, value, ruleFieldIndex)
+                }
+                isInputRemovalDisabled={isInputRemovalDisabled}
+              />
+            </div>
           );
         }
 

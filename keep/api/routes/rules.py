@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from keep.api.core.db import create_rule as create_rule_db
+from keep.api.core.db import create_rule as create_rule_db, get_rule_incidents_count_db
 from keep.api.core.db import delete_rule as delete_rule_db
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
 from keep.api.core.db import get_rules as get_rules_db
@@ -21,6 +21,7 @@ class RuleCreateDto(BaseModel):
     sqlQuery: dict
     celQuery: str
     timeframeInSeconds: int
+    timeUnit: str
     groupingCriteria: list = []
     groupDescription: str = None
     requireApprove: bool = False
@@ -40,11 +41,13 @@ def get_rules(
     rules = get_rules_db(tenant_id=tenant_id)
     # now add this:
     rules_dist = get_rule_distribution_db(tenant_id=tenant_id, minute=True)
+    rules_incidents = get_rule_incidents_count_db(tenant_id=tenant_id)
     logger.info("Got rules")
     # return rules
     rules = [rule.dict() for rule in rules]
     for rule in rules:
         rule["distribution"] = rules_dist.get(rule["id"], [])
+        rule["incidents"] = rules_incidents.get(rule["id"], 0)
 
     return rules
 
@@ -65,6 +68,7 @@ async def create_rule(
     rule_name = rule_create_request.ruleName
     cel_query = rule_create_request.celQuery
     timeframe = rule_create_request.timeframeInSeconds
+    timeunit = rule_create_request.timeUnit
     grouping_criteria = rule_create_request.groupingCriteria
     group_description = rule_create_request.groupDescription
     require_approve = rule_create_request.requireApprove
@@ -86,6 +90,9 @@ async def create_rule(
     if not timeframe:
         raise HTTPException(status_code=400, detail="Timeframe is required")
 
+    if not timeunit:
+        raise HTTPException(status_code=400, detail="Timeunit is required")
+
     rule = create_rule_db(
         tenant_id=tenant_id,
         name=rule_name,
@@ -94,6 +101,7 @@ async def create_rule(
             "params": params,
         },
         timeframe=timeframe,
+        timeunit=timeunit,
         definition_cel=cel_query,
         created_by=created_by,
         grouping_criteria=grouping_criteria,
@@ -145,6 +153,7 @@ async def update_rule(
         sql_query = body["sqlQuery"]
         cel_query = body["celQuery"]
         timeframe = body["timeframeInSeconds"]
+        timeunit = body["timeUnit"]
         grouping_criteria = body.get("groupingCriteria", [])
         require_approve = body.get("requireApprove", [])
     except Exception:
@@ -168,6 +177,9 @@ async def update_rule(
     if not timeframe:
         raise HTTPException(status_code=400, detail="Timeframe is required")
 
+    if not timeunit:
+        raise HTTPException(status_code=400, detail="Timeunit is required")
+
     rule = update_rule_db(
         tenant_id=tenant_id,
         rule_id=rule_id,
@@ -177,6 +189,7 @@ async def update_rule(
             "params": params,
         },
         timeframe=timeframe,
+        timeunit=timeunit,
         definition_cel=cel_query,
         updated_by=updated_by,
         grouping_criteria=grouping_criteria,

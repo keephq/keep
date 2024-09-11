@@ -27,6 +27,7 @@ class Workflow:
         workflow_steps: typing.List[Step],
         workflow_actions: typing.List[Step],
         workflow_description: str = None,
+        workflow_disabled:bool = False,
         workflow_providers: typing.List[dict] = None,
         workflow_providers_type: typing.List[str] = [],
         workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,
@@ -40,6 +41,7 @@ class Workflow:
         self.workflow_steps = workflow_steps
         self.workflow_actions = workflow_actions
         self.workflow_description = workflow_description
+        self.workflow_disabled = workflow_disabled
         self.workflow_providers = workflow_providers
         self.workflow_providers_type = workflow_providers_type
         self.workflow_strategy = workflow_strategy
@@ -87,6 +89,9 @@ class Workflow:
         return actions_firing, actions_errors
 
     def run(self, workflow_execution_id):
+        if self.workflow_disabled:
+            self.logger.info(f"Skipping disabled workflow {self.workflow_id}")
+            return
         self.logger.info(f"Running workflow {self.workflow_id}")
         self.context_manager.set_execution_context(workflow_execution_id)
         try:

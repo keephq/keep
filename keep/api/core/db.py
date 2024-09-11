@@ -157,6 +157,7 @@ def get_workflows_that_should_run():
         workflows_with_interval = (
             session.query(Workflow)
             .filter(Workflow.is_deleted == False)
+            .filter(Workflow.is_disabled == False)
             .filter(Workflow.interval != None)
             .filter(Workflow.interval > 0)
             .all()
@@ -277,6 +278,7 @@ def add_or_update_workflow(
     created_by,
     interval,
     workflow_raw,
+    is_disabled,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -300,6 +302,7 @@ def add_or_update_workflow(
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
+            existing_workflow.is_disabled= is_disabled
 
         else:
             # Create a new workflow
@@ -311,6 +314,7 @@ def add_or_update_workflow(
                 created_by=created_by,
                 updated_by=updated_by,  # Set updated_by to the provided value
                 interval=interval,
+                is_disabled =is_disabled,
                 workflow_raw=workflow_raw,
             )
             session.add(workflow)
@@ -496,7 +500,6 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
         return None
     return workflow.workflow_raw
 
-
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
     logger.info("Updating provider last pull time", extra=extra)
@@ -566,28 +569,77 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         session.commit()
 
 
-def get_workflow_executions(tenant_id, workflow_id, limit=50):
+def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, status: Optional[Union[str, List[str]]] = None,
+    trigger: Optional[Union[str, List[str]]] = None,
+    execution_id: Optional[str] = None):
     with Session(engine) as session:
-        workflow_executions = session.exec(
-            select(
-                WorkflowExecution.id,
-                WorkflowExecution.workflow_id,
-                WorkflowExecution.started,
-                WorkflowExecution.status,
-                WorkflowExecution.triggered_by,
-                WorkflowExecution.execution_time,
-                WorkflowExecution.error,
+        query = (
+            session.query(
+                WorkflowExecution,
             )
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(
-                WorkflowExecution.started
-                >= datetime.now(tz=timezone.utc) - timedelta(days=7)
+            .filter(
+                WorkflowExecution.tenant_id == tenant_id,
+                WorkflowExecution.workflow_id == workflow_id
             )
-            .order_by(WorkflowExecution.started.desc())
-            .limit(limit)
-        ).all()
-    return workflow_executions
+        )
+
+        now = datetime.now(tz=timezone.utc)
+        timeframe = None
+
+        if tab == 1:
+            timeframe = now - timedelta(days=30)
+        elif tab == 2:
+            timeframe = now - timedelta(days=7)
+        elif tab == 3:
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            query = query.filter(
+                WorkflowExecution.started >= start_of_day,
+                WorkflowExecution.started <= now
+            )
+
+        if timeframe:
+            query = query.filter(
+                WorkflowExecution.started >= timeframe
+            )
+
+        if isinstance(status, str):
+            status = [status]
+        elif status is None:
+            status = []    
+       
+        # Normalize trigger to a list
+        if isinstance(trigger, str):
+            trigger = [trigger]
+
+
+        if execution_id:
+            query = query.filter(WorkflowExecution.id == execution_id)
+        if status and len(status) > 0:
+            query = query.filter(WorkflowExecution.status.in_(status))
+        if trigger and len(trigger) > 0:
+            conditions = [WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger]
+            query = query.filter(or_(*conditions))
+    
+
+        total_count = query.count()
+        status_count_query = query.with_entities(
+            WorkflowExecution.status,
+            func.count().label('count')
+        ).group_by(WorkflowExecution.status)
+        status_counts = status_count_query.all()
+
+        statusGroupbyMap = {status: count for status, count in status_counts}
+        pass_count = statusGroupbyMap.get('success', 0)
+        fail_count = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)   
+        avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
+        avgDuration = avgDuration if avgDuration else 0.0
+
+        query = query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+        
+        # Execute the query
+        workflow_executions = query.all()
+
+    return total_count, workflow_executions, pass_count, fail_count, avgDuration
 
 
 def delete_workflow(tenant_id, workflow_id):
@@ -1291,7 +1343,7 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
         session.commit()
 
 
-def get_workflow_id_by_name(tenant_id, workflow_name):
+def get_workflow_by_name(tenant_id, workflow_name):
     with Session(engine) as session:
         workflow = session.exec(
             select(Workflow)
@@ -1300,8 +1352,7 @@ def get_workflow_id_by_name(tenant_id, workflow_name):
             .where(Workflow.is_deleted == False)
         ).first()
 
-        if workflow:
-            return workflow.id
+        return workflow
 
 
 def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
@@ -1324,6 +1375,7 @@ def create_rule(
     tenant_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     created_by,
@@ -1337,6 +1389,7 @@ def create_rule(
             tenant_id=tenant_id,
             name=name,
             timeframe=timeframe,
+            timeunit=timeunit,
             definition=definition,
             definition_cel=definition_cel,
             created_by=created_by,
@@ -1356,6 +1409,7 @@ def update_rule(
     rule_id,
     name,
     timeframe,
+    timeunit,
     definition,
     definition_cel,
     updated_by,
@@ -1370,6 +1424,7 @@ def update_rule(
         if rule:
             rule.name = name
             rule.timeframe = timeframe
+            rule.timeunit = timeunit
             rule.definition = definition
             rule.definition_cel = definition_cel
             rule.grouping_criteria = grouping_criteria
@@ -1477,6 +1532,20 @@ def get_rule(tenant_id, rule_id):
             select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
         ).first()
     return rule
+
+
+def get_rule_incidents_count_db(tenant_id):
+    with Session(engine) as session:
+        query = (
+            session.query(Incident.rule_id, func.count(Incident.id))
+            .select_from(Incident)
+            .filter(
+                Incident.tenant_id == tenant_id,
+                col(Incident.rule_id).isnot(None)
+            )
+            .group_by(Incident.rule_id)
+        )
+        return dict(query.all())
 
 
 def get_rule_distribution(tenant_id, minute=False):
@@ -1591,7 +1660,7 @@ def update_key_last_used(
             # shouldn't happen but somehow happened to specific tenant so logging it
             logger.error(
                 "API key not found",
-                extra={"tenant_id": tenant_id, "unique_api_key_id": unique_api_key_id},
+                extra={"tenant_id": tenant_id, "unique_api_key_id": reference_id},
             )
             return
         tenant_api_key_entry.last_used = datetime.utcnow()
@@ -2655,6 +2724,18 @@ def get_all_topology_data(
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
         return service_dtos
+
+
+def get_topology_data_by_dynamic_matcher(
+    tenant_id: str, matchers_value: dict[str, str]
+) -> TopologyService | None:
+    with Session(engine) as session:
+        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
+        for matcher in matchers_value:
+            query = query.where(
+                getattr(TopologyService, matcher) == matchers_value[matcher]
+            )
+    return session.exec(query).first()
 
 
 def get_tags(tenant_id):

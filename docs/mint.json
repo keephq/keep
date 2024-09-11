@@ -21,6 +21,11 @@
       "url": "https://platform.keephq.dev/"
     }
   ],
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_mYqciA4RO5g48K6KnmZtftn5xQa5625Aao7vsVC0gJ9"
+    }
+  },
   "anchors": [],
   "navigation": [
     {
@@ -45,10 +50,7 @@
     },
     {
       "group": "Development",
-      "pages": [
-        "development/getting-started",
-        "development/external-url"
-      ]
+      "pages": ["development/getting-started", "development/external-url"]
     },
     {
       "group": "Deployment",
@@ -80,7 +82,8 @@
         "platform/alertseverityandstatus",
         "platform/workflows",
         "platform/settings",
-        "platform/metrics"
+        "platform/metrics",
+        "platform/support"
       ]
     },
     {
@@ -94,78 +97,79 @@
         {
           "group": "Supported Providers",
           "pages": [
-              "providers/documentation/aks-provider",
-              "providers/documentation/appdynamics-provider",
-              "providers/documentation/axiom-provider",
-              "providers/documentation/azuremonitoring-provider",
-              "providers/documentation/centreon-provider",
-              "providers/documentation/cloudwatch-provider",
-              "providers/documentation/console-provider",
-              "providers/documentation/coralogix-provider",
-              "providers/documentation/datadog-provider",
-              "providers/documentation/discord-provider",
-              "providers/documentation/elastic-provider",
-              "providers/documentation/gcpmonitoring-provider",
-              "providers/documentation/github_workflows_provider",
-              "providers/documentation/gitlab-provider",
-              "providers/documentation/gitlabpipelines-provider",
-              "providers/documentation/google_chat-provider",
-              "providers/documentation/grafana-provider",
-              "providers/documentation/grafana_incident-provider",
-              "providers/documentation/grafana_oncall-provider",
-              "providers/documentation/http-provider",
-              "providers/documentation/ilert-provider",
-              "providers/documentation/incidentio-provider",
-              "providers/documentation/incidentmanager-provider",
-              "providers/documentation/jira-provider",
-              "providers/documentation/kibana-provider",
-              "providers/documentation/kubernetes-provider",
-              "providers/documentation/linear_provider",
-              "providers/documentation/linearb-provider",
-              "providers/documentation/mailchimp-provider",
-              "providers/documentation/mattermost-provider",
-              "providers/documentation/microsoft-planner-provider",
-              "providers/documentation/mock-provider",
-              "providers/documentation/mongodb-provider",
-              "providers/documentation/mysql-provider",
-              "providers/documentation/netdata-provider",
-              "providers/documentation/new-relic-provider",
-              "providers/documentation/ntfy-provider",
-              "providers/documentation/openobserve-provider",
-              "providers/documentation/openshift-provider",
-              "providers/documentation/opsgenie-provider",
-              "providers/documentation/pagerduty-provider",
-              "providers/documentation/pagertree-provider",
-              "providers/documentation/pingdom-provider",
-              "providers/documentation/planner-provider",
-              "providers/documentation/postgresql-provider",
-              "providers/documentation/pushover-provider",
-              "providers/documentation/quickchart-provider",
-              "providers/documentation/redmine-provider",
-              "providers/documentation/resend-provider",
-              "providers/documentation/rollbar-provider",
-              "providers/documentation/sendgrid-provider",
-              "providers/documentation/sentry-provider",
-              "providers/documentation/signalfx-provider",
-              "providers/documentation/signl4-provider",
-              "providers/documentation/site24x7-provider",
-              "providers/documentation/slack-provider",
-              "providers/documentation/snowflake-provider",
-              "providers/documentation/splunk-provider",
-              "providers/documentation/squadcast-provider",
-              "providers/documentation/ssh-provider",
-              "providers/documentation/statuscake-provider",
-              "providers/documentation/teams-provider",
-              "providers/documentation/telegram-provider",
-              "providers/documentation/template",
-              "providers/documentation/trello-provider",
-              "providers/documentation/twilio-provider",
-              "providers/documentation/uptimekuma-provider",
-              "providers/documentation/victoriametrics-provider",
-              "providers/documentation/webhook-provider",
-              "providers/documentation/websocket-provider",
-              "providers/documentation/zabbix-provider",
-              "providers/documentation/zenduty-provider"
+            "providers/documentation/aks-provider",
+            "providers/documentation/appdynamics-provider",
+            "providers/documentation/axiom-provider",
+            "providers/documentation/azuremonitoring-provider",
+            "providers/documentation/centreon-provider",
+            "providers/documentation/clickhouse-provider",
+            "providers/documentation/cloudwatch-provider",
+            "providers/documentation/console-provider",
+            "providers/documentation/coralogix-provider",
+            "providers/documentation/datadog-provider",
+            "providers/documentation/discord-provider",
+            "providers/documentation/elastic-provider",
+            "providers/documentation/gcpmonitoring-provider",
+            "providers/documentation/github_workflows_provider",
+            "providers/documentation/gitlab-provider",
+            "providers/documentation/gitlabpipelines-provider",
+            "providers/documentation/google_chat-provider",
+            "providers/documentation/grafana-provider",
+            "providers/documentation/grafana_incident-provider",
+            "providers/documentation/grafana_oncall-provider",
+            "providers/documentation/http-provider",
+            "providers/documentation/ilert-provider",
+            "providers/documentation/incidentio-provider",
+            "providers/documentation/incidentmanager-provider",
+            "providers/documentation/jira-provider",
+            "providers/documentation/kibana-provider",
+            "providers/documentation/kubernetes-provider",
+            "providers/documentation/linear_provider",
+            "providers/documentation/linearb-provider",
+            "providers/documentation/mailchimp-provider",
+            "providers/documentation/mattermost-provider",
+            "providers/documentation/microsoft-planner-provider",
+            "providers/documentation/mock-provider",
+            "providers/documentation/mongodb-provider",
+            "providers/documentation/mysql-provider",
+            "providers/documentation/netdata-provider",
+            "providers/documentation/new-relic-provider",
+            "providers/documentation/ntfy-provider",
+            "providers/documentation/openobserve-provider",
+            "providers/documentation/openshift-provider",
+            "providers/documentation/opsgenie-provider",
+            "providers/documentation/pagerduty-provider",
+            "providers/documentation/pagertree-provider",
+            "providers/documentation/pingdom-provider",
+            "providers/documentation/planner-provider",
+            "providers/documentation/postgresql-provider",
+            "providers/documentation/pushover-provider",
+            "providers/documentation/quickchart-provider",
+            "providers/documentation/redmine-provider",
+            "providers/documentation/resend-provider",
+            "providers/documentation/rollbar-provider",
+            "providers/documentation/sendgrid-provider",
+            "providers/documentation/sentry-provider",
+            "providers/documentation/signalfx-provider",
+            "providers/documentation/signl4-provider",
+            "providers/documentation/site24x7-provider",
+            "providers/documentation/slack-provider",
+            "providers/documentation/snowflake-provider",
+            "providers/documentation/splunk-provider",
+            "providers/documentation/squadcast-provider",
+            "providers/documentation/ssh-provider",
+            "providers/documentation/statuscake-provider",
+            "providers/documentation/teams-provider",
+            "providers/documentation/telegram-provider",
+            "providers/documentation/template",
+            "providers/documentation/trello-provider",
+            "providers/documentation/twilio-provider",
+            "providers/documentation/uptimekuma-provider",
+            "providers/documentation/victoriametrics-provider",
+            "providers/documentation/webhook-provider",
+            "providers/documentation/websocket-provider",
+            "providers/documentation/zabbix-provider",
+            "providers/documentation/zenduty-provider"
           ]
         }
       ]
@@ -266,15 +270,11 @@
         },
         {
           "group": "healthcheck",
-          "pages": [
-            "api-ref/healthcheck/healthcheck"
-          ]
+          "pages": ["api-ref/healthcheck/healthcheck"]
         },
         {
           "group": "topology",
-          "pages": [
-            "api-ref/topology/get-topology-data"
-          ]
+          "pages": ["api-ref/topology/get-topology-data"]
         },
         {
           "group": "alerts",
@@ -348,21 +348,15 @@
         },
         {
           "group": "whoami",
-          "pages": [
-            "api-ref/whoami/get-tenant-id"
-          ]
+          "pages": ["api-ref/whoami/get-tenant-id"]
         },
         {
           "group": "pusher",
-          "pages": [
-            "api-ref/pusher/pusher-authentication"
-          ]
+          "pages": ["api-ref/pusher/pusher-authentication"]
         },
         {
           "group": "status",
-          "pages": [
-            "api-ref/status/status"
-          ]
+          "pages": ["api-ref/status/status"]
         },
         {
           "group": "rules",
@@ -420,9 +414,7 @@
         },
         {
           "group": "metrics",
-          "pages": [
-            "api-ref/metrics/get-metrics"
-          ]
+          "pages": ["api-ref/metrics/get-metrics"]
         },
         {
           "group": "users",
@@ -435,9 +427,7 @@
         },
         {
           "group": "groups",
-          "pages": [
-            "api-ref/groups/get-groups"
-          ]
+          "pages": ["api-ref/groups/get-groups"]
         },
         {
           "group": "mappings",
@@ -458,9 +448,7 @@
         },
         {
           "group": "tags",
-          "pages": [
-            "api-ref/tags/get-tags"
-          ]
+          "pages": ["api-ref/tags/get-tags"]
         }
       ]
     },
