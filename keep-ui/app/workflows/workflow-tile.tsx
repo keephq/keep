@@ -50,7 +50,6 @@ function WorkflowMenuSection({
   onBuilder,
   isRunButtonDisabled,
   runButtonToolTip,
-  isWorkflowDisabled,
 }: {
   onDelete: () => Promise<void>;
   onRun: () => Promise<void>;
@@ -59,7 +58,6 @@ function WorkflowMenuSection({
   onBuilder: () => void;
   isRunButtonDisabled: boolean;
   runButtonToolTip?: string;
-  isWorkflowDisabled: boolean
 }) {
   // Determine if all providers are installed
 
@@ -72,7 +70,6 @@ function WorkflowMenuSection({
       onBuilder={onBuilder}
       isRunButtonDisabled={isRunButtonDisabled}
       runButtonToolTip={runButtonToolTip}
-      isWorkflowDisabled={isWorkflowDisabled}
     />
   );
 }
@@ -569,7 +566,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             onBuilder: handleBuilderClick,
             runButtonToolTip: message,
             isRunButtonDisabled: !!isRunButtonDisabled,
-            isWorkflowDisabled: !!workflow.disabled,
           })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
@@ -866,7 +862,6 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
             onBuilder: handleBuilderClick,
             runButtonToolTip: message,
             isRunButtonDisabled: !!isRunButtonDisabled,
-            isWorkflowDisabled: !!workflow.disabled
           })}
         </div>
 

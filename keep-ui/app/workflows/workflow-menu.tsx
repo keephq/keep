@@ -13,7 +13,6 @@ interface WorkflowMenuProps {
   onBuilder?: () => void;
   isRunButtonDisabled: boolean;
   runButtonToolTip?: string; 
-  isWorkflowDisabled:boolean
 }
 
 
