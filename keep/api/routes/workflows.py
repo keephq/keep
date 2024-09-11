@@ -25,9 +25,9 @@ from keep.api.core.db import (
     get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
+    get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.core.db import get_workflow_id_by_name
 from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
     ProviderDTO,
@@ -37,13 +37,13 @@ from keep.api.models.workflow import (
     WorkflowExecutionLogsDTO,
     WorkflowToAlertExecutionDTO,
 )
+from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
-from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -177,6 +177,7 @@ def get_workflows(
             last_updated=workflow.last_updated,
             last_executions=last_executions,
             last_execution_started=last_execution_started,
+            disabled=workflow.disabled,
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto
@@ -215,7 +216,7 @@ def run_workflow(
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
-        workflow_id = get_workflow_id_by_name(tenant_id, workflow_id)
+        workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
     workflowmanager = WorkflowManager.get_instance()
 
     # Finally, run it
@@ -550,7 +551,18 @@ def get_workflow_by_id(
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
 
     with tracer.start_as_current_span("get_workflow_executions"):
-        total_count, workflow_executions, pass_count, fail_count, avgDuration = get_workflow_executions_db(tenant_id, workflow_id, limit, offset, tab, status, trigger, execution_id)
+        total_count, workflow_executions, pass_count, fail_count, avgDuration = (
+            get_workflow_executions_db(
+                tenant_id,
+                workflow_id,
+                limit,
+                offset,
+                tab,
+                status,
+                trigger,
+                execution_id,
+            )
+        )
     workflow_executions_dtos = []
     with tracer.start_as_current_span("create_workflow_dtos"):
         for workflow_execution in workflow_executions:
@@ -566,15 +578,16 @@ def get_workflow_by_id(
             workflow_executions_dtos.append(workflow_execution_dto)
 
     return WorkflowExecutionsPaginatedResultsDto(
-        limit=limit, 
+        limit=limit,
         offset=offset,
         count=total_count,
         items=workflow_executions_dtos,
         passCount=pass_count,
         failCount=fail_count,
         avgDuration=avgDuration,
-        workflow=workflow
+        workflow=workflow,
     )
+
 
 @router.delete("/{workflow_id}", description="Delete workflow")
 def delete_workflow_by_id(
