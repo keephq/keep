@@ -89,7 +89,7 @@ export const useAlerts = () => {
 
   const useMultipleFingerprintsAlertAudit = (
     fingerprints: string[] | undefined,
-    options: SWRConfiguration = { revalidateOnFocus: false }
+    options: SWRConfiguration = { revalidateOnFocus: true }
   ) => {
     return useSWR<AuditEvent[]>(
       () => (session && fingerprints ? `${apiUrl}/alerts/audit` : null),
