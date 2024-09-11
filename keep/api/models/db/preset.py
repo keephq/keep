@@ -20,7 +20,7 @@ def generate_uuid():
 
 class PresetTagLink(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id", primary_key=True)
-    preset_id: UUID = Field(foreign_key="preset.id", primary_key=True)
+    preset_id: str = Field(foreign_key="preset.id", primary_key=True)
     tag_id: str = Field(foreign_key="tag.id", primary_key=True)
 
 
