@@ -13,8 +13,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
-import numpy as np
-import pandas as pd
+# import numpy as np
+# import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -1537,10 +1537,7 @@ def get_rule_incidents_count_db(tenant_id):
         query = (
             session.query(Incident.rule_id, func.count(Incident.id))
             .select_from(Incident)
-            .filter(
-                Incident.tenant_id == tenant_id,
-                col(Incident.rule_id).isnot(None)
-            )
+            .filter(Incident.tenant_id == tenant_id, col(Incident.rule_id).isnot(None))
             .group_by(Incident.rule_id)
         )
         return dict(query.all())
@@ -2651,6 +2648,7 @@ def confirm_predicted_incident_by_id(
         return incident
 
 
+"""
 def write_pmi_matrix_to_temp_file(
     tenant_id: str, pmi_matrix: np.array, fingerprints: List, temp_dir: str
 ) -> bool:
@@ -2732,6 +2730,7 @@ def get_pmi_value(
     return pmi_entry.pmi if pmi_entry else None
 
 
+
 def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, int]]:
     npzfile = np.load(f"{temp_dir}/pmi_matrix.npz", allow_pickle=True)
     pmi_matrix = npzfile["pmi_matrix"]
@@ -2754,6 +2753,7 @@ def get_pmi_values(
         (entry.fingerprint_i, entry.fingerprint_j): entry.pmi for entry in pmi_entries
     }
     return pmi_values
+"""
 
 
 def update_incident_summary(
