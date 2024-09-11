@@ -274,7 +274,9 @@ class AlertDeduplicator:
 
         fields_per_provider = {}
         for field in fields:
-            key = f"{field.provider_type}_{field.provider_id}"
+            provider_type = field.provider_type if field.provider_type else "null"
+            provider_id = field.provider_id if field.provider_id else "null"
+            key = f"{provider_type}_{provider_id}"
             if key not in fields_per_provider:
                 fields_per_provider[key] = []
             fields_per_provider[key].append(field.field_name)

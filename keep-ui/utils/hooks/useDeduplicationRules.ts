@@ -20,7 +20,7 @@ export const useDeduplicationFields = (options: SWRConfiguration = {}) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  return useSWRImmutable<string[]>(
+  return useSWRImmutable<Record<string, string[]>>(
     () => (session ? `${apiUrl}/deduplications/fields` : null),
     (url) => fetcher(url, session?.accessToken),
     options

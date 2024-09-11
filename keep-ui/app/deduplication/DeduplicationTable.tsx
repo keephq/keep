@@ -35,38 +35,38 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const selectedId = searchParams ? searchParams.get("id") : null;
+  let selectedId = searchParams ? searchParams.get("id") : null;
   const selectedRule = deduplicationRules.find((rule) => rule.id === selectedId);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedDeduplicationRule, setSelectedDeduplicationRule] = useState<DeduplicationRule | null>(null);
 
-  const deduplicationFormFromRule = useMemo(() => {
-    if (selectedDeduplicationRule) {
-      return {
-        name: selectedDeduplicationRule.name,
-        description: selectedDeduplicationRule.description,
-        timeUnit: "seconds",
-      };
-    }
-
-    return {};
-  }, [selectedDeduplicationRule]);
-
   const onDeduplicationClick = (rule: DeduplicationRule) => {
     setSelectedDeduplicationRule(rule);
     setIsSidebarOpen(true);
+    router.push(`/deduplication?id=${rule.id}`);
   };
 
   const onCloseDeduplication = () => {
     setIsSidebarOpen(false);
     setSelectedDeduplicationRule(null);
+    router.push('/deduplication');
   };
 
   useEffect(() => {
-    if (selectedRule) {
-      onDeduplicationClick(selectedRule);
+    if (selectedId && !isSidebarOpen) {
+      const rule = deduplicationRules.find((r) => r.id === selectedId);
+      if (rule) {
+        setSelectedDeduplicationRule(rule);
+        setIsSidebarOpen(true);
+      }
     }
-  }, [selectedRule]);
+  }, [selectedId, deduplicationRules]);
+
+  useEffect(() => {
+    if (!isSidebarOpen && selectedId) {
+      router.push('/deduplication');
+    }
+  }, [isSidebarOpen, selectedId, router]);
 
   const DEDUPLICATION_TABLE_COLS = useMemo(
     () => [
@@ -238,7 +238,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
       <DeduplicationSidebar
         isOpen={isSidebarOpen}
         toggle={onCloseDeduplication}
-        defaultValue={deduplicationFormFromRule}
+        selectedDeduplicationRule={selectedDeduplicationRule}
         onSubmit={handleSubmitDeduplicationRule}
       />
     </div>
