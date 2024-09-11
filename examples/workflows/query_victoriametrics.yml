@@ -28,4 +28,3 @@ workflow:
         type: slack
         with:
           message: "Result: {{ steps.victoriametrics-step.results.data.result }}"
-          
