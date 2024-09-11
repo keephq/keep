@@ -25,17 +25,10 @@ export default function WorkflowMenu({
   onBuilder,
   isRunButtonDisabled,
   runButtonToolTip,
-  isWorkflowDisabled,
 }: WorkflowMenuProps) {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       };
-  
- if(isWorkflowDisabled){
-   runButtonToolTip = "Workflow is Disabled"
- }
-  
- isRunButtonDisabled = isRunButtonDisabled || isWorkflowDisabled 
 
   return (
     <div className="w-44 text-right">

@@ -33,13 +33,18 @@ export const useWorkflowRun = (workflow: Workflow) => {
         (trigger) => trigger.type === "alert"
     );
 
+    const isWorkflowDisabled = !!workflow?.disabled
+
     const getDisabledTooltip = () => {
         if (!allProvidersInstalled) return "Not all providers are installed.";
         if (!hasManualTrigger) return "No manual trigger available.";
+        if(isWorkflowDisabled) {
+            return "Workflow is Disabled";
+        }
         return message;
     };
 
-    const isRunButtonDisabled = !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger);
+    const isRunButtonDisabled = isWorkflowDisabled || !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger);
 
     if (isRunButtonDisabled) {
         message = getDisabledTooltip();

@@ -555,11 +555,11 @@ def get_workflow_by_id(
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
             interval=workflow.interval,
-            disabled=workflow.is_disabled or False,
             providers=providers_dto,
             triggers=triggers,
             workflow_raw=workflow.workflow_raw,
             last_updated=workflow.last_updated,
+            disabled=workflow.is_disabled,
     )        
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,
