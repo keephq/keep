@@ -2316,8 +2316,8 @@ def add_alerts_to_incident_by_incident_id(
 
         for idx, entry in enumerate(alert_to_incident_entries):
             session.add(entry)
-            if idx % 100 == 0:
-                logger.info(f"Added {idx}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database", 
+            if (idx + 1) % 100 == 0:
+                logger.info(f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database", 
                             extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
                 session.commit()
                 session.flush()

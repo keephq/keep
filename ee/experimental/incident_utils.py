@@ -46,9 +46,6 @@ STRIDE_DENOMINATOR = 4
 DEFAULT_TEMP_DIR_LOCATION = "./ee/experimental/ai_temp"
 PMI_SLIDING_WINDOW = 3600
 
-# check incident compatibility with the old one
-# check whether button works well
-
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
     tenant_id: str,
@@ -480,8 +477,7 @@ async def mine_incidents_and_create_objects(
     logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}", 
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
-    # UNCOMMENT TO SAVE LAST CORRELATED BATCH START TIMESTAMP
-    # write_tenant_ai_config(tenant_id, tenant_ai_config)
+    write_tenant_ai_config(tenant_id, tenant_ai_config)
     
     logger.info(f"Writing {len(incidents)} incidents to database", 
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
