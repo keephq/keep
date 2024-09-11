@@ -1,10 +1,8 @@
 import logging
 import os
-import yappi
 
 import networkx as nx
 import numpy as np
-
 
 from tqdm import tqdm
 from datetime import datetime, timedelta
@@ -48,8 +46,6 @@ STRIDE_DENOMINATOR = 4
 DEFAULT_TEMP_DIR_LOCATION = "./ee/experimental/ai_temp"
 PMI_SLIDING_WINDOW = 3600
 
-# TODO: check remote db compatibility 
-# TODO: make sure that local incident creation and etc and dump works well
 # check incident compatibility with the old one
 # check whether button works well
 
@@ -277,7 +273,7 @@ def update_incident_name_inmem(incident: Incident, name: str):
     return incident
 
 
-async def original_mine_incidents_and_create_objects(
+async def mine_incidents_and_create_objects(
     ctx: dict | None,  # arq context
     tenant_id: str,
     alert_lower_timestamp: datetime = None,
@@ -481,16 +477,18 @@ async def original_mine_incidents_and_create_objects(
         updated_incident_ids.extend([incident.id for incident in batch_updated_incidents])
         incident_ids_for_processing.extend(batch_incident_ids_for_processing)
         
-        
+    logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}", 
+                extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
     # UNCOMMENT TO SAVE LAST CORRELATED BATCH START TIMESTAMP
     # write_tenant_ai_config(tenant_id, tenant_ai_config)
     
+    logger.info(f"Writing {len(incidents)} incidents to database", 
+                extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     db_incident_ids_for_processing = []
     db_new_incident_ids = []
     db_updated_incident_ids = []
     for incident in incidents:
-        # if not new then check
         if not get_incident_by_id(tenant_id, incident.id):
             incident_dict = {
                 "ai_generated_name": incident.ai_generated_name,
@@ -515,9 +513,8 @@ async def original_mine_incidents_and_create_objects(
                 
         add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert.id for alert in incident.alerts])
         
-    
-    # write_incidents_to_db(tenant_id, incidents)
-    
+    logger.info(f"Scheduling {len(db_incident_ids_for_processing)} incidents for name / summary generation", 
+                extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     new_incident_count = len(set(new_incident_ids))
     updated_incident_count = len(set(updated_incident_ids).difference(set(new_incident_ids)))
     db_incident_ids_for_processing = list(set(db_incident_ids_for_processing))
@@ -548,21 +545,3 @@ async def original_mine_incidents_and_create_objects(
 
     return {"incidents": [get_incident_by_id(tenant_id, incident_id)
                           for incident_id in incident_ids]}
-
-
-async def mine_incidents_and_create_objects(*args, **kwargs):
-    # Start profiling
-    yappi.start()
-
-    try:
-        # Your function logic goes here (ensure all awaits are captured)
-        result = await original_mine_incidents_and_create_objects(*args, **kwargs)
-        return result
-    finally:
-        # Stop profiling
-        yappi.stop()
-        # yappi.get_func_stats().print_all()
-        # yappi.get_thread_stats().print_all()
-
-        # Save the results to a file to explore with snakeviz
-        yappi.get_func_stats().save('profile_results.prof', type='pstat')

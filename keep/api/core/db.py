@@ -13,6 +13,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -1597,7 +1598,6 @@ def update_key_last_used(
         session.add(tenant_api_key_entry)
         session.commit()
 
-
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     with Session(engine) as session:
         providers = (
@@ -2273,6 +2273,9 @@ def get_alerts_data_for_incident(
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[Incident]:
+    logger.info(f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts", 
+                extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}})
+    
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -2311,8 +2314,13 @@ def add_alerts_to_incident_by_incident_id(
             for alert_id in new_alert_ids
         ]
 
-        session.bulk_insert_mappings(AlertToIncident, 
-                                     [entry.__dict__ for entry in alert_to_incident_entries])
+        for idx, entry in enumerate(alert_to_incident_entries):
+            session.add(entry)
+            if idx % 100 == 0:
+                logger.info(f"Added {idx}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database", 
+                            extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
+                session.commit()
+                session.flush()
 
         started_at, last_seen_at = session.exec(
             select(func.min(Alert.timestamp), func.max(Alert.timestamp))
@@ -2684,3 +2692,4 @@ def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
             .where(Provider.name == provider_name)
         ).first()
     return provider
+
