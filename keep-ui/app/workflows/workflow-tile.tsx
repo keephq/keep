@@ -78,6 +78,7 @@ function WorkflowMenuSection({
       onView={onView}
       onBuilder={onBuilder}
       allProvidersInstalled={allProvidersInstalled}
+      isWorkflowDisabled={workflow.disabled}
       hasManualTrigger={hasManualTrigger}
       hasAlertTrigger={hasAlertTrigger}
     />
@@ -1078,6 +1079,12 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
               {workflow.last_execution_status
                 ? workflow.last_execution_status
                 : "N/A"}
+            </span>
+          </ListItem>
+          <ListItem>
+            <span>Disabled</span>
+            <span className="text-right">
+              {workflow?.disabled?.toString()}
             </span>
           </ListItem>
         </List>

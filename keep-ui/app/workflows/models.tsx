@@ -33,6 +33,7 @@ export type Workflow = {
   interval: string;
   providers: Provider[];
   triggers: Trigger[];
+  disabled:boolean,
   last_execution_time: string;
   last_execution_status: string;
   last_updated: string;

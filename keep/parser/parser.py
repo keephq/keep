@@ -150,6 +150,7 @@ class Parser:
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
         workflow_id = self._parse_id(workflow)
+        workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
         workflow_tags = self._parse_tags(workflow)
         workflow_steps = self._parse_steps(context_manager, workflow)
@@ -168,6 +169,7 @@ class Parser:
         workflow = Workflow(
             workflow_id=workflow_id,
             workflow_description=workflow.get("description"),
+            workflow_disabled=workflow_disabled,
             workflow_owners=workflow_owners,
             workflow_tags=workflow_tags,
             workflow_interval=workflow_interval,
@@ -322,6 +324,11 @@ class Parser:
             if trigger.get("type") == "interval":
                 workflow_interval = trigger.get("value", 0)
         return workflow_interval
+
+    @staticmethod
+    def parse_disabled(workflow_dict: dict) -> bool:
+        workflow_is_disabled_in_yml = workflow_dict.get("disabled")
+        return True if (workflow_is_disabled_in_yml == "true" or workflow_is_disabled_in_yml is True) else False
 
     @staticmethod
     def parse_provider_parameters(provider_parameters: dict) -> dict:
