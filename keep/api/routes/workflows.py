@@ -177,7 +177,7 @@ def get_workflows(
             last_updated=workflow.last_updated,
             last_executions=last_executions,
             last_execution_started=last_execution_started,
-            disabled=workflow.disabled,
+            disabled=workflow.is_disabled,
         )
         workflows_dto.append(workflow_dto)
     return workflows_dto
