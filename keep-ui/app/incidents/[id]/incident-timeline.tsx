@@ -139,7 +139,6 @@ const IncidentTimeline: React.FC<Props> = ({ incident }) => {
       borderLessCards
       showAllCardsHorizontally
       useReadMore
-      // mediaWidth="150"
     />
   );
 };
