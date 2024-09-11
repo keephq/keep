@@ -30,7 +30,6 @@ from keep.api.core.db import (
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
 from keep.api.models.alert import AlertDto
 from keep.api.models.workflow import (
-    ProviderDTO,
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
     WorkflowExecutionDTO,
@@ -41,7 +40,6 @@ from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.parser.parser import Parser
-from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
@@ -72,7 +70,6 @@ def get_workflows(
 ) -> list[WorkflowDTO] | list[dict]:
     tenant_id = authenticated_entity.tenant_id
     workflowstore = WorkflowStore()
-    parser = Parser()
     workflows_dto = []
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
@@ -109,57 +106,12 @@ def get_workflows(
             last_execution_started = None
 
         try:
-            workflow_yaml = yaml.safe_load(workflow.workflow_raw)
-            providers = parser.get_providers_from_workflow(workflow_yaml)
-        except Exception:
-            logger.exception("Failed to parse workflow", extra={"workflow": workflow})
-            continue
-        providers_dto = []
-        # get the provider details
-        for provider in providers:
-            try:
-                provider = installed_providers_by_type[provider.get("type")][
-                    provider.get("name")
-                ]
-                provider_dto = ProviderDTO(
-                    name=provider.name,
-                    type=provider.type,
-                    id=provider.id,
-                    installed=True,
-                )
-                providers_dto.append(provider_dto)
-            except KeyError:
-                # the provider is not installed, now we want to check:
-                # 1. if the provider requires any config - so its not instaleld
-                # 2. if the provider does not require any config - consider it as installed
-                try:
-                    conf = ProvidersFactory.get_provider_required_config(
-                        provider.get("type")
-                    )
-                except ModuleNotFoundError:
-                    logger.warning(
-                        "Someone tried to use a non-existing provider in a workflow",
-                        extra={"provider": provider.get("type")},
-                    )
-                    conf = None
-                if conf:
-                    provider_dto = ProviderDTO(
-                        name=provider.get("name"),
-                        type=provider.get("type"),
-                        id=None,
-                        installed=False,
-                    )
-                # if the provider does not require any config, consider it as installed
-                else:
-                    provider_dto = ProviderDTO(
-                        name=provider.get("name"),
-                        type=provider.get("type"),
-                        id=None,
-                        installed=True,
-                    )
-                providers_dto.append(provider_dto)
+            providers_dto, triggers = workflowstore.get_workflow_meta_data(
+            tenant_id=tenant_id, workflow=workflow, installed_providers_by_type=installed_providers_by_type)
+        except Exception as e:
+            logger.error(f"Error fetching workflow meta data: {e}")
+            providers_dto, triggers = [], []  # Default in case of failure
 
-        triggers = parser.get_triggers_from_workflow(workflow_yaml)
         # create the workflow DTO
         workflow_dto = WorkflowDTO(
             id=workflow.id,
@@ -549,6 +501,17 @@ def get_workflow_by_id(
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    installed_providers = get_installed_providers(tenant_id)
+    installed_providers_by_type = {}
+    for installed_provider in installed_providers:
+        if installed_provider.type not in installed_providers_by_type:
+            installed_providers_by_type[installed_provider.type] = {
+                installed_provider.name: installed_provider
+            }
+        else:
+            installed_providers_by_type[installed_provider.type][
+                installed_provider.name
+            ] = installed_provider
 
     with tracer.start_as_current_span("get_workflow_executions"):
         total_count, workflow_executions, pass_count, fail_count, avgDuration = (
@@ -577,6 +540,27 @@ def get_workflow_by_id(
             }
             workflow_executions_dtos.append(workflow_execution_dto)
 
+    workflowstore = WorkflowStore()
+    try:
+        providers_dto, triggers = workflowstore.get_workflow_meta_data(
+        tenant_id=tenant_id, workflow=workflow, installed_providers_by_type=installed_providers_by_type)
+    except Exception as e:
+        logger.error(f"Error fetching workflow meta data: {e}")
+        providers_dto, triggers = [], []  # Default in case of failure
+    
+    final_workflow = WorkflowDTO(
+            id=workflow.id,
+            name=workflow.name,
+            description=workflow.description or "[This workflow has no description]",
+            created_by=workflow.created_by,
+            creation_time=workflow.creation_time,
+            interval=workflow.interval,
+            providers=providers_dto,
+            triggers=triggers,
+            workflow_raw=workflow.workflow_raw,
+            last_updated=workflow.last_updated,
+            disabled=workflow.is_disabled,
+    )        
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,
         offset=offset,
@@ -585,7 +569,7 @@ def get_workflow_by_id(
         passCount=pass_count,
         failCount=fail_count,
         avgDuration=avgDuration,
-        workflow=workflow,
+        workflow=final_workflow
     )
 
 

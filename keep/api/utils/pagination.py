@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from keep.api.models.alert import IncidentDto, AlertDto 
 from keep.api.models.workflow import (
     WorkflowExecutionDTO,
+    WorkflowDTO
 )
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
 from typing import Optional
@@ -28,5 +29,5 @@ class WorkflowExecutionsPaginatedResultsDto(PaginatedResultsDto):
     items: list[WorkflowExecutionDTO]
     passCount: int = 0
     avgDuration: float = 0.0
-    workflow: Optional[Workflow] = None
+    workflow: Optional[WorkflowDTO] = None
     failCount: int = 0

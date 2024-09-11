@@ -24,7 +24,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
         return (
           <>
             {provider && (
-              <div key={`step-${index}`} className="flex items-center gap-2 flex-shrink-0">
+              <div key={`step-${step.id}`} className="flex items-center gap-2 flex-shrink-0">
                 {index > 0 && (
                   <TiArrowRight size={24} className="text-gray-500" />
                 )}
@@ -48,7 +48,7 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
         return (
           <>
             {provider && (
-              <div key={`action-${index}`} className="flex items-center gap-2 flex-shrink-0">
+              <div key={`action-${action.id}`} className="flex items-center gap-2 flex-shrink-0">
                 {(index > 0 || isStepPresent) && (
                   <TiArrowRight size={24} className="text-gray-500" />
                 )}
