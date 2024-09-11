@@ -4,7 +4,6 @@ Keep main database module.
 This module contains the CRUD database functions for Keep.
 """
 
-import os
 import hashlib
 import json
 import logging
@@ -13,10 +12,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
-from tqdm import tqdm
 
 import numpy as np
-import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
