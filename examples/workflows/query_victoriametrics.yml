@@ -10,6 +10,21 @@ workflow:
         config: "{{ providers.victoriametrics }}"
         type: victoriametrics
         with:
-          query: process_memory_limit_bytes
+          query: avg(rate(process_cpu_seconds_total))
           queryType: query
-  actions: []
+
+  actions:
+    - name: ntfy-action
+      provider:
+        config: "{{ providers.ntfy }}"
+        type: ntfy
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result }}"
+          topic: victoriametrics
+
+    - name: slack-action
+      provider:
+        config: "{{ providers.slack }}"
+        type: slack
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result }}"
