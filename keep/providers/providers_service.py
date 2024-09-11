@@ -238,12 +238,16 @@ class ProvidersService:
                 logger.info(f"Provider {provider_name} already installed")
                 continue
             logger.info(f"Installing provider {provider_name}")
-            ProvidersService.install_provider(
-                tenant_id=tenant_id,
-                installed_by="system",
-                provider_id=provider_config["type"],
-                provider_name=provider_name,
-                provider_type=provider_config["type"],
-                provider_config=provider_config["authentication"],
-            )
-            logger.info(f"Provider {provider_name} provisioned")
+            try:
+                ProvidersService.install_provider(
+                    tenant_id=tenant_id,
+                    installed_by="system",
+                    provider_id=provider_config["type"],
+                    provider_name=provider_name,
+                    provider_type=provider_config["type"],
+                    provider_config=provider_config["authentication"],
+                )
+                logger.info(f"Provider {provider_name} provisioned")
+            except Exception:
+                logger.exception(f"Failed to provision provider {provider_name}")
+                continue

@@ -1,10 +1,11 @@
 import React, { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { Text, Button, TextInput, Callout, Badge, MultiSelect, MultiSelectItem, Switch } from "@tremor/react";
+import { Text, Button, TextInput, Callout, Badge, Select, SelectItem, MultiSelect, MultiSelectItem, Switch } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { DeduplicationRule } from "app/deduplication/models";
 import { useProviders } from "utils/hooks/useProviders";
+import { useDeduplicationFields } from "utils/hooks/useDeduplicationRules";
 
 interface DeduplicationSidebarProps {
   isOpen: boolean;
@@ -32,9 +33,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { data: providers = { installed_providers: [], linked_providers: [] } } = useProviders();
+  const { data: deduplicationFields = [] } = useDeduplicationFields();
 
   const alertProviders = [...providers.installed_providers, ...providers.linked_providers].filter(
-    provider => provider.labels?.includes("alert")
+    provider => provider.tags?.includes("alert")
   );
 
   const fullDeduplication = watch("full_deduplication");
@@ -152,18 +154,18 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     control={control}
                     rules={{ required: "Provider type is required" }}
                     render={({ field }) => (
-                      <MultiSelect
+                      <Select
                         {...field}
                         placeholder="Select provider type"
                         error={!!errors.provider_type}
                         errorMessage={errors.provider_type?.message}
                       >
                         {alertProviders.map((provider) => (
-                          <MultiSelectItem key={provider.id} value={provider.type}>
-                            {provider.type}
-                          </MultiSelectItem>
+                          <SelectItem key={provider.id} value={provider.type}>
+                            {provider.type} {provider.name || provider.id}
+                          </SelectItem>
                         ))}
-                      </MultiSelect>
+                      </Select>
                     )}
                   />
                 </div>
@@ -182,11 +184,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         error={!!errors.fingerprint_fields}
                         errorMessage={errors.fingerprint_fields?.message}
                       >
-                        {/* Replace this with actual fingerprint field options */}
-                        <MultiSelectItem value="title">Title</MultiSelectItem>
-                        <MultiSelectItem value="description">Description</MultiSelectItem>
-                        <MultiSelectItem value="severity">Severity</MultiSelectItem>
-                        <MultiSelectItem value="source">Source</MultiSelectItem>
+                        {deduplicationFields.map((fieldName) => (
+                          <MultiSelectItem key={fieldName} value={fieldName}>
+                            {fieldName}
+                          </MultiSelectItem>
+                        ))}
                       </MultiSelect>
                     )}
                   />
@@ -221,11 +223,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                           error={!!errors.ignore_fields}
                           errorMessage={errors.ignore_fields?.message}
                         >
-                          {/* Replace this with actual ignore field options */}
-                          <MultiSelectItem value="title">Title</MultiSelectItem>
-                          <MultiSelectItem value="description">Description</MultiSelectItem>
-                          <MultiSelectItem value="severity">Severity</MultiSelectItem>
-                          <MultiSelectItem value="source">Source</MultiSelectItem>
+                          {deduplicationFields.map((fieldName) => (
+                            <MultiSelectItem key={fieldName} value={fieldName}>
+                              {fieldName}
+                            </MultiSelectItem>
+                          ))}
                         </MultiSelect>
                       )}
                     />

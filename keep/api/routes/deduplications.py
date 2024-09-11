@@ -38,7 +38,7 @@ def get_deduplication_fields(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:deduplications"])
     ),
-):
+) -> dict[str, list[str]]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting deduplication fields")
 

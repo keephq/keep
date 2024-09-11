@@ -108,8 +108,8 @@ class AlertDto(BaseModel):
     lastReceived: str
     firingStartTime: str | None = None
     environment: str = "undefined"
-    isFullDuplicate: bool | None = None
-    isPartialDuplicate: bool | None = None
+    isFullDuplicate: bool | None = False
+    isPartialDuplicate: bool | None = False
     duplicateReason: str | None = None
     service: str | None = None
     source: list[str] | None = []
@@ -290,7 +290,6 @@ class AlertDto(BaseModel):
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
-                    "isDuplicate": False,
                     "duplicateReason": None,
                     "service": "backend",
                     "source": ["keep"],
@@ -420,6 +419,7 @@ class IncidentDto(IncidentDtoIn):
 
 
 class DeduplicationRuleDto(BaseModel):
+    id: str | None  # UUID
     name: str
     description: str
     default: bool

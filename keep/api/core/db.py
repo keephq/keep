@@ -19,10 +19,13 @@ import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, null, update
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import expression
-from sqlmodel import Session, col, or_, select
+from sqlmodel import Session, col, or_, select, text
 
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
@@ -301,7 +304,7 @@ def add_or_update_workflow(
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
-            existing_workflow.is_disabled= is_disabled
+            existing_workflow.is_disabled = is_disabled
 
         else:
             # Create a new workflow
@@ -313,7 +316,7 @@ def add_or_update_workflow(
                 created_by=created_by,
                 updated_by=updated_by,  # Set updated_by to the provided value
                 interval=interval,
-                is_disabled =is_disabled,
+                is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
             )
             session.add(workflow)
@@ -498,6 +501,7 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     if not workflow:
         return None
     return workflow.workflow_raw
+
 
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
@@ -2894,3 +2898,93 @@ def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
             .where(Provider.name == provider_name)
         ).first()
     return provider
+
+
+def bulk_upsert_alert_fields(
+    tenant_id: str, fields: List[str], provider_id: str, provider_type: str
+):
+    with Session(engine) as session:
+        try:
+            # Prepare the data for bulk insert
+            data = [
+                {
+                    "tenant_id": tenant_id,
+                    "field_name": field,
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
+                }
+                for field in fields
+            ]
+
+            if engine.dialect.name == "postgresql":
+                stmt = pg_insert(AlertField).values(data)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=[
+                        "tenant_id",
+                        "field_name",
+                    ],  # Unique constraint columns
+                    set_={
+                        "provider_id": stmt.excluded.provider_id,
+                        "provider_type": stmt.excluded.provider_type,
+                    },
+                )
+            elif engine.dialect.name == "mysql":
+                stmt = mysql_insert(AlertField).values(data)
+                stmt = stmt.on_duplicate_key_update(
+                    provider_id=stmt.inserted.provider_id,
+                    provider_type=stmt.inserted.provider_type,
+                )
+            elif engine.dialect.name == "sqlite":
+                stmt = sqlite_insert(AlertField).values(data)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=[
+                        "tenant_id",
+                        "field_name",
+                    ],  # Unique constraint columns
+                    set_={
+                        "provider_id": stmt.excluded.provider_id,
+                        "provider_type": stmt.excluded.provider_type,
+                    },
+                )
+            elif engine.dialect.name == "mssql":
+                # SQL Server requires a raw query with a MERGE statement
+                values = ", ".join(
+                    f"('{tenant_id}', '{field}', '{provider_id}', '{provider_type}')"
+                    for field in fields
+                )
+
+                merge_query = text(
+                    f"""
+                    MERGE INTO AlertField AS target
+                    USING (VALUES {values}) AS source (tenant_id, field_name, provider_id, provider_type)
+                    ON target.tenant_id = source.tenant_id AND target.field_name = source.field_name
+                    WHEN MATCHED THEN
+                        UPDATE SET provider_id = source.provider_id, provider_type = source.provider_type
+                    WHEN NOT MATCHED THEN
+                        INSERT (tenant_id, field_name, provider_id, provider_type)
+                        VALUES (source.tenant_id, source.field_name, source.provider_id, source.provider_type);
+                """
+                )
+
+                session.execute(merge_query)
+            else:
+                raise NotImplementedError(
+                    f"Upsert not supported for {engine.dialect.name}"
+                )
+
+            # Execute the statement
+            if engine.dialect.name != "mssql":  # Already executed for SQL Server
+                session.execute(stmt)
+            session.commit()
+
+        except IntegrityError:
+            # Handle any potential race conditions
+            session.rollback()
+
+
+def get_alerts_fields(tenant_id: str) -> List[AlertField]:
+    with Session(engine) as session:
+        fields = session.exec(
+            select(AlertField).where(AlertField.tenant_id == tenant_id)
+        ).all()
+    return fields

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
@@ -184,6 +184,7 @@ class AlertDeduplicationRule(SQLModel, table=True):
     fingerprint_fields: list[str] = Field(sa_column=Column(JSON), default=[])
     full_deduplication: bool = Field(default=False)
     ignore_fields: list[str] = Field(sa_column=Column(JSON), default=[])
+    priority: int = Field(default=0)  # for future use
 
     class Config:
         arbitrary_types_allowed = True
@@ -207,7 +208,6 @@ class AlertDeduplicationEvent(SQLModel, table=True):
     # these are only soft reference since it could be linked provider
     provider_id: str | None = Field()
     provider_type: str | None = Field()
-    priority: int = Field(default=0)  # for future use
 
     __table_args__ = (
         Index(
@@ -227,6 +227,26 @@ class AlertDeduplicationEvent(SQLModel, table=True):
             "ix_alert_deduplication_event_provider_type_date_hour",
             "provider_type",
             "date_hour",
+        ),
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class AlertField(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id", index=True)
+    field_name: str = Field(index=True)
+    provider_id: str | None = Field(index=True)
+    provider_type: str | None = Field(index=True)
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "field_name", name="uq_tenant_field"),
+        Index("ix_alert_field_tenant_id", "tenant_id"),
+        Index("ix_alert_field_tenant_id_field_name", "tenant_id", "field_name"),
+        Index(
+            "ix_alert_field_provider_id_provider_type", "provider_id", "provider_type"
         ),
     )
 

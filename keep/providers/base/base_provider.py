@@ -321,12 +321,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
             provider_id=provider_id,
             provider_type=provider_type,
         )
+
+        if not isinstance(formatted_alert, list):
+            formatted_alert.providerId = provider_id
+            formatted_alert.providerType = provider_type
+            formatted_alert = [formatted_alert]
+
+        else:
+            for alert in formatted_alert:
+                alert.providerId = provider_id
+                alert.providerType = provider_type
+
         # if there is no custom deduplication rule, return the formatted alert
         if not custom_deduplication_rule:
             return formatted_alert
         # if there is a custom deduplication rule, apply it
-        if not isinstance(formatted_alert, list):
-            formatted_alert = [formatted_alert]
         # apply the custom deduplication rule to calculate the fingerprint
         for alert in formatted_alert:
             logger.info(
@@ -340,7 +349,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
             alert.fingerprint = cls.get_alert_fingerprint(
                 alert, custom_deduplication_rule.deduplication_fields
             )
-
         return formatted_alert
 
     @staticmethod

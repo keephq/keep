@@ -15,3 +15,14 @@ export const useDeduplicationRules = (options: SWRConfiguration = {}) => {
     options
   );
 };
+
+export const useDeduplicationFields = (options: SWRConfiguration = {}) => {
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+
+  return useSWRImmutable<string[]>(
+    () => (session ? `${apiUrl}/deduplications/fields` : null),
+    (url) => fetcher(url, session?.accessToken),
+    options
+  );
+};

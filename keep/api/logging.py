@@ -105,7 +105,9 @@ class DevTerminalFormatter(logging.Formatter):
                 # Extract extra from the _log function's local variables
                 extra = frame.f_locals.get("extra", {})
                 if extra:
-                    extra_info = " ".join([f"[{k}: {v}]" for k, v in extra.items()])
+                    extra_info = " ".join(
+                        [f"[{k}: {v}]" for k, v in extra.items() if k != "raw_event"]
+                    )
                 else:
                     extra_info = ""
                 break

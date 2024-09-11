@@ -6,6 +6,7 @@ import logging
 from keep.api.core.config import config
 from keep.api.core.db import (
     create_deduplication_event,
+    get_alerts_fields,
     get_all_dedup_ratio,
     get_all_deduplication_rules,
     get_custom_full_deduplication_rules,
@@ -15,6 +16,8 @@ from keep.api.core.db import (
 from keep.api.models.alert import AlertDto, DeduplicationRuleDto
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+
+DEFAULT_RULE_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 class AlertDeduplicator:
@@ -91,9 +94,23 @@ class AlertDeduplicator:
         rule = self.get_full_deduplication_rule(
             self.tenant_id, alert.providerId, alert.providerType
         )
-        self.logger.debug(f"Applying deduplication rule {rule.id} to alert {alert.id}")
+        self.logger.debug(
+            "Applying deduplication rule to alert",
+            extra={
+                "rule_id": rule.id,
+                "alert_id": alert.id,
+            },
+        )
         alert = self._apply_deduplication_rule(alert, rule)
-        self.logger.debug(f"Alert after deduplication rule {rule.id}: {alert}")
+        self.logger.debug(
+            "Alert after deduplication rule applied",
+            extra={
+                "rule_id": rule.id,
+                "alert_id": alert.id,
+                "is_full_duplicate": alert.isFullDuplicate,
+                "is_partial_duplicate": alert.isPartialDuplicate,
+            },
+        )
         if alert.isFullDuplicate or alert.isPartialDuplicate:
             # create deduplication event
             create_deduplication_event(
@@ -153,6 +170,7 @@ class AlertDeduplicator:
     def _get_default_full_deduplication_rule(self) -> DeduplicationRuleDto:
         # just return a default deduplication rule with lastReceived field
         return DeduplicationRuleDto(
+            id=DEFAULT_RULE_UUID,
             name="Keep Full Deduplication Rule",
             description="Keep Full Deduplication Rule",
             default=True,
@@ -252,7 +270,13 @@ class AlertDeduplicator:
         return result
 
     def get_deduplication_fields(self) -> list[str]:
-        # SHAHAR: this could be improved by saving the fields on ingestion time
-        # SHAHAR: it may be broken
-        fields = self.search_engine.search_alerts_by_cel()
-        return fields
+        fields = get_alerts_fields(self.tenant_id)
+
+        fields_per_provider = {}
+        for field in fields:
+            key = f"{field.provider_type}_{field.provider_id}"
+            if key not in fields_per_provider:
+                fields_per_provider[key] = []
+            fields_per_provider[key].append(field.field_name)
+
+        return fields_per_provider
