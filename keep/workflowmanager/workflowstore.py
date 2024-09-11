@@ -42,6 +42,7 @@ class WorkflowStore:
             workflow["name"] = workflow_name
         else:
             workflow_name = workflow.get("name")
+
         workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
             name=workflow_name,
@@ -49,6 +50,7 @@ class WorkflowStore:
             description=workflow.get("description"),
             created_by=created_by,
             interval=interval,
+            is_disabled=Parser.parse_disabled(workflow),
             workflow_raw=yaml.dump(workflow),
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")

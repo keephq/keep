@@ -156,6 +156,7 @@ def get_workflows_that_should_run():
         workflows_with_interval = (
             session.query(Workflow)
             .filter(Workflow.is_deleted == False)
+            .filter(Workflow.is_disabled == False)
             .filter(Workflow.interval != None)
             .filter(Workflow.interval > 0)
             .all()
@@ -276,6 +277,7 @@ def add_or_update_workflow(
     created_by,
     interval,
     workflow_raw,
+    is_disabled,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -299,6 +301,7 @@ def add_or_update_workflow(
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
+            existing_workflow.is_disabled= is_disabled
 
         else:
             # Create a new workflow
@@ -310,6 +313,7 @@ def add_or_update_workflow(
                 created_by=created_by,
                 updated_by=updated_by,  # Set updated_by to the provided value
                 interval=interval,
+                is_disabled =is_disabled,
                 workflow_raw=workflow_raw,
             )
             session.add(workflow)
@@ -494,7 +498,6 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     if not workflow:
         return None
     return workflow.workflow_raw
-
 
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
@@ -1340,7 +1343,7 @@ def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
         session.commit()
 
 
-def get_workflow_id_by_name(tenant_id, workflow_name):
+def get_workflow_by_name(tenant_id, workflow_name):
     with Session(engine) as session:
         workflow = session.exec(
             select(Workflow)
@@ -1349,8 +1352,7 @@ def get_workflow_id_by_name(tenant_id, workflow_name):
             .where(Workflow.is_deleted == False)
         ).first()
 
-        if workflow:
-            return workflow.id
+        return workflow
 
 
 def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
