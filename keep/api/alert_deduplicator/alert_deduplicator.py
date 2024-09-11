@@ -13,8 +13,8 @@ from keep.api.core.db import (
     get_provider_distribution,
 )
 from keep.api.models.alert import AlertDto, DeduplicationRuleDto
-from keep.api.models.db.alert import AlertDeduplicationRule
 from keep.providers.providers_factory import ProvidersFactory
+from keep.searchengine.searchengine import SearchEngine
 
 
 class AlertDeduplicator:
@@ -25,6 +25,7 @@ class AlertDeduplicator:
         self.provider_distribution_enabled = config(
             "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
         )
+        self.search_engine = SearchEngine(self.tenant_id)
 
     def _apply_deduplication_rule(
         self, alert: AlertDto, rule: DeduplicationRuleDto
@@ -151,12 +152,24 @@ class AlertDeduplicator:
 
     def _get_default_full_deduplication_rule(self) -> DeduplicationRuleDto:
         # just return a default deduplication rule with lastReceived field
-        return AlertDeduplicationRule(
+        return DeduplicationRuleDto(
+            name="Keep Full Deduplication Rule",
+            description="Keep Full Deduplication Rule",
+            default=True,
+            distribution=[],
             fingerprint_fields=[],
+            provider_type="keep",
             provider_id=None,
             full_deduplication=True,
             ignore_fields=["lastReceived"],
             priority=0,
+            last_updated=None,
+            last_updated_by=None,
+            created_at=None,
+            created_by=None,
+            ingested=0,
+            dedup_ratio=0.0,
+            enabled=True,
         )
 
     def get_deduplications(self) -> list[DeduplicationRuleDto]:
@@ -179,11 +192,13 @@ class AlertDeduplicator:
         custom_deduplications_dict = {
             rule.provider_id: rule for rule in custom_deduplications
         }
+        # get the "catch all" full deduplication rule
+        catch_all_full_deduplication = self._get_default_full_deduplication_rule()
 
         # calculate the deduplciations
         # if a provider has custom deduplication rule, use it
         # else, use the default deduplication rule of the provider
-        final_deduplications = []
+        final_deduplications = [catch_all_full_deduplication]
         for provider in providers:
             # if the provider doesn't have a deduplication rule, use the default one
             if provider.id not in custom_deduplications_dict:
@@ -235,3 +250,9 @@ class AlertDeduplicator:
                         break
 
         return result
+
+    def get_deduplication_fields(self) -> list[str]:
+        # SHAHAR: this could be improved by saving the fields on ingestion time
+        # SHAHAR: it may be broken
+        fields = self.search_engine.search_alerts_by_cel()
+        return fields

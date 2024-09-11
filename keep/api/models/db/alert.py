@@ -207,6 +207,7 @@ class AlertDeduplicationEvent(SQLModel, table=True):
     # these are only soft reference since it could be linked provider
     provider_id: str | None = Field()
     provider_type: str | None = Field()
+    priority: int = Field(default=0)  # for future use
 
     __table_args__ = (
         Index(

@@ -426,10 +426,10 @@ class DeduplicationRuleDto(BaseModel):
     distribution: list[dict]  # list of {hour: int, count: int}
     provider_id: str | None  # None for default rules
     provider_type: str
-    last_updated: str
-    last_updated_by: str
-    created_at: str
-    created_by: str
+    last_updated: str | None
+    last_updated_by: str | None
+    created_at: str | None
+    created_by: str | None
     ingested: int
     dedup_ratio: float
     enabled: bool

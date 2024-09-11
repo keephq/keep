@@ -1,7 +1,7 @@
 import React, { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { Text, Button, TextInput, Callout, Badge, MultiSelect, MultiSelectItem } from "@tremor/react";
+import { Text, Button, TextInput, Callout, Badge, MultiSelect, MultiSelectItem, Switch } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { DeduplicationRule } from "app/deduplication/models";
 import { useProviders } from "utils/hooks/useProviders";
@@ -19,12 +19,14 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   defaultValue,
   onSubmit,
 }) => {
-  const { control, handleSubmit, setValue, reset, setError, formState: { errors }, clearErrors } = useForm<Partial<DeduplicationRule>>({
+  const { control, handleSubmit, setValue, reset, setError, watch, formState: { errors }, clearErrors } = useForm<Partial<DeduplicationRule>>({
     defaultValues: defaultValue || {
       name: "",
       description: "",
-      sources: [],
+      provider_type: "",
       fingerprint_fields: [],
+      full_deduplication: false,
+      ignore_fields: [],
     },
   });
 
@@ -35,6 +37,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     provider => provider.labels?.includes("alert")
   );
 
+  const fullDeduplication = watch("full_deduplication");
+
   useEffect(() => {
     if (isOpen && defaultValue) {
       reset(defaultValue);
@@ -42,8 +46,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
       reset({
         name: "",
         description: "",
-        sources: [],
+        provider_type: "",
         fingerprint_fields: [],
+        full_deduplication: false,
+        ignore_fields: [],
       });
     }
   }, [isOpen, defaultValue, reset]);
@@ -139,21 +145,21 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Sources
+                    Provider Type
                   </label>
                   <Controller
-                    name="sources"
+                    name="provider_type"
                     control={control}
-                    rules={{ required: "At least one source is required" }}
+                    rules={{ required: "Provider type is required" }}
                     render={({ field }) => (
                       <MultiSelect
                         {...field}
-                        placeholder="Select sources"
-                        error={!!errors.sources}
-                        errorMessage={errors.sources?.message}
+                        placeholder="Select provider type"
+                        error={!!errors.provider_type}
+                        errorMessage={errors.provider_type?.message}
                       >
                         {alertProviders.map((provider) => (
-                          <MultiSelectItem key={provider.id} value={provider.id}>
+                          <MultiSelectItem key={provider.id} value={provider.type}>
                             {provider.type}
                           </MultiSelectItem>
                         ))}
@@ -185,6 +191,46 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     )}
                   />
                 </div>
+                <div className="mt-4">
+                  <label className="flex items-center space-x-2">
+                    <Controller
+                      name="full_deduplication"
+                      control={control}
+                      render={({ field }) => (
+                        <Switch
+                          checked={field.value}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
+                    <span className="text-sm font-medium text-gray-700">Full Deduplication</span>
+                  </label>
+                </div>
+                {fullDeduplication && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ignore Fields
+                    </label>
+                    <Controller
+                      name="ignore_fields"
+                      control={control}
+                      render={({ field }) => (
+                        <MultiSelect
+                          {...field}
+                          placeholder="Select ignore fields"
+                          error={!!errors.ignore_fields}
+                          errorMessage={errors.ignore_fields?.message}
+                        >
+                          {/* Replace this with actual ignore field options */}
+                          <MultiSelectItem value="title">Title</MultiSelectItem>
+                          <MultiSelectItem value="description">Description</MultiSelectItem>
+                          <MultiSelectItem value="severity">Severity</MultiSelectItem>
+                          <MultiSelectItem value="source">Source</MultiSelectItem>
+                        </MultiSelect>
+                      )}
+                    />
+                  </div>
+                )}
                 {errors.root?.serverError && (
                   <Callout className="mt-4" title="Error while saving rule" color="rose">
                     {errors.root.serverError.message}

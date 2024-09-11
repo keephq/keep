@@ -28,3 +28,22 @@ def get_deduplications(
 
     logger.info(deduplications)
     return deduplications
+
+
+@router.get(
+    "/fields",
+    description="Get Optional Fields For Deduplications",
+)
+def get_deduplication_fields(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:deduplications"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Getting deduplication fields")
+
+    alert_deduplicator = AlertDeduplicator(tenant_id)
+    fields = alert_deduplicator.get_deduplication_fields()
+
+    logger.info("Got deduplication fields")
+    return fields
