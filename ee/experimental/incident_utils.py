@@ -1,5 +1,6 @@
 import logging
 import os
+import math
 
 import networkx as nx
 import numpy as np
@@ -330,7 +331,6 @@ async def mine_incidents_and_create_objects(
         if tenant_ai_config.get("last_correlated_batch_start", None):
             alert_lower_timestamp = datetime.fromisoformat(
                 tenant_ai_config.get("last_correlated_batch_start", None))
-            alert_lower_timestamp += timedelta(seconds=alert_batch_stride)
 
         else:
             alert_lower_timestamp = None
@@ -375,14 +375,10 @@ async def mine_incidents_and_create_objects(
 
     logger.info("Getting new alerts and incidents", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
 
-    alerts = query_alerts(
-        tenant_id,
-        limit=use_n_historical_alerts,
-        upper_timestamp=alert_upper_timestamp,
-        lower_timestamp=alert_lower_timestamp, 
-        sort_ascending=True)
+    alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp,
+        lower_timestamp=alert_lower_timestamp, sort_ascending=True)
     
-    incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp, 
+    incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp + incident_validity_threshold, 
                                    lower_timestamp=alert_upper_timestamp - incident_validity_threshold)
 
     pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
@@ -391,7 +387,8 @@ async def mine_incidents_and_create_objects(
     if not alert_lower_timestamp:
         alert_lower_timestamp = min(alert.timestamp for alert in alerts)
 
-    n_batches = int((alert_upper_timestamp - alert_lower_timestamp).total_seconds() // alert_batch_stride) - (STRIDE_DENOMINATOR - 1)
+
+    n_batches = int(math.ceil((alert_upper_timestamp - alert_lower_timestamp).total_seconds() / alert_batch_stride)) - (STRIDE_DENOMINATOR - 1)
     logging.info(
         f"Starting alert correlation. Current batch size: {alert_validity_threshold} seconds. Current \
             batch stride: {alert_batch_stride} seconds. Number of batches to process: {n_batches}")
@@ -526,14 +523,18 @@ async def mine_incidents_and_create_objects(
                 till {alert_upper_timestamp.replace(microsecond=0)} were processed. Total count of processed alerts: {len(alerts)}. \
                     Total count of created incidents: {new_incident_count}. Total count of updated incidents: \
                         {updated_incident_count}."
-
-        else:
+        elif len(alerts) > 0:
             log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. Alerts from {alert_lower_timestamp.replace(microsecond=0)} \
                 till {alert_upper_timestamp.replace(microsecond=0)} were processed. Total count of processed alerts: {len(alerts)}. \
                     Total count of created incidents: {new_incident_count}. Total count of updated incidents: \
                         {updated_incident_count}. This may be due to high alert sparsity or low amount of unique \
-                            alert fingerprints. Increasing "sliding window size" or decreasing minimal amount of \
+                            alert fingerprints. Adding more alerts, increasing "sliding window size" or decreasing minimal amount of \
                             "minimal amount of unique fingerprints in an incident" configuration parameters may help.'
+                            
+        else:
+            log_string = f'{ALGORITHM_VERBOSE_NAME} successfully executed. Alerts from {alert_lower_timestamp.replace(microsecond=0)} \
+                till {alert_upper_timestamp.replace(microsecond=0)} were processed. Total count of processed alerts: {len(alerts)}. \
+                    No incidents were created or updated. Add alerts to the system to enable automatic incident creation.'
 
         pusher_client.trigger(f"private-{tenant_id}", "ai-logs-change", {"log": log_string})
 
