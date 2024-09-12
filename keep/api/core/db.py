@@ -2512,18 +2512,6 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         return deleted
-    
-
-def write_incidents_to_db(tenant_id: str, incidents: List[Incident]):
-    with Session(engine) as session:
-        for incident in incidents:
-            
-            incident.is_confirmed = not incident.is_predicted
-            session.add(incident)
-            
-            # add alert2
-            
-        session.commit()
 
 
 def get_alerts_count(
