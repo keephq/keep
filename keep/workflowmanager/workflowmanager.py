@@ -71,12 +71,7 @@ class WorkflowManager:
             return value == filter_val
 
     def _get_workflow_from_store(self, tenant_id, workflow_model):
-        if workflow_model.is_disabled:
-                    self.logger.debug(
-                        f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
-                        f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
-                    )
-                    continuetry:
+        try:
             # get the actual workflow that can be triggered
             self.logger.info("Getting workflow from store")
             workflow = self.workflow_store.get_workflow(
@@ -110,6 +105,13 @@ class WorkflowManager:
             },
         )
         for workflow_model in all_workflow_models:
+
+            if workflow_model.is_disabled:
+                self.logger.debug(
+                    f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
+                    f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
+                )
+                continue
             workflow = self._get_workflow_from_store(tenant_id, workflow_model)
             if workflow is None:
                 continue
@@ -147,6 +149,12 @@ class WorkflowManager:
             )
             for workflow_model in all_workflow_models:
 
+                if workflow_model.is_disabled:
+                    self.logger.debug(
+                        f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
+                        f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
+                    )
+                    continue
                 workflow = self._get_workflow_from_store(tenant_id, workflow_model)
                 if workflow is None:
                     continue
