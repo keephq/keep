@@ -106,7 +106,7 @@ class WorkflowStore:
     def get_raw_workflow(self, tenant_id: str, workflow_id: str) -> str:
         raw_workflow = get_raw_workflow(tenant_id, workflow_id)
         workflow_yaml = yaml.safe_load(raw_workflow)
-        if "id" in workflow_yaml:
+        if raw_workflow and workflow_yaml:
             #Ensure that old workflows created through uploads are updated with the original UUID.
             workflow_yaml["id"] = workflow_id
         valid_workflow_yaml = {"workflow": workflow_yaml}
@@ -120,9 +120,10 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
         workflow_yaml = yaml.safe_load(workflow)
-        if "id" in workflow_yaml:
+        if raw_workflow and workflow_yaml:
             #Ensure that old workflows created through uploads are updated with the original UUID.
             workflow_yaml["id"] = workflow_id
+
         workflow = self.parser.parse(tenant_id, workflow_yaml)
         if len(workflow) > 1:
             raise HTTPException(

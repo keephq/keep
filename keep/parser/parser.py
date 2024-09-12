@@ -37,7 +37,7 @@ class Parser:
         
 
         # get the workflow id from the database
-        workflow_id = get_workflow_id(tenant_id, workflow.id) 
+        workflow_id = get_workflow_id(tenant_id, workflow.get("id")) 
         # if the workflow id is not found, it means that the workflow is not stored in the db
         # for example when running from CLI
         # so for backward compatibility, we will use the workflow name as the id
