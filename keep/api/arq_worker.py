@@ -83,7 +83,7 @@ def get_arq_worker(queue_name: str) -> Worker:
         "ARQ_KEEP_RESULT", cast=int, default=3600
     )  # duration to keep job results for
     expires = config(
-        "ARQ_EXPIRES", cast=int, default=3600*1000
+        "ARQ_EXPIRES", cast=int, default=3600*1000 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 3600
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
 
     # generate a worker id so each worker will have a different health check key

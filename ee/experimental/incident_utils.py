@@ -378,14 +378,16 @@ async def mine_incidents_and_create_objects(
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp,
         lower_timestamp=alert_lower_timestamp, sort_ascending=True)
     
+    if not alert_lower_timestamp:
+        alert_lower_timestamp = min(alert.timestamp for alert in alerts)
+    
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp + incident_validity_threshold, 
                                    lower_timestamp=alert_upper_timestamp - incident_validity_threshold)
 
     pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
     logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
     
-    if not alert_lower_timestamp:
-        alert_lower_timestamp = min(alert.timestamp for alert in alerts)
+   
 
 
     n_batches = int(math.ceil((alert_upper_timestamp - alert_lower_timestamp).total_seconds() / alert_batch_stride)) - (STRIDE_DENOMINATOR - 1)
