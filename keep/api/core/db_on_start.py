@@ -143,11 +143,6 @@ def try_create_single_tenant(tenant_id: str) -> None:
                     )
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
-                
-            tenant_ai_config = session.exec(select(TenantAIConfig).where(TenantAIConfig.tenant_id == tenant_id)).first()
-            if not tenant_ai_config:
-                logger.info("Creating tenant AI config")
-                session.add(TenantAIConfig(tenant_id=tenant_id, config={'last_correlated_batch_start': ''}))
                     
             # commit the changes
             session.commit()

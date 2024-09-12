@@ -2607,31 +2607,25 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
     return pmi_matrix, fingerint2idx
 
 
-def get_tenant_ai_config(tenant_id: str) -> dict:    
+def get_tenant_config(tenant_id: str) -> dict:    
     with Session(engine) as session:
-        tenant_ai_config = session.exec(
-            select(TenantAIConfig)
-            .where(TenantAIConfig.tenant_id == tenant_id)
+        tenant_data = session.exec(
+            select(Tenant)
+            .where(Tenant.id == tenant_id)
         ).first()
-        return tenant_ai_config.config if tenant_ai_config else {}
+        return tenant_data.configuration if tenant_data else {}
     
 
-def write_tenant_ai_config(tenant_id: str, config: dict) -> TenantAIConfig:
+def write_tenant_config(tenant_id: str, config: dict) -> None:
     with Session(engine) as session:
-        tenant_ai_config = session.exec(
-            select(TenantAIConfig)
-            .where(TenantAIConfig.tenant_id == tenant_id)
+        tenant_data = session.exec(
+            select(Tenant)
+            .where(Tenant.id == tenant_id)
         ).first()
-        
-        if not tenant_ai_config:
-            tenant_ai_config = TenantAIConfig(tenant_id=tenant_id, config=config)
-            session.add(tenant_ai_config)
-        else:
-            tenant_ai_config.config = config
-            
+        tenant_data.configuration = config
         session.commit()
-        session.refresh(tenant_ai_config)
-        return tenant_ai_config
+        session.refresh(tenant_data)
+        return tenant_data
 
 
 def update_incident_summary(

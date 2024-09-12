@@ -37,10 +37,3 @@ class TenantInstallation(SQLModel, table=True):
     bot_id: str
     installed: bool = False
     tenant: Optional[Tenant] = Relationship(back_populates="installations")
-
-
-class TenantAIConfig(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
-    tenant: Tenant = Relationship()
-    config: dict = Field(default={'last_correlated_batch_start': ''}, sa_column=Column(JSON))

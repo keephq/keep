@@ -28,9 +28,8 @@ from keep.api.core.db import (
     update_incident_name,
     write_pmi_matrix_to_temp_file,
     get_pmi_values_from_temp_file,
-    get_tenant_ai_config,
-    write_tenant_ai_config,
-    write_incidents_to_db,
+    get_tenant_config,
+    write_tenant_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -309,7 +308,7 @@ async def mine_incidents_and_create_objects(
     Returns:
     Dict[str, List[Incident]]: a dictionary containing the created incidents
     """
-    # obtain tenant_ai_config
+    # obtain tenant_config
     if not general_temp_dir:
         general_temp_dir = os.environ.get(
             "AI_TEMP_FOLDER", DEFAULT_TEMP_DIR_LOCATION)
@@ -317,7 +316,7 @@ async def mine_incidents_and_create_objects(
     temp_dir = f"{general_temp_dir}/{tenant_id}"
     os.makedirs(temp_dir, exist_ok=True)
 
-    tenant_ai_config = get_tenant_ai_config(tenant_id)
+    tenant_config = get_tenant_config(tenant_id)
 
     # obtain alert-related parameters
     alert_validity_threshold = int(os.environ.get("ALERT_VALIDITY_THRESHOLD", ALERT_VALIDITY_THRESHOLD))
@@ -328,9 +327,9 @@ async def mine_incidents_and_create_objects(
             "MINE_ALERT_UPPER_TIMESTAMP", datetime.now())
 
     if not alert_lower_timestamp:
-        if tenant_ai_config.get("last_correlated_batch_start", None):
+        if tenant_config.get("last_correlated_batch_start", None):
             alert_lower_timestamp = datetime.fromisoformat(
-                tenant_ai_config.get("last_correlated_batch_start", None))
+                tenant_config.get("last_correlated_batch_start", None))
 
         else:
             alert_lower_timestamp = None
@@ -387,9 +386,6 @@ async def mine_incidents_and_create_objects(
     pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
     logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
     
-   
-
-
     n_batches = int(math.ceil((alert_upper_timestamp - alert_lower_timestamp).total_seconds() / alert_batch_stride)) - (STRIDE_DENOMINATOR - 1)
     logging.info(
         f"Starting alert correlation. Current batch size: {alert_validity_threshold} seconds. Current \
@@ -414,7 +410,7 @@ async def mine_incidents_and_create_objects(
 
         logger.info(
             f"Processing batch {batch_idx} with start timestamp {datetime.fromtimestamp(batch_start_ts[batch_idx])} \
-                and end timestamp {datetime.fromtimestamp(batch_end_ts[batch_idx])}. Batch size: {len(batch_alerts)}", 
+                and end timestamp {min(datetime.fromtimestamp(batch_end_ts[batch_idx]), alert_upper_timestamp)}. Batch size: {len(batch_alerts)}", 
             extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
         
         if len(batch_alerts) == 0:
@@ -475,8 +471,8 @@ async def mine_incidents_and_create_objects(
         
     logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}", 
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-    tenant_ai_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
-    write_tenant_ai_config(tenant_id, tenant_ai_config)
+    tenant_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
+    write_tenant_config(tenant_id, tenant_config)
     
     logger.info(f"Writing {len(incidents)} incidents to database", 
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
