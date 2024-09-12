@@ -34,7 +34,6 @@ class Parser:
         """
         # for backward compatibility reasons, the id on the YAML is actually the name
         # and the id is a unique generated id stored in the db
-        workflow_name = workflow.get("name") or "[No workflow Name]"
         
 
         # get the workflow id from the database
