@@ -578,8 +578,8 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
             onDownload: handleDownloadClick,
             onView: handleViewClick,
             onBuilder: handleBuilderClick,
-            runButtonToolTip: message,
-            isRunButtonDisabled: !!isRunButtonDisabled,
+            runButtonToolTip: message || error || "",
+            isRunButtonDisabled: !!isRunButtonDisabled || !isValid,
           })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
@@ -884,8 +884,8 @@ export function WorkflowTileOld({ workflow, providers }: { workflow: Workflow, p
             onDownload: handleDownloadClick,
             onView: handleViewClick,
             onBuilder: handleBuilderClick,
-            runButtonToolTip: message,
-            isRunButtonDisabled: !!isRunButtonDisabled,
+            runButtonToolTip: message || error || "",
+            isRunButtonDisabled: !!isRunButtonDisabled || !isValid,
           })}
         </div>
 
