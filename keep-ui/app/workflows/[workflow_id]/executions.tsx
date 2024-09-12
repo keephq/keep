@@ -153,7 +153,7 @@ export default function WorkflowDetailPage({
     const workflow = { last_executions: data.items } as Partial<Workflow>
     return (
         <>
-            <Card className="relative flex p-4 w-full gap-3">
+            <Card className="relative grid p-4 w-full gap-3 grid-cols-[1fr_4fr]">
                 <SideNavBar workflow={data.workflow} />
                 <div className="relative overflow-auto p-0.5 flex-1 flex-shrink-1">
                     <div className="sticky top-0 flex justify-between items-end">

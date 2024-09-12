@@ -28,7 +28,7 @@ export default function SideNavBar({ workflow }: { workflow: Workflow }) {
     ];
 
     return (
-        <div className="flex flex-col gap-10 pt-6 top-20 p-1 max-w-[270px]">
+        <div className="flex flex-col gap-10 pt-6 top-20 p-1">
             <div className="h-36">
                 <h1 className="text-2xl line-clamp-2 font-extrabold">{workflow.name}</h1>
                 {workflow.description && (
