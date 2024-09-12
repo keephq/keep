@@ -252,7 +252,9 @@ class Parser:
                 self.logger.debug(
                     "Parsing providers from KEEP_PROVIDERS environment variable"
                 )
-                context_manager.providers_context.update(json.loads(providers_json))
+                providers_dict = json.loads(providers_json)
+                self._inject_env_variables(providers_dict)
+                context_manager.providers_context.update(providers_dict)
                 self.logger.debug(
                     "Providers parsed successfully from KEEP_PROVIDERS environment variable"
                 )
@@ -271,6 +273,7 @@ class Parser:
                     self.logger.debug(f"Parsing provider {provider_name} from {env}")
                     # {'authentication': {'webhook_url': 'https://hooks.slack.com/services/...'}}
                     provider_config = json.loads(os.environ.get(env))
+                    self._inject_env_variables(provider_config)
                     context_manager.providers_context[provider_name] = provider_config
                     self.logger.debug(
                         f"Provider {provider_name} parsed successfully from {env}"
@@ -279,6 +282,28 @@ class Parser:
                     self.logger.error(
                         f"Error parsing provider config from environment variable {env}"
                     )
+
+    def _inject_env_variables(self, config):
+        """
+        Recursively inject environment variables into the config.
+        """
+        if isinstance(config, dict):
+            for key, value in config.items():
+                config[key] = self._inject_env_variables(value)
+        elif isinstance(config, list):
+            return [self._inject_env_variables(item) for item in config]
+        elif (
+            isinstance(config, str) and config.startswith("$(") and config.endswith(")")
+        ):
+            env_var = config[2:-1]
+            env_var_val = os.environ.get(env_var)
+            if not env_var_val:
+                self.logger.warning(
+                    f"Environment variable {env_var} not found while injecting into config"
+                )
+                return config
+            return env_var_val
+        return config
 
     def _parse_providers_from_workflow(
         self, context_manager: ContextManager, workflow: dict
@@ -324,7 +349,14 @@ class Parser:
     @staticmethod
     def parse_disabled(workflow_dict: dict) -> bool:
         workflow_is_disabled_in_yml = workflow_dict.get("disabled")
-        return True if (workflow_is_disabled_in_yml == "true" or workflow_is_disabled_in_yml is True) else False
+        return (
+            True
+            if (
+                workflow_is_disabled_in_yml == "true"
+                or workflow_is_disabled_in_yml is True
+            )
+            else False
+        )
 
     @staticmethod
     def parse_provider_parameters(provider_parameters: dict) -> dict:
@@ -534,7 +566,9 @@ class Parser:
             extended_action = actions_context.get(action.get("use"), {})
             yield ParserUtils.deep_merge(action, extended_action)
 
-    def _get_on_failure_action(self, context_manager: ContextManager, workflow: dict) -> Step | None:
+    def _get_on_failure_action(
+        self, context_manager: ContextManager, workflow: dict
+    ) -> Step | None:
         """
         Parse the on-failure action
 
@@ -548,7 +582,11 @@ class Parser:
         self.logger.debug("Parsing on-failure")
         workflow_on_failure = workflow.get("on-failure", {})
         if workflow_on_failure:
-            parsed_action = self._get_action(context_manager=context_manager, action=workflow_on_failure, action_name="on-failure")
+            parsed_action = self._get_action(
+                context_manager=context_manager,
+                action=workflow_on_failure,
+                action_name="on-failure",
+            )
             self.logger.debug("Parsed on-failure successfully")
             return parsed_action
         self.logger.debug("No on-failure action")
