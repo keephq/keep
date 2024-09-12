@@ -120,7 +120,7 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
         workflow_yaml = yaml.safe_load(workflow)
-        if raw_workflow and workflow_yaml:
+        if workflow and workflow_yaml:
             #Ensure that old workflows created through uploads are updated with the original UUID.
             workflow_yaml["id"] = workflow_id
 
