@@ -1,14 +1,13 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { Workflow, Filter } from "./models";
+import { Workflow, Provider, Trigger } from './models';
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
 import Loading from "../loading";
-import { Trigger, Provider } from "./models";
 import {
   Button,
   Text,
@@ -21,13 +20,13 @@ import {
   AccordionBody,
   AccordionHeader,
   Badge,
+  Callout,
 } from "@tremor/react";
 import ProviderForm from "app/providers/provider-form";
 import SlidingPanel from "react-sliding-side-panel";
-import { useFetchProviders } from "app/providers/page.client";
 import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, ExclamationCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
@@ -40,7 +39,9 @@ import {
   MdOutlineKeyboardArrowLeft,
 } from "react-icons/md";
 import { HiBellAlert } from "react-icons/hi2";
+import { BiSolidError } from "react-icons/bi";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
+import useWorklowValidator from "utils/hooks/useWorklowValidator";
 
 function WorkflowMenuSection({
   onDelete,
@@ -260,7 +261,7 @@ export const ProvidersCarousel = ({
   );
 };
 
-function WorkflowTile({ workflow }: { workflow: Workflow }) {
+function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers: FullProvider[]}) {
   // Create a set to keep track of unique providers
   const apiUrl = getApiURL();
   const { data: session } = useSession();
@@ -278,7 +279,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     ?.filters?.find((f) => f.key === "source")?.value;
   const [fallBackIcon, setFallBackIcon] = useState(false);
 
-  const { providers } = useFetchProviders();
+
   const {
     isRunning,
     handleRunClick,
@@ -286,6 +287,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
     isRunButtonDisabled,
     message,
   } = useWorkflowRun(workflow!);
+
+  const { loading, isValid, error } = useWorklowValidator(workflow, providers || null);
+
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
@@ -379,7 +383,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   )
     .map((type) => {
       let fullProvider =
-        providers.find((fp) => fp.type === type) || ({} as FullProvider);
+        providers?.find((fp) => fp.type === type) || ({} as FullProvider);
       let workflowProvider =
         workflowProvidersMap.get(type) || ({} as FullProvider);
 
@@ -541,7 +545,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   };
 
   return (
-    <div className="mt-2.5">
+    <div className="realtive mt-2.5">
       {isRunning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <Loading />
@@ -557,6 +561,16 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         }
       }}
       >
+        {!loading && !isValid && <div className="relative group"><BiSolidError className="absolute top-[-25px] right-[-25px] text-red-500" size={32} />
+          <Callout
+            className="mt-2.5 mb-2.5 absolute top-[-90px] right-5 scale-0 rounded bg-gray-800 text-xs text-white group-hover:scale-100"
+            title="Validation Error"
+            icon={ExclamationCircleIcon}
+          >{error}</Callout>
+
+        </div>}
+
+
         <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
           {!!handleRunClick && WorkflowMenuSection({
             onDelete: handleDeleteClick,
@@ -708,7 +722,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   );
 }
 
-export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
+export function WorkflowTileOld({ workflow, providers }: { workflow: Workflow, providers: FullProvider[] }) {
   // Create a set to keep track of unique providers
   const apiUrl = getApiURL();
   const { data: session } = useSession();
@@ -720,7 +734,7 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  const { providers } = useFetchProviders();
+
   const {
     isRunning,
     handleRunClick,
@@ -728,6 +742,9 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
     message,
     getTriggerModalProps,
   } = useWorkflowRun(workflow!);
+
+  const { loading, isValid, error } = useWorklowValidator(workflow, providers || null);
+
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
@@ -822,7 +839,7 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
   )
     .map((type) => {
       let fullProvider =
-        providers.find((fp) => fp.type === type) || ({} as FullProvider);
+        providers?.find((fp) => fp.type === type) || ({} as FullProvider);
       let workflowProvider =
         workflowProvidersMap.get(type) || ({} as FullProvider);
 
@@ -849,8 +866,15 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <Card>
-        <div className="flex w-full justify-between items-center h-14">
+      <Card className="relative">
+        {!loading && !isValid && <div className="relative group"><BiSolidError className="absolute top-[-40px] right-[-35px] text-red-500" size={32} />
+          <Callout
+            className="mt-2.5 mb-2.5 absolute top-[-100px] right-5 scale-0 rounded bg-gray-800 text-xs text-white group-hover:scale-100"
+            title="Validation Error"
+            icon={ExclamationCircleIcon}
+          >{error}</Callout>
+
+        </div>}        <div className="flex w-full justify-between items-center h-14">
           <Title className="truncate max-w-64 text-left text-lightBlack">
             {workflow.name}
           </Title>

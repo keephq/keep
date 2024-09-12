@@ -276,22 +276,26 @@ def add_or_update_workflow(
     description,
     created_by,
     interval,
-    workflow_raw,
+    update_raw,
     is_disabled,
     updated_by=None,
+    workflow_id=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
         existing_workflow = (
             session.query(Workflow)
-            .filter_by(name=name)
+            .filter_by(id=workflow_id)
             .filter_by(tenant_id=tenant_id)
             .first()
         )
 
         if existing_workflow:
+            workflow_raw = update_raw(existing_workflow.id)
+
             # tb: no need to override the id field here because it has foreign key constraints.
             existing_workflow.tenant_id = tenant_id
+            existing_workflow.name = name
             existing_workflow.description = description
             existing_workflow.updated_by = (
                 updated_by or existing_workflow.updated_by
@@ -305,6 +309,8 @@ def add_or_update_workflow(
 
         else:
             # Create a new workflow
+            # Since the workflow does not exist in the database, we'll include the original workflow_id in the raw data
+            workflow_raw = update_raw(id)
             workflow = Workflow(
                 id=id,
                 name=name,

@@ -235,7 +235,8 @@ export function generateWorkflow(
 
 export function parseWorkflow(
   workflowString: string,
-  providers: Provider[]
+  providers: Provider[],
+  isPureRaw: boolean = false
 ): Definition {
   /**
    * Parse the alert file and generate the definition
@@ -244,16 +245,20 @@ export function parseWorkflow(
     schema: JSON_SCHEMA,
   }) as any;
   // This is to support both old and new structure of workflow
-  const workflow = parsedWorkflowFile.alert
+  let workflow = parsedWorkflowFile.alert
     ? parsedWorkflowFile.alert
     : parsedWorkflowFile.workflow;
+
+  if(isPureRaw) {
+    workflow = parsedWorkflowFile
+  }  
   const steps = [] as V2Step[];
   const workflowSteps =
-    workflow.steps?.map((s: V2Step) => {
+    workflow?.steps?.map((s: V2Step) => {
       s.type = "step";
       return s;
     }) || [];
-  const workflowActions = workflow.actions || [];
+  const workflowActions = workflow?.actions || [];
   const conditions = [] as any;
   [...workflowSteps, ...workflowActions].forEach((action: any) => {
     const stepOrAction = action.type === "step" ? "step" : "action";

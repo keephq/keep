@@ -9,6 +9,7 @@ import { FlowNode } from "../../app/workflows/builder/builder-store";
 import { Provider } from "app/providers/providers";
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
+import { validate as isUUID } from 'uuid';
 
 const layoutOptions = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
@@ -175,8 +176,12 @@ const useWorkflowInitialization = (
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
-      const name = parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
-
+      let name = parsedWorkflow?.properties?.name
+      if(!name) {
+        name = !isUUID(parsedWorkflow?.properties?.id) 
+        ? parsedWorkflow?.properties?.id 
+        : "";
+      }
       const sequences = [
         {
           id: "start",
@@ -199,6 +204,7 @@ const useWorkflowInitialization = (
       ];
       const intialPositon = { x: 0, y: 50 };
       let { nodes, edges } = processWorkflowV2(sequences, intialPositon, true);
+      //TO DO update all the flow data at one go instead of one by one
       setSelectedNode(null);
       setFirstInitilisationDone(false)
       setIsLayouted(false);

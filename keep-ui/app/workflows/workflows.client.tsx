@@ -21,6 +21,7 @@ import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
+import { useFetchProviders } from "app/providers/page.client";
 
 export default function WorkflowsPage() {
   const apiUrl = getApiURL();
@@ -50,6 +51,9 @@ export default function WorkflowsPage() {
       : null,
     (url: string) => fetcher(url, session?.accessToken!)
   );
+
+  const { providers } = useFetchProviders();
+
 
   /**
     Add Mock Workflows (6 Random Workflows on Every Request)
@@ -299,13 +303,13 @@ export default function WorkflowsPage() {
             ) : !isSwitchOn ? (
               <div className="flex flex-wrap gap-2">
                 {data.map((workflow) => (
-                  <WorkflowTileOld key={workflow.id} workflow={workflow} />
+                  <WorkflowTileOld key={workflow.id} workflow={workflow} providers={providers}/>
                 ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full gap-4 p-4">
                 {data.map((workflow) => (
-                  <WorkflowTile key={workflow.id} workflow={workflow} />
+                  <WorkflowTile key={workflow.id} workflow={workflow} providers={providers}/>
                 ))}
               </div>
             )}
