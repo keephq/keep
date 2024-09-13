@@ -1,8 +1,8 @@
 import io
 import logging
 import os
-import uuid
 import random
+import uuid
 
 import requests
 import validators
@@ -15,17 +15,16 @@ from keep.api.core.db import (
     get_all_workflows,
     get_all_workflows_yamls,
     get_raw_workflow,
+    get_workflow,
     get_workflow_execution,
     get_workflows_with_last_execution,
     get_workflows_with_last_executions_v2,
 )
 from keep.api.models.db.workflow import Workflow as WorkflowModel
+from keep.api.models.workflow import ProviderDTO
 from keep.parser.parser import Parser
-from keep.workflowmanager.workflow import Workflow
 from keep.providers.providers_factory import ProvidersFactory
-from keep.api.models.workflow import (
-    ProviderDTO,
-)
+from keep.workflowmanager.workflow import Workflow
 
 
 class WorkflowStore:
@@ -62,11 +61,19 @@ class WorkflowStore:
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
-        try:
-            delete_workflow(tenant_id, workflow_id)
-        except Exception:
+        workflow = get_workflow(tenant_id, workflow_id)
+        if not workflow:
             raise HTTPException(
                 status_code=404, detail=f"Workflow {workflow_id} not found"
+            )
+        if workflow.provisioned:
+            raise HTTPException(403, detail="Cannot delete a provisioned workflow")
+        try:
+            delete_workflow(tenant_id, workflow_id)
+        except Exception as e:
+            self.logger.exception(f"Error deleting workflow {workflow_id}: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to delete workflow {workflow_id}"
             )
 
     def _parse_workflow_to_dict(self, workflow_path: str) -> dict:
@@ -133,7 +140,9 @@ class WorkflowStore:
         workflows = get_all_workflows(tenant_id)
         return workflows
 
-    def get_all_workflows_with_last_execution(self, tenant_id: str, is_v2: bool = False) -> list[dict]:
+    def get_all_workflows_with_last_execution(
+        self, tenant_id: str, is_v2: bool = False
+    ) -> list[dict]:
         # list all tenant's workflows
         if is_v2:
             workflows = get_workflows_with_last_executions_v2(tenant_id, 15)
@@ -247,7 +256,9 @@ class WorkflowStore:
             raise e
         return workflow
 
-    def get_random_workflow_templates(self, tenant_id: str, workflows_dir: str, limit: int) -> list[dict]:
+    def get_random_workflow_templates(
+        self, tenant_id: str, workflows_dir: str, limit: int
+    ) -> list[dict]:
         """
         Get random workflows from a directory.
         Args:
@@ -261,7 +272,9 @@ class WorkflowStore:
         if not os.path.isdir(workflows_dir):
             raise FileNotFoundError(f"Directory {workflows_dir} does not exist")
 
-        workflow_yaml_files = [f for f in os.listdir(workflows_dir) if f.endswith(('.yaml', '.yml'))]
+        workflow_yaml_files = [
+            f for f in os.listdir(workflows_dir) if f.endswith((".yaml", ".yml"))
+        ]
         if not workflow_yaml_files:
             raise FileNotFoundError(f"No workflows found in directory {workflows_dir}")
 
@@ -275,15 +288,17 @@ class WorkflowStore:
                 file_path = os.path.join(workflows_dir, file)
                 workflow_yaml = self._parse_workflow_to_dict(file_path)
                 if "workflow" in workflow_yaml:
-                    workflow_yaml['name'] = workflow_yaml['workflow']['id']
-                    workflow_yaml['workflow_raw'] = yaml.dump(workflow_yaml)
-                    workflow_yaml['workflow_raw_id'] = workflow_yaml['workflow']['id']
+                    workflow_yaml["name"] = workflow_yaml["workflow"]["id"]
+                    workflow_yaml["workflow_raw"] = yaml.dump(workflow_yaml)
+                    workflow_yaml["workflow_raw_id"] = workflow_yaml["workflow"]["id"]
                     workflows.append(workflow_yaml)
                     count += 1
 
                 self.logger.info(f"Workflow from {file} fetched successfully")
             except Exception as e:
-                self.logger.error(f"Error parsing or fetching workflow from {file}: {e}")
+                self.logger.error(
+                    f"Error parsing or fetching workflow from {file}: {e}"
+                )
         return workflows
 
     def group_last_workflow_executions(self, workflows: list[dict]) -> list[dict]:
@@ -294,7 +309,7 @@ class WorkflowStore:
         self.logger.info(f"workflow_executions: {workflows}")
         workflow_dict = {}
         for item in workflows:
-            workflow,started,execution_time,status = item
+            workflow, started, execution_time, status = item
             workflow_id = workflow.id
 
             # Initialize the workflow if not already in the dictionary
@@ -304,14 +319,14 @@ class WorkflowStore:
                     "workflow_last_run_started": None,
                     "workflow_last_run_time": None,
                     "workflow_last_run_status": None,
-                    "workflow_last_executions": []
+                    "workflow_last_executions": [],
                 }
 
             # Update the latest execution details if available
-            if workflow_dict[workflow_id]["workflow_last_run_started"] is None :
+            if workflow_dict[workflow_id]["workflow_last_run_started"] is None:
                 workflow_dict[workflow_id]["workflow_last_run_status"] = status
                 workflow_dict[workflow_id]["workflow_last_run_started"] = started
-                workflow_dict[workflow_id]["workflow_last_run_time"] = started    
+                workflow_dict[workflow_id]["workflow_last_run_time"] = started
 
             # Add the execution to the list of executions
             if started is not None:
@@ -319,7 +334,7 @@ class WorkflowStore:
                     {
                         "status": status,
                         "execution_time": execution_time,
-                        "started": started
+                        "started": started,
                     }
                 )
         # Convert the dictionary to a list of results
@@ -329,14 +344,16 @@ class WorkflowStore:
                 "workflow_last_run_status": workflow_info["workflow_last_run_status"],
                 "workflow_last_run_time": workflow_info["workflow_last_run_time"],
                 "workflow_last_run_started": workflow_info["workflow_last_run_started"],
-                "workflow_last_executions": workflow_info["workflow_last_executions"]
+                "workflow_last_executions": workflow_info["workflow_last_executions"],
             }
             for workflow_id, workflow_info in workflow_dict.items()
         ]
 
         return results
 
-    def get_workflow_meta_data(self, tenant_id: str, workflow: dict, installed_providers_by_type: dict):
+    def get_workflow_meta_data(
+        self, tenant_id: str, workflow: dict, installed_providers_by_type: dict
+    ):
         providers_dto = []
         triggers = []
 
@@ -354,19 +371,28 @@ class WorkflowStore:
             # Parse the workflow YAML safely
             workflow_yaml = yaml.safe_load(workflow_raw_data)
             if not workflow_yaml:
-                self.logger.error(f"Parsed workflow_yaml is empty or invalid: {workflow_raw_data}")
+                self.logger.error(
+                    f"Parsed workflow_yaml is empty or invalid: {workflow_raw_data}"
+                )
                 return providers_dto, triggers
 
             providers = self.parser.get_providers_from_workflow(workflow_yaml)
         except Exception as e:
             # Improved logging to capture more details about the error
-            self.logger.error(f"Failed to parse workflow in get_workflow_meta_data: {e}, workflow: {workflow}")
-            return providers_dto, triggers  # Return empty providers and triggers in case of error
+            self.logger.error(
+                f"Failed to parse workflow in get_workflow_meta_data: {e}, workflow: {workflow}"
+            )
+            return (
+                providers_dto,
+                triggers,
+            )  # Return empty providers and triggers in case of error
 
         # Step 2: Process providers and add them to DTO
         for provider in providers:
             try:
-                provider_data = installed_providers_by_type[provider.get("type")][provider.get("name")]
+                provider_data = installed_providers_by_type[provider.get("type")][
+                    provider.get("name")
+                ]
                 provider_dto = ProviderDTO(
                     name=provider_data.name,
                     type=provider_data.type,
@@ -377,9 +403,13 @@ class WorkflowStore:
             except KeyError:
                 # Handle case where the provider is not installed
                 try:
-                    conf = ProvidersFactory.get_provider_required_config(provider.get("type"))
+                    conf = ProvidersFactory.get_provider_required_config(
+                        provider.get("type")
+                    )
                 except ModuleNotFoundError:
-                    self.logger.warning(f"Non-existing provider in workflow: {provider.get('type')}")
+                    self.logger.warning(
+                        f"Non-existing provider in workflow: {provider.get('type')}"
+                    )
                     conf = None
 
                 # Handle providers based on whether they require config
@@ -387,11 +417,13 @@ class WorkflowStore:
                     name=provider.get("name"),
                     type=provider.get("type"),
                     id=None,
-                    installed=(conf is None),  # Consider it installed if no config is required
+                    installed=(
+                        conf is None
+                    ),  # Consider it installed if no config is required
                 )
                 providers_dto.append(provider_dto)
 
         # Step 3: Extract triggers from workflow
         triggers = self.parser.get_triggers_from_workflow(workflow_yaml)
 
-        return providers_dto, triggers   
+        return providers_dto, triggers

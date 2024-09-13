@@ -45,6 +45,8 @@ class ProvidersService:
         provider_name: str,
         provider_type: str,
         provider_config: Dict[str, Any],
+        provisioned: bool = False,
+        validate_scopes: bool = True,
     ) -> Dict[str, Any]:
         provider_unique_id = uuid.uuid4().hex
         logger.info(
@@ -69,7 +71,10 @@ class ProvidersService:
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-        validated_scopes = provider.validate_scopes()
+        if validate_scopes:
+            validated_scopes = provider.validate_scopes()
+        else:
+            validated_scopes = {}
 
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
@@ -89,6 +94,7 @@ class ProvidersService:
                 configuration_key=secret_name,
                 validatedScopes=validated_scopes,
                 consumer=provider.is_consumer,
+                provisioned=provisioned,
             )
             try:
                 session.add(provider_model)
@@ -128,6 +134,9 @@ class ProvidersService:
 
         if not provider:
             raise HTTPException(404, detail="Provider not found")
+
+        if provider.provisioned:
+            raise HTTPException(403, detail="Cannot update a provisioned provider")
 
         provider_config = {
             "authentication": provider_info,
@@ -169,6 +178,9 @@ class ProvidersService:
 
         if not provider:
             raise HTTPException(404, detail="Provider not found")
+
+        if provider.provisioned:
+            raise HTTPException(403, detail="Cannot delete a provisioned provider")
 
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
@@ -238,12 +250,18 @@ class ProvidersService:
                 logger.info(f"Provider {provider_name} already installed")
                 continue
             logger.info(f"Installing provider {provider_name}")
-            ProvidersService.install_provider(
-                tenant_id=tenant_id,
-                installed_by="system",
-                provider_id=provider_config["type"],
-                provider_name=provider_name,
-                provider_type=provider_config["type"],
-                provider_config=provider_config["authentication"],
-            )
+            try:
+                ProvidersService.install_provider(
+                    tenant_id=tenant_id,
+                    installed_by="system",
+                    provider_id=provider_config["type"],
+                    provider_name=provider_name,
+                    provider_type=provider_config["type"],
+                    provider_config=provider_config["authentication"],
+                    provisioned=True,
+                    validate_scopes=False,
+                )
+            except Exception:
+                logger.exception(f"Failed to provision provider {provider_name}")
+                continue
             logger.info(f"Provider {provider_name} provisioned")
