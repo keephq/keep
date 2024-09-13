@@ -10,6 +10,7 @@ import logging
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ import numpy as np
 import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
+from networkx import is_connected
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, null, update
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -46,12 +48,34 @@ logger = logging.getLogger(__name__)
 
 
 # this is a workaround for gunicorn to load the env vars
-#   becuase somehow in gunicorn it doesn't load the .env file
+# because somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 
 
 engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
+
+
+class IncidentSorting(Enum):
+    creation_time = "creation_time"
+    start_time = "start_time"
+    last_seen_time = "last_seen_time"
+    severity = "severity"
+    status = "status"
+    alerts_count = "alerts_count"
+
+    creation_time_desc = "-creation_time"
+    start_time_desc = "-start_time"
+    last_seen_time_desc = "-last_seen_time"
+    severity_desc = "-severity"
+    status_desc = "-status"
+    alerts_count_desc = "-alerts_count"
+
+    def get_order_by(self):
+        if self.value.startswith("-"):
+            return desc(col(getattr(Incident, self.value[1:])))
+
+        return col(getattr(Incident, self.value))
 
 
 def get_session() -> Session:
@@ -666,10 +690,8 @@ def get_workflow_executions(
         ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = (
-            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-        )
-
+        query = (query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+)
         # Execute the query
         workflow_executions = query.all()
 
@@ -2144,6 +2166,8 @@ def get_last_incidents(
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
     is_confirmed: bool = False,
+    sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
+    with_alerts: bool = False,
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -2154,6 +2178,11 @@ def get_last_incidents(
         offset (int): Current offset for
         timeframe (int|null): Return incidents only for the last <N> days
         is_confirmed (bool): Return confirmed incidents or predictions
+        upper_timestamp: datetime = None,
+        lower_timestamp: datetime = None,
+        is_confirmed (bool): filter incident candidates or real incidents
+        sorting: Optional[IncidentSorting]: how to sort the data
+        with_alerts (bool): Pre-load alerts or not
 
     Returns:
         List[Incident]: A list of Incident objects.
@@ -2163,11 +2192,13 @@ def get_last_incidents(
             session.query(
                 Incident,
             )
-            # .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
-            ).order_by(desc(Incident.creation_time))
+            )
         )
+
+        if with_alerts:
+            query = query.options(joinedload(Incident.alerts))
 
         if timeframe:
             query = query.filter(
@@ -2184,10 +2215,13 @@ def get_last_incidents(
         elif lower_timestamp:
             query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
+        if sorting:
+            query = query.order_by(sorting.get_order_by())
+
         total_count = query.count()
 
         # Order by start_time in descending order and limit the results
-        query = query.order_by(desc(Incident.start_time)).limit(limit).offset(offset)
+        query = query.limit(limit).offset(offset)
         # Execute the query
         incidents = query.all()
 
@@ -2216,9 +2250,11 @@ def create_incident_from_dict(
     tenant_id: str, incident_data: dict
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
+    if "is_confirmed" not in incident_data:
+        incident_data["is_confirmed"] = not is_predicted
     with Session(engine) as session:
         new_incident = Incident(
-            **incident_data, tenant_id=tenant_id, is_confirmed=not is_predicted
+            **incident_data, tenant_id=tenant_id
         )
         session.add(new_incident)
         session.commit()
