@@ -41,7 +41,7 @@ import {
 import { HiBellAlert } from "react-icons/hi2";
 import { BiSolidError } from "react-icons/bi";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
-import useWorklowValidator from "utils/hooks/useWorklowValidator";
+import useWorkflowValidator from "utils/hooks/useWorkflowValidator";
 
 function WorkflowMenuSection({
   onDelete,
@@ -288,7 +288,7 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
     message,
   } = useWorkflowRun(workflow!);
 
-  const { loading, isValid, error } = useWorklowValidator(workflow, providers || null);
+  const { loading, isValid, error } = useWorkflowValidator(workflow, providers || null);
 
 
   const handleConnectProvider = (provider: FullProvider) => {
@@ -743,7 +743,7 @@ export function WorkflowTileOld({ workflow, providers }: { workflow: Workflow, p
     getTriggerModalProps,
   } = useWorkflowRun(workflow!);
 
-  const { loading, isValid, error } = useWorklowValidator(workflow, providers || null);
+  const { loading, isValid, error } = useWorkflowValidator(workflow, providers || null);
 
 
   const handleConnectProvider = (provider: FullProvider) => {

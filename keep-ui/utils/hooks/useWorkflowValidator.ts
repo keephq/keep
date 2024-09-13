@@ -14,7 +14,7 @@ import { Provider } from "app/providers/providers";
 import { Definition } from "app/workflows/builder/builder-store";
 import { Workflow } from "app/workflows/models";
 
-export default function useWorklowValidator(
+export default function useWorkflowValidator(
     workflow: Workflow,
     providers: Provider[] | null
 ) {
