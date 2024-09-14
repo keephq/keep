@@ -955,7 +955,7 @@ const ProviderForm = ({
         </Button>
         {installedProvidersMode && Object.keys(provider.config).length > 0 && (
           <>
-            <Button onClick={deleteProvider} color="orange" className="mr-2.5" disabled={provider.provisioned}>
+            <Button onClick={deleteProvider} color="orange" className="mr-2.5" disabled={provider.provisioned} variant="secondary">
               Delete
             </Button>
             <div className="relative">
