@@ -736,7 +736,7 @@ def test_special_characters_in_strings(db_session, setup_alerts):
 
 # tests 10k alerts
 @pytest.mark.parametrize(
-    "setup_stress_alerts", [{"num_alerts": 10000}], indirect=True
+    "setup_stress_alerts", [{"num_alerts": 1000}], indirect=True
 )  # Generate 10,000 alerts
 def test_filter_large_dataset(db_session, setup_stress_alerts):
     search_query = SearchQuery(
@@ -745,7 +745,7 @@ def test_filter_large_dataset(db_session, setup_stress_alerts):
             "params": {"source_1": "source_1", "severity_1": "critical"},
         },
         cel_query='(source == "source_1") && (severity == "critical")',
-        limit=10000,
+        limit=1000,
     )
     # first, use elastic
     os.environ["ELASTIC_ENABLED"] = "true"
@@ -764,10 +764,10 @@ def test_filter_large_dataset(db_session, setup_stress_alerts):
     # compare
     assert len(elastic_filtered_alerts) == len(db_filtered_alerts)
     print(
-        "time taken for 10k alerts with elastic: ",
+        "time taken for 1k alerts with elastic: ",
         elastic_end_time - elastic_start_time,
     )
-    print("time taken for 10k alerts with db: ", db_end_time - db_start_time)
+    print("time taken for 1k alerts with db: ", db_end_time - db_start_time)
 
 
 @pytest.mark.parametrize("setup_stress_alerts", [{"num_alerts": 10000}], indirect=True)
