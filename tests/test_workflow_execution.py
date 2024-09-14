@@ -475,3 +475,103 @@ def test_workflow_execution3(
     elif expected_tier == 1:
         assert workflow_execution.results["send-slack-message-tier-0"] == []
         assert "Tier 1" in workflow_execution.results["send-slack-message-tier-1"][0]
+
+
+
+workflow_definition_for_enabled_disabled = """workflow:
+id: %s
+description: Handle alerts based on startedAt timestamp
+triggers:
+- type: alert
+  filters:
+  - key: name
+    value: "server-is-down"
+actions:
+- name: send-slack-message-tier-0
+  if: keep.get_firing_time('{{ alert }}', 'minutes') > 0 and keep.get_firing_time('{{ alert }}', 'minutes') < 10
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 0 Alert: {{ alert.name }} - {{ alert.description }}
+        Alert details: {{ alert }}"
+- name: send-slack-message-tier-1
+  if: "keep.get_firing_time('{{ alert }}', 'minutes') >= 10 and keep.get_firing_time('{{ alert }}', 'minutes') < 30"
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+         Alert details: {{ alert }}"
+"""
+
+
+def test_workflow_execution_with_disabled_workflow(
+    db_session,
+    create_alert,
+    workflow_manager,
+):
+    enabled_id = "enabled-workflow"
+    enabled_workflow = Workflow(
+        id=enabled_id,
+        name="enabled-workflow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="This workflow is enabled and should be executed",
+        created_by="test@keephq.dev",
+        interval=0,
+        is_disabled=False,
+        workflow_raw=workflow_definition_for_enabled_disabled % enabled_id
+    )
+
+    disabled_id = "disabled-workflow"
+    disabled_workflow = Workflow(
+        id=disabled_id,
+        name="disabled-workflow",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="This workflow is disabled and should not be executed",
+        created_by="test@keephq.dev",
+        interval=0,
+        is_disabled=True,
+        workflow_raw=workflow_definition_for_enabled_disabled % disabled_id
+    )
+
+    db_session.add(enabled_workflow)
+    db_session.add(disabled_workflow)
+    db_session.commit()
+
+    base_time = datetime.now(tz=pytz.utc)
+
+    create_alert("fp1", AlertStatus.FIRING, base_time)
+    current_alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-down",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp1",
+    )
+
+    # Sleep one second to avoid the case where tier0 alerts are not triggered
+    time.sleep(1)
+
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    enabled_workflow_execution = None
+    disabled_workflow_execution = None
+    count = 0
+
+    while (enabled_workflow_execution is None and disabled_workflow_execution is None) and count < 30:
+        enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, enabled_id
+        )
+        disabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, disabled_id
+        )
+
+        time.sleep(1)
+        count += 1
+
+    assert enabled_workflow_execution is not None
+    assert enabled_workflow_execution.status == "success"
+
+    assert disabled_workflow_execution is None

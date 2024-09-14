@@ -79,6 +79,12 @@ class WorkflowManager:
                 },
             )
             for workflow_model in all_workflow_models:
+                if workflow_model.is_disabled:
+                    self.logger.debug(
+                        f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
+                        f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
+                    )
+                    continue
                 try:
                     # get the actual workflow that can be triggered
                     self.logger.info("Getting workflow from store")

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.24.0"
+version = "0.24.3"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -93,6 +93,7 @@ quickchart-io = "^2.0.0"
 scipy = "^1.14.1"
 networkx = "^3.3"
 google-auth = "2.34.0"
+clickhouse-driver = "^0.2.9"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"

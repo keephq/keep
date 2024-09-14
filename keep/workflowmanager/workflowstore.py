@@ -22,6 +22,10 @@ from keep.api.core.db import (
 from keep.api.models.db.workflow import Workflow as WorkflowModel
 from keep.parser.parser import Parser
 from keep.workflowmanager.workflow import Workflow
+from keep.providers.providers_factory import ProvidersFactory
+from keep.api.models.workflow import (
+    ProviderDTO,
+)
 
 
 class WorkflowStore:
@@ -42,6 +46,7 @@ class WorkflowStore:
             workflow["name"] = workflow_name
         else:
             workflow_name = workflow.get("name")
+
         workflow = add_or_update_workflow(
             id=str(uuid.uuid4()),
             name=workflow_name,
@@ -49,6 +54,7 @@ class WorkflowStore:
             description=workflow.get("description"),
             created_by=created_by,
             interval=interval,
+            is_disabled=Parser.parse_disabled(workflow),
             workflow_raw=yaml.dump(workflow),
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")
@@ -329,3 +335,63 @@ class WorkflowStore:
         ]
 
         return results
+
+    def get_workflow_meta_data(self, tenant_id: str, workflow: dict, installed_providers_by_type: dict):
+        providers_dto = []
+        triggers = []
+
+        # Early return if workflow is None
+        if workflow is None:
+            return providers_dto, triggers
+
+        # Step 1: Load workflow YAML and handle potential parsing errors more thoroughly
+        try:
+            workflow_raw_data = workflow.workflow_raw
+            if not isinstance(workflow_raw_data, str):
+                self.logger.error(f"workflow_raw is not a string workflow: {workflow}")
+                return providers_dto, triggers
+
+            # Parse the workflow YAML safely
+            workflow_yaml = yaml.safe_load(workflow_raw_data)
+            if not workflow_yaml:
+                self.logger.error(f"Parsed workflow_yaml is empty or invalid: {workflow_raw_data}")
+                return providers_dto, triggers
+
+            providers = self.parser.get_providers_from_workflow(workflow_yaml)
+        except Exception as e:
+            # Improved logging to capture more details about the error
+            self.logger.error(f"Failed to parse workflow in get_workflow_meta_data: {e}, workflow: {workflow}")
+            return providers_dto, triggers  # Return empty providers and triggers in case of error
+
+        # Step 2: Process providers and add them to DTO
+        for provider in providers:
+            try:
+                provider_data = installed_providers_by_type[provider.get("type")][provider.get("name")]
+                provider_dto = ProviderDTO(
+                    name=provider_data.name,
+                    type=provider_data.type,
+                    id=provider_data.id,
+                    installed=True,
+                )
+                providers_dto.append(provider_dto)
+            except KeyError:
+                # Handle case where the provider is not installed
+                try:
+                    conf = ProvidersFactory.get_provider_required_config(provider.get("type"))
+                except ModuleNotFoundError:
+                    self.logger.warning(f"Non-existing provider in workflow: {provider.get('type')}")
+                    conf = None
+
+                # Handle providers based on whether they require config
+                provider_dto = ProviderDTO(
+                    name=provider.get("name"),
+                    type=provider.get("type"),
+                    id=None,
+                    installed=(conf is None),  # Consider it installed if no config is required
+                )
+                providers_dto.append(provider_dto)
+
+        # Step 3: Extract triggers from workflow
+        triggers = self.parser.get_triggers_from_workflow(workflow_yaml)
+
+        return providers_dto, triggers   
