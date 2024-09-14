@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import sys
 
@@ -134,6 +135,12 @@ def test_reprovision_workflow(monkeypatch, db_session, client, test_app):
     # Reinitialize the TestClient with the new app instance
     from keep.api.api import get_app
 
+    app = get_app()
+
+    # Manually trigger the startup event
+    for event_handler in app.router.on_startup:
+        asyncio.run(event_handler())
+
     client = TestClient(get_app())
 
     response = client.get("/workflows", headers={"x-api-key": "someapikey"})
@@ -175,7 +182,7 @@ def test_provision_provider(db_session, client, test_app):
     ],
     indirect=True,
 )
-def test_reprovision_provder(monkeypatch, db_session, client, test_app):
+def test_reprovision_provider(monkeypatch, db_session, client, test_app):
     response = client.get("/providers", headers={"x-api-key": "someapikey"})
     assert response.status_code == 200
     # 3 workflows and 3 provisioned workflows
@@ -197,7 +204,13 @@ def test_reprovision_provder(monkeypatch, db_session, client, test_app):
     # Reinitialize the TestClient with the new app instance
     from keep.api.api import get_app
 
-    client = TestClient(get_app())
+    app = get_app()
+
+    # Manually trigger the startup event
+    for event_handler in app.router.on_startup:
+        asyncio.run(event_handler())
+
+    client = TestClient(app)
 
     # Step 3: Verify if the new provider is provisioned after reloading
     response = client.get("/providers", headers={"x-api-key": "someapikey"})

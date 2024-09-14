@@ -245,17 +245,16 @@ def get_app(
     # if any endpoints needed, add them on_start
     identity_manager.on_start(app)
 
-    # provision providers from env. relevant only on single tenant.
-    logger.info("Provisioning providers and workflows")
-    ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
-    logger.info("Providers loaded successfully")
-    WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
-    logger.info("Workflows provisioned successfully")
-
     @app.on_event("startup")
     async def on_startup():
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
+        # provision providers from env. relevant only on single tenant.
+        logger.info("Provisioning providers and workflows")
+        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
+        logger.info("Providers loaded successfully")
+        WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
+        logger.info("Workflows provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler
