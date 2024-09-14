@@ -1312,7 +1312,7 @@ def test_severity_comparisons(
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_alerts_enrichment_in_search(client, db_session, test_app, elastic_client):
+def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_client):
 
     rule = MappingRule(
         id=1,
