@@ -20,11 +20,12 @@ class Parser:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def _get_workflow_id(self, tenant_id, workflow: dict) -> str:
+    def _get_workflow_id(self, tenant_id, workflow: dict, workflow_not_found_throw_error=False) -> str:
         """Support both CLI and API workflows
 
         Args:
             workflow (dict): _description_
+            workflow_not_found_throw_error: (bool, optional): _description_. Defaults to False.
 
         Raises:
             ValueError: _description_
@@ -32,16 +33,16 @@ class Parser:
         Returns:
             str: _description_
         """
-        # for backward compatibility reasons, the id on the YAML is actually the name
-        # and the id is a unique generated id stored in the db
-        
+
+        if workflow_not_found_throw_error and not workflow.get("id"): 
+            raise ValueError("Workflow dict must have an id")
 
         # get the workflow id from the database
         workflow_id = get_workflow_id(tenant_id, workflow.get("id")) 
-        # if the workflow id is not found, it means that the workflow is not stored in the db
-        # for example when running from CLI
-        # so for backward compatibility, we will use the workflow name as the id
-        # todo - refactor CLI to use db also
+
+        if workflow_not_found_throw_error: 
+            raise ValueError(f"Workflow with id {workflow.get('id')} does not exist in the database for tenant {tenant_id}")
+
         return workflow_id
 
     def parse(
@@ -50,12 +51,14 @@ class Parser:
         parsed_workflow_yaml: dict,
         providers_file: str = None,
         actions_file: str = None,
+        workflow_not_found_throw_error: bool = False
     ) -> typing.List[Workflow]:
         """_summary_
 
         Args:
             parsed_workflow_yaml (str): could be a url or a file path
             providers_file (str, optional): _description_. Defaults to None.
+            workflow_not_found_throw_error: (bool, optional): _description_. Defaults to False.
 
         Returns:
             typing.List[Workflow]: _description_
@@ -75,6 +78,7 @@ class Parser:
                     workflow_providers,
                     actions_file,
                     workflow_actions,
+                    workflow_not_found_throw_error
                 )
                 for workflow in raw_workflows
             ]
@@ -130,9 +134,10 @@ class Parser:
         workflow_providers: dict = None,
         actions_file: str = None,
         workflow_actions: dict = None,
+        workflow_not_found_throw_error: bool = False
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
-        workflow_id = self._get_workflow_id(tenant_id, workflow)
+        workflow_id = self._get_workflow_id(tenant_id, workflow, workflow_not_found_throw_error)
         context_manager = ContextManager(
             tenant_id=tenant_id,
             workflow_id=workflow_id,

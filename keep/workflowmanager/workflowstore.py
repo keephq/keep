@@ -50,7 +50,7 @@ class WorkflowStore:
         workflow_id = workflow.get("id")
         interval = self.parser.parse_interval(workflow)
         if not workflow.get("name"):  # workflow name is None or empty string
-            workflow_name = workflow_id if self._is_not_uuid(workflow_id) else "[No Workflow Name]"
+            workflow_name = workflow_id if workflow_id and self._is_not_uuid(workflow_id) else "[No Workflow Name]"
             workflow["name"] = workflow_name
         else:
             workflow_name = workflow.get("name")
@@ -124,6 +124,7 @@ class WorkflowStore:
             #Ensure that old workflows created through uploads are updated with the original UUID.
             workflow_yaml["id"] = workflow_id
 
+        # Ensure backward compatibility. Any workflow created without an ID or missing the original workflow.id in the workflow_raw will be updated with the current workflow.id.
         workflow = self.parser.parse(tenant_id, workflow_yaml)
         if len(workflow) > 1:
             raise HTTPException(
@@ -138,9 +139,10 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
 
-    def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
+    #if we want to check strictly if a workflow exists we can pass workflow_not_found_throw_error=True
+    def get_workflow_from_dict(self, tenant_id: str, workflow: dict, workflow_not_found_throw_error=False) -> Workflow:
         logging.info("Parsing workflow from dict", extra={"workflow": workflow})
-        workflow = self.parser.parse(tenant_id, workflow)
+        workflow = self.parser.parse(tenant_id, workflow, workflow_not_found_throw_error=workflow_not_found_throw_error)
         if workflow:
             return workflow[0]
         else:
@@ -190,6 +192,7 @@ class WorkflowStore:
         if isinstance(workflow_path, tuple):
             for workflow_url in workflow_path:
                 workflow_yaml = self._parse_workflow_to_dict(workflow_url)
+                #In this case while parsing, it's not necessary to strictly verify whether the workflow exists.
                 workflows.extend(
                     self.parser.parse(
                         tenant_id, workflow_yaml, providers_file, actions_file
@@ -203,6 +206,7 @@ class WorkflowStore:
             )
         else:
             workflow_yaml = self._parse_workflow_to_dict(workflow_path)
+            #In this case while parsing, it's not necessary to strictly verify whether the workflow exists.
             workflows = self.parser.parse(
                 tenant_id, workflow_yaml, providers_file, actions_file
             )
@@ -231,6 +235,7 @@ class WorkflowStore:
                     os.path.join(workflows_dir, file)
                 )
                 try:
+                    #In this case while parsing, it's not necessary to strictly verify whether the workflow exists.
                     workflows.extend(
                         self.parser.parse(
                             tenant_id,

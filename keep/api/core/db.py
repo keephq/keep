@@ -278,8 +278,8 @@ def add_or_update_workflow(
     interval,
     update_raw,
     is_disabled,
+    workflow_id,
     updated_by=None,
-    workflow_id=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
@@ -660,12 +660,12 @@ def delete_workflow(tenant_id, workflow_id):
             session.commit()
 
 
-def get_workflow_id(tenant_id, workflow_name):
+def get_workflow_id(tenant_id, workflow_id):
     with Session(engine) as session:
         workflow = session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
-            .where(Workflow.name == workflow_name)
+            .where(Workflow.id == workflow_id)
             .where(Workflow.is_deleted == False)
         ).first()
 

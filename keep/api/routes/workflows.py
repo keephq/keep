@@ -166,6 +166,7 @@ def run_workflow(
     created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
+    # ideally this not recommeded even for cli. we should always take id as input.
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
         workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
@@ -232,6 +233,7 @@ async def run_workflow_from_definition(
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
+        #test run does not require to have workflow record in db. We just need to parse it
         workflow = workflowstore.get_workflow_from_dict(
             tenant_id=tenant_id, workflow=workflow
         )
