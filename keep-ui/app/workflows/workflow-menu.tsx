@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { EyeIcon, PencilIcon, PlayIcon, TrashIcon, WrenchIcon } from "@heroicons/react/24/outline";
-import { DownloadIcon } from "@radix-ui/react-icons";
+import {DownloadIcon, LockClosedIcon, LockOpen1Icon} from "@radix-ui/react-icons";
 
 interface WorkflowMenuProps {
   onDelete?: () => Promise<void>;
@@ -11,9 +11,8 @@ interface WorkflowMenuProps {
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;
-  allProvidersInstalled: boolean;
-  hasManualTrigger: boolean;
-  hasAlertTrigger: boolean;
+  isRunButtonDisabled: boolean;
+  runButtonToolTip?: string; 
 }
 
 
@@ -23,21 +22,12 @@ export default function WorkflowMenu({
   onView,
   onDownload,
   onBuilder,
-  allProvidersInstalled,
-  hasManualTrigger,
-  hasAlertTrigger
+  isRunButtonDisabled,
+  runButtonToolTip,
 }: WorkflowMenuProps) {
-  const getDisabledTooltip = () => {
-    if (!allProvidersInstalled) return "Not all providers are installed.";
-    if (!hasManualTrigger) return "No manual trigger available.";
-    return "";
-  };
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       };
-
-  const isRunButtonDisabled = !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger);
-
 
   return (
     <div className="w-44 text-right">
@@ -76,9 +66,9 @@ export default function WorkflowMenu({
                     <PlayIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                     Run
                   </button>
-                  {isRunButtonDisabled && (
+                  {isRunButtonDisabled && !!runButtonToolTip &&(
                     <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
-                      {getDisabledTooltip()}
+                      {runButtonToolTip}
                     </div>
                   )}
                 </div>

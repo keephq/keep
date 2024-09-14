@@ -16,6 +16,7 @@ class Workflow(SQLModel, table=True):
     interval: Optional[int]
     workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
+    is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 

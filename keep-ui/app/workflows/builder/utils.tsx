@@ -211,6 +211,7 @@ export function generateWorkflow(
   workflowId: string,
   name: string,
   description: string,
+  disabled: boolean,
   steps: V2Step[],
   conditions: V2Step[],
   triggers: { [key: string]: { [key: string]: string } } = {}
@@ -225,6 +226,7 @@ export function generateWorkflow(
       id: workflowId,
       name: name,
       description: description,
+      disabled:disabled,
       isLocked: true,
       ...triggers,
     },
@@ -305,6 +307,7 @@ export function parseWorkflow(
     workflow.id,
     workflow.name,
     workflow.description,
+    workflow.disabled,
     steps,
     conditions,
     triggers
@@ -384,6 +387,7 @@ export function buildAlert(definition: Definition): Alert {
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
   const description = (alert.properties.description as string) ?? "";
+  const disabled = (alert.properties.disabled) ?? false
   const owners = (alert.properties.owners as string[]) ?? [];
   const services = (alert.properties.services as string[]) ?? [];
   // Steps (move to func?)
@@ -510,6 +514,7 @@ export function buildAlert(definition: Definition): Alert {
     name: name,
     triggers: triggers,
     description: description,
+    disabled : Boolean(disabled),
     owners: owners,
     services: services,
     steps: steps,

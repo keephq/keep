@@ -186,7 +186,7 @@ function Builder({
         triggers = { alert: { source: alertSource, name: alertName } };
       }
       setDefinition(
-        wrapDefinitionV2({...generateWorkflow(alertUuid, "", "", [], [], triggers), isValid: true})
+        wrapDefinitionV2({...generateWorkflow(alertUuid, "", "", false,[], [], triggers), isValid: true})
       );
     } else {
       setDefinition(wrapDefinitionV2({...parseWorkflow(loadedAlertFile!, providers), isValid:true}));

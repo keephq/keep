@@ -18,7 +18,7 @@ export function globalValidatorV2(
 
   if (
     !!definition?.properties && 
-    !definition.properties['manual'] && 
+    !definition.properties['manual'] &&
     !definition.properties['interval'] &&
     !definition.properties['alert']
   ) {
