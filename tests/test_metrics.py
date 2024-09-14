@@ -4,7 +4,7 @@ from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     create_incident_from_dict,
 )
-from tests.fixtures.client import setup_api_key
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
