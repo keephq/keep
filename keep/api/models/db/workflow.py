@@ -20,6 +20,7 @@ class Workflow(SQLModel, table=True):
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     provisioned: bool = Field(default=False)
+    provisioned_file: Optional[str] = None
 
     class Config:
         orm_mode = True

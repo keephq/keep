@@ -23,6 +23,7 @@ def upgrade() -> None:
 
     with op.batch_alter_table("workflow", schema=None) as batch_op:
         batch_op.add_column(sa.Column("provisioned", sa.Boolean(), nullable=False))
+        batch_op.add_column(sa.Column("provisioned_file", sa.String(), nullable=True))
 
     # ### end Alembic commands ###
 

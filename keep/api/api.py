@@ -60,6 +60,7 @@ from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.posthog.posthog import get_posthog_client
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
@@ -251,6 +252,8 @@ def get_app(
         # provision providers from env. relevant only on single tenant.
         ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
+        WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
+        logger.info("Workflows provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler

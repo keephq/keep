@@ -278,6 +278,8 @@ def add_or_update_workflow(
     interval,
     workflow_raw,
     is_disabled,
+    provisioned=False,
+    provisioned_file=None,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -302,6 +304,8 @@ def add_or_update_workflow(
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
             existing_workflow.is_disabled = is_disabled
+            existing_workflow.provisioned = provisioned
+            existing_workflow.provisioned_file = provisioned_file
 
         else:
             # Create a new workflow
@@ -315,6 +319,8 @@ def add_or_update_workflow(
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
             )
             session.add(workflow)
 
@@ -456,6 +462,17 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
         workflows = session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
+
+def get_all_provisioned_workflows(tenant_id: str) -> List[Workflow]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned == True)
             .where(Workflow.is_deleted == False)
         ).all()
     return workflows
@@ -655,6 +672,19 @@ def delete_workflow(tenant_id, workflow_id):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
+        ).first()
+
+        if workflow:
+            workflow.is_deleted = True
+            session.commit()
+
+
+def delete_workflow_by_provisioned_file(tenant_id, provisioned_file):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned_file == provisioned_file)
         ).first()
 
         if workflow:
