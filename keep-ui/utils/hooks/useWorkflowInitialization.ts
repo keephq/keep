@@ -182,6 +182,9 @@ const useWorkflowInitialization = (
         ? parsedWorkflow?.properties?.id 
         : "";
       }
+      if(name === '[No Workflow Name]'){
+        name = '';
+      }
       const sequences = [
         {
           id: "start",
