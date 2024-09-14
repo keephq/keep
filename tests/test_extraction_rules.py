@@ -3,7 +3,7 @@ from time import sleep
 import pytest
 from isodate import parse_datetime
 
-from tests.fixtures.client import setup_api_key
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 VALID_API_KEY = "valid_api_key"
 
