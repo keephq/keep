@@ -7,6 +7,7 @@ Create Date: 2024-09-13 10:48:16.112419
 """
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -31,7 +32,10 @@ def upgrade() -> None:
         ),
     )
     op.add_column(
-        "workflow", sa.Column("provisioned_file", sa.String(length=255), nullable=True)
+        "workflow",
+        sa.Column(
+            "provisioned_file", sqlmodel.sql.sqltypes.AutoString(), nullable=True
+        ),
     )
 
     # ### end Alembic commands ###
