@@ -116,24 +116,30 @@ def get_workflows(
             providers_dto, triggers = [], []  # Default in case of failure
 
         # create the workflow DTO
-        workflow_dto = WorkflowDTO(
-            id=workflow.id,
-            name=workflow.name,
-            description=workflow.description or "[This workflow has no description]",
-            created_by=workflow.created_by,
-            creation_time=workflow.creation_time,
-            last_execution_time=workflow_last_run_time,
-            last_execution_status=workflow_last_run_status,
-            interval=workflow.interval,
-            providers=providers_dto,
-            triggers=triggers,
-            workflow_raw=workflow.workflow_raw,
-            revision=workflow.revision,
-            last_updated=workflow.last_updated,
-            last_executions=last_executions,
-            last_execution_started=last_execution_started,
-            disabled=workflow.is_disabled,
-        )
+        try:
+            workflow_dto = WorkflowDTO(
+                id=workflow.id,
+                name=workflow.name,
+                description=workflow.description
+                or "[This workflow has no description]",
+                created_by=workflow.created_by,
+                creation_time=workflow.creation_time,
+                last_execution_time=workflow_last_run_time,
+                last_execution_status=workflow_last_run_status,
+                interval=workflow.interval,
+                providers=providers_dto,
+                triggers=triggers,
+                workflow_raw=workflow.workflow_raw,
+                revision=workflow.revision,
+                last_updated=workflow.last_updated,
+                last_executions=last_executions,
+                last_execution_started=last_execution_started,
+                disabled=workflow.is_disabled,
+                provisioned=workflow.provisioned,
+            )
+        except Exception as e:
+            logger.error(f"Error creating workflow DTO: {e}")
+            continue
         workflows_dto.append(workflow_dto)
     return workflows_dto
 

@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from keep.api.core.db import engine, get_provider_by_name
+from keep.api.core.db import engine, get_all_provisioned_providers, get_provider_by_name
 from keep.api.models.db.provider import Provider
 from keep.api.models.provider import Provider as ProviderModel
 from keep.contextmanager.contextmanager import ContextManager
@@ -169,7 +169,9 @@ class ProvidersService:
         }
 
     @staticmethod
-    def delete_provider(tenant_id: str, provider_id: str, session: Session):
+    def delete_provider(
+        tenant_id: str, provider_id: str, session: Session, allow_provisioned=False
+    ):
         provider = session.exec(
             select(Provider).where(
                 (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
@@ -179,7 +181,7 @@ class ProvidersService:
         if not provider:
             raise HTTPException(404, detail="Provider not found")
 
-        if provider.provisioned:
+        if provider.provisioned and not allow_provisioned:
             raise HTTPException(403, detail="Cannot delete a provisioned provider")
 
         context_manager = ContextManager(tenant_id=tenant_id)
@@ -243,6 +245,18 @@ class ProvidersService:
         context_manager = ContextManager(tenant_id=tenant_id)
         parser._parse_providers_from_env(context_manager)
         env_providers = context_manager.providers_context
+
+        # first, remove any provisioned providers that are not in the env
+        prev_provisioned_providers = get_all_provisioned_providers(tenant_id)
+        for provider in prev_provisioned_providers:
+            if provider.name not in env_providers:
+                with Session(engine) as session:
+                    logger.info(f"Deleting provider {provider.name}")
+                    ProvidersService.delete_provider(
+                        tenant_id, provider.id, session, allow_provisioned=True
+                    )
+                    logger.info(f"Provider {provider.name} deleted")
+
         for provider_name, provider_config in env_providers.items():
             logger.info(f"Provisioning provider {provider_name}")
             # if its already installed, skip

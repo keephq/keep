@@ -44,6 +44,7 @@ export type Workflow = {
     WorkflowExecution,
     "execution_time" | "status" | "started"
   >[];
+  provisioned?: boolean;
 };
 
 export type MockProvider = {

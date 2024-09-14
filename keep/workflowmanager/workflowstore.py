@@ -270,16 +270,20 @@ class WorkflowStore:
         # Get all existing provisioned workflows
         provisioned_workflows = get_all_provisioned_workflows(tenant_id)
 
-        # Check for workflows that are no longer in the directory and delete them
+        # Check for workflows that are no longer in the directory or outside the workflows_dir and delete them
         for workflow in provisioned_workflows:
-            if not os.path.exists(workflow.provisioned_file):
+            if (
+                not os.path.exists(workflow.provisioned_file)
+                or not os.path.commonpath([workflows_dir, workflow.provisioned_file])
+                == workflows_dir
+            ):
                 logger.info(
-                    f"Deleting workflow {workflow.id} as its file no longer exists"
+                    f"Deprovisioning workflow {workflow.id} as its file no longer exists or is outside the workflows directory"
                 )
                 delete_workflow_by_provisioned_file(
                     tenant_id, workflow.provisioned_file
                 )
-                logger.info(f"Workflow {workflow.id} deleted successfully")
+                logger.info(f"Workflow {workflow.id} deprovisioned successfully")
 
         # Provision new workflows
         for file in os.listdir(workflows_dir):
