@@ -26,7 +26,7 @@ import {
   Accordion,
   AccordionHeader,
   AccordionBody,
-
+  Badge,
 } from "@tremor/react";
 import {
   ExclamationCircleIcon,
@@ -520,6 +520,7 @@ const ProviderForm = ({
                 onChange={(value) => handleInputChange({ target: { name: configKey, value } })}
                 placeholder={method.placeholder || `Select ${configKey}`}
                 error={Object.keys(inputErrors).includes(configKey)}
+                disabled={provider.provisioned}
               >
                 {method.options.map((option) => (
                   <SelectItem key={option} value={option}>
@@ -541,6 +542,7 @@ const ProviderForm = ({
                 color="orange"
                 size="xs"
                 onClick={addEntry(configKey)}
+                disabled={provider.provisioned}
               >
                 Add Entry
               </Button>
@@ -550,6 +552,7 @@ const ProviderForm = ({
               value={formValues[configKey] || []}
               onChange={(value) => handleDictInputChange(configKey, value)}
               error={Object.keys(inputErrors).includes(configKey)}
+              disabled={provider.provisioned}
             />
           </div>
         );
@@ -565,6 +568,7 @@ const ProviderForm = ({
                   inputFileRef.current.click();
                 }}
                 icon={ArrowDownOnSquareIcon}
+                disabled={provider.provisioned}
               >
                 {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
               </Button>
@@ -581,6 +585,7 @@ const ProviderForm = ({
                   }
                   handleInputChange(e);
                 }}
+                disabled={provider.provisioned}
               />
             </>
           );
@@ -597,6 +602,7 @@ const ProviderForm = ({
                 autoComplete="off"
                 error={Object.keys(inputErrors).includes(configKey)}
                 placeholder={method.placeholder || `Enter ${configKey}`}
+                disabled={provider.provisioned}
               />
             </>
           );
@@ -694,6 +700,13 @@ const ProviderForm = ({
       <div>
         <div className="flex flex-row">
           <Title>Connect to {provider.display_name}</Title>
+          {/* Display the Provisioned Badge if the provider is provisioned */}
+          {provider.provisioned && (
+            <Badge color="orange" className="ml-2">
+              Provisioned
+            </Badge>
+          )}
+
           <Link
             href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`}
             target="_blank"
@@ -707,6 +720,20 @@ const ProviderForm = ({
             />
           </Link>
         </div>
+
+        {provider.provisioned &&
+          <div className="w-full mt-4">
+            <Callout
+              icon={ExclamationTriangleIcon}
+              color="orange"
+              className="w-full"
+            >
+              <Text>
+                Editing provisioned providers is not possible from UI.
+              </Text>
+            </Callout>
+          </div>
+        }
 
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
@@ -885,7 +912,7 @@ const ProviderForm = ({
               variant="secondary"
               color="orange"
               className="mt-2.5"
-              disabled={!installOrUpdateWebhookEnabled}
+              disabled={!installOrUpdateWebhookEnabled || provider.provisioned}
               tooltip={
                 !installOrUpdateWebhookEnabled
                   ? "Fix required webhook scopes and refresh scopes to enable"
@@ -928,16 +955,20 @@ const ProviderForm = ({
         </Button>
         {installedProvidersMode && Object.keys(provider.config).length > 0 && (
           <>
-            <Button onClick={deleteProvider} color="red" className="mr-2.5">
+            <Button onClick={deleteProvider} color="orange" className="mr-2.5" disabled={provider.provisioned} variant="secondary">
               Delete
             </Button>
-            <Button
-              loading={isLoading}
-              onClick={handleUpdateClick}
-              color="orange"
-            >
-              Update
-            </Button>
+            <div className="relative">
+              <Button
+                loading={isLoading}
+                onClick={handleUpdateClick}
+                color="orange"
+                disabled={provider.provisioned}
+                variant="secondary"
+              >
+                Update
+              </Button>
+            </div>
           </>
         )}
         {!installedProvidersMode && Object.keys(provider.config).length > 0 && (

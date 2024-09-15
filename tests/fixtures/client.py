@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import importlib
 import sys
@@ -29,6 +30,11 @@ def test_app(monkeypatch, request):
     for module in list(sys.modules):
         if module.startswith("keep.api.routes"):
             del sys.modules[module]
+
+        # this is a fucking bug in db patching ffs it ruined my saturday
+        elif module.startswith("keep.providers.providers_service"):
+            importlib.reload(sys.modules[module])
+
     if "keep.api.api" in sys.modules:
         importlib.reload(sys.modules["keep.api.api"])
 
@@ -36,6 +42,11 @@ def test_app(monkeypatch, request):
     from keep.api.api import get_app
 
     app = get_app()
+
+    # Manually trigger the startup event
+    for event_handler in app.router.on_startup:
+        asyncio.run(event_handler())
+
     return app
 
 

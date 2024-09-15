@@ -107,30 +107,39 @@ def get_workflows(
 
         try:
             providers_dto, triggers = workflowstore.get_workflow_meta_data(
-            tenant_id=tenant_id, workflow=workflow, installed_providers_by_type=installed_providers_by_type)
+                tenant_id=tenant_id,
+                workflow=workflow,
+                installed_providers_by_type=installed_providers_by_type,
+            )
         except Exception as e:
             logger.error(f"Error fetching workflow meta data: {e}")
             providers_dto, triggers = [], []  # Default in case of failure
 
         # create the workflow DTO
-        workflow_dto = WorkflowDTO(
-            id=workflow.id,
-            name=workflow.name,
-            description=workflow.description or "[This workflow has no description]",
-            created_by=workflow.created_by,
-            creation_time=workflow.creation_time,
-            last_execution_time=workflow_last_run_time,
-            last_execution_status=workflow_last_run_status,
-            interval=workflow.interval,
-            providers=providers_dto,
-            triggers=triggers,
-            workflow_raw=workflow.workflow_raw,
-            revision=workflow.revision,
-            last_updated=workflow.last_updated,
-            last_executions=last_executions,
-            last_execution_started=last_execution_started,
-            disabled=workflow.is_disabled,
-        )
+        try:
+            workflow_dto = WorkflowDTO(
+                id=workflow.id,
+                name=workflow.name,
+                description=workflow.description
+                or "[This workflow has no description]",
+                created_by=workflow.created_by,
+                creation_time=workflow.creation_time,
+                last_execution_time=workflow_last_run_time,
+                last_execution_status=workflow_last_run_status,
+                interval=workflow.interval,
+                providers=providers_dto,
+                triggers=triggers,
+                workflow_raw=workflow.workflow_raw,
+                revision=workflow.revision,
+                last_updated=workflow.last_updated,
+                last_executions=last_executions,
+                last_execution_started=last_execution_started,
+                disabled=workflow.is_disabled,
+                provisioned=workflow.provisioned,
+            )
+        except Exception as e:
+            logger.error(f"Error creating workflow DTO: {e}")
+            continue
         workflows_dto.append(workflow_dto)
     return workflows_dto
 
@@ -380,6 +389,19 @@ def get_random_workflow_templates(
         "KEEP_WORKFLOWS_PATH",
         os.path.join(os.path.dirname(__file__), "../../../examples/workflows"),
     )
+    if not os.path.exists(default_directory):
+        # on the container we use the following path
+        fallback_directory = "/examples/workflows"
+        logger.warning(
+            f"{default_directory} does not exist, using fallback: {fallback_directory}"
+        )
+        if os.path.exists(fallback_directory):
+            default_directory = fallback_directory
+        else:
+            logger.error(f"Neither {default_directory} nor {fallback_directory} exist")
+            raise FileNotFoundError(
+                f"Neither {default_directory} nor {fallback_directory} exist"
+            )
     workflows = workflowstore.get_random_workflow_templates(
         tenant_id=tenant_id, workflows_dir=default_directory, limit=6
     )
@@ -424,6 +446,10 @@ async def update_workflow_by_id(
             extra={"tenant_id": tenant_id},
         )
         raise HTTPException(404, "Workflow not found")
+
+    if workflow_from_db.provisioned:
+        raise HTTPException(403, detail="Cannot update a provisioned workflow")
+
     workflow = await __get_workflow_raw_data(request, None)
     parser = Parser()
     workflow_interval = parser.parse_interval(workflow)
@@ -545,24 +571,27 @@ def get_workflow_by_id(
     workflowstore = WorkflowStore()
     try:
         providers_dto, triggers = workflowstore.get_workflow_meta_data(
-        tenant_id=tenant_id, workflow=workflow, installed_providers_by_type=installed_providers_by_type)
+            tenant_id=tenant_id,
+            workflow=workflow,
+            installed_providers_by_type=installed_providers_by_type,
+        )
     except Exception as e:
         logger.error(f"Error fetching workflow meta data: {e}")
         providers_dto, triggers = [], []  # Default in case of failure
-    
+
     final_workflow = WorkflowDTO(
-            id=workflow.id,
-            name=workflow.name,
-            description=workflow.description or "[This workflow has no description]",
-            created_by=workflow.created_by,
-            creation_time=workflow.creation_time,
-            interval=workflow.interval,
-            providers=providers_dto,
-            triggers=triggers,
-            workflow_raw=workflow.workflow_raw,
-            last_updated=workflow.last_updated,
-            disabled=workflow.is_disabled,
-    )        
+        id=workflow.id,
+        name=workflow.name,
+        description=workflow.description or "[This workflow has no description]",
+        created_by=workflow.created_by,
+        creation_time=workflow.creation_time,
+        interval=workflow.interval,
+        providers=providers_dto,
+        triggers=triggers,
+        workflow_raw=workflow.workflow_raw,
+        last_updated=workflow.last_updated,
+        disabled=workflow.is_disabled,
+    )
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,
         offset=offset,
@@ -571,7 +600,7 @@ def get_workflow_by_id(
         passCount=pass_count,
         failCount=fail_count,
         avgDuration=avgDuration,
-        workflow=final_workflow
+        workflow=final_workflow,
     )
 
 

@@ -279,6 +279,8 @@ def add_or_update_workflow(
     update_raw,
     is_disabled,
     workflow_id,
+    provisioned=False,
+    provisioned_file=None,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -305,7 +307,9 @@ def add_or_update_workflow(
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
-            existing_workflow.is_disabled= is_disabled
+            existing_workflow.is_disabled = is_disabled
+            existing_workflow.provisioned = provisioned
+            existing_workflow.provisioned_file = provisioned_file
 
         else:
             # Create a new workflow
@@ -319,8 +323,10 @@ def add_or_update_workflow(
                 created_by=created_by,
                 updated_by=updated_by,  # Set updated_by to the provided value
                 interval=interval,
-                is_disabled =is_disabled,
+                is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
             )
             session.add(workflow)
 
@@ -467,6 +473,27 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
     return workflows
 
 
+def get_all_provisioned_workflows(tenant_id: str) -> List[Workflow]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned == True)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
+
+def get_all_provisioned_providers(tenant_id: str) -> List[Provider]:
+    with Session(engine) as session:
+        providers = session.exec(
+            select(Provider)
+            .where(Provider.tenant_id == tenant_id)
+            .where(Provider.provisioned == True)
+        ).all()
+    return providers
+
+
 def get_all_workflows_yamls(tenant_id: str) -> List[str]:
     with Session(engine) as session:
         workflows = session.exec(
@@ -504,6 +531,7 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     if not workflow:
         return None
     return workflow.workflow_raw
+
 
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
@@ -574,18 +602,22 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         session.commit()
 
 
-def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, status: Optional[Union[str, List[str]]] = None,
+def get_workflow_executions(
+    tenant_id,
+    workflow_id,
+    limit=50,
+    offset=0,
+    tab=2,
+    status: Optional[Union[str, List[str]]] = None,
     trigger: Optional[Union[str, List[str]]] = None,
-    execution_id: Optional[str] = None):
+    execution_id: Optional[str] = None,
+):
     with Session(engine) as session:
-        query = (
-            session.query(
-                WorkflowExecution,
-            )
-            .filter(
-                WorkflowExecution.tenant_id == tenant_id,
-                WorkflowExecution.workflow_id == workflow_id
-            )
+        query = session.query(
+            WorkflowExecution,
+        ).filter(
+            WorkflowExecution.tenant_id == tenant_id,
+            WorkflowExecution.workflow_id == workflow_id,
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -599,48 +631,51 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
             start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
             query = query.filter(
                 WorkflowExecution.started >= start_of_day,
-                WorkflowExecution.started <= now
+                WorkflowExecution.started <= now,
             )
 
         if timeframe:
-            query = query.filter(
-                WorkflowExecution.started >= timeframe
-            )
+            query = query.filter(WorkflowExecution.started >= timeframe)
 
         if isinstance(status, str):
             status = [status]
         elif status is None:
-            status = []    
-       
+            status = []
+
         # Normalize trigger to a list
         if isinstance(trigger, str):
             trigger = [trigger]
-
 
         if execution_id:
             query = query.filter(WorkflowExecution.id == execution_id)
         if status and len(status) > 0:
             query = query.filter(WorkflowExecution.status.in_(status))
         if trigger and len(trigger) > 0:
-            conditions = [WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger]
+            conditions = [
+                WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger
+            ]
             query = query.filter(or_(*conditions))
-    
 
         total_count = query.count()
         status_count_query = query.with_entities(
-            WorkflowExecution.status,
-            func.count().label('count')
+            WorkflowExecution.status, func.count().label("count")
         ).group_by(WorkflowExecution.status)
         status_counts = status_count_query.all()
 
         statusGroupbyMap = {status: count for status, count in status_counts}
-        pass_count = statusGroupbyMap.get('success', 0)
-        fail_count = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)   
-        avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
+        pass_count = statusGroupbyMap.get("success", 0)
+        fail_count = statusGroupbyMap.get("error", 0) + statusGroupbyMap.get(
+            "timeout", 0
+        )
+        avgDuration = query.with_entities(
+            func.avg(WorkflowExecution.execution_time)
+        ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-        
+        query = (
+            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+        )
+
         # Execute the query
         workflow_executions = query.all()
 
@@ -653,6 +688,20 @@ def delete_workflow(tenant_id, workflow_id):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
+        ).first()
+
+        if workflow:
+            workflow.is_deleted = True
+            session.commit()
+
+
+
+def delete_workflow_by_provisioned_file(tenant_id, provisioned_file):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned_file == provisioned_file)
         ).first()
 
         if workflow:
@@ -1538,10 +1587,7 @@ def get_rule_incidents_count_db(tenant_id):
         query = (
             session.query(Incident.rule_id, func.count(Incident.id))
             .select_from(Incident)
-            .filter(
-                Incident.tenant_id == tenant_id,
-                col(Incident.rule_id).isnot(None)
-            )
+            .filter(Incident.tenant_id == tenant_id, col(Incident.rule_id).isnot(None))
             .group_by(Incident.rule_id)
         )
         return dict(query.all())
@@ -1617,15 +1663,26 @@ def get_all_filters(tenant_id):
 
 
 def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
+    from sqlalchemy.dialects import mssql
+
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
-        alert_hash = session.exec(
+        query = (
             select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
             .where(Alert.fingerprint == fingerprint)
             .order_by(Alert.timestamp.desc())
-        ).first()
+            .limit(1)  # Add LIMIT 1 for MSSQL
+        )
+
+        # Compile the query and log it
+        compiled_query = query.compile(
+            dialect=mssql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+        logger.info(f"Compiled query: {compiled_query}")
+
+        alert_hash = session.exec(query).first()
     return alert_hash
 
 
@@ -2116,8 +2173,7 @@ def get_last_incidents(
             # .options(joinedload(Incident.alerts))
             .filter(
                 Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
-            )
-            .order_by(desc(Incident.creation_time))
+            ).order_by(desc(Incident.creation_time))
         )
 
         if timeframe:

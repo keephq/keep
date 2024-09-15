@@ -1,18 +1,15 @@
 from time import sleep
 
 import pytest
-
 from isodate import parse_datetime
 
-from tests.fixtures.client import client, test_app, setup_api_key
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 VALID_API_KEY = "valid_api_key"
 
 
-@pytest.mark.parametrize(
-    "test_app", ["NO_AUTH"], indirect=True
-)
-def test_create_extraction_rule(client, test_app, db_session):
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_create_extraction_rule(db_session, client, test_app):
     setup_api_key(db_session, VALID_API_KEY, role="webhook")
 
     # Try to create invalid extraction
@@ -33,10 +30,8 @@ def test_create_extraction_rule(client, test_app, db_session):
     assert response.status_code == 200
 
 
-@pytest.mark.parametrize(
-    "test_app", ["NO_AUTH"], indirect=True
-)
-def test_extraction_rule_updated_at(client, test_app, db_session):
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_extraction_rule_updated_at(db_session, client, test_app):
     setup_api_key(db_session, VALID_API_KEY, role="webhook")
 
     rule_dict = {
@@ -66,7 +61,9 @@ def test_extraction_rule_updated_at(client, test_app, db_session):
     # Without it update can happen in the same second, so we will not see any changes
     sleep(1)
     updated_response = client.put(
-        f"/extraction/{rule_id}", json=updated_rule_dict, headers={"x-api-key": VALID_API_KEY}
+        f"/extraction/{rule_id}",
+        json=updated_rule_dict,
+        headers={"x-api-key": VALID_API_KEY},
     )
 
     assert updated_response.status_code == 200
@@ -75,7 +72,3 @@ def test_extraction_rule_updated_at(client, test_app, db_session):
     new_updated_at = parse_datetime(updated_response_data["updated_at"])
 
     assert new_updated_at > updated_at
-
-
-
-
