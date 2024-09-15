@@ -44,3 +44,4 @@ class Provider(BaseModel):
     ] = []
     alertsDistribution: dict[str, int] | None = None
     alertExample: dict | None = None
+    provisioned: bool = False

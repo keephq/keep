@@ -9,10 +9,12 @@ import debounce from "lodash.debounce";
 
 const ReactFlowEditor = ({
   providers,
+  installedProviders,
   validatorConfiguration,
   onDefinitionChange
 }: {
   providers: Provider[] | undefined | null;
+  installedProviders: Provider[] | undefined | null;
   validatorConfiguration: {
     step: (step: V2Step, parent?: V2Step, defnition?: ReactFlowDefinition) => boolean;
     root: (def: Definition) => boolean;
@@ -114,7 +116,7 @@ const ReactFlowEditor = ({
             <div style={{ width: "300px" }}>
               <GlobalEditorV2 synced={synced} />
               {!selectedNode?.includes('empty') && !isTrigger && <Divider ref={stepEditorRef} />}
-              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 installedProviders={providers} setSynced={setSynced} />}
+              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 providers={providers} installedProviders={installedProviders} setSynced={setSynced} />}
             </div>
           </div>
         </div>
@@ -124,4 +126,3 @@ const ReactFlowEditor = ({
 };
 
 export default ReactFlowEditor;
-

@@ -54,6 +54,7 @@ export function GlobalEditorV2({synced}: {synced: boolean}) {
 interface keepEditorProps {
   properties: V2Properties;
   updateProperty: ((key: string, value: any) => void);
+  providers?: Provider[] | null | undefined;
   installedProviders?: Provider[] | null | undefined;
   providerType?: string;
   type?: string;
@@ -64,6 +65,7 @@ function KeepStepEditor({
   properties,
   updateProperty,
   installedProviders,
+  providers,
   providerType,
   type,
 }: keepEditorProps) {
@@ -86,6 +88,9 @@ function KeepStepEditor({
   const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
+  const isThisProviderNeedsInstallation = providers?.some(
+    (p) => p.type === providerType && p.config && Object.keys(p.config).length > 0
+  ) ?? false;
 
   const DynamicIcon = (props: any) => (
     <svg
@@ -141,12 +146,13 @@ function KeepStepEditor({
         error={
           providerConfig !== "" &&
           providerConfig !== undefined &&
+          isThisProviderNeedsInstallation &&
           installedProviderByType?.find(
             (p) => p.details?.name === providerConfig
           ) === undefined
         }
         errorMessage={`${
-          providerConfig &&
+          providerConfig && isThisProviderNeedsInstallation &&
           installedProviderByType?.find(
             (p) => p.details?.name === providerConfig
           ) === undefined
@@ -412,14 +418,16 @@ function WorkflowEditorV2({
 
 
 export function StepEditorV2({
+  providers,
   installedProviders,
   setSynced
 }: {
+  providers: Provider[] | undefined | null;
   installedProviders?: Provider[] | undefined | null;
   setSynced: (sync:boolean) => void;
 }) {
   const [formData, setFormData] = useState<{ name?: string; properties?: V2Properties, type?:string }>({});
-  const { 
+  const {
     selectedNode,
     updateSelectedNodeData,
     setOpneGlobalEditor,
@@ -475,6 +483,7 @@ export function StepEditorV2({
         <KeepStepEditor
           properties={formData.properties}
           updateProperty={handlePropertyChange}
+          providers={providers}
           installedProviders={installedProviders}
           providerType={providerType}
           type={formData.type}

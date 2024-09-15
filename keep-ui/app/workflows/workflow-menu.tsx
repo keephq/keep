@@ -12,7 +12,8 @@ interface WorkflowMenuProps {
   onDownload?: () => void;
   onBuilder?: () => void;
   isRunButtonDisabled: boolean;
-  runButtonToolTip?: string; 
+  runButtonToolTip?: string;
+  provisioned?: boolean;
 }
 
 
@@ -24,6 +25,7 @@ export default function WorkflowMenu({
   onBuilder,
   isRunButtonDisabled,
   runButtonToolTip,
+  provisioned,
 }: WorkflowMenuProps) {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
@@ -115,15 +117,23 @@ export default function WorkflowMenu({
               </Menu.Item>
               <Menu.Item>
                 {({ active }) => (
-                  <button
-                  onClick={(e) => { stopPropagation(e); onDelete?.(); }}
-                    className={`${
-                      active ? "bg-slate-200" : "text-gray-900"
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                  >
-                    <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Delete
-                  </button>
+                  <div className="relative group">
+                    <button
+                      disabled={provisioned}
+                      onClick={(e) => { stopPropagation(e); onDelete?.(); }}
+                      className={`${
+                        active ? 'bg-slate-200' : 'text-gray-900'
+                      } flex w-full items-center rounded-md px-2 py-2 text-xs ${provisioned ? 'cursor-not-allowed opacity-50' : ''}`}
+                    >
+                      <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Delete
+                    </button>
+                    {provisioned && (
+                      <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
+                        Cannot delete a provisioned workflow
+                      </div>
+                    )}
+                  </div>
                 )}
               </Menu.Item>
             </div>

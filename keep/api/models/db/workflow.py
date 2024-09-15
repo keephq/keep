@@ -19,6 +19,8 @@ class Workflow(SQLModel, table=True):
     is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
+    provisioned: bool = Field(default=False)
+    provisioned_file: Optional[str] = None
 
     class Config:
         orm_mode = True
