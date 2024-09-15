@@ -92,47 +92,59 @@ def pull_data_from_providers(
             provider_config=provider.details,
         )
 
-        logger.info(
-            f"Pulling alerts from provider {provider.type} ({provider.id})",
-            extra=extra,
-        )
-        sorted_provider_alerts_by_fingerprint = (
-            provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
-        )
-
         try:
-            if isinstance(provider_class, BaseTopologyProvider):
-                logger.info("Getting topology data", extra=extra)
-                topology_data = provider_class.pull_topology()
-                logger.info("Got topology data, processing", extra=extra)
-                process_topology(tenant_id, topology_data, provider.id, provider.type)
-                logger.info("Processed topology data", extra=extra)
-        except NotImplementedError:
-            logger.warning(
-                f"Provider {provider.type} ({provider.id}) does not support topology data",
+            logger.info(
+                f"Pulling alerts from provider {provider.type} ({provider.id})",
                 extra=extra,
             )
-        except Exception as e:
-            logger.error(
-                f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                extra={**extra, "error": str(e)},
+            sorted_provider_alerts_by_fingerprint = (
+                provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
+            )
+            logger.info(
+                f"Pulling alerts from provider {provider.type} ({provider.id}) completed",
+                extra=extra,
             )
 
-        # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
-        update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+            try:
+                if isinstance(provider_class, BaseTopologyProvider):
+                    logger.info("Getting topology data", extra=extra)
+                    topology_data = provider_class.pull_topology()
+                    logger.info("Got topology data, processing", extra=extra)
+                    process_topology(
+                        tenant_id, topology_data, provider.id, provider.type
+                    )
+                    logger.info("Processed topology data", extra=extra)
+            except NotImplementedError:
+                logger.warning(
+                    f"Provider {provider.type} ({provider.id}) does not support topology data",
+                    extra=extra,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
+                    extra={**extra, "error": str(e)},
+                )
 
-        for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-            process_event(
-                {},
-                tenant_id,
-                provider.type,
-                provider.id,
-                fingerprint,
-                None,
-                trace_id,
-                alert,
-                notify_client=False,
+            for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
+                process_event(
+                    {},
+                    tenant_id,
+                    provider.type,
+                    provider.id,
+                    fingerprint,
+                    None,
+                    trace_id,
+                    alert,
+                    notify_client=False,
+                )
+        except Exception:
+            logger.exception(
+                f"Unknown error pulling from provider {provider.type} ({provider.id})",
+                extra=extra,
             )
+        finally:
+            # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
+            update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
 
 
 @router.get(
