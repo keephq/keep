@@ -388,6 +388,7 @@ def get_random_workflow_templates(
         os.path.join(os.path.dirname(__file__), "../../../examples/workflows"),
     )
     if not os.path.exists(default_directory):
+        # on the container we use the following path
         fallback_directory = "/examples/workflows"
         logger.warning(
             f"{default_directory} does not exist, using fallback: {fallback_directory}"
