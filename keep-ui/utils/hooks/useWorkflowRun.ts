@@ -2,7 +2,14 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { useRouter } from "next/navigation";
+import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "app/workflows/models";
+import { Provider } from "app/providers/providers";
+
+interface ProvidersData {
+    providers: { [key: string]: { providers: Provider[] } };
+  }
+
 
 export const useWorkflowRun = (workflow: Workflow) => {
 
@@ -15,14 +22,23 @@ export const useWorkflowRun = (workflow: Workflow) => {
     const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
     const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
 
+    const { data: providersData = { providers: {} } as ProvidersData } = useProviders();
+    const providers = providersData.providers;
+
+
     const apiUrl = getApiURL();
 
     if (!workflow) {
         return {};
     }
-    const allProvidersInstalled = workflow?.providers?.every(
-        (provider) => provider.installed
-    );
+
+    const notInstalledProviders = workflow?.providers?.filter((workflowProvider) =>
+        !workflowProvider.installed && Object.values(providers || {}).some(provider =>
+            provider.type === workflowProvider.type && (provider.config && Object.keys(provider.config).length > 0)
+        )
+    ).map(provider => provider.type);
+
+    const allProvidersInstalled = notInstalledProviders.length === 0;
 
     // Check if there is a manual trigger
     const hasManualTrigger = workflow?.triggers?.some(
@@ -36,7 +52,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
     const isWorkflowDisabled = !!workflow?.disabled
 
     const getDisabledTooltip = () => {
-        if (!allProvidersInstalled) return "Not all providers are installed.";
+        if (!allProvidersInstalled) return `Not all providers are installed: ${notInstalledProviders.join(", ")}`;
         if (!hasManualTrigger) return "No manual trigger available.";
         if(isWorkflowDisabled) {
             return "Workflow is Disabled";
@@ -107,28 +123,25 @@ export const useWorkflowRun = (workflow: Workflow) => {
         if (!workflow) {
             return;
         }
-        const hasAlertTrigger = workflow?.triggers?.some(
-            (trigger) => trigger.type === "alert"
-        );
+        const dependencies = extractAlertDependencies(workflow?.workflow_raw);
+        const hasDependencies = dependencies.length > 0;
 
-        // if it needs alert payload, than open the modal
-        if (hasAlertTrigger) {
+        // if it has dependencies, open the modal
+        if (hasDependencies) {
+            setAlertDependencies(dependencies);
             // extract the filters
             // TODO: support more than one trigger
-            for (const trigger of workflow?.triggers) {
-                // at least one trigger is alert, o/w hasAlertTrigger was false
+            for (const trigger of workflow?.triggers || []) {
                 if (trigger.type === "alert") {
                     const staticAlertFilters = trigger.filters || [];
                     setAlertFilters(staticAlertFilters);
                     break;
                 }
             }
-            const dependencies = extractAlertDependencies(workflow?.workflow_raw);
-            setAlertDependencies(dependencies);
             setIsAlertTriggerModalOpen(true);
             return;
         }
-        // else, manual trigger, just run it
+        // else, no dependencies, just run it
         else {
             runWorkflow({});
         }
