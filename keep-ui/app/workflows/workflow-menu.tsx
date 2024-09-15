@@ -11,10 +11,9 @@ interface WorkflowMenuProps {
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;
-  allProvidersInstalled: boolean;
-  hasManualTrigger: boolean;
-  hasAlertTrigger: boolean;
-  isWorkflowDisabled:boolean
+  isRunButtonDisabled: boolean;
+  runButtonToolTip?: string;
+  provisioned?: boolean;
 }
 
 
@@ -24,23 +23,13 @@ export default function WorkflowMenu({
   onView,
   onDownload,
   onBuilder,
-  allProvidersInstalled,
-  hasManualTrigger,
-  hasAlertTrigger,
-  isWorkflowDisabled,
+  isRunButtonDisabled,
+  runButtonToolTip,
+  provisioned,
 }: WorkflowMenuProps) {
-  const getDisabledTooltip = () => {
-    if (!allProvidersInstalled) return "Not all providers are installed.";
-    if (!hasManualTrigger) return "No manual trigger available.";
-    if (isWorkflowDisabled) return "Workflow is disabled";
-    return "";
-  };
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       };
-
-  const isRunButtonDisabled = !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger) || isWorkflowDisabled;
-
 
   return (
     <div className="w-44 text-right">
@@ -79,9 +68,9 @@ export default function WorkflowMenu({
                     <PlayIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                     Run
                   </button>
-                  {isRunButtonDisabled && (
+                  {isRunButtonDisabled && !!runButtonToolTip &&(
                     <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
-                      {getDisabledTooltip()}
+                      {runButtonToolTip}
                     </div>
                   )}
                 </div>
@@ -128,15 +117,23 @@ export default function WorkflowMenu({
               </Menu.Item>
               <Menu.Item>
                 {({ active }) => (
-                  <button
-                  onClick={(e) => { stopPropagation(e); onDelete?.(); }}
-                    className={`${
-                      active ? "bg-slate-200" : "text-gray-900"
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                  >
-                    <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Delete
-                  </button>
+                  <div className="relative group">
+                    <button
+                      disabled={provisioned}
+                      onClick={(e) => { stopPropagation(e); onDelete?.(); }}
+                      className={`${
+                        active ? 'bg-slate-200' : 'text-gray-900'
+                      } flex w-full items-center rounded-md px-2 py-2 text-xs ${provisioned ? 'cursor-not-allowed opacity-50' : ''}`}
+                    >
+                      <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Delete
+                    </button>
+                    {provisioned && (
+                      <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
+                        Cannot delete a provisioned workflow
+                      </div>
+                    )}
+                  </div>
                 )}
               </Menu.Item>
             </div>

@@ -281,6 +281,8 @@ def add_or_update_workflow(
     interval,
     workflow_raw,
     is_disabled,
+    provisioned=False,
+    provisioned_file=None,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -305,6 +307,8 @@ def add_or_update_workflow(
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
             existing_workflow.is_disabled = is_disabled
+            existing_workflow.provisioned = provisioned
+            existing_workflow.provisioned_file = provisioned_file
 
         else:
             # Create a new workflow
@@ -318,6 +322,8 @@ def add_or_update_workflow(
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
             )
             session.add(workflow)
 
@@ -462,6 +468,27 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
             .where(Workflow.is_deleted == False)
         ).all()
     return workflows
+
+
+def get_all_provisioned_workflows(tenant_id: str) -> List[Workflow]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned == True)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
+
+def get_all_provisioned_providers(tenant_id: str) -> List[Provider]:
+    with Session(engine) as session:
+        providers = session.exec(
+            select(Provider)
+            .where(Provider.tenant_id == tenant_id)
+            .where(Provider.provisioned == True)
+        ).all()
+    return providers
 
 
 def get_all_workflows_yamls(tenant_id: str) -> List[str]:
@@ -658,6 +685,19 @@ def delete_workflow(tenant_id, workflow_id):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
+        ).first()
+
+        if workflow:
+            workflow.is_deleted = True
+            session.commit()
+
+
+def delete_workflow_by_provisioned_file(tenant_id, provisioned_file):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned_file == provisioned_file)
         ).first()
 
         if workflow:
@@ -1701,15 +1741,26 @@ def get_all_dedup_ratio(tenant_id):
 
 
 def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
+    from sqlalchemy.dialects import mssql
+
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
-        alert_hash = session.exec(
+        query = (
             select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
             .where(Alert.fingerprint == fingerprint)
             .order_by(Alert.timestamp.desc())
-        ).first()
+            .limit(1)  # Add LIMIT 1 for MSSQL
+        )
+
+        # Compile the query and log it
+        compiled_query = query.compile(
+            dialect=mssql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+        logger.info(f"Compiled query: {compiled_query}")
+
+        alert_hash = session.exec(query).first()
     return alert_hash
 
 

@@ -40,6 +40,7 @@ import {
   MdOutlineKeyboardArrowLeft,
 } from "react-icons/md";
 import { HiBellAlert } from "react-icons/hi2";
+import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 
 function WorkflowMenuSection({
   onDelete,
@@ -47,28 +48,20 @@ function WorkflowMenuSection({
   onDownload,
   onView,
   onBuilder,
-  workflow,
+  isRunButtonDisabled,
+  runButtonToolTip,
+  provisioned,
 }: {
   onDelete: () => Promise<void>;
   onRun: () => Promise<void>;
   onDownload: () => void;
   onView: () => void;
   onBuilder: () => void;
-  workflow: Workflow;
+  isRunButtonDisabled: boolean;
+  runButtonToolTip?: string;
+  provisioned?: boolean;
 }) {
   // Determine if all providers are installed
-  const allProvidersInstalled = workflow.providers.every(
-    (provider) => provider.installed
-  );
-
-  // Check if there is a manual trigger
-  const hasManualTrigger = workflow.triggers.some(
-    (trigger) => trigger.type === "manual"
-  ); // Replace 'manual' with the actual value that represents a manual trigger in your data
-
-  const hasAlertTrigger = workflow.triggers.some(
-    (trigger) => trigger.type === "alert"
-  );
 
   return (
     <WorkflowMenu
@@ -77,10 +70,9 @@ function WorkflowMenuSection({
       onDownload={onDownload}
       onView={onView}
       onBuilder={onBuilder}
-      allProvidersInstalled={allProvidersInstalled}
-      isWorkflowDisabled={workflow.disabled}
-      hasManualTrigger={hasManualTrigger}
-      hasAlertTrigger={hasAlertTrigger}
+      isRunButtonDisabled={isRunButtonDisabled}
+      runButtonToolTip={runButtonToolTip}
+      provisioned={provisioned}
     />
   );
 }
@@ -282,11 +274,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   );
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [isRunning, setIsRunning] = useState(false);
-  const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
 
-  const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
-  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
   const alertSource = workflow?.triggers
     ?.find((w) => w.type === "alert")
@@ -294,6 +282,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [fallBackIcon, setFallBackIcon] = useState(false);
 
   const { providers } = useFetchProviders();
+  const {
+    isRunning,
+    handleRunClick,
+    getTriggerModalProps,
+    isRunButtonDisabled,
+    message,
+  } = useWorkflowRun(workflow!);
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
@@ -315,89 +310,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   ) => {
     setFormValues(updatedFormValues);
     setFormErrors(updatedFormErrors);
-  };
-
-  // todo: this logic should move to the backend
-  function extractAlertDependencies(workflowRaw: string): string[] {
-    const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
-    const dependencies = workflowRaw.match(dependencyRegex);
-
-    if (!dependencies) {
-      return [];
-    }
-
-    // Convert Set to Array
-    const uniqueDependencies = Array.from(new Set(dependencies)).reduce<
-      string[]
-    >((acc, dep) => {
-      // Ensure 'dep' is treated as a string
-      const match = dep.match(/alert\.([\w.]+)/);
-      if (match) {
-        acc.push(match[1]);
-      }
-      return acc;
-    }, []);
-
-    return uniqueDependencies;
-  }
-
-  const runWorkflow = async (payload: object) => {
-    try {
-      setIsRunning(true);
-      const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        // Workflow started successfully
-        const responseData = await response.json();
-        const { workflow_execution_id } = responseData;
-        setIsRunning(false);
-        router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
-      } else {
-        console.error("Failed to start workflow");
-      }
-    } catch (error) {
-      console.error("An error occurred while starting workflow", error);
-    }
-    setIsRunning(false);
-  };
-
-  const handleRunClick = async () => {
-    const hasAlertTrigger = workflow.triggers.some(
-      (trigger) => trigger.type === "alert"
-    );
-
-    // if it needs alert payload, than open the modal
-    if (hasAlertTrigger) {
-      // extract the filters
-      // TODO: support more than one trigger
-      for (const trigger of workflow.triggers) {
-        // at least one trigger is alert, o/w hasAlertTrigger was false
-        if (trigger.type === "alert") {
-          const staticAlertFilters = trigger.filters || [];
-          setAlertFilters(staticAlertFilters);
-          break;
-        }
-      }
-      const dependencies = extractAlertDependencies(workflow.workflow_raw);
-      setAlertDependencies(dependencies);
-      setIsAlertTriggerModalOpen(true);
-      return;
-    }
-    // else, manual trigger, just run it
-    else {
-      runWorkflow({});
-    }
-  };
-
-  const handleAlertTriggerModalSubmit = (payload: any) => {
-    runWorkflow(payload); // Function to run the workflow with the payload
   };
 
   const handleDeleteClick = async () => {
@@ -638,7 +550,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <Card 
+      <Card
       className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2"
       onClick={(e)=>{
         e.stopPropagation();
@@ -648,14 +560,21 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         }
       }}
       >
-        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
-          {WorkflowMenuSection({
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center">
+          {workflow.provisioned && (
+            <Badge color="orange" size="xs" className="mr-2">
+              Provisioned
+            </Badge>
+          )}
+          {!!handleRunClick && WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
             onDownload: handleDownloadClick,
             onView: handleViewClick,
             onBuilder: handleBuilderClick,
-            workflow,
+            runButtonToolTip: message,
+            isRunButtonDisabled: !!isRunButtonDisabled,
+            provisioned: workflow.provisioned,
           })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
@@ -765,13 +684,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       </Card>
 
-      <AlertTriggerModal
-        isOpen={isAlertTriggerModalOpen}
-        onClose={() => setIsAlertTriggerModalOpen(false)}
-        onSubmit={handleAlertTriggerModalSubmit}
-        staticFields={alertFilters}
-        dependencies={alertDependencies}
-      />
+      {!!getTriggerModalProps && <AlertTriggerModal
+        {...getTriggerModalProps()}
+      />}
       <Modal
         isOpen={openTriggerModal}
         onClose={() => {
@@ -813,13 +728,15 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
   );
   const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [isRunning, setIsRunning] = useState(false);
-  const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
-
-  const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
-  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
 
   const { providers } = useFetchProviders();
+  const {
+    isRunning,
+    handleRunClick,
+    isRunButtonDisabled,
+    message,
+    getTriggerModalProps,
+  } = useWorkflowRun(workflow!);
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
@@ -843,88 +760,6 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
     setFormErrors(updatedFormErrors);
   };
 
-  // todo: this logic should move to the backend
-  function extractAlertDependencies(workflowRaw: string): string[] {
-    const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
-    const dependencies = workflowRaw.match(dependencyRegex);
-
-    if (!dependencies) {
-      return [];
-    }
-
-    // Convert Set to Array
-    const uniqueDependencies = Array.from(new Set(dependencies)).reduce<
-      string[]
-    >((acc, dep) => {
-      // Ensure 'dep' is treated as a string
-      const match = dep.match(/alert\.([\w.]+)/);
-      if (match) {
-        acc.push(match[1]);
-      }
-      return acc;
-    }, []);
-
-    return uniqueDependencies;
-  }
-
-  const runWorkflow = async (payload: object) => {
-    try {
-      setIsRunning(true);
-      const response = await fetch(`${apiUrl}/workflows/${workflow.id}/run`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        // Workflow started successfully
-        const responseData = await response.json();
-        const { workflow_execution_id } = responseData;
-        setIsRunning(false);
-        router.push(`/workflows/${workflow.id}/runs/${workflow_execution_id}`);
-      } else {
-        console.error("Failed to start workflow");
-      }
-    } catch (error) {
-      console.error("An error occurred while starting workflow", error);
-    }
-    setIsRunning(false);
-  };
-
-  const handleRunClick = async () => {
-    const hasAlertTrigger = workflow.triggers.some(
-      (trigger) => trigger.type === "alert"
-    );
-
-    // if it needs alert payload, than open the modal
-    if (hasAlertTrigger) {
-      // extract the filters
-      // TODO: support more than one trigger
-      for (const trigger of workflow.triggers) {
-        // at least one trigger is alert, o/w hasAlertTrigger was false
-        if (trigger.type === "alert") {
-          const staticAlertFilters = trigger.filters || [];
-          setAlertFilters(staticAlertFilters);
-          break;
-        }
-      }
-      const dependencies = extractAlertDependencies(workflow.workflow_raw);
-      setAlertDependencies(dependencies);
-      setIsAlertTriggerModalOpen(true);
-      return;
-    }
-    // else, manual trigger, just run it
-    else {
-      runWorkflow({});
-    }
-  };
-
-  const handleAlertTriggerModalSubmit = (payload: any) => {
-    runWorkflow(payload); // Function to run the workflow with the payload
-  };
 
   const handleDeleteClick = async () => {
     try {
@@ -1028,13 +863,15 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           <Title className="truncate max-w-64 text-left text-lightBlack">
             {workflow.name}
           </Title>
-          {WorkflowMenuSection({
+          {!!handleRunClick && WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
             onDownload: handleDownloadClick,
             onView: handleViewClick,
             onBuilder: handleBuilderClick,
-            workflow,
+            runButtonToolTip: message,
+            isRunButtonDisabled: !!isRunButtonDisabled,
+            provisioned: workflow.provisioned,
           })}
         </div>
 
@@ -1186,13 +1023,9 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           )}
         </SlidingPanel>
       </Card>
-      <AlertTriggerModal
-        isOpen={isAlertTriggerModalOpen}
-        onClose={() => setIsAlertTriggerModalOpen(false)}
-        onSubmit={handleAlertTriggerModalSubmit}
-        staticFields={alertFilters}
-        dependencies={alertDependencies}
-      />
+      {!!getTriggerModalProps && <AlertTriggerModal
+        {...getTriggerModalProps()}
+      />}
     </div>
   );
 }

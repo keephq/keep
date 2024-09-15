@@ -19,6 +19,7 @@ import {
 import "./provider-tile.css";
 import moment from "moment";
 import ImageWithFallback from "@/components/ImageWithFallback";
+import { FaCode } from "react-icons/fa";
 
 interface Props {
   provider: Provider;
@@ -199,6 +200,15 @@ export default function ProviderTile({ provider, onClick }: Props) {
           <Text color={"green"} className="flex text-xs">
             Linked
           </Text>
+        ) : null}
+        {provider.provisioned ? (
+          <Icon
+            icon={FaCode}
+            className="absolute top-[-15px] right-[-15px]"
+            color="orange"
+            size="sm"
+            tooltip="Provisioned"
+          />
         ) : null}
         <div className="flex flex-col gap-2">
           <div>

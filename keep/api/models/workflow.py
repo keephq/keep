@@ -28,8 +28,8 @@ class WorkflowDTO(BaseModel):
     created_by: str
     creation_time: datetime
     triggers: List[dict] = None
-    interval: int
-    disabled:bool
+    interval: int | None = None
+    disabled: bool = False
     last_execution_time: datetime = None
     last_execution_status: str = None
     providers: List[ProviderDTO]
@@ -39,6 +39,8 @@ class WorkflowDTO(BaseModel):
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
     last_executions: List[dict] = None
     last_execution_started: datetime = None
+    provisioned: bool = False
+    provisioned_file: str = None
 
     @property
     def workflow_raw_id(self):
@@ -70,7 +72,14 @@ class WorkflowDTO(BaseModel):
         ordered_raw["disabled"] = d.get("disabled")
         ordered_raw["triggers"] = d.get("triggers")
         for key, val in d.items():
-            if key not in ["id", "description", "disabled", "triggers", "steps", "actions"]:
+            if key not in [
+                "id",
+                "description",
+                "disabled",
+                "triggers",
+                "steps",
+                "actions",
+            ]:
                 ordered_raw[key] = val
         # than steps and actions
         ordered_raw["steps"] = d.get("steps")
