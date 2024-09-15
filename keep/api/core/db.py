@@ -2752,4 +2752,3 @@ def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
             .where(Provider.name == provider_name)
         ).first()
     return provider
-
