@@ -78,7 +78,7 @@ class Parser:
                     workflow_providers,
                     actions_file,
                     workflow_actions,
-                    workflow_not_found_throw_error
+                    workflow_not_found_throw_error,
                 )
                 for workflow in raw_workflows
             ]
@@ -94,6 +94,7 @@ class Parser:
                 workflow_providers,
                 actions_file,
                 workflow_actions,
+                workflow_not_found_throw_error,
             )
             workflows = [workflow]
         # else, if it stored in the db, it stored without the "workflow" key
@@ -105,6 +106,7 @@ class Parser:
                 workflow_providers,
                 actions_file,
                 workflow_actions,
+                workflow_not_found_throw_error,
             )
             workflows = [workflow]
         return workflows

@@ -26,11 +26,11 @@ def test_get_workflow_from_dict():
     workflow_path = str(path_to_test_resources / "db_disk_space_for_testing.yml")
     workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path)
     result = workflow_store.get_workflow_from_dict(
-        tenant_id=tenant_id, workflow=workflow_dict
+        tenant_id=tenant_id, workflow=workflow_dict, workflow_not_found_throw_error=False
     )
-    mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict)
+    mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict, workflow_not_found_throw_error=False)
     #The workflow ID is not set in the database because it's a mock file.
-    assert result.id != "workflow1"
+    assert result.id == "workflow1"
 
 
 def test_get_workflow_from_dict_raises_exception():
@@ -46,12 +46,12 @@ def test_get_workflow_from_dict_raises_exception():
 
     with pytest.raises(HTTPException) as exc_info:
         workflow_store.get_workflow_from_dict(
-            tenant_id=tenant_id, workflow=workflow_dict
+            tenant_id=tenant_id, workflow=workflow_dict, workflow_not_found_throw_error=True
         )
 
     assert exc_info.value.status_code == 500
     assert exc_info.value.detail == "Unable to parse workflow from dict"
-    mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict)
+    mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict, workflow_not_found_throw_error=True)
 
 
 def test_get_workflow_results():
