@@ -3,11 +3,12 @@ import json
 import logging
 import os
 import typing
+import validators
 
 import yaml
 
 from keep.actions.actions_factory import ActionsCRUD
-from keep.api.core.db import get_workflow_id
+from keep.api.core.db import get_workflow_id, get_workflow_by_name
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
@@ -37,10 +38,13 @@ class Parser:
         if workflow_not_found_throw_error and not workflow.get("id"): 
             raise ValueError("Workflow dict must have an id")
 
-        # get the workflow id from the database
-        workflow_id = get_workflow_id(tenant_id, workflow.get("id")) 
+        #This will only work if we pass the cli workflows with non uuid value as id.
+        if not validators.uuid(workflow.get("id")):
+            workflow_id = get_workflow_by_name(tenant_id, workflow.get("id"))
+        else:
+            workflow_id = get_workflow_id(tenant_id, workflow.get("id")) 
 
-        if workflow_not_found_throw_error: 
+        if workflow_not_found_throw_error and not workflow_id: 
             raise ValueError(f"Workflow with id {workflow.get('id')} does not exist in the database for tenant {tenant_id}")
 
         return workflow_id
