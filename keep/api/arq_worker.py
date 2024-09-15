@@ -82,6 +82,11 @@ def get_arq_worker(queue_name: str) -> Worker:
     keep_result = config(
         "ARQ_KEEP_RESULT", cast=int, default=3600
     )  # duration to keep job results for
+    
+    if config("ARQ_EXPIRES"):
+        logger.info(f"ARQ_EXPIRES is set to {config('ARQ_EXPIRES')}. Warning: this hyperparameter needs to be set to a high value (our default is 3600000ms) to handle longer-running AI tasks.")
+    else:
+        logger.info(f"ARQ_EXPIRES is not set. Defaulting to {3600*1000 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 3600}ms") 
     expires = config(
         "ARQ_EXPIRES", cast=int, default=3600*1000 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 3600
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
