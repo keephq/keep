@@ -32,6 +32,8 @@ class GithubProvider(BaseProvider):
     Enrich alerts with data from GitHub.
     """
 
+    PROVIDER_DISPLAY_NAME = "GitHub"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

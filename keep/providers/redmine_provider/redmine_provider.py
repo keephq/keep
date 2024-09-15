@@ -39,6 +39,7 @@ class RedmineProviderAuthConfig:
 class RedmineProvider(BaseProvider):
     """Enrich alerts with Redmine tickets."""
 
+    PROVIDER_DISPLAY_NAME = "Redmine"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
