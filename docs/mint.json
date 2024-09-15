@@ -159,6 +159,7 @@
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
             "providers/documentation/statuscake-provider",
+            "providers/documentation/sumologic-provider",
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/template",
