@@ -45,7 +45,8 @@ class PlannerProvider(BaseProvider):
     """
     Create tasks in Microsoft Planner.
     """
-
+    
+    PROVIDER_DISPLAY_NAME = "Microsoft Planner"
     MS_GRAPH_BASE_URL = "https://graph.microsoft.com"
     MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="/v1.0/planner/plans")
     MS_TASKS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="/v1.0/planner/tasks")

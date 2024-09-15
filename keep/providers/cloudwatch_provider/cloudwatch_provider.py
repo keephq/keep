@@ -64,6 +64,8 @@ class CloudwatchProviderAuthConfig:
 class CloudwatchProvider(BaseProvider):
     """Push alarms from AWS Cloudwatch to Keep."""
 
+    PROVIDER_DISPLAY_NAME = "Cloudwatch"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="cloudwatch:DescribeAlarms",
