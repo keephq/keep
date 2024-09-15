@@ -65,6 +65,14 @@
             "deployment/authentication/keycloak-auth"
           ]
         },
+        {
+          "group": "Provision",
+          "pages": [
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow"
+          ]
+        },
         "deployment/secret-manager",
         "deployment/docker",
         "deployment/kubernetes",

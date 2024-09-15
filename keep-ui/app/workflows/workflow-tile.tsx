@@ -50,6 +50,7 @@ function WorkflowMenuSection({
   onBuilder,
   isRunButtonDisabled,
   runButtonToolTip,
+  provisioned,
 }: {
   onDelete: () => Promise<void>;
   onRun: () => Promise<void>;
@@ -58,6 +59,7 @@ function WorkflowMenuSection({
   onBuilder: () => void;
   isRunButtonDisabled: boolean;
   runButtonToolTip?: string;
+  provisioned?: boolean;
 }) {
   // Determine if all providers are installed
 
@@ -70,6 +72,7 @@ function WorkflowMenuSection({
       onBuilder={onBuilder}
       isRunButtonDisabled={isRunButtonDisabled}
       runButtonToolTip={runButtonToolTip}
+      provisioned={provisioned}
     />
   );
 }
@@ -547,7 +550,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
           <Loading />
         </div>
       )}
-      <Card 
+      <Card
       className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2"
       onClick={(e)=>{
         e.stopPropagation();
@@ -557,7 +560,12 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         }
       }}
       >
-        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2">
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center">
+          {workflow.provisioned && (
+            <Badge color="orange" size="xs" className="mr-2">
+              Provisioned
+            </Badge>
+          )}
           {!!handleRunClick && WorkflowMenuSection({
             onDelete: handleDeleteClick,
             onRun: handleRunClick,
@@ -566,6 +574,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             onBuilder: handleBuilderClick,
             runButtonToolTip: message,
             isRunButtonDisabled: !!isRunButtonDisabled,
+            provisioned: workflow.provisioned,
           })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
@@ -862,6 +871,7 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
             onBuilder: handleBuilderClick,
             runButtonToolTip: message,
             isRunButtonDisabled: !!isRunButtonDisabled,
+            provisioned: workflow.provisioned,
           })}
         </div>
 

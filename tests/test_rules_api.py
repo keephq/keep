@@ -1,8 +1,7 @@
 import pytest
 
-from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.db import create_rule as create_rule_db
-
+from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 TEST_RULE_DATA = {
@@ -18,28 +17,36 @@ TEST_RULE_DATA = {
     "created_by": "test@keephq.dev",
 }
 
-INVALID_DATA_STEPS = [{
-    "update": {"sqlQuery": {"sql": "", "params": []}},
-    "error": "SQL is required",
-}, {
-    "update": {"sqlQuery": {"sql": "SELECT", "params": []}},
-    "error": "Params are required",
-}, {
-    "update": {"celQuery": ""},
-    "error": "CEL is required",
-}, {
-    "update": {"ruleName": ""},
-    "error": "Rule name is required",
-}, {
-    "update": {"timeframeInSeconds": 0},
-    "error": "Timeframe is required",
-}, {
-    "update": {"timeUnit": ""},
-    "error": "Timeunit is required",
-}]
+INVALID_DATA_STEPS = [
+    {
+        "update": {"sqlQuery": {"sql": "", "params": []}},
+        "error": "SQL is required",
+    },
+    {
+        "update": {"sqlQuery": {"sql": "SELECT", "params": []}},
+        "error": "Params are required",
+    },
+    {
+        "update": {"celQuery": ""},
+        "error": "CEL is required",
+    },
+    {
+        "update": {"ruleName": ""},
+        "error": "Rule name is required",
+    },
+    {
+        "update": {"timeframeInSeconds": 0},
+        "error": "Timeframe is required",
+    },
+    {
+        "update": {"timeUnit": ""},
+        "error": "Timeunit is required",
+    },
+]
+
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_get_rules_api(client, db_session, test_app):
+def test_get_rules_api(db_session, client, test_app):
     rule = create_rule_db(**TEST_RULE_DATA)
 
     response = client.get(
@@ -50,7 +57,7 @@ def test_get_rules_api(client, db_session, test_app):
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    assert data[0]['id'] == str(rule.id)
+    assert data[0]["id"] == str(rule.id)
 
     rule2 = create_rule_db(**TEST_RULE_DATA)
 
@@ -62,27 +69,26 @@ def test_get_rules_api(client, db_session, test_app):
     assert response2.status_code == 200
     data = response2.json()
     assert len(data) == 2
-    assert data[0]['id'] == str(rule.id)
-    assert data[1]['id'] == str(rule2.id)
+    assert data[0]["id"] == str(rule.id)
+    assert data[1]["id"] == str(rule2.id)
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_create_rule_api(client, db_session, test_app):
+def test_create_rule_api(db_session, client, test_app):
 
     rule_data = {
         "ruleName": "test rule",
-        "sqlQuery": {"sql": "SELECT * FROM alert where severity = %s", "params": ["critical"]},
+        "sqlQuery": {
+            "sql": "SELECT * FROM alert where severity = %s",
+            "params": ["critical"],
+        },
         "celQuery": "severity = 'critical'",
         "timeframeInSeconds": 300,
         "timeUnit": "seconds",
         "requireApprove": False,
     }
 
-    response = client.post(
-        "/rules",
-        headers={"x-api-key": "some-key"},
-        json=rule_data
-    )
+    response = client.post("/rules", headers={"x-api-key": "some-key"}, json=rule_data)
 
     assert response.status_code == 200
     data = response.json()
@@ -92,9 +98,7 @@ def test_create_rule_api(client, db_session, test_app):
     invalid_rule_data = {k: v for k, v in rule_data.items() if k != "ruleName"}
 
     invalid_data_response = client.post(
-        "/rules",
-        headers={"x-api-key": "some-key"},
-        json=invalid_rule_data
+        "/rules", headers={"x-api-key": "some-key"}, json=invalid_rule_data
     )
 
     assert invalid_data_response.status_code == 422
@@ -109,7 +113,7 @@ def test_create_rule_api(client, db_session, test_app):
         invalid_data_response_2 = client.post(
             "/rules",
             headers={"x-api-key": "some-key"},
-            json=dict(rule_data, **invalid_data_step["update"])
+            json=dict(rule_data, **invalid_data_step["update"]),
         )
 
         assert invalid_data_response_2.status_code == 400, current_step
@@ -119,7 +123,7 @@ def test_create_rule_api(client, db_session, test_app):
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_delete_rule_api(client, db_session, test_app):
+def test_delete_rule_api(db_session, client, test_app):
     rule = create_rule_db(**TEST_RULE_DATA)
 
     response = client.delete(
@@ -143,15 +147,17 @@ def test_delete_rule_api(client, db_session, test_app):
     assert data["detail"] == "Rule not found"
 
 
-
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_update_rule_api(client, db_session, test_app):
+def test_update_rule_api(db_session, client, test_app):
 
     rule = create_rule_db(**TEST_RULE_DATA)
 
     rule_data = {
         "ruleName": "test rule",
-        "sqlQuery": {"sql": "SELECT * FROM alert where severity = %s", "params": ["critical"]},
+        "sqlQuery": {
+            "sql": "SELECT * FROM alert where severity = %s",
+            "params": ["critical"],
+        },
         "celQuery": "severity = 'critical'",
         "timeframeInSeconds": 300,
         "timeUnit": "seconds",
@@ -159,9 +165,7 @@ def test_update_rule_api(client, db_session, test_app):
     }
 
     response = client.put(
-        "/rules/{}".format(rule.id),
-        headers={"x-api-key": "some-key"},
-        json=rule_data
+        "/rules/{}".format(rule.id), headers={"x-api-key": "some-key"}, json=rule_data
     )
 
     assert response.status_code == 200
@@ -174,7 +178,7 @@ def test_update_rule_api(client, db_session, test_app):
         invalid_data_response_2 = client.put(
             "/rules/{}".format(rule.id),
             headers={"x-api-key": "some-key"},
-            json=dict(rule_data, **invalid_data_step["update"])
+            json=dict(rule_data, **invalid_data_step["update"]),
         )
 
         assert invalid_data_response_2.status_code == 400, current_step
