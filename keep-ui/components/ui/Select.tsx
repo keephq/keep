@@ -13,7 +13,7 @@ const customStyles: StylesConfig<OptionType, false> = {
       borderColor: 'orange',
     },
     boxShadow: state.isFocused ? '0 0 0 1px orange' : 'none',
-    backgroundColor: 'transparent',
+    backgroundColor: state.isDisabled ? 'rgba(255, 165, 0, 0.1)' : 'transparent',
   }),
   option: (provided, state) => ({
     ...provided,
@@ -23,9 +23,10 @@ const customStyles: StylesConfig<OptionType, false> = {
       backgroundColor: 'rgba(255, 165, 0, 0.3)',
     },
   }),
-  singleValue: (provided) => ({
+  singleValue: (provided, state) => ({
     ...provided,
     color: 'black',
+    backgroundColor: state.isDisabled ? 'rgba(255, 165, 0, 0.1)' : 'transparent',
   }),
   menuPortal: (base) => ({
     ...base,
@@ -105,6 +106,7 @@ const StyledSelect: React.FC<StyledSelectProps> = ({
   placeholder,
   getOptionLabel,
   getOptionValue,
+ ...rest
 }) => (
   <Select<OptionType, false, GroupBase<OptionType>>
     value={value}
@@ -117,6 +119,7 @@ const StyledSelect: React.FC<StyledSelectProps> = ({
     menuPosition="fixed"
     getOptionLabel={getOptionLabel}
     getOptionValue={getOptionValue}
+    {...rest}
   />
 );
 

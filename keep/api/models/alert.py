@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 import pytz
@@ -436,3 +436,13 @@ class DeduplicationRuleDto(BaseModel):
     fingerprint_fields: list[str]
     full_deduplication: bool
     ignore_fields: list[str]
+
+
+class DeduplicationRuleRequestDto(BaseModel):
+    name: str
+    description: Optional[str] = None
+    provider_type: str
+    provider_id: Optional[str] = None
+    fingerprint_fields: list[str]
+    full_deduplication: bool = False
+    ignore_fields: Optional[list[str]] = None

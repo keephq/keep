@@ -1671,6 +1671,96 @@ def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
     return rule
 
 
+def create_deduplication_rule(
+    tenant_id: str,
+    name: str,
+    description: str,
+    provider_id: str | None,
+    provider_type: str,
+    created_by: str,
+    last_updated_by: str | None = None,
+    enabled: bool = True,
+    fingerprint_fields: list[str] = [],
+    full_deduplication: bool = False,
+    ignore_fields: list[str] = [],
+    priority: int = 0,
+):
+    with Session(engine) as session:
+        new_rule = AlertDeduplicationRule(
+            tenant_id=tenant_id,
+            name=name,
+            description=description,
+            provider_id=provider_id,
+            provider_type=provider_type,
+            last_updated_by=last_updated_by,
+            created_by=created_by,
+            enabled=enabled,
+            fingerprint_fields=fingerprint_fields,
+            full_deduplication=full_deduplication,
+            ignore_fields=ignore_fields,
+            priority=priority,
+        )
+        session.add(new_rule)
+        session.commit()
+        session.refresh(new_rule)
+    return new_rule
+
+
+def update_deduplication_rule(
+    rule_id: str,
+    tenant_id: str,
+    name: str,
+    description: str,
+    provider_id: str | None,
+    provider_type: str,
+    last_updated_by: str,
+    enabled: bool = True,
+    fingerprint_fields: list[str] = [],
+    full_deduplication: bool = False,
+    ignore_fields: list[str] = [],
+    priority: int = 0,
+):
+    with Session(engine) as session:
+        rule = session.exec(
+            select(AlertDeduplicationRule)
+            .where(AlertDeduplicationRule.id == rule_id)
+            .where(AlertDeduplicationRule.tenant_id == tenant_id)
+        ).first()
+        if not rule:
+            raise ValueError(f"No deduplication rule found with id {rule_id}")
+
+        rule.name = name
+        rule.description = description
+        rule.provider_id = provider_id
+        rule.provider_type = provider_type
+        rule.last_updated_by = last_updated_by
+        rule.enabled = enabled
+        rule.fingerprint_fields = fingerprint_fields
+        rule.full_deduplication = full_deduplication
+        rule.ignore_fields = ignore_fields
+        rule.priority = priority
+
+        session.add(rule)
+        session.commit()
+        session.refresh(rule)
+    return rule
+
+
+def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
+    with Session(engine) as session:
+        rule = session.exec(
+            select(AlertDeduplicationRule)
+            .where(AlertDeduplicationRule.id == rule_id)
+            .where(AlertDeduplicationRule.tenant_id == tenant_id)
+        ).first()
+        if not rule:
+            return False
+
+        session.delete(rule)
+        session.commit()
+    return True
+
+
 def get_custom_full_deduplication_rules(tenant_id, provider_id, provider_type):
     with Session(engine) as session:
         rules = session.exec(

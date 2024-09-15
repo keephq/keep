@@ -198,7 +198,10 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
             Set up rules to deduplicate similar alerts
           </Subtitle>
         </div>
-        <Button color="orange" onClick={() => onDeduplicationClick({} as DeduplicationRule)}>
+        <Button color="orange" onClick={() => {
+          setSelectedDeduplicationRule(null);
+          setIsSidebarOpen(true);
+        }}>
           Create Deduplication Rule
         </Button>
       </div>

@@ -6,14 +6,21 @@ import logging
 from keep.api.core.config import config
 from keep.api.core.db import (
     create_deduplication_event,
+    create_deduplication_rule,
+    delete_deduplication_rule,
     get_alerts_fields,
     get_all_dedup_ratio,
     get_all_deduplication_rules,
     get_custom_full_deduplication_rules,
     get_last_alert_hash_by_fingerprint,
     get_provider_distribution,
+    update_deduplication_rule,
 )
-from keep.api.models.alert import AlertDto, DeduplicationRuleDto
+from keep.api.models.alert import (
+    AlertDto,
+    DeduplicationRuleDto,
+    DeduplicationRuleRequestDto,
+)
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -272,15 +279,60 @@ class AlertDeduplicator:
     def get_deduplication_fields(self) -> list[str]:
         fields = get_alerts_fields(self.tenant_id)
 
-        default_fields = ["source", "service", "description"]
-
         fields_per_provider = {}
         for field in fields:
             provider_type = field.provider_type if field.provider_type else "null"
             provider_id = field.provider_id if field.provider_id else "null"
             key = f"{provider_type}_{provider_id}"
             if key not in fields_per_provider:
-                fields_per_provider[key] = copy.copy(default_fields)
+                fields_per_provider[key] = []
             fields_per_provider[key].append(field.field_name)
 
         return fields_per_provider
+
+    def create_deduplication_rule(
+        self, rule: DeduplicationRuleRequestDto, created_by: str
+    ) -> DeduplicationRuleDto:
+        # Use the db function to create a new deduplication rule
+        new_rule = create_deduplication_rule(
+            tenant_id=self.tenant_id,
+            name=rule.name,
+            description=rule.description,
+            provider_id=rule.provider_id,
+            provider_type=rule.provider_type,
+            created_by=created_by,
+            enabled=True,
+            fingerprint_fields=rule.fingerprint_fields,
+            full_deduplication=rule.full_deduplication,
+            ignore_fields=rule.ignore_fields or [],
+            priority=0,
+        )
+
+        return new_rule
+
+    def update_deduplication_rule(
+        self, rule_id: str, rule: DeduplicationRuleRequestDto, updated_by: str
+    ) -> DeduplicationRuleDto:
+        # Use the db function to update an existing deduplication rule
+        updated_rule = update_deduplication_rule(
+            rule_id=rule_id,
+            tenant_id=self.tenant_id,
+            name=rule.name,
+            description=rule.description,
+            provider_id=rule.provider_id,
+            provider_type=rule.provider_type,
+            last_updated_by=updated_by,
+            enabled=True,
+            fingerprint_fields=rule.fingerprint_fields,
+            full_deduplication=rule.full_deduplication,
+            ignore_fields=rule.ignore_fields or [],
+            priority=0,
+        )
+
+        return updated_rule
+
+    def delete_deduplication_rule(self, rule_id: str) -> bool:
+        # Use the db function to delete a deduplication rule
+        success = delete_deduplication_rule(rule_id=rule_id, tenant_id=self.tenant_id)
+
+        return success
