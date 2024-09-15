@@ -39,6 +39,8 @@ class WorkflowDTO(BaseModel):
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
     last_executions: List[dict] = None
     last_execution_started: datetime = None
+    provisioned: bool = False
+    provisioned_file: str = None
 
     @property
     def workflow_raw_id(self):
