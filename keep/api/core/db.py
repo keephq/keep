@@ -281,16 +281,30 @@ def add_or_update_workflow(
     workflow_id,
     provisioned=False,
     provisioned_file=None,
+    re_provision=False,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
-        existing_workflow = (
-            session.query(Workflow)
-            .filter_by(id=workflow_id)
-            .filter_by(tenant_id=tenant_id)
-            .first()
-        )
+        #if already provisioned. Update is not possible on provision workflow so we can search by name)
+        if provisioned : 
+            existing_workflow= (
+                session.query(Workflow)
+                .filter_by(name=name)
+                .filter_by(tenant_id=tenant_id)
+                .filter_by(provisioned=True)
+                .first()
+            )
+            if existing_workflow and not re_provision: 
+                raise ValueError("Cannot update a provisioned workflow")
+
+        else : 
+            existing_workflow = (
+                session.query(Workflow)
+                .filter_by(id=workflow_id)
+                .filter_by(tenant_id=tenant_id)
+                .first()
+            )
 
         if existing_workflow:
             workflow_raw = update_raw(existing_workflow.id)

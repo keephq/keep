@@ -364,6 +364,18 @@ class Parser:
             )
             else False
         )
+    @staticmethod    
+    def parse_provisioned(workflow_dict:dict) -> bool:
+        workflow_is_provisioned = workflow_dict.get("provisioned")
+        return (
+            True
+            if (
+                workflow_is_provisioned == "true"
+                or workflow_is_provisioned is True
+            )
+            else False
+        )
+
 
     @staticmethod
     def parse_provider_parameters(provider_parameters: dict) -> dict:

@@ -61,17 +61,26 @@ class WorkflowStore:
             workflow["id"] = workflow_id
             return yaml.dump(workflow)
 
-        workflow = add_or_update_workflow(
-            id=str(uuid.uuid4()),
-            name=workflow_name,
-            tenant_id=tenant_id,
-            description=workflow.get("description"),
-            created_by=created_by,
-            interval=interval,
-            is_disabled=Parser.parse_disabled(workflow),
-            update_raw=_update_workflow_raw_data,  # Pass update_raw function
-            workflow_id=workflow_id,
-        )
+
+        try:    
+            workflow = add_or_update_workflow(
+                id=str(uuid.uuid4()),
+                name=workflow_name,
+                tenant_id=tenant_id,
+                description=workflow.get("description"),
+                created_by=created_by,
+                interval=interval,
+                is_disabled=Parser.parse_disabled(workflow),
+                update_raw=_update_workflow_raw_data,  # Pass update_raw function
+                workflow_id=workflow_id,
+                provisioned=Parser.parse_provisioned(workflow),
+                provisioned_file=workflow.get("provisioned_file")
+            )
+        except Exception as e:
+            self.logger.error(f"Error creating workflow {workflow_id}: {str(e)}")
+            raise HTTPException(
+                status_code=403, detail=f"{str(e)}"
+            )
         self.logger.info(f"Workflow {workflow_id} created successfully")
         return workflow
 
@@ -333,7 +342,11 @@ class WorkflowStore:
                     workflow_id = str(uuid.uuid4())
                     workflow_description = workflow_yaml.get("description")
                     workflow_interval = parser.parse_interval(workflow_yaml)
-                    workflow_disabled = parser.parse_disabled(workflow_yaml)
+                    workflow_disabled = parser.parse_disabled(workflow_yaml)             
+
+                    def _update_workflow_raw_data(workflow_id: str):
+                       workflow_yaml["id"] = workflow_id
+                       return yaml.dump(workflow_yaml)
 
                     add_or_update_workflow(
                         id=workflow_id,
@@ -343,9 +356,11 @@ class WorkflowStore:
                         created_by="system",
                         interval=workflow_interval,
                         is_disabled=workflow_disabled,
-                        workflow_raw=yaml.dump(workflow_yaml),
+                        update_raw=_update_workflow_raw_data,
+                        workflow_id=workflow_id,
                         provisioned=True,
                         provisioned_file=workflow_path,
+                        re_provision=True
                     )
                     provisioned_workflows.append(workflow_yaml)
 

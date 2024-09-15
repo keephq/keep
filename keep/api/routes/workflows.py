@@ -136,6 +136,7 @@ def get_workflows(
                 last_execution_started=last_execution_started,
                 disabled=workflow.is_disabled,
                 provisioned=workflow.provisioned,
+                provisioned_file=workflow.provisioned_file,
             )
         except Exception as e:
             logger.error(f"Error creating workflow DTO: {e}")
@@ -591,6 +592,9 @@ def get_workflow_by_id(
         workflow_raw=workflow.workflow_raw,
         last_updated=workflow.last_updated,
         disabled=workflow.is_disabled,
+        provisioned=workflow.provisioned,
+        provisioned_file=workflow.provisioned_file,
+
     )
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,
