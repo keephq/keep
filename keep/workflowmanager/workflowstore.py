@@ -444,7 +444,6 @@ class WorkflowStore:
         Group last workflow executions by workflow id
         """
 
-        self.logger.info(f"workflow_executions: {workflows}")
         workflow_dict = {}
         for item in workflows:
             workflow, started, execution_time, status = item
