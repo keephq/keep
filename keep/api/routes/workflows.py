@@ -387,6 +387,19 @@ def get_random_workflow_templates(
         "KEEP_WORKFLOWS_PATH",
         os.path.join(os.path.dirname(__file__), "../../../examples/workflows"),
     )
+    if not os.path.exists(default_directory):
+        # on the container we use the following path
+        fallback_directory = "/examples/workflows"
+        logger.warning(
+            f"{default_directory} does not exist, using fallback: {fallback_directory}"
+        )
+        if os.path.exists(fallback_directory):
+            default_directory = fallback_directory
+        else:
+            logger.error(f"Neither {default_directory} nor {fallback_directory} exist")
+            raise FileNotFoundError(
+                f"Neither {default_directory} nor {fallback_directory} exist"
+            )
     workflows = workflowstore.get_random_workflow_templates(
         tenant_id=tenant_id, workflows_dir=default_directory, limit=6
     )
