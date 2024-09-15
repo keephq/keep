@@ -307,10 +307,10 @@ class WorkflowStore:
 
         # Check for workflows that are no longer in the directory or outside the workflows_dir and delete them
         for workflow in provisioned_workflows:
-            if (
-                not os.path.exists(workflow.provisioned_file)
-                or not os.path.commonpath([workflows_dir, workflow.provisioned_file])
-                == workflows_dir
+            if not os.path.exists(
+                workflow.provisioned_file
+            ) or not workflows_dir.endswith(
+                os.path.commonpath([workflows_dir, workflow.provisioned_file])
             ):
                 logger.info(
                     f"Deprovisioning workflow {workflow.id} as its file no longer exists or is outside the workflows directory"
