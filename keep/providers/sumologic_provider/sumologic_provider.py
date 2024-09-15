@@ -3,8 +3,6 @@ SumoLogic Provider is a class that allows to install webhooks in SumoLogic.
 """
 
 import dataclasses
-import json
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -133,7 +131,6 @@ class SumologicProvider(BaseProvider):
         perms = {"manageScheduledViews", "manageConnections", "manageUsersAndRoles"}
         self.logger.info("Validating SumoLogic authentication.")
         try:
-            x = self.__get_url(paths=["account", "accountOwner"])
             account_owner_response = requests.get(
                 url=self.__get_url(paths=["account", "accountOwner"]),
                 auth=self.__get_auth(),
@@ -149,7 +146,7 @@ class SumologicProvider(BaseProvider):
             else:
                 account_owner_response = account_owner_response.json()
                 self.logger.error(
-                    f"Error while getting UserID",
+                    "Error while getting UserID",
                     extra={"error": str(account_owner_response)},
                 )
                 return {
