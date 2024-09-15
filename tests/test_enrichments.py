@@ -457,7 +457,7 @@ def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_enrichment(client, db_session, test_app, mock_alert_dto, elastic_client):
+def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client):
     # add some rule
     rule = MappingRule(
         id=1,
@@ -495,7 +495,7 @@ def test_enrichment(client, db_session, test_app, mock_alert_dto, elastic_client
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_disposable_enrichment(client, db_session, test_app, mock_alert_dto):
+def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
     # SHAHAR: there is a voodoo so that you must do something with the db_session to kick it off
     rule = MappingRule(
         id=1,

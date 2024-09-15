@@ -12,7 +12,7 @@ from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 @pytest.mark.parametrize("test_app", ["SINGLE_TENANT"], indirect=True)
 def test_single_tenant_configuration_with_elastic(
-    client, elastic_client, db_session, test_app
+    db_session, client, elastic_client, test_app
 ):
     valid_api_key = "valid_api_key"
     setup_api_key(db_session, valid_api_key)
@@ -30,7 +30,7 @@ def test_single_tenant_configuration_with_elastic(
     ],
     indirect=True,
 )
-def test_single_tenant_configuration_without_elastic(client, db_session, test_app):
+def test_single_tenant_configuration_without_elastic(db_session, client, test_app):
     valid_api_key = "valid_api_key"
     setup_api_key(db_session, valid_api_key)
     response = client.get("/preset/feed/alerts", headers={"x-api-key": valid_api_key})
@@ -39,7 +39,7 @@ def test_single_tenant_configuration_without_elastic(client, db_session, test_ap
 
 @pytest.mark.parametrize("test_app", ["MULTI_TENANT"], indirect=True)
 def test_multi_tenant_configuration_with_elastic(
-    client, elastic_client, db_session, test_app
+    db_session, client, elastic_client, test_app
 ):
     valid_api_key = "valid_api_key"
     valid_api_key_2 = "valid_api_key_2"
