@@ -272,13 +272,15 @@ class AlertDeduplicator:
     def get_deduplication_fields(self) -> list[str]:
         fields = get_alerts_fields(self.tenant_id)
 
+        default_fields = ["source", "service", "description"]
+
         fields_per_provider = {}
         for field in fields:
             provider_type = field.provider_type if field.provider_type else "null"
             provider_id = field.provider_id if field.provider_id else "null"
             key = f"{provider_type}_{provider_id}"
             if key not in fields_per_provider:
-                fields_per_provider[key] = []
+                fields_per_provider[key] = copy.copy(default_fields)
             fields_per_provider[key].append(field.field_name)
 
         return fields_per_provider
