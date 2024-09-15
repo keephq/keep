@@ -77,13 +77,6 @@ class SumologicProvider(BaseProvider):
         ),
     ]
 
-    SEVERITIES_MAP = {
-        "CRITICAL": AlertSeverity.CRITICAL,
-        "WARNING": AlertSeverity.WARNING,
-        "INFO": AlertSeverity.INFO,
-    }
-    STATUS_MAP = {"firing": AlertStatus.FIRING, "resolved": AlertStatus.RESOLVED}
-
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -119,7 +112,7 @@ class SumologicProvider(BaseProvider):
         paths = ["issue", "createmeta"]
         query_params = {"projectKeys": "key1"}
         url = __get_url("test", paths, query_params)
-        # url = https://baseballxyz.saas.appdynamics.com/rest/api/2/issue/createmeta?projectKeys=key1
+        # url = https://api.sumologic.com/api/v1/issue/createmeta?projectKeys=key1
         """
         if self.authentication_config.deployment.lower() != "us1":
             host = f"https://api.{self.authentication_config.deployment.lower()}.sumologic.com/api/v1/"
@@ -409,18 +402,18 @@ class SumologicProvider(BaseProvider):
     @staticmethod
     def __extract_severity(severity: str):
         if "critical" in severity.lower():
-            return SumologicProvider.SEVERITIES_MAP.get("CRITICAL")
+            return AlertSeverity.CRITICAL
         elif "warning" in severity.lower():
-            return SumologicProvider.SEVERITIES_MAP.get("WARNING")
+            return AlertSeverity.WARNING
         elif "missing" in severity.lower():
-            return SumologicProvider.SEVERITIES_MAP.get("INFO")
+            return AlertSeverity.INFO
 
     @staticmethod
     def __extract_status(status: str):
         if "resolved" in status.lower():
-            return SumologicProvider.STATUS_MAP.get("resolved")
+            return AlertStatus.RESOLVED
         else:
-            return SumologicProvider.STATUS_MAP.get("firing")
+            return AlertStatus.FIRING
 
     @staticmethod
     def _format_alert(
@@ -447,34 +440,3 @@ class SumologicProvider(BaseProvider):
             url=event["alertResponseUrl"],
             source=["sumologic"],
         )
-
-
-if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
-    context_manager = ContextManager(
-        tenant_id="singletenant",
-        workflow_id="test",
-    )
-
-    import os
-
-    # api_key = os.getenv("INCIDENTIO_API_KEY")
-
-    config = ProviderConfig(
-        description="Sumo Logic Provider",
-        authentication={
-            "sumoAccessId": "suOOgc0GyKCgQK",
-            "sumoAccessKey": "Wiu8EzqHJzZHwowrTBo77vfSs4Xyxboxe3odhl0ZUSHrcn2vMgtQVL9j66h6koyK",
-            "deployment": "US1",
-        },
-    )
-
-    provider = SumologicProvider(
-        context_manager,
-        provider_id="incidentio_provider",
-        config=config,
-    )
-    print(provider.setup_webhook("a", "https://tasks.copyrightable.com/", "c", True))
-    # print(provider._get_alerts())
