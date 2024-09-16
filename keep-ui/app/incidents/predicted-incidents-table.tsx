@@ -45,9 +45,9 @@ export default function PredictedIncidentsTable({
       cell: ({ row }) => <div className="text-wrap">{row.original.generated_summary}</div>,
     }),
     columnHelper.display({
-      id: "alert_count",
+      id: "alerts_count",
       header: "Number of Alerts",
-      cell: (context) => context.row.original.number_of_alerts,
+      cell: (context) => context.row.original.alerts_count,
     }),
     columnHelper.display({
       id: "alert_sources",
