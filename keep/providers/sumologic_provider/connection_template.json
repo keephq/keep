@@ -1,0 +1,20 @@
+{
+  "name": "{{Name}}",
+  "description": "{{Description}}",
+  "monitorType": "{{MonitorType}}",
+  "query": "{{Query}}",
+  "queryURL": "{{QueryURL}}",
+  "resultsJson": "{{ResultsJson}}",
+  "numQueryResults": "{{NumQueryResults}}",
+  "id": "{{Id}}",
+  "detectionMethod": "{{DetectionMethod}}",
+  "triggerType": "{{TriggerType}}",
+  "triggerTimeRange": "{{TriggerTimeRange}}",
+  "triggerTime": "{{TriggerTime}}",
+  "triggerCondition": "{{TriggerCondition}}",
+  "triggerValue": "{{TriggerValue}}",
+  "triggerTimeStart": "{{TriggerTimeStart}}",
+  "triggerTimeEnd": "{{TriggerTimeEnd}}",
+  "sourceURL": "{{SourceURL}}",
+  "alertResponseUrl": "{{AlertResponseUrl}}"
+}
