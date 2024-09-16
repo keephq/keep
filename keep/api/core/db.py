@@ -18,7 +18,6 @@ import numpy as np
 import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
-from networkx import is_connected
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from sqlalchemy import and_, desc, null, update
 from sqlalchemy.exc import IntegrityError, OperationalError
