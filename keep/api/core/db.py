@@ -1678,7 +1678,6 @@ def create_deduplication_rule(
     provider_id: str | None,
     provider_type: str,
     created_by: str,
-    last_updated_by: str | None = None,
     enabled: bool = True,
     fingerprint_fields: list[str] = [],
     full_deduplication: bool = False,
@@ -1692,7 +1691,7 @@ def create_deduplication_rule(
             description=description,
             provider_id=provider_id,
             provider_type=provider_type,
-            last_updated_by=last_updated_by,
+            last_updated_by=created_by,  # on creation, last_updated_by is the same as created_by
             created_by=created_by,
             enabled=enabled,
             fingerprint_fields=fingerprint_fields,
@@ -1786,15 +1785,14 @@ def create_deduplication_event(tenant_id, deduplication_rule_id, deduplication_t
         session.commit()
 
 
-def get_all_dedup_ratio(tenant_id):
+def get_all_alerts_by_providers(tenant_id):
     with Session(engine) as session:
-        # Query to get the count of alerts and unique fingerprints per provider_id and provider_type
+        # Query to get the count of alerts per provider_id and provider_type
         query = (
             select(
                 Alert.provider_id,
                 Alert.provider_type,
                 func.count(Alert.id).label("num_alerts"),
-                func.count(func.distinct(Alert.fingerprint)).label("num_fingerprints"),
             )
             .where(Alert.tenant_id == tenant_id)
             .group_by(Alert.provider_id, Alert.provider_type)
@@ -1802,37 +1800,68 @@ def get_all_dedup_ratio(tenant_id):
 
         results = session.exec(query).all()
 
-        # Calculate the ratio for each provider
+        # Create a dictionary with the number of alerts for each provider
         stats = {}
-        total_alerts = 0
         for result in results:
             provider_id = result.provider_id
             provider_type = result.provider_type
             num_alerts = result.num_alerts
-            num_fingerprints = result.num_fingerprints
-            ratio = (
-                (1 - (num_fingerprints / num_alerts)) * 100
-                if num_fingerprints > 0
-                else 0
-            )
 
-            key = (provider_id, provider_type)
+            key = f"{provider_type}_{provider_id}"
             stats[key] = {
                 "num_alerts": num_alerts,
-                "num_fingerprints": num_fingerprints,
-                "ratio": ratio,
             }
-            total_alerts += num_alerts
 
-        # Add total number of alerts to the stats
-        stats["total_alerts"] = total_alerts
+    return stats
+
+
+def get_all_deduplication_stats(tenant_id):
+    with Session(engine) as session:
+        # Query to get deduplication stats
+        query = (
+            select(
+                AlertDeduplicationEvent.provider_id,
+                AlertDeduplicationEvent.provider_type,
+                AlertDeduplicationEvent.deduplication_type,
+                func.count(AlertDeduplicationEvent.id).label("dedup_count"),
+            )
+            .where(AlertDeduplicationEvent.tenant_id == tenant_id)
+            .group_by(
+                AlertDeduplicationEvent.provider_id,
+                AlertDeduplicationEvent.provider_type,
+                AlertDeduplicationEvent.deduplication_type,
+            )
+        )
+
+        results = session.exec(query).all()
+
+        # Create a dictionary with deduplication stats for each provider
+        stats = {}
+        for result in results:
+            provider_id = result.provider_id
+            provider_type = result.provider_type
+            dedup_type = result.deduplication_type
+            dedup_count = result.dedup_count
+
+            key = (provider_id, provider_type)
+            if key not in stats:
+                stats[key] = {"full": 0, "partial": 0}
+
+            stats[key][dedup_type] = dedup_count
+
+        # Calculate deduplication ratio
+        for key, counts in stats.items():
+            total_dedups = counts["full"] + counts["partial"]
+            if total_dedups > 0:
+                ratio = counts["full"] / total_dedups
+            else:
+                ratio = 0
+            stats[key]["ratio"] = ratio
 
     return stats
 
 
 def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
-    from sqlalchemy.dialects import mssql
-
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
@@ -1843,13 +1872,14 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
             .order_by(Alert.timestamp.desc())
             .limit(1)  # Add LIMIT 1 for MSSQL
         )
-
+        """
+        from sqlalchemy.dialects import mssql
         # Compile the query and log it
         compiled_query = query.compile(
             dialect=mssql.dialect(), compile_kwargs={"literal_binds": True}
         )
         logger.info(f"Compiled query: {compiled_query}")
-
+        """
         alert_hash = session.exec(query).first()
     return alert_hash
 

@@ -9,11 +9,9 @@ from keep.api.core.db import (
     create_deduplication_rule,
     delete_deduplication_rule,
     get_alerts_fields,
-    get_all_dedup_ratio,
     get_all_deduplication_rules,
     get_custom_full_deduplication_rules,
     get_last_alert_hash_by_fingerprint,
-    get_provider_distribution,
     update_deduplication_rule,
 )
 from keep.api.models.alert import (
@@ -214,9 +212,38 @@ class AlertDeduplicator:
         }
         # get custom deduplication rules
         custom_deduplications = get_all_deduplication_rules(self.tenant_id)
-        custom_deduplications_dict = {
-            rule.provider_id: rule for rule in custom_deduplications
-        }
+        # cast to dto
+        custom_deduplications_dto = [
+            DeduplicationRuleDto(
+                id=str(rule.id),
+                name=rule.name,
+                description=rule.description,
+                default=False,
+                distribution=[],
+                fingerprint_fields=rule.fingerprint_fields,
+                provider_type=rule.provider_type,
+                provider_id=rule.provider_id,
+                full_deduplication=rule.full_deduplication,
+                ignore_fields=rule.ignore_fields,
+                priority=rule.priority,
+                last_updated=str(rule.last_updated),
+                last_updated_by=rule.last_updated_by,
+                created_at=str(rule.created_at),
+                created_by=rule.created_by,
+                ingested=0,
+                dedup_ratio=0.0,
+                enabled=rule.enabled,
+            )
+            for rule in custom_deduplications
+        ]
+
+        custom_deduplications_dict = {}
+        for rule in custom_deduplications_dto:
+            key = f"{rule.provider_type}_{rule.provider_id}"
+            if key not in custom_deduplications_dict:
+                custom_deduplications_dict[key] = []
+            custom_deduplications_dict[key].append(rule)
+
         # get the "catch all" full deduplication rule
         catch_all_full_deduplication = self._get_default_full_deduplication_rule()
 
@@ -226,7 +253,8 @@ class AlertDeduplicator:
         final_deduplications = [catch_all_full_deduplication]
         for provider in providers:
             # if the provider doesn't have a deduplication rule, use the default one
-            if provider.id not in custom_deduplications_dict:
+            key = f"{provider.type}_{provider.id}"
+            if key not in custom_deduplications_dict:
                 # no default deduplication rule found [if provider doesn't have FINGERPRINT_FIELDS]
                 if provider.type not in default_deduplications_dict:
                     self.logger.warning(
@@ -248,16 +276,16 @@ class AlertDeduplicator:
                 final_deduplications.append(default_deduplication)
             # else, just use the custom deduplication rule
             else:
-                final_deduplications.append(custom_deduplications_dict[provider.id])
+                final_deduplications += custom_deduplications_dict[key]
 
         # now calculate some statistics
-        dedup_ratio = get_all_dedup_ratio(self.tenant_id)
-
+        # alerts_by_provider_stats = get_all_alerts_by_providers(self.tenant_id)
+        # deduplication_stats = get_all_deduplication_stats(self.tenant_id)
+        """
         result = []
         for dedup in final_deduplications:
-            dedup.ingested = dedup_ratio.get(
-                (dedup.provider_id, dedup.provider_type), {}
-            ).get("num_alerts", 0.0)
+            key = f"{dedup.provider_type}_{dedup.provider_id}"
+            dedup.ingested = alerts_by_provider_stats[key]
             dedup.dedup_ratio = dedup_ratio.get(
                 (dedup.provider_id, dedup.provider_type), {}
             ).get("ratio", 0.0)
@@ -273,6 +301,10 @@ class AlertDeduplicator:
                         )
                         dedup.distribution = distribution
                         break
+        """
+        # sort providers to have enabled first
+        result = []
+        result = sorted(result, key=lambda x: x.default, reverse=True)
 
         return result
 

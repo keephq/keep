@@ -102,7 +102,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     clearErrors();
     try {
       const apiUrl = getApiURL();
-      let url = `${apiUrl}/deduplication`;
+      let url = `${apiUrl}/deduplications`;
 
       if (selectedDeduplicationRule && selectedDeduplicationRule.id) {
         url += `/${selectedDeduplicationRule.id}`;
