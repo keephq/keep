@@ -930,7 +930,6 @@ def count_alerts(
 def get_enrichment(tenant_id, fingerprint, refresh=False):
     with Session(engine) as session:
         return get_enrichment_with_session(session, tenant_id, fingerprint, refresh)
-    return alert_enrichment
 
 
 def get_enrichments(
@@ -958,7 +957,7 @@ def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
         .where(AlertEnrichment.tenant_id == tenant_id)
         .where(AlertEnrichment.alert_fingerprint == fingerprint)
     ).first()
-    if refresh:
+    if refresh and alert_enrichment:
         try:
             session.refresh(alert_enrichment)
         except Exception:
@@ -1760,24 +1759,27 @@ def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
     return True
 
 
-def get_custom_full_deduplication_rules(tenant_id, provider_id, provider_type):
+def get_custom_deduplication_rules(tenant_id, provider_id, provider_type):
     with Session(engine) as session:
         rules = session.exec(
             select(AlertDeduplicationRule)
             .where(AlertDeduplicationRule.tenant_id == tenant_id)
             .where(AlertDeduplicationRule.provider_id == provider_id)
             .where(AlertDeduplicationRule.provider_type == provider_type)
-            .where(AlertDeduplicationRule.full_deduplication == True)
         ).all()
     return rules
 
 
-def create_deduplication_event(tenant_id, deduplication_rule_id, deduplication_type):
+def create_deduplication_event(
+    tenant_id, deduplication_rule_id, deduplication_type, provider_id, provider_type
+):
     with Session(engine) as session:
         deduplication_event = AlertDeduplicationEvent(
             tenant_id=tenant_id,
             deduplication_rule_id=deduplication_rule_id,
             deduplication_type=deduplication_type,
+            provider_id=provider_id,
+            provider_type=provider_type,
             timestamp=datetime.utcnow(),
             date_hour=datetime.utcnow().replace(minute=0, second=0, microsecond=0),
         )
@@ -1817,46 +1819,82 @@ def get_all_alerts_by_providers(tenant_id):
 
 def get_all_deduplication_stats(tenant_id):
     with Session(engine) as session:
-        # Query to get deduplication stats
-        query = (
+        # Query to get all-time deduplication stats
+        all_time_query = (
             select(
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
-                AlertDeduplicationEvent.deduplication_type,
                 func.count(AlertDeduplicationEvent.id).label("dedup_count"),
             )
             .where(AlertDeduplicationEvent.tenant_id == tenant_id)
             .group_by(
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
-                AlertDeduplicationEvent.deduplication_type,
             )
         )
 
-        results = session.exec(query).all()
+        all_time_results = session.exec(all_time_query).all()
+
+        # Query to get alerts distribution in the last 24 hours
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        alerts_last_24_hours_query = (
+            select(
+                AlertDeduplicationEvent.provider_id,
+                AlertDeduplicationEvent.provider_type,
+                AlertDeduplicationEvent.date_hour,
+                func.count(AlertDeduplicationEvent.id).label("hourly_count"),
+            )
+            .where(AlertDeduplicationEvent.tenant_id == tenant_id)
+            .where(AlertDeduplicationEvent.date_hour >= twenty_four_hours_ago)
+            .group_by(
+                AlertDeduplicationEvent.provider_id,
+                AlertDeduplicationEvent.provider_type,
+                AlertDeduplicationEvent.date_hour,
+            )
+        )
+
+        alerts_last_24_hours_results = session.exec(alerts_last_24_hours_query).all()
 
         # Create a dictionary with deduplication stats for each provider
         stats = {}
-        for result in results:
+        current_hour = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+        for result in all_time_results:
             provider_id = result.provider_id
             provider_type = result.provider_type
-            dedup_type = result.deduplication_type
             dedup_count = result.dedup_count
 
-            key = (provider_id, provider_type)
+            # alerts without provider_id and provider_type are considered as "keep"
+            if not provider_type:
+                provider_type = "keep"
+
+            key = f"{provider_type}_{provider_id}"
             if key not in stats:
-                stats[key] = {"full": 0, "partial": 0}
+                stats[key] = {
+                    "dedup_count": 0,
+                    "alerts_last_24_hours": [
+                        {"hour": (current_hour - timedelta(hours=i)).hour, "number": 0}
+                        for i in range(0, 24)
+                    ],
+                }
 
-            stats[key][dedup_type] = dedup_count
+            stats[key]["dedup_count"] = dedup_count
 
-        # Calculate deduplication ratio
-        for key, counts in stats.items():
-            total_dedups = counts["full"] + counts["partial"]
-            if total_dedups > 0:
-                ratio = counts["full"] / total_dedups
-            else:
-                ratio = 0
-            stats[key]["ratio"] = ratio
+        # Add alerts distribution from the last 24 hours
+        for result in alerts_last_24_hours_results:
+            provider_id = result.provider_id
+            provider_type = result.provider_type
+            date_hour = result.date_hour
+            hourly_count = result.hourly_count
+
+            if not provider_type:
+                provider_type = "keep"
+            key = f"{provider_type}_{provider_id}"
+            if key in stats:
+                hours_ago = int((current_hour - date_hour).total_seconds() / 3600)
+                if 0 <= hours_ago < 24:
+                    stats[key]["alerts_last_24_hours"][23 - hours_ago][
+                        "number"
+                    ] = hourly_count
 
     return stats
 

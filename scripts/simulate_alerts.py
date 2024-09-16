@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    GENERATE_DEDUPLICATIONS = True
     keep_api_key = (
         "f228aabc-17d4-4e12-a918-48bd90742afc"  # os.environ.get("KEEP_API_KEY")
     )
@@ -36,25 +37,31 @@ def main():
         provider = provider_classes[provider_type]
         alert = provider.simulate_alert()
 
-        logger.info("Sending alert: {}".format(alert))
-        try:
-            env = random.choice(["production", "staging", "development"])
-            response = requests.post(
-                send_alert_url + f"?provider_id={provider_type}-{env}",
-                headers={"x-api-key": keep_api_key},
-                json=alert,
-            )
-        except Exception as e:
-            logger.error("Failed to send alert: {}".format(e))
-            time.sleep(0.2)
-            continue
+        # Determine number of times to send the same alert
+        num_iterations = 1
+        if GENERATE_DEDUPLICATIONS:
+            num_iterations = random.randint(1, 3)
 
-        if response.status_code != 202:
-            logger.error("Failed to send alert: {}".format(response.text))
-        else:
-            logger.info("Alert sent successfully")
+        for _ in range(num_iterations):
+            logger.info("Sending alert: {}".format(alert))
+            try:
+                env = random.choice(["production", "staging", "development"])
+                response = requests.post(
+                    send_alert_url + f"?provider_id={provider_type}-{env}",
+                    headers={"x-api-key": keep_api_key},
+                    json=alert,
+                )
+            except Exception as e:
+                logger.error("Failed to send alert: {}".format(e))
+                time.sleep(0.2)
+                continue
 
-        time.sleep(0.2)  # Wait for 10 seconds before sending the next alert
+            if response.status_code != 202:
+                logger.error("Failed to send alert: {}".format(response.text))
+            else:
+                logger.info("Alert sent successfully")
+
+            time.sleep(0.2)  # Wait for 0.2 seconds before sending the next alert
 
 
 if __name__ == "__main__":

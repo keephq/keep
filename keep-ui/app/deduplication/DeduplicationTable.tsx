@@ -91,8 +91,10 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
         cell: (info) => (
           <div className="flex items-center justify-between max-w-[400px]">
             <span className="truncate lg:whitespace-normal">{info.getValue()}</span>
-            {info.row.original.default && (
+            {info.row.original.default ? (
               <Badge color="orange" size="xs" className="ml-2">Default</Badge>
+            ) : (
+              <Badge color="orange" size="xs" className="ml-2">Custom</Badge>
             )}
             {info.row.original.full_deduplication && (
               <Badge color="orange" size="xs" className="ml-2">Full Deduplication</Badge>
@@ -140,16 +142,26 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
       }),
       columnHelper.accessor("fingerprint_fields", {
         header: "Fields",
-        cell: (info) => (
-          <div className="flex flex-wrap items-center gap-2 w-[200px]">
-            {info.getValue().map((field: string, index: number) => (
-              <React.Fragment key={field}>
-                {index > 0 && <PlusIcon className="w-4 h-4 text-gray-400" />}
-                <Badge color="orange" size="md">{field}</Badge>
-              </React.Fragment>
-            ))}
-          </div>
-        ),
+        cell: (info) => {
+          const fields = info.getValue();
+          if (!fields || fields.length === 0) {
+            return (
+              <div className="flex flex-wrap items-center gap-2 w-[200px]">
+                <Badge color="oranrge" size="md">N/A</Badge>
+              </div>
+            );
+          }
+          return (
+            <div className="flex flex-wrap items-center gap-2 w-[200px]">
+              {fields.map((field: string, index: number) => (
+                <React.Fragment key={field}>
+                  {index > 0 && <PlusIcon className="w-4 h-4 text-gray-400" />}
+                  <Badge color="orange" size="md">{field}</Badge>
+                </React.Fragment>
+              ))}
+            </div>
+          );
+        },
       }),
       columnHelper.display({
         id: "actions",

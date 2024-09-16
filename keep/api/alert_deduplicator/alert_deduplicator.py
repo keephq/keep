@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 import logging
+import uuid
 
 from keep.api.core.config import config
 from keep.api.core.db import (
@@ -9,8 +10,10 @@ from keep.api.core.db import (
     create_deduplication_rule,
     delete_deduplication_rule,
     get_alerts_fields,
+    get_all_alerts_by_providers,
     get_all_deduplication_rules,
-    get_custom_full_deduplication_rules,
+    get_all_deduplication_stats,
+    get_custom_deduplication_rules,
     get_last_alert_hash_by_fingerprint,
     update_deduplication_rule,
 )
@@ -96,33 +99,39 @@ class AlertDeduplicator:
         #   you can also safe to assume that alert.fingerprint is set by the provider itself
 
         # get only relevant rules
-        rule = self.get_full_deduplication_rule(
+        rules = self.get_deduplication_rules(
             self.tenant_id, alert.providerId, alert.providerType
         )
-        self.logger.debug(
-            "Applying deduplication rule to alert",
-            extra={
-                "rule_id": rule.id,
-                "alert_id": alert.id,
-            },
-        )
-        alert = self._apply_deduplication_rule(alert, rule)
-        self.logger.debug(
-            "Alert after deduplication rule applied",
-            extra={
-                "rule_id": rule.id,
-                "alert_id": alert.id,
-                "is_full_duplicate": alert.isFullDuplicate,
-                "is_partial_duplicate": alert.isPartialDuplicate,
-            },
-        )
-        if alert.isFullDuplicate or alert.isPartialDuplicate:
-            # create deduplication event
-            create_deduplication_event(
-                tenant_id=self.tenant_id,
-                deduplication_rule_id=rule.id,
-                deduplication_type="full" if alert.isFullDuplicate else "partial",
+
+        for rule in rules:
+            self.logger.debug(
+                "Applying deduplication rule to alert",
+                extra={
+                    "rule_id": rule.id,
+                    "alert_id": alert.id,
+                },
             )
+            alert = self._apply_deduplication_rule(alert, rule)
+            self.logger.debug(
+                "Alert after deduplication rule applied",
+                extra={
+                    "rule_id": rule.id,
+                    "alert_id": alert.id,
+                    "is_full_duplicate": alert.isFullDuplicate,
+                    "is_partial_duplicate": alert.isPartialDuplicate,
+                },
+            )
+            if alert.isFullDuplicate or alert.isPartialDuplicate:
+                # create deduplication event
+                create_deduplication_event(
+                    tenant_id=self.tenant_id,
+                    deduplication_rule_id=rule.id,
+                    deduplication_type="full" if alert.isFullDuplicate else "partial",
+                    provider_id=alert.providerId,
+                    provider_type=alert.providerType,
+                )
+                # we don't need to check the other rules
+                break
         return alert
 
     def _remove_field(self, field, alert: AlertDto) -> AlertDto:
@@ -142,47 +151,77 @@ class AlertDeduplicator:
             setattr(alert, field_parts[0], d)
         return alert
 
-    def get_full_deduplication_rule(
+    def get_deduplication_rules(
         self, tenant_id, provider_id, provider_type
     ) -> DeduplicationRuleDto:
         # try to get the rule from the database
-        rule = get_custom_full_deduplication_rules(
-            tenant_id, provider_id, provider_type
-        )
-        if rule:
+        rules = get_custom_deduplication_rules(tenant_id, provider_id, provider_type)
+
+        if not rules:
             self.logger.debug(
-                "Using custom deduplication rule",
+                "No custom deduplication rules found, using deafult full deduplication rule",
                 extra={
                     "provider_id": provider_id,
                     "provider_type": provider_type,
                     "tenant_id": tenant_id,
                 },
             )
-            return rule
+            rule = self._get_default_full_deduplication_rule(provider_id, provider_type)
+            return [rule]
 
-        # no custom rule found, let's try to use the default one
+        # else, return the custom rules
         self.logger.debug(
-            "Using default full deduplication rule",
+            "Using custom deduplication rules",
             extra={
                 "provider_id": provider_id,
                 "provider_type": provider_type,
                 "tenant_id": tenant_id,
             },
         )
-        rule = self._get_default_full_deduplication_rule()
-        return rule
+        #
+        # check that at least one of them is full deduplication rule
+        full_deduplication_rules = [rule for rule in rules if rule.full_deduplication]
+        # if full deduplication rule found, return the rules
+        if full_deduplication_rules:
+            return rules
 
-    def _get_default_full_deduplication_rule(self) -> DeduplicationRuleDto:
+        # if not, assign them the default full deduplication rule ignore fields
+        self.logger.info(
+            "No full deduplication rule found, assigning default full deduplication rule ignore fields"
+        )
+        default_full_dedup_rule = self._get_default_full_deduplication_rule(
+            provider_id=provider_id, provider_type=provider_type
+        )
+        for rule in rules:
+            if not rule.full_deduplication:
+                self.logger.debug(
+                    "Assigning default full deduplication rule ignore fields",
+                )
+                rule.ignore_fields = default_full_dedup_rule.ignore_fields
+        return rules
+
+    def _get_default_full_deduplication_rule(
+        self, provider_id, provider_type
+    ) -> DeduplicationRuleDto:
+        # this is a way to generate a unique uuid for the default deduplication rule per (provider_id, provider_type)
+        namespace_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, "keephq.dev")
+        generated_uuid = str(
+            uuid.uuid5(namespace_uuid, f"{provider_id}_{provider_type}")
+        )
+
         # just return a default deduplication rule with lastReceived field
+        if not provider_type:
+            provider_type = "keep"
+
         return DeduplicationRuleDto(
-            id=DEFAULT_RULE_UUID,
-            name="Keep Full Deduplication Rule",
-            description="Keep Full Deduplication Rule",
+            id=generated_uuid,
+            name=f"{provider_type} default deduplication rule",
+            description=f"{provider_type} default deduplication rule",
             default=True,
             distribution=[],
-            fingerprint_fields=[],
-            provider_type="keep",
-            provider_id=None,
+            fingerprint_fields=[],  # ["fingerprint"], # this is fallback
+            provider_type=provider_type or "keep",
+            provider_id=provider_id,
             full_deduplication=True,
             ignore_fields=["lastReceived"],
             priority=0,
@@ -219,7 +258,7 @@ class AlertDeduplicator:
                 name=rule.name,
                 description=rule.description,
                 default=False,
-                distribution=[],
+                distribution=[{"hour": i, "number": 0} for i in range(24)],
                 fingerprint_fields=rule.fingerprint_fields,
                 provider_type=rule.provider_type,
                 provider_id=rule.provider_id,
@@ -245,7 +284,9 @@ class AlertDeduplicator:
             custom_deduplications_dict[key].append(rule)
 
         # get the "catch all" full deduplication rule
-        catch_all_full_deduplication = self._get_default_full_deduplication_rule()
+        catch_all_full_deduplication = self._get_default_full_deduplication_rule(
+            provider_id=None, provider_type=None
+        )
 
         # calculate the deduplciations
         # if a provider has custom deduplication rule, use it
@@ -279,31 +320,40 @@ class AlertDeduplicator:
                 final_deduplications += custom_deduplications_dict[key]
 
         # now calculate some statistics
-        # alerts_by_provider_stats = get_all_alerts_by_providers(self.tenant_id)
-        # deduplication_stats = get_all_deduplication_stats(self.tenant_id)
-        """
+        alerts_by_provider_stats = get_all_alerts_by_providers(self.tenant_id)
+        deduplication_stats = get_all_deduplication_stats(self.tenant_id)
+
         result = []
         for dedup in final_deduplications:
             key = f"{dedup.provider_type}_{dedup.provider_id}"
-            dedup.ingested = alerts_by_provider_stats[key]
-            dedup.dedup_ratio = dedup_ratio.get(
-                (dedup.provider_id, dedup.provider_type), {}
-            ).get("ratio", 0.0)
+            dedup.ingested = alerts_by_provider_stats[key].get("num_alerts", 0)
+            if dedup.ingested == 0:
+                dedup.dedup_ratio = 0.0
+            # this shouldn't happen, only in backward compatibility or some bug that dedup events are not created
+            elif key not in deduplication_stats:
+                self.logger.warning(f"Provider {key} does not have deduplication stats")
+                dedup.dedup_ratio = 0.0
+            elif deduplication_stats[key].get("dedup_count", 0) == 0:
+                dedup.dedup_ratio = 0.0
+            else:
+                dedup.dedup_ratio = (
+                    deduplication_stats[key].get("dedup_count")
+                    / (deduplication_stats[key].get("dedup_count") + dedup.ingested)
+                ) * 100
+                dedup.distribution = deduplication_stats[key].get(
+                    "alerts_last_24_hours"
+                )
             result.append(dedup)
 
         if self.provider_distribution_enabled:
-            providers_distribution = get_provider_distribution(self.tenant_id)
             for dedup in result:
-                for pd in providers_distribution:
+                for pd, stats in deduplication_stats.items():
                     if pd == f"{dedup.provider_id}_{dedup.provider_type}":
-                        distribution = providers_distribution[pd].get(
-                            "alert_last_24_hours"
-                        )
+                        distribution = stats.get("alert_last_24_hours")
                         dedup.distribution = distribution
                         break
-        """
+
         # sort providers to have enabled first
-        result = []
         result = sorted(result, key=lambda x: x.default, reverse=True)
 
         return result
