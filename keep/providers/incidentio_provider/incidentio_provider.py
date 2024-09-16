@@ -38,6 +38,8 @@ class IncidentioProviderAuthConfig:
 class IncidentioProvider(BaseProvider):
     """Receive Incidents from Incidentio."""
 
+    PROVIDER_DISPLAY_NAME = "incident.io"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",

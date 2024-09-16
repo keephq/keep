@@ -48,6 +48,7 @@ class TwilioProviderAuthConfig:
 class TwilioProvider(BaseProvider):
     """Send SMS via Twilio."""
 
+    PROVIDER_DISPLAY_NAME = "Twilio"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="send_sms",
