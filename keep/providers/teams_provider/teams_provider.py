@@ -28,6 +28,8 @@ class TeamsProviderAuthConfig:
 class TeamsProvider(BaseProvider):
     """Send alert message to Teams."""
 
+    PROVIDER_DISPLAY_NAME = "Teams"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

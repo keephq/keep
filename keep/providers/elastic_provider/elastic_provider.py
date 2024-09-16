@@ -45,6 +45,8 @@ class ElasticProviderAuthConfig:
 class ElasticProvider(BaseProvider):
     """Enrich alerts with data from Elasticsearch."""
 
+    PROVIDER_DISPLAY_NAME = "Elastic"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

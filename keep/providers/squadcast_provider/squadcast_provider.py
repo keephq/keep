@@ -47,6 +47,7 @@ class SquadcastProviderAuthConfig:
 class SquadcastProvider(BaseProvider):
     """Create incidents and notes using the Squadcast API."""
 
+    PROVIDER_DISPLAY_NAME = "Squadcast"
     PROVIDER_TAGS = ["alert"]
 
     PROVIDER_SCOPES = [
