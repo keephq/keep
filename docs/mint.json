@@ -32,8 +32,9 @@
       "group": "Overview",
       "pages": [
         "overview/introduction",
-        "overview/keyconcepts",
         "overview/usecases",
+        "overview/comparisons",
+        "overview/keyconcepts",
         "overview/ruleengine",
         "overview/presets",
         {
@@ -44,8 +45,7 @@
           ]
         },
         "overview/maintenance-windows",
-        "overview/examples",
-        "overview/comparison"
+        "overview/examples"
       ]
     },
     {
