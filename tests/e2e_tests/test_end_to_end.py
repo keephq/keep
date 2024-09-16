@@ -102,7 +102,7 @@ def test_providers_page_is_accessible(browser):
         browser.get_by_role("button", name="Cancel").click()
         # connect resend provider
         browser.locator("button").filter(
-            has_text=re.compile(r"^resend messaging$")
+            has_text=re.compile(r"^Resend messaging$")
         ).first.click()
         browser.get_by_placeholder("Enter provider name").click()
         random_provider_name = "".join(
