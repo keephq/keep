@@ -103,6 +103,7 @@ class DatadogProviderAuthConfig:
 class DatadogProvider(BaseTopologyProvider):
     """Pull/push alerts from Datadog."""
 
+    PROVIDER_DISPLAY_NAME = "Datadog"
     OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
     DATADOG_CLIENT_ID = os.environ.get("DATADOG_CLIENT_ID")
     DATADOG_CLIENT_SECRET = os.environ.get("DATADOG_CLIENT_SECRET")
