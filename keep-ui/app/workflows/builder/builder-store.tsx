@@ -149,6 +149,8 @@ export type FlowState = {
   errorNode: string | null;
   synced: boolean;
   setSynced: (synced: boolean) => void;
+  canDeploy: boolean;
+  setCanDeploy: (deploy: boolean) => void;
 };
 
 
@@ -260,6 +262,8 @@ const useStore = create<FlowState>((set, get) => ({
   firstInitilisationDone: false,
   errorNode: null,
   synced: true,
+  canDeploy: false,
+  setCanDeploy: (deploy)=>set({canDeploy: deploy}),
   setSynced: (sync) => set({ synced: sync }),
   setErrorNode: (id) => set({ errorNode: id }),
   setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
@@ -291,7 +295,7 @@ const useStore = create<FlowState>((set, get) => ({
       });
       set({
         nodes: updatedNodes,
-        changes: get().changes + 1
+        changes: get().changes + 1,
       });
     }
   },

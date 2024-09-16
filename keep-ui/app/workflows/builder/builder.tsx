@@ -27,6 +27,7 @@ import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
 import useStore, { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
+import { toast } from "react-toastify";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -76,7 +77,7 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
-  const { setErrorNode } = useStore();
+  const { errorNode, setErrorNode, canDeploy, synced } = useStore();
 
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
@@ -210,7 +211,12 @@ function Builder({
   }, [triggerRun]);
 
   useEffect(() => {
-    if (triggerSave) {
+ 
+    if (triggerSave || (canDeploy && !errorNode && definition.isValid)) {
+      if(!synced) {
+        toast('Please save the previous step or wait while properties sync with the workflow.');
+        return;
+      }
       if (workflowId) {
         updateWorkflow();
       } else {
@@ -218,7 +224,7 @@ function Builder({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerSave]);
+  }, [triggerSave, canDeploy, errorNode, definition.isValid]);
 
   useEffect(() => {
     enableGenerate(
