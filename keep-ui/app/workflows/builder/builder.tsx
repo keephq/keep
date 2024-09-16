@@ -212,7 +212,7 @@ function Builder({
 
   useEffect(() => {
  
-    if (triggerSave || (canDeploy && !errorNode && definition.isValid)) {
+    if (triggerSave) {
       if(!synced) {
         toast('Please save the previous step or wait while properties sync with the workflow.');
         return;
@@ -224,7 +224,21 @@ function Builder({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [triggerSave, canDeploy, errorNode, definition.isValid]);
+  }, [triggerSave]);
+
+  useEffect(()=>{
+    if (canDeploy && !errorNode && definition.isValid) {
+      if(!synced) {
+        toast('Please save the previous step or wait while properties sync with the workflow.');
+        return;
+      }
+      if (workflowId) {
+        updateWorkflow();
+      } else {
+        addWorkflow();
+      }
+    }
+  }, [canDeploy, errorNode, definition?.isValid])
 
   useEffect(() => {
     enableGenerate(
