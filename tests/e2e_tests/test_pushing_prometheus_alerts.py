@@ -35,11 +35,9 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")
         browser.get_by_text("Connect Provider").hover()
-        browser.locator("button").filter(
-            has_text=re.compile(r"^prometheus dataalert$")
-        ).first.hover()
-
-        browser.locator("button:has-text('prometheus')").click()
+        prometheus_tile = browser.locator("button:has-text('prometheus'):has-text('alert'):has-text('data')")
+        prometheus_tile.first.hover()
+        prometheus_tile.first.click()
         browser.get_by_placeholder("Enter provider name").click()
         browser.get_by_placeholder("Enter provider name").fill(provider_name)
         browser.get_by_placeholder("Enter url").click()
@@ -59,9 +57,7 @@ def test_pulling_prometheus_alerts_to_provider(browser):
 
         # Validate provider is created
         expect(
-            browser.locator("button")
-            .filter(has_text=re.compile(re.escape(provider_name)))
-            .first
+            browser.locator("button:has-text('prometheus'):has-text('connected')")
         ).to_be_visible()
 
         browser.reload()
