@@ -90,6 +90,7 @@ export interface Provider {
   tags: TProviderLabels[];
   alertsDistribution?: AlertDistritbuionData[];
   alertExample?: { [key: string]: string };
+  provisioned?: boolean;
 }
 
 export type Providers = Provider[];

@@ -137,10 +137,17 @@ def try_create_single_tenant(tenant_id: str) -> None:
                     secret_manager = SecretManagerFactory.get_secret_manager(
                         context_manager
                     )
-                    secret_manager.write_secret(
-                        secret_name=f"{tenant_id}-{api_key_name}",
-                        secret_value=api_key_secret,
-                    )
+                    try:
+                        secret_manager.write_secret(
+                            secret_name=f"{tenant_id}-{api_key_name}",
+                            secret_value=api_key_secret,
+                        )
+                    # probably 409 if the secret already exists, but we don't want to fail on that
+                    except Exception:
+                        logger.exception(
+                            f"Failed to write secret for api key {api_key_name}"
+                        )
+                        pass
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
             # commit the changes
@@ -162,7 +169,7 @@ def migrate_db():
     if os.environ.get("SKIP_DB_CREATION", "false") == "true":
         logger.info("Skipping running migrations...")
         return None
-    
+
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"
     config = alembic.config.Config(file_=config_path)

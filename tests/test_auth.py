@@ -53,7 +53,7 @@ def get_mock_jwt_payload(token, *args, **kwargs):
 @pytest.mark.parametrize(
     "test_app", ["SINGLE_TENANT", "MULTI_TENANT", "NO_AUTH"], indirect=True
 )
-def test_api_key_with_header(client, db_session, test_app):
+def test_api_key_with_header(db_session, client, test_app):
     """Tests the API key authentication with the x-api-key/digest"""
     auth_type = os.getenv("AUTH_TYPE")
     valid_api_key = "valid_api_key"
@@ -95,7 +95,7 @@ def test_api_key_with_header(client, db_session, test_app):
 @pytest.mark.parametrize(
     "test_app", ["SINGLE_TENANT", "MULTI_TENANT", "NO_AUTH"], indirect=True
 )
-def test_bearer_token(client, db_session, test_app):
+def test_bearer_token(db_session, client, test_app):
     """Tests the bearer token authentication"""
     auth_type = os.getenv("AUTH_TYPE")
     # Test bearer tokens
@@ -121,7 +121,7 @@ def test_bearer_token(client, db_session, test_app):
 @pytest.mark.parametrize(
     "test_app", ["SINGLE_TENANT", "MULTI_TENANT", "NO_AUTH"], indirect=True
 )
-def test_webhook_api_key(client, db_session, test_app):
+def test_webhook_api_key(db_session, client, test_app):
     """Tests the webhook API key authentication"""
     auth_type = os.getenv("AUTH_TYPE")
     valid_api_key = "valid_api_key"
@@ -167,7 +167,7 @@ def test_webhook_api_key(client, db_session, test_app):
 
 # sanity check with keycloak
 @pytest.mark.parametrize("test_app", ["KEYCLOAK"], indirect=True)
-def test_keycloak_sanity(keycloak_client, keycloak_token, client, test_app):
+def test_keycloak_sanity(db_session, keycloak_client, keycloak_token, client, test_app):
     """Tests the keycloak sanity check"""
     # Use the token to make a request to the Keep API
     headers = {"Authorization": f"Bearer {keycloak_token}"}
@@ -182,7 +182,7 @@ def test_keycloak_sanity(keycloak_client, keycloak_token, client, test_app):
     ],
     indirect=True,
 )
-def test_api_key_impersonation_without_admin(client, db_session, test_app):
+def test_api_key_impersonation_without_admin(db_session, client, test_app):
     """Tests the API key impersonation with different environment settings"""
 
     valid_api_key = "valid_admin_api_key"
@@ -207,7 +207,7 @@ def test_api_key_impersonation_without_admin(client, db_session, test_app):
     ],
     indirect=True,
 )
-def test_api_key_impersonation_without_user_provision(client, db_session, test_app):
+def test_api_key_impersonation_without_user_provision(db_session, client, test_app):
     """Tests the API key impersonation with different environment settings"""
 
     valid_api_key = "valid_admin_api_key"
@@ -239,7 +239,7 @@ def test_api_key_impersonation_without_user_provision(client, db_session, test_a
     ],
     indirect=True,
 )
-def test_api_key_impersonation_with_user_provision(client, db_session, test_app):
+def test_api_key_impersonation_with_user_provision(db_session, client, test_app):
     """Tests the API key impersonation with different environment settings"""
 
     valid_api_key = "valid_admin_api_key"
@@ -272,7 +272,7 @@ def test_api_key_impersonation_with_user_provision(client, db_session, test_app)
     indirect=True,
 )
 def test_api_key_impersonation_provisioned_user_cant_login(
-    client, db_session, test_app
+    db_session, client, test_app
 ):
     """Tests the API key impersonation with different environment settings"""
 

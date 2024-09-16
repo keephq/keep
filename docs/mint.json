@@ -65,6 +65,14 @@
             "deployment/authentication/keycloak-auth"
           ]
         },
+        {
+          "group": "Provision",
+          "pages": [
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow"
+          ]
+        },
         "deployment/secret-manager",
         "deployment/docker",
         "deployment/kubernetes",
@@ -159,6 +167,7 @@
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
             "providers/documentation/statuscake-provider",
+            "providers/documentation/sumologic-provider",
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/template",
