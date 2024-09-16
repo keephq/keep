@@ -40,6 +40,8 @@ class SplunkProviderAuthConfig:
 class SplunkProvider(BaseProvider):
     """Pull alerts and query incidents from Splunk."""
 
+    PROVIDER_DISPLAY_NAME = "Splunk"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
