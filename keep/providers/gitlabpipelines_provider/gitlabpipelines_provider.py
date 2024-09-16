@@ -31,6 +31,8 @@ class GitlabpipelinesProviderAuthConfig:
 class GitlabpipelinesProvider(BaseProvider):
     """Enrich alerts with data from GitLab Pipelines."""
 
+    PROVIDER_DISPLAY_NAME = "GitLab Pipelines"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
