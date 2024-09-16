@@ -472,7 +472,8 @@ def change_incident_status(
         },
     )
 
-    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=True)
+    with_alerts = change.status == IncidentStatus.RESOLVED
+    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
