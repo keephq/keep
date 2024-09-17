@@ -394,7 +394,7 @@ async def mine_incidents_and_create_objects(
         alert_lower_timestamp = min(alert.timestamp for alert in alerts)
     
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp + incident_validity_threshold, 
-                                   lower_timestamp=alert_upper_timestamp - incident_validity_threshold)
+                                   lower_timestamp=alert_upper_timestamp - incident_validity_threshold, with_alerts=True)
 
     n_batches = int(math.ceil((alert_upper_timestamp - alert_lower_timestamp).total_seconds() / alert_batch_stride)) - (STRIDE_DENOMINATOR - 1)
     logging.info(
