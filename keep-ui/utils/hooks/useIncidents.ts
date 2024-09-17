@@ -5,6 +5,7 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
+import {SortingState} from "@tanstack/react-table";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -14,6 +15,7 @@ export const useIncidents = (
   confirmed: boolean = true,
   limit: number = 25,
   offset: number = 0,
+  sorting: {id: string, desc: boolean} = {id: "creation_time", desc: false},
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
@@ -23,7 +25,7 @@ export const useIncidents = (
   return useSWR<PaginatedIncidentsDto>(
     () =>
       session
-        ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}`
+        ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${sorting.desc ? "-" : ""}${sorting.id}`
         : null,
     (url) => fetcher(url, session?.accessToken),
     options
