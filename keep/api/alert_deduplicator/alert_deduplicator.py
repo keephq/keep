@@ -218,7 +218,7 @@ class AlertDeduplicator:
             name=f"{provider_type} default deduplication rule",
             description=f"{provider_type} default deduplication rule",
             default=True,
-            distribution=[],
+            distribution=[{"hour": i, "number": 0} for i in range(24)],
             fingerprint_fields=[],  # ["fingerprint"], # this is fallback
             provider_type=provider_type or "keep",
             provider_id=provider_id,
@@ -326,20 +326,29 @@ class AlertDeduplicator:
         result = []
         for dedup in final_deduplications:
             key = f"{dedup.provider_type}_{dedup.provider_id}"
-            dedup.ingested = alerts_by_provider_stats[key].get("num_alerts", 0)
+            dedup.ingested = alerts_by_provider_stats.get(key, {"num_alerts": 0}).get(
+                "num_alerts", 0
+            )
+            # full deduplication is also counted as ingested
+            dedup.ingested += deduplication_stats.get(key, {"full_dedup_count": 0}).get(
+                "full_dedup_count", 0
+            )
+            # total dedup count is the sum of full and partial dedup count
+            dedup_count = deduplication_stats.get(key, {"full_dedup_count": 0}).get(
+                "full_dedup_count", 0
+            ) + deduplication_stats.get(key, {"partial_dedup_count": 0}).get(
+                "partial_dedup_count", 0
+            )
             if dedup.ingested == 0:
                 dedup.dedup_ratio = 0.0
             # this shouldn't happen, only in backward compatibility or some bug that dedup events are not created
             elif key not in deduplication_stats:
                 self.logger.warning(f"Provider {key} does not have deduplication stats")
                 dedup.dedup_ratio = 0.0
-            elif deduplication_stats[key].get("dedup_count", 0) == 0:
+            elif dedup_count == 0:
                 dedup.dedup_ratio = 0.0
             else:
-                dedup.dedup_ratio = (
-                    deduplication_stats[key].get("dedup_count")
-                    / (deduplication_stats[key].get("dedup_count") + dedup.ingested)
-                ) * 100
+                dedup.dedup_ratio = (dedup_count / dedup.ingested) * 100
                 dedup.distribution = deduplication_stats[key].get(
                     "alerts_last_24_hours"
                 )

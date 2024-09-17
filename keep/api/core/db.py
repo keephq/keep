@@ -1824,12 +1824,14 @@ def get_all_deduplication_stats(tenant_id):
             select(
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
+                AlertDeduplicationEvent.deduplication_type,
                 func.count(AlertDeduplicationEvent.id).label("dedup_count"),
             )
             .where(AlertDeduplicationEvent.tenant_id == tenant_id)
             .group_by(
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
+                AlertDeduplicationEvent.deduplication_type,
             )
         )
 
@@ -1862,6 +1864,7 @@ def get_all_deduplication_stats(tenant_id):
             provider_id = result.provider_id
             provider_type = result.provider_type
             dedup_count = result.dedup_count
+            dedup_type = result.deduplication_type
 
             # alerts without provider_id and provider_type are considered as "keep"
             if not provider_type:
@@ -1870,14 +1873,18 @@ def get_all_deduplication_stats(tenant_id):
             key = f"{provider_type}_{provider_id}"
             if key not in stats:
                 stats[key] = {
-                    "dedup_count": 0,
+                    "full_dedup_count": 0,
+                    "partial_dedup_count": 0,
                     "alerts_last_24_hours": [
                         {"hour": (current_hour - timedelta(hours=i)).hour, "number": 0}
                         for i in range(0, 24)
                     ],
                 }
 
-            stats[key]["dedup_count"] = dedup_count
+            if dedup_type == "full":
+                stats[key]["full_dedup_count"] += dedup_count
+            elif dedup_type == "partial":
+                stats[key]["partial_dedup_count"] += dedup_count
 
         # Add alerts distribution from the last 24 hours
         for result in alerts_last_24_hours_results:
