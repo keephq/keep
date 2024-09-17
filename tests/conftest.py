@@ -1,6 +1,7 @@
 import inspect
 import os
 import random
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
@@ -488,6 +489,8 @@ def setup_alerts(elastic_client, db_session, request):
     alert_details = request.param.get("alert_details")
     alerts = []
     for i, detail in enumerate(alert_details):
+        # sleep to avoid same lastReceived
+        time.sleep(0.02)
         detail["fingerprint"] = f"test-{i}"
         alerts.append(
             Alert(
