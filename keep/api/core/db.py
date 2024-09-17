@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
 import numpy as np
-import pandas as pd
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -38,7 +37,6 @@ from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-impo
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.statistics import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
@@ -1077,6 +1075,7 @@ def query_alerts(
     upper_timestamp=None,
     lower_timestamp=None,
     skip_alerts_with_null_timestamp=True,
+    sort_ascending=False,
 ) -> list[Alert]:
     """
     Get all alerts for a given tenant_id.
@@ -1126,9 +1125,14 @@ def query_alerts(
 
         if skip_alerts_with_null_timestamp:
             query = query.filter(Alert.timestamp.isnot(None))
-
-        # Order by timestamp in descending order and limit the results
-        query = query.order_by(Alert.timestamp.desc()).limit(limit)
+            
+        if sort_ascending:
+            query = query.order_by(Alert.timestamp.asc())
+        else:
+            query = query.order_by(Alert.timestamp.desc())
+            
+        if limit:
+            query = query.limit(limit)
 
         # Execute the query
         alerts = query.all()
@@ -1738,7 +1742,6 @@ def update_key_last_used(
         session.add(tenant_api_key_entry)
         session.commit()
 
-
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     with Session(engine) as session:
         providers = (
@@ -2168,6 +2171,7 @@ def get_last_incidents(
     is_confirmed: bool = False,
     sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
     with_alerts: bool = False,
+    is_predicted: bool = None,
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -2194,6 +2198,9 @@ def get_last_incidents(
 
         if with_alerts:
             query = query.options(joinedload(Incident.alerts))
+
+        if is_predicted is not None:
+            query = query.filter(Incident.is_predicted == is_predicted)
 
         if timeframe:
             query = query.filter(
@@ -2416,6 +2423,9 @@ def get_alerts_data_for_incident(
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[Incident]:
+    logger.info(f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts", 
+                extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}})
+    
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -2427,39 +2437,40 @@ def add_alerts_to_incident_by_incident_id(
         if not incident:
             return None
 
-        existed_alert_ids = session.exec(
-            select(AlertToIncident.alert_id).where(
-                AlertToIncident.tenant_id == tenant_id,
-                AlertToIncident.incident_id == incident.id,
-                col(AlertToIncident.alert_id).in_(alert_ids),
-            )
-        ).all()
+        # Use a set for faster membership checks
+        existing_alert_ids = set(
+            session.exec(
+                select(AlertToIncident.alert_id).where(
+                    AlertToIncident.tenant_id == tenant_id,
+                    AlertToIncident.incident_id == incident.id,
+                    col(AlertToIncident.alert_id).in_(alert_ids),
+                )
+            ).all()
+        )
 
-        new_alert_ids = [
-            alert_id for alert_id in alert_ids if alert_id not in existed_alert_ids
-        ]
+        new_alert_ids = [alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids]
 
         if not new_alert_ids:
             return incident
 
         alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 
-        incident.sources = list(
-            set(incident.sources) | set(alerts_data_for_incident["sources"])
-        )
-        incident.affected_services = list(
-            set(incident.affected_services) | set(alerts_data_for_incident["services"])
-        )
+        incident.sources = list(set(incident.sources) | set(alerts_data_for_incident["sources"]))
+        incident.affected_services = list(set(incident.affected_services) | set(alerts_data_for_incident["services"]))
         incident.alerts_count += alerts_data_for_incident["count"]
 
         alert_to_incident_entries = [
-            AlertToIncident(
-                alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
-            )
+            AlertToIncident(alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id)
             for alert_id in new_alert_ids
         ]
 
-        session.bulk_save_objects(alert_to_incident_entries)
+        for idx, entry in enumerate(alert_to_incident_entries):
+            session.add(entry)
+            if (idx + 1) % 100 == 0:
+                logger.info(f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database", 
+                            extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
+                session.commit()
+                session.flush()
 
         started_at, last_seen_at = session.exec(
             select(func.min(Alert.timestamp), func.max(Alert.timestamp))
@@ -2469,9 +2480,9 @@ def add_alerts_to_incident_by_incident_id(
                 AlertToIncident.incident_id == incident.id,
             )
         ).one()
+
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
-
         incident.severity = alerts_data_for_incident["max_severity"].order
 
         session.add(incident)
@@ -2658,78 +2669,6 @@ def write_pmi_matrix_to_temp_file(
     return True
 
 
-def write_pmi_matrix_to_db(tenant_id: str, pmi_matrix_df: pd.DataFrame) -> bool:
-    # TODO: add handlers for sequential launches
-    with Session(engine) as session:
-        pmi_entries_to_update = 0
-        pmi_entries_to_insert = []
-
-        # Query for existing entries to differentiate between updates and inserts
-        existing_entries = session.query(PMIMatrix).filter_by(tenant_id=tenant_id).all()
-        existing_entries_dict = {
-            (entry.fingerprint_i, entry.fingerprint_j): entry
-            for entry in existing_entries
-        }
-
-        for fingerprint_i in pmi_matrix_df.index:
-            for fingerprint_j in pmi_matrix_df.columns:
-                if pmi_matrix_df.at[fingerprint_i, fingerprint_j] == -100:
-                    continue
-
-                pmi = float(pmi_matrix_df.at[fingerprint_i, fingerprint_j])
-
-                pmi_entry = {
-                    "tenant_id": tenant_id,
-                    "fingerprint_i": fingerprint_i,
-                    "fingerprint_j": fingerprint_j,
-                    "pmi": pmi,
-                }
-
-                if (fingerprint_i, fingerprint_j) in existing_entries_dict:
-                    existed_entry = existing_entries_dict[
-                        (fingerprint_i, fingerprint_j)
-                    ]
-                    if existed_entry.pmi != pmi:
-                        session.execute(
-                            update(PMIMatrix)
-                            .where(
-                                PMIMatrix.fingerprint_i == fingerprint_i,
-                                PMIMatrix.fingerprint_j == fingerprint_j,
-                                PMIMatrix.tenant_id == tenant_id,
-                            )
-                            .values(pmi=pmi)
-                        )
-                        pmi_entries_to_update += 1
-                else:
-                    pmi_entries_to_insert.append(pmi_entry)
-
-        if pmi_entries_to_insert:
-            session.bulk_insert_mappings(PMIMatrix, pmi_entries_to_insert)
-
-        logger.info(
-            f"PMI matrix for tenant {tenant_id} updated. {pmi_entries_to_update} entries updated, {len(pmi_entries_to_insert)} entries inserted",
-            extra={"tenant_id": tenant_id},
-        )
-
-        session.commit()
-
-    return True
-
-
-def get_pmi_value(
-    tenant_id: str, fingerprint_i: str, fingerprint_j: str
-) -> Optional[float]:
-    with Session(engine) as session:
-        pmi_entry = session.exec(
-            select(PMIMatrix)
-            .where(PMIMatrix.tenant_id == tenant_id)
-            .where(PMIMatrix.fingerprint_i == fingerprint_i)
-            .where(PMIMatrix.fingerprint_j == fingerprint_j)
-        ).first()
-
-    return pmi_entry.pmi if pmi_entry else None
-
-
 def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, int]]:
     npzfile = np.load(f"{temp_dir}/pmi_matrix.npz", allow_pickle=True)
     pmi_matrix = npzfile["pmi_matrix"]
@@ -2740,18 +2679,25 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
     return pmi_matrix, fingerint2idx
 
 
-def get_pmi_values(
-    tenant_id: str, fingerprints: List[str]
-) -> Dict[Tuple[str, str], Optional[float]]:
+def get_tenant_config(tenant_id: str) -> dict:    
     with Session(engine) as session:
-        pmi_entries = session.exec(
-            select(PMIMatrix).where(PMIMatrix.tenant_id == tenant_id)
-        ).all()
+        tenant_data = session.exec(
+            select(Tenant)
+            .where(Tenant.id == tenant_id)
+        ).first()
+        return tenant_data.configuration if tenant_data else {}
+    
 
-    pmi_values = {
-        (entry.fingerprint_i, entry.fingerprint_j): entry.pmi for entry in pmi_entries
-    }
-    return pmi_values
+def write_tenant_config(tenant_id: str, config: dict) -> None:
+    with Session(engine) as session:
+        tenant_data = session.exec(
+            select(Tenant)
+            .where(Tenant.id == tenant_id)
+        ).first()
+        tenant_data.configuration = config
+        session.commit()
+        session.refresh(tenant_data)
+        return tenant_data
 
 
 def update_incident_summary(
