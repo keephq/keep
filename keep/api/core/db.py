@@ -689,8 +689,9 @@ def get_workflow_executions(
         ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = (query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-)
+        query = (
+            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+        )
         # Execute the query
         workflow_executions = query.all()
 
@@ -1694,7 +1695,7 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
         compiled_query = query.compile(
             dialect=mssql.dialect(), compile_kwargs={"literal_binds": True}
         )
-        logger.info(f"Compiled query: {compiled_query}")
+        logger.debug(f"Compiled query: {compiled_query}")
 
         alert_hash = session.exec(query).first()
     return alert_hash
@@ -2187,14 +2188,9 @@ def get_last_incidents(
         List[Incident]: A list of Incident objects.
     """
     with Session(engine) as session:
-        query = (
-            session.query(
-                Incident,
-            )
-            .filter(
-                Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
-            )
-        )
+        query = session.query(
+            Incident,
+        ).filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed)
 
         if with_alerts:
             query = query.options(joinedload(Incident.alerts))
@@ -2252,9 +2248,7 @@ def create_incident_from_dict(
     if "is_confirmed" not in incident_data:
         incident_data["is_confirmed"] = not is_predicted
     with Session(engine) as session:
-        new_incident = Incident(
-            **incident_data, tenant_id=tenant_id
-        )
+        new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
         session.commit()
         session.refresh(new_incident)
@@ -2842,7 +2836,13 @@ def get_all_topology_data(
             services = [service_instance, *[service.service for service in services]]
         else:
             # Fetch services for the tenant
-            services = session.exec(query).all()
+            services = session.exec(
+                query.options(
+                    selectinload(TopologyService.dependencies).selectinload(
+                        TopologyServiceDependency.dependent_service
+                    )
+                )
+            ).all()
 
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
