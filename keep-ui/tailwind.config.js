@@ -19,7 +19,7 @@ module.exports = {
             muted: "rgb(255 237 213)", // orange-200
             subtle: "rgb(251 146 60)", // orange-400
             DEFAULT: "rgb(249 115 22)", // orange-500
-            emphasis: "#1d4ed8", // blue-700
+            emphasis: "#374151", //  gray-700
             inverted: "#ffffff", // white
           },
           background: {

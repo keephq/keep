@@ -24,19 +24,22 @@ import { DeduplicationRule } from "app/deduplication/models";
 import DeduplicationSidebar from "app/deduplication/DeduplicationSidebar";
 import { TrashIcon, PauseIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { getApiURL } from "utils/apiUrl";
+import { useSession } from "next-auth/react";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 
 type DeduplicationTableProps = {
   deduplicationRules: DeduplicationRule[];
+  mutateDeduplicationRules: () => Promise<void>;
 };
 
-export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplicationRules }) => {
+export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplicationRules, mutateDeduplicationRules }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const searchParams = useSearchParams();
 
   let selectedId = searchParams ? searchParams.get("id") : null;
-  const selectedRule = deduplicationRules.find((rule) => rule.id === selectedId);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedDeduplicationRule, setSelectedDeduplicationRule] = useState<DeduplicationRule | null>(null);
 
@@ -50,6 +53,31 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
     setIsSidebarOpen(false);
     setSelectedDeduplicationRule(null);
     router.push('/deduplication');
+  };
+
+  const handleDeleteRule = async (rule: DeduplicationRule, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (rule.default) return; // Don't delete default rules
+
+    if (window.confirm("Are you sure you want to delete this deduplication rule?")) {
+      try {
+        const url = `${getApiURL()}/deduplications/${rule.id}`;
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          await mutateDeduplicationRules();
+        } else {
+          console.error("Failed to delete deduplication rule");
+        }
+      } catch (error) {
+        console.error("Error deleting deduplication rule:", error);
+      }
+    }
   };
 
   useEffect(() => {
@@ -144,16 +172,20 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
         header: "Fields",
         cell: (info) => {
           const fields = info.getValue();
-          if (!fields || fields.length === 0) {
+          const ignoreFields = info.row.original.ignore_fields;
+          const displayFields = fields && fields.length > 0 ? fields : ignoreFields;
+
+          if (!displayFields || displayFields.length === 0) {
             return (
               <div className="flex flex-wrap items-center gap-2 w-[200px]">
-                <Badge color="oranrge" size="md">N/A</Badge>
+                <Badge color="orange" size="md">N/A</Badge>
               </div>
             );
           }
+
           return (
             <div className="flex flex-wrap items-center gap-2 w-[200px]">
-              {fields.map((field: string, index: number) => (
+              {displayFields.map((field: string, index: number) => (
                 <React.Fragment key={field}>
                   {index > 0 && <PlusIcon className="w-4 h-4 text-gray-400" />}
                   <Badge color="orange" size="md">{field}</Badge>
@@ -167,23 +199,25 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
         id: "actions",
         cell: (info) => (
           <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity w-full">
-            <Button
+            {/* <Button
               size="xs"
               variant="secondary"
               icon={PauseIcon}
               tooltip="Disable Rule"
-            />
+            /> */}
             <Button
               size="xs"
               variant="secondary"
               icon={TrashIcon}
-              tooltip="Delete Rule"
+              tooltip={info.row.original.default ? "Cannot delete default rule" : "Delete Rule"}
+              disabled={info.row.original.default}
+              onClick={(e) => handleDeleteRule(info.row.original, e)}
             />
           </div>
         ),
       }),
     ],
-    []
+    [handleDeleteRule]
   );
 
   const table = useReactTable({
@@ -251,6 +285,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
         </Table>
       </Card>
       <DeduplicationSidebar
+        mutateDeduplicationRules={mutateDeduplicationRules}
         isOpen={isSidebarOpen}
         toggle={onCloseDeduplication}
         selectedDeduplicationRule={selectedDeduplicationRule}

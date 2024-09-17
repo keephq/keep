@@ -6,8 +6,7 @@ import { DeduplicationTable } from "./DeduplicationTable";
 import Loading from "app/loading";
 
 export const Client = () => {
-
-    const { data: deduplicationRules = [], isLoading } = useDeduplicationRules();
+    const { data: deduplicationRules = [], isLoading, mutate: mutateDeduplicationRules } = useDeduplicationRules();
 
     if (isLoading) {
         return <Loading />;
@@ -15,7 +14,7 @@ export const Client = () => {
 
     if (deduplicationRules.length === 0) {
         return <DeduplicationPlaceholder />;
-      }
+    }
 
-    return <DeduplicationTable deduplicationRules={deduplicationRules} />;
+    return <DeduplicationTable deduplicationRules={deduplicationRules} mutateDeduplicationRules={mutateDeduplicationRules} />;
 };

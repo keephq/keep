@@ -537,7 +537,7 @@ class ProvidersFactory:
             if provider.default_fingerprint_fields:
                 deduplication_dto = DeduplicationRuleDto(
                     name=f"{provider.type}_default",
-                    description=f"Default deduplication for {provider.display_name}",
+                    description=f"{provider.display_name} default deduplication rule",
                     default=True,
                     distribution=[{"hour": i, "number": 0} for i in range(24)],
                     provider_type=provider.type,
