@@ -18,6 +18,8 @@ import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import IncidentTimeline from "./incident-timeline";
+import { CiBellOn, CiViewTimeline } from "react-icons/ci";
+import { IoIosGitNetwork } from "react-icons/io";
 
 interface Props {
   incidentId: string;
@@ -53,7 +55,7 @@ export default function IncidentView({ incidentId }: Props) {
           <div className="flex flex-col gap-2 xl:gap-0 xl:flex-row xl:divide-x p-2 h-full">
             <div
               id="incidentOverview"
-              className="w-2/5 min-w-[400px] xl:pr-2.5"
+              className="w-1/5 xl:pr-2.5"
             >
               <IncidentInformation incident={incident} />
             </div>
@@ -63,9 +65,9 @@ export default function IncidentView({ incidentId }: Props) {
             >
               <TabGroup defaultIndex={0}>
                 <TabList variant="line" color="orange">
-                  <Tab>Alerts</Tab>
-                  <Tab>Timeline</Tab>
-                  <Tab>Topology</Tab>
+                  <Tab icon={CiBellOn}>Alerts</Tab>
+                  <Tab icon={CiViewTimeline}>Timeline</Tab>
+                  <Tab icon={IoIosGitNetwork}>Topology</Tab>
                 </TabList>
                 <TabPanels>
                   <TabPanel>

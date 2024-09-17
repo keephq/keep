@@ -7,6 +7,7 @@ import { fetcher } from "utils/fetcher";
 import { toDateObjectWithFallback } from "utils/helpers";
 
 export type AuditEvent = {
+  id: string;
   user_id: string;
   action: string;
   description: string;

@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+from itertools import groupby
 from typing import Optional
 
 import celpy
@@ -693,8 +694,14 @@ def get_multiple_fingerprint_alert_audit(
 
     if not alert_audit:
         raise HTTPException(status_code=404, detail="Alert not found")
-
-    grouped_events = AlertAuditDto.from_orm_list(alert_audit)
+    grouped_events = []
+    # Group the results by fingerprint
+    grouped_audit = {
+        fingerprint: list(group)
+        for fingerprint, group in groupby(alert_audit, key=lambda x: x.fingerprint)
+    }
+    for values in grouped_audit.values():
+        grouped_events.extend(AlertAuditDto.from_orm_list(values))
     return grouped_events
 
 
