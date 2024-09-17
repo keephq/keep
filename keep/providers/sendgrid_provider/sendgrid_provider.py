@@ -44,6 +44,7 @@ class SendgridProviderAuthConfig:
 class SendgridProvider(BaseProvider):
     """Send email using the SendGrid API."""
 
+    PROVIDER_DISPLAY_NAME = "SendGrid"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="email.send",

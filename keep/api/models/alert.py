@@ -360,7 +360,7 @@ class IncidentDto(IncidentDtoIn):
     last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
 
-    number_of_alerts: int
+    alerts_count: int
     alert_sources: list[str]
     severity: IncidentSeverity
     assignee: str | None
@@ -407,7 +407,7 @@ class IncidentDto(IncidentDtoIn):
             start_time=db_incident.start_time,
             last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
-            number_of_alerts=db_incident.alerts_count,
+            alerts_count=db_incident.alerts_count,
             alert_sources=db_incident.sources,
             severity=severity,
             assignee=db_incident.assignee,

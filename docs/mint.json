@@ -32,8 +32,9 @@
       "group": "Overview",
       "pages": [
         "overview/introduction",
-        "overview/keyconcepts",
         "overview/usecases",
+        "overview/comparisons",
+        "overview/keyconcepts",
         "overview/ruleengine",
         "overview/presets",
         {
@@ -44,8 +45,7 @@
           ]
         },
         "overview/maintenance-windows",
-        "overview/examples",
-        "overview/comparison"
+        "overview/examples"
       ]
     },
     {
@@ -63,6 +63,14 @@
             "deployment/authentication/db-auth",
             "deployment/authentication/auth0-auth",
             "deployment/authentication/keycloak-auth"
+          ]
+        },
+        {
+          "group": "Provision",
+          "pages": [
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow"
           ]
         },
         "deployment/secret-manager",
@@ -159,6 +167,7 @@
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
             "providers/documentation/statuscake-provider",
+            "providers/documentation/sumologic-provider",
             "providers/documentation/teams-provider",
             "providers/documentation/telegram-provider",
             "providers/documentation/template",

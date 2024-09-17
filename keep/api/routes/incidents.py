@@ -21,7 +21,7 @@ from keep.api.core.db import (
     get_incident_unique_fingerprint_count,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id,
+    update_incident_from_dto_by_id, IncidentSorting,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn
@@ -124,6 +124,7 @@ def get_all_incidents(
     confirmed: bool = True,
     limit: int = 25,
     offset: int = 0,
+    sorting: IncidentSorting = IncidentSorting.creation_time,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -140,6 +141,7 @@ def get_all_incidents(
         is_confirmed=confirmed,
         limit=limit,
         offset=offset,
+        sorting=sorting
     )
 
     incidents_dto = []

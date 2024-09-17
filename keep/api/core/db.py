@@ -10,6 +10,7 @@ import logging
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
@@ -44,12 +45,34 @@ logger = logging.getLogger(__name__)
 
 
 # this is a workaround for gunicorn to load the env vars
-#   becuase somehow in gunicorn it doesn't load the .env file
+# because somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 
 
 engine = create_db_engine()
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
+
+
+class IncidentSorting(Enum):
+    creation_time = "creation_time"
+    start_time = "start_time"
+    last_seen_time = "last_seen_time"
+    severity = "severity"
+    status = "status"
+    alerts_count = "alerts_count"
+
+    creation_time_desc = "-creation_time"
+    start_time_desc = "-start_time"
+    last_seen_time_desc = "-last_seen_time"
+    severity_desc = "-severity"
+    status_desc = "-status"
+    alerts_count_desc = "-alerts_count"
+
+    def get_order_by(self):
+        if self.value.startswith("-"):
+            return desc(col(getattr(Incident, self.value[1:])))
+
+        return col(getattr(Incident, self.value))
 
 
 def get_session() -> Session:
@@ -276,6 +299,8 @@ def add_or_update_workflow(
     interval,
     workflow_raw,
     is_disabled,
+    provisioned=False,
+    provisioned_file=None,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
@@ -299,7 +324,9 @@ def add_or_update_workflow(
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
-            existing_workflow.is_disabled= is_disabled
+            existing_workflow.is_disabled = is_disabled
+            existing_workflow.provisioned = provisioned
+            existing_workflow.provisioned_file = provisioned_file
 
         else:
             # Create a new workflow
@@ -311,8 +338,10 @@ def add_or_update_workflow(
                 created_by=created_by,
                 updated_by=updated_by,  # Set updated_by to the provided value
                 interval=interval,
-                is_disabled =is_disabled,
+                is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
+                provisioned=provisioned,
+                provisioned_file=provisioned_file,
             )
             session.add(workflow)
 
@@ -459,6 +488,27 @@ def get_all_workflows(tenant_id: str) -> List[Workflow]:
     return workflows
 
 
+def get_all_provisioned_workflows(tenant_id: str) -> List[Workflow]:
+    with Session(engine) as session:
+        workflows = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned == True)
+            .where(Workflow.is_deleted == False)
+        ).all()
+    return workflows
+
+
+def get_all_provisioned_providers(tenant_id: str) -> List[Provider]:
+    with Session(engine) as session:
+        providers = session.exec(
+            select(Provider)
+            .where(Provider.tenant_id == tenant_id)
+            .where(Provider.provisioned == True)
+        ).all()
+    return providers
+
+
 def get_all_workflows_yamls(tenant_id: str) -> List[str]:
     with Session(engine) as session:
         workflows = session.exec(
@@ -496,6 +546,7 @@ def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
     if not workflow:
         return None
     return workflow.workflow_raw
+
 
 def update_provider_last_pull_time(tenant_id: str, provider_id: str):
     extra = {"tenant_id": tenant_id, "provider_id": provider_id}
@@ -566,18 +617,22 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         session.commit()
 
 
-def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, status: Optional[Union[str, List[str]]] = None,
+def get_workflow_executions(
+    tenant_id,
+    workflow_id,
+    limit=50,
+    offset=0,
+    tab=2,
+    status: Optional[Union[str, List[str]]] = None,
     trigger: Optional[Union[str, List[str]]] = None,
-    execution_id: Optional[str] = None):
+    execution_id: Optional[str] = None,
+):
     with Session(engine) as session:
-        query = (
-            session.query(
-                WorkflowExecution,
-            )
-            .filter(
-                WorkflowExecution.tenant_id == tenant_id,
-                WorkflowExecution.workflow_id == workflow_id
-            )
+        query = session.query(
+            WorkflowExecution,
+        ).filter(
+            WorkflowExecution.tenant_id == tenant_id,
+            WorkflowExecution.workflow_id == workflow_id,
         )
 
         now = datetime.now(tz=timezone.utc)
@@ -591,48 +646,50 @@ def get_workflow_executions(tenant_id, workflow_id, limit=50, offset=0, tab=2, s
             start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
             query = query.filter(
                 WorkflowExecution.started >= start_of_day,
-                WorkflowExecution.started <= now
+                WorkflowExecution.started <= now,
             )
 
         if timeframe:
-            query = query.filter(
-                WorkflowExecution.started >= timeframe
-            )
+            query = query.filter(WorkflowExecution.started >= timeframe)
 
         if isinstance(status, str):
             status = [status]
         elif status is None:
-            status = []    
-       
+            status = []
+
         # Normalize trigger to a list
         if isinstance(trigger, str):
             trigger = [trigger]
-
 
         if execution_id:
             query = query.filter(WorkflowExecution.id == execution_id)
         if status and len(status) > 0:
             query = query.filter(WorkflowExecution.status.in_(status))
         if trigger and len(trigger) > 0:
-            conditions = [WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger]
+            conditions = [
+                WorkflowExecution.triggered_by.like(f"{trig}%") for trig in trigger
+            ]
             query = query.filter(or_(*conditions))
-    
 
         total_count = query.count()
         status_count_query = query.with_entities(
-            WorkflowExecution.status,
-            func.count().label('count')
+            WorkflowExecution.status, func.count().label("count")
         ).group_by(WorkflowExecution.status)
         status_counts = status_count_query.all()
 
         statusGroupbyMap = {status: count for status, count in status_counts}
-        pass_count = statusGroupbyMap.get('success', 0)
-        fail_count = statusGroupbyMap.get('error', 0) + statusGroupbyMap.get('timeout', 0)   
-        avgDuration = query.with_entities(func.avg(WorkflowExecution.execution_time)).scalar()
+        pass_count = statusGroupbyMap.get("success", 0)
+        fail_count = statusGroupbyMap.get("error", 0) + statusGroupbyMap.get(
+            "timeout", 0
+        )
+        avgDuration = query.with_entities(
+            func.avg(WorkflowExecution.execution_time)
+        ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-        
+        query = (
+            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+        )
         # Execute the query
         workflow_executions = query.all()
 
@@ -645,6 +702,19 @@ def delete_workflow(tenant_id, workflow_id):
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.id == workflow_id)
+        ).first()
+
+        if workflow:
+            workflow.is_deleted = True
+            session.commit()
+
+
+def delete_workflow_by_provisioned_file(tenant_id, provisioned_file):
+    with Session(engine) as session:
+        workflow = session.exec(
+            select(Workflow)
+            .where(Workflow.tenant_id == tenant_id)
+            .where(Workflow.provisioned_file == provisioned_file)
         ).first()
 
         if workflow:
@@ -1536,10 +1606,7 @@ def get_rule_incidents_count_db(tenant_id):
         query = (
             session.query(Incident.rule_id, func.count(Incident.id))
             .select_from(Incident)
-            .filter(
-                Incident.tenant_id == tenant_id,
-                col(Incident.rule_id).isnot(None)
-            )
+            .filter(Incident.tenant_id == tenant_id, col(Incident.rule_id).isnot(None))
             .group_by(Incident.rule_id)
         )
         return dict(query.all())
@@ -1615,15 +1682,26 @@ def get_all_filters(tenant_id):
 
 
 def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
+    from sqlalchemy.dialects import mssql
+
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
-        alert_hash = session.exec(
+        query = (
             select(Alert.alert_hash)
             .where(Alert.tenant_id == tenant_id)
             .where(Alert.fingerprint == fingerprint)
             .order_by(Alert.timestamp.desc())
-        ).first()
+            .limit(1)  # Add LIMIT 1 for MSSQL
+        )
+
+        # Compile the query and log it
+        compiled_query = query.compile(
+            dialect=mssql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+        logger.debug(f"Compiled query: {compiled_query}")
+
+        alert_hash = session.exec(query).first()
     return alert_hash
 
 
@@ -2091,6 +2169,8 @@ def get_last_incidents(
     upper_timestamp: datetime = None,
     lower_timestamp: datetime = None,
     is_confirmed: bool = False,
+    sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
+    with_alerts: bool = False,
     is_predicted: bool = None,
 ) -> Tuple[list[Incident], int]:
     """
@@ -2102,21 +2182,22 @@ def get_last_incidents(
         offset (int): Current offset for
         timeframe (int|null): Return incidents only for the last <N> days
         is_confirmed (bool): Return confirmed incidents or predictions
+        upper_timestamp: datetime = None,
+        lower_timestamp: datetime = None,
+        is_confirmed (bool): filter incident candidates or real incidents
+        sorting: Optional[IncidentSorting]: how to sort the data
+        with_alerts (bool): Pre-load alerts or not
 
     Returns:
         List[Incident]: A list of Incident objects.
     """
     with Session(engine) as session:
-        query = (
-            session.query(
-                Incident,
-            )
-            .options(joinedload(Incident.alerts))
-            .filter(
-                Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed
-            )
-            .order_by(desc(Incident.creation_time))
-        )
+        query = session.query(
+            Incident,
+        ).filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed)
+
+        if with_alerts:
+            query = query.options(joinedload(Incident.alerts))
 
         if is_predicted is not None:
             query = query.filter(Incident.is_predicted == is_predicted)
@@ -2136,10 +2217,13 @@ def get_last_incidents(
         elif lower_timestamp:
             query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
+        if sorting:
+            query = query.order_by(sorting.get_order_by())
+
         total_count = query.count()
 
         # Order by start_time in descending order and limit the results
-        query = query.order_by(desc(Incident.start_time)).limit(limit).offset(offset)
+        query = query.limit(limit).offset(offset)
         # Execute the query
         incidents = query.all()
 
@@ -2168,10 +2252,10 @@ def create_incident_from_dict(
     tenant_id: str, incident_data: dict
 ) -> Optional[Incident]:
     is_predicted = incident_data.get("is_predicted", False)
+    if "is_confirmed" not in incident_data:
+        incident_data["is_confirmed"] = not is_predicted
     with Session(engine) as session:
-        new_incident = Incident(
-            **incident_data, tenant_id=tenant_id, is_confirmed=not is_predicted
-        )
+        new_incident = Incident(**incident_data, tenant_id=tenant_id)
         session.add(new_incident)
         session.commit()
         session.refresh(new_incident)
@@ -2698,7 +2782,13 @@ def get_all_topology_data(
             services = [service_instance, *[service.service for service in services]]
         else:
             # Fetch services for the tenant
-            services = session.exec(query).all()
+            services = session.exec(
+                query.options(
+                    selectinload(TopologyService.dependencies).selectinload(
+                        TopologyServiceDependency.dependent_service
+                    )
+                )
+            ).all()
 
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 

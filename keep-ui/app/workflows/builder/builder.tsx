@@ -313,6 +313,7 @@ function Builder({
           <div className="h-[94%]">
             <ReactFlowProvider>
               <ReactFlowBuilder
+                providers={providers}
                 installedProviders={installedProviders}
                 definition={definition}
                 validatorConfiguration={ValidatorConfigurationV2}

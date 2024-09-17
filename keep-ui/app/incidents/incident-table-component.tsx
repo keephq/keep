@@ -1,12 +1,73 @@
-import {Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow} from "@tremor/react";
-import { flexRender, Table as ReactTable } from "@tanstack/react-table";
-import React from "react";
+import {Icon, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow} from "@tremor/react";
+import {flexRender, Header, Table as ReactTable} from "@tanstack/react-table";
+import React, {ReactNode} from "react";
 import { IncidentDto } from "./model";
 import { useRouter } from "next/navigation";
-
+import {FaArrowDown, FaArrowRight, FaArrowUp} from "react-icons/fa";
 interface Props {
   table: ReactTable<IncidentDto>;
 }
+
+interface SortableHeaderCellProps {
+  header: Header<IncidentDto, unknown>;
+  children: ReactNode;
+}
+
+const SortableHeaderCell = ({
+  header,
+  children,
+}: SortableHeaderCellProps) => {
+
+  const { column } = header;
+
+  return (
+    <TableHeaderCell
+      // className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
+      className={`relative ${
+        column.getIsPinned() === false ? "hover:bg-slate-100" : ""
+      } group`}
+    >
+      <div className="flex items-center">
+        {column.getCanSort() && (
+          <>
+            <Icon
+              className="cursor-pointer"
+              size="xs"
+              color="neutral"
+              onClick={(event) => {
+                console.log("clicked for sorting");
+                event.stopPropagation();
+                const toggleSorting = header.column.getToggleSortingHandler();
+                if (toggleSorting) toggleSorting(event);
+              }}
+              tooltip={
+                column.getNextSortingOrder() === "asc"
+                  ? "Sort ascending"
+                  : column.getNextSortingOrder() === "desc"
+                  ? "Sort descending"
+                  : "Clear sort"
+              }
+              icon= {column.getIsSorted() ? (
+                column.getIsSorted() === "asc" ? FaArrowDown : FaArrowUp
+              ) : (
+                FaArrowRight
+              )}
+            >
+              {/* Icon logic */}
+
+            </Icon>
+            {/* Custom styled vertical line separator */}
+            <div className="w-px h-5 mx-2 bg-gray-400"></div>
+          </>
+        )}
+
+        {children} {/* Column name or text */}
+      </div>
+
+    </TableHeaderCell>
+
+  );
+};
 
 export const IncidentTableComponent = (props: Props) => {
 
@@ -24,15 +85,15 @@ export const IncidentTableComponent = (props: Props) => {
           >
             {headerGroup.headers.map((header) => {
               return (
-                <TableHeaderCell
-                  className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
+                <SortableHeaderCell
+                  header={header}
                   key={header.id}
                 >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()
                   )}
-                </TableHeaderCell>
+                </SortableHeaderCell>
               );
             })}
           </TableRow>

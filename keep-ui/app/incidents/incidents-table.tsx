@@ -3,11 +3,13 @@ import {
   Badge,
 } from "@tremor/react";
 import {
-  DisplayColumnDef,
   ExpandedState,
   createColumnHelper,
   getCoreRowModel,
   useReactTable,
+  SortingState,
+  getSortedRowModel,
+  ColumnDef,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
@@ -23,6 +25,8 @@ const columnHelper = createColumnHelper<IncidentDto>();
 interface Props {
   incidents: PaginatedIncidentsDto;
   mutate: () => void;
+  sorting: SortingState,
+  setSorting: Dispatch<SetStateAction<any>>;
   setPagination: Dispatch<SetStateAction<any>>;
   editCallback: (rule: IncidentDto) => void;
 }
@@ -31,6 +35,8 @@ export default function IncidentsTable({
   incidents: incidents,
   mutate,
   setPagination,
+  sorting,
+  setSorting,
   editCallback,
 }: Props) {
   const { data: session } = useSession();
@@ -76,22 +82,21 @@ export default function IncidentsTable({
       header: "Group by value",
       cell: ({ row }) => <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>,
     }),
-    // columnHelper.display({
-    //   id: "severity",
-    //   header: "Severity",
-    //   cell: (context) => {
-    //     const severity = context.row.original.severity;
-    //     let color;
-    //     if (severity === "critical") color = "red";
-    //     else if (severity === "info") color = "blue";
-    //     else if (severity === "warning") color = "yellow";
-    //     return <Badge color={color}>{severity}</Badge>;
-    //   },
-    // }),
-    columnHelper.display({
-      id: "alert_count",
+    columnHelper.accessor("severity", {
+      id: "severity",
+      header: "Severity",
+      cell: (context) => {
+        const severity = context.row.original.severity;
+        let color;
+        if (severity === "critical") color = "red";
+        else if (severity === "info") color = "blue";
+        else if (severity === "warning") color = "yellow";
+        return <Badge color={color}>{severity}</Badge>;
+      },
+    }),
+    columnHelper.accessor("alerts_count", {
+      id: "alerts_count",
       header: "Number of Alerts",
-      cell: (context) => context.row.original.number_of_alerts,
     }),
     columnHelper.display({
       id: "alert_sources",
@@ -121,10 +126,10 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "assignee",
       header: "Assignee",
-      cell: (context) => context.row.original.assignee,
+      cell: ({row}) => row.original.assignee
     }),
-    columnHelper.display({
-      id: "created_at",
+    columnHelper.accessor("creation_time", {
+      id: "creation_time",
       header: "Created At",
       cell: ({ row }) =>
         new Date(row.original.creation_time + "Z").toLocaleString(),
@@ -160,17 +165,27 @@ export default function IncidentsTable({
         </div>
       ),
     }),
-  ] as DisplayColumnDef<IncidentDto>[];
+  ] as ColumnDef<IncidentDto>[];
 
   const table = useReactTable({
     columns,
     data: incidents.items,
-    state: { expanded, pagination },
+    state: { expanded, pagination, sorting },
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     rowCount: incidents.count,
     onPaginationChange: setTablePagination,
     onExpandedChange: setExpanded,
+    onSortingChange: (value) => {
+      if (typeof value === "function") {
+        setSorting(value)
+      }
+    },
+    getSortedRowModel: getSortedRowModel(),
+    enableSorting: true,
+    enableMultiSort: false,
+    manualSorting: true,
+    debugTable: true,
   });
 
   return (

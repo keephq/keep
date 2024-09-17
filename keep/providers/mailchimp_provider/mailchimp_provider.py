@@ -27,6 +27,7 @@ class MailchimpProviderAuthConfig:
 class MailchimpProvider(BaseProvider):
     """Send email using the Mailchimp API."""
 
+    PROVIDER_DISPLAY_NAME = "Mailchimp"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connect_to_client",
