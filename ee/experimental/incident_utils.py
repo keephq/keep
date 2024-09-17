@@ -97,14 +97,7 @@ def calculate_pmi_matrix(
     pmi_matrix, pmi_columns = get_alert_pmi_matrix(
         alerts, "fingerprint", sliding_window, stride, offload_config)
 
-    logger.info(
-        "Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database.",
-        extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-    write_pmi_matrix_to_temp_file(tenant_id, pmi_matrix, pmi_columns, temp_dir)
-
-    logger.info("PMI matrix is written to the database.", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-
-    return {"status": "success"}
+    return {"status": "success", "pmi_matrix": pmi_matrix, "pmi_columns": pmi_columns}
 
 
 def update_existing_incident(incident: Incident, alerts: List[Alert]) -> Tuple[str, bool]:
@@ -380,7 +373,18 @@ async def mine_incidents_and_create_objects(
             pusher_client.trigger(f"private-{tenant_id}", "ai-logs-change", {"log": "Failed to calculate PMI matrix"})
             
         return {"incidents": []}
+    
+    elif status.get("status") == "success":
+        logger.info(
+        f"Calculating PMI coefficients for alerts finished. PMI matrix is being written to the database. Total number of PMI coefficients: {status.get('pmi_matrix').size}",
+        extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
+        
+        pmi_values = status.get("pmi_matrix")
+        fingerprints = status.get("pmi_columns")
+        write_pmi_matrix_to_temp_file(tenant_id, pmi_values, fingerprints, temp_dir)
 
+        logger.info("PMI matrix is written to the database.", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
+        fingerprint2idx = {fingerprint: i for i, fingerprint in enumerate(fingerprints)}
     logger.info("Getting new alerts and incidents", extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
 
     alerts = query_alerts(tenant_id, limit=use_n_historical_alerts, upper_timestamp=alert_upper_timestamp,
@@ -392,9 +396,6 @@ async def mine_incidents_and_create_objects(
     incidents, _ = get_last_incidents(tenant_id, limit=use_n_historical_incidents, upper_timestamp=alert_lower_timestamp + incident_validity_threshold, 
                                    lower_timestamp=alert_upper_timestamp - incident_validity_threshold)
 
-    pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
-    logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
-    
     n_batches = int(math.ceil((alert_upper_timestamp - alert_lower_timestamp).total_seconds() / alert_batch_stride)) - (STRIDE_DENOMINATOR - 1)
     logging.info(
         f"Starting alert correlation. Current batch size: {alert_validity_threshold} seconds. Current \
@@ -433,7 +434,7 @@ async def mine_incidents_and_create_objects(
             extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
         
         batch_incident_ids_for_processing, batch_new_incidents, batch_updated_incidents = process_alert_batch(
-            batch_alerts, batch_incidents, tenant_id, min_incident_size, incident_validity_threshold, pmi_values, fingerpint2idx, pmi_threshold, delete_nodes, knee_threshold)
+            batch_alerts, batch_incidents, tenant_id, min_incident_size, incident_validity_threshold, pmi_values, fingerprint2idx, pmi_threshold, delete_nodes, knee_threshold)
 
         new_incident_ids.extend([incident.id for incident in batch_new_incidents])
         incidents.extend(batch_new_incidents)
