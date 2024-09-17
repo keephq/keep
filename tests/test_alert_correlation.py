@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock, AsyncMock
 from keep.api.models.db.alert import Alert
 from keep.api.models.db.tenant import Tenant
-from ee.experimental.incident_utils import mine_incidents_and_create_objects, calculate_pmi_matrix
+from ee.experimental.incident_utils import mine_incidents_and_create_objects, calculate_pmi_matrix, DEFAULT_TEMP_DIR_LOCATION
 
 random.seed(42)
 
@@ -102,10 +102,11 @@ def test_calculate_pmi_matrix(db_session, tenant_id='test', n_alerts=10000, n_fi
     result = calculate_pmi_matrix(None, tenant_id)
     
     assert result == {"status": "success"}
-    assert os.path.exists(f"tmp/{tenant_id}/pmi_matrix.npz")
-    pmi_matrix = np.load(f"tmp/{tenant_id}/pmi_matrix.npz")
-    assert pmi_matrix["columns"] == [f"fp-{i % n_fingerprints}" for i in range(n_fingerprints)]
-    assert pmi_matrix["matrix"].shape == (n_fingerprints, n_fingerprints)
+    temp_dir = os.environ.get("AI_TEMP_FOLDER", DEFAULT_TEMP_DIR_LOCATION)
+    assert os.path.exists(f"{temp_dir}/{tenant_id}/pmi_matrix.npz")
+    pmi_matrix = np.load(f"{temp_dir}/{tenant_id}/pmi_matrix.npz", allow_pickle=True)
+    assert (np.unique(pmi_matrix["fingerprints"]) == np.unique([f"fp-{i % n_fingerprints}" for i in range(n_fingerprints)])).all()
+    assert pmi_matrix["pmi_matrix"].shape == (n_fingerprints, n_fingerprints)
     
 
 @pytest.mark.asyncio
