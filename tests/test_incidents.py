@@ -181,7 +181,7 @@ def test_get_last_incidents(db_session, create_alert):
 @pytest.mark.parametrize(
     "test_app", ["NO_AUTH"], indirect=True
 )
-def test_incident_status_change(client, test_app, db_session, setup_stress_alerts_no_elastic):
+def test_incident_status_change(db_session, client, test_app, setup_stress_alerts_no_elastic):
 
     alerts = setup_stress_alerts_no_elastic(100)
     incident = create_incident_from_dict("keep", {"name": "test", "description": "test"})
