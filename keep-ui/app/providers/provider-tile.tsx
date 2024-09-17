@@ -160,9 +160,10 @@ export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <button
       className={
-        "tile-basis text-left min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:shadow-lg hover:grayscale-0 cursor-pointer gap-3" +
+        "tile-basis text-left min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:grayscale-0  gap-3" +
         // Add fixed height only if provider card doesn't have much content
-        (!provider.installed && !provider.linked ? " h-32" : "")
+        (!provider.installed && !provider.linked ? " h-32" : "") +
+        (!provider.linked ? "cursor-pointer hover:shadow-lg" : "")
       }
       onClick={onClick}
     >
