@@ -64,11 +64,17 @@ def pull_data_from_providers(
         workflow_id=None,
     )
 
+    logger.info(
+        "Pulling data from providers",
+        extra={"tenant_id": tenant_id, "trace_id": trace_id},
+    )
+
     for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
         extra = {
             "provider_type": provider.type,
             "provider_id": provider.id,
             "tenant_id": tenant_id,
+            "trace_id": trace_id,
         }
 
         if provider.last_pull_time is not None:
@@ -365,7 +371,7 @@ def update_preset(
     "/{preset_name}/alerts",
     description="Get a preset for tenant",
 )
-async def get_preset_alerts(
+def get_preset_alerts(
     request: Request,
     bg_tasks: BackgroundTasks,
     preset_name: str,
@@ -385,7 +391,10 @@ async def get_preset_alerts(
     )
 
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Getting preset alerts", extra={"preset_name": preset_name})
+    logger.info(
+        "Getting preset alerts",
+        extra={"preset_name": preset_name, "tenant_id": tenant_id},
+    )
     # handle static presets
     if preset_name in STATIC_PRESETS:
         preset = STATIC_PRESETS[preset_name]
@@ -402,7 +411,7 @@ async def get_preset_alerts(
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
 
-    response.headers["X-search-type"] = str(search_engine.search_mode.value)
+    response.headers["X-Search-Type"] = str(search_engine.search_mode.value)
     return preset_alerts
 
 
