@@ -230,7 +230,7 @@ class OpsgenieProvider(BaseProvider):
 
         return {
             "alerts": alerts.data,
-            "number_of_alerts": len(alerts.data),
+            "alerts_count": len(alerts.data),
         }
 
 

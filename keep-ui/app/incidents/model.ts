@@ -8,7 +8,7 @@ export interface IncidentDto {
   generated_summary: string;
   assignee: string;
   severity: string;
-  number_of_alerts: number;
+  alerts_count: number;
   alert_sources: string[];
   services: string[];
   start_time?: Date;
