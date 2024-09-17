@@ -2857,7 +2857,13 @@ def get_all_topology_data(
             services = [service_instance, *[service.service for service in services]]
         else:
             # Fetch services for the tenant
-            services = session.exec(query).all()
+            services = session.exec(
+                query.options(
+                    selectinload(TopologyService.dependencies).selectinload(
+                        TopologyServiceDependency.dependent_service
+                    )
+                )
+            ).all()
 
         service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
 
