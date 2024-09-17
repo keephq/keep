@@ -64,12 +64,18 @@ def pull_data_from_providers(
         workflow_id=None,
     )
 
+    providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
+
     logger.info(
         "Pulling data from providers",
-        extra={"tenant_id": tenant_id, "trace_id": trace_id},
+        extra={
+            "tenant_id": tenant_id,
+            "trace_id": trace_id,
+            "providers_len": len(providers),
+        },
     )
 
-    for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
+    for provider in providers:
         extra = {
             "provider_type": provider.type,
             "provider_id": provider.id,
@@ -91,17 +97,16 @@ def pull_data_from_providers(
                 )
                 continue
 
-        provider_class = ProvidersFactory.get_provider(
-            context_manager=context_manager,
-            provider_id=provider.id,
-            provider_type=provider.type,
-            provider_config=provider.details,
-        )
-
         try:
             logger.info(
                 f"Pulling alerts from provider {provider.type} ({provider.id})",
                 extra=extra,
+            )
+            provider_class = ProvidersFactory.get_provider(
+                context_manager=context_manager,
+                provider_id=provider.id,
+                provider_type=provider.type,
+                provider_config=provider.details,
             )
             sorted_provider_alerts_by_fingerprint = (
                 provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
@@ -113,16 +118,18 @@ def pull_data_from_providers(
 
             try:
                 if isinstance(provider_class, BaseTopologyProvider):
-                    logger.info("Getting topology data", extra=extra)
+                    logger.info("Pulling topology data", extra=extra)
                     topology_data = provider_class.pull_topology()
-                    logger.info("Got topology data, processing", extra=extra)
+                    logger.info(
+                        "Pulling topology data finished, processing", extra=extra
+                    )
                     process_topology(
                         tenant_id, topology_data, provider.id, provider.type
                     )
-                    logger.info("Processed topology data", extra=extra)
+                    logger.info("Finished processing topology data", extra=extra)
             except NotImplementedError:
-                logger.warning(
-                    f"Provider {provider.type} ({provider.id}) does not support topology data",
+                logger.debug(
+                    f"Provider {provider.type} ({provider.id}) does not implement puliing topology data",
                     extra=extra,
                 )
             except Exception as e:
@@ -151,6 +158,14 @@ def pull_data_from_providers(
         finally:
             # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
             update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+    logger.info(
+        "Pulling data from providers completed",
+        extra={
+            "tenant_id": tenant_id,
+            "trace_id": trace_id,
+            "providers_len": len(providers),
+        },
+    )
 
 
 @router.get(
