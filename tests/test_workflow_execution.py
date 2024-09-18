@@ -641,7 +641,7 @@ def test_workflow_incident_triggers(
     incident = IncidentDto(
         id="ba9ddbb9-3a83-40fc-9ace-1e026e08ca2b",
         user_generated_name="incident",
-        number_of_alerts=0,
+        alerts_count=0,
         alert_sources=[],
         services=[],
         severity="critical",
