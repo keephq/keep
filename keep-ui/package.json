@@ -232,7 +232,7 @@
     "mz": "^2.7.0",
     "nanoid": "^3.3.6",
     "natural-compare": "^1.4.0",
-    "next": "^14.2.1",
+    "next": "^14.2.12",
     "next-auth": "^4.24.7",
     "node-releases": "^2.0.10",
     "normalize-path": "^3.0.0",
