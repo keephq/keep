@@ -103,9 +103,8 @@ class ProvidersService:
                 try:
                     # if the provider is already installed, delete the secret
                     logger.warning("Provider already installed, deleting secret")
-                    secret_manager.write_secret(
+                    secret_manager.delete_secret(
                         secret_name=secret_name,
-                        secret_value=json.dumps(config),
                     )
                     logger.warning("Secret deleted")
                 except Exception:
