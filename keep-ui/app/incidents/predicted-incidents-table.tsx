@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { MdDone, MdBlock} from "react-icons/md";
 import { useSession } from "next-auth/react";
-import {IncidentDto, PaginatedIncidentsDto} from "./model";
+import {IncidentDto, PaginatedIncidentsDto} from "./models";
 import React, { useState } from "react";
 import Image from "next/image";
 import { IncidentTableComponent } from "./incident-table-component";
