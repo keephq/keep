@@ -399,12 +399,10 @@ export default function IncidentTimeline({
                   startTime={startTime}
                   endTime={endTime}
                   timeScale={timeScale}
-                  pixelsPerMillisecond={pixelsPerMillisecond}
                   onEventClick={setSelectedEvent}
                   selectedEventId={selectedEvent?.id || null}
                   isFirstRow={index === 0}
                   isLastRow={index === array.length - 1}
-                  minWidth={200}
                 />
               ))}
           </div>
