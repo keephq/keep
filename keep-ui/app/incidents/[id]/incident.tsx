@@ -16,7 +16,6 @@ import {
 import IncidentAlerts from "./incident-alerts";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import IncidentTimeline from "./incident-timeline";
 import { CiBellOn, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
