@@ -52,11 +52,8 @@ export default function IncidentView({ incidentId }: Props) {
       </div>
       <Card className="flex flex-col items-center justify-center gap-y-8 mt-10 p-4 md:p-10 mx-auto h-[calc(100vh-180px)]">
         <div className="w-full h-full">
-          <div className="flex flex-col gap-2 xl:gap-0 xl:flex-row xl:divide-x p-2 h-full">
-            <div
-              id="incidentOverview"
-              className="w-1/5 xl:pr-2.5"
-            >
+          <div className="flex flex-col gap-2 xl:gap-0 xl:divide-y p-2 h-full">
+            <div id="incidentOverview" className="mb-2.5">
               <IncidentInformation incident={incident} />
             </div>
             <div

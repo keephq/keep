@@ -27,8 +27,8 @@ import AlertName from "app/alerts/alert-name";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
 import IncidentPagination from "../incident-pagination";
-import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
-import {IncidentDto} from "../model";
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { IncidentDto } from "../model";
 
 interface Props {
   incident: IncidentDto;
@@ -39,7 +39,6 @@ interface Pagination {
   offset: number;
 }
 
-
 const columnHelper = createColumnHelper<AlertDto>();
 
 export default function IncidentAlerts({ incident }: Props) {
@@ -48,11 +47,15 @@ export default function IncidentAlerts({ incident }: Props) {
     offset: 0,
   });
 
-  const { data: alerts, isLoading } = useIncidentAlerts(incident.id, alertsPagination.limit, alertsPagination.offset);
+  const { data: alerts, isLoading } = useIncidentAlerts(
+    incident.id,
+    alertsPagination.limit,
+    alertsPagination.offset
+  );
 
   const [pagination, setTablePagination] = useState({
-    pageIndex: alerts? Math.ceil(alerts.offset / alerts.limit) : 0,
-    pageSize: alerts? alerts.limit : 20,
+    pageIndex: alerts ? Math.ceil(alerts.offset / alerts.limit) : 0,
+    pageSize: alerts ? alerts.limit : 20,
   });
 
   useEffect(() => {
@@ -60,16 +63,16 @@ export default function IncidentAlerts({ incident }: Props) {
       setAlertsPagination({
         limit: pagination.pageSize,
         offset: 0,
-      })
+      });
     }
     const currentOffset = pagination.pageSize * pagination.pageIndex;
     if (alerts && alerts.offset != currentOffset) {
       setAlertsPagination({
         limit: pagination.pageSize,
         offset: currentOffset,
-      })
+      });
     }
-  }, [pagination])
+  }, [pagination]);
   usePollIncidentAlerts(incident.id);
 
   const columns = [
@@ -116,7 +119,7 @@ export default function IncidentAlerts({ incident }: Props) {
         (context.getValue() ?? []).map((source, index) => (
           <Image
             className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-            key={source}
+            key={`source-${source}-${index}`}
             alt={source}
             height={24}
             width={24}
@@ -128,13 +131,13 @@ export default function IncidentAlerts({ incident }: Props) {
     columnHelper.display({
       id: "remove",
       header: "",
-      cell: (context) => (
-        incident.is_confirmed &&
+      cell: (context) =>
+        incident.is_confirmed && (
           <IncidentAlertMenu
             alert={context.row.original}
             incidentId={incident.id}
           />
-      ),
+        ),
     }),
   ];
 
@@ -164,9 +167,9 @@ export default function IncidentAlerts({ incident }: Props) {
         <TableHead>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
+              {headerGroup.headers.map((header, index) => {
                 return (
-                  <TableHeaderCell key={header.id}>
+                  <TableHeaderCell key={`header-${header.id}-${index}`}>
                     {flexRender(
                       header.column.columnDef.header,
                       header.getContext()
@@ -179,10 +182,13 @@ export default function IncidentAlerts({ incident }: Props) {
         </TableHead>
         {alerts && alerts?.items?.length > 0 && (
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="hover:bg-slate-100">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+            {table.getRowModel().rows.map((row, index) => (
+              <TableRow
+                key={`row-${row.id}-${index}`}
+                className="hover:bg-slate-100"
+              >
+                {row.getVisibleCells().map((cell, index) => (
+                  <TableCell key={`cell-${cell.id}-${index}`}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -196,10 +202,10 @@ export default function IncidentAlerts({ incident }: Props) {
             <TableBody>
               {Array(pagination.pageSize)
                 .fill("")
-                .map((index) => (
-                  <TableRow key={index}>
-                    {columns.map((c) => (
-                      <TableCell key={c.id}>
+                .map((index, rowIndex) => (
+                  <TableRow key={`row-${index}-${rowIndex}`}>
+                    {columns.map((c, cellIndex) => (
+                      <TableCell key={`cell-${c.id}-${cellIndex}`}>
                         <Skeleton />
                       </TableCell>
                     ))}
@@ -211,7 +217,7 @@ export default function IncidentAlerts({ incident }: Props) {
       </Table>
 
       <div className="mt-4 mb-8">
-        <IncidentPagination table={table}  isRefreshAllowed={true}/>
+        <IncidentPagination table={table} isRefreshAllowed={true} />
       </div>
     </>
   );

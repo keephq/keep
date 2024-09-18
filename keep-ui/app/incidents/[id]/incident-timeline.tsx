@@ -1,16 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import {
-  format,
-  parseISO,
-  differenceInMinutes,
-  differenceInHours,
-  differenceInDays,
-  addMinutes,
-  addHours,
-  addDays,
-} from "date-fns";
+import React, { useEffect, useMemo, useState } from "react";
+import { format, parseISO } from "date-fns";
 import { AuditEvent, useAlerts } from "utils/hooks/useAlerts";
 import { AlertDto } from "app/alerts/models";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
@@ -58,13 +49,21 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
 }) => {
   return (
     <div className="mt-4 p-4 bg-gray-100">
-      <h2 className="font-semibold mb-2">{alert.name}</h2>
+      <h2 className="font-semibold mb-2">
+        {alert.name} ({alert.fingerprint})
+      </h2>
       <p className="mb-2 text-md">{alert.description}</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm w-1/4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <p className="text-gray-400">Date:</p>
         <p>
           {format(parseISO(event.timestamp), "dd, MMM yyyy - HH:mm.ss 'UTC'")}
         </p>
+
+        <p className="text-gray-400">Action:</p>
+        <p>{event.action}</p>
+
+        <p className="text-gray-400">Description:</p>
+        <p>{event.description}</p>
 
         <p className="text-gray-400">Severity:</p>
         <div className="flex items-center">
@@ -208,7 +207,13 @@ const AlertBar: React.FC<AlertBarProps> = ({
         >
           <div className="absolute inset-y-0 left-2 flex items-center font-semibold truncate w-full pr-4">
             <AlertSeverity marginLeft={false} severity={alert.severity} />
-            <span className={`ml-2 ${severityTextColors[alert.severity as keyof typeof severityTextColors] || severityTextColors.info}`}>
+            <span
+              className={`ml-2 ${
+                severityTextColors[
+                  alert.severity as keyof typeof severityTextColors
+                ] || severityTextColors.info
+              }`}
+            >
               {alert.name}
             </span>
           </div>
@@ -241,13 +246,22 @@ export default function IncidentTimeline({
     incident.id
   );
   const { useMultipleFingerprintsAlertAudit } = useAlerts();
-  const { data: auditEvents, isLoading: auditEventsLoading } =
-    useMultipleFingerprintsAlertAudit(alerts?.items.map((m) => m.fingerprint));
+  const {
+    data: auditEvents,
+    isLoading: auditEventsLoading,
+    mutate,
+  } = useMultipleFingerprintsAlertAudit(
+    alerts?.items.map((m) => m.fingerprint)
+  );
 
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
+  useEffect(() => {
+    mutate();
+  }, [alerts, mutate]);
+
   const timelineData = useMemo(() => {
-    if (auditEvents) {
+    if (auditEvents && alerts) {
       const allTimestamps = auditEvents.map((event) =>
         parseISO(event.timestamp).getTime()
       );
@@ -255,39 +269,36 @@ export default function IncidentTimeline({
       const startTime = new Date(Math.min(...allTimestamps));
       const endTime = new Date(Math.max(...allTimestamps));
 
-      const paddedStartTime = new Date(startTime.getTime());
-      const paddedEndTime = new Date(endTime.getTime());
+      // Add padding to start and end times
+      const paddedStartTime = new Date(startTime.getTime() - 1000 * 60 * 10); // 10 minutes before
+      const paddedEndTime = new Date(endTime.getTime() + 1000 * 60 * 10); // 10 minutes after
 
-      const daysDifference = differenceInDays(paddedEndTime, paddedStartTime);
+      const totalDuration = paddedEndTime.getTime() - paddedStartTime.getTime();
+      const pixelsPerMillisecond = 5000 / totalDuration; // Assuming 5000px minimum width
 
       let timeScale: "minutes" | "hours" | "days";
-      let intervals;
-      let formatString;
+      let intervalDuration: number;
+      let formatString: string;
 
-      if (daysDifference > 3) {
+      if (totalDuration > 3 * 24 * 60 * 60 * 1000) {
         timeScale = "days";
-        intervals = Array.from({ length: 9 }, (_, i) =>
-          addDays(paddedStartTime, (i * daysDifference) / 8)
-        );
+        intervalDuration = 24 * 60 * 60 * 1000;
         formatString = "MMM dd";
-      } else if (daysDifference > 1) {
+      } else if (totalDuration > 24 * 60 * 60 * 1000) {
         timeScale = "hours";
-        intervals = Array.from({ length: 9 }, (_, i) =>
-          addHours(
-            paddedStartTime,
-            (i * differenceInHours(paddedEndTime, paddedStartTime)) / 8
-          )
-        );
+        intervalDuration = 60 * 60 * 1000;
         formatString = "HH:mm";
       } else {
         timeScale = "minutes";
-        intervals = Array.from({ length: 9 }, (_, i) =>
-          addMinutes(
-            paddedStartTime,
-            (i * differenceInMinutes(paddedEndTime, paddedStartTime)) / 8
-          )
-        );
+        intervalDuration = 5 * 60 * 1000; // 5-minute intervals
         formatString = "HH:mm:ss";
+      }
+
+      const intervals: Date[] = [];
+      let currentTime = paddedStartTime;
+      while (currentTime <= paddedEndTime) {
+        intervals.push(new Date(currentTime));
+        currentTime = new Date(currentTime.getTime() + intervalDuration);
       }
 
       return {
@@ -296,29 +307,72 @@ export default function IncidentTimeline({
         intervals,
         formatString,
         timeScale,
+        pixelsPerMillisecond,
       };
     }
     return {};
-  }, [auditEvents]);
+  }, [auditEvents, alerts]);
 
   if (auditEventsLoading || !auditEvents || alertsLoading) return <>No Data</>;
 
-  const { startTime, endTime, intervals, formatString, timeScale } =
-    timelineData;
+  const {
+    startTime,
+    endTime,
+    intervals,
+    formatString,
+    timeScale,
+    pixelsPerMillisecond,
+  } = timelineData;
 
-  if (!intervals || !startTime || !endTime || !timeScale) return <>No Data</>;
+  if (
+    !intervals ||
+    !startTime ||
+    !endTime ||
+    !timeScale ||
+    !pixelsPerMillisecond
+  )
+    return <>No Data</>;
+
+  const totalWidth = Math.max(
+    5000,
+    (endTime.getTime() - startTime.getTime()) * pixelsPerMillisecond
+  );
 
   return (
     <div className="p-4">
       <div className="overflow-x-auto">
-        <div style={{ minWidth: "100%", width: "max-content" }}>
+        <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
           {/* Time labels */}
-          <div className="flex justify-between mb-2">
+          <div
+            className="flex mb-2 relative"
+            style={{ height: "20px", paddingLeft: "40px" }}
+          >
             {intervals.map((time, index) => (
-              <div key={index} className="text-xs px-2 text-gray-400">
+              <div
+                key={index}
+                className="text-xs px-2 text-gray-400 absolute whitespace-nowrap"
+                style={{
+                  left: `${
+                    (time.getTime() - startTime.getTime()) *
+                    pixelsPerMillisecond
+                  }px`,
+                  transform: "translateX(-50%)",
+                  visibility: index === 0 ? "hidden" : "visible", // Hide the first label
+                }}
+              >
                 {format(time, formatString)}
               </div>
             ))}
+            {/* Add an extra label for the first time, positioned at the start */}
+            <div
+              className="text-xs px-2 text-gray-400 absolute whitespace-nowrap"
+              style={{
+                left: "0px",
+                transform: "translateX(0)",
+              }}
+            >
+              {format(intervals[0], formatString)}
+            </div>
           </div>
 
           {/* Alert bars */}
@@ -345,27 +399,31 @@ export default function IncidentTimeline({
                   startTime={startTime}
                   endTime={endTime}
                   timeScale={timeScale}
+                  pixelsPerMillisecond={pixelsPerMillisecond}
                   onEventClick={setSelectedEvent}
                   selectedEventId={selectedEvent?.id || null}
                   isFirstRow={index === 0}
                   isLastRow={index === array.length - 1}
+                  minWidth={200}
                 />
               ))}
           </div>
-          <div className="h-3" />
-          {/* Event details box */}
-          {selectedEvent && (
-            <AlertEventInfo
-              event={selectedEvent}
-              alert={
-                alerts?.items.find(
-                  (a) => a.fingerprint === selectedEvent.fingerprint
-                )!
-              }
-            />
-          )}
         </div>
       </div>
+      <div className="h-3" />
+      {/* Event details box */}
+      {selectedEvent && (
+        <div className="overflow-x-hidden">
+          <AlertEventInfo
+            event={selectedEvent}
+            alert={
+              alerts?.items.find(
+                (a) => a.fingerprint === selectedEvent.fingerprint
+              )!
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }
