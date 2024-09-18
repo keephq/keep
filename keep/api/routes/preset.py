@@ -181,7 +181,7 @@ def _get_time_stamp_filter(
             time_stamp_dict = json.loads(time_stamp)
             # Return the TimeStampFilter object, Pydantic will map 'from' -> lower_timestamp and 'to' -> upper_timestamp
             return TimeStampFilter(**time_stamp_dict)
-        except (json.JSONDecodeError, TypeError) as e:
+        except (json.JSONDecodeError, TypeError):
             raise HTTPException(status_code=400, detail="Invalid time_stamp format")
     return TimeStampFilter()
 
@@ -195,7 +195,7 @@ def get_presets(
     ),
     session: Session = Depends(get_session),
     time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter)
-):
+) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Getting all presets {time_stamp}")
 

@@ -1,8 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
-from fastapi import Query
-
 class TimeStampFilter(BaseModel):
     lower_timestamp: Optional[datetime] = Field(None, alias='start')
     upper_timestamp: Optional[datetime] = Field(None, alias='end')
