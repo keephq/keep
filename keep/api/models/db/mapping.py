@@ -25,8 +25,8 @@ class MappingRule(SQLModel, table=True):
             String,
             name="type",
             server_default="csv",
-            length=255,
-        )
+        ),
+        max_length=255,
     )
     # The attributes to match against (e.g. ["service","region"])
     matchers: list[str] = Field(sa_column=Column(JSON), nullable=False)
