@@ -26,6 +26,8 @@ class ResendProviderAuthConfig:
 class ResendProvider(BaseProvider):
     """Send email using the Resend API."""
 
+    PROVIDER_DISPLAY_NAME = "Resend"
+
     RESEND_API_URL = "https://api.resend.com"
 
     def __init__(

@@ -21,6 +21,8 @@ class ZendutyProviderAuthConfig:
 class ZendutyProvider(BaseProvider):
     """Create incident in Zenduty."""
 
+    PROVIDER_DISPLAY_NAME = "Zenduty"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

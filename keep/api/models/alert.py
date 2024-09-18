@@ -92,6 +92,15 @@ class AlertStatus(Enum):
     PENDING = "pending"
 
 
+class IncidentStatus(Enum):
+    # Active incident
+    FIRING = "firing"
+    # Incident has been resolved
+    RESOLVED = "resolved"
+    # Incident has been acknowledged but not resolved
+    ACKNOWLEDGED = "acknowledged"
+
+
 class IncidentSeverity(SeverityBaseInterface):
     CRITICAL = ("critical", 5)
     HIGH = ("high", 4)
@@ -348,6 +357,7 @@ class IncidentDtoIn(BaseModel):
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
                     "name": "Incident name",
                     "user_summary": "Keep: Incident description",
+                    "status": "firing",
                 }
             ]
         }
@@ -360,9 +370,10 @@ class IncidentDto(IncidentDtoIn):
     last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
 
-    number_of_alerts: int
+    alerts_count: int
     alert_sources: list[str]
     severity: IncidentSeverity
+    status: IncidentStatus = IncidentStatus.FIRING
     assignee: str | None
     services: list[str]
 
@@ -388,6 +399,20 @@ class IncidentDto(IncidentDtoIn):
             UUID: lambda v: str(v),
         }
 
+    @root_validator(pre=True)
+    def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set default status
+        status = values.get("status")
+        try:
+            values["status"] = IncidentStatus(status)
+        except ValueError:
+            logging.warning(
+                f"Invalid status value: {status}, setting default.",
+                extra={"event": values},
+            )
+            values["status"] = IncidentStatus.FIRING
+        return values
+
     @classmethod
     def from_db_incident(cls, db_incident):
 
@@ -407,10 +432,16 @@ class IncidentDto(IncidentDtoIn):
             start_time=db_incident.start_time,
             last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
-            number_of_alerts=db_incident.alerts_count,
+            alerts_count=db_incident.alerts_count,
             alert_sources=db_incident.sources,
             severity=severity,
+            status=db_incident.status,
             assignee=db_incident.assignee,
             services=db_incident.affected_services,
             rule_fingerprint=db_incident.rule_fingerprint,
         )
+
+
+class IncidentStatusChangeDto(BaseModel):
+    status: IncidentStatus
+    comment: str | None
