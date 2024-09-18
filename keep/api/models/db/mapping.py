@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from pydantic import BaseModel, validator
+from sqlalchemy import String
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -19,7 +20,14 @@ class MappingRule(SQLModel, table=True):
     override: bool = Field(default=True)
     condition: Optional[str] = Field(max_length=2000)
     # The type of this mapping rule
-    type: str = "csv"
+    type: str = Field(
+        sa_column=Column(
+            String(255),
+            name="type",
+            server_default="csv",
+        ),
+        max_length=255,
+    )
     # The attributes to match against (e.g. ["service","region"])
     matchers: list[str] = Field(sa_column=Column(JSON), nullable=False)
     # The rows of the CSV file [{service: "service1", region: "region1", ...}, ...]
