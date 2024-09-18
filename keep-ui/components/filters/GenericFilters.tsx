@@ -194,7 +194,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   };
 
   const handleDate = (start?: Date, end?: Date) => {
-    let newValue;
+    let newValue = ""
     if (!start && !end) {
       newValue = "";
     } else {
@@ -273,8 +273,9 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           if (Array.isArray(acc[key])) {
             acc[key] = [...acc[key], value];
             return acc;
+          }else {
+            acc[key] = [acc[key] as string, value];
           }
-          acc[key] = [acc[key], value];
           return acc;
         }
         acc[key] = value;
