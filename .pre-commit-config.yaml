@@ -7,12 +7,6 @@ repos:
         language: system
         types: [python]
         require_serial: true
-      #  - id: yamllint
-      #    name: yamllint
-      #    description: This hook runs yamllint.
-      #    entry: yamllint
-      #    language: python
-      #    types: [file, yaml]
       - id: end-of-file-fixer
         name: Fix End of Files
         entry: end-of-file-fixer
