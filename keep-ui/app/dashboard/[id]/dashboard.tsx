@@ -21,7 +21,7 @@ const DASHBOARD_FILTERS = [
     type: "date",
     key: "time_stamp",
     value: "",
-    name: "Last Recived",
+    name: "Last received",
   }
 ]
 
