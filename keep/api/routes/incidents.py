@@ -7,6 +7,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
+from datetime import datetime
 from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
