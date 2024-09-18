@@ -19,19 +19,28 @@ import Image from "next/image";
 import AlertSeverity from "app/alerts/alert-severity";
 
 const severityColors = {
-  critical: "bg-red-400",
-  high: "bg-orange-400",
-  warning: "bg-blue-300",
-  low: "bg-green-400",
-  info: "bg-green-400",
-  error: "bg-orange-400",
+  critical: "bg-red-300",
+  high: "bg-orange-300",
+  warning: "bg-blue-200",
+  low: "bg-green-300",
+  info: "bg-green-300",
+  error: "bg-orange-300",
 };
 
 const dotColors = {
-  "bg-red-400": "bg-red-500",
-  "bg-orange-400": "bg-orange-500",
-  "bg-blue-300": "bg-blue-400",
-  "bg-green-400": "bg-green-500",
+  "bg-red-300": "bg-red-500",
+  "bg-orange-300": "bg-orange-500",
+  "bg-blue-200": "bg-blue-400",
+  "bg-green-300": "bg-green-500",
+};
+
+const severityTextColors = {
+  critical: "text-red-500",
+  high: "text-orange-500",
+  warning: "text-yellow-500",
+  low: "text-green-500",
+  info: "text-emerald-500",
+  error: "text-orange-500",
 };
 
 interface EventDotProps {
@@ -51,19 +60,19 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
     <div className="mt-4 p-4 bg-gray-100">
       <h2 className="font-semibold mb-2">{alert.name}</h2>
       <p className="mb-2 text-md">{alert.description}</p>
-      <div className="flex w-80 justify-between text-sm items-center">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm w-1/4">
         <p className="text-gray-400">Date:</p>
-        {format(parseISO(event.timestamp), "dd, MMM yyyy - HH:mm.ss 'UTC'")}
-      </div>
-      <div className="flex w-80 justify-between text-sm items-center">
-        <p className="text-gray-400 text-sm">Severity:</p>
+        <p>
+          {format(parseISO(event.timestamp), "dd, MMM yyyy - HH:mm.ss 'UTC'")}
+        </p>
+
+        <p className="text-gray-400">Severity:</p>
         <div className="flex items-center">
-          <AlertSeverity severity={alert.severity} />
-          <p>{alert.severity}</p>
+          <AlertSeverity marginLeft={false} severity={alert.severity} />
+          <p className="ml-2">{alert.severity}</p>
         </div>
-      </div>
-      <div className="flex w-80 justify-between text-sm items-center">
-        <p className="text-gray-400 text-sm">Source:</p>
+
+        <p className="text-gray-400">Source:</p>
         <div className="flex items-center">
           {alert.source.map((source, index) => (
             <Image
@@ -78,10 +87,9 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
           ))}
           <p>{alert.source.join(",")}</p>
         </div>
-      </div>
-      <div className="flex w-80 justify-between text-sm items-center">
-        <p className="text-gray-400 text-sm">Status:</p>
-        {alert.status}
+
+        <p className="text-gray-400">Status:</p>
+        <p>{alert.status}</p>
       </div>
     </div>
   );
@@ -96,10 +104,12 @@ const EventDot: React.FC<EventDotProps> = ({
   isSelected,
 }) => {
   const eventTime = parseISO(event.timestamp);
-  const position =
+  let position =
     ((eventTime.getTime() - alertStart.getTime()) /
       (alertEnd.getTime() - alertStart.getTime())) *
     100;
+  if (position == 0) position = 5;
+  if (position == 100) position = 90;
 
   return (
     <div
@@ -110,9 +120,9 @@ const EventDot: React.FC<EventDotProps> = ({
       onClick={() => onClick(event)}
     >
       <div
-        className={`w-3 ${isSelected ? "h-full border-2 border-white" : "h-3"} ${
-          dotColors[color as keyof typeof dotColors]
-        } rounded-full`}
+        className={`w-3 ${
+          isSelected ? "h-full border-2 border-white" : "h-3"
+        } ${dotColors[color as keyof typeof dotColors]} rounded-full`}
       ></div>
     </div>
   );
@@ -126,6 +136,8 @@ interface AlertBarProps {
   timeScale: "minutes" | "hours" | "days";
   onEventClick: (event: AuditEvent | null) => void;
   selectedEventId: string | null;
+  isFirstRow: boolean;
+  isLastRow: boolean;
 }
 
 const AlertBar: React.FC<AlertBarProps> = ({
@@ -136,6 +148,8 @@ const AlertBar: React.FC<AlertBarProps> = ({
   timeScale,
   onEventClick,
   selectedEventId,
+  isFirstRow,
+  isLastRow,
 }) => {
   const alertEvents = auditEvents.filter(
     (event) => event.fingerprint === alert.fingerprint
@@ -164,23 +178,39 @@ const AlertBar: React.FC<AlertBarProps> = ({
   };
 
   return (
-    <div className="relative h-12 mb-4">
+    <div className="relative h-14 flex items-center">
+      <div className="absolute inset-0 grid grid-cols-24">
+        {Array.from({ length: 24 }).map((_, index) => (
+          <div
+            key={index}
+            className={`border-gray-100 border-b ${
+              isFirstRow ? "border-t-0" : "border-t"
+            }
+            ${index === 0 ? "border-l-0" : "border-l"} ${
+              index === 23 ? "border-r-0" : "border-r"
+            }`}
+          />
+        ))}
+      </div>
       <div
-        className={`absolute h-full rounded-full bg-white shadow-lg z-10 p-1`}
+        className={`absolute h-12 rounded-full bg-white shadow-lg z-10 p-1`}
         style={{
           left: `${startPosition}%`,
           width: `${width}%`,
-          minWidth: "20px", // Minimum width to ensure visibility
+          minWidth: "200px", // Minimum width to ensure visibility
         }}
       >
         <div
           className={`h-full w-full rounded-full ${
             severityColors[alert.severity as keyof typeof severityColors] ||
             severityColors.info
-          } relative`}
+          } relative overflow-hidden`}
         >
-          <div className="absolute inset-y-0 left-2 flex items-center text-white font-semibold truncate w-full pr-4">
-            {alert.name}
+          <div className="absolute inset-y-0 left-2 flex items-center font-semibold truncate w-full pr-4">
+            <AlertSeverity marginLeft={false} severity={alert.severity} />
+            <span className={`ml-2 ${severityTextColors[alert.severity as keyof typeof severityTextColors] || severityTextColors.info}`}>
+              {alert.name}
+            </span>
           </div>
           {alertEvents.map((event, index) => (
             <EventDot
@@ -292,7 +322,7 @@ export default function IncidentTimeline({
           </div>
 
           {/* Alert bars */}
-          <div className="space-y-4">
+          <div className="space-y-0">
             {alerts?.items
               .sort((a, b) => {
                 const aStart = Math.min(
@@ -307,7 +337,7 @@ export default function IncidentTimeline({
                 );
                 return aStart - bStart;
               })
-              .map((alert, index) => (
+              .map((alert, index, array) => (
                 <AlertBar
                   key={alert.id}
                   alert={alert}
@@ -317,10 +347,12 @@ export default function IncidentTimeline({
                   timeScale={timeScale}
                   onEventClick={setSelectedEvent}
                   selectedEventId={selectedEvent?.id || null}
+                  isFirstRow={index === 0}
+                  isLastRow={index === array.length - 1}
                 />
               ))}
           </div>
-          <div className="h-5" />
+          <div className="h-3" />
           {/* Event details box */}
           {selectedEvent && (
             <AlertEventInfo
