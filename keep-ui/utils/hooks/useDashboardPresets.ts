@@ -29,7 +29,8 @@ export const useDashboardPreset = () => {
   };
 
   let allPreset = useMemo(() => {
-    //if dashboard as any filters applied we will be taking the live data or else we will use the localstorage data(to sync the values with nav bar and dashboard)
+    /*If any filters are applied on the dashboard, we will fetch live data; otherwise, 
+    we will use data from localStorage to sync values between the navbar and the dashboard.*/
     let combinedPresets = searchParams?.toString() ? [...presets, ...fetchedPresets]: [...presetsOrderFromLS, ...staticPresetsOrderFromLS];
     //private preset checks
     combinedPresets = combinedPresets.filter((preset) =>
