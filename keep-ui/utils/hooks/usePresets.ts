@@ -8,37 +8,29 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import moment from "moment";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();
   const { data: configData } = useConfig();
   const apiUrl = getApiURL();
-  const isDashBoard = type === 'dashboard'
-  const presetType = isDashBoard ? `${type}__` : "" + "presets-order";;
+  //ideally, we can use pathname. but hardcoding it for now.
+  const isDashBoard = type === "dashboard";
   const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>(
     "presets-order",
     []
   );
-  const [dashboardPresetsOrderFromLS, setDashboardPresetsOrderFromLS] = useLocalStorage<Preset[]>(
-    presetType,
-    []
-  )
-
   const searchParams = useSearchParams();
+
+  const newPresetsRef = useRef<Preset[] | null>(null);
 
   const [staticPresetsOrderFromLS, setStaticPresetsOrderFromLS] =
     useLocalStorage<Preset[]>(`static-presets-order`, []);
-  const [staticDashboardPresetsOrderFromLS, setStaticDashPresetsOrderFromLS] =
-    useLocalStorage<Preset[]>(`static-${presetType}`, []);
   // used to sync the presets with the server
   const [isLocalStorageReady, setIsLocalStorageReady] = useState(false);
-  const [isDashboardLocalStorageReady, setIsDashboardLocalStorageReady] = useState(false);
   const presetsOrderRef = useRef(presetsOrderFromLS);
-  const dashboradPresetsOrderRef = useRef(dashboardPresetsOrderFromLS);
   const staticPresetsOrderRef = useRef(staticPresetsOrderFromLS);
-  const dashboardStaticPresetsOrderRef = useRef(staticDashboardPresetsOrderFromLS);
   const { bind, unbind } = useWebsocket();
 
   useEffect(() => {
@@ -46,14 +38,10 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     staticPresetsOrderRef.current = staticPresetsOrderFromLS;
   }, [presetsOrderFromLS, staticPresetsOrderFromLS]);
 
-  useEffect(() => {
-    if (isDashBoard) {
-      dashboradPresetsOrderRef.current = dashboardPresetsOrderFromLS;
-      dashboardStaticPresetsOrderRef.current = staticDashboardPresetsOrderFromLS;
-    }
-  }, [type, dashboardPresetsOrderFromLS, staticDashboardPresetsOrderFromLS]);
-
   const updateLocalPresets = (newPresets: Preset[]) => {
+    if (newPresetsRef) {
+      newPresetsRef.current = newPresets;
+    }
     const updatePresets = (currentPresets: Preset[], newPresets: Preset[]) => {
       const newPresetMap = new Map(newPresets.map((p) => [p.id, p]));
       let updatedPresets = new Map(currentPresets.map((p) => [p.id, p]));
@@ -79,34 +67,6 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
 
       return Array.from(updatedPresets.values());
     };
-    const time_stamp = searchParams?.get('time_stamp');
-    let endDate = null;
-    try {
-      endDate = time_stamp ? JSON.parse(time_stamp)?.end : null;
-    } catch (err) {
-      //do nothing
-    }
-    const startOfToday = moment().startOf('day')
-    //let say the filter we have applied is before today. then the recent changes should not be applied
-    if ((isDashBoard && endDate && startOfToday.isAfter(moment(endDate)))) {
-      setDashboardPresetsOrderFromLS((current) =>
-        updatePresets(
-          dashboradPresetsOrderRef.current,
-          newPresets.filter(
-            (p) => !["feed", "deleted", "dismissed", "groups"].includes(p.name)
-          )
-        )
-      );
-      setStaticPresetsOrderFromLS((current) =>
-        updatePresets(
-          dashboardStaticPresetsOrderRef.current,
-          newPresets.filter((p) =>
-            ["feed", "deleted", "dismissed", "groups"].includes(p.name)
-          )
-        )
-      );
-    }
-
     setPresetsOrderFromLS((current) =>
       updatePresets(
         presetsOrderRef.current,
@@ -127,7 +87,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
 
   useSWRSubscription(
     () =>
-      configData?.PUSHER_DISABLED === false && session && (isLocalStorageReady || isDashboardLocalStorageReady)
+      configData?.PUSHER_DISABLED === false && session && isLocalStorageReady
         ? "presets"
         : null,
     (_, { next }) => {
@@ -151,9 +111,14 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   );
 
   const useFetchAllPresets = (options?: SWRConfiguration) => {
-    const filters = searchParams?.toString()
+    const filters = searchParams?.toString();
     return useSWR<Preset[]>(
-      () => (session ? `${apiUrl}/preset${(useFilters && filters && isDashBoard) ? `?${filters}` : ''}` : null),
+      () =>
+        session
+          ? `${apiUrl}/preset${
+              useFilters && filters && isDashBoard ? `?${filters}` : ""
+            }`
+          : null,
       (url) => fetcher(url, session?.accessToken),
       {
         ...options,
@@ -167,37 +132,21 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
               ["feed", "deleted", "dismissed", "groups"].includes(p.name)
             );
 
-            const dashboardDynamicPresets = data.filter(
-              (p) =>
-                !["feed", "deleted", "dismissed", "groups"].includes(p.name));
-            const staticDashboardPresets = data.filter((p) =>
-              ["feed", "deleted", "dismissed", "groups"].includes(p.name));
-
+            //if it is dashboard we don't need to merge with local storage.
+            //if we need to merge. we need maintain multiple local storage for each dahboard view which make it very complex to maintain.(if we have more dashboards)
             if (isDashBoard) {
-              mergePresetsWithLocalStorage(
-                dashboardDynamicPresets,
-                dashboardPresetsOrderFromLS,
-                setDashboardPresetsOrderFromLS,
-                type,
-              );
-              mergePresetsWithLocalStorage(
-                staticDashboardPresets,
-                staticDashboardPresetsOrderFromLS,
-                setStaticDashPresetsOrderFromLS,
-                type
-              );
-            } else {
-              mergePresetsWithLocalStorage(
-                dynamicPresets,
-                presetsOrderFromLS,
-                setPresetsOrderFromLS
-              );
-              mergePresetsWithLocalStorage(
-                staticPresets,
-                staticPresetsOrderFromLS,
-                setStaticPresetsOrderFromLS
-              );
+              return;
             }
+            mergePresetsWithLocalStorage(
+              dynamicPresets,
+              presetsOrderFromLS,
+              setPresetsOrderFromLS
+            );
+            mergePresetsWithLocalStorage(
+              staticPresets,
+              staticPresetsOrderFromLS,
+              setStaticPresetsOrderFromLS
+            );
           }
         },
       }
@@ -207,8 +156,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   const mergePresetsWithLocalStorage = (
     serverPresets: Preset[],
     localPresets: Preset[],
-    setter: (presets: Preset[]) => void,
-    type?: string
+    setter: (presets: Preset[]) => void
   ) => {
     // This map quickly checks presence by ID
     const serverPresetIds = new Set(serverPresets.map((sp) => sp.id));
@@ -233,11 +181,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
 
     // Update state with combined list
     setter(combinedPresets);
-    if (isDashBoard) {
-      setIsDashboardLocalStorageReady(true);
-    } else {
-      setIsLocalStorageReady(true);
-    }
+    setIsLocalStorageReady(true);
   };
 
   const useAllPresets = (options?: SWRConfiguration) => {
@@ -283,8 +227,6 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     presetsOrderFromLS,
     setPresetsOrderFromLS,
     staticPresetsOrderFromLS,
-    dashboardPresetsOrderFromLS,
-    setDashboardPresetsOrderFromLS,
-    dashboardStaticPresetsOrderRef
+    newPresetsRef,
   };
 };

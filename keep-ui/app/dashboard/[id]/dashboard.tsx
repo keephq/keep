@@ -1,5 +1,5 @@
 'use client';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState, useEffect, ChangeEvent } from 'react';
 import GridLayout from '../GridLayout';
 import { usePresets } from "utils/hooks/usePresets";
@@ -14,13 +14,19 @@ import { getApiURL } from 'utils/apiUrl';
 import './../styles.css';
 import { toast } from 'react-toastify';
 import { GenericFilters } from '@/components/filters/GenericFilters';
+import { useDashboardPreset } from 'utils/hooks/useDashboardPresets';
+
+const DASHBOARD_FILTERS = [
+  {
+    type: "date",
+    key: "time_stamp",
+    value: "",
+    name: "Last Recived",
+  }
+]
 
 const DashboardPage = () => {
-  //instead of "dashboard" we can use pathname.
-  const { useAllPresets, useStaticPresets } = usePresets('dashboard', true);
-  const searchParams = useSearchParams();
-  const { data: presets = [] } = useAllPresets();
-  const { data: staticPresets = [] } = useStaticPresets();
+  const allPresets = useDashboardPreset();
   const { id }: any = useParams();
   const { data: session } = useSession();
   const { dashboards, isLoading, mutate: mutateDashboard } = useDashboards();
@@ -41,13 +47,6 @@ const DashboardPage = () => {
       }
     }
   }, [id, dashboards, isLoading]);
-
-  const allPresets = [...presets, ...staticPresets];
-
-
-  console.log("allPresets===>", allPresets);
-  console.log("dashboard===>", dashboards);
-  console.log("widgetData===>", widgetData);
 
   const openModal = () => {
     setEditingItem(null); // Ensure new modal opens without editing item context
@@ -172,30 +171,7 @@ const DashboardPage = () => {
           />
         </div>
         <div className="flex gap-1 items-end">
-        <GenericFilters filters={
-            [
-              {
-                type: 'date', key: 'time_stamp', value: "", name: "CustomDate"
-              },
-              {
-                type: 'select', key: 'trigger', value: "", name: "Trigger", options: [
-                  { value: "scheduler", label: "Scheduler" },
-                  { value: "manual", label: "Manual" },
-                  { value: "type:alert", label: "Alert" },
-                ]
-              },
-
-              {
-                type: 'select', key: 'status', value: "", name: "Status", options: [
-                  { value: "success", label: "Success" },
-                  { value: "error", label: "Error" },
-                  { value: "in_progress", label: "In Progress" },
-                  { value: "timeout", label: "Timeout" },
-                  { value: "providers_not_configured", label: "Providers Not Configured" },
-                ]
-              }
-
-            ]} />
+        <GenericFilters filters={DASHBOARD_FILTERS} />
         <div className="flex">
           <Button
             icon={FiSave}
