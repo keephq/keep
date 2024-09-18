@@ -22,7 +22,7 @@ class MappingRule(SQLModel, table=True):
     # The type of this mapping rule
     type: str = Field(
         sa_column=Column(
-            String,
+            String(255),
             name="type",
             server_default="csv",
         ),
