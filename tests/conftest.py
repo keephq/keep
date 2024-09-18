@@ -474,6 +474,7 @@ def _create_valid_event(d, lastReceived=None):
     event = {
         "id": str(uuid.uuid4()),
         "name": "some-test-event",
+        "status": "firing",
         "lastReceived": (
             str(lastReceived)
             if lastReceived

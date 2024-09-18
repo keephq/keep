@@ -2,7 +2,7 @@
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "app/loading";
 import { useState } from "react";
-import { IncidentDto } from "./model";
+import { IncidentDto } from "./models";
 import CreateOrUpdateIncident from "./create-or-update-incident";
 import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
