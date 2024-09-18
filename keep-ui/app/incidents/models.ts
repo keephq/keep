@@ -1,5 +1,12 @@
 import {AlertDto} from "../alerts/models";
 
+export enum Status {
+  Firing = "firing",
+  Resolved = "resolved",
+  Acknowledged = "acknowledged",
+}
+
+
 export interface IncidentDto {
   id: string;
   user_generated_name: string;
@@ -8,6 +15,7 @@ export interface IncidentDto {
   generated_summary: string;
   assignee: string;
   severity: string;
+  status: Status;
   alerts_count: number;
   alert_sources: string[];
   services: string[];
@@ -32,4 +40,3 @@ export interface PaginatedIncidentAlertsDto {
   count: number;
   items: AlertDto[];
 }
-

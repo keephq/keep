@@ -27,8 +27,8 @@ import AlertName from "app/alerts/alert-name";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
 import IncidentPagination from "../incident-pagination";
-import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { IncidentDto } from "../model";
+import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
+import {IncidentDto} from "../models";
 
 interface Props {
   incident: IncidentDto;
