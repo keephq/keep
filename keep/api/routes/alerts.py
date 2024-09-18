@@ -425,6 +425,15 @@ def get_alert(
 )
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> dict[str, str]:
+    return _enrich_alert(enrich_data, authenticated_entity=authenticated_entity)
+
+
+def _enrich_alert(
+    enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])

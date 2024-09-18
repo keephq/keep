@@ -2,7 +2,7 @@
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "app/loading";
 import { useState } from "react";
-import { IncidentDto } from "./model";
+import { IncidentDto } from "./models";
 import CreateOrUpdateIncident from "./create-or-update-incident";
 import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
@@ -10,6 +10,7 @@ import { IncidentPlaceholder } from "./IncidentPlaceholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "./predicted-incidents-table";
+import {SortingState} from "@tanstack/react-table";
 
 interface Pagination {
   limit: number;
@@ -22,11 +23,17 @@ export default function Incident() {
     offset: 0,
   });
 
+  const [incidentsSorting, setIncidentsSorting] = useState<SortingState>([
+    { id: "creation_time", desc: true },
+  ]);
+
+  console.log('incidentSorting', incidentsSorting)
+
   const {
     data: incidents,
     isLoading,
     mutate: mutateIncidents,
-  } = useIncidents(true, incidentsPagination.limit, incidentsPagination.offset);
+  } = useIncidents(true, incidentsPagination.limit, incidentsPagination.offset, incidentsSorting[0]);
   const {
     data: predictedIncidents,
     isLoading: isPredictedLoading,
@@ -102,6 +109,8 @@ export default function Incident() {
                 incidents={incidents}
                 mutate={mutateIncidents}
                 setPagination={setIncidentsPagination}
+                sorting={incidentsSorting}
+                setSorting={setIncidentsSorting}
                 editCallback={handleStartEdit}
               />
             </Card>
