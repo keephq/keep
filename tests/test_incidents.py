@@ -15,9 +15,10 @@ from keep.api.core.db import (
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import IncidentSeverity, AlertSeverity, AlertStatus
+from keep.api.models.alert import IncidentSeverity, AlertSeverity, AlertStatus, IncidentStatus
 from keep.api.models.db.alert import Alert
-
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from tests.fixtures.client import client, test_app
 
 def test_get_alerts_data_for_incident(db_session, setup_stress_alerts_no_elastic):
     alerts = setup_stress_alerts_no_elastic(100)
@@ -176,3 +177,61 @@ def test_get_last_incidents(db_session, create_alert):
 
     incidents_sorted_by_severity_desc, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, sorting=IncidentSorting.severity_desc, limit=5)
     assert all([i.severity == IncidentSeverity.CRITICAL.order for i in incidents_sorted_by_severity_desc])
+
+@pytest.mark.parametrize(
+    "test_app", ["NO_AUTH"], indirect=True
+)
+def test_incident_status_change(db_session, client, test_app, setup_stress_alerts_no_elastic):
+
+    alerts = setup_stress_alerts_no_elastic(100)
+    incident = create_incident_from_dict("keep", {"name": "test", "description": "test"})
+
+    add_alerts_to_incident_by_incident_id(
+        "keep",
+        incident.id,
+        [a.id for a in alerts]
+    )
+
+    incident = get_incident_by_id("keep", incident.id, with_alerts=True)
+
+    alerts_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+    assert len([alert for alert in alerts_dtos if alert.status == AlertStatus.RESOLVED.value]) == 0
+
+    response_ack = client.post(
+        "/incidents/{}/status".format(incident.id),
+        headers={"x-api-key": "some-key"},
+        json={
+            "status": IncidentStatus.ACKNOWLEDGED.value,
+        }
+    )
+
+    assert response_ack.status_code == 200
+    data = response_ack.json()
+    assert data["id"] == str(incident.id)
+    assert data["status"] == IncidentStatus.ACKNOWLEDGED.value
+
+    incident = get_incident_by_id("keep", incident.id, with_alerts=True)
+
+    assert incident.status == IncidentStatus.ACKNOWLEDGED.value
+    alerts_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+    assert len([alert for alert in alerts_dtos if alert.status == AlertStatus.RESOLVED.value]) == 0
+
+    response_resolved = client.post(
+        "/incidents/{}/status".format(incident.id),
+        headers={"x-api-key": "some-key"},
+        json={
+            "status": IncidentStatus.RESOLVED.value,
+        }
+    )
+
+    assert response_resolved.status_code == 200
+    data = response_resolved.json()
+    assert data["id"] == str(incident.id)
+    assert data["status"] == IncidentStatus.RESOLVED.value
+
+    incident = get_incident_by_id("keep", incident.id, with_alerts=True)
+
+    assert incident.status == IncidentStatus.RESOLVED.value
+    # All alerts are resolved as well
+    alerts_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+    assert len([alert for alert in alerts_dtos if alert.status == AlertStatus.RESOLVED.value]) == 100

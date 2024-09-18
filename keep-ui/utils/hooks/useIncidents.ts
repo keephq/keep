@@ -1,4 +1,4 @@
-import {IncidentDto, PaginatedIncidentAlertsDto, PaginatedIncidentsDto} from "app/incidents/model";
+import {IncidentDto, PaginatedIncidentAlertsDto, PaginatedIncidentsDto} from "../../app/incidents/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";

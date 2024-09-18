@@ -1,6 +1,6 @@
 
 import {Button, Title} from "@tremor/react";
-import { IncidentDto } from "../model";
+import { IncidentDto } from "../models";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import React, {useState} from "react";

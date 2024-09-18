@@ -318,7 +318,11 @@ async def receive_generic_event(
     description="Helper function to complete Netdata webhook challenge",
 )
 async def webhook_challenge():
-    token = Request.query_params.get("token").encode("ascii")
+    try:
+        token = Request.query_params.get("token").encode("ascii")
+    except Exception as e:
+        logger.exception("Failed to get token", extra={"error": str(e)})
+        raise HTTPException(status_code=400, detail="Bad request: failed to get token")
     KEY = "keep-netdata-webhook-integration"
 
     # creates HMAC SHA-256 hash from incomming token and your consumer secret
@@ -424,6 +428,15 @@ def get_alert(
     description="Enrich an alert",
 )
 def enrich_alert(
+    enrich_data: EnrichAlertRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> dict[str, str]:
+    return _enrich_alert(enrich_data, authenticated_entity=authenticated_entity)
+
+
+def _enrich_alert(
     enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(
