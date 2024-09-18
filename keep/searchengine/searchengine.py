@@ -9,6 +9,7 @@ from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.preset import PresetDto, PresetSearchQuery
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
+from keep.api.models.time_stamp import TimeStampFilter
 
 
 class SearchMode(enum.Enum):
@@ -51,19 +52,23 @@ class SearchEngine:
             extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
         )
 
-    def _get_last_alerts(self, limit=1000, timeframe: int = 0) -> list[AlertDto]:
+    def _get_last_alerts(self, limit=1000, timeframe: int = 0, time_stamp:TimeStampFilter=None) -> list[AlertDto]:
         """Get the last alerts
 
         Returns:
             list[AlertDto]: The list of alerts
         """
         self.logger.info("Getting last alerts")
+        lower_timestamp = time_stamp.lower_timestamp if time_stamp else None
+        upper_timestamp = time_stamp.upper_timestamp if time_stamp else None
+
         alerts = get_last_alerts(
-            tenant_id=self.tenant_id, limit=limit, timeframe=timeframe
+            tenant_id=self.tenant_id, limit=limit, timeframe=timeframe,
+            lower_timestamp=lower_timestamp, upper_timestamp=upper_timestamp
         )
         # convert the alerts to DTO
         alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-        self.logger.info("Finished getting last alerts")
+        self.logger.info(f"Finished getting last alerts {lower_timestamp} {upper_timestamp} {time_stamp}")
         return alerts_dto
 
     def search_alerts_by_cel(
@@ -150,7 +155,8 @@ class SearchEngine:
         return filtered_alerts
 
     def search_preset_alerts(
-        self, presets: list[PresetDto]
+        self, presets: list[PresetDto],
+        time_stamp: TimeStampFilter = None
     ) -> dict[str, list[AlertDto]]:
         """Search for alerts based on a list of queries
 
@@ -168,7 +174,7 @@ class SearchEngine:
         # if internal
         if self.search_mode == SearchMode.INTERNAL:
             # get the alerts
-            alerts_dto = self._get_last_alerts()
+            alerts_dto = self._get_last_alerts(time_stamp=time_stamp)
             for preset in presets:
                 filtered_alerts = self.rule_engine.filter_alerts(
                     alerts_dto, preset.cel_query

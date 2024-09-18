@@ -1,5 +1,5 @@
 'use client';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useState, useEffect, ChangeEvent } from 'react';
 import GridLayout from '../GridLayout';
 import { usePresets } from "utils/hooks/usePresets";
@@ -13,12 +13,15 @@ import { useDashboards } from 'utils/hooks/useDashboards';
 import { getApiURL } from 'utils/apiUrl';
 import './../styles.css';
 import { toast } from 'react-toastify';
+import { GenericFilters } from '@/components/filters/GenericFilters';
 
 const DashboardPage = () => {
-  const { useAllPresets, useStaticPresets } = usePresets();
+  //instead of "dashboard" we can use pathname.
+  const { useAllPresets, useStaticPresets } = usePresets('dashboard', true);
+  const searchParams = useSearchParams();
   const { data: presets = [] } = useAllPresets();
   const { data: staticPresets = [] } = useStaticPresets();
-  const { id } : any = useParams();
+  const { id }: any = useParams();
   const { data: session } = useSession();
   const { dashboards, isLoading, mutate: mutateDashboard } = useDashboards();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,6 +43,11 @@ const DashboardPage = () => {
   }, [id, dashboards, isLoading]);
 
   const allPresets = [...presets, ...staticPresets];
+
+
+  console.log("allPresets===>", allPresets);
+  console.log("dashboard===>", dashboards);
+  console.log("widgetData===>", widgetData);
 
   const openModal = () => {
     setEditingItem(null); // Ensure new modal opens without editing item context
@@ -163,6 +171,31 @@ const DashboardPage = () => {
             color="orange"
           />
         </div>
+        <div className="flex gap-1 items-end">
+        <GenericFilters filters={
+            [
+              {
+                type: 'date', key: 'time_stamp', value: "", name: "CustomDate"
+              },
+              {
+                type: 'select', key: 'trigger', value: "", name: "Trigger", options: [
+                  { value: "scheduler", label: "Scheduler" },
+                  { value: "manual", label: "Manual" },
+                  { value: "type:alert", label: "Alert" },
+                ]
+              },
+
+              {
+                type: 'select', key: 'status', value: "", name: "Status", options: [
+                  { value: "success", label: "Success" },
+                  { value: "error", label: "Error" },
+                  { value: "in_progress", label: "In Progress" },
+                  { value: "timeout", label: "Timeout" },
+                  { value: "providers_not_configured", label: "Providers Not Configured" },
+                ]
+              }
+
+            ]} />
         <div className="flex">
           <Button
             icon={FiSave}
@@ -172,6 +205,7 @@ const DashboardPage = () => {
             tooltip="Save current dashboard"
           />
           <Button color="orange" onClick={openModal} className="ml-2">Add Widget</Button>
+        </div>
         </div>
       </div>
       {layout.length === 0 ? (
@@ -192,6 +226,7 @@ const DashboardPage = () => {
             data={widgetData}
             onEdit={handleEditWidget}
             onDelete={handleDeleteWidget}
+            presets={allPresets}
           />
         </Card>
       )}
