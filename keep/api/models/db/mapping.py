@@ -25,6 +25,7 @@ class MappingRule(SQLModel, table=True):
             String,
             name="type",
             server_default="csv",
+            length=255,
         )
     )
     # The attributes to match against (e.g. ["service","region"])
