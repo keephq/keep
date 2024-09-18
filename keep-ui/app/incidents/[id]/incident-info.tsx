@@ -11,6 +11,7 @@ import {
 } from "../incident-candidate-actions";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 // import { RiSparkling2Line } from "react-icons/ri";
 
 interface Props {
@@ -35,6 +36,8 @@ export default function IncidentInformation({ incident }: Props) {
     setIsFormOpen(false);
     mutate();
   };
+
+  const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
 
   return (
     <div className="flex h-full flex-col justify-between">
@@ -107,13 +110,13 @@ export default function IncidentInformation({ incident }: Props) {
         <p>Summary: {incident.user_summary || incident.generated_summary}</p>
         {!!incident.start_time && (
           <p>
-            Started at: {new Date(incident.start_time + "Z").toLocaleString()}
+            Started at: {format(new Date(incident.start_time), formatString)}
           </p>
         )}
         {!!incident.last_seen_time && (
           <p>
             Last seen at:{" "}
-            {new Date(incident.last_seen_time + "Z").toLocaleString()}
+            {format(new Date(incident.last_seen_time), formatString)}
           </p>
         )}
         {!!incident.rule_fingerprint && (
