@@ -54,7 +54,7 @@ export default function Ai() {
       },
       body: JSON.stringify({
         sliding_window: slidingWindow * 60 * 60,
-        min_alert_number: minFingerprints,
+        min_incident_size: minFingerprints,
       }),
     });
     if (!response.ok) {
