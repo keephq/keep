@@ -1,3 +1,6 @@
+import { InterfaceToType } from "utils/type-utils";
+import type { Node } from "@xyflow/react";
+
 export interface TopologyServiceDependency {
   serviceId: string;
   serviceName: string;
@@ -20,4 +23,20 @@ export interface TopologyService {
   ip_address?: string;
   mac_address?: string;
   manufacturer?: string;
+  applicationObject?: Application;
 }
+
+// We need to convert interface to type because only types are allowed in @xyflow/react
+// https://github.com/xyflow/web/issues/486
+export type ServiceNodeType = Node<InterfaceToType<TopologyService>, string>;
+
+export type Application = {
+  id: string;
+  name: string;
+  description: string;
+  services: {
+    id: string;
+    name: string;
+  }[];
+  // TODO: Consider adding tags, cost of disruption, etc.
+};

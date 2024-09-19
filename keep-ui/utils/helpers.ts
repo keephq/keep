@@ -2,6 +2,8 @@ import { toast } from "react-toastify";
 import { getApiURL } from "./apiUrl";
 import { Provider } from "../app/providers/providers";
 import moment from "moment";
+import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from "clsx";
 
 export function onlyUnique(value: string, index: number, array: string[]) {
   return array.indexOf(value) === index;
@@ -72,4 +74,8 @@ export async function installWebhook(provider: Provider, accessToken: string) {
 
 export function getAlertLastReceieved(lastRecievedFromAlert: Date) {
   return moment(lastRecievedFromAlert).fromNow();
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
