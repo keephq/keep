@@ -278,7 +278,10 @@ class EnrichmentsBl:
             )
 
             if not topology_service:
-                self.logger.warning("No topology service found to match on")
+                self.logger.debug(
+                    "No topology service found to match on",
+                    extra={"matcher_value": matcher_value},
+                )
             else:
                 enrichments = topology_service.dict(exclude_none=True)
                 # Remove redundant fields

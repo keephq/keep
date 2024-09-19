@@ -22,6 +22,7 @@ class ContextManager:
         self.providers_context = {}
         self.actions_context = {}
         self.event_context = {}
+        self.incident_context = {}
         self.foreach_context = {
             "value": None,
         }
@@ -78,6 +79,9 @@ class ContextManager:
     def set_event_context(self, event):
         self.event_context = event
 
+    def set_incident_context(self, incident):
+        self.incident_context = incident
+
     def get_workflow_id(self):
         return self.workflow_id
 
@@ -104,6 +108,7 @@ class ContextManager:
             "event": self.event_context,
             "last_workflow_results": self.last_workflow_execution_results,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
+            "incident": self.incident_context,  # this is an alias so workflows will be able to use alert.source
         }
 
         if not exclude_providers:

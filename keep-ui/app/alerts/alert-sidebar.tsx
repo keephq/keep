@@ -102,7 +102,7 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                   <AlertTimeline
                     key={auditData ? auditData.length : 1}
                     alert={alert}
-                    auditData={auditData}
+                    auditData={auditData || []}
                     isLoading={isLoading}
                     onRefresh={handleRefresh}
                   />

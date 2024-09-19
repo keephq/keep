@@ -551,31 +551,32 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       )}
       <Card
-      className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2"
-      onClick={(e)=>{
-        e.stopPropagation();
-        e.preventDefault();
-        if (workflow.id) {
-          router.push(`/workflows/${workflow.id}`);
-        }
-      }}
+        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2 overflow-hidden"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (workflow.id) {
+            router.push(`/workflows/${workflow.id}`);
+          }
+        }}
       >
-        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center">
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
           {workflow.provisioned && (
-            <Badge color="orange" size="xs" className="mr-2">
+            <Badge color="orange" size="xs" className="mr-2 mb-2">
               Provisioned
             </Badge>
           )}
-          {!!handleRunClick && WorkflowMenuSection({
-            onDelete: handleDeleteClick,
-            onRun: handleRunClick,
-            onDownload: handleDownloadClick,
-            onView: handleViewClick,
-            onBuilder: handleBuilderClick,
-            runButtonToolTip: message,
-            isRunButtonDisabled: !!isRunButtonDisabled,
-            provisioned: workflow.provisioned,
-          })}
+          {!!handleRunClick &&
+            WorkflowMenuSection({
+              onDelete: handleDeleteClick,
+              onRun: handleRunClick,
+              onDownload: handleDownloadClick,
+              onView: handleViewClick,
+              onBuilder: handleBuilderClick,
+              runButtonToolTip: message,
+              isRunButtonDisabled: !!isRunButtonDisabled,
+              provisioned: workflow.provisioned,
+            })}
         </div>
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
           <WorkflowGraph workflow={workflow} />
@@ -634,7 +635,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                         className="object-cover"
                       />
                     ) : (
-                     <HiBellAlert size={20}/>
+                      <HiBellAlert size={20} />
                     )}
                     Trigger
                   </div>
@@ -684,9 +685,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       </Card>
 
-      {!!getTriggerModalProps && <AlertTriggerModal
-        {...getTriggerModalProps()}
-      />}
+      {!!getTriggerModalProps && (
+        <AlertTriggerModal {...getTriggerModalProps()} />
+      )}
       <Modal
         isOpen={openTriggerModal}
         onClose={() => {
@@ -759,7 +760,6 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
     setFormValues(updatedFormValues);
     setFormErrors(updatedFormErrors);
   };
-
 
   const handleDeleteClick = async () => {
     try {
@@ -863,16 +863,17 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           <Title className="truncate max-w-64 text-left text-lightBlack">
             {workflow.name}
           </Title>
-          {!!handleRunClick && WorkflowMenuSection({
-            onDelete: handleDeleteClick,
-            onRun: handleRunClick,
-            onDownload: handleDownloadClick,
-            onView: handleViewClick,
-            onBuilder: handleBuilderClick,
-            runButtonToolTip: message,
-            isRunButtonDisabled: !!isRunButtonDisabled,
-            provisioned: workflow.provisioned,
-          })}
+          {!!handleRunClick &&
+            WorkflowMenuSection({
+              onDelete: handleDeleteClick,
+              onRun: handleRunClick,
+              onDownload: handleDownloadClick,
+              onView: handleViewClick,
+              onBuilder: handleBuilderClick,
+              runButtonToolTip: message,
+              isRunButtonDisabled: !!isRunButtonDisabled,
+              provisioned: workflow.provisioned,
+            })}
         </div>
 
         <div className="flex items-center justify-between h-10">
@@ -920,9 +921,7 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           </ListItem>
           <ListItem>
             <span>Disabled</span>
-            <span className="text-right">
-              {workflow?.disabled?.toString()}
-            </span>
+            <span className="text-right">{workflow?.disabled?.toString()}</span>
           </ListItem>
         </List>
 
@@ -1023,9 +1022,9 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           )}
         </SlidingPanel>
       </Card>
-      {!!getTriggerModalProps && <AlertTriggerModal
-        {...getTriggerModalProps()}
-      />}
+      {!!getTriggerModalProps && (
+        <AlertTriggerModal {...getTriggerModalProps()} />
+      )}
     </div>
   );
 }
