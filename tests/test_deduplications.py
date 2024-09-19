@@ -1,3 +1,6 @@
+import random
+import uuid
+
 import pytest
 
 from keep.providers.providers_factory import ProvidersFactory
@@ -104,7 +107,10 @@ def test_deduplication_sanity_2(db_session, client, test_app):
     # insert two different alerts, twice each, and make sure that the default deduplication rule is working
     provider = ProvidersFactory.get_provider_class("datadog")
     alert1 = provider.simulate_alert()
-    alert2 = provider.simulate_alert()
+    alert2 = alert1
+    # datadog deduplicated by monitor_id
+    while alert2.get("monitor_id") == alert1.get("monitor_id"):
+        alert2 = provider.simulate_alert()
 
     for alert in [alert1, alert2]:
         for _ in range(2):
@@ -141,7 +147,12 @@ def test_deduplication_sanity_3(db_session, client, test_app):
     provider = ProvidersFactory.get_provider_class("datadog")
     alerts = [provider.simulate_alert() for _ in range(10)]
 
+    monitor_ids = set()
     for alert in alerts:
+        # lets make it not deduplicated by randomizing the monitor_id
+        while alert["monitor_id"] in monitor_ids:
+            alert["monitor_id"] = random.randint(0, 10**10)
+        monitor_ids.add(alert["monitor_id"])
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
@@ -169,17 +180,26 @@ def test_deduplication_sanity_3(db_session, client, test_app):
     indirect=True,
 )
 def test_custom_deduplication_rule(db_session, client, test_app):
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert1 = provider.simulate_alert()
+    client.post(
+        "/alerts/event/datadog", json=alert1, headers={"x-api-key": "some-api-key"}
+    )
+
     # create a custom deduplication rule and insert alerts that should be deduplicated by this
     custom_rule = {
-        "description": "Custom Rule",
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
         "provider_type": "datadog",
-        "deduplication_fields": ["title", "message"],
-        "default": False,
+        "fingerprint_fields": ["title", "message"],
+        "full_deduplication": False,
+        "ignore_fields": None,
     }
 
-    client.post(
+    resp = client.post(
         "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
     )
+    assert resp.status_code == 200
 
     provider = ProvidersFactory.get_provider_class("datadog")
     alert = provider.simulate_alert()
@@ -195,7 +215,7 @@ def test_custom_deduplication_rule(db_session, client, test_app):
 
     custom_rule_found = False
     for dedup_rule in deduplication_rules:
-        if dedup_rule.get("description") == "Custom Rule":
+        if dedup_rule.get("name") == "Custom Rule":
             custom_rule_found = True
             assert dedup_rule.get("ingested") == 2
             assert dedup_rule.get("dedup_ratio") == 50.0
@@ -213,28 +233,103 @@ def test_custom_deduplication_rule(db_session, client, test_app):
     ],
     indirect=True,
 )
-def test_custom_deduplication_rule_2(db_session, client, test_app):
-    # create a custom deduplication rule and insert alerts that should not be deduplicated by this
-    custom_rule = {
-        "description": "Custom Rule",
-        "provider_type": "datadog",
-        "deduplication_fields": ["title", "message"],
-        "default": False,
-    }
-
-    client.post(
-        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
-    )
-
+def test_custom_deduplication_rule_behaviour(db_session, client, test_app):
+    # create a custom deduplication rule and insert alerts that should be deduplicated by this
     provider = ProvidersFactory.get_provider_class("datadog")
     alert1 = provider.simulate_alert()
-    alert2 = provider.simulate_alert()
-
     client.post(
         "/alerts/event/datadog", json=alert1, headers={"x-api-key": "some-api-key"}
     )
+    custom_rule = {
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
+        "provider_type": "datadog",
+        "fingerprint_fields": ["title", "message"],
+        "full_deduplication": False,
+        "ignore_fields": None,
+    }
+
+    resp = client.post(
+        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
+    )
+    assert resp.status_code == 200
+
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert = provider.simulate_alert()
+
+    for _ in range(2):
+        # the default rule should deduplicate the alert by monitor_id so let's randomize it -
+        # if the custom rule is working, the alert should be deduplicated by title and message
+        alert["monitor_id"] = random.randint(0, 10**10)
+        client.post(
+            "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+        )
+
+    deduplication_rules = client.get(
+        "/deduplications", headers={"x-api-key": "some-api-key"}
+    ).json()
+
+    custom_rule_found = False
+    for dedup_rule in deduplication_rules:
+        if dedup_rule.get("name") == "Custom Rule":
+            custom_rule_found = True
+            assert dedup_rule.get("ingested") == 2
+            assert dedup_rule.get("dedup_ratio") == 50.0
+            assert not dedup_rule.get("default")
+
+    assert custom_rule_found
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"keepDatadog":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
+        },
+    ],
+    indirect=True,
+)
+def test_custom_deduplication_rule_2(db_session, client, test_app):
+    # create a custom full deduplication rule and insert alerts that should not be deduplicated by this
+    providers = client.get("/providers", headers={"x-api-key": "some-api-key"}).json()
+    datadog_provider_id = next(
+        provider["id"]
+        for provider in providers.get("installed_providers")
+        if provider["type"] == "datadog"
+    )
+
+    custom_rule = {
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
+        "provider_type": "datadog",
+        "provider_id": datadog_provider_id,
+        "fingerprint_fields": [
+            "name",
+            "message",
+        ],  # title in datadog mapped to name in keep
+        "full_deduplication": False,
+        "ignore_fields": ["field_that_never_exists"],
+    }
+
+    response = client.post(
+        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 200
+
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert1 = provider.simulate_alert()
+
     client.post(
-        "/alerts/event/datadog", json=alert2, headers={"x-api-key": "some-api-key"}
+        f"/alerts/event/datadog?provider_id={datadog_provider_id}",
+        json=alert1,
+        headers={"x-api-key": "some-api-key"},
+    )
+    alert1["title"] = "Different title"
+    client.post(
+        f"/alerts/event/datadog?provider_id={datadog_provider_id}",
+        json=alert1,
+        headers={"x-api-key": "some-api-key"},
     )
 
     deduplication_rules = client.get(
@@ -243,7 +338,7 @@ def test_custom_deduplication_rule_2(db_session, client, test_app):
 
     custom_rule_found = False
     for dedup_rule in deduplication_rules:
-        if dedup_rule.get("description") == "Custom Rule":
+        if dedup_rule.get("name") == "Custom Rule":
             custom_rule_found = True
             assert dedup_rule.get("ingested") == 2
             assert dedup_rule.get("dedup_ratio") == 0
@@ -257,36 +352,53 @@ def test_custom_deduplication_rule_2(db_session, client, test_app):
     [
         {
             "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"keepDatadog":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
         },
     ],
     indirect=True,
 )
 def test_update_deduplication_rule(db_session, client, test_app):
     # create a custom deduplication rule and update it
+    response = client.get("/providers", headers={"x-api-key": "some-api-key"})
+    assert response.status_code == 200
+    datadog_provider_id = next(
+        provider["id"]
+        for provider in response.json().get("installed_providers")
+        if provider["type"] == "datadog"
+    )
+
     custom_rule = {
-        "description": "Custom Rule",
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
         "provider_type": "datadog",
-        "deduplication_fields": ["title", "message"],
-        "default": False,
+        "provider_id": datadog_provider_id,
+        "fingerprint_fields": ["title", "message"],
+        "full_deduplication": False,
+        "ignore_fields": None,
     }
 
     response = client.post(
         "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
     )
-    rule_id = response.json().get("id")
+    assert response.status_code == 200
 
+    rule_id = response.json().get("id")
     updated_rule = {
+        "name": "Updated Custom Rule",
         "description": "Updated Custom Rule",
         "provider_type": "datadog",
-        "deduplication_fields": ["title"],
-        "default": False,
+        "provider_id": datadog_provider_id,
+        "fingerprint_fields": ["title"],
+        "full_deduplication": False,
+        "ignore_fields": None,
     }
 
-    client.put(
+    response = client.put(
         f"/deduplications/{rule_id}",
         json=updated_rule,
         headers={"x-api-key": "some-api-key"},
     )
+    assert response.status_code == 200
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -297,7 +409,7 @@ def test_update_deduplication_rule(db_session, client, test_app):
         if dedup_rule.get("id") == rule_id:
             updated_rule_found = True
             assert dedup_rule.get("description") == "Updated Custom Rule"
-            assert dedup_rule.get("deduplication_fields") == ["title"]
+            assert dedup_rule.get("fingerprint_fields") == ["title"]
 
     assert updated_rule_found
 
@@ -311,20 +423,88 @@ def test_update_deduplication_rule(db_session, client, test_app):
     ],
     indirect=True,
 )
+def test_update_deduplication_rule_non_exist_provider(db_session, client, test_app):
+    # create a custom deduplication rule and update it
+    custom_rule = {
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
+        "provider_type": "datadog",
+        "fingerprint_fields": ["title", "message"],
+        "full_deduplication": False,
+        "ignore_fields": None,
+    }
+    response = client.post(
+        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Provider datadog not found"}
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+        },
+    ],
+    indirect=True,
+)
+def test_update_deduplication_rule_linked_provider(db_session, client, test_app):
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert1 = provider.simulate_alert()
+    response = client.post(
+        "/alerts/event/datadog", json=alert1, headers={"x-api-key": "some-api-key"}
+    )
+    custom_rule = {
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
+        "provider_type": "datadog",
+        "fingerprint_fields": ["title", "message"],
+        "full_deduplication": False,
+        "ignore_fields": None,
+    }
+    response = client.post(
+        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
+    )
+    # once a linked provider is created, a customization should be allowed
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_PROVIDERS": '{"keepDatadog":{"type":"datadog","authentication":{"api_key":"1234","app_key": "1234"}}}',
+        },
+    ],
+    indirect=True,
+)
 def test_delete_deduplication_rule_sanity(db_session, client, test_app):
+    response = client.get("/providers", headers={"x-api-key": "some-api-key"})
+    assert response.status_code == 200
+    datadog_provider_id = next(
+        provider["id"]
+        for provider in response.json().get("installed_providers")
+        if provider["type"] == "datadog"
+    )
     # create a custom deduplication rule and delete it
     custom_rule = {
-        "description": "Custom Rule",
+        "name": "Custom Rule",
+        "description": "Custom Rule Description",
         "provider_type": "datadog",
-        "deduplication_fields": ["title", "message"],
-        "default": False,
+        "provider_id": datadog_provider_id,
+        "fingerprint_fields": ["title", "message"],
+        "full_deduplication": False,
+        "ignore_fields": None,
     }
 
     response = client.post(
         "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
     )
-    rule_id = response.json().get("id")
+    assert response.status_code == 200
 
+    rule_id = response.json().get("id")
     client.delete(f"/deduplications/{rule_id}", headers={"x-api-key": "some-api-key"})
 
     deduplication_rules = client.get(
@@ -349,6 +529,14 @@ def test_delete_deduplication_rule_invalid(db_session, client, test_app):
         "/deduplications/non-existent-id", headers={"x-api-key": "some-api-key"}
     )
 
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid rule id"}
+
+    # now use UUID
+    some_uuid = str(uuid.uuid4())
+    response = client.delete(
+        f"/deduplications/{some_uuid}", headers={"x-api-key": "some-api-key"}
+    )
     assert response.status_code == 404
 
 
@@ -375,7 +563,7 @@ def test_delete_deduplication_rule_default(db_session, client, test_app):
         f"/deduplications/{default_rule_id}", headers={"x-api-key": "some-api-key"}
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 404
 
 
 @pytest.mark.parametrize(
@@ -389,19 +577,25 @@ def test_delete_deduplication_rule_default(db_session, client, test_app):
 )
 def test_full_deduplication(db_session, client, test_app):
     # create a custom deduplication rule with full deduplication and insert alerts that should be deduplicated by this
-    custom_rule = {
-        "description": "Full Deduplication Rule",
-        "provider_type": "datadog",
-        "deduplication_fields": ["title", "message", "source"],
-        "default": False,
-    }
-
-    client.post(
-        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
-    )
-
     provider = ProvidersFactory.get_provider_class("datadog")
     alert = provider.simulate_alert()
+    # send the alert so a linked provider is created
+    response = client.post(
+        "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+    )
+    custom_rule = {
+        "name": "Full Deduplication Rule",
+        "description": "Full Deduplication Rule",
+        "provider_type": "datadog",
+        "fingerprint_fields": ["title", "message", "source"],
+        "full_deduplication": True,
+        "ignore_fields": list(alert.keys()),  # ignore all fields
+    }
+
+    response = client.post(
+        "/deduplications", json=custom_rule, headers={"x-api-key": "some-api-key"}
+    )
+    assert response.status_code == 200
 
     for _ in range(3):
         client.post(
@@ -417,7 +611,7 @@ def test_full_deduplication(db_session, client, test_app):
         if dedup_rule.get("description") == "Full Deduplication Rule":
             full_dedup_rule_found = True
             assert dedup_rule.get("ingested") == 3
-            assert dedup_rule.get("dedup_ratio") == 66.67
+            assert 66.667 - dedup_rule.get("dedup_ratio") < 0.1  # 0.66666666....7
 
     assert full_dedup_rule_found
 
@@ -477,9 +671,9 @@ def test_ingesting_alert_without_fingerprint_fields(db_session, client, test_app
     # insert a datadog alert without the required fingerprint fields and make sure that it is not deduplicated
     provider = ProvidersFactory.get_provider_class("datadog")
     alert = provider.simulate_alert()
-    alert.pop("incident_id")
-    alert.pop("group")
-    alert.pop("title")
+    alert.pop("incident_id", None)
+    alert.pop("group", None)
+    alert["title"] = str(random.randint(0, 10**10))
 
     client.post(
         "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
@@ -533,6 +727,6 @@ def test_deduplication_fields(db_session, client, test_app):
         if dedup_rule.get("provider_type") == "datadog" and dedup_rule.get("default"):
             datadog_rule_found = True
             assert dedup_rule.get("ingested") == 3
-            assert dedup_rule.get("dedup_ratio") == 66.67
+            assert 66.667 - dedup_rule.get("dedup_ratio") < 0.1  # 0.66666666....7
 
     assert datadog_rule_found

@@ -1689,8 +1689,6 @@ def get_all_deduplication_rules(tenant_id):
                 AlertDeduplicationRule.tenant_id == tenant_id
             )
         ).all()
-        # cast to dto
-
     return rules
 
 
@@ -1857,6 +1855,7 @@ def get_all_deduplication_stats(tenant_id):
         # Query to get all-time deduplication stats
         all_time_query = (
             select(
+                AlertDeduplicationEvent.deduplication_rule_id,
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
                 AlertDeduplicationEvent.deduplication_type,
@@ -1864,6 +1863,7 @@ def get_all_deduplication_stats(tenant_id):
             )
             .where(AlertDeduplicationEvent.tenant_id == tenant_id)
             .group_by(
+                AlertDeduplicationEvent.deduplication_rule_id,
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
                 AlertDeduplicationEvent.deduplication_type,
@@ -1876,6 +1876,7 @@ def get_all_deduplication_stats(tenant_id):
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         alerts_last_24_hours_query = (
             select(
+                AlertDeduplicationEvent.deduplication_rule_id,
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
                 AlertDeduplicationEvent.date_hour,
@@ -1884,6 +1885,7 @@ def get_all_deduplication_stats(tenant_id):
             .where(AlertDeduplicationEvent.tenant_id == tenant_id)
             .where(AlertDeduplicationEvent.date_hour >= twenty_four_hours_ago)
             .group_by(
+                AlertDeduplicationEvent.deduplication_rule_id,
                 AlertDeduplicationEvent.provider_id,
                 AlertDeduplicationEvent.provider_type,
                 AlertDeduplicationEvent.date_hour,
@@ -1892,7 +1894,7 @@ def get_all_deduplication_stats(tenant_id):
 
         alerts_last_24_hours_results = session.exec(alerts_last_24_hours_query).all()
 
-        # Create a dictionary with deduplication stats for each provider
+        # Create a dictionary with deduplication stats for each rule
         stats = {}
         current_hour = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         for result in all_time_results:
@@ -1905,21 +1907,27 @@ def get_all_deduplication_stats(tenant_id):
             if not provider_type:
                 provider_type = "keep"
 
-            key = f"{provider_type}_{provider_id}"
+            key = str(result.deduplication_rule_id)
             if key not in stats:
+                # initialize the stats for the deduplication rule
                 stats[key] = {
                     "full_dedup_count": 0,
                     "partial_dedup_count": 0,
+                    "none_dedup_count": 0,
                     "alerts_last_24_hours": [
                         {"hour": (current_hour - timedelta(hours=i)).hour, "number": 0}
                         for i in range(0, 24)
                     ],
+                    "provider_id": provider_id,
+                    "provider_type": provider_type,
                 }
 
             if dedup_type == "full":
                 stats[key]["full_dedup_count"] += dedup_count
             elif dedup_type == "partial":
                 stats[key]["partial_dedup_count"] += dedup_count
+            elif dedup_type == "none":
+                stats[key]["none_dedup_count"] += dedup_count
 
         # Add alerts distribution from the last 24 hours
         for result in alerts_last_24_hours_results:
@@ -1927,10 +1935,11 @@ def get_all_deduplication_stats(tenant_id):
             provider_type = result.provider_type
             date_hour = result.date_hour
             hourly_count = result.hourly_count
+            key = str(result.deduplication_rule_id)
 
             if not provider_type:
                 provider_type = "keep"
-            key = f"{provider_type}_{provider_id}"
+
             if key in stats:
                 hours_ago = int((current_hour - date_hour).total_seconds() / 3600)
                 if 0 <= hours_ago < 24:
@@ -3135,6 +3144,19 @@ def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
             .where(Provider.tenant_id == tenant_id)
             .where(Provider.name == provider_name)
         ).first()
+    return provider
+
+
+def get_provider_by_type_and_id(
+    tenant_id: str, provider_type: str, provider_id: Optional[str]
+) -> Provider:
+    with Session(engine) as session:
+        query = select(Provider).where(
+            Provider.tenant_id == tenant_id,
+            Provider.type == provider_type,
+            Provider.id == provider_id,
+        )
+        provider = session.exec(query).first()
     return provider
 
 

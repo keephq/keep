@@ -347,7 +347,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 },
             )
             alert.fingerprint = cls.get_alert_fingerprint(
-                alert, custom_deduplication_rule.deduplication_fields
+                alert, custom_deduplication_rule.fingerprint_fields
             )
         return formatted_alert
 

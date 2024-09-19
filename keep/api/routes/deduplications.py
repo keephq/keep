@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -73,6 +74,8 @@ def create_deduplication_rule(
         )
         logger.info("Created deduplication rule")
         return created_rule
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logger.exception("Error creating deduplication rule")
         raise HTTPException(status_code=400, detail=str(e))
@@ -116,6 +119,13 @@ def delete_deduplication_rule(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Deleting deduplication rule", extra={"rule_id": rule_id})
     alert_deduplicator = AlertDeduplicator(tenant_id)
+
+    # verify rule id is uuid
+    try:
+        uuid.UUID(rule_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid rule id")
+
     try:
         success = alert_deduplicator.delete_deduplication_rule(rule_id)
         if success:
@@ -123,6 +133,10 @@ def delete_deduplication_rule(
             return {"message": "Deduplication rule deleted successfully"}
         else:
             raise HTTPException(status_code=404, detail="Deduplication rule not found")
+    except HTTPException as e:
+        logger.exception("Error deleting deduplication rule")
+        # keep the same status code
+        raise e
     except Exception as e:
         logger.exception("Error deleting deduplication rule")
         raise HTTPException(status_code=400, detail=str(e))

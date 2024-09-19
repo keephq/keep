@@ -301,12 +301,21 @@ def get_app(
         if SCHEDULER:
             logger.info("Stopping the scheduler")
             wf_manager = WorkflowManager.get_instance()
-            await wf_manager.stop()
+            # stop the scheduler
+            try:
+                await wf_manager.stop()
+            # in pytest, there could be race condition
+            except TypeError:
+                pass
             logger.info("Scheduler stopped successfully")
         if CONSUMER:
             logger.info("Stopping the consumer")
             event_subscriber = EventSubscriber.get_instance()
-            await event_subscriber.stop()
+            try:
+                await event_subscriber.stop()
+            # in pytest, there could be race condition
+            except TypeError:
+                pass
             logger.info("Consumer stopped successfully")
         # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
         logger.info("Keep shutdown complete")

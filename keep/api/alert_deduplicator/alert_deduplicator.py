@@ -4,13 +4,14 @@ import json
 import logging
 import uuid
 
+from fastapi import HTTPException
+
 from keep.api.core.config import config
 from keep.api.core.db import (
     create_deduplication_event,
     create_deduplication_rule,
     delete_deduplication_rule,
     get_alerts_fields,
-    get_all_alerts_by_providers,
     get_all_deduplication_rules,
     get_all_deduplication_stats,
     get_custom_deduplication_rules,
@@ -132,6 +133,16 @@ class AlertDeduplicator:
                 )
                 # we don't need to check the other rules
                 break
+            else:
+                # create none deduplication event, for statistics
+                create_deduplication_event(
+                    tenant_id=self.tenant_id,
+                    deduplication_rule_id=rule.id,
+                    deduplication_type="none",
+                    provider_id=alert.providerId,
+                    provider_type=alert.providerType,
+                )
+
         return alert
 
     def _remove_field(self, field, alert: AlertDto) -> AlertDto:
@@ -200,14 +211,19 @@ class AlertDeduplicator:
                 rule.ignore_fields = default_full_dedup_rule.ignore_fields
         return rules
 
-    def _get_default_full_deduplication_rule(
-        self, provider_id, provider_type
-    ) -> DeduplicationRuleDto:
+    def _generate_uuid(self, provider_id, provider_type):
         # this is a way to generate a unique uuid for the default deduplication rule per (provider_id, provider_type)
         namespace_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, "keephq.dev")
         generated_uuid = str(
             uuid.uuid5(namespace_uuid, f"{provider_id}_{provider_type}")
         )
+        return generated_uuid
+
+    def _get_default_full_deduplication_rule(
+        self, provider_id, provider_type
+    ) -> DeduplicationRuleDto:
+        # this is a way to generate a unique uuid for the default deduplication rule per (provider_id, provider_type)
+        generated_uuid = self._generate_uuid(provider_id, provider_type)
 
         # just return a default deduplication rule with lastReceived field
         if not provider_type:
@@ -249,6 +265,9 @@ class AlertDeduplicator:
         default_deduplications_dict = {
             dd.provider_type: dd for dd in default_deduplications
         }
+        for dd in default_deduplications:
+            provider_id, provider_type = dd.provider_id, dd.provider_type
+            dd.id = self._generate_uuid(provider_id, provider_type)
         # get custom deduplication rules
         custom_deduplications = get_all_deduplication_rules(self.tenant_id)
         # cast to dto
@@ -320,25 +339,26 @@ class AlertDeduplicator:
                 final_deduplications += custom_deduplications_dict[key]
 
         # now calculate some statistics
-        alerts_by_provider_stats = get_all_alerts_by_providers(self.tenant_id)
+        # alerts_by_provider_stats = get_all_alerts_by_providers(self.tenant_id)
         deduplication_stats = get_all_deduplication_stats(self.tenant_id)
 
         result = []
         for dedup in final_deduplications:
-            key = f"{dedup.provider_type}_{dedup.provider_id}"
-            dedup.ingested = alerts_by_provider_stats.get(key, {"num_alerts": 0}).get(
-                "num_alerts", 0
-            )
-            # full deduplication is also counted as ingested
-            dedup.ingested += deduplication_stats.get(key, {"full_dedup_count": 0}).get(
+            key = dedup.id
+            full_dedup = deduplication_stats.get(key, {"full_dedup_count": 0}).get(
                 "full_dedup_count", 0
             )
+            partial_dedup = deduplication_stats.get(
+                key, {"partial_dedup_count": 0}
+            ).get("partial_dedup_count", 0)
+            none_dedup = deduplication_stats.get(key, {"none_dedup_count": 0}).get(
+                "none_dedup_count", 0
+            )
+
+            dedup.ingested = full_dedup + partial_dedup + none_dedup
             # total dedup count is the sum of full and partial dedup count
-            dedup_count = deduplication_stats.get(key, {"full_dedup_count": 0}).get(
-                "full_dedup_count", 0
-            ) + deduplication_stats.get(key, {"partial_dedup_count": 0}).get(
-                "partial_dedup_count", 0
-            )
+            dedup_count = full_dedup + partial_dedup
+
             if dedup.ingested == 0:
                 dedup.dedup_ratio = 0.0
             # this shouldn't happen, only in backward compatibility or some bug that dedup events are not created
@@ -384,6 +404,25 @@ class AlertDeduplicator:
     def create_deduplication_rule(
         self, rule: DeduplicationRuleRequestDto, created_by: str
     ) -> DeduplicationRuleDto:
+        # check that provider installed (cannot create deduplication rule for uninstalled provider)
+        provider = None
+        installed_providers = ProvidersFactory.get_installed_providers(self.tenant_id)
+        linked_providers = ProvidersFactory.get_linked_providers(self.tenant_id)
+        provider_key = f"{rule.provider_type}_{rule.provider_id}"
+        for p in installed_providers + linked_providers:
+            if provider_key == f"{p.type}_{p.id}":
+                provider = p
+                break
+
+        if not provider:
+            message = f"Provider {rule.provider_type} not found"
+            if rule.provider_id:
+                message += f" with id {rule.provider_id}"
+            raise HTTPException(
+                status_code=404,
+                detail=message,
+            )
+
         # Use the db function to create a new deduplication rule
         new_rule = create_deduplication_rule(
             tenant_id=self.tenant_id,
