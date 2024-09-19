@@ -7,7 +7,6 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
-from datetime import datetime
 from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
@@ -21,7 +20,6 @@ from keep.api.core.db import (
     get_incident_unique_fingerprint_count,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id,
     change_incident_status_by_id,
     update_incident_from_dto_by_id,
     IncidentSorting,
