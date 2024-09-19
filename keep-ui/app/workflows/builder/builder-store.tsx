@@ -303,10 +303,10 @@ const useStore = create<FlowState>((set, get) => ({
       });
     }
   },
-  setV2Properties: (properties) => set({ v2Properties: properties }),
+  setV2Properties: (properties) => set({ v2Properties: properties, canDeploy:false }),
   updateV2Properties: (properties) => {
     const updatedProperties = { ...get().v2Properties, ...properties };
-    set({ v2Properties: updatedProperties, changes: get().changes + 1 });
+    set({ v2Properties: updatedProperties, changes: get().changes + 1, canDeploy:false });
   },
   setSelectedNode: (id) => {
     set({
