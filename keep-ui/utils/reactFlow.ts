@@ -460,7 +460,7 @@ export function getTriggerStep(properties: V2Properties) {
         }
 
         Object.keys(properties).forEach((key) => {
-            if (['interval', 'manual', 'alert'].includes(key) && properties[key]) {
+            if (['interval', 'manual', 'alert', 'incident'].includes(key) && properties[key]) {
                 _steps.push({
                     id: key,
                     type: key,

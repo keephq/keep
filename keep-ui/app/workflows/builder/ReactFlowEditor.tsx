@@ -25,7 +25,7 @@ const ReactFlowEditor = ({
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
+  const isTrigger = ['interval', 'manual', 'alert', 'incident'].includes(selectedNode || '')
   const saveRef = useRef<boolean>(false);
   useEffect(()=>{
       if(saveRef.current && synced){
@@ -33,7 +33,6 @@ const ReactFlowEditor = ({
         saveRef.current = false;
       }
   }, [saveRef?.current, synced])
-
 
   useEffect(() => {
     setIsOpen(true);
@@ -123,11 +122,11 @@ const ReactFlowEditor = ({
           </button>
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
-              <GlobalEditorV2 synced={synced} 
+              <GlobalEditorV2 synced={synced}
                 saveRef={saveRef}
               />
               {!selectedNode?.includes('empty') && !isTrigger && <Divider ref={stepEditorRef} />}
-              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 
+              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2
               providers={providers}
               installedProviders={installedProviders}
               setSynced={setSynced}
