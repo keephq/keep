@@ -6,10 +6,10 @@ python get_providers_list.py | pbcopy
 python get_providers_list.py --validate # To check docs/providers/overview.mdx
 """
 
+import argparse
 import glob
 import os
 import re
-import argparse
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
@@ -24,9 +24,12 @@ def validate(providers_to_validate):
 
         for provider in providers_to_validate:
             if provider not in overview_content:
-                print(f"""Provider {provider} is not in the docs/providers/overview.md file,
-use scripts/get_providers_list.py to generate recent providers list and update the file.""")
+                print(
+                    f"""Provider {provider} is not in the docs/providers/overview.md file,
+use scripts/get_providers_list.py to generate recent providers list and update the file."""
+                )
                 exit(1)
+
 
 def main():
     """
@@ -42,13 +45,12 @@ def main():
         if os.path.isfile(file_path):
             with open(file_path, "r") as file:
                 for line in file.readlines():
-                    match = re.search(r'title:\s*"([^"]+)"', line)
+                    match = re.search(r"title:\s*[\"|\']([^\"]+)[\"|\']", line)
                     if match:
                         url = "/providers/documentation/" + file_path.replace(
                             "./../docs/providers/documentation/", ""
                         ).replace(".mdx", "")
-                        provider_name = match.group(
-                            1).replace("Provider", "").strip()
+                        provider_name = match.group(1).replace("Provider", "").strip()
 
                         # Due to https://github.com/keephq/keep/pull/1239#discussion_r1643196800
                         if "Slack" in provider_name:

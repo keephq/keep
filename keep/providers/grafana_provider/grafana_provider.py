@@ -46,6 +46,7 @@ class GrafanaProviderAuthConfig:
 
 
 class GrafanaProvider(BaseProvider):
+    PROVIDER_DISPLAY_NAME = "Grafana"
     """Pull/Push alerts from Grafana."""
 
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"

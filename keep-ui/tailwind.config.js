@@ -8,6 +8,10 @@ module.exports = {
   darkMode: "class",
   theme: {
     extend: {
+      gridTemplateColumns: {
+        20: "repeat(20, minmax(0, 1fr))",
+        24: "repeat(24, minmax(0, 1fr))",
+      },
       minHeight: {
         "screen-minus-200": "calc(100vh - 200px)",
       },
@@ -129,5 +133,8 @@ module.exports = {
         /^(fill-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950))$/,
     },
   ],
-  plugins: [require("@headlessui/tailwindcss"), require('@tailwindcss/typography')],
+  plugins: [
+    require("@headlessui/tailwindcss"),
+    require("@tailwindcss/typography"),
+  ],
 };

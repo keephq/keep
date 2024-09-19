@@ -45,6 +45,8 @@ class SnowflakeProviderAuthConfig:
 class SnowflakeProvider(BaseProvider):
     """Enrich alerts with data from Snowflake."""
 
+    PROVIDER_DISPLAY_NAME = "Snowflake"
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

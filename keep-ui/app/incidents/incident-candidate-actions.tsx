@@ -1,6 +1,6 @@
 import {getApiURL} from "../../utils/apiUrl";
 import {toast} from "react-toastify";
-import {IncidentDto, PaginatedIncidentsDto} from "./model";
+import {IncidentDto, PaginatedIncidentsDto} from "./models";
 import {Session} from "next-auth";
 
 interface Props {

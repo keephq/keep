@@ -313,20 +313,20 @@ class ProvidersFactory:
                 docs = provider_class.__doc__
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
 
-                provider_tags = []
-                provider_tags.extend(provider_class.PROVIDER_TAGS)
+                provider_tags = set(provider_class.PROVIDER_TAGS)
                 if can_fetch_topology:
-                    provider_tags.append("topology")
+                    provider_tags.add("topology")
                 if can_query and "data" not in provider_tags:
-                    provider_tags.append("data")
+                    provider_tags.add("data")
                 if (
                     supports_webhook
                     or can_setup_webhook
                     and "alert" not in provider_tags
                 ):
-                    provider_tags.append("alert")
+                    provider_tags.add("alert")
                 if can_notify and "ticketing" not in provider_tags:
-                    provider_tags.append("messaging")
+                    provider_tags.add("messaging")
+                provider_tags = list(provider_tags)
 
                 provider_methods = ProvidersFactory.__get_methods(provider_class)
                 # if the provider has a PROVIDER_DISPLAY_NAME, use it, otherwise use the provider type

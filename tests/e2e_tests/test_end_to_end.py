@@ -9,7 +9,11 @@
 #   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 #   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
-# NOTE: to clean the database, run docker volume rm keep_postgres_data keep_mysql-data
+# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/ 
+# NOTE: to clean the database, run 
+# docker compose stop
+# docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml down --volumes
+# docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
 # NOTE 2: to run the tests with a browser, uncomment this:
 # import os
 
@@ -91,14 +95,10 @@ def test_providers_page_is_accessible(browser):
         )
         browser.goto("http://localhost:3000/providers")
         # get the GCP Monitoring provider
-        browser.locator("button").filter(
-            has_text=re.compile(r"^GCP Monitoring alert$")
-        ).first.click()
+        browser.locator("button:has-text('GCP Monitoring'):has-text('alert')").click()
         browser.get_by_role("button", name="Cancel").click()
         # connect resend provider
-        browser.locator("button").filter(
-            has_text=re.compile(r"^resend messaging$")
-        ).first.click()
+        browser.locator("button:has-text('Resend'):has-text('messaging')").click()
         browser.get_by_placeholder("Enter provider name").click()
         random_provider_name = "".join(
             [random.choice(string.ascii_letters) for i in range(10)]
@@ -112,7 +112,6 @@ def test_providers_page_is_accessible(browser):
         # make sure the provider is connected:
         # find and click the button containing the provider id in its nested elements
         provider_button = browser.locator(f"button:has-text('{random_provider_name}')")
-        print(provider_button)
         provider_button.click()
     except Exception:
         # Current file + test name for unique html and png dump.

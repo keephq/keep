@@ -96,6 +96,7 @@ class KafkaProvider(BaseProvider):
     Kafka provider class.
     """
 
+    PROVIDER_DISPLAY_NAME = "Kafka"
     PROVIDER_SCOPES = [
         ProviderScope(
             name="topic_read",
