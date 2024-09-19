@@ -7,6 +7,7 @@ import {
   Subtitle,
   Icon,
   Button,
+  Switch,
   Divider,
 } from "@tremor/react";
 import { KeyIcon } from "@heroicons/react/20/solid";
@@ -15,6 +16,7 @@ import {
   BackspaceIcon,
   FunnelIcon,
 } from "@heroicons/react/24/outline";
+import React from "react";
 import useStore, { V2Properties } from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 
@@ -263,8 +265,6 @@ function WorkflowEditorV2({
   selectedNode: string | null;
   saveRef: React.MutableRefObject<boolean>;
 }) {
-  const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
-
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
@@ -281,7 +281,6 @@ function WorkflowEditorV2({
       updateAlertFilter(filterName, "");
     }
   };
-
 
   const deleteFilter = (filter: string) => {
     const currentFilters = { ...properties.alert };
@@ -310,7 +309,7 @@ function WorkflowEditorV2({
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
       {propertyKeys.map((key, index) => {
-        const isTrigger = ["manual", "alert", 'interval'].includes(key) ;
+        const isTrigger = ["manual", "alert", 'interval', 'incident'].includes(key);
         renderDivider = isTrigger && key ===  selectedNode ? !renderDivider : false;
         return (
           <div key={key}>
@@ -380,20 +379,41 @@ function WorkflowEditorV2({
                     )
                   );
 
+                case "incident":
+                  return selectedNode === 'incident' && <>
+                    <Subtitle className="mt-2.5">Incident events</Subtitle>
+                    {Array("created", "updated", "deleted").map((event) =>
+                      <div key={`incident-${event}`} className="flex">
+                        <Switch
+                          id={event}
+                          checked={properties.incident.events?.indexOf(event) > -1}
+                          onChange={() => {
+                            let events = properties.incident.events || [];
+                            if (events.indexOf(event) > -1) {
+                              events = (events as string[]).filter(e => e !== event)
+                              setProperties({ ...properties, [key]: {events: events } })
+                            } else {
+                              events.push(event);
+                              setProperties({ ...properties, [key]: {events: events} })
+                            }
+                          }}
+                          color={"orange"}
+                        />
+                        <label htmlFor={`incident-${event}`} className="text-sm text-gray-500">
+                          <Text>{event}</Text>
+                        </label>
+                      </div>
+                    )}
+                  </>;
                 case "interval":
-                  return (
-                    selectedNode === "interval" && (
-                      <TextInput
-                        placeholder={`Set the ${key}`}
-
-                        onChange={(e: any) =>
-                          handleChange(key, e.target.value)
-                        }
-                        value={properties[key] || "" as string}
-                      />
-                    )
-                  );
-                case "disabled":
+                  return selectedNode === "interval" && (<TextInput
+                    placeholder={`Set the ${key}`}
+                    onChange={(e: any) =>
+                      handleChange(key, e.target.value)
+                    }
+                    value={properties[key] || ""as string}
+                  />);
+                case "isabled":
                   return (
                     <div key={key}>
                       <input
@@ -412,13 +432,13 @@ function WorkflowEditorV2({
                       onChange={(e: any) =>
                         handleChange(key, e.target.value)
                       }
-                      value={properties[key] || "" as string}
-                    />
-                  );
-              }
-            })()}
-          </div>
-        );
+                      value={properties[key] || ""as string}
+                                  />
+                              );
+                      }
+                  })()}
+              </div>
+          );
       })}
     </>
   );
@@ -489,7 +509,7 @@ export function StepEditorV2({
 
   return (
     <EditorLayout>
-      <Title className="capitalize">{providerType} Editor</Title>
+      <Title className="capitalize">{providerType}1 Editor</Title>
       <Text className="mt-1">Unique Identifier</Text>
       <TextInput
         className="mb-2.5"

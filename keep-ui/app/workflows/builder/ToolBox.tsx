@@ -34,6 +34,7 @@ const GroupedMenu = ({ name, steps, searchTerm, isDraggable = true }: {
   function IconUrlProvider(data: any) {
     const { type } = data || {};
     if (type === "alert" || type === "workflow") return "/keep.png";
+    if (type === "incident" || type === "workflow") return "/keep.png";
     return `/icons/${type
       ?.replace("step-", "")
       ?.replace("action-", "")
@@ -126,7 +127,7 @@ const DragAndDropSidebar = ({ isDraggable }: {
     setIsVisible(!isDraggable)
   }, [selectedNode, selectedEdge, isDraggable]);
 
-  const triggerNodeMap = nodes.filter((node: any) => ['interval', 'manual', 'alert'].includes(node?.id)).reduce((obj: any, node: any) => {
+  const triggerNodeMap = nodes.filter((node: any) => ['interval', 'manual', 'alert', 'incident'].includes(node?.id)).reduce((obj: any, node: any) => {
     obj[node.id] = true;
     return obj;
   }, {} as Record<string, boolean>);

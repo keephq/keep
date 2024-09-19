@@ -113,6 +113,7 @@ function getTriggerIcon(triggered_by: string) {
         case "Manual": return FaHandPointer;
         case "Scheduler": return PiDiamondsFourFill;
         case "Alert": return HiBellAlert;
+        case "Incident": return HiBellAlert;
         default: return PiDiamondsFourFill;
     }
 }
@@ -158,6 +159,9 @@ export function ExecutionTable({
                             break;
                         case triggered_by.substring(0, 6) === "manual":
                             valueToShow = "Manual";
+                            break;
+                        case triggered_by.substring(0, 8) === "incident":
+                            valueToShow = "Incident";
                             break;
                     }
                 }
