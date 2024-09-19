@@ -373,6 +373,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.12",
+    "@types/d3-time-format": "^4.0.3",
     "@types/js-cookie": "^3.0.3",
     "@types/js-yaml": "^4.0.5",
     "@types/json-logic-js": "^2.0.7",

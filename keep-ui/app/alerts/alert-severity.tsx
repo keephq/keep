@@ -10,9 +10,10 @@ import {
 
 interface Props {
   severity: Severity | undefined;
+  marginLeft?: boolean;
 }
 
-export default function AlertSeverity({ severity }: Props) {
+export default function AlertSeverity({ severity, marginLeft = true }: Props) {
   let icon: any;
   let color: any;
   let severityText: string;
@@ -56,7 +57,7 @@ export default function AlertSeverity({ severity }: Props) {
       icon={icon}
       tooltip={severityText}
       size="sm"
-      className="ml-2.5"
+      className={marginLeft ? "ml-2.5" : ""}
     />
   );
 }
