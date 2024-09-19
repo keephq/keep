@@ -105,6 +105,9 @@ def pull_data_from_providers(
                 f"Pulling alerts from provider {provider.type} ({provider.id})",
                 extra=extra,
             )
+            # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
+            update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+
             provider_class = ProvidersFactory.get_provider(
                 context_manager=context_manager,
                 provider_id=provider.id,
@@ -124,7 +127,8 @@ def pull_data_from_providers(
                     logger.info("Pulling topology data", extra=extra)
                     topology_data = provider_class.pull_topology()
                     logger.info(
-                        "Pulling topology data finished, processing", extra=extra
+                        "Pulling topology data finished, processing",
+                        extra={**extra, "topology_length": len(topology_data)},
                     )
                     process_topology(
                         tenant_id, topology_data, provider.id, provider.type
@@ -158,9 +162,6 @@ def pull_data_from_providers(
                 f"Unknown error pulling from provider {provider.type} ({provider.id})",
                 extra=extra,
             )
-        finally:
-            # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
-            update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
     logger.info(
         "Pulling data from providers completed",
         extra={

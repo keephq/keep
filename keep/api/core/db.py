@@ -108,6 +108,7 @@ def create_workflow_execution(
     event_id: str = None,
     fingerprint: str = None,
     execution_id: str = None,
+    event_type: str = "alert",
 ) -> str:
     with Session(engine) as session:
         try:
@@ -126,13 +127,21 @@ def create_workflow_execution(
             # Ensure the object has an id
             session.flush()
             execution_id = workflow_execution.id
-            if fingerprint:
+            if fingerprint and event_type == "alert":
                 workflow_to_alert_execution = WorkflowToAlertExecution(
                     workflow_execution_id=execution_id,
                     alert_fingerprint=fingerprint,
                     event_id=event_id,
                 )
                 session.add(workflow_to_alert_execution)
+            elif event_type == "incident":
+                workflow_to_incident_execution = WorkflowToIncidentExecution(
+                    workflow_execution_id=execution_id,
+                    alert_fingerprint=fingerprint,
+                    incident_id=event_id,
+                )
+                session.add(workflow_to_incident_execution)
+
             session.commit()
             return execution_id
         except IntegrityError:
@@ -687,9 +696,8 @@ def get_workflow_executions(
         ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = (
-            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-        )
+        query = (query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+)
         # Execute the query
         workflow_executions = query.all()
 
@@ -2095,16 +2103,38 @@ def get_incidents(tenant_id) -> List[Incident]:
 
 
 def get_alert_audit(
-    tenant_id: str, fingerprint: str, limit: int = 50
+    tenant_id: str, fingerprint: str | list[str], limit: int = 50
 ) -> List[AlertAudit]:
+    """
+    Get the alert audit for the given fingerprint(s).
+
+    Args:
+        tenant_id (str): the tenant_id to filter the alert audit by
+        fingerprint (str | list[str]): the fingerprint(s) to filter the alert audit by
+        limit (int, optional): the maximum number of alert audits to return. Defaults to 50.
+
+    Returns:
+        List[AlertAudit]: the alert audit for the given fingerprint(s)
+    """
     with Session(engine) as session:
-        audit = session.exec(
-            select(AlertAudit)
-            .where(AlertAudit.tenant_id == tenant_id)
-            .where(AlertAudit.fingerprint == fingerprint)
-            .order_by(desc(AlertAudit.timestamp))
-            .limit(limit)
-        ).all()
+        if isinstance(fingerprint, list):
+            query = (
+                select(AlertAudit)
+                .where(AlertAudit.tenant_id == tenant_id)
+                .where(AlertAudit.fingerprint.in_(fingerprint))
+                .order_by(desc(AlertAudit.timestamp), AlertAudit.fingerprint)
+            )
+            if limit:
+                query = query.limit(limit)
+            audit = session.exec(query).all()
+        else:
+            audit = session.exec(
+                select(AlertAudit)
+                .where(AlertAudit.tenant_id == tenant_id)
+                .where(AlertAudit.fingerprint == fingerprint)
+                .order_by(desc(AlertAudit.timestamp))
+                .limit(limit)
+            ).all()
     return audit
 
 
@@ -2345,7 +2375,7 @@ def get_incidents_count(
 
 
 def get_incident_alerts_by_incident_id(
-    tenant_id: str, incident_id: str, limit: int, offset: int
+    tenant_id: str, incident_id: str, limit: Optional[int] = None, offset: Optional[int] = None
 ) -> (List[Alert], int):
     with Session(engine) as session:
         query = (
@@ -2363,7 +2393,10 @@ def get_incident_alerts_by_incident_id(
 
     total_count = query.count()
 
-    return query.limit(limit).offset(offset).all(), total_count
+    if limit and offset:
+        query = query.limit(limit).offset(offset)
+
+    return query.all(), total_count
 
 
 def get_alerts_data_for_incident(

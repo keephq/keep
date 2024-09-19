@@ -34,6 +34,7 @@ from keep.api.models.alert import (
     EnrichAlertRequestBody,
     UnEnrichAlertRequestBody,
 )
+from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
@@ -686,16 +687,49 @@ async def search_alerts(
         raise HTTPException(status_code=500, detail="Failed to search alerts")
 
 
+@router.post(
+    "/audit",
+    description="Get alert timeline audit trail for multiple fingerprints",
+)
+def get_multiple_fingerprint_alert_audit(
+    fingerprints: list[str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> list[AlertAuditDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching alert audit",
+        extra={"fingerprints": fingerprints, "tenant_id": tenant_id},
+    )
+    alert_audit = get_alert_audit_db(tenant_id, fingerprints)
+
+    if not alert_audit:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    grouped_events = []
+
+    # Group the results by fingerprint for "deduplication" (2x, 3x, etc.) thingy..
+    grouped_audit = {}
+    for audit in alert_audit:
+        if audit.fingerprint not in grouped_audit:
+            grouped_audit[audit.fingerprint] = []
+        grouped_audit[audit.fingerprint].append(audit)
+
+    for values in grouped_audit.values():
+        grouped_events.extend(AlertAuditDto.from_orm_list(values))
+    return grouped_events
+
+
 @router.get(
     "/{fingerprint}/audit",
-    description="Get alert enrichment",
+    description="Get alert timeline audit trail",
 )
 def get_alert_audit(
     fingerprint: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-):
+) -> list[AlertAuditDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alert audit",
@@ -708,29 +742,5 @@ def get_alert_audit(
     if not alert_audit:
         raise HTTPException(status_code=404, detail="Alert not found")
 
-    grouped_events = []
-    previous_event = None
-    count = 1
-
-    for event in alert_audit:
-        if previous_event and (
-            event.user_id == previous_event.user_id
-            and event.action == previous_event.action
-            and event.description == previous_event.description
-        ):
-            count += 1
-        else:
-            if previous_event:
-                if count > 1:
-                    previous_event.description += f" x{count}"
-                grouped_events.append(previous_event.dict())
-            previous_event = event
-            count = 1
-
-    # Add the last event
-    if previous_event:
-        if count > 1:
-            previous_event.description += f" x{count}"
-        grouped_events.append(previous_event.dict())
-
+    grouped_events = AlertAuditDto.from_orm_list(alert_audit)
     return grouped_events
