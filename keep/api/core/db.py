@@ -2031,7 +2031,7 @@ def update_action(
     return found_action
 
 
-def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
+def get_tenants_configurations(only_with_config=False) -> dict:
     with Session(engine) as session:
         try:
             tenants = session.exec(select(Tenant)).all()
@@ -2051,6 +2051,18 @@ def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
         tenants_configurations[tenant.id] = tenant.configuration or {}
 
     return tenants_configurations
+
+
+def update_tenant_configuration_by_id(tenant_id: str, configuration: dict) -> bool:
+    with Session(engine) as session:
+        result = session.exec(
+            update(Tenant).filter(Tenant.id == tenant_id).values(
+                configuration=configuration
+            )
+        )
+        session.commit()
+
+        return bool(result.rowcount)
 
 
 def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:

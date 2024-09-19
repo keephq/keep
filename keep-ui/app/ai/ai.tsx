@@ -41,6 +41,16 @@ export default function Ai() {
     };
   }, [newText]);
 
+  useEffect(() => {
+    if (aistats?.mining_configuration?.sliding_window) {
+      setSlidingWindow(aistats.mining_configuration.sliding_window / 3600);
+    }
+    if (aistats?.mining_configuration?.min_alert_number) {
+      setMinFingerprints(aistats.mining_configuration.min_alert_number);
+    }
+
+  }, [aistats])
+
   const mineIncidents = async (e: FormEvent) => {
     e.preventDefault();
     setAnimate(true);
@@ -67,6 +77,32 @@ export default function Ai() {
     setAnimate(false);
     setNewText("Mine incidents");
   };
+
+  const saveMiningConfig = async (e: FormEvent) => {
+    e.preventDefault();
+    const apiUrl = getApiURL();
+    const response = await fetch(`${apiUrl}/incidents/mine-config`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sliding_window: slidingWindow * 60 * 60,
+        min_alert_number: minFingerprints,
+      }),
+    });
+    if (!response.ok) {
+      toast.error(
+        "Failed to save correlation config, please contact us if this issue persists.",
+      );
+    } else {
+      toast.success(
+        "AI Correlation config saved successfully.",
+      );
+    }
+  };
+
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
@@ -152,7 +188,13 @@ export default function Ai() {
                       What is the maximal acceptable gap between alerts of the same incident in your system?
                     </p>
 
-                    <input type="range" className="w-full accent-orange-600" min={1} max={24} value={slidingWindow} onChange={(e) => setSlidingWindow(parseInt(e.currentTarget.value))} />
+                    <input
+                      type="range"
+                      className="w-full accent-orange-600"
+                      min={1} max={24}
+                      value={slidingWindow}
+                      onChange={(e) => setSlidingWindow(parseInt(e.currentTarget.value))}
+                    />
 
                     {slidingWindow}
 
@@ -166,7 +208,14 @@ export default function Ai() {
                       incident?
                     </p>
 
-                    <input type="range"  min={3} max={20} className="w-full accent-orange-600" value={minFingerprints} onChange={(e) => setMinFingerprints(parseInt(e.currentTarget.value))} />
+                    <input
+                      type="range"
+                      min={3}
+                      max={20}
+                      className="w-full accent-orange-600"
+                      value={minFingerprints}
+                      onChange={(e) => setMinFingerprints(parseInt(e.currentTarget.value))}
+                    />
                     {minFingerprints}
                   </div>
 
@@ -178,7 +227,7 @@ export default function Ai() {
                   </div>
 
 
-                  <button
+                  {aistats?.is_manual_mining_enabled && <button
                     className={
                       (animate && "animate-pulse") +
                       " w-full text-white mt-2 pt-2 pb-2 pr-2 rounded-xl transition-all duration-500 bg-gradient-to-tl from-amber-800 via-amber-600 to-amber-400 bg-size-200 bg-pos-0 hover:bg-pos-100"
@@ -228,7 +277,18 @@ export default function Ai() {
                       </div>
                       <div className="pt-2">{text}</div>
                     </div>
+                  </button>}
+
+                  <button
+                    className="w-full text-white mt-2 pt-2 pb-2 pr-2 rounded-xl bg-gradient-to-tl from-amber-800 via-amber-600 to-amber-400 bg-size-200 bg-pos-0 hover:bg-pos-100"
+                    onClick={saveMiningConfig}
+                  >
+                    <div className="flex flex-row p-2">
+                      <div className="pt-2">Save AI correlation config</div>
+                    </div>
                   </button>
+
+
                 </Card>
                 <Card
                   className={"p-4 flex flex-col w-full border-white border-2"}

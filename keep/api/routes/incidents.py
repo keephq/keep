@@ -27,6 +27,7 @@ from keep.api.core.db import (
     IncidentSorting,
 )
 from keep.api.core.dependencies import get_pusher_client
+from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.ai import IncidentMineConfiguration
 from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn, IncidentStatusChangeDto, IncidentStatus, \
     EnrichAlertRequestBody
@@ -480,6 +481,29 @@ def mine(
         )
     )
     return result
+
+
+@router.post(
+    "/mine-config",
+    description="Save incident mining configuration to tenant",
+    include_in_schema=False,
+)
+def mine(
+    config: IncidentMineConfiguration,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incidents"])
+    ),
+
+) -> dict:
+    tenant_id = authenticated_entity.tenant_id
+
+    tenant_config = TenantConfiguration()
+    incident_mining = tenant_config.get_configuration(tenant_id, "incident_mining_configuration") or {}
+    incident_mining.update(config)
+
+    tenant_config.set_configuration(tenant_id, "incident_mining_configuration", incident_mining)
+
+    return incident_mining
 
 
 @router.post(
