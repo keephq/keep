@@ -555,14 +555,14 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
         </div>
       )}
       <Card
-      className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2"
-      onClick={(e)=>{
-        e.stopPropagation();
-        e.preventDefault();
-        if (workflow.id) {
-          router.push(`/workflows/${workflow.id}`);
-        }
-      }}
+        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2 overflow-hidden"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (workflow.id) {
+            router.push(`/workflows/${workflow.id}`);
+          }
+        }}
       >
         {!loading && !isValid && <div className="relative group"><BiSolidError className="absolute top-[-25px] right-[-25px] text-red-500" size={32} />
           <Callout
@@ -572,11 +572,9 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
           >{error}</Callout>
 
         </div>}
-
-
-        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center">
+        <div className="absolute top-0 right-0 mt-2 mr-2 mb-2 flex items-center flex-wrap">
           {workflow.provisioned && (
-            <Badge color="orange" size="xs" className="mr-2">
+            <Badge color="orange" size="xs" className="mr-2 mb-2">
               Provisioned
             </Badge>
           )}
@@ -648,7 +646,7 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
                         className="object-cover"
                       />
                     ) : (
-                     <HiBellAlert size={20}/>
+                      <HiBellAlert size={20} />
                     )}
                     Trigger
                   </div>
@@ -698,9 +696,9 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
         </div>
       </Card>
 
-      {!!getTriggerModalProps && <AlertTriggerModal
-        {...getTriggerModalProps()}
-      />}
+      {!!getTriggerModalProps && (
+        <AlertTriggerModal {...getTriggerModalProps()} />
+      )}
       <Modal
         isOpen={openTriggerModal}
         onClose={() => {
@@ -776,7 +774,6 @@ export function WorkflowTileOld({ workflow, providers }: { workflow: Workflow, p
     setFormValues(updatedFormValues);
     setFormErrors(updatedFormErrors);
   };
-
 
   const handleDeleteClick = async () => {
     try {
@@ -944,9 +941,7 @@ export function WorkflowTileOld({ workflow, providers }: { workflow: Workflow, p
           </ListItem>
           <ListItem>
             <span>Disabled</span>
-            <span className="text-right">
-              {workflow?.disabled?.toString()}
-            </span>
+            <span className="text-right">{workflow?.disabled?.toString()}</span>
           </ListItem>
         </List>
 
@@ -1047,9 +1042,9 @@ export function WorkflowTileOld({ workflow, providers }: { workflow: Workflow, p
           )}
         </SlidingPanel>
       </Card>
-      {!!getTriggerModalProps && <AlertTriggerModal
-        {...getTriggerModalProps()}
-      />}
+      {!!getTriggerModalProps && (
+        <AlertTriggerModal {...getTriggerModalProps()} />
+      )}
     </div>
   );
 }
