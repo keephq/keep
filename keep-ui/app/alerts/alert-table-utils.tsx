@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ColumnDef,
   FilterFn,
-  Row,
   RowSelectionState,
   VisibilityState,
   createColumnHelper,
@@ -18,7 +17,7 @@ import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
-import { Severity, severityMapping } from "./models";
+import { severityMapping } from "./models";
 import { MdOutlineNotificationsActive, MdOutlineNotificationsOff } from "react-icons/md";
 
 export const DEFAULT_COLS = [
