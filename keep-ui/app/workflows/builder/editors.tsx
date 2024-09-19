@@ -413,7 +413,7 @@ function WorkflowEditorV2({
                     }
                     value={properties[key] || ""as string}
                   />);
-                case "isabled":
+                case "disabled":
                   return (
                     <div key={key}>
                       <input
