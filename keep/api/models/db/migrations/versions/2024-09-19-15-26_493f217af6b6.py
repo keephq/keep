@@ -1,8 +1,8 @@
-"""deduplications v2
+"""Dedup
 
-Revision ID: 05292e5e1455
-Revises: 938b1aa62d5c
-Create Date: 2024-09-17 09:39:51.160143
+Revision ID: 493f217af6b6
+Revises: 5d7ae55efc6a
+Create Date: 2024-09-19 15:26:21.564118
 
 """
 
@@ -12,8 +12,8 @@ from alembic import op
 from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
-revision = "05292e5e1455"
-down_revision = "938b1aa62d5c"
+revision = "493f217af6b6"
+down_revision = "5d7ae55efc6a"
 branch_labels = None
 depends_on = None
 

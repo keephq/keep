@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def main():
     GENERATE_DEDUPLICATIONS = True
     keep_api_key = (
-        "f228aabc-17d4-4e12-a918-48bd90742afc"  # os.environ.get("KEEP_API_KEY")
+        "ba8fa324-9047-480d-b611-6e446ec75215"  # os.environ.get("KEEP_API_KEY")
     )
     keep_api_url = "http://localhost:8080"  # os.environ.get("KEEP_API_URL")
     if keep_api_key is None or keep_api_url is None:

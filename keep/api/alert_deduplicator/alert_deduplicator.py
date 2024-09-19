@@ -326,6 +326,9 @@ class AlertDeduplicator:
                 default_deduplication = copy.deepcopy(
                     default_deduplications_dict[provider.type]
                 )
+                default_deduplication.id = self._generate_uuid(
+                    provider.id, provider.type
+                )
                 # copy the provider id to the description
                 if provider.id:
                     default_deduplication.description = (
@@ -385,6 +388,11 @@ class AlertDeduplicator:
         # sort providers to have enabled first
         result = sorted(result, key=lambda x: x.default, reverse=True)
 
+        # if the default is empty, remove it
+        if len(result) == 1 and result[0].ingested == 0:
+            # empty states, no alerts
+            return []
+
         return result
 
     def get_deduplication_fields(self) -> list[str]:
@@ -443,7 +451,16 @@ class AlertDeduplicator:
     def update_deduplication_rule(
         self, rule_id: str, rule: DeduplicationRuleRequestDto, updated_by: str
     ) -> DeduplicationRuleDto:
-        # Use the db function to update an existing deduplication rule
+        # check if this is a default rule
+        default_rule_id = self._generate_uuid(rule.provider_id, rule.provider_type)
+        # if its a default, we need to override and create a new rule
+        if rule_id == default_rule_id:
+            self.logger.info("Default rule update, creating a new rule")
+            rule_dto = self.create_deduplication_rule(rule, updated_by)
+            self.logger.info("Default rule updated")
+            return rule_dto
+
+        # else, use the db function to update an existing deduplication rule
         updated_rule = update_deduplication_rule(
             rule_id=rule_id,
             tenant_id=self.tenant_id,

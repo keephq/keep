@@ -18,14 +18,11 @@ export const DeduplicationPlaceholder = () => {
           <Subtitle className="text-gray-400">
             Reduce noise by creatiing deduplications.
           </Subtitle>
+          <Subtitle className="text-gray-400">
+            Start sending alerts or connect providers to create deduplication
+            rules.
+          </Subtitle>
         </div>
-        <Button
-          className="mb-10"
-          color="orange"
-          onClick={() => onCorrelationClick()}
-        >
-          Create Deduplication
-        </Button>
         <DeduplicationSankey className="max-w-full" />
       </Card>
       {/* <CorrelationSidebar
