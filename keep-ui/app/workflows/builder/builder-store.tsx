@@ -149,6 +149,8 @@ export type FlowState = {
   errorNode: string | null;
   synced: boolean;
   setSynced: (synced: boolean) => void;
+  canDeploy: boolean;
+  setCanDeploy: (deploy: boolean) => void;
 };
 
 
@@ -242,6 +244,10 @@ function addNodeBetween(nodeOrEdge: string | null, step: V2Step, type: string, s
       set({v2Properties: {...get().v2Properties, [newNodeId]: {}}});
       break;
     }
+    case "incident": {
+      set({v2Properties: {...get().v2Properties, [newNodeId]: {}}});
+      break;
+    }
   }
 }
 
@@ -260,6 +266,8 @@ const useStore = create<FlowState>((set, get) => ({
   firstInitilisationDone: false,
   errorNode: null,
   synced: true,
+  canDeploy: false,
+  setCanDeploy: (deploy)=>set({canDeploy: deploy}),
   setSynced: (sync) => set({ synced: sync }),
   setErrorNode: (id) => set({ errorNode: id }),
   setFirstInitilisationDone: (firstInitilisationDone) => set({ firstInitilisationDone }),
@@ -291,14 +299,14 @@ const useStore = create<FlowState>((set, get) => ({
       });
       set({
         nodes: updatedNodes,
-        changes: get().changes + 1
+        changes: get().changes + 1,
       });
     }
   },
-  setV2Properties: (properties) => set({ v2Properties: properties }),
+  setV2Properties: (properties) => set({ v2Properties: properties, canDeploy:false }),
   updateV2Properties: (properties) => {
     const updatedProperties = { ...get().v2Properties, ...properties };
-    set({ v2Properties: updatedProperties, changes: get().changes + 1 });
+    set({ v2Properties: updatedProperties, changes: get().changes + 1, canDeploy:false });
   },
   setSelectedNode: (id) => {
     set({
@@ -433,7 +441,7 @@ const useStore = create<FlowState>((set, get) => ({
 
 
     finalEdges = edges.filter((edge) => !(idArray.includes(edge.source) || idArray.includes(edge.target)));
-    if (['interval', 'alert', 'manual'].includes(ids) && edges.some((edge) => edge.source === 'trigger_start' && edge.target !== ids)) {
+    if (['interval', 'alert', 'manual', 'incident'].includes(ids) && edges.some((edge) => edge.source === 'trigger_start' && edge.target !== ids)) {
       edges = edges.filter((edge) => !(idArray.includes(edge.source)));
     }
     const sources = [...new Set(edges.filter((edge) => startNode.id === edge.target))];
@@ -453,7 +461,7 @@ const useStore = create<FlowState>((set, get) => ({
     const newNode = createDefaultNodeV2({ ...nodes[endIndex + 1].data, islayouted: false }, nodes[endIndex + 1].id);
 
     const newNodes = [...nodes.slice(0, nodeStartIndex), newNode, ...nodes.slice(endIndex + 2)];
-    if(['manual', 'alert', 'interval'].includes(ids)) {
+    if(['manual', 'alert', 'interval', 'incident'].includes(ids)) {
       const v2Properties = get().v2Properties;
       delete v2Properties[ids];
       set({ v2Properties });

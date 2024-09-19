@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { Subtitle, Button } from "@tremor/react";
 import { Chrono } from "react-chrono";
 import Image from "next/image";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { AlertDto } from "./models";
+import { AuditEvent } from "utils/hooks/useAlerts";
 
 const getInitials = (name: string) =>
   ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
@@ -15,13 +16,6 @@ const formatTimestamp = (timestamp: Date | string) => {
   return date.toLocaleString();
 };
 
-type AuditEvent = {
-  user_id: string;
-  action: string;
-  description: string;
-  timestamp: string;
-};
-
 type AlertTimelineProps = {
   alert: AlertDto | null;
   auditData: AuditEvent[];
@@ -29,7 +23,12 @@ type AlertTimelineProps = {
   onRefresh: () => void;
 };
 
-const AlertTimeline: React.FC<AlertTimelineProps> = ({ alert, auditData, isLoading, onRefresh }) => {
+const AlertTimeline: React.FC<AlertTimelineProps> = ({
+  alert,
+  auditData,
+  isLoading,
+  onRefresh,
+}) => {
   // Default audit event if no audit data is available
   const defaultAuditEvent = alert
     ? [
@@ -97,11 +96,9 @@ const AlertTimeline: React.FC<AlertTimelineProps> = ({ alert, auditData, isLoadi
         <div className="flex-grow">
           <Chrono
             items={
-              auditContent.map(
-                (entry) => ({
-                  title: formatTimestamp(entry.timestamp),
-                })
-              ) || []
+              auditContent.map((entry) => ({
+                title: formatTimestamp(entry.timestamp),
+              })) || []
             }
             hideControls
             disableToolbar

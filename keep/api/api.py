@@ -323,7 +323,7 @@ def get_app(
         )
 
     @app.middleware("http")
-    async def log_middeware(request: Request, call_next):
+    async def log_middleware(request: Request, call_next):
         identity = _extract_identity(request, attribute="keep_tenant_id")
         logger.info(
             f"Request started: {request.method} {request.url.path}",

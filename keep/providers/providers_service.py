@@ -100,6 +100,16 @@ class ProvidersService:
                 session.add(provider_model)
                 session.commit()
             except IntegrityError:
+                try:
+                    # if the provider is already installed, delete the secret
+                    logger.warning("Provider already installed, deleting secret")
+                    secret_manager.delete_secret(
+                        secret_name=secret_name,
+                    )
+                    logger.warning("Secret deleted")
+                except Exception:
+                    logger.exception("Failed to delete the secret")
+                    pass
                 raise HTTPException(
                     status_code=409, detail="Provider already installed"
                 )

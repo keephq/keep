@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useApplications } from "./useApplications";
 
@@ -59,8 +59,7 @@ export const useTopology = (
   environment?: string
 ) => {
   const { data: session } = useSession();
-
-  useTopologyPolling();
+  const { data: pollTopology } = useTopologyPolling();
 
   const url = buildTopologyUrl({ session, providerId, service, environment });
 
@@ -70,6 +69,12 @@ export const useTopology = (
   );
 
   const { applications } = useApplications();
+
+  useEffect(() => {
+    if (pollTopology) {
+      mutate();
+    }
+  }, [pollTopology, mutate]);
 
   // TODO: remove once endpoint returns application data
   if (data) {
@@ -101,12 +106,14 @@ export const useTopology = (
 
 export const useTopologyPolling = () => {
   const { bind, unbind } = useWebsocket();
+  const [pollTopology, setPollTopology] = useState(0);
 
   const handleIncoming = useCallback((data: TopologyUpdate) => {
     toast.success(
       `Topology pulled from ${data.providerId} (${data.providerType})`,
       { position: "top-right" }
     );
+    setPollTopology(Math.floor(Math.random() * 10000));
   }, []);
 
   useEffect(() => {
@@ -115,4 +122,6 @@ export const useTopologyPolling = () => {
       unbind("topology-update", handleIncoming);
     };
   }, [bind, unbind, handleIncoming]);
+
+  return { data: pollTopology };
 };
