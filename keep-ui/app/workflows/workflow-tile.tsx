@@ -555,7 +555,7 @@ function WorkflowTile({ workflow , providers}: { workflow: Workflow , providers:
         </div>
       )}
       <Card
-        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2 overflow-hidden"
+        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
