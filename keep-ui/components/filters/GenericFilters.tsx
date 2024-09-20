@@ -7,6 +7,8 @@ import { GoPlusCircle } from "react-icons/go";
 import { DateRangePicker, DateRangePickerValue, Title } from "@tremor/react";
 import { MdOutlineDateRange } from "react-icons/md";
 import { IconType } from "react-icons";
+import { endOfDay } from "date-fns";
+
 
 type Filter = {
   key: string;
@@ -132,8 +134,12 @@ function CustomDate({
     from: start,
     to: end,
   }: DateRangePickerValue) => {
-    setDateRange({ from: start ?? undefined, to: end ?? undefined });
-    handleDate(start, end);
+    const endDate = end || start;
+    const endOfDayDate = endDate ? endOfDay(endDate) : end;
+
+
+    setDateRange({ from: start ?? undefined, to: endOfDayDate ?? undefined });
+    handleDate(start, endOfDayDate);
   };
 
   useEffect(() => {
@@ -200,9 +206,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
     } else {
       newValue = JSON.stringify({
         start: start,
-        end: moment(end || start)
-          .endOf("day")
-          .toDate(),
+        end: end || start,
       });
     }
     if (filter) {
