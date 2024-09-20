@@ -23,19 +23,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-
-def setup(app: FastAPI):
-    logger = logging.getLogger(__name__)
-    # Configure the OpenTelemetry SDK
-    service_name = os.environ.get("OTEL_SERVICE_NAME", "keep-api")
-    otlp_collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", False)
-    otlp_traces_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", None)
-    otlp_logs_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", None)
-    otlp_metrics_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", None)
-    enable_cloud_trace_exporeter = os.environ.get("CLOUD_TRACE_ENABLED", False)
-    metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
-    # to support both grpc and http - for example dynatrace doesn't support grpc
-    def get_protocol_from_endpoint(endpoint):
+def get_protocol_from_endpoint(endpoint):
         parsed_url = urlparse(endpoint)
         if parsed_url.scheme == "http":
             return HTTPOTLPSpanExporter
@@ -43,6 +31,17 @@ def setup(app: FastAPI):
             return GRPCOTLPSpanExporter
         else:
             raise ValueError(f"Unsupported protocol: {parsed_url.scheme}")
+
+def setup(app: FastAPI):
+    logger = logging.getLogger(__name__)
+    # Configure the OpenTelemetry SDK
+    service_name = os.environ.get("OTEL_SERVICE_NAME", os.environ.get("SERVICE_NAME", "keep-api"))
+    otlp_collector_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", os.environ.get("OTLP_ENDPOINT", False))
+    otlp_traces_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", None)
+    otlp_logs_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", None)
+    otlp_metrics_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT", None)
+    enable_cloud_trace_exporeter = os.environ.get("CLOUD_TRACE_ENABLED", False)
+    metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
 
     resource = Resource.create({"service.name": service_name})
     provider = TracerProvider(resource=resource)
