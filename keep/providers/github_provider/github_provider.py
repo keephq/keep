@@ -25,6 +25,20 @@ class GithubProviderAuthConfig:
             "sensitive": True,
         }
     )
+    repository: str = dataclasses.field(
+        metadata={
+            "description": "GitHub Repository",
+            "sensitive": False,
+        },
+        default=None,
+    )
+    md_path: str = dataclasses.field(
+        metadata={
+            "description": "Path to .md files in the repository",
+            "sensitive": False,
+        },
+        default=None,
+    )
 
 
 class GithubProvider(BaseProvider):
@@ -58,6 +72,32 @@ class GithubProvider(BaseProvider):
         self.authentication_config = GithubProviderAuthConfig(
             **self.config.authentication
         )
+    def query_runbook(self,query):
+        """Retrieve markdown files from the GitHub repository."""
+
+        if not query:
+            raise ValueError("Query is required")
+
+        auth=None
+        if self.authentication_config.repository and self.authentication_config.md_path:
+            auth = HTTPBasicAuth(
+                self.authentication_config.repository,
+                self.authentication_config.md_path,
+            )
+
+        resp = requests.get(
+            f"{self.authentication_config.url}/api/v1/query",
+            params={"query": query},
+            auth=(
+                auth
+                if self.authentication_config.repository and self.authentication_config.md_path
+                else None
+            )
+        )
+        if response.status_code != 200:
+            raise Exception(f"Runbook Query Failed: {response.content}")
+
+        return response.json()
 
 
 class GithubStarsProvider(GithubProvider):
@@ -111,7 +151,12 @@ if __name__ == "__main__":
     github_stars_provider = GithubStarsProvider(
         context_manager,
         "test",
-        ProviderConfig(authentication={"access_token": os.environ.get("GITHUB_PAT")}),
+        ProviderConfig(authentication={
+        "access_token": os.environ.get("GITHUB_PAT"),
+        "repository": os.environ.get("GITHUB_REPOSITORY"),
+        "md_path": os.environ.get("MARKDOWN_PATH"),
+        }
+        ),
     )
 
     result = github_stars_provider.query(

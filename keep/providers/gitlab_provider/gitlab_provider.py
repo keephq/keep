@@ -35,6 +35,20 @@ class GitlabProviderAuthConfig:
             "documentation_url": "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
         }
     )
+    repository: str = dataclasses.field(
+        metadata={
+            "description": "GitHub Repository",
+            "sensitive": False,
+        },
+        default=None,
+    )
+    md_path: str = dataclasses.field(
+        metadata={
+            "description": "Path to .md files in the repository",
+            "sensitive": False,
+        },
+        default=None,
+    )
 
 
 class GitlabProvider(BaseProvider):
@@ -142,6 +156,34 @@ class GitlabProvider(BaseProvider):
             else:
                 params[param] = kwargs[param]
         return params
+        
+    def query_runbook(self,query):
+        """Retrieve markdown files from the GitHub repository."""
+
+        if not query:
+            raise ValueError("Query is required")
+
+        auth=None
+        if self.authentication_config.repository and self.authentication_config.md_path:
+            auth = HTTPBasicAuth(
+                self.authentication_config.repository,
+                self.authentication_config.md_path,
+            )
+
+        resp = requests.get(
+            f"{self.authentication_config.url}/api/v1/query",
+            params={"query": query},
+            auth=(
+                auth
+                if self.authentication_config.repository and self.authentication_config.md_path
+                else None
+            )
+        )
+        if response.status_code != 200:
+            raise Exception(f"Runbook Query Failed: {response.content}")
+
+        return response.json()
+
 
     def _notify(self, id: str, title: str, description: str = "", labels: str = "", issue_type: str = "issue",
                 **kwargs: dict):
@@ -180,6 +222,8 @@ if __name__ == "__main__":
         authentication={
             "personal_access_token": gitlab_pat,
             "host": gitlab_host,
+            "repository": os.environ.get("GITHUB_REPOSITORY"),
+            "md_path": os.environ.get("MARKDOWN_PATH")
         },
     )
     provider = GitlabProvider(context_manager, provider_id="gitlab", config=config)
