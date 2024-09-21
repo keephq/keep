@@ -16,6 +16,7 @@ import { toast } from "react-toastify";
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
   if (type === "alert" || type === "workflow" || type === "trigger" || !type) return "/keep.png";
+  if (type === "incident" || type === "workflow" || type === "trigger" || !type) return "/keep.png";
   return `/icons/${type
     ?.replace("step-", "")
     ?.replace("action-", "")

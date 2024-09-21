@@ -69,6 +69,17 @@ export function getToolboxConfiguration(providers: Provider[]) {
               }
             },
           },
+          {
+            type: "incident",
+            componentType: "trigger",
+            name: "Incident",
+            id: 'incident',
+            properties: {
+              incident: {
+                events: [],
+              }
+            },
+          },
         ],
       },
       {
@@ -298,6 +309,8 @@ export function parseWorkflow(
         }, {});
       } else if (currType === "manual") {
         value = "true";
+      } else if (currType === "incident") {
+        value = {events: curr.events};
       }
       prev[currType] = value;
       return prev;
@@ -508,7 +521,12 @@ export function buildAlert(definition: Definition): Alert {
       value: alert.properties.interval,
     });
   }
-
+  if (alert.properties.incident) {
+    triggers.push({
+      type: "incident",
+      events: alert.properties.incident.events,
+    });
+  }
   return {
     id: alertId,
     name: name,

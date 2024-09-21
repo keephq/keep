@@ -150,6 +150,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
                         pass
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
+                    
             # commit the changes
             session.commit()
             logger.info("Single tenant created")

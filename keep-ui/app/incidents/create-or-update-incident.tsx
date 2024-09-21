@@ -12,7 +12,7 @@ import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
-import { IncidentDto } from "./model";
+import { IncidentDto } from "./models";
 import { useIncidents } from "utils/hooks/useIncidents";
 
 interface Props {
