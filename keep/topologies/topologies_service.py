@@ -143,12 +143,10 @@ class TopologiesService:
         new_service_ids = set(service.id for service in application.services)
 
         # Remove existing links not in the update request
-        deleted = (
-            session.query(TopologyServiceApplication)
-            .where(TopologyServiceApplication.application_id == application_id)
-            .where(TopologyServiceApplication.service_id.not_in(new_service_ids))
+        session.query(TopologyServiceApplication) \
+            .where(TopologyServiceApplication.application_id == application_id) \
+            .where(TopologyServiceApplication.service_id.not_in(new_service_ids)) \
             .delete()
-        )
 
         # Add new links
         existing_links = session.exec(
