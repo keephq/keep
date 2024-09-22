@@ -42,7 +42,7 @@ def test_get_workflow_from_dict_raises_exception():
     tenant_id = "test_tenant"
 
     workflow_path = str(path_to_test_resources / "db_disk_space_for_testing.yml")
-    workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path)
+    workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path, workflow_not_found_throw_error=True)
 
     with pytest.raises(HTTPException) as exc_info:
         workflow_store.get_workflow_from_dict(

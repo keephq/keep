@@ -50,13 +50,17 @@ class WorkflowStore:
     def create_workflow(self, tenant_id: str, created_by, workflow: dict):
         workflow_id = workflow.get("id")
         interval = self.parser.parse_interval(workflow)
-        if not workflow.get("name"):  # workflow name is None or empty string
-            workflow_name = workflow_id if workflow_id and self._is_not_uuid(workflow_id) else "[No Workflow Name]"
+        workflow_name = workflow.get("name")
+        if not workflow_name:  # workflow name is None or empty string
+            workflow_name = workflow_id if workflow_id and self._is_not_uuid(workflow_id) else workflow_name
             workflow["name"] = workflow_name
         else:
             workflow_name = workflow.get("name")
 
-
+        if not workflow_name: 
+            raise HTTPException(
+                status_code=400, detail="Workflow name is required"
+            )    
         def _update_workflow_raw_data(workflow_id: str):
             workflow["id"] = workflow_id
             return yaml.dump(workflow)

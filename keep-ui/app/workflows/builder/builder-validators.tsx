@@ -7,7 +7,7 @@ export function globalValidatorV2(
 ): boolean {
   const workflowName = definition?.properties?.name;
   const workflowDescription = definition?.properties?.description;
-  if(!workflowName || workflowName == "[No Workflow Name]") {
+  if(!workflowName) {
     setGlobalValidationError(null, "Workflow name cannot be empty.");
     return false;
   }
