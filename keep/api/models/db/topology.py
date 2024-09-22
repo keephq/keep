@@ -1,10 +1,24 @@
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 from sqlalchemy import DateTime, ForeignKey
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, func
 
+class TopologyServiceApplication(SQLModel, table=True):
+    service_id: int = Field(foreign_key="topologyservice.id", primary_key=True)
+    application_id: UUID = Field(foreign_key="topologyapplication.id", primary_key=True)
+
+class TopologyApplication(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
+    name: str
+    description: Optional[str] = None
+    services: List["TopologyService"] = Relationship(
+        back_populates="applications",
+        link_model=TopologyServiceApplication
+    )
 
 class TopologyService(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
@@ -17,7 +31,6 @@ class TopologyService(SQLModel, table=True):
     display_name: str
     description: Optional[str]
     team: Optional[str]
-    application: Optional[str]
     email: Optional[str]
     slack: Optional[str]
     ip_address: Optional[str] = None
@@ -41,10 +54,14 @@ class TopologyService(SQLModel, table=True):
         },
     )
 
+    applications: List[TopologyApplication] = Relationship(
+        back_populates="services",
+        link_model=TopologyServiceApplication
+    )
+
     class Config:
         orm_mode = True
         unique_together = ["tenant_id", "service", "environment", "source_provider_id"]
-
 
 class TopologyServiceDependency(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
@@ -86,7 +103,6 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     environment: str = "unknown"
     description: Optional[str] = None
     team: Optional[str] = None
-    application: Optional[str] = None
     email: Optional[str] = None
     slack: Optional[str] = None
     ip_address: Optional[str] = None
@@ -105,13 +121,55 @@ class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
     protocol: Optional[str] = "unknown"
 
 
+class TopologyApplicationDto(BaseModel, extra="ignore"):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    services: List[TopologyService] = Relationship(
+        back_populates="applications",
+        link_model="TopologyServiceApplication"
+    )
+
+
+class TopologyServiceDtoIn(BaseModel, extra="ignore"):
+    id: int
+
+
+class TopologyApplicationDtoIn(BaseModel, extra="ignore"):
+    id: Optional[UUID] = None
+    name: str
+    description: Optional[str] = None
+    services: List[TopologyServiceDtoIn] = []
+
+
+class TopologyApplicationServiceDto(BaseModel, extra="ignore"):
+    id: int
+    name: str
+    service: str
+
+class TopologyApplicationDtoOut(TopologyApplicationDto):
+    services: List[TopologyApplicationServiceDto] = []
+
+    @classmethod
+    def from_orm(cls, application: "TopologyApplication") -> "TopologyApplicationDtoOut":
+        return cls(
+            id=application.id,
+            name=application.name,
+            description=application.description,
+            services=[
+                TopologyApplicationServiceDto(id=service.id, name=service.display_name, service=service.service) for service in application.services if service.id is not None
+            ]
+        )
+
+
 class TopologyServiceDtoOut(TopologyServiceDtoBase):
     id: int
     dependencies: List[TopologyServiceDependencyDto]
+    application_ids: List[UUID]
     updated_at: Optional[datetime]
 
     @classmethod
-    def from_orm(cls, service: "TopologyService") -> "TopologyServiceDtoOut":
+    def from_orm(cls, service: "TopologyService", application_ids: List[UUID]) -> "TopologyServiceDtoOut":
         return cls(
             id=service.id,
             source_provider_id=service.source_provider_id,
@@ -122,7 +180,6 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             environment=service.environment,
             description=service.description,
             team=service.team,
-            application=service.application,
             email=service.email,
             slack=service.slack,
             ip_address=service.ip_address,
@@ -137,5 +194,6 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
                 )
                 for dep in service.dependencies
             ],
+            application_ids=application_ids,
             updated_at=service.updated_at,
         )
