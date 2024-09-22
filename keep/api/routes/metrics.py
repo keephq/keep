@@ -41,10 +41,13 @@ def get_metrics(
 
       # Optional, you can add labels to exported incidents. 
       # Label values will be equal to the last incident's alert payload value matching the label.
-      # Don't add "flaky" labels which could change from alert to alert within the same incident.
-      # Such labels will be added to the exported metrics as "labels_service" and "labels_queue".
+      # Attention! Don't add "flaky" labels which could change from alert to alert within the same incident.
+      # Good labels: ['labels.department', 'labels.team'], bad labels: ['labels.severity', 'labels.pod_id']
+      # Check Keep -> Feed -> "extraPayload" column.
+
       params:
         labels: ['labels.service', 'labels.queue']
+      # Will resuld as: "labels_service" and "labels_queue".
     ```
     """
     # We don't use im-memory metrics countrs here which is typical for prometheus exporters,
