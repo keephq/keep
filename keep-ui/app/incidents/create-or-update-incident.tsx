@@ -17,14 +17,14 @@ import { useIncidents } from "utils/hooks/useIncidents";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
-  createCallback?: (id: string) => void
-  exitCallback?: () => void
+  createCallback?: (id: string) => void;
+  exitCallback?: () => void;
 }
 
 export default function CreateOrUpdateIncident({
   incidentToEdit,
   createCallback,
-  exitCallback
+  exitCallback,
 }: Props) {
   const { data: session } = useSession();
   const { mutate } = useIncidents(true, 20);
@@ -34,12 +34,18 @@ export default function CreateOrUpdateIncident({
   const editMode = incidentToEdit !== null;
 
   // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
-  const cancellable = editMode || exitCallback
+  const cancellable = editMode || exitCallback;
 
   useEffect(() => {
     if (incidentToEdit) {
-      setIncidentName(incidentToEdit.user_generated_name ?? incidentToEdit.ai_generated_name ?? "");
-      setIncidentUserSummary(incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? "" );
+      setIncidentName(
+        incidentToEdit.user_generated_name ??
+          incidentToEdit.ai_generated_name ??
+          ""
+      );
+      setIncidentUserSummary(
+        incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? ""
+      );
       setIncidentAssignee(incidentToEdit.assignee ?? "");
     }
   }, [incidentToEdit]);
@@ -70,8 +76,8 @@ export default function CreateOrUpdateIncident({
       await mutate();
       toast.success("Incident created successfully");
 
-      const created = await response.json()
-      createCallback?.(created.id) // close the modal and associate the alert incident
+      const created = await response.json();
+      createCallback?.(created.id); // close the modal and associate the alert incident
     } else {
       toast.error(
         "Failed to create incident, please contact us if this issue persists."
@@ -83,21 +89,18 @@ export default function CreateOrUpdateIncident({
   const updateIncident = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    const response = await fetch(
-      `${apiUrl}/incidents/${incidentToEdit?.id}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: incidentName,
-          user_summary: incidentUserSummary,
-          assignee: incidentAssignee,
-        }),
-      }
-    );
+    const response = await fetch(`${apiUrl}/incidents/${incidentToEdit?.id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_generated_name: incidentName,
+        user_summary: incidentUserSummary,
+        assignee: incidentAssignee,
+      }),
+    });
     if (response.ok) {
       exitEditMode();
       await mutate();
@@ -111,21 +114,16 @@ export default function CreateOrUpdateIncident({
 
   // If the Incident is successfully updated or the user cancels the update we exit the editMode and set the editRule in the incident.tsx to null.
   const exitEditMode = () => {
-    exitCallback?.()
+    exitCallback?.();
     clearForm();
   };
 
   const submitEnabled = (): boolean => {
-    return (
-      !!incidentName
-    );
+    return !!incidentName;
   };
 
   return (
-    <form
-      className="py-2"
-      onSubmit={editMode ? updateIncident : addIncident}
-    >
+    <form className="py-2" onSubmit={editMode ? updateIncident : addIncident}>
       <Subtitle>Incident Metadata</Subtitle>
       <div className="mt-2.5">
         <Text>

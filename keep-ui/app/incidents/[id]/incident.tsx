@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import IncidentTimeline from "./incident-timeline";
 import { CiBellOn, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
+import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 
 interface Props {
   incidentId: string;
@@ -72,7 +73,16 @@ export default function IncidentView({ incidentId }: Props) {
                   <TabPanel>
                     <IncidentTimeline incident={incident} />
                   </TabPanel>
-                  <TabPanel>Coming Soon...</TabPanel>
+                  <TabPanel>
+                    <div className="h-80">
+                      <EmptyStateCard
+                        title="Coming Soon..."
+                        description="Topology view of the incident is coming soon."
+                        buttonText="Go to Topology"
+                        onClick={() => router.push("/topology")}
+                      />
+                    </div>
+                  </TabPanel>
                 </TabPanels>
               </TabGroup>
             </div>
