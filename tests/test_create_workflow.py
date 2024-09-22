@@ -27,7 +27,7 @@ def mock_uuid():
 
 
 #Here we can add deprecated payloads also to test the workflow creation.
-def get_sample_mock_workflow(name=None, id=None):
+def get_sample_mock_workflow(name=None, id=None, provisioned=False):
     sample = {
         "description": "test workflow",
         "interval": 0,
@@ -55,7 +55,10 @@ def get_sample_mock_workflow(name=None, id=None):
     if name : 
         sample["name"] = name
     if id :
-        sample["id"] = id    
+        sample["id"] = id   
+
+    if provisioned :
+        sample["provisioned"] = provisioned     
 
     return sample    
 
@@ -157,3 +160,20 @@ def test_create_workflow_when_there_is_id_and_no_name(db_session, mock_uuid):
     result3 = workflow_store.create_workflow(tenant_id=SINGLE_TENANT_UUID, created_by="test", workflow=mock_workflow3)
     assert result3.id == "my-fixed-uuid1"
     assert result3.name == "test workflow 1"
+
+
+def test_create_worfklow_already_provisioned_workflow_should_not_update(db_session, mock_uuid):
+    workflow_store = WorkflowStore()
+    # create mock workflow
+    mock_workflow = get_sample_mock_workflow(name="test_name", provisioned=True)   
+    result = workflow_store.create_workflow(tenant_id=SINGLE_TENANT_UUID, created_by="test", workflow=mock_workflow)
+    assert result.id == "my-fixed-uuid1"
+    assert result.name == "test_name"
+    assert result.provisioned == True
+
+    mock_workflow_1 = get_sample_mock_workflow(name="test_name1", id="my-fixed-uuid1")
+    
+    with pytest.raises(HTTPException) as workflow_info:
+        workflow_store.create_workflow(tenant_id=SINGLE_TENANT_UUID, created_by="test", workflow=mock_workflow_1)
+
+    assert workflow_info.value.detail == "Cannot update a provisioned workflow"

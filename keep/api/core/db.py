@@ -316,26 +316,29 @@ def add_or_update_workflow(
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
-        #if already provisioned. Update is not possible on provision workflow so we can search by name)
-        if provisioned : 
-            existing_workflow= (
+        #if re_provision = True that means it is a system or cli operation. so we need check by both name and id. if exist update or else create new
+        #if re_provision = False that means it is normal operation. so we need check by id always. if exist update or else create new
+
+        existing_workflow = None
+        if re_provision: 
+            existing_workflow = (
                 session.query(Workflow)
                 .filter_by(name=name)
                 .filter_by(tenant_id=tenant_id)
-                .filter_by(provisioned=True)
                 .first()
             )
-            if existing_workflow and not re_provision: 
+        if not existing_workflow:
+            existing_workflow = (
+                    session.query(Workflow)
+                    .filter_by(id=workflow_id)
+                    .filter_by(tenant_id=tenant_id)
+                    .first()
+                )
+
+        if existing_workflow and existing_workflow.provisioned and not re_provision: 
                 raise ValueError("Cannot update a provisioned workflow")
 
-        else : 
-            existing_workflow = (
-                session.query(Workflow)
-                .filter_by(id=workflow_id)
-                .filter_by(tenant_id=tenant_id)
-                .first()
-            )
-
+        provisioned  = existing_workflow.provisioned if existing_workflow else provisioned
         if existing_workflow:
             workflow_raw = update_raw(existing_workflow.id)
 
@@ -352,7 +355,7 @@ def add_or_update_workflow(
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
             existing_workflow.is_disabled = is_disabled
-            existing_workflow.provisioned = provisioned
+            existing_workflow.provisioned = provisioned or False
             existing_workflow.provisioned_file = provisioned_file
 
         else:
@@ -369,7 +372,7 @@ def add_or_update_workflow(
                 interval=interval,
                 is_disabled=is_disabled,
                 workflow_raw=workflow_raw,
-                provisioned=provisioned,
+                provisioned= provisioned or False,
                 provisioned_file=provisioned_file,
             )
             session.add(workflow)
