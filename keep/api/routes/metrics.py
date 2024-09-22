@@ -43,7 +43,7 @@ def get_metrics(
       # Label values will be equal to the last incident's alert payload value matching the label.
       # Attention! Don't add "flaky" labels which could change from alert to alert within the same incident.
       # Good labels: ['labels.department', 'labels.team'], bad labels: ['labels.severity', 'labels.pod_id']
-      # Check Keep -> Feed -> "extraPayload" column.
+      # Check Keep -> Feed -> "extraPayload" column, it will help in writing labels.
 
       params:
         labels: ['labels.service', 'labels.queue']
@@ -77,13 +77,13 @@ def get_metrics(
             last_alert_dto = AlertDto(**last_alert.event)
         except IndexError:
             last_alert_dto = None
+        
+        if labels is not None:
+            for label in labels:
+                label_value = chevron.render("{{ " + label + " }}", last_alert_dto)
+                label = label.replace(".", "_")
+                extra_labels += f' {label}="{label_value}"'
 
-        for label in labels:
-            label_value = chevron.render("{{ " + label + " }}", last_alert_dto)
-            if label_value is None:
-                label_value = "None"
-            label = label.replace(".", "_")
-            extra_labels += f' {label}="{label_value}"'
         export += f'alerts_total{{incident_name="{incident_name}" incident_id="{incident.id}"{extra_labels}}} {incident.alerts_count}\n'
     
     # Exporting stats about open incidents
