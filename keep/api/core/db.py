@@ -697,8 +697,9 @@ def get_workflow_executions(
         ).scalar()
         avgDuration = avgDuration if avgDuration else 0.0
 
-        query = (query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
-)
+        query = (
+            query.order_by(desc(WorkflowExecution.started)).limit(limit).offset(offset)
+        )
         # Execute the query
         workflow_executions = query.all()
 
@@ -1751,6 +1752,7 @@ def update_key_last_used(
         session.add(tenant_api_key_entry)
         session.commit()
 
+
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     with Session(engine) as session:
         providers = (
@@ -2261,7 +2263,9 @@ def get_last_incidents(
     return incidents, total_count
 
 
-def get_incident_by_id(tenant_id: str, incident_id: str | UUID, with_alerts: bool = False) -> Optional[Incident]:
+def get_incident_by_id(
+    tenant_id: str, incident_id: str | UUID, with_alerts: bool = False
+) -> Optional[Incident]:
     with Session(engine) as session:
         query = session.query(
             Incident,
@@ -2270,7 +2274,7 @@ def get_incident_by_id(tenant_id: str, incident_id: str | UUID, with_alerts: boo
             Incident.id == incident_id,
         )
         if with_alerts:
-            query= query.options(joinedload(Incident.alerts))
+            query = query.options(joinedload(Incident.alerts))
 
     return query.first()
 
@@ -2314,16 +2318,9 @@ def update_incident_from_dto_by_id(
         if not incident:
             return None
 
-        session.query(Incident).filter(
-            Incident.tenant_id == tenant_id,
-            Incident.id == incident_id,
-        ).update(
-            {
-                "user_generated_name": updated_incident_dto.user_generated_name,
-                "user_summary": updated_incident_dto.user_summary,
-                "assignee": updated_incident_dto.assignee,
-            }
-        )
+        incident.user_generated_name = updated_incident_dto.user_generated_name
+        incident.user_summary = updated_incident_dto.user_summary
+        incident.assignee = updated_incident_dto.assignee
 
         session.commit()
         session.refresh(incident)
@@ -2375,7 +2372,10 @@ def get_incidents_count(
 
 
 def get_incident_alerts_by_incident_id(
-    tenant_id: str, incident_id: str, limit: Optional[int] = None, offset: Optional[int] = None
+    tenant_id: str,
+    incident_id: str,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
 ) -> (List[Alert], int):
     with Session(engine) as session:
         query = (
@@ -2459,8 +2459,10 @@ def get_alerts_data_for_incident(
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[Incident]:
-    logger.info(f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts",
-                extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}})
+    logger.info(
+        f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts",
+        extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}},
+    )
 
     with Session(engine) as session:
         query = select(Incident).where(
@@ -2483,27 +2485,39 @@ def add_alerts_to_incident_by_incident_id(
             ).all()
         )
 
-        new_alert_ids = [alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids]
+        new_alert_ids = [
+            alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids
+        ]
 
         if not new_alert_ids:
             return incident
 
         alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 
-        incident.sources = list(set(incident.sources) | set(alerts_data_for_incident["sources"]))
-        incident.affected_services = list(set(incident.affected_services) | set(alerts_data_for_incident["services"]))
+        incident.sources = list(
+            set(incident.sources) | set(alerts_data_for_incident["sources"])
+        )
+        incident.affected_services = list(
+            set(incident.affected_services) | set(alerts_data_for_incident["services"])
+        )
         incident.alerts_count += alerts_data_for_incident["count"]
 
         alert_to_incident_entries = [
-            AlertToIncident(alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id)
+            AlertToIncident(
+                alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
+            )
             for alert_id in new_alert_ids
         ]
 
         for idx, entry in enumerate(alert_to_incident_entries):
             session.add(entry)
             if (idx + 1) % 100 == 0:
-                logger.info(f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
-                            extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
+                logger.info(
+                    f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
+                    extra={
+                        "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
+                    },
+                )
                 session.commit()
                 session.flush()
 
@@ -2740,19 +2754,13 @@ def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, in
 
 def get_tenant_config(tenant_id: str) -> dict:
     with Session(engine) as session:
-        tenant_data = session.exec(
-            select(Tenant)
-            .where(Tenant.id == tenant_id)
-        ).first()
+        tenant_data = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
         return tenant_data.configuration if tenant_data else {}
 
 
 def write_tenant_config(tenant_id: str, config: dict) -> None:
     with Session(engine) as session:
-        tenant_data = session.exec(
-            select(Tenant)
-            .where(Tenant.id == tenant_id)
-        ).first()
+        tenant_data = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
         tenant_data.configuration = config
         session.commit()
         session.refresh(tenant_data)
@@ -2903,7 +2911,9 @@ def get_provider_by_name(tenant_id: str, provider_name: str) -> Provider:
     return provider
 
 
-def change_incident_status_by_id(tenant_id: str, incident_id: UUID | str, status: IncidentStatus) -> bool:
+def change_incident_status_by_id(
+    tenant_id: str, incident_id: UUID | str, status: IncidentStatus
+) -> bool:
     with Session(engine) as session:
         stmt = (
             update(Incident)
