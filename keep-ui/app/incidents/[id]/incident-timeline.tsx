@@ -8,6 +8,8 @@ import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { IncidentDto } from "../models";
 import Image from "next/image";
 import AlertSeverity from "app/alerts/alert-severity";
+import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import { useRouter } from "next/navigation";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -237,6 +239,20 @@ const AlertBar: React.FC<AlertBarProps> = ({
   );
 };
 
+const IncidentTimelineNoAlerts: React.FC = () => {
+  const router = useRouter();
+  return (
+    <div className="h-80">
+      <EmptyStateCard
+        title="Timeline not available"
+        description="No alerts found for this incident. Go to the alerts feed and assign alerts to view the timeline."
+        buttonText="Assign alerts to this incident"
+        onClick={() => router.push("/alerts/feed")}
+      />
+    </div>
+  );
+};
+
 export default function IncidentTimeline({
   incident,
 }: {
@@ -313,7 +329,8 @@ export default function IncidentTimeline({
     return {};
   }, [auditEvents, alerts]);
 
-  if (auditEventsLoading || !auditEvents || alertsLoading) return <>No Data</>;
+  if (auditEventsLoading || !auditEvents || alertsLoading)
+    return <IncidentTimelineNoAlerts />;
 
   const {
     startTime,
