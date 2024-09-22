@@ -1,0 +1,4 @@
+.copilotKitInput textarea {
+  height: unset !important;
+  max-height: unset !important;
+}
