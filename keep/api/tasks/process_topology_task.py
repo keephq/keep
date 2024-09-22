@@ -72,7 +72,7 @@ def process_topology(
             service_id = service_to_keep_service_id_map.get(service.service)
             depends_on_service_id = service_to_keep_service_id_map.get(dependency)
             if not service_id or not depends_on_service_id:
-                logger.warning(
+                logger.debug(
                     "Found a dangling service, skipping",
                     extra={"service": service.service, "dependency": dependency},
                 )
