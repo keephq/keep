@@ -3,7 +3,7 @@
 import { OnSelectionChangeParams, useOnSelectionChange } from "@xyflow/react";
 import { useState, useCallback } from "react";
 import { cn } from "utils/helpers";
-import { Application } from "../types";
+import { Application } from "../models";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { CreateOrUpdateApplicationForm } from "./create-or-update-application";

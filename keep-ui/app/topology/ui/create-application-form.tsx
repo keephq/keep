@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { OnSelectionChangeParams, useOnSelectionChange } from "@xyflow/react";
-import { Application } from "../types";
+import { Application } from "../models";
 import { Button } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { cn } from "utils/helpers";
@@ -41,13 +41,14 @@ export function CreateApplicationForm({
     onChange,
   });
 
-  const createApplication = (application: Application) => {
-    addApplication(application);
+  const createApplication = (applicationObj: Omit<Application, "id">) => {
+    const application = addApplication(applicationObj);
     setIsModalOpen(false);
     setSelectedServices([]);
-    setTimeout(() => {
-      zoomToNode(application.id);
-    }, 100);
+    // TODO: zoom to the newly created application when API is implemented
+    // setTimeout(() => {
+    //   zoomToNode(application.id);
+    // }, 100);
   };
 
   return (
