@@ -19,6 +19,7 @@ from keep.topologies.topologies_service import (
     ApplicationNotFoundException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
+    ApplicationParseException,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,8 @@ def get_applications(
     logger.info("Getting applications", extra={"tenant_id": tenant_id})
     try:
         return TopologiesService.get_applications_by_tenant_id(tenant_id, session)
+    except ApplicationParseException as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.exception(f"Failed to get applications: {str(e)}")
         raise HTTPException(

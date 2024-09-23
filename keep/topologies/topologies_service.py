@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+from pydantic import ValidationError
 from sqlalchemy.orm import joinedload, selectinload
 from uuid import UUID
 
@@ -20,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 class TopologyException(Exception):
     """Base exception for topology-related errors"""
+
+
+class ApplicationParseException(TopologyException):
+    """Raised when an application cannot be parsed"""
 
 
 class ApplicationNotFoundException(TopologyException):
@@ -119,12 +124,13 @@ class TopologiesService:
             try:
                 app_dto = TopologyApplicationDtoOut.from_orm(application)
                 result.append(app_dto)
-            except Exception as e:
+            except ValidationError as e:
                 logger.error(
-                    f"Error converting application to DTO: {str(e)}",
-                    extra={"application_id": application.id, "error": str(e)},
+                    f"Failed to parse application with id {application.id}: {e}"
                 )
-
+                raise ApplicationParseException(
+                    f"Failed to parse application with id {application.id}"
+                )
         return result
 
     @staticmethod

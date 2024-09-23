@@ -6,9 +6,11 @@ from pydantic import BaseModel
 from sqlalchemy import DateTime, ForeignKey
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, func
 
+
 class TopologyServiceApplication(SQLModel, table=True):
     service_id: int = Field(foreign_key="topologyservice.id", primary_key=True)
     application_id: UUID = Field(foreign_key="topologyapplication.id", primary_key=True)
+
 
 class TopologyApplication(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -16,9 +18,9 @@ class TopologyApplication(SQLModel, table=True):
     name: str
     description: Optional[str] = None
     services: List["TopologyService"] = Relationship(
-        back_populates="applications",
-        link_model=TopologyServiceApplication
+        back_populates="applications", link_model=TopologyServiceApplication
     )
+
 
 class TopologyService(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
@@ -55,13 +57,13 @@ class TopologyService(SQLModel, table=True):
     )
 
     applications: List[TopologyApplication] = Relationship(
-        back_populates="services",
-        link_model=TopologyServiceApplication
+        back_populates="services", link_model=TopologyServiceApplication
     )
 
     class Config:
         orm_mode = True
         unique_together = ["tenant_id", "service", "environment", "source_provider_id"]
+
 
 class TopologyServiceDependency(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
@@ -126,8 +128,7 @@ class TopologyApplicationDto(BaseModel, extra="ignore"):
     name: str
     description: Optional[str] = None
     services: List[TopologyService] = Relationship(
-        back_populates="applications",
-        link_model="TopologyServiceApplication"
+        back_populates="applications", link_model="TopologyServiceApplication"
     )
 
 
@@ -147,18 +148,30 @@ class TopologyApplicationServiceDto(BaseModel, extra="ignore"):
     name: str
     service: str
 
+    @classmethod
+    def from_orm(cls, service: "TopologyService") -> "TopologyApplicationServiceDto":
+        return cls(
+            id=service.id,
+            name=service.display_name,
+            service=service.service,
+        )
+
+
 class TopologyApplicationDtoOut(TopologyApplicationDto):
     services: List[TopologyApplicationServiceDto] = []
 
     @classmethod
-    def from_orm(cls, application: "TopologyApplication") -> "TopologyApplicationDtoOut":
+    def from_orm(
+        cls, application: "TopologyApplication"
+    ) -> "TopologyApplicationDtoOut":
         return cls(
             id=application.id,
             name=application.name,
             description=application.description,
             services=[
-                TopologyApplicationServiceDto(id=service.id, name=service.display_name, service=service.service) for service in application.services if service.id is not None
-            ]
+                TopologyApplicationServiceDto.from_orm(service)
+                for service in application.services
+            ],
         )
 
 
@@ -169,7 +182,9 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
     updated_at: Optional[datetime]
 
     @classmethod
-    def from_orm(cls, service: "TopologyService", application_ids: List[UUID]) -> "TopologyServiceDtoOut":
+    def from_orm(
+        cls, service: "TopologyService", application_ids: List[UUID]
+    ) -> "TopologyServiceDtoOut":
         return cls(
             id=service.id,
             source_provider_id=service.source_provider_id,
