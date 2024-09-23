@@ -234,7 +234,7 @@
     "mz": "^2.7.0",
     "nanoid": "^3.3.6",
     "natural-compare": "^1.4.0",
-    "next": "^14.2.12",
+    "next": "^14.2.13",
     "next-auth": "^4.24.7",
     "node-releases": "^2.0.10",
     "normalize-path": "^3.0.0",
@@ -284,12 +284,12 @@
     "proxy-from-env": "^1.1.0",
     "pusher-js": "^8.3.0",
     "queue-microtask": "^1.2.3",
-    "react": "^18.2.0",
+    "react": "^18.3.1",
     "react-chartjs-2": "^5.2.0",
     "react-chrono": "^2.6.1",
     "react-code-blocks": "^0.1.3",
     "react-datepicker": "^6.1.0",
-    "react-dom": "^18.2.0",
+    "react-dom": "^18.3.1",
     "react-grid-layout": "^1.4.4",
     "react-hook-form": "^7.51.5",
     "react-hotkeys-hook": "^4.5.0",
@@ -392,7 +392,7 @@
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.3.3",
     "prettier-eslint": "^16.3.0",
-    "typescript": "^4.9.5"
+    "typescript": "^5.6.2"
   },
   "author": "",
   "license": "ISC"
