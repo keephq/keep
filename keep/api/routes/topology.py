@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -13,7 +14,12 @@ from keep.api.models.db.topology import (
 )
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.topologies.topologies_service import TopologiesService
+from keep.topologies.topologies_service import (
+    TopologiesService,
+    ApplicationNotFoundException,
+    InvalidApplicationDataException,
+    ServiceNotFoundException,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,7 +51,7 @@ def get_topology_data(
         logger.exception("Failed to get topology data")
         raise HTTPException(
             status_code=400,
-            detail="Unknown exception when getting topology data, please contact us",
+            detail="Unknown error when getting topology data, please contact us",
         )
 
 
@@ -67,8 +73,8 @@ def get_applications(
     except Exception as e:
         logger.exception(f"Failed to get applications: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail="Unknown exception when getting applications, please contact us",
+            status_code=400,
+            detail="Unknown error when getting applications, please contact us",
         )
 
 
@@ -90,11 +96,15 @@ def create_application(
         return TopologiesService.create_application_by_tenant_id(
             tenant_id, application, session
         )
+    except InvalidApplicationDataException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ServiceNotFoundException as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         logger.exception("Failed to create application")
         raise HTTPException(
             status_code=400,
-            detail="Unknown exception when creating application, please contact us",
+            detail="Unknown error when creating application, please contact us",
         )
 
 
@@ -104,7 +114,7 @@ def create_application(
     response_model=TopologyApplicationDtoOut,
 )
 def update_application(
-    application_id: str,
+    application_id: UUID,
     application: TopologyApplicationDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
@@ -112,11 +122,18 @@ def update_application(
     session: Session = Depends(get_session),
 ) -> TopologyApplicationDtoOut:
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Updating application", extra={tenant_id: tenant_id})
+    logger.info(
+        "Updating application",
+        extra={tenant_id: tenant_id, application_id: application_id},
+    )
     try:
         return TopologiesService.update_application_by_id(
             tenant_id, application_id, application, session
         )
+    except ApplicationNotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except InvalidApplicationDataException as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         logger.exception("Failed to update application")
         raise HTTPException(
@@ -127,7 +144,7 @@ def update_application(
 
 @router.delete("/applications/{application_id}", description="Delete an application")
 def delete_application(
-    application_id: str,
+    application_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
     ),
@@ -140,6 +157,8 @@ def delete_application(
         return JSONResponse(
             status_code=200, content={"message": "Application deleted successfully"}
         )
+    except ApplicationNotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         logger.exception("Failed to delete application")
         raise HTTPException(

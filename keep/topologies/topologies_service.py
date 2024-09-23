@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
-from fastapi import HTTPException
 from sqlalchemy.orm import joinedload, selectinload
+from uuid import UUID
 
 from sqlmodel import Session, select
 
@@ -16,6 +16,22 @@ from keep.api.models.db.topology import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class TopologyException(Exception):
+    """Base exception for topology-related errors"""
+
+
+class ApplicationNotFoundException(TopologyException):
+    """Raised when an application is not found"""
+
+
+class InvalidApplicationDataException(TopologyException):
+    """Raised when application data is invalid"""
+
+
+class ServiceNotFoundException(TopologyException):
+    """Raised when a service is not found"""
 
 
 class TopologiesService:
@@ -124,20 +140,30 @@ class TopologiesService:
         session.flush()  # This assigns an ID to new_application
 
         service_ids = [service.id for service in application.services]
+        if not service_ids:
+            raise InvalidApplicationDataException(
+                "Application must have at least one service"
+            )
+
         # Fetch existing services
-        existing_services = session.exec(
+        services_to_add = session.exec(
             select(TopologyService)
             .where(TopologyService.tenant_id == tenant_id)
             .where(TopologyService.id.in_(service_ids))
         ).all()
+        if len(services_to_add) != len(service_ids):
+            raise ServiceNotFoundException("One or more services not found")
 
         # Create TopologyServiceApplication links
-        for service in existing_services:
-            link = TopologyServiceApplication(
+        new_links = [
+            TopologyServiceApplication(
                 service_id=service.id, application_id=new_application.id
             )
-            session.add(link)
+            for service in services_to_add
+            if service.id
+        ]
 
+        session.add_all(new_links)
         session.commit()
 
         session.expire(new_application, ["services"])
@@ -147,7 +173,7 @@ class TopologiesService:
     @staticmethod
     def update_application_by_id(
         tenant_id: str,
-        application_id: str,
+        application_id: UUID,
         application: TopologyApplicationDtoIn,
         session: Session,
     ) -> TopologyApplicationDtoOut:
@@ -157,7 +183,9 @@ class TopologiesService:
             .where(TopologyApplication.id == application_id)
         ).first()
         if not application_db:
-            raise HTTPException(status_code=404, detail="Application not found")
+            raise ApplicationNotFoundException(
+                f"Application with id {application_id} not found"
+            )
 
         application_db.name = application.name
         application_db.description = application.description
@@ -177,11 +205,24 @@ class TopologiesService:
         ).all()
         existing_service_ids = set(existing_links)
 
+        services_to_add_ids = new_service_ids - existing_service_ids
+
+        # Fetch existing services
+        services_to_add = session.exec(
+            select(TopologyService)
+            .where(TopologyService.tenant_id == tenant_id)
+            .where(TopologyService.id.in_(services_to_add_ids))
+        ).all()
+
+        if len(services_to_add) != len(services_to_add_ids):
+            raise ServiceNotFoundException("One or more services not found")
+
         new_links = [
             TopologyServiceApplication(
-                service_id=service_id, application_id=application_id
+                service_id=service.id, application_id=application_id
             )
-            for service_id in new_service_ids - existing_service_ids
+            for service in services_to_add
+            if service.id
         ]
         session.add_all(new_links)
 
@@ -190,14 +231,19 @@ class TopologiesService:
         return TopologyApplicationDtoOut.from_orm(application_db)
 
     @staticmethod
-    def delete_application_by_id(tenant_id: str, application_id: str, session: Session):
+    def delete_application_by_id(
+        tenant_id: str, application_id: UUID, session: Session
+    ):
+        # Validate that application_id is a valid UUID
         application = session.exec(
             select(TopologyApplication)
             .where(TopologyApplication.tenant_id == tenant_id)
             .where(TopologyApplication.id == application_id)
         ).first()
         if not application:
-            raise HTTPException(status_code=404, detail="Application not found")
+            raise ApplicationNotFoundException(
+                f"Application with id {application_id} not found"
+            )
         session.delete(application)
         session.commit()
         return None
