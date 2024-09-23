@@ -59,16 +59,16 @@ export default function IncidentView({ incidentId }: Props) {
             </div>
             <div
               id="incidentTabs"
-              className="w-full xl:pl-2.5 overflow-x-scroll h-full overflow-hidden"
+              className="w-full xl:pl-2.5 overflow-x-scroll h-full"
             >
-              <TabGroup defaultIndex={0} className="h-full">
+              <TabGroup defaultIndex={0}>
                 <TabList variant="line" color="orange">
                   <Tab icon={CiBellOn}>Alerts</Tab>
                   <Tab icon={CiViewTimeline}>Timeline</Tab>
                   <Tab icon={IoIosGitNetwork}>Topology</Tab>
                   <Tab icon={CiChat2}>Chat</Tab>
                 </TabList>
-                <TabPanels className="h-full">
+                <TabPanels>
                   <TabPanel>
                     <IncidentAlerts incident={incident} />
                   </TabPanel>
@@ -85,7 +85,7 @@ export default function IncidentView({ incidentId }: Props) {
                       />
                     </div>
                   </TabPanel>
-                  <TabPanel className="h-[calc(100%-50px)]">
+                  <TabPanel>
                     <IncidentChat incident={incident} />
                   </TabPanel>
                 </TabPanels>
