@@ -137,14 +137,6 @@ class TopologiesService:
     def create_application_by_tenant_id(
         tenant_id: str, application: TopologyApplicationDtoIn, session: Session
     ) -> TopologyApplicationDtoOut:
-        new_application = TopologyApplication(
-            tenant_id=tenant_id,
-            name=application.name,
-            description=application.description,
-        )
-        session.add(new_application)
-        session.flush()  # This assigns an ID to new_application
-
         service_ids = [service.id for service in application.services]
         if not service_ids:
             raise InvalidApplicationDataException(
@@ -159,6 +151,14 @@ class TopologiesService:
         ).all()
         if len(services_to_add) != len(service_ids):
             raise ServiceNotFoundException("One or more services not found")
+
+        new_application = TopologyApplication(
+            tenant_id=tenant_id,
+            name=application.name,
+            description=application.description,
+        )
+        session.add(new_application)
+        session.flush()  # This assigns an ID to new_application
 
         # Create TopologyServiceApplication links
         new_links = [

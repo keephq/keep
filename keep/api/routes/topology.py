@@ -42,18 +42,10 @@ def get_topology_data(
 ) -> List[TopologyServiceDtoOut]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting topology data", extra={tenant_id: tenant_id})
-
-    try:
-        topology_data = TopologiesService.get_all_topology_data(
-            tenant_id, session, provider_id, service_id, environment, include_empty_deps
-        )
-        return topology_data
-    except Exception:
-        logger.exception("Failed to get topology data")
-        raise HTTPException(
-            status_code=400,
-            detail="Unknown error when getting topology data, please contact us",
-        )
+    topology_data = TopologiesService.get_all_topology_data(
+        tenant_id, session, provider_id, service_id, environment, include_empty_deps
+    )
+    return topology_data
 
 
 @router.get(
@@ -73,12 +65,6 @@ def get_applications(
         return TopologiesService.get_applications_by_tenant_id(tenant_id, session)
     except ApplicationParseException as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.exception(f"Failed to get applications: {str(e)}")
-        raise HTTPException(
-            status_code=400,
-            detail="Unknown error when getting applications, please contact us",
-        )
 
 
 @router.post(
@@ -103,12 +89,6 @@ def create_application(
         raise HTTPException(status_code=400, detail=str(e))
     except ServiceNotFoundException as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        logger.exception("Failed to create application")
-        raise HTTPException(
-            status_code=400,
-            detail="Unknown error when creating application, please contact us",
-        )
 
 
 @router.put(
@@ -137,12 +117,6 @@ def update_application(
         raise HTTPException(status_code=404, detail=str(e))
     except InvalidApplicationDataException as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        logger.exception("Failed to update application")
-        raise HTTPException(
-            status_code=400,
-            detail="Unknown exception when updating application, please contact us",
-        )
 
 
 @router.delete("/applications/{application_id}", description="Delete an application")
@@ -162,9 +136,3 @@ def delete_application(
         )
     except ApplicationNotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception:
-        logger.exception("Failed to delete application")
-        raise HTTPException(
-            status_code=400,
-            detail="Unknown exception when deleting application, please contact us",
-        )
