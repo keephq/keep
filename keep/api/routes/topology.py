@@ -117,6 +117,8 @@ def update_application(
         raise HTTPException(status_code=404, detail=str(e))
     except InvalidApplicationDataException as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except ServiceNotFoundException as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/applications/{application_id}", description="Delete an application")
