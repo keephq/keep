@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -29,19 +29,25 @@ import { useSession } from "next-auth/react";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 
+import { KeyedMutator } from "swr";
+
 type DeduplicationTableProps = {
   deduplicationRules: DeduplicationRule[];
-  mutateDeduplicationRules: () => Promise<void>;
+  mutateDeduplicationRules: KeyedMutator<DeduplicationRule[]>;
 };
 
-export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplicationRules, mutateDeduplicationRules }) => {
+export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
+  deduplicationRules,
+  mutateDeduplicationRules,
+}) => {
   const router = useRouter();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
 
   let selectedId = searchParams ? searchParams.get("id") : null;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedDeduplicationRule, setSelectedDeduplicationRule] = useState<DeduplicationRule | null>(null);
+  const [selectedDeduplicationRule, setSelectedDeduplicationRule] =
+    useState<DeduplicationRule | null>(null);
 
   const onDeduplicationClick = (rule: DeduplicationRule) => {
     setSelectedDeduplicationRule(rule);
@@ -52,18 +58,23 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
   const onCloseDeduplication = () => {
     setIsSidebarOpen(false);
     setSelectedDeduplicationRule(null);
-    router.push('/deduplication');
+    router.push("/deduplication");
   };
 
-  const handleDeleteRule = async (rule: DeduplicationRule, event: React.MouseEvent) => {
+  const handleDeleteRule = async (
+    rule: DeduplicationRule,
+    event: React.MouseEvent
+  ) => {
     event.stopPropagation();
     if (rule.default) return; // Don't delete default rules
 
-    if (window.confirm("Are you sure you want to delete this deduplication rule?")) {
+    if (
+      window.confirm("Are you sure you want to delete this deduplication rule?")
+    ) {
       try {
         const url = `${getApiURL()}/deduplications/${rule.id}`;
         const response = await fetch(url, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${session?.accessToken}`,
           },
@@ -92,7 +103,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
 
   useEffect(() => {
     if (!isSidebarOpen && selectedId) {
-      router.push('/deduplication');
+      router.push("/deduplication");
     }
   }, [isSidebarOpen, selectedId, router]);
 
@@ -118,39 +129,55 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
         header: "Name",
         cell: (info) => (
           <div className="flex items-center justify-between max-w-[400px]">
-            <span className="truncate lg:whitespace-normal">{info.getValue()}</span>
+            <span className="truncate lg:whitespace-normal">
+              {info.getValue()}
+            </span>
             {info.row.original.default ? (
-              <Badge color="orange" size="xs" className="ml-2">Default</Badge>
+              <Badge color="orange" size="xs" className="ml-2">
+                Default
+              </Badge>
             ) : (
-              <Badge color="orange" size="xs" className="ml-2">Custom</Badge>
+              <Badge color="orange" size="xs" className="ml-2">
+                Custom
+              </Badge>
             )}
             {info.row.original.full_deduplication && (
-              <Badge color="orange" size="xs" className="ml-2">Full Deduplication</Badge>
+              <Badge color="orange" size="xs" className="ml-2">
+                Full Deduplication
+              </Badge>
             )}
           </div>
         ),
       }),
       columnHelper.accessor("ingested", {
         header: "Ingested",
-        cell: (info) => <Badge color="orange" className="w-16">{info.getValue() || 0}</Badge>,
+        cell: (info) => (
+          <Badge color="orange" className="w-16">
+            {info.getValue() || 0}
+          </Badge>
+        ),
       }),
       columnHelper.accessor("dedup_ratio", {
         header: "Dedup Ratio",
         cell: (info) => {
           const value = info.getValue() || 0;
           const formattedValue = Number(value).toFixed(1);
-          return <Badge color="orange" className="w-16">{formattedValue}%</Badge>;
+          return (
+            <Badge color="orange" className="w-16">
+              {formattedValue}%
+            </Badge>
+          );
         },
       }),
       columnHelper.accessor("distribution", {
         header: "Distribution",
         cell: (info) => {
           const rawData = info.getValue();
-          const maxNumber = Math.max(...rawData.map(item => item.number));
-          const allZero = rawData.every(item => item.number === 0);
-          const data = rawData.map(item => ({
+          const maxNumber = Math.max(...rawData.map((item) => item.number));
+          const allZero = rawData.every((item) => item.number === 0);
+          const data = rawData.map((item) => ({
             ...item,
-            number: maxNumber > 0 ? (item.number / maxNumber) + 1 : 0.5
+            number: maxNumber > 0 ? item.number / maxNumber + 1 : 0.5,
           }));
           const colors = ["orange"];
           const showGradient = true;
@@ -173,12 +200,15 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
         cell: (info) => {
           const fields = info.getValue();
           const ignoreFields = info.row.original.ignore_fields;
-          const displayFields = fields && fields.length > 0 ? fields : ignoreFields;
+          const displayFields =
+            fields && fields.length > 0 ? fields : ignoreFields;
 
           if (!displayFields || displayFields.length === 0) {
             return (
               <div className="flex flex-wrap items-center gap-2 w-[200px]">
-                <Badge color="orange" size="md">N/A</Badge>
+                <Badge color="orange" size="md">
+                  N/A
+                </Badge>
               </div>
             );
           }
@@ -188,7 +218,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
               {displayFields.map((field: string, index: number) => (
                 <React.Fragment key={field}>
                   {index > 0 && <PlusIcon className="w-4 h-4 text-gray-400" />}
-                  <Badge color="orange" size="md">{field}</Badge>
+                  <Badge color="orange" size="md">
+                    {field}
+                  </Badge>
                 </React.Fragment>
               ))}
             </div>
@@ -209,7 +241,11 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
               size="xs"
               variant="secondary"
               icon={TrashIcon}
-              tooltip={info.row.original.default ? "Cannot delete default rule" : "Delete Rule"}
+              tooltip={
+                info.row.original.default
+                  ? "Cannot delete default rule"
+                  : "Delete Rule"
+              }
               disabled={info.row.original.default}
               onClick={(e) => handleDeleteRule(info.row.original, e)}
             />
@@ -224,9 +260,11 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
     data: deduplicationRules,
     columns: DEDUPLICATION_TABLE_COLS,
     getCoreRowModel: getCoreRowModel(),
-  })
+  });
 
-  const handleSubmitDeduplicationRule = async (data: Partial<DeduplicationRule>) => {
+  const handleSubmitDeduplicationRule = async (
+    data: Partial<DeduplicationRule>
+  ) => {
     // Implement the logic to submit the deduplication rule
     // This is a placeholder function, replace with actual implementation
     console.log("Submitting deduplication rule:", data);
@@ -238,16 +276,20 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({ deduplic
       <div className="flex items-center justify-between">
         <div>
           <Title className="text-2xl font-normal">
-            Deduplication Rules <span className="text-gray-400">({deduplicationRules.length})</span>
+            Deduplication Rules{" "}
+            <span className="text-gray-400">({deduplicationRules.length})</span>
           </Title>
           <Subtitle className="text-gray-400">
             Set up rules to deduplicate similar alerts
           </Subtitle>
         </div>
-        <Button color="orange" onClick={() => {
-          setSelectedDeduplicationRule(null);
-          setIsSidebarOpen(true);
-        }}>
+        <Button
+          color="orange"
+          onClick={() => {
+            setSelectedDeduplicationRule(null);
+            setIsSidebarOpen(true);
+          }}
+        >
           Create Deduplication Rule
         </Button>
       </div>

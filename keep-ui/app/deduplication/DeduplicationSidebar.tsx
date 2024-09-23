@@ -12,6 +12,7 @@ import MultiSelect from "@/components/ui/MultiSelect";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
+import { KeyedMutator } from "swr";
 
 interface ProviderOption {
   value: string;
@@ -24,7 +25,7 @@ interface DeduplicationSidebarProps {
   toggle: VoidFunction;
   selectedDeduplicationRule: DeduplicationRule | null;
   onSubmit: (data: Partial<DeduplicationRule>) => Promise<void>;
-  mutateDeduplicationRules: () => Promise<void>;
+  mutateDeduplicationRules: KeyedMutator<DeduplicationRule[]>;
 }
 
 const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
@@ -34,7 +35,16 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   onSubmit,
   mutateDeduplicationRules,
 }) => {
-  const { control, handleSubmit, setValue, reset, setError, watch, formState: { errors }, clearErrors } = useForm<Partial<DeduplicationRule>>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    reset,
+    setError,
+    watch,
+    formState: { errors },
+    clearErrors,
+  } = useForm<Partial<DeduplicationRule>>({
     defaultValues: selectedDeduplicationRule || {
       name: "",
       description: "",
@@ -47,32 +57,57 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: providers = { installed_providers: [], linked_providers: [] } } = useProviders();
+  const {
+    data: providers = { installed_providers: [], linked_providers: [] },
+  } = useProviders();
   const { data: deduplicationFields = {} } = useDeduplicationFields();
   const { data: session } = useSession();
 
-  const alertProviders = useMemo(() => [
-    { id: null, "type": "keep", "details": { name: "Keep" }, tags: ["alert"] },
-    ...providers.installed_providers,
-    ...providers.linked_providers
-  ].filter(provider => provider.tags?.includes("alert")), [providers]);
+  const alertProviders = useMemo(
+    () =>
+      [
+        { id: null, type: "keep", details: { name: "Keep" }, tags: ["alert"] },
+        ...providers.installed_providers,
+        ...providers.linked_providers,
+      ].filter((provider) => provider.tags?.includes("alert")),
+    [providers]
+  );
   const fullDeduplication = watch("full_deduplication");
   const selectedProviderType = watch("provider_type");
   const selectedProviderId = watch("provider_id");
   const fingerprintFields = watch("fingerprint_fields");
   const ignoreFields = watch("ignore_fields");
 
-
   const availableFields = useMemo(() => {
     // todo: add default fields for each provider from the backend
-    const defaultFields = ["source", "service", "description", "fingerprint", "name", "lastReceived"];
+    const defaultFields = [
+      "source",
+      "service",
+      "description",
+      "fingerprint",
+      "name",
+      "lastReceived",
+    ];
     if (selectedProviderType) {
-      const key = `${selectedProviderType}_${selectedProviderId || 'null'}`;
+      const key = `${selectedProviderType}_${selectedProviderId || "null"}`;
       const providerFields = deduplicationFields[key] || [];
-      return [...new Set([...defaultFields, ...providerFields, ...(fingerprintFields ?? []), ...(ignoreFields ?? [])])];
+      return [
+        ...new Set([
+          ...defaultFields,
+          ...providerFields,
+          ...(fingerprintFields ?? []),
+          ...(ignoreFields ?? []),
+        ]),
+      ];
     }
     return [...new Set([...defaultFields, ...(fingerprintFields ?? [])])];
-  }, [selectedProviderType, selectedProviderId, deduplicationFields, fingerprintFields, ignoreFields]);
+  }, [
+    selectedProviderType,
+    selectedProviderId,
+    deduplicationFields,
+    fingerprintFields,
+    ignoreFields,
+  ]);
 
   useEffect(() => {
     if (isOpen && selectedDeduplicationRule) {
@@ -97,7 +132,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     toggle();
   };
 
-  const onFormSubmit: SubmitHandler<Partial<DeduplicationRule>> = async (data) => {
+  const onFormSubmit: SubmitHandler<Partial<DeduplicationRule>> = async (
+    data
+  ) => {
     setIsSubmitting(true);
     clearErrors();
     try {
@@ -110,7 +147,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
 
       // Use POST if there's no selectedDeduplicationRule.id (it's a default rule or new rule)
       // This ensures we always create a new rule for default rules
-      const method = (!selectedDeduplicationRule || !selectedDeduplicationRule.id) ? "POST" : "PUT";
+      const method =
+        !selectedDeduplicationRule || !selectedDeduplicationRule.id
+          ? "POST"
+          : "PUT";
 
       const response = await fetch(url, {
         method: method,
@@ -128,10 +168,16 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         await mutateDeduplicationRules();
       } else {
         const errorData = await response.json();
-        setError("root.serverError", { type: "manual", message: errorData.message || "Failed to save deduplication rule" });
+        setError("root.serverError", {
+          type: "manual",
+          message: errorData.message || "Failed to save deduplication rule",
+        });
       }
     } catch (error) {
-      setError("root.serverError", { type: "manual", message: "An unexpected error occurred" });
+      setError("root.serverError", {
+        type: "manual",
+        message: "An unexpected error occurred",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -163,9 +209,17 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {selectedDeduplicationRule ? "Edit Deduplication Rule" : "Add Deduplication Rule"}
-                <Badge className="ml-4" color="orange">Beta</Badge>
-                {selectedDeduplicationRule?.default && <Badge className="ml-2" color="orange">Default Rule</Badge>}
+                {selectedDeduplicationRule
+                  ? "Edit Deduplication Rule"
+                  : "Add Deduplication Rule"}
+                <Badge className="ml-4" color="orange">
+                  Beta
+                </Badge>
+                {selectedDeduplicationRule?.default && (
+                  <Badge className="ml-2" color="orange">
+                    Default Rule
+                  </Badge>
+                )}
               </Dialog.Title>
               <Button onClick={toggle} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
@@ -181,15 +235,29 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   color="orange"
                 >
                   <Text>
-                    Editing a default deduplication rule requires advanced knowledge. Default rules are carefully designed to provide optimal deduplication for specific alert types. Modifying these rules may impact the efficiency of your alert processing. If you&apos;re unsure about making changes, we recommend creating a new custom rule instead of modifying the default one.
+                    Editing a default deduplication rule requires advanced
+                    knowledge. Default rules are carefully designed to provide
+                    optimal deduplication for specific alert types. Modifying
+                    these rules may impact the efficiency of your alert
+                    processing. If you&apos;re unsure about making changes, we
+                    recommend creating a new custom rule instead of modifying
+                    the default one.
                   </Text>
                   <br></br>
-                  <a href="/docs/deduplication-rules" className="text-orange-600 hover:underline mt-4">Learn more about deduplication rules</a>
+                  <a
+                    href="/docs/deduplication-rules"
+                    className="text-orange-600 hover:underline mt-4"
+                  >
+                    Learn more about deduplication rules
+                  </a>
                 </Callout>
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onFormSubmit)} className="mt-4 flex flex-col h-full">
+            <form
+              onSubmit={handleSubmit(onFormSubmit)}
+              className="mt-4 flex flex-col h-full"
+            >
               <div className="flex-grow">
                 <div className="mt-4">
                   <Text className="block text-sm font-medium text-gray-700">
@@ -234,36 +302,53 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     control={control}
                     rules={{ required: "Provider is required" }}
                     render={({ field }) => (
-                        <Select<ProviderOption, false, GroupBase<ProviderOption>>
-                          {...field}
-                          isDisabled={!!selectedDeduplicationRule?.default}
-                          options={alertProviders.map((provider) => ({
-                            value: `${provider.type}_${provider.id}`,
-                            label: provider.details?.name || provider.id || "main",
-                            logoUrl: `/icons/${provider.type}-icon.png`
-                          }))}
-                          placeholder="Select provider"
-                          onChange={(selectedOption) => {
-                            if (selectedOption) {
-                              const [providerType, providerId] = selectedOption.value.split('_');
-                              setValue("provider_type", providerType);
-                              setValue("provider_id", providerId as any);
-                            }
-                          }}
-                          value={alertProviders.find(
-                            (provider) => `${provider.type}_${provider.id}` === `${selectedProviderType}_${selectedProviderId}`
-                          ) ? {
-                            value: `${selectedProviderType}_${selectedProviderId}`,
-                            label: alertProviders.find(
-                              (provider) => `${provider.type}_${provider.id}` === `${selectedProviderType}_${selectedProviderId}`
-                            )?.details?.name || (selectedProviderId !== "null" && selectedProviderId !== null ? selectedProviderId : "main"),
-                            logoUrl: `/icons/${selectedProviderType}-icon.png`
-                          } as ProviderOption : null}
-                        />
+                      <Select<ProviderOption, false, GroupBase<ProviderOption>>
+                        {...field}
+                        isDisabled={!!selectedDeduplicationRule?.default}
+                        options={alertProviders.map((provider) => ({
+                          value: `${provider.type}_${provider.id}`,
+                          label:
+                            provider.details?.name || provider.id || "main",
+                          logoUrl: `/icons/${provider.type}-icon.png`,
+                        }))}
+                        placeholder="Select provider"
+                        onChange={(selectedOption) => {
+                          if (selectedOption) {
+                            const [providerType, providerId] =
+                              selectedOption.value.split("_");
+                            setValue("provider_type", providerType);
+                            setValue("provider_id", providerId as any);
+                          }
+                        }}
+                        value={
+                          alertProviders.find(
+                            (provider) =>
+                              `${provider.type}_${provider.id}` ===
+                              `${selectedProviderType}_${selectedProviderId}`
+                          )
+                            ? ({
+                                value: `${selectedProviderType}_${selectedProviderId}`,
+                                label:
+                                  alertProviders.find(
+                                    (provider) =>
+                                      `${provider.type}_${provider.id}` ===
+                                      `${selectedProviderType}_${selectedProviderId}`
+                                  )?.details?.name ||
+                                  (selectedProviderId !== "null" &&
+                                  selectedProviderId !== null
+                                    ? selectedProviderId
+                                    : "main"),
+                                logoUrl: `/icons/${selectedProviderType}-icon.png`,
+                              } as ProviderOption)
+                            : null
+                        }
+                      />
                     )}
                   />
                   {errors.provider_type && (
-                    <p className="mt-1 text-sm text-red-600">{errors.provider_type.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.provider_type.message}
+                    </p>
                   )}
                 </div>
                 <div className="mt-4">
@@ -273,28 +358,40 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   <Controller
                     name="fingerprint_fields"
                     control={control}
-                    rules={{ required: "At least one fingerprint field is required" }}
+                    rules={{
+                      required: "At least one fingerprint field is required",
+                    }}
                     render={({ field }) => (
-                        <MultiSelect
+                      <MultiSelect
                         {...field}
                         options={availableFields.map((fieldName) => ({
                           value: fieldName,
-                          label: fieldName
+                          label: fieldName,
                         }))}
                         placeholder="Select fingerprint fields"
                         value={field.value?.map((value: string) => ({
                           value,
-                          label: value
+                          label: value,
                         }))}
                         onChange={(selectedOptions) => {
-                          field.onChange(selectedOptions.map((option: { value: string }) => option.value));
+                          field.onChange(
+                            selectedOptions.map(
+                              (option: { value: string }) => option.value
+                            )
+                          );
                         }}
-                        noOptionsMessage={() => selectedProviderType ? "No options" : "Please choose provider to see available fields"}
-                        />
+                        noOptionsMessage={() =>
+                          selectedProviderType
+                            ? "No options"
+                            : "Please choose provider to see available fields"
+                        }
+                      />
                     )}
-                />
+                  />
                   {errors.fingerprint_fields && (
-                    <p className="mt-1 text-sm text-red-600">{errors.fingerprint_fields.message}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.fingerprint_fields.message}
+                    </p>
                   )}
                 </div>
                 <div className="mt-4">
@@ -309,7 +406,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                         />
                       )}
                     />
-                    <span className="text-sm font-medium text-gray-700">Full Deduplication</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Full Deduplication
+                    </span>
                   </Text>
                 </div>
                 {fullDeduplication && (
@@ -325,26 +424,36 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                           {...field}
                           options={availableFields.map((fieldName) => ({
                             value: fieldName,
-                            label: fieldName
+                            label: fieldName,
                           }))}
                           placeholder="Select ignore fields"
                           value={field.value?.map((value: string) => ({
                             value,
-                            label: value
+                            label: value,
                           }))}
                           onChange={(selectedOptions) => {
-                            field.onChange(selectedOptions.map((option: { value: string }) => option.value));
+                            field.onChange(
+                              selectedOptions.map(
+                                (option: { value: string }) => option.value
+                              )
+                            );
                           }}
                         />
                       )}
                     />
                     {errors.ignore_fields && (
-                      <p className="mt-1 text-sm text-red-600">{errors.ignore_fields.message}</p>
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.ignore_fields.message}
+                      </p>
                     )}
                   </div>
                 )}
                 {errors.root?.serverError && (
-                  <Callout className="mt-4" title="Error while saving rule" color="rose">
+                  <Callout
+                    className="mt-4"
+                    title="Error while saving rule"
+                    color="rose"
+                  >
                     {errors.root.serverError.message}
                   </Callout>
                 )}
@@ -358,11 +467,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                 >
                   Cancel
                 </Button>
-                <Button
-                  color="orange"
-                  type="submit"
-                  disabled={isSubmitting}
-                >
+                <Button color="orange" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Saving..." : "Save Rule"}
                 </Button>
               </div>
