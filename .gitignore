@@ -208,3 +208,4 @@ ee/experimental/ai_temp/*
 ,e!ee/experimental/ai_temp/.gitkeep
 
 oauth2.cfg
+scripts/keep_slack_bot.py
