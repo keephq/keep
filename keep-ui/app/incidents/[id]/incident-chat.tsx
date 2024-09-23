@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Needed ATM because of some bug with copilot kit useCopilotAction
 import {
   CopilotChat,
   CopilotKitCSSProperties,
