@@ -30,6 +30,10 @@ jobs:
           tag: true
           commit: true
 
+      - name: Check Release Status
+        if: ${{ success() }}
+        run: echo "Release was successfull."
+
       - name: Open PR for release branch
         id: pr-step
         uses: peter-evans/create-pull-request@v6.1.0
@@ -40,6 +44,10 @@ jobs:
           body: "This PR contains the latest release changes."
           draft: false
           base: main
+      
+      - name: Check PR Creation Status
+        if: ${{ success() }}
+        run: echo "Pull request created successfully"
 
       - uses: peter-evans/enable-pull-request-automerge@v3
         with:
@@ -56,3 +64,7 @@ jobs:
               --title="v${{ steps.release-step.outputs.version }}" \
               --target="release/${{ steps.release-step.outputs.version }}" \
               --generate-notes
+              
+      - name: Check Release Creation Status
+        if: ${{ success() }}
+        run: echo "Release created successfully with tag"

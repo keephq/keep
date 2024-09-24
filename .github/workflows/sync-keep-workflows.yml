@@ -30,6 +30,20 @@ jobs:
         - name: Check out the repo
           uses: actions/checkout@v2
 
+        - name: Check Checkout Status
+          if: ${{ success() }}
+          run: echo "Repository checked out successfully."
+
         - name: Run Keep CLI
           run: |
             keep workflow apply -f examples/workflows
+        
+        - name: Check Keep CLI Status
+          if: ${{ success() }}
+          run: echo "Keep CLI command executed successfully."
+
+        - name: Handle Keep CLI Failure
+          if: ${{ failure() }}
+          run: |
+            echo "Keep CLI command failed. Please check the logs for details."
+            exit 1

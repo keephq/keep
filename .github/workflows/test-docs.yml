@@ -21,9 +21,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Check Checkout Status
+        if: ${{ success() }}
+        run: echo "Repository checked out successfully."
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
+      - name: Check Ruff Linter Status
+        if: ${{ success() }}
+        run: echo "Ruff linter ran successfully."
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
         with:
@@ -37,4 +43,13 @@ jobs:
           python3 docs_get_providers_list.py --validate;
 
           # Todo: validate if openapi schema is matching with the code
-  
+
+      - name: Check Documentation Validation Status
+        if: ${{ success() }}
+        run: echo "Documentation validation commands executed successfully."
+
+      - name: Handle Documentation Validation Failure
+        if: ${{ failure() }}
+        run: |
+          echo "Documentation validation failed. Please check the logs for details."
+          exit 1

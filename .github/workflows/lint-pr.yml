@@ -41,15 +41,10 @@ jobs:
           header: pr-title-lint-error
           delete: true
 
-      # Log the result of linting
       - name: Log lint status
-        run: |
-          if [ "${{ steps.lint_pr_title.outputs.error_message }}" == "" ]; then
-            echo "Linting passed successfully!";
-          else
-            echo "Linting failed with message: ${{ steps.lint_pr_title.outputs.error_message }}";
-          fi
-
+        if: ${{ success() && steps.lint_pr_title.outputs.error_message == '' }}
+        run: echo "PR title is valid"
+  
   links:
     runs-on: ubuntu-latest
     name: Validate PR to Issue link
