@@ -2,7 +2,7 @@ import { Button } from "@tremor/react";
 import { TextInput, Textarea, AutocompleteInput } from "@/components/ui";
 import { useCallback, useState } from "react";
 import { useTopology } from "utils/hooks/useTopology";
-import { Application } from "../types";
+import { Application } from "../models";
 import { Icon } from "@tremor/react";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
 
@@ -11,26 +11,39 @@ type FormErrors = {
   services?: string;
 };
 
+type CreateApplicationFormProps = {
+  action: "create";
+  application: Pick<Application, "services">;
+  onSubmit: (application: Omit<Application, "id">) => void;
+  onCancel: () => void;
+};
+
+type UpdateApplicationFormProps = {
+  action: "edit";
+  application: Application;
+  onSubmit: (application: Application) => void;
+  onCancel: () => void;
+};
+
+type CreatOrUpdateApplicationFormProps =
+  | CreateApplicationFormProps
+  | UpdateApplicationFormProps;
+
 export function CreateOrUpdateApplicationForm({
   action,
   application,
   onSubmit,
   onCancel,
-}: {
-  action: "create" | "edit";
-  application:
-    | (Pick<Application, "services"> & Partial<Application>)
-    | Application;
-  onSubmit: (application: Omit<Application, "id"> & { id?: string }) => void;
-  onCancel: () => void;
-}) {
+}: CreatOrUpdateApplicationFormProps) {
   const { topologyData } = useTopology();
   const [applicationName, setApplicationName] = useState(
-    application?.name || ""
+    action === "edit" ? application.name : ""
   );
   const [applicationDescription, setApplicationDescription] = useState(
-    application?.description || ""
+    action === "edit" ? application.description : ""
   );
+  const applicationId = action === "edit" ? application.id : undefined;
+
   const [selectedServices, setSelectedServices] = useState<
     { id: string; name: string }[]
   >(application?.services || []);
@@ -61,13 +74,21 @@ export function CreateOrUpdateApplicationForm({
         return;
       }
       setErrors({});
-      onSubmit({ ...formValues, id: application.id });
+      if (action === "edit") {
+        onSubmit({
+          ...formValues,
+          id: applicationId!,
+        });
+      } else {
+        onSubmit(formValues);
+      }
     },
     [
+      action,
       applicationName,
       applicationDescription,
       selectedServices,
-      application.id,
+      applicationId,
       onSubmit,
     ]
   );

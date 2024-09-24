@@ -3,7 +3,7 @@ import { Handle, NodeProps, Position } from "@xyflow/react";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import { useRouter } from "next/navigation";
-import { ServiceNodeType } from "../types";
+import { ServiceNodeType } from "../../models";
 import { cn } from "utils/helpers";
 
 const THRESHOLD = 5;

@@ -1,6 +1,6 @@
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { v4 as uuidv4 } from "uuid";
-import { Application } from "../../app/topology/types";
+import { Application } from "../../app/topology/models";
 
 // Mocked API
 // TODO: replace with actual API
