@@ -53,7 +53,6 @@ def context_manager():
     return ContextManager(tenant_id=SINGLE_TENANT_UUID, workflow_id="1234")
 
 
-@pytest.fixture(scope="session")
 def docker_services(
     docker_compose_command,
     docker_compose_file,
@@ -362,7 +361,6 @@ def elastic_container(docker_ip, docker_services):
         print("Tearing down ElasticSearch")
 
 
-@pytest.fixture
 def elastic_client(request):
     # this is so if any other module initialized Elasticsearch, it will be deleted
     ElasticClient._instance = None
@@ -385,7 +383,7 @@ def elastic_client(request):
         pass
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def keycloak_client(request):
     os.environ["KEYCLOAK_URL"] = "http://localhost:8787/auth/"
     os.environ["KEYCLOAK_REALM"] = "keeptest"

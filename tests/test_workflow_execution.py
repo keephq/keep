@@ -4,11 +4,10 @@ from datetime import datetime, timedelta
 
 import pytest
 import pytz
-from asyncio import sleep
 
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus, IncidentDtoIn, IncidentDto
+from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
@@ -78,51 +77,75 @@ def setup_workflow(db_session):
 
 
 @pytest.mark.parametrize(
-    "test_case, alert_statuses, expected_tier, db_session",
+    "test_app, test_case, alert_statuses, expected_tier, db_session",
     [
-        ("No action", [[0, "firing"]], None, None),
-        ("Tier 1", [[20, "firing"]], 1, None),
-        ("Tier 2", [[35, "firing"]], 2, None),
-        ("Resolved before tier 1", [[10, "firing"], [11, "resolved"]], None, None),
-        ("Resolved after tier 1", [[20, "firing"], [25, "resolved"]], 1, None),
-        ("Resolved after tier 2", [[35, "firing"], [40, "resolved"]], 2, None),
+        ({"AUTH_TYPE": "NOAUTH"}, "No action", [[0, "firing"]], None, None),
+        ({"AUTH_TYPE": "NOAUTH"}, "Tier 1", [[20, "firing"]], 1, None),
+        ({"AUTH_TYPE": "NOAUTH"}, "Tier 2", [[35, "firing"]], 2, None),
         (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Resolved before tier 1",
+            [[10, "firing"], [11, "resolved"]],
+            None,
+            None,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Resolved after tier 1",
+            [[20, "firing"], [25, "resolved"]],
+            1,
+            None,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Resolved after tier 2",
+            [[35, "firing"], [40, "resolved"]],
+            2,
+            None,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
             "Multiple firings, last one tier 2",
             [[10, "firing"], [20, "firing"], [35, "firing"]],
             2,
             None,
         ),
-        ("No action", [[0, "firing"]], None, {"db": "mysql"}),
-        ("Tier 1", [[20, "firing"]], 1, {"db": "mysql"}),
-        ("Tier 2", [[35, "firing"]], 2, {"db": "mysql"}),
+        ({"AUTH_TYPE": "NOAUTH"}, "No action", [[0, "firing"]], None, {"db": "mysql"}),
+        ({"AUTH_TYPE": "NOAUTH"}, "Tier 1", [[20, "firing"]], 1, {"db": "mysql"}),
+        ({"AUTH_TYPE": "NOAUTH"}, "Tier 2", [[35, "firing"]], 2, {"db": "mysql"}),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "Resolved before tier 1",
             [[10, "firing"], [11, "resolved"]],
             None,
             {"db": "mysql"},
         ),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "Resolved after tier 1",
             [[20, "firing"], [25, "resolved"]],
             1,
             {"db": "mysql"},
         ),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "Resolved after tier 2",
             [[35, "firing"], [40, "resolved"]],
             2,
             {"db": "mysql"},
         ),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "Multiple firings, last one tier 2",
             [[10, "firing"], [20, "firing"], [35, "firing"]],
             2,
             {"db": "mysql"},
         ),
     ],
-    indirect=["db_session"],
+    indirect=["test_app", "db_session"],
 )
 def test_workflow_execution(
+    test_app,
     db_session,
     create_alert,
     setup_workflow,
@@ -229,36 +252,59 @@ actions:
 
 
 @pytest.mark.parametrize(
-    "workflow_id, test_case, alert_statuses, expected_action",
+    "test_app, workflow_id, test_case, alert_statuses, expected_action",
     [
-        ("alert-first-firing", "First firing", [[0, "firing"]], True),
-        ("alert-second-firing", "Second firing within 24h", [[0, "firing"], [1, "firing"]], False),
         (
+            {"AUTH_TYPE": "NOAUTH"},
+            "alert-first-firing",
+            "First firing",
+            [[0, "firing"]],
+            True,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
+            "alert-second-firing",
+            "Second firing within 24h",
+            [[0, "firing"], [1, "firing"]],
+            False,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
             "firing-resolved-firing-24",
             "First firing, resolved, and fired again after 24h",
             [[0, "firing"], [1, "resolved"], [25, "firing"]],
             True,
         ),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "multiple-firings-24",
             "Multiple firings within 24h",
             [[0, "firing"], [1, "firing"], [2, "firing"], [3, "firing"]],
             False,
         ),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "resolved-fired-24",
             "Resolved and fired again within 24h",
             [[0, "firing"], [1, "resolved"], [2, "firing"]],
             False,
         ),
         (
+            {"AUTH_TYPE": "NOAUTH"},
             "first-firing-multiple-resolutions",
             "First firing after multiple resolutions",
             [[0, "resolved"], [1, "resolved"], [2, "firing"]],
             True,
         ),
-        ("firing-exactly-24", "Firing exactly at 24h boundary", [[0, "firing"], [24, "firing"]], True),
         (
+            {"AUTH_TYPE": "NOAUTH"},
+            "firing-exactly-24",
+            "Firing exactly at 24h boundary",
+            [[0, "firing"], [24, "firing"]],
+            True,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
             "complex-scenario",
             "Complex scenario with multiple status changes",
             [
@@ -271,8 +317,10 @@ actions:
             False,
         ),
     ],
+    indirect=["test_app"],
 )
 def test_workflow_execution_2(
+    test_app,
     db_session,
     create_alert,
     workflow_manager,
@@ -342,7 +390,8 @@ def test_workflow_execution_2(
     status = None
     while workflow_execution is None and count < 30 and status != "success":
         workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, workflow_id,
+            SINGLE_TENANT_UUID,
+            workflow_id,
         )
         if workflow_execution is not None:
             status = workflow_execution.status
@@ -390,21 +439,29 @@ actions:
 
 
 @pytest.mark.parametrize(
-    "test_case, alert_statuses, expected_tier, db_session",
+    "test_app, test_case, alert_statuses, expected_tier, db_session",
     [
-        ("Tier 0", [[0, "firing"]], 0, None),
-        ("Tier 1", [[10, "firing"], [0, "firing"]], 1, None),
-        ("Resolved", [[15, "firing"], [5, "firing"], [0, "resolved"]], None, None),
+        ({"AUTH_TYPE": "NOAUTH"}, "Tier 0", [[0, "firing"]], 0, None),
+        ({"AUTH_TYPE": "NOAUTH"}, "Tier 1", [[10, "firing"], [0, "firing"]], 1, None),
         (
+            {"AUTH_TYPE": "NOAUTH"},
+            "Resolved",
+            [[15, "firing"], [5, "firing"], [0, "resolved"]],
+            None,
+            None,
+        ),
+        (
+            {"AUTH_TYPE": "NOAUTH"},
             "Tier 0 again",
             [[20, "firing"], [10, "firing"], [5, "resolved"], [0, "firing"]],
             0,
             None,
         ),
     ],
-    indirect=["db_session"],
+    indirect=["test_app", "db_session"],
 )
 def test_workflow_execution3(
+    test_app,
     db_session,
     create_alert,
     workflow_manager,
@@ -478,7 +535,6 @@ def test_workflow_execution3(
         assert "Tier 1" in workflow_execution.results["send-slack-message-tier-1"][0]
 
 
-
 workflow_definition_for_enabled_disabled = """workflow:
 id: %s
 description: Handle alerts based on startedAt timestamp
@@ -507,7 +563,15 @@ actions:
 """
 
 
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        ({"AUTH_TYPE": "NOAUTH"}),
+    ],
+    indirect=["test_app"],
+)
 def test_workflow_execution_with_disabled_workflow(
+    test_app,
     db_session,
     create_alert,
     workflow_manager,
@@ -521,7 +585,7 @@ def test_workflow_execution_with_disabled_workflow(
         created_by="test@keephq.dev",
         interval=0,
         is_disabled=False,
-        workflow_raw=workflow_definition_for_enabled_disabled % enabled_id
+        workflow_raw=workflow_definition_for_enabled_disabled % enabled_id,
     )
 
     disabled_id = "disabled-workflow"
@@ -533,7 +597,7 @@ def test_workflow_execution_with_disabled_workflow(
         created_by="test@keephq.dev",
         interval=0,
         is_disabled=True,
-        workflow_raw=workflow_definition_for_enabled_disabled % disabled_id
+        workflow_raw=workflow_definition_for_enabled_disabled % disabled_id,
     )
 
     db_session.add(enabled_workflow)
@@ -561,7 +625,9 @@ def test_workflow_execution_with_disabled_workflow(
     disabled_workflow_execution = None
     count = 0
 
-    while (enabled_workflow_execution is None and disabled_workflow_execution is None) and count < 30:
+    while (
+        enabled_workflow_execution is None and disabled_workflow_execution is None
+    ) and count < 30:
         enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
         )
@@ -578,10 +644,9 @@ def test_workflow_execution_with_disabled_workflow(
     assert disabled_workflow_execution is None
 
 
-
 workflow_definition_4 = """workflow:
 id: incident-triggers-test-created-updated
-description: test incident triggers 
+description: test incident triggers
 triggers:
 - type: incident
   events:
@@ -621,7 +686,15 @@ actions:
 """
 
 
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        ({"AUTH_TYPE": "NOAUTH"}),
+    ],
+    indirect=["test_app"],
+)
 def test_workflow_incident_triggers(
+    test_app,
     db_session,
     workflow_manager,
 ):
@@ -669,18 +742,26 @@ def test_workflow_incident_triggers(
     workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "created")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
-    workflow_execution_created = wait_workflow_execution("incident-triggers-test-created-updated")
+    workflow_execution_created = wait_workflow_execution(
+        "incident-triggers-test-created-updated"
+    )
     assert workflow_execution_created is not None
     assert workflow_execution_created.status == "success"
-    assert workflow_execution_created.results['mock-action'] == ['"incident: incident"\n']
+    assert workflow_execution_created.results["mock-action"] == [
+        '"incident: incident"\n'
+    ]
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
 
     workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "updated")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
-    workflow_execution_updated = wait_workflow_execution("incident-triggers-test-created-updated")
+    workflow_execution_updated = wait_workflow_execution(
+        "incident-triggers-test-created-updated"
+    )
     assert workflow_execution_updated is not None
     assert workflow_execution_updated.status == "success"
-    assert workflow_execution_updated.results['mock-action'] == ['"incident: incident"\n']
+    assert workflow_execution_updated.results["mock-action"] == [
+        '"incident: incident"\n'
+    ]
 
     # incident-triggers-test-created-updated should not be triggered
     workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
@@ -702,9 +783,13 @@ def test_workflow_incident_triggers(
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # incident-triggers-test-deleted should be triggered now
-    workflow_execution_deleted = wait_workflow_execution("incident-triggers-test-deleted")
+    workflow_execution_deleted = wait_workflow_execution(
+        "incident-triggers-test-deleted"
+    )
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
 
     assert workflow_execution_deleted is not None
     assert workflow_execution_deleted.status == "success"
-    assert workflow_execution_deleted.results['mock-action'] == ['"deleted incident: incident"\n']
+    assert workflow_execution_deleted.results["mock-action"] == [
+        '"deleted incident: incident"\n'
+    ]
