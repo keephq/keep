@@ -8,7 +8,14 @@ from typing import Any, Dict, List
 from uuid import UUID
 
 import pytz
-from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator, PrivateAttr
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    Extra,
+    PrivateAttr,
+    root_validator,
+    validator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -410,6 +417,7 @@ class IncidentDto(IncidentDtoIn):
     def alerts(self) -> List["AlertDto"]:
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+
         if not self._tenant_id:
             return []
         alerts, _ = get_incident_alerts_by_incident_id(self._tenant_id, str(self.id))
@@ -432,14 +440,16 @@ class IncidentDto(IncidentDtoIn):
     @classmethod
     def from_db_incident(cls, db_incident):
 
-        severity = IncidentSeverity.from_number(db_incident.severity) \
-            if isinstance(db_incident.severity, int) \
+        severity = (
+            IncidentSeverity.from_number(db_incident.severity)
+            if isinstance(db_incident.severity, int)
             else db_incident.severity
+        )
 
         dto = cls(
             id=db_incident.id,
             user_generated_name=db_incident.user_generated_name,
-            ai_generated_name = db_incident.ai_generated_name,
+            ai_generated_name=db_incident.ai_generated_name,
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,

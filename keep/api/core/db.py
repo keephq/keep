@@ -9,6 +9,7 @@ import json
 import logging
 import random
 import uuid
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
@@ -2551,6 +2552,28 @@ def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> i
             )
         ).scalar()
 
+
+def get_last_alerts_for_incidents(incident_ids: List[str | UUID]) -> Dict[str, List[Alert]]:
+    with Session(engine) as session:
+        query = (
+            session.query(
+                Alert,
+                AlertToIncident.incident_id,
+            )
+            .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .filter(
+                AlertToIncident.incident_id.in_(incident_ids),
+            )
+            .order_by(Alert.timestamp.desc())
+        )
+
+        alerts = query.all()
+
+    incidents_alerts = defaultdict(list)
+    for alert, incident_id in alerts:
+        incidents_alerts[str(incident_id)].append(alert)
+
+    return incidents_alerts
 
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
