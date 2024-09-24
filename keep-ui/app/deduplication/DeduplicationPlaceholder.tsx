@@ -25,10 +25,6 @@ export const DeduplicationPlaceholder = () => {
         </div>
         <DeduplicationSankey className="max-w-full" />
       </Card>
-      {/* <CorrelationSidebar
-        isOpen={isSidebarOpen}
-        toggle={() => setIsSidebarOpen(!isSidebarOpen)}
-      /> */}
     </Fragment>
   );
 };
