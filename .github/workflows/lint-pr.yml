@@ -40,6 +40,16 @@ jobs:
         with:
           header: pr-title-lint-error
           delete: true
+
+      # Log the result of linting
+      - name: Log lint status
+        run: |
+          if [ "${{ steps.lint_pr_title.outputs.error_message }}" == "" ]; then
+            echo "Linting passed successfully!";
+          else
+            echo "Linting failed with message: ${{ steps.lint_pr_title.outputs.error_message }}";
+          fi
+
   links:
     runs-on: ubuntu-latest
     name: Validate PR to Issue link
@@ -53,4 +63,4 @@ jobs:
           exclude-branches: "release/**, dependabot/**"
       # OPTIONAL: Use the output from the `check-linked-issues` step
       - name: Get the output
-        run: echo "How many linked issues? ${{ steps.check-linked-issues.outputs.linked_issues_count }}"
+        run: echo "How many linked  issues? ${{ steps.check-linked-issues.outputs.linked_issues_count }}"
