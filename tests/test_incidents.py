@@ -24,6 +24,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.db.alert import Alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from tests.fixtures.client import client, test_app  # noqa
 
 
 def test_get_alerts_data_for_incident(db_session, setup_stress_alerts_no_elastic):

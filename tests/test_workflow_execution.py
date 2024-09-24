@@ -10,6 +10,7 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from tests.fixtures.client import client, test_app  # noqa
 
 # This workflow definition is used to test the execution of workflows based on alert firing times.
 # It defines two actions:
