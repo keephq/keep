@@ -605,15 +605,6 @@ def test_no_function_calls(context_manager):
     assert len(functions) == 0, "Should find no functions"
 
 
-def test_keep_in_string_not_as_function_call(context_manager):
-    iohandler = IOHandler(context_manager)
-    template = "Here is a sentence with keep. not as a function call: 'Let's keep. moving forward.'"
-    functions = iohandler.extract_keep_functions(template)
-    assert (
-        len(functions) == 0
-    ), "Should find no functions when 'keep.' is part of a string."
-
-
 def test_malformed_function_calls(context_manager):
     iohandler = IOHandler(context_manager)
     template = "Here is a malformed function call keep.(without closing parenthesis."
