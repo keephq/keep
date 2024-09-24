@@ -550,6 +550,13 @@ def test_delete_deduplication_rule_invalid(db_session, client, test_app):
     indirect=True,
 )
 def test_delete_deduplication_rule_default(db_session, client, test_app):
+    # shoot an alert to create a default deduplication rule
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert = provider.simulate_alert()
+    client.post(
+        "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
+    )
+
     # try to delete a default deduplication rule
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
