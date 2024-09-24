@@ -146,8 +146,8 @@ def setup_workflow(db_session):
     indirect=["test_app", "db_session"],
 )
 def test_workflow_execution(
-    test_app,
     db_session,
+    test_app,
     create_alert,
     setup_workflow,
     workflow_manager,
@@ -321,8 +321,8 @@ actions:
     indirect=["test_app"],
 )
 def test_workflow_execution_2(
-    test_app,
     db_session,
+    test_app,
     create_alert,
     workflow_manager,
     workflow_id,
@@ -462,8 +462,8 @@ actions:
     indirect=["test_app", "db_session"],
 )
 def test_workflow_execution3(
-    test_app,
     db_session,
+    test_app,
     create_alert,
     workflow_manager,
     test_case,
@@ -572,8 +572,8 @@ actions:
     indirect=["test_app"],
 )
 def test_workflow_execution_with_disabled_workflow(
-    test_app,
     db_session,
+    test_app,
     create_alert,
     workflow_manager,
 ):
@@ -695,8 +695,8 @@ actions:
     indirect=["test_app"],
 )
 def test_workflow_incident_triggers(
-    test_app,
     db_session,
+    test_app,
     workflow_manager,
 ):
     workflow_created = Workflow(
