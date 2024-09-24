@@ -111,7 +111,7 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
       }
     >
       <CopilotChat
-        className="h-full overflow-y-hidden"
+        className="-mx-2"
         instructions={`You now act as an expert incident responder.
       You are responsible for resolving incidents and helping the incident responding team.
       The information you are provided with is a JSON representing all the data about the incident and a list of alerts that are related to the incident.
