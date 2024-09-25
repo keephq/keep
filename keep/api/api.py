@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 from importlib import metadata
 
 import jwt
@@ -341,10 +342,13 @@ def get_app(
             f"Request started: {request.method} {request.url.path}",
             extra={"tenant_id": identity},
         )
+        start_time = time.time()
         request.state.tenant_id = identity
         response = await call_next(request)
+
+        end_time = time.time()
         logger.info(
-            f"Request finished: {request.method} {request.url.path} {response.status_code}"
+            f"Request finished: {request.method} {request.url.path} {response.status_code} in {end_time - start_time:.2f}s",
         )
         return response
 
