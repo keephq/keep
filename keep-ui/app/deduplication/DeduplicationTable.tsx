@@ -128,7 +128,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       columnHelper.accessor("description", {
         header: "Name",
         cell: (info) => (
-          <div className="flex items-center justify-between max-w-[400px]">
+          <div className="flex items-center justify-between max-w-[320px]">
             <span className="truncate lg:whitespace-normal">
               {info.getValue()}
             </span>

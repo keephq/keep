@@ -1,7 +1,17 @@
-import React, { Fragment, useEffect, useState, useMemo } from "react";
+import { Fragment, useEffect, useState, useMemo } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { Text, Button, TextInput, Callout, Badge, Switch } from "@tremor/react";
+import {
+  Text,
+  Button,
+  TextInput,
+  Callout,
+  Badge,
+  Switch,
+  Icon,
+  Title,
+  Card,
+} from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { DeduplicationRule } from "app/deduplication/models";
 import { useProviders } from "utils/hooks/useProviders";
@@ -9,7 +19,10 @@ import { useDeduplicationFields } from "utils/hooks/useDeduplicationRules";
 import { GroupBase } from "react-select";
 import Select from "@/components/ui/Select";
 import MultiSelect from "@/components/ui/MultiSelect";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
 import { getApiURL } from "utils/apiUrl";
 import { useSession } from "next-auth/react";
 import { KeyedMutator } from "swr";
@@ -79,7 +92,6 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   const ignoreFields = watch("ignore_fields");
 
   const availableFields = useMemo(() => {
-    // todo: add default fields for each provider from the backend
     const defaultFields = [
       "source",
       "service",
@@ -145,8 +157,6 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         url += `/${selectedDeduplicationRule.id}`;
       }
 
-      // Use POST if there's no selectedDeduplicationRule.id (it's a default rule or new rule)
-      // This ensures we always create a new rule for default rules
       const method =
         !selectedDeduplicationRule || !selectedDeduplicationRule.id
           ? "POST"
@@ -206,24 +216,28 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           leaveFrom="translate-x-0"
           leaveTo="translate-x-full"
         >
-          <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
+          <Dialog.Panel className="fixed right-0 inset-y-0 w-2/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
-              <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {selectedDeduplicationRule
-                  ? "Edit Deduplication Rule"
-                  : "Add Deduplication Rule"}
-                <Badge className="ml-4" color="orange">
-                  Beta
-                </Badge>
-                {selectedDeduplicationRule?.default && (
-                  <Badge className="ml-2" color="orange">
-                    Default Rule
+              <div>
+                <Dialog.Title className="text-3xl font-bold" as={Title}>
+                  {selectedDeduplicationRule
+                    ? "Edit Deduplication Rule"
+                    : "Add Deduplication Rule"}
+                  <Badge className="ml-4" color="orange">
+                    Beta
                   </Badge>
-                )}
-              </Dialog.Title>
-              <Button onClick={toggle} variant="light">
-                <IoMdClose className="h-6 w-6 text-gray-500" />
-              </Button>
+                  {selectedDeduplicationRule?.default && (
+                    <Badge className="ml-2" color="orange">
+                      Default Rule
+                    </Badge>
+                  )}
+                </Dialog.Title>
+              </div>
+              <div>
+                <Button onClick={toggle} variant="light">
+                  <IoMdClose className="h-6 w-6 text-gray-500" />
+                </Button>
+              </div>
             </div>
 
             {selectedDeduplicationRule?.default && (
@@ -245,7 +259,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   </Text>
                   <br></br>
                   <a
-                    href="/docs/deduplication-rules"
+                    href="https://docs.keephq.dev/overview/deduplication"
+                    target="_blank"
                     className="text-orange-600 hover:underline mt-4"
                   >
                     Learn more about deduplication rules
@@ -258,196 +273,251 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
               onSubmit={handleSubmit(onFormSubmit)}
               className="mt-4 flex flex-col h-full"
             >
-              <div className="flex-grow">
-                <div className="mt-4">
-                  <Text className="block text-sm font-medium text-gray-700">
-                    Rule Name
-                  </Text>
-                  <Controller
-                    name="name"
-                    control={control}
-                    rules={{ required: "Rule name is required" }}
-                    render={({ field }) => (
-                      <TextInput
-                        {...field}
-                        error={!!errors.name}
-                        errorMessage={errors.name?.message}
+              <div className="flex-grow space-y-4">
+                <Card>
+                  <div className="space-y-4">
+                    <div>
+                      <Text className="block text-sm font-medium text-gray-700 mb-2">
+                        Rule name
+                      </Text>
+                      <Controller
+                        name="name"
+                        control={control}
+                        rules={{ required: "Rule name is required" }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            error={!!errors.name}
+                            errorMessage={errors.name?.message}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                </div>
-                <div className="mt-4">
-                  <Text className="block text-sm font-medium text-gray-700">
-                    Description
-                  </Text>
-                  <Controller
-                    name="description"
-                    control={control}
-                    rules={{ required: "Description is required" }}
-                    render={({ field }) => (
-                      <TextInput
-                        {...field}
-                        error={!!errors.description}
-                        errorMessage={errors.description?.message}
+                    </div>
+                    <div>
+                      <Text className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </Text>
+                      <Controller
+                        name="description"
+                        control={control}
+                        rules={{ required: "Description is required" }}
+                        render={({ field }) => (
+                          <TextInput
+                            {...field}
+                            error={!!errors.description}
+                            errorMessage={errors.description?.message}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                </div>
-                <div className="mt-4">
-                  <Text className="block text-sm font-medium text-gray-700">
-                    Provider
-                  </Text>
-                  <Controller
-                    name="provider_type"
-                    control={control}
-                    rules={{ required: "Provider is required" }}
-                    render={({ field }) => (
-                      <Select<ProviderOption, false, GroupBase<ProviderOption>>
-                        {...field}
-                        isDisabled={!!selectedDeduplicationRule?.default}
-                        options={alertProviders.map((provider) => ({
-                          value: `${provider.type}_${provider.id}`,
-                          label:
-                            provider.details?.name || provider.id || "main",
-                          logoUrl: `/icons/${provider.type}-icon.png`,
-                        }))}
-                        placeholder="Select provider"
-                        onChange={(selectedOption) => {
-                          if (selectedOption) {
-                            const [providerType, providerId] =
-                              selectedOption.value.split("_");
-                            setValue("provider_type", providerType);
-                            setValue("provider_id", providerId as any);
-                          }
-                        }}
-                        value={
-                          alertProviders.find(
-                            (provider) =>
-                              `${provider.type}_${provider.id}` ===
-                              `${selectedProviderType}_${selectedProviderId}`
-                          )
-                            ? ({
-                                value: `${selectedProviderType}_${selectedProviderId}`,
-                                label:
-                                  alertProviders.find(
-                                    (provider) =>
-                                      `${provider.type}_${provider.id}` ===
-                                      `${selectedProviderType}_${selectedProviderId}`
-                                  )?.details?.name ||
-                                  (selectedProviderId !== "null" &&
-                                  selectedProviderId !== null
-                                    ? selectedProviderId
-                                    : "main"),
-                                logoUrl: `/icons/${selectedProviderType}-icon.png`,
-                              } as ProviderOption)
-                            : null
-                        }
-                      />
-                    )}
-                  />
-                  {errors.provider_type && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.provider_type.message}
-                    </p>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <Text className="block text-sm font-medium text-gray-700">
-                    Fingerprint Fields
-                  </Text>
-                  <Controller
-                    name="fingerprint_fields"
-                    control={control}
-                    rules={{
-                      required: "At least one fingerprint field is required",
-                    }}
-                    render={({ field }) => (
-                      <MultiSelect
-                        {...field}
-                        options={availableFields.map((fieldName) => ({
-                          value: fieldName,
-                          label: fieldName,
-                        }))}
-                        placeholder="Select fingerprint fields"
-                        value={field.value?.map((value: string) => ({
-                          value,
-                          label: value,
-                        }))}
-                        onChange={(selectedOptions) => {
-                          field.onChange(
-                            selectedOptions.map(
-                              (option: { value: string }) => option.value
-                            )
-                          );
-                        }}
-                        noOptionsMessage={() =>
-                          selectedProviderType
-                            ? "No options"
-                            : "Please choose provider to see available fields"
-                        }
-                      />
-                    )}
-                  />
-                  {errors.fingerprint_fields && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.fingerprint_fields.message}
-                    </p>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <Text className="flex items-center space-x-2">
-                    <Controller
-                      name="full_deduplication"
-                      control={control}
-                      render={({ field }) => (
-                        <Switch
-                          checked={field.value}
-                          onChange={field.onChange}
-                        />
-                      )}
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      Full Deduplication
-                    </span>
-                  </Text>
-                </div>
-                {fullDeduplication && (
-                  <div className="mt-4">
-                    <Text className="block text-sm font-medium text-gray-700">
-                      Ignore Fields
-                    </Text>
-                    <Controller
-                      name="ignore_fields"
-                      control={control}
-                      render={({ field }) => (
-                        <MultiSelect
-                          {...field}
-                          options={availableFields.map((fieldName) => ({
-                            value: fieldName,
-                            label: fieldName,
-                          }))}
-                          placeholder="Select ignore fields"
-                          value={field.value?.map((value: string) => ({
-                            value,
-                            label: value,
-                          }))}
-                          onChange={(selectedOptions) => {
-                            field.onChange(
-                              selectedOptions.map(
-                                (option: { value: string }) => option.value
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-700 flex items-center mb-2">
+                        Provider
+                        <span className="ml-1 relative inline-flex items-center">
+                          <span className="group relative flex items-center">
+                            <Icon
+                              icon={InformationCircleIcon}
+                              className="w-[1em] h-[1em] text-gray-500"
+                            />
+                            <span className="absolute bottom-full left-full p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
+                              Select the provider for which this deduplication
+                              rule will apply. This determines the source of
+                              alerts that will be processed by this rule.
+                            </span>
+                          </span>
+                        </span>
+                      </span>
+                      <Controller
+                        name="provider_type"
+                        control={control}
+                        rules={{ required: "Provider is required" }}
+                        render={({ field }) => (
+                          <Select<
+                            ProviderOption,
+                            false,
+                            GroupBase<ProviderOption>
+                          >
+                            {...field}
+                            isDisabled={!!selectedDeduplicationRule?.default}
+                            options={alertProviders.map((provider) => ({
+                              value: `${provider.type}_${provider.id}`,
+                              label:
+                                provider.details?.name || provider.id || "main",
+                              logoUrl: `/icons/${provider.type}-icon.png`,
+                            }))}
+                            placeholder="Select provider"
+                            onChange={(selectedOption) => {
+                              if (selectedOption) {
+                                const [providerType, providerId] =
+                                  selectedOption.value.split("_");
+                                setValue("provider_type", providerType);
+                                setValue("provider_id", providerId as any);
+                              }
+                            }}
+                            value={
+                              alertProviders.find(
+                                (provider) =>
+                                  `${provider.type}_${provider.id}` ===
+                                  `${selectedProviderType}_${selectedProviderId}`
                               )
-                            );
-                          }}
-                        />
+                                ? ({
+                                    value: `${selectedProviderType}_${selectedProviderId}`,
+                                    label:
+                                      alertProviders.find(
+                                        (provider) =>
+                                          `${provider.type}_${provider.id}` ===
+                                          `${selectedProviderType}_${selectedProviderId}`
+                                      )?.details?.name ||
+                                      (selectedProviderId !== "null" &&
+                                      selectedProviderId !== null
+                                        ? selectedProviderId
+                                        : "main"),
+                                    logoUrl: `/icons/${selectedProviderType}-icon.png`,
+                                  } as ProviderOption)
+                                : null
+                            }
+                          />
+                        )}
+                      />
+                      {errors.provider_type && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.provider_type.message}
+                        </p>
                       )}
-                    />
-                    {errors.ignore_fields && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.ignore_fields.message}
-                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-700 flex items-center mb-2">
+                        Fields to use for fingerprint
+                        <span className="ml-1 relative inline-flex items-center">
+                          <span className="group relative flex items-center">
+                            <Icon
+                              icon={InformationCircleIcon}
+                              className="w-[1em] h-[1em] text-gray-500"
+                            />
+                            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
+                              Fingerprint fields are used to identify and group
+                              similar alerts. Choose fields that uniquely
+                              identify an alert type, such as 'service',
+                              'error_type', or 'affected_component'.
+                            </span>
+                          </span>
+                        </span>
+                      </span>
+                      <Controller
+                        name="fingerprint_fields"
+                        control={control}
+                        rules={{
+                          required:
+                            "At least one fingerprint field is required",
+                        }}
+                        render={({ field }) => (
+                          <MultiSelect
+                            {...field}
+                            options={availableFields.map((fieldName) => ({
+                              value: fieldName,
+                              label: fieldName,
+                            }))}
+                            placeholder="Select fingerprint fields"
+                            value={field.value?.map((value: string) => ({
+                              value,
+                              label: value,
+                            }))}
+                            onChange={(selectedOptions) => {
+                              field.onChange(
+                                selectedOptions.map(
+                                  (option: { value: string }) => option.value
+                                )
+                              );
+                            }}
+                            noOptionsMessage={() =>
+                              selectedProviderType
+                                ? "No options"
+                                : "Please choose provider to see available fields"
+                            }
+                          />
+                        )}
+                      />
+                      {errors.fingerprint_fields && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.fingerprint_fields.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Text className="flex items-center space-x-2">
+                        <Controller
+                          name="full_deduplication"
+                          control={control}
+                          render={({ field }) => (
+                            <Switch
+                              checked={field.value}
+                              onChange={field.onChange}
+                            />
+                          )}
+                        />
+                        <span className="text-sm font-medium text-gray-700 flex items-center">
+                          Full deduplication
+                          <span className="ml-1 relative inline-flex items-center">
+                            <span className="group relative flex items-center">
+                              <Icon
+                                icon={InformationCircleIcon}
+                                className="w-[1em] h-[1em] text-gray-500"
+                              />
+                              <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
+                                1. Full deduplication: Keep will discard events
+                                if they are the same (excluding the 'Ignore
+                                Fields').
+                                <br />
+                                2. Partial deduplication (default): Uses
+                                specified fields to correlate alerts. E.g., two
+                                alerts with same 'service' and 'env' fields will
+                                be deduped into one alert.
+                              </span>
+                            </span>
+                          </span>
+                        </span>
+                      </Text>
+                    </div>
+
+                    {fullDeduplication && (
+                      <div>
+                        <Text className="block text-sm font-medium text-gray-700 mb-2">
+                          Ignore fields
+                        </Text>
+                        <Controller
+                          name="ignore_fields"
+                          control={control}
+                          render={({ field }) => (
+                            <MultiSelect
+                              {...field}
+                              options={availableFields.map((fieldName) => ({
+                                value: fieldName,
+                                label: fieldName,
+                              }))}
+                              placeholder="Select ignore fields"
+                              value={field.value?.map((value: string) => ({
+                                value,
+                                label: value,
+                              }))}
+                              onChange={(selectedOptions) => {
+                                field.onChange(
+                                  selectedOptions.map(
+                                    (option: { value: string }) => option.value
+                                  )
+                                );
+                              }}
+                            />
+                          )}
+                        />
+                        {errors.ignore_fields && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.ignore_fields.message}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
+                </Card>
                 {errors.root?.serverError && (
                   <Callout
                     className="mt-4"
