@@ -7,7 +7,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -369,10 +369,7 @@ class OpenobserveProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     @staticmethod
-    def _format_alert(
-        event: dict,
-        provider_instance: Optional["OpenobserveProvider"] = None,
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         logger = logging.getLogger(__name__)
         name = event.pop("alert_name", "")
         # openoboserve does not provide severity

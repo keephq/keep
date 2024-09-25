@@ -5,7 +5,6 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 import dataclasses
 import datetime
 import os
-from typing import Optional
 
 import pydantic
 import requests
@@ -82,6 +81,7 @@ receivers:
             name="connectivity", description="Connectivity Test", mandatory=True
         )
     ]
+    FINGERPRINT_FIELDS = ["fingerprint"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -153,16 +153,8 @@ receivers:
         alert_dtos = self._format_alert(alerts_data)
         return alert_dtos
 
-    def get_status(event: dict) -> AlertStatus:
-        return PrometheusProvider.STATUS_MAP.get(
-            event.get("status", event.get("state", "firing"))
-        )
-
     @staticmethod
-    def _format_alert(
-        event: dict | list[AlertDto],
-        provider_instance: Optional["PrometheusProvider"] = None,
-    ) -> list[AlertDto]:
+    def _format_alert(event: dict | list[AlertDto]) -> list[AlertDto]:
         # TODO: need to support more than 1 alert per event
         alert_dtos = []
         if isinstance(event, list):

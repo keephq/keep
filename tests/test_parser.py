@@ -1,8 +1,8 @@
 # here we are going to create all needed tests for the parser.py parse function
-import uuid
 import builtins
 import json
 import time
+import uuid
 from pathlib import Path
 
 import pytest
@@ -11,13 +11,13 @@ import yaml
 from fastapi import HTTPException
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.db.action import Action
 from keep.contextmanager.contextmanager import ContextManager
 from keep.parser.parser import Parser, ParserUtils
 from keep.providers.mock_provider.mock_provider import MockProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.step.step import Step
 from keep.workflowmanager.workflowstore import WorkflowStore
-from keep.api.models.db.action import Action
 
 
 def test_parse_with_nonexistent_file(db_session):
@@ -84,14 +84,6 @@ def test_parse_all_alerts(db_session):
     # Complete the asserts:
     assert len(all_workflows) == 2  # Assuming two mock alert files were returned
     # You can add more specific assertions based on the content of mock_files and how they are parsed into alerts.
-
-
-# This test depends on the previous one because of global providers configuration
-@pytest.mark.xfail
-def test_parse_with_alert_source_with_no_providers_file():
-    parser = Parser()
-    with pytest.raises(TypeError):
-        parser.parse(str(workflow_path))
 
 
 def parse_env_setup(context_manager):
@@ -301,7 +293,9 @@ class TestParseAlert:
 ## Test Case for reusable actions
 path_to_test_reusable_resources = Path(__file__).parent / "workflows"
 reusable_workflow_path = str(path_to_test_resources / "reusable_alert_for_testing.yml")
-reusable_workflow_with_action_path = str(path_to_test_resources / "reusable_alert_with_actions_for_testing.yml")
+reusable_workflow_with_action_path = str(
+    path_to_test_resources / "reusable_alert_with_actions_for_testing.yml"
+)
 reusable_providers_path = str(path_to_test_resources / "providers_for_testing.yaml")
 reusable_actions_path = str(path_to_test_resources / "reusable_actions_for_testing.yml")
 
@@ -397,7 +391,7 @@ class TestReusableActionWithWorkflow:
 
 
 class TestParserUtils:
-    
+
     def test_deep_merge_dict(self):
         """Dictionary: if the merge combines recursively and prioritize values of source"""
         source = {"1": {"s11": "s11", "s12": "s12"}, "2": {"s21": "s21"}}
@@ -405,16 +399,18 @@ class TestParserUtils:
         expected_results = {
             "1": {"s11": "s11", "s12": "s12", "d11": "d11", "d12": "d12"},
             "2": {"s21": "s21"},
-            "3": {"d31": "d31"}
+            "3": {"d31": "d31"},
         }
         results = ParserUtils.deep_merge(source, dest)
         assert expected_results == results
 
     def test_deep_merge_list(self):
         """List: if the merge combines recursively and prioritize values of source"""
-        source           = {"data": [{"s1": "s1"}, {"s2": "s2"}]}
-        dest             = {"data": [{"d1": "d1"}, {"d2": "d2"}, {"d3": "d3"}]}
-        expected_results = {"data": [{"s1": "s1", "d1": "d1"}, {"s2": "s2", "d2": "d2"}, {"d3": "d3"}]}
+        source = {"data": [{"s1": "s1"}, {"s2": "s2"}]}
+        dest = {"data": [{"d1": "d1"}, {"d2": "d2"}, {"d3": "d3"}]}
+        expected_results = {
+            "data": [{"s1": "s1", "d1": "d1"}, {"s2": "s2", "d2": "d2"}, {"d3": "d3"}]
+        }
 
         results = ParserUtils.deep_merge(source, dest)
         assert expected_results == results

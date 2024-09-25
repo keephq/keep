@@ -413,7 +413,7 @@ def get_preset_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:presets"])
     ),
-) -> list[AlertDto]:
+) -> list:
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.

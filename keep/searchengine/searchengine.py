@@ -175,9 +175,11 @@ class SearchEngine:
         if self.search_mode == SearchMode.INTERNAL:
             # get the alerts
             alerts_dto = self._get_last_alerts(time_stamp=time_stamp)
+            # performance optimization: get the alerts activation once
+            alerts_activation = self.rule_engine.get_alerts_activation(alerts_dto)
             for preset in presets:
                 filtered_alerts = self.rule_engine.filter_alerts(
-                    alerts_dto, preset.cel_query
+                    alerts_dto, preset.cel_query, alerts_activation
                 )
                 preset.alerts_count = len(filtered_alerts)
                 # update noisy
