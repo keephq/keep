@@ -335,9 +335,26 @@ class ZabbixProvider(BaseProvider):
 
         response = requests.post(url, json=data, headers=headers)
 
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError:
+            self.logger.exception(
+                "Error while sending request to Zabbix API",
+                extra={
+                    "response": response.text,
+                    "tenant_id": self.context_manager.tenant_id,
+                },
+            )
+            raise
         response_json = response.json()
         if "error" in response_json:
+            self.logger.error(
+                "Error while querying zabbix",
+                extra={
+                    "tenant_id": self.context_manager.tenant_id,
+                    "response_json": response_json,
+                },
+            )
             raise ProviderMethodException(response_json.get("error", {}).get("data"))
         return response_json
 

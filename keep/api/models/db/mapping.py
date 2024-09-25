@@ -60,8 +60,8 @@ class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
 class MappingRuleDtoIn(MappRuleDtoBase):
     rows: Optional[list[dict]] = None
 
-    @validator("type", pre=True, always=True)
-    def validate_type(cls, _type, values):
-        if _type == "csv" and not values.get("rows"):
+    @validator("rows", pre=True, always=True)
+    def validate_rows(cls, rows, values):
+        if not rows and values.get("type") == "csv":
             raise ValueError("Mapping of type CSV cannot have empty rows")
-        return _type
+        return rows

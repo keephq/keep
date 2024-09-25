@@ -58,7 +58,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <p className="text-gray-400">Date:</p>
         <p>
-          {format(parseISO(event.timestamp), "dd, MMM yyyy - HH:mm.ss 'UTC'")}
+          {format(parseISO(event.timestamp), "dd, MMM yyyy - HH:mm:ss 'UTC'")}
         </p>
 
         <p className="text-gray-400">Action:</p>
@@ -134,7 +134,7 @@ interface AlertBarProps {
   auditEvents: AuditEvent[];
   startTime: Date;
   endTime: Date;
-  timeScale: "minutes" | "hours" | "days";
+  timeScale: "seconds" | "minutes" | "hours" | "days";
   onEventClick: (event: AuditEvent | null) => void;
   selectedEventId: string | null;
   isFirstRow: boolean;
@@ -285,14 +285,13 @@ export default function IncidentTimeline({
       const startTime = new Date(Math.min(...allTimestamps));
       const endTime = new Date(Math.max(...allTimestamps));
 
-      // Add padding to start and end times
-      const paddedStartTime = new Date(startTime.getTime() - 1000 * 60 * 10); // 10 minutes before
-      const paddedEndTime = new Date(endTime.getTime() + 1000 * 60 * 10); // 10 minutes after
+      // Add padding to end time only
+      const paddedEndTime = new Date(endTime.getTime() + 1000 * 60); // 1 minute after
 
-      const totalDuration = paddedEndTime.getTime() - paddedStartTime.getTime();
+      const totalDuration = paddedEndTime.getTime() - startTime.getTime();
       const pixelsPerMillisecond = 5000 / totalDuration; // Assuming 5000px minimum width
 
-      let timeScale: "minutes" | "hours" | "days";
+      let timeScale: "seconds" | "minutes" | "hours" | "days";
       let intervalDuration: number;
       let formatString: string;
 
@@ -304,21 +303,25 @@ export default function IncidentTimeline({
         timeScale = "hours";
         intervalDuration = 60 * 60 * 1000;
         formatString = "HH:mm";
-      } else {
+      } else if (totalDuration > 60 * 60 * 1000) {
         timeScale = "minutes";
         intervalDuration = 5 * 60 * 1000; // 5-minute intervals
+        formatString = "HH:mm";
+      } else {
+        timeScale = "seconds";
+        intervalDuration = 10 * 1000; // 10-second intervals
         formatString = "HH:mm:ss";
       }
 
       const intervals: Date[] = [];
-      let currentTime = paddedStartTime;
+      let currentTime = startTime;
       while (currentTime <= paddedEndTime) {
         intervals.push(new Date(currentTime));
         currentTime = new Date(currentTime.getTime() + intervalDuration);
       }
 
       return {
-        startTime: paddedStartTime,
+        startTime,
         endTime: paddedEndTime,
         intervals,
         formatString,
@@ -374,22 +377,11 @@ export default function IncidentTimeline({
                     pixelsPerMillisecond
                   }px`,
                   transform: "translateX(-50%)",
-                  visibility: index === 0 ? "hidden" : "visible", // Hide the first label
                 }}
               >
                 {format(time, formatString)}
               </div>
             ))}
-            {/* Add an extra label for the first time, positioned at the start */}
-            <div
-              className="text-xs px-2 text-gray-400 absolute whitespace-nowrap"
-              style={{
-                left: "0px",
-                transform: "translateX(0)",
-              }}
-            >
-              {format(intervals[0], formatString)}
-            </div>
           </div>
 
           {/* Alert bars */}

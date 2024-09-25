@@ -14,12 +14,36 @@ import { toast } from "react-toastify";
 import { getApiURL } from "utils/apiUrl";
 import { IncidentDto } from "./models";
 import { useIncidents } from "utils/hooks/useIncidents";
+import { Session } from "next-auth";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
   createCallback?: (id: string) => void;
   exitCallback?: () => void;
 }
+
+export const updateIncidentRequest = async (
+  session: Session | null,
+  incidentId: string,
+  incidentName: string,
+  incidentUserSummary: string,
+  incidentAssignee: string
+) => {
+  const apiUrl = getApiURL();
+  const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      user_generated_name: incidentName,
+      user_summary: incidentUserSummary,
+      assignee: incidentAssignee,
+    }),
+  });
+  return response;
+};
 
 export default function CreateOrUpdateIncident({
   incidentToEdit,
@@ -88,19 +112,13 @@ export default function CreateOrUpdateIncident({
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backend.
   const updateIncident = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
-    const response = await fetch(`${apiUrl}/incidents/${incidentToEdit?.id}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_generated_name: incidentName,
-        user_summary: incidentUserSummary,
-        assignee: incidentAssignee,
-      }),
-    });
+    const response = await updateIncidentRequest(
+      session,
+      incidentToEdit?.id!,
+      incidentName,
+      incidentUserSummary,
+      incidentAssignee
+    );
     if (response.ok) {
       exitEditMode();
       await mutate();
