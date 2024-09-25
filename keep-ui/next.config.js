@@ -41,8 +41,8 @@ const nextConfig = {
       : [
           {
             source: "/",
-            destination: "/providers",
-            permanent: true,
+            destination: "/incidents",
+            permanent: process.env.ENV === "production",
           },
         ];
   },
