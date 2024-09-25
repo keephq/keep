@@ -5,7 +5,6 @@ SentryProvider is a class that provides a way to read data from Sentry.
 import dataclasses
 import datetime
 import logging
-from typing import Optional
 
 import pydantic
 import requests
@@ -202,9 +201,7 @@ class SentryProvider(BaseProvider):
         return validated_scopes
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["SentryProvider"] = None
-    ) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.info(
             "Formatting Sentry alert",

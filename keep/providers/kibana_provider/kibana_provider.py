@@ -6,7 +6,7 @@ import dataclasses
 import datetime
 import json
 import uuid
-from typing import Literal, Optional
+from typing import Literal
 from urllib.parse import urlparse
 
 import pydantic
@@ -471,9 +471,7 @@ class KibanaProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["KibanaProvider"] = None
-    ) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         """
         Formats an alert from Kibana to a standard format.
 
