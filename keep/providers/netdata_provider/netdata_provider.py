@@ -2,12 +2,11 @@
 Netdata is a cloud-based monitoring tool that provides real-time monitoring of servers, applications, and devices.
 """
 
-from typing import Optional
-
-from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
 
 class NetdataProvider(BaseProvider):
     """Get alerts from Netdata into Keep."""
@@ -60,19 +59,28 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
         pass
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["NetdataProvider"] = None
-    ) -> AlertDto:
-        
+    def _format_alert(event: dict) -> AlertDto:
         alert = AlertDto(
             id=event["id"] if "id" in event else None,
             name=event["name"] if "name" in event else None,
             host=event["host"],
             message=event["message"],
-            severity=NetdataProvider.SEVERITIES_MAP.get(event["severity"], AlertSeverity.INFO),
-            status=NetdataProvider.STATUS_MAP.get(event["status"]["text"], AlertStatus.INFO) if "status" in event else AlertStatus.INFO,
+            severity=NetdataProvider.SEVERITIES_MAP.get(
+                event["severity"], AlertSeverity.INFO
+            ),
+            status=(
+                NetdataProvider.STATUS_MAP.get(
+                    event["status"]["text"], AlertStatus.INFO
+                )
+                if "status" in event
+                else AlertStatus.INFO
+            ),
             alert=event["alert"] if "alert" in event else None,
-            url=event["alert_url"] or event["url"] if "alert_url" in event or "url" in event else None,
+            url=(
+                event["alert_url"] or event["url"]
+                if "alert_url" in event or "url" in event
+                else None
+            ),
             chart=event["chart"] if "chart" in event else None,
             alert_class=event["class"] if "class" in event else None,
             context=event["context"] if "context" in event else None,
@@ -80,12 +88,17 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
             duration=event["duration"] if "duration" in event else None,
             info=event["info"] if "info" in event else None,
             space=event["space"] if "space" in event else None,
-            total_critical=event["total_critical"] if "total_critical" in event else None,
-            total_warnings=event["total_warnings"] if "total_warnings" in event else None,
+            total_critical=(
+                event["total_critical"] if "total_critical" in event else None
+            ),
+            total_warnings=(
+                event["total_warnings"] if "total_warnings" in event else None
+            ),
             value=event["value"] if "value" in event else None,
         )
 
         return alert
-    
+
+
 if __name__ == "__main__":
     pass
