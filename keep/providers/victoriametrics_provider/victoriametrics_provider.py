@@ -4,7 +4,6 @@ VictoriametricsProvider is a class that allows to install webhooks and get alert
 
 import dataclasses
 import datetime
-from typing import Optional
 
 import pydantic
 import requests
@@ -80,7 +79,7 @@ receivers:
         "high": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
         "low": AlertSeverity.LOW,
-        "test": AlertSeverity.INFO
+        "test": AlertSeverity.INFO,
     }
 
     STATUS_MAP = {
@@ -92,19 +91,26 @@ receivers:
     }
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        response = requests.get(f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}")
+        response = requests.get(
+            f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}"
+        )
         if response.status_code == 200:
             connected_to_client = True
             self.logger.info("Connected to client successfully")
         else:
-            connected_to_client = f"Error while connecting to client, {response.status_code}"
-            self.logger.error("Error while connecting to client", extra={"status_code": response.status_code})
+            connected_to_client = (
+                f"Error while connecting to client, {response.status_code}"
+            )
+            self.logger.error(
+                "Error while connecting to client",
+                extra={"status_code": response.status_code},
+            )
         return {
-            'connected': connected_to_client,
+            "connected": connected_to_client,
         }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         self._host = None
         super().__init__(context_manager, provider_id, config)
@@ -131,7 +137,7 @@ receivers:
 
         # if the user explicitly supplied a host with http/https, use it
         if self.authentication_config.VMAlertHost.startswith(
-                "http://"
+            "http://"
         ) or self.authentication_config.VMAlertHost.startswith("https://"):
             self._host = self.authentication_config.VMAlertHost
             return self.authentication_config.VMAlertHost.rstrip("/")
@@ -154,18 +160,16 @@ receivers:
             return self.authentication_config.VMAlertHost.rstrip("/")
 
     @staticmethod
-    def _format_alert(
-            event: dict, provider_instance: Optional["BaseProvider"] = None
-    ) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
         alerts = []
         for alert in event["alerts"]:
             alerts.append(
                 AlertDto(
                     name=alert["labels"]["alertname"],
-                    fingerprint=alert['fingerprint'],
-                    id=alert['fingerprint'],
-                    description=alert["annotations"]['description'],
-                    message=alert["annotations"]['summary'],
+                    fingerprint=alert["fingerprint"],
+                    id=alert["fingerprint"],
+                    description=alert["annotations"]["description"],
+                    message=alert["annotations"]["summary"],
                     status=VictoriametricsProvider.STATUS_MAP[alert["status"]],
                     startedAt=alert["startsAt"],
                     url=alert["generatorURL"],
@@ -179,19 +183,23 @@ receivers:
         return alerts
 
     def _get_alerts(self) -> list[AlertDto]:
-        response = requests.get(f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/alerts")
+        response = requests.get(
+            f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/alerts"
+        )
         if response.status_code == 200:
             alerts = []
             response = response.json()
-            for alert in response['data']['alerts']:
+            for alert in response["data"]["alerts"]:
                 alerts.append(
                     AlertDto(
                         name=alert["name"],
-                        id=alert['id'],
-                        description=alert["annotations"]['description'],
-                        message=alert["annotations"]['summary'],
+                        id=alert["id"],
+                        description=alert["annotations"]["description"],
+                        message=alert["annotations"]["summary"],
                         status=VictoriametricsProvider.STATUS_MAP[alert["state"]],
-                        severity=VictoriametricsProvider.STATUS_MAP[alert["labels"]["severity"]],
+                        severity=VictoriametricsProvider.STATUS_MAP[
+                            alert["labels"]["severity"]
+                        ],
                         startedAt=alert["activeAt"],
                         url=alert["source"],
                         source=["victoriametrics"],
@@ -204,7 +212,7 @@ receivers:
             self.logger.error("Failed to get alerts", extra=response.json())
             raise Exception("Could not get alerts")
 
-    def _query(self, query="", start="", end="", step="", queryType="", **kwargs:dict):
+    def _query(self, query="", start="", end="", step="", queryType="", **kwargs: dict):
         if queryType == "query":
             response = requests.get(
                 f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/query",
@@ -213,9 +221,11 @@ receivers:
             if response.status_code == 200:
                 return response.json()
             else:
-                self.logger.error("Failed to perform instant query", extra=response.json())
+                self.logger.error(
+                    "Failed to perform instant query", extra=response.json()
+                )
                 raise Exception("Could not perform instant query")
-            
+
         elif queryType == "query_range":
             response = requests.get(
                 f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/query_range",
@@ -224,9 +234,11 @@ receivers:
             if response.status_code == 200:
                 return response.json()
             else:
-                self.logger.error("Failed to perform range query", extra=response.json())
+                self.logger.error(
+                    "Failed to perform range query", extra=response.json()
+                )
                 raise Exception("Could not range query")
-            
+
         else:
             self.logger.error("Invalid query type")
             raise Exception("Invalid query type")
