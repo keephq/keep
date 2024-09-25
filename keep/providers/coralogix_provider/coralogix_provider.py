@@ -2,12 +2,11 @@
 Coralogix is a modern observability platform delivers comprehensive visibility into all your logs, metrics, traces and security events with end-to-end monitoring.
 """
 
-from typing import Optional
-
-from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+
 
 class CoralogixProvider(BaseProvider):
     """Get alerts from Coralogix into Keep."""
@@ -49,7 +48,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
     FINGERPRINT_FIELDS = ["alertUniqueIdentifier"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -59,42 +58,71 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         """
         # no config
         pass
-    
+
     def get_value_by_key(fields: dict, key: str):
         for item in fields:
             if item["key"] == key:
                 return item["value"]
         return None
-    
+
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["CoralogixProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         alert = AlertDto(
-            id=CoralogixProvider.get_value_by_key(event["fields"], "alertUniqueIdentifier") if "fields" in event else None,
+            id=(
+                CoralogixProvider.get_value_by_key(
+                    event["fields"], "alertUniqueIdentifier"
+                )
+                if "fields" in event
+                else None
+            ),
             alert_id=event["alert_id"] if "alert_id" in event else None,
             name=event["name"] if "name" in event else None,
             description=event["description"] if "description" in event else None,
-            status=CoralogixProvider.STATUS_MAP.get(
-                event["alert_action"]),
+            status=CoralogixProvider.STATUS_MAP.get(event["alert_action"]),
             severity=CoralogixProvider.SEVERITIES_MAP.get(
-                CoralogixProvider.get_value_by_key(event["fields"], "severityLowercase")),
-            lastReceived=CoralogixProvider.get_value_by_key(event["fields"], "timestampISO") if "fields" in event else None,
-            alertUniqueIdentifier=CoralogixProvider.get_value_by_key(event["fields"], "alertUniqueIdentifier") if "fields" in event else None,
+                CoralogixProvider.get_value_by_key(event["fields"], "severityLowercase")
+            ),
+            lastReceived=(
+                CoralogixProvider.get_value_by_key(event["fields"], "timestampISO")
+                if "fields" in event
+                else None
+            ),
+            alertUniqueIdentifier=(
+                CoralogixProvider.get_value_by_key(
+                    event["fields"], "alertUniqueIdentifier"
+                )
+                if "fields" in event
+                else None
+            ),
             uuid=event["uuid"] if "uuid" in event else None,
             threshold=event["threshold"] if "threshold" in event else None,
             timewindow=event["timewindow"] if "timewindow" in event else None,
-            group_by_labels=event["group_by_labels"] if "group_by_labels" in event else None,
+            group_by_labels=(
+                event["group_by_labels"] if "group_by_labels" in event else None
+            ),
             alert_url=event["alert_url"] if "alert_url" in event else None,
             log_url=event["log_url"] if "log_url" in event else None,
-            team=CoralogixProvider.get_value_by_key(event["fields"], "team") if "fields" in event else None,
-            priority=CoralogixProvider.get_value_by_key(event["fields"], "priority") if "fields" in event else None,
-            computer=CoralogixProvider.get_value_by_key(event["fields"], "computer") if "fields" in event else None,
+            team=(
+                CoralogixProvider.get_value_by_key(event["fields"], "team")
+                if "fields" in event
+                else None
+            ),
+            priority=(
+                CoralogixProvider.get_value_by_key(event["fields"], "priority")
+                if "fields" in event
+                else None
+            ),
+            computer=(
+                CoralogixProvider.get_value_by_key(event["fields"], "computer")
+                if "fields" in event
+                else None
+            ),
             fields=event["fields"] if "fields" in event else None,
             source=["coralogix"],
         )
 
         return alert
-    
+
+
 if __name__ == "__main__":
     pass

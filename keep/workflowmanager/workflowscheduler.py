@@ -42,6 +42,8 @@ class WorkflowScheduler:
 
     async def start(self):
         self.logger.info("Starting workflows scheduler")
+        # Shahar: fix for a bug in unit tests
+        self._stop = False
         thread = threading.Thread(target=self._start)
         thread.start()
         self.threads.append(thread)
@@ -222,7 +224,7 @@ class WorkflowScheduler:
                 execution_number=unique_execution_number,
                 fingerprint=alert.fingerprint,
                 event_id=alert.event_id,
-                event_type="alert"
+                event_type="alert",
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
@@ -338,7 +340,6 @@ class WorkflowScheduler:
                 event_id = event.event_id
                 event_type = "alert"
                 fingerprint = event.fingerprint
-
 
             # In manual, we create the workflow execution id sync so it could be tracked by the caller (UI)
             # In event (e.g. alarm), we will create it here

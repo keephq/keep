@@ -285,7 +285,7 @@ class ProvidersService:
                     provisioned=True,
                     validate_scopes=False,
                 )
+                logger.info(f"Provider {provider_name} provisioned")
             except Exception:
                 logger.exception(f"Failed to provision provider {provider_name}")
                 continue
-            logger.info(f"Provider {provider_name} provisioned")

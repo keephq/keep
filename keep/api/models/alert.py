@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import pytz
@@ -124,7 +124,8 @@ class AlertDto(BaseModel):
     lastReceived: str
     firingStartTime: str | None = None
     environment: str = "undefined"
-    isDuplicate: bool | None = None
+    isFullDuplicate: bool | None = False
+    isPartialDuplicate: bool | None = False
     duplicateReason: str | None = None
     service: str | None = None
     source: list[str] | None = []
@@ -305,7 +306,6 @@ class AlertDto(BaseModel):
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
-                    "isDuplicate": False,
                     "duplicateReason": None,
                     "service": "backend",
                     "source": ["keep"],
@@ -470,6 +470,36 @@ class IncidentDto(IncidentDtoIn):
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
         return dto
+
+
+class DeduplicationRuleDto(BaseModel):
+    id: str | None  # UUID
+    name: str
+    description: str
+    default: bool
+    distribution: list[dict]  # list of {hour: int, count: int}
+    provider_id: str | None  # None for default rules
+    provider_type: str
+    last_updated: str | None
+    last_updated_by: str | None
+    created_at: str | None
+    created_by: str | None
+    ingested: int
+    dedup_ratio: float
+    enabled: bool
+    fingerprint_fields: list[str]
+    full_deduplication: bool
+    ignore_fields: list[str]
+
+
+class DeduplicationRuleRequestDto(BaseModel):
+    name: str
+    description: Optional[str] = None
+    provider_type: str
+    provider_id: Optional[str] = None
+    fingerprint_fields: list[str]
+    full_deduplication: bool = False
+    ignore_fields: Optional[list[str]] = None
 
 
 class IncidentStatusChangeDto(BaseModel):
