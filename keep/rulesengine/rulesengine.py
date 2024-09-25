@@ -2,12 +2,33 @@ import json
 import logging
 
 import celpy
+import celpy.c7nlib
+import celpy.celparser
+import celpy.celtypes
+import celpy.evaluation
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
+
+# Shahar: this is performance enhancment https://github.com/cloud-custodian/cel-python/issues/68
+
+celpy.evaluation.Referent.__repr__ = lambda self: ""
+celpy.evaluation.NameContainer.__repr__ = lambda self: ""
+celpy.Activation.__repr__ = lambda self: ""
+celpy.Activation.__str__ = lambda self: ""
+celpy.celtypes.MapType.__repr__ = lambda self: ""
+celpy.celtypes.DoubleType.__repr__ = lambda self: ""
+celpy.celtypes.BytesType.__repr__ = lambda self: ""
+celpy.celtypes.IntType.__repr__ = lambda self: ""
+celpy.celtypes.UintType.__repr__ = lambda self: ""
+celpy.celtypes.ListType.__repr__ = lambda self: ""
+celpy.celtypes.StringType.__repr__ = lambda self: ""
+celpy.celtypes.TimestampType.__repr__ = lambda self: ""
+celpy.c7nlib.C7NContext.__repr__ = lambda self: ""
+celpy.celparser.Tree.__repr__ = lambda self: ""
 
 
 class RulesEngine:
@@ -165,6 +186,7 @@ class RulesEngine:
         """
         logger = logging.getLogger(__name__)
         env = celpy.Environment()
+
         # tb: temp hack because this function is super slow
         if cel == STATIC_PRESETS.get("feed", {}).options[0].get("value"):
             return [
