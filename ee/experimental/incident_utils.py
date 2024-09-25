@@ -30,6 +30,7 @@ from keep.api.core.db import (
     get_pmi_values_from_temp_file,
     get_tenant_config,
     write_tenant_config,
+    delete_incident_by_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ ALERT_VALIDITY_THRESHOLD = 3600
 STRIDE_DENOMINATOR = 4
 DEFAULT_TEMP_DIR_LOCATION = "./ee/experimental/ai_temp"
 PMI_SLIDING_WINDOW = 3600
+
 
 def calculate_pmi_matrix(
     ctx: dict | None,  # arq context
@@ -139,14 +141,63 @@ def get_component_first_seen_time(component: Set[str], alerts: List[Alert]) -> d
     return min(alert.timestamp for alert in alerts if alert.fingerprint in component)
 
 
+def are_mergeable_incidents(incident1: Incident, incident2: Incident, pmi_values, fingerpint2idx, 
+                            pmi_threshold, delete_nodes, knee_threshold) -> bool:
+    incident1_fingerprints = set(alert.fingerprint for alert in incident1.alerts)
+    incident2_fingerprints = set(alert.fingerprint for alert in incident2.alerts)
+    
+    graph = create_graph(incident1.tenant_id, list(incident1_fingerprints.union(incident2_fingerprints)), pmi_values, 
+                          fingerpint2idx, pmi_threshold, delete_nodes, knee_threshold)
+
+    return len(list(nx.connected_components(graph))) == 1
+
+
+def merge_incidents(tenant_id: str, incidents: List[Incident], new_incident_ids: List[str], 
+                    updated_incident_ids: List[str], incident_ids_for_processing: List[str], 
+                    pmi_values, fingerprint2idx, pmi_threshold, delete_nodes, knee_threshold) -> Tuple[List[Incident], List[str], List[str], List[str]]:
+    # merge incidents
+    incidents_to_delete = []
+    for idx_1, incident_1 in enumerate(incidents):
+        idx_1_was_merged = False
+        for idx_2, incident_2 in enumerate(incidents[idx_1 + 1:]):
+            if are_mergeable_incidents(incident_1, incident_2, pmi_values, fingerprint2idx, pmi_threshold, delete_nodes, knee_threshold):
+                incidents[idx_2].alerts.extend(incidents[idx_1].alerts)
+                idx_1_was_merged = True
+                
+        if idx_1_was_merged:
+            incidents_to_delete.append(idx_1)
+            
+    logger.info(f'Detected {len(incidents_to_delete)} incidents to be merged. Cleaning up...', 
+                extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
+            
+    # clean up incidents from database
+    new_incident_ids = set(new_incident_ids)
+    updated_incident_ids = set(updated_incident_ids)
+    incident_ids_for_processing = set(incident_ids_for_processing)
+    
+    for idx in incidents_to_delete:
+        if get_incident_by_id(tenant_id, incidents[idx].id):
+            logger.info(f'Deleting incident {incidents[idx].id}', 
+                        extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
+            delete_incident_by_id(tenant_id, incidents[idx].id)
+            
+        if incidents[idx].id in new_incident_ids:
+            new_incident_ids.remove(incidents[idx].id)
+        if incidents[idx].id in updated_incident_ids:
+            updated_incident_ids.remove(incidents[idx].id)
+        if incidents[idx].id in incident_ids_for_processing:
+            incident_ids_for_processing.remove(incidents[idx].id)
+            
+        incidents.pop(idx)
+        
+    return incidents, list(new_incident_ids), list(updated_incident_ids), list(incident_ids_for_processing)
+
 def process_graph_component(component: Set[str], batch_incidents: List[Incident], batch_alerts: List[Alert], batch_fingerprints: Set[str],
                              tenant_id: str, min_incident_size: int, incident_validity_threshold: timedelta) -> Tuple[str, bool]:
     is_component_merged = False
     for incident in batch_incidents:
         incident_fingerprints = set(alert.fingerprint for alert in incident.alerts)
         if incident_fingerprints.issubset(component):
-            if not incident_fingerprints.intersection(batch_fingerprints):
-                continue
             logger.info(f"Found possible extension for incident {incident.id}", 
                         extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
                     
@@ -167,8 +218,8 @@ def process_graph_component(component: Set[str], batch_incidents: List[Incident]
                                     extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
             
     if not is_component_merged:
-        if len(component) >= min_incident_size:
-            logger.info(f"Creating new incident with {len(component)} alerts", 
+        if len(component.intersection(batch_fingerprints)) >= min_incident_size:
+            logger.info(f"Creating new incident with {len(component.intersection(batch_fingerprints))} fingerprints", 
                         extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
             return create_new_incident_inmem(component, batch_alerts, tenant_id)
         else:
@@ -180,7 +231,7 @@ def process_alert_batch(batch_alerts: List[Alert], batch_incidents: list[Inciden
     
     batch_fingerprints = set([alert.fingerprint for alert in batch_alerts])
         
-    amended_fingerprints = set(batch_fingerprints)
+    amended_fingerprints = batch_fingerprints.copy()
     for incident in batch_incidents:
         incident_fingerprints = set(alert.fingerprint for alert in incident.alerts)
             
@@ -196,13 +247,16 @@ def process_alert_batch(batch_alerts: List[Alert], batch_incidents: list[Inciden
     batch_updated_incidents = []
         
     for component in nx.connected_components(amended_graph):
-            incident, is_updated = process_graph_component(component, batch_incidents, batch_alerts, batch_fingerprints, tenant_id, min_incident_size, incident_validity_threshold)
-            if incident:
-                batch_incident_ids_for_processing.append(incident.id)
-                if is_updated:
-                    batch_updated_incidents.append(incident)
-                else:
-                    batch_new_incidents.append(incident)
+        if not component.intersection(batch_fingerprints):
+            continue
+        
+        incident, is_updated = process_graph_component(component, batch_incidents, batch_alerts, batch_fingerprints, tenant_id, min_incident_size, incident_validity_threshold)
+        if incident:
+            batch_incident_ids_for_processing.append(incident.id)
+            if is_updated:
+                batch_updated_incidents.append(incident)
+            else:
+                batch_new_incidents.append(incident)
     
     return batch_incident_ids_for_processing, batch_new_incidents, batch_updated_incidents
 
@@ -290,6 +344,7 @@ async def mine_incidents_and_create_objects(
     incident_validity_threshold: timedelta = None,
     general_temp_dir: str = None,
     alert_validity_threshold: int = None,
+    merge_incidents: bool = None,
 ) -> Dict[str, List[Incident]]:
     """
     This function mines incidents from alerts and creates incidents in the database.
@@ -364,6 +419,9 @@ async def mine_incidents_and_create_objects(
 
     if not knee_threshold:
         knee_threshold = os.environ.get("KNEE_THRESHOLD", 0.8)
+        
+    if not merge_incidents:
+        merge_incidents = os.environ.get("MERGE_INCIDENTS", True)
 
     status = calculate_pmi_matrix(ctx, tenant_id, min_alert_number=min_alert_number)
     if status.get("status") == "failed":
@@ -441,17 +499,19 @@ async def mine_incidents_and_create_objects(
         updated_incident_ids.extend([incident.id for incident in batch_updated_incidents])
         incident_ids_for_processing.extend(batch_incident_ids_for_processing)
         
-    logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}", 
-                extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
-    tenant_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
-    write_tenant_config(tenant_id, tenant_config)
+    if merge_incidents:
+        incidents, new_incident_ids, updated_incident_ids, incident_ids_for_processing \
+            = merge_incidents(tenant_id, incidents, new_incident_ids, updated_incident_ids,
+                              incident_ids_for_processing)
     
     logger.info(f"Writing {len(incidents)} incidents to database", 
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
     db_incident_ids_for_processing = []
     db_new_incident_ids = []
     db_updated_incident_ids = []
-    for incident in incidents:
+    for incident in tqdm(incidents, desc="Writing incidents to database", total=len(incidents)):
+        logger.info(f"Writing incident {incident.id} to database", 
+                    extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
         if not get_incident_by_id(tenant_id, incident.id):
             incident_dict = {
                 "ai_generated_name": incident.ai_generated_name,
@@ -460,6 +520,8 @@ async def mine_incidents_and_create_objects(
             }
             db_incident = create_incident_from_dict(tenant_id, incident_dict)
             
+            logger.info(f"Created a record for incident {db_incident.id} in database. Database incident id: {db_incident.id}", 
+                        extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
             incident_id = db_incident.id
         else: 
             incident_id = incident.id
@@ -475,6 +537,11 @@ async def mine_incidents_and_create_objects(
         
                 
         add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert.id for alert in incident.alerts])
+        
+    logger.info(f"Saving last correlated batch start timestamp: {datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))}", 
+                extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})
+    tenant_config["last_correlated_batch_start"] = datetime.isoformat(alert_lower_timestamp + timedelta(seconds= (n_batches - 1) * alert_batch_stride))
+    write_tenant_config(tenant_id, tenant_config)
         
     logger.info(f"Scheduling {len(db_incident_ids_for_processing)} incidents for name / summary generation", 
                 extra={"tenant_id": tenant_id, "algorithm": ALGORITHM_VERBOSE_NAME})

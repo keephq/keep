@@ -2430,16 +2430,23 @@ def get_alerts_data_for_incident(
         services = []
         severities = []
 
-        for service, source, severity in alerts_data:
+        for idx, (service, source, severity) in enumerate(alerts_data):
             if source:
                 sources.append(source)
             if service:
                 services.append(service)
             if severity:
-                if isinstance(severity, int):
-                    severities.append(IncidentSeverity.from_number(severity))
-                else:
-                    severities.append(IncidentSeverity(severity))
+                try:
+                    if isinstance(severity, int):
+                        severities.append(IncidentSeverity.from_number(severity))
+                    else:
+                        severities.append(IncidentSeverity(severity))
+                except ValueError:
+                    logging.warning(
+                        f"Invalid severity value: {severity}, setting default.",
+                        extra={"event": alerts_data[idx]},
+                        )
+                    severities.append(IncidentSeverity.INFO)
 
         return {
             "sources": set(sources),
@@ -2505,7 +2512,10 @@ def add_alerts_to_incident_by_incident_id(
                             extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
                 session.commit()
                 session.flush()
-
+                
+        logger.info(f"Added {len(alert_to_incident_entries)}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
+                    extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}})
+        
         started_at, last_seen_at = session.exec(
             select(func.min(Alert.timestamp), func.max(Alert.timestamp))
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
