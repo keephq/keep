@@ -169,9 +169,17 @@ class SearchEngine:
         if self.search_mode == SearchMode.INTERNAL:
             # get the alerts
             alerts_dto = self._get_last_alerts()
+            alerts_activation = self.rule_engine.get_alerts_activation(alerts_dto)
             for preset in presets:
+                import time
+
+                p = time.time()
                 filtered_alerts = self.rule_engine.filter_alerts(
-                    alerts_dto, preset.cel_query
+                    alerts_dto, preset.cel_query, alerts_activation
+                )
+                p2 = time.time()
+                self.logger.info(
+                    f"Filtering alerts for preset {preset.id} took {p2-p} seconds"
                 )
                 preset.alerts_count = len(filtered_alerts)
                 # update noisy
