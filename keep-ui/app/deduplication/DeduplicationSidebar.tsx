@@ -397,8 +397,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
                               Fingerprint fields are used to identify and group
                               similar alerts. Choose fields that uniquely
-                              identify an alert type, such as 'service',
-                              'error_type', or 'affected_component'.
+                              identify an alert type, such as
+                              &apos;service&apos;, &apos;error_type&apos;, or
+                              &apos;affected_component&apos;.
                             </span>
                           </span>
                         </span>
@@ -465,13 +466,14 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                               />
                               <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 p-2 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 w-80 text-center pointer-events-none group-hover:pointer-events-auto">
                                 1. Full deduplication: Keep will discard events
-                                if they are the same (excluding the 'Ignore
-                                Fields').
+                                if they are the same (excluding the &apos;Ignore
+                                Fields&apos;).
                                 <br />
                                 2. Partial deduplication (default): Uses
                                 specified fields to correlate alerts. E.g., two
-                                alerts with same 'service' and 'env' fields will
-                                be deduped into one alert.
+                                alerts with same &apos;service&apos; and
+                                &apos;env&apos; fields will be deduped into one
+                                alert.
                               </span>
                             </span>
                           </span>
