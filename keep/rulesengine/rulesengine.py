@@ -4,7 +4,7 @@ import logging
 import celpy
 
 from keep.api.consts import STATIC_PRESETS
-from keep.api.core.db import get_incident_for_grouping_rule, assign_alert_to_incident
+from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
@@ -37,15 +37,17 @@ class RulesEngine:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
-                    
+
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
-                    incident = get_incident_for_grouping_rule(self.tenant_id, rule, rule.timeframe, rule_fingerprint)
+                    incident = get_incident_for_grouping_rule(
+                        self.tenant_id, rule, rule.timeframe, rule_fingerprint
+                    )
 
                     incident = assign_alert_to_incident(
                         alert_id=event.event_id,
                         incident_id=incident.id,
-                        tenant_id=self.tenant_id
+                        tenant_id=self.tenant_id,
                     )
 
                     incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)

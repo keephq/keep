@@ -47,7 +47,10 @@ def test_app(monkeypatch, request):
     for event_handler in app.router.on_startup:
         asyncio.run(event_handler())
 
-    return app
+    yield app
+
+    for event_handler in app.router.on_shutdown:
+        asyncio.run(event_handler())
 
 
 # Fixture for TestClient using the test_app fixture
