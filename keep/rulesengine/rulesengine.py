@@ -214,38 +214,18 @@ class RulesEngine:
             logger.debug("No CEL expression provided")
             return alerts
         # preprocess the cel expression
-        import time
-
-        p1 = time.time()
         cel = preprocess_cel_expression(cel)
-        p2 = time.time()
         ast = self.env.compile(cel)
-        p3 = time.time()
         prgm = self.env.program(ast)
-        p4 = time.time()
-        logger.info(f"Time for preprocessing: {p2-p1}")
-        logger.info(f"Time for compiling: {p3-p2}")
-        logger.info(f"Time for creating program: {p4-p3}")
-
         filtered_alerts = []
 
-        import time
-
-        count = 0
-        count2 = 0
         for i, alert in enumerate(alerts):
-            p1 = time.time()
             if alerts_activation:
                 activation = alerts_activation[i]
             else:
                 activation = self.get_alerts_activation([alert])[0]
-            p2 = time.time()
-            count2 += p2 - p1
             try:
-                pre_r = time.time()
                 r = prgm.evaluate(activation)
-                post_r = time.time()
-                count += post_r - pre_r
             except celpy.evaluation.CELEvalError as e:
                 # this is ok, it means that the subrule is not relevant for this event
                 if "no such member" in str(e):
@@ -273,6 +253,4 @@ class RulesEngine:
             if r:
                 filtered_alerts.append(alert)
 
-        logger.info(f"Total time for CEL evaluation: {count}")
-        logger.info(f"Time for creating activation: {count2}")
         return filtered_alerts
