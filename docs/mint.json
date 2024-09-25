@@ -85,12 +85,9 @@
       "group": "Platform",
       "pages": [
         "platform/overview",
-        "platform/providers",
         "platform/alerts",
         "platform/alertseverityandstatus",
-        "platform/workflows",
         "platform/settings",
-        "platform/metrics",
         "platform/support"
       ]
     },
@@ -187,7 +184,6 @@
       "group": "Workflows",
       "pages": [
         "workflows/overview",
-        "workflows/getting-started",
         {
           "group": "Syntax",
           "pages": [
