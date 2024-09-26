@@ -7,9 +7,10 @@ type Option<T> = {
   value: T;
 };
 
-type AutocompleteInputProps<T> = {
+export type AutocompleteInputProps<T> = {
   options: Option<T>[];
-  onSelect: (option: Option<T>, clearInput: () => void) => void;
+  onSelect: (option: Option<T>) => void;
+  getId: (option: Option<T>) => string;
   placeholder: string;
   wrapperClassName?: string;
 } & Omit<React.ComponentProps<typeof TextInput>, "onSelect">;
@@ -17,7 +18,9 @@ type AutocompleteInputProps<T> = {
 export function AutocompleteInput<T>({
   options,
   onSelect,
+  getId,
   placeholder,
+  wrapperClassName,
   ...props
 }: AutocompleteInputProps<T>) {
   const [inputValue, setInputValue] = useState("");
@@ -64,7 +67,8 @@ export function AutocompleteInput<T>({
   const handleOptionClick = (option: Option<T>) => {
     setInputValue(option.label);
     setIsOpen(false);
-    onSelect(option, clearInput);
+    onSelect(option);
+    clearInput();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -78,7 +82,7 @@ export function AutocompleteInput<T>({
       setFocusedIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : prevIndex
       );
-    } else if (e.key === "Enter" || e.key === " ") {
+    } else if (e.key === "Enter" || (e.key === " " && focusedIndex !== -1)) {
       e.preventDefault();
       if (focusedIndex >= 0 && focusedIndex < filteredOptions.length) {
         handleOptionClick(filteredOptions[focusedIndex]);
@@ -101,7 +105,7 @@ export function AutocompleteInput<T>({
   }, [focusedIndex, isOpen]);
 
   return (
-    <div ref={wrapperRef} className={cn("relative", props.wrapperClassName)}>
+    <div ref={wrapperRef} className={cn("relative", wrapperClassName)}>
       <TextInput
         ref={inputRef}
         value={inputValue}
@@ -124,8 +128,8 @@ export function AutocompleteInput<T>({
         >
           {filteredOptions.map((option, index) => (
             <li
-              key={String(option.value)}
-              id={`option-${index}`}
+              key={getId(option)}
+              id={`option-${getId(option)}`}
               role="option"
               aria-selected={index === focusedIndex}
               tabIndex={-1}

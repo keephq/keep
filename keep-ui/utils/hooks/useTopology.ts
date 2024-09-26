@@ -1,100 +1,67 @@
-import { TopologyService, Application } from "app/topology/models";
+import { TopologyService } from "app/topology/models";
 import { useSession } from "next-auth/react";
-import type { Session } from "next-auth";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { useApplications } from "./useApplications";
+import { buildTopologyUrl } from "../../app/topology/data/api";
 
-const isNullOrUndefined = (value: unknown): value is null | undefined =>
-  value === null || value === undefined;
-
-function buildTopologyUrl({
-  providerId,
-  service,
-  environment,
-  session,
-}: {
-  providerId?: string;
-  service?: string;
-  environment?: string;
-  session: Session | null;
-}) {
-  const apiUrl = getApiURL();
-
-  if (!session) {
-    return null;
-  }
-
-  const baseUrl = `${apiUrl}/topology`;
-
-  if (
-    !isNullOrUndefined(providerId) &&
-    !isNullOrUndefined(service) &&
-    !isNullOrUndefined(environment)
-  ) {
-    const params = new URLSearchParams({
-      provider_id: providerId,
-      service_id: service,
-      environment: environment,
-    });
-    return `${baseUrl}?${params.toString()}`;
-  }
-
-  return baseUrl;
-}
+export const topologyBaseKey = `${getApiURL()}/topology`;
 
 interface TopologyUpdate {
   providerType: string;
   providerId: string;
 }
 
+type UseTopologyOptions = {
+  providerId?: string;
+  service?: string;
+  environment?: string;
+  initialData?: TopologyService[];
+};
+
 // TODO: ensure that hook is memoized so could be used multiple times in the tree without rerenders
-export const useTopology = (
-  providerId?: string,
-  service?: string,
-  environment?: string
-) => {
+export const useTopology = ({
+  providerId,
+  service,
+  environment,
+  initialData: fallbackData,
+}: UseTopologyOptions = {}) => {
+  const __debug__prevData = useRef<TopologyService[] | null | undefined>(null);
   const { data: session } = useSession();
   const { data: pollTopology } = useTopologyPolling();
 
-  const url = buildTopologyUrl({ session, providerId, service, environment });
+  const url = !session
+    ? null
+    : buildTopologyUrl({ providerId, service, environment });
 
   const { data, error, mutate } = useSWR<TopologyService[]>(
     url,
-    (url: string) => fetcher(url, session!.accessToken)
+    (url: string) => fetcher(url, session!.accessToken),
+    {
+      fallbackData,
+    }
   );
-
-  const { applications } = useApplications();
 
   useEffect(() => {
     if (pollTopology) {
       mutate();
+      console.log("mutate triggered because of pollTopology");
     }
   }, [pollTopology, mutate]);
 
-  // TODO: remove once endpoint returns application data
-  if (data) {
-    const dataWithApplications = data.map((service) => {
-      const application = applications.find((application) =>
-        application.services.some((s) => s.id === service.service.toString())
-      );
-      return {
-        ...service,
-        applicationObject: application,
-      };
-    });
-
-    return {
-      topologyData: dataWithApplications,
-      error,
-      isLoading: !data && !error,
-      mutate,
-    };
-  }
+  // useEffect(
+  //   function __debug__dataChanged() {
+  //     console.log("data changed", data);
+  //     if (__debug__prevData.current) {
+  //       console.log("prevData", __debug__prevData.current);
+  //     }
+  //     __debug__prevData.current = data;
+  //   },
+  //   [data]
+  // );
 
   return {
     topologyData: data,

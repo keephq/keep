@@ -1,10 +1,11 @@
-import { Button } from "@tremor/react";
-import { TextInput, Textarea, AutocompleteInput } from "@/components/ui";
+import { Callout } from "@tremor/react";
+import { TextInput, Textarea } from "@/components/ui";
 import { useCallback, useState } from "react";
-import { useTopology } from "utils/hooks/useTopology";
-import { Application } from "../models";
+import { TopologyApplication, TopologyServiceMinimal } from "../../models";
 import { Icon } from "@tremor/react";
-import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon } from "@heroicons/react/24/solid";
+import { TopologySearchAutocomplete } from "../TopologySearchAutocomplete";
+import Button from "@/components/ui/Button";
 
 type FormErrors = {
   name?: string;
@@ -13,16 +14,18 @@ type FormErrors = {
 
 type CreateApplicationFormProps = {
   action: "create";
-  application: Pick<Application, "services">;
-  onSubmit: (application: Omit<Application, "id">) => void;
+  application?: Partial<TopologyApplication>;
+  onSubmit: (application: Omit<TopologyApplication, "id">) => Promise<void>;
   onCancel: () => void;
+  onDelete?: undefined;
 };
 
 type UpdateApplicationFormProps = {
   action: "edit";
-  application: Application;
-  onSubmit: (application: Application) => void;
+  application: TopologyApplication;
+  onSubmit: (application: TopologyApplication) => Promise<void>;
   onCancel: () => void;
+  onDelete: () => void;
 };
 
 type CreatOrUpdateApplicationFormProps =
@@ -34,8 +37,10 @@ export function CreateOrUpdateApplicationForm({
   application,
   onSubmit,
   onCancel,
+  onDelete,
 }: CreatOrUpdateApplicationFormProps) {
-  const { topologyData } = useTopology();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const [applicationName, setApplicationName] = useState(
     action === "edit" ? application.name : ""
   );
@@ -45,11 +50,13 @@ export function CreateOrUpdateApplicationForm({
   const applicationId = action === "edit" ? application.id : undefined;
 
   const [selectedServices, setSelectedServices] = useState<
-    { id: string; name: string }[]
+    TopologyServiceMinimal[]
   >(application?.services || []);
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const validateForm = (formValues: Omit<Application, "id">): FormErrors => {
+  const validateForm = (
+    formValues: Omit<TopologyApplication, "id">
+  ): FormErrors => {
     const newErrors: FormErrors = {};
     if (!formValues.name.trim()) {
       newErrors.name = "Enter the application name";
@@ -74,13 +81,23 @@ export function CreateOrUpdateApplicationForm({
         return;
       }
       setErrors({});
-      if (action === "edit") {
-        onSubmit({
-          ...formValues,
-          id: applicationId!,
-        });
-      } else {
-        onSubmit(formValues);
+      setIsLoading(true);
+      if (action === "create") {
+        onSubmit(formValues)
+          .catch((error) => {
+            setError(error);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else if (action === "edit") {
+        onSubmit({ ...formValues, id: applicationId! })
+          .catch((error) => {
+            setError(error);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
       }
     },
     [
@@ -135,7 +152,7 @@ export function CreateOrUpdateApplicationForm({
             <ul className="flex flex-wrap gap-2 max-h-60 overflow-auto p-2">
               {selectedServices.map((service) => (
                 <li
-                  key={service.id}
+                  key={service.service}
                   className="text-sm inline-flex justify-between bg-gray-100 rounded-md"
                 >
                   <span className="text-gray-800 p-2 pr-0">{service.name}</span>
@@ -157,38 +174,50 @@ export function CreateOrUpdateApplicationForm({
               ))}
             </ul>
           )}
-          <AutocompleteInput<string>
-            className="hover:bg-gray-100 border-0 shadow-none !rounded-t-none [&>input]:rounded-t-none"
-            icon={MagnifyingGlassIcon}
-            options={
-              topologyData
-                ?.map((service) => ({
-                  label: service.display_name,
-                  value: service.service.toString(),
-                }))
-                .filter(
-                  (service) =>
-                    !selectedServices.some((s) => s.id === service.value)
-                ) || []
-            }
-            onSelect={(option, clearInput) => {
-              setSelectedServices([
-                ...selectedServices,
-                { id: option.value, name: option.label },
-              ]);
-              clearInput();
-            }}
+          <TopologySearchAutocomplete
             placeholder="Search services by name or id"
+            includeApplications={false}
+            onSelect={({ value }: { value: TopologyServiceMinimal }) => {
+              setSelectedServices([...selectedServices, value]);
+            }}
           />
         </div>
       </div>
-      <div className="flex justify-end gap-2">
-        <Button color="orange" size="xs" variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button color="orange" size="xs" type="submit">
-          {action === "create" ? "Create" : "Update"}
-        </Button>
+      {error && (
+        <Callout title="Error" color="red">
+          {error.message}
+        </Callout>
+      )}
+      <div className="flex justify-between gap-2">
+        {onDelete && (
+          <Button
+            color="red"
+            size="xs"
+            variant="destructive"
+            onClick={onDelete}
+          >
+            Delete
+          </Button>
+        )}
+        <div className="flex flex-1 justify-end gap-2">
+          <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="orange"
+            size="xs"
+            variant="primary"
+            type="submit"
+            loading={isLoading}
+          >
+            {action === "create" ? "Create" : "Update"}
+          </Button>
+        </div>
       </div>
     </form>
   );

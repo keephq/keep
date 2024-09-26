@@ -1,31 +1,173 @@
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { v4 as uuidv4 } from "uuid";
-import { Application } from "../../app/topology/models";
+import { TopologyApplication } from "../../app/topology/models";
+import { getApiURL } from "utils/apiUrl";
+import useSWR from "swr";
+import { fetcher } from "utils/fetcher";
+import { useSession } from "next-auth/react";
+import { useCallback, useMemo, useTransition } from "react";
+import { topologyBaseKey, useTopology } from "./useTopology";
+import { useRevalidateMultiple } from "utils/state";
 
-// Mocked API
-// TODO: replace with actual API
-export function useApplications() {
-  const [applications, setApplications] = useLocalStorage<Application[]>(
-    "applications",
-    []
+type UseTopologyApplicationsOptions = {
+  initialData?: TopologyApplication[];
+};
+
+export function useTopologyApplications({
+  initialData,
+}: UseTopologyApplicationsOptions = {}) {
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+  const revalidateMultiple = useRevalidateMultiple();
+  const { topologyData, mutate: mutateTopology } = useTopology();
+  const topologyApplicationsKey = `${apiUrl}/topology/applications`;
+  const { data, error, isLoading, mutate } = useSWR<TopologyApplication[]>(
+    !session ? null : topologyApplicationsKey,
+    (url: string) => fetcher(url, session!.accessToken),
+    {
+      fallbackData: initialData,
+    }
   );
 
-  function addApplication(
-    application: Omit<Application, "id"> & { id?: string }
-  ) {
-    const id = application.id ?? uuidv4();
-    setApplications([...applications, { ...application, id }]);
-  }
+  const applications = useMemo(() => data ?? [], [data]);
 
-  function removeApplication(applicationId: string) {
-    setApplications(applications.filter((app) => app.id !== applicationId));
-  }
+  const addApplication = useCallback(
+    async (application: Omit<TopologyApplication, "id">) => {
+      const response = await fetch(`${getApiURL()}/topology/applications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify(application),
+      });
+      if (response.ok) {
+        console.log("mutating on success");
+        revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
+      } else {
+        // Rollback optimistic update on error
+        const error = new Error("Failed to add application", {
+          cause: response.statusText,
+        });
+        throw error;
+      }
+      const json = await response.json();
+      return json as TopologyApplication;
+    },
+    [mutate, mutateTopology, session?.accessToken]
+  );
 
-  function updateApplication(application: Application) {
-    setApplications(
-      applications.map((app) => (app.id === application.id ? application : app))
-    );
-  }
+  const updateApplication = useCallback(
+    async (application: TopologyApplication) => {
+      mutate(
+        applications.map((app) =>
+          app.id === application.id ? application : app
+        ),
+        false
+      );
+      if (topologyData) {
+        mutateTopology(
+          topologyData.map((node) => {
+            if (
+              application.services.some((service) =>
+                node.application_ids.includes(service.service)
+              )
+            ) {
+              return {
+                ...node,
+                application_ids: node.application_ids.concat(application.id),
+              };
+            }
+            return node;
+          })
+        );
+      }
+      const response = await fetch(
+        `${getApiURL()}/topology/applications/${application.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: JSON.stringify(application),
+        }
+      );
+      if (response.ok) {
+        revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
+      } else {
+        // Rollback optimistic update on error
+        mutate(applications, false);
+        mutateTopology(topologyData, false);
+        const error = new Error("Failed to update application", {
+          cause: response.statusText,
+        });
+        throw error;
+      }
+      return response;
+    },
+    [
+      applications,
+      mutate,
+      mutateTopology,
+      revalidateMultiple,
+      session?.accessToken,
+      topologyApplicationsKey,
+      topologyData,
+    ]
+  );
 
-  return { applications, addApplication, removeApplication, updateApplication };
+  const deleteApplication = useCallback(
+    async (applicationId: string) => {
+      mutate(
+        applications.filter((app) => app.id !== applicationId),
+        false
+      );
+      if (topologyData) {
+        mutateTopology(
+          topologyData.map((node) => {
+            if (node.application_ids.includes(applicationId)) {
+              return {
+                ...node,
+                application_ids: node.application_ids.filter(
+                  (id) => id !== applicationId
+                ),
+              };
+            } else {
+              return node;
+            }
+          })
+        );
+      }
+      const response = await fetch(
+        `${getApiURL()}/topology/applications/${applicationId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
+      if (response.ok) {
+        revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
+      } else {
+        // Rollback optimistic update on error
+        mutate(applications, false);
+        mutateTopology(topologyData, false);
+        const error = new Error("Failed to delete application", {
+          cause: response.statusText,
+        });
+        throw error;
+      }
+      return response;
+    },
+    [applications, mutate, mutateTopology, session?.accessToken, topologyData]
+  );
+
+  return {
+    applications,
+    addApplication,
+    updateApplication,
+    removeApplication: deleteApplication,
+    error,
+    isLoading,
+  };
 }

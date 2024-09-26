@@ -1,12 +1,47 @@
 import React, { useEffect, useState } from "react";
 import { Handle, NodeProps, Position } from "@xyflow/react";
-import { useAlerts } from "utils/hooks/useAlerts";
-import { useAlertPolling } from "utils/hooks/usePusher";
+import { useAlerts } from "../../../../utils/hooks/useAlerts";
+import { useAlertPolling } from "../../../../utils/hooks/usePusher";
 import { useRouter } from "next/navigation";
 import { ServiceNodeType } from "../../models";
-import { cn } from "utils/helpers";
+import { cn } from "../../../../utils/helpers";
+import { Badge } from "@tremor/react";
+import { generatePastelColorFromUUID } from "./application-node";
 
 const THRESHOLD = 5;
+
+function uuidToArrayItem(uuidString: string, array: any[]): number {
+  // Remove hyphens and take the first 8 characters
+  const uuidPart = uuidString.replace(/-/g, "").slice(0, 8);
+
+  // Convert to integer and use modulo to get a number between 0 and 21
+  return parseInt(uuidPart, 16) % array.length;
+}
+
+const generate_color_from_id = (id: string) => {
+  // id is a uuid v4
+  const allColors = [
+    "red",
+    "orange",
+    "amber",
+    "yellow",
+    "lime",
+    "green",
+    "emerald",
+    "teal",
+    "cyan",
+    "sky",
+    "blue",
+    "indigo",
+    "violet",
+    "purple",
+    "fuchsia",
+    "pink",
+    "rose",
+  ];
+  const index = uuidToArrayItem(id, allColors);
+  return allColors[index];
+};
 
 export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
   const { useAllAlerts } = useAlerts();
@@ -37,7 +72,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
   return (
     <div
       className={cn(
-        "bg-white p-4 border-2 border-gray-200 rounded-xl shadow-lg relative",
+        "flex flex-col gap-1 bg-white p-4 border-2 border-gray-200 rounded-xl shadow-lg relative transition-colors",
         selected && "border-tremor-brand"
       )}
       onMouseEnter={() => setShowDetails(true)}
@@ -78,12 +113,6 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
               <span>{data.team}</span>
             </div>
           )}
-          {data.application && (
-            <div>
-              <p className="text-gray-500">Application</p>
-              <span>{data.application}</span>
-            </div>
-          )}
           {data.email && (
             <div>
               <p className="text-gray-500">Email</p>
@@ -116,6 +145,17 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
           )}
         </div>
       )}
+      <div className="flex flex-wrap gap-1">
+        {data?.applications?.map((app) => {
+          const color = generate_color_from_id(app.id);
+          // TODO: fix tailwind not generating classes for dynamic colors
+          return (
+            <Badge key={app.id} color={color}>
+              {app.name}
+            </Badge>
+          );
+        })}
+      </div>
       <Handle type="source" position={Position.Right} id="right" />
       <Handle type="target" position={Position.Left} id="left" />
     </div>

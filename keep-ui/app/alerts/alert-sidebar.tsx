@@ -6,7 +6,7 @@ import { IoMdClose } from "react-icons/io";
 // import AlertMenu from "./alert-menu";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
-import TopologyPage from "app/topology/topology";
+import TopologyPage from "../topology/map/ui/topology-page";
 
 type AlertSidebarProps = {
   isOpen: boolean;
