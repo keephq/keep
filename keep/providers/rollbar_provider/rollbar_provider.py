@@ -3,24 +3,25 @@ RollbarProvider is a class that allows to install webhooks and get alerts in Rol
 """
 
 import dataclasses
-import pydantic
-
 import datetime
-import requests
-
-from typing import List, Optional
+from typing import List
 from urllib.parse import urljoin
+
+import pydantic
+import requests
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+
 @pydantic.dataclasses.dataclass
 class RollbarProviderAuthConfig:
     """
     RollbarProviderAuthConfig is a class that allows to authenticate in Rollbar.
     """
+
     rollbarAccessToken: str = dataclasses.field(
         metadata={
             "required": True,
@@ -29,6 +30,7 @@ class RollbarProviderAuthConfig:
         },
         default=None,
     )
+
 
 class RollbarProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Rollbar"
@@ -46,11 +48,11 @@ class RollbarProvider(BaseProvider):
         "error": AlertSeverity.HIGH,
         "info": AlertSeverity.INFO,
         "critical": AlertSeverity.CRITICAL,
-        "debug": AlertSeverity.LOW
+        "debug": AlertSeverity.LOW,
     }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -78,7 +80,7 @@ class RollbarProvider(BaseProvider):
         return {
             "X-Rollbar-Access-Token": self.authentication_config.rollbarAccessToken,
             "accept": "application/json; charset=utf-8",
-            "content-type": "application/json"
+            "content-type": "application/json",
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
@@ -86,50 +88,60 @@ class RollbarProvider(BaseProvider):
         Validate the scopes of the provider.
         """
         try:
-            response = requests.get(self.__get_url("items"), headers=self.__get_headers())
+            response = requests.get(
+                self.__get_url("items"), headers=self.__get_headers()
+            )
             if response.status_code == 200:
-                scopes = {
-                    "authenticated": True
-                }
+                scopes = {"authenticated": True}
             else:
-                self.logger.error("Unable to read projects from Rollbar, statusCode: %s", response.status_code)
+                self.logger.error(
+                    "Unable to read projects from Rollbar, statusCode: %s",
+                    response.status_code,
+                )
                 scopes = {
                     "authenticated": f"Unable to read projects from Rollbar, statusCode: {response.status_code}"
                 }
 
         except Exception as e:
             self.logger.error("Error validating scopes for Rollbar: %s", e)
-            scopes = {
-                "authenticated": f"Error validating scopes for Rollbar: {e}"
-            }
+            scopes = {"authenticated": f"Error validating scopes for Rollbar: {e}"}
 
         return scopes
 
     def __get_occurences(self) -> List[AlertDto]:
         try:
-            response = requests.get(self.__get_url("instances"), headers=self.__get_headers())
+            response = requests.get(
+                self.__get_url("instances"), headers=self.__get_headers()
+            )
 
             if not response.ok:
-              self.logger.error("Failed to get occurrences from Rollbar: %s", response.json())
-              raise Exception("Could not get occurrences from Rollbar")
-            
-            return [AlertDto(
-              id=alert["id"],
-              name=alert["project_id"],
-              environment=alert["data"]["environment"],
-              event_id=alert["data"]["uuid"],
-              language=alert["data"]["language"],
-              message=alert["data"]["body"]["message"]["body"],
-              host=alert["data"]["server"]["host"],
-              pid=alert["data"]["server"]["pid"],
-              severity=RollbarProvider.SEVERITIES_MAP[alert["data"]["level"]],
-              lastReceived=datetime.datetime.fromtimestamp(alert["timestamp"]).isoformat(),
-            ) for alert in response.json()["result"]["instances"]]
-        
+                self.logger.error(
+                    "Failed to get occurrences from Rollbar: %s", response.json()
+                )
+                raise Exception("Could not get occurrences from Rollbar")
+
+            return [
+                AlertDto(
+                    id=alert["id"],
+                    name=alert["project_id"],
+                    environment=alert["data"]["environment"],
+                    event_id=alert["data"]["uuid"],
+                    language=alert["data"]["language"],
+                    message=alert["data"]["body"]["message"]["body"],
+                    host=alert["data"]["server"]["host"],
+                    pid=alert["data"]["server"]["pid"],
+                    severity=RollbarProvider.SEVERITIES_MAP[alert["data"]["level"]],
+                    lastReceived=datetime.datetime.fromtimestamp(
+                        alert["timestamp"]
+                    ).isoformat(),
+                )
+                for alert in response.json()["result"]["instances"]
+            ]
+
         except Exception as e:
             self.logger.error("Error getting occurrences from Rollbar: %s", e)
             raise Exception(f"Error getting occurrences from Rollbar: {e}")
-        
+
     def _get_alerts(self) -> List[AlertDto]:
         alerts = []
         try:
@@ -140,31 +152,32 @@ class RollbarProvider(BaseProvider):
             self.logger.error("Error getting occurrences from Rollbar: %s", e)
 
         return alerts
-        
+
     @staticmethod
-    def _format_alert(
-            event: dict,
-            provider_instance: Optional["RollbarProvider"] = None,
-    ) -> AlertDto:
-        item_data = event['data']['item']
-        occurrence_data = event['data']['occurrence']
+    def _format_alert(event: dict) -> AlertDto:
+        item_data = event["data"]["item"]
+        occurrence_data = event["data"]["occurrence"]
         return AlertDto(
-            id=str(item_data['id']),
-            name=event['event_name'],
+            id=str(item_data["id"]),
+            name=event["event_name"],
             severity=RollbarProvider.SEVERITIES_MAP[occurrence_data["level"]],
-            lastReceived=datetime.datetime.fromtimestamp(item_data['last_occurrence_timestamp']).isoformat(),
-            environment=item_data['environment'],
-            service='Rollbar',
-            source=[occurrence_data['framework']],
-            url=event['data']['url'],
-            message=occurrence_data['body']['message']['body'],
-            description=item_data['title'],
-            event_id=str(occurrence_data['uuid']),
-            labels={'level': item_data['level']},
-            fingerprint=item_data['hash'],
+            lastReceived=datetime.datetime.fromtimestamp(
+                item_data["last_occurrence_timestamp"]
+            ).isoformat(),
+            environment=item_data["environment"],
+            service="Rollbar",
+            source=[occurrence_data["framework"]],
+            url=event["data"]["url"],
+            message=occurrence_data["body"]["message"]["body"],
+            description=item_data["title"],
+            event_id=str(occurrence_data["uuid"]),
+            labels={"level": item_data["level"]},
+            fingerprint=item_data["hash"],
         )
 
-    def setup_webhook(self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True):
+    def setup_webhook(
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    ):
         self.logger.info("Setting up webhook for Rollbar")
         self.logger.info("Enabling Webhook in Rollbar")
         try:
@@ -174,7 +187,7 @@ class RollbarProvider(BaseProvider):
                 json={
                     "enabled": True,
                     "url": f"{keep_api_url}?api_key={api_key}",
-                }
+                },
             )
 
             if response.ok:
@@ -185,19 +198,22 @@ class RollbarProvider(BaseProvider):
                         {
                             "trigger": "occurrence",
                         }
-                    }
+                    },
                 )
                 if response.ok:
                     self.logger.info("Created occurrence rule in Rollbar")
                 else:
-                    self.logger.error("Failed to enable webhook in Rollbar: %s", response.json())
+                    self.logger.error(
+                        "Failed to enable webhook in Rollbar: %s", response.json()
+                    )
                     raise Exception("Failed to enable webhook in Rollbar")
-            
+
             self.logger.info("Webhook enabled in Rollbar")
         except Exception as e:
             self.logger.error("Error setting up webhook for Rollbar: %s", e)
             raise Exception(f"Error setting up webhook for Rollbar: {e}")
-    
+
+
 if __name__ == "__main__":
     import logging
 
@@ -213,7 +229,7 @@ if __name__ == "__main__":
 
     if rollbar_host is None:
         raise Exception("ROLLBAR_HOST is not set")
-    
+
     config = ProviderConfig(
         description="Rollbar Provider",
         authentication={

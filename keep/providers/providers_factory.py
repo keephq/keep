@@ -19,6 +19,7 @@ from keep.api.core.db import (
     get_installed_providers,
     get_linked_providers,
 )
+from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
@@ -341,6 +342,13 @@ class ProvidersFactory:
                 # not all providers have this method (yet ^^)
                 except Exception:
                     alert_example = None
+
+                # Add default fingerprint fields if available
+                if hasattr(provider_class, "FINGERPRINT_FIELDS"):
+                    default_fingerprint_fields = provider_class.FINGERPRINT_FIELDS
+                else:
+                    default_fingerprint_fields = []
+
                 providers.append(
                     Provider(
                         type=provider_type,
@@ -359,6 +367,7 @@ class ProvidersFactory:
                         methods=provider_methods,
                         tags=provider_tags,
                         alertExample=alert_example,
+                        default_fingerprint_fields=default_fingerprint_fields,
                     )
                 )
             except ModuleNotFoundError:
@@ -512,3 +521,39 @@ class ProvidersFactory:
             _linked_providers.append(provider)
 
         return _linked_providers
+
+    @staticmethod
+    def get_default_deduplication_rules() -> list[DeduplicationRuleDto]:
+        """
+        Get the default deduplications for all providers with FINGERPRINT_FIELDS.
+
+        Returns:
+            list: The default deduplications for each provider.
+        """
+        default_deduplications = []
+        all_providers = ProvidersFactory.get_all_providers()
+
+        for provider in all_providers:
+            if provider.default_fingerprint_fields:
+                deduplication_dto = DeduplicationRuleDto(
+                    name=f"{provider.type}_default",
+                    description=f"{provider.display_name} default deduplication rule",
+                    default=True,
+                    distribution=[{"hour": i, "number": 0} for i in range(24)],
+                    provider_type=provider.type,
+                    last_updated="",
+                    last_updated_by="",
+                    created_at="",
+                    created_by="",
+                    ingested=0,
+                    dedup_ratio=0.0,
+                    enabled=True,
+                    fingerprint_fields=provider.default_fingerprint_fields,
+                    # default provider deduplication rules are not full deduplication
+                    full_deduplication=False,
+                    # not relevant for default deduplication rules
+                    ignore_fields=[],
+                )
+                default_deduplications.append(deduplication_dto)
+
+        return default_deduplications

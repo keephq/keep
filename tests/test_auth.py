@@ -203,7 +203,11 @@ def test_api_key_impersonation_without_admin(db_session, client, test_app):
 @pytest.mark.parametrize(
     "test_app",
     [
-        {"AUTH_TYPE": "SINGLE_TENANT", "KEEP_IMPERSONATION_ENABLED": "true"},
+        {
+            "AUTH_TYPE": "SINGLE_TENANT",
+            "KEEP_IMPERSONATION_ENABLED": "true",
+            "KEEP_IMPERSONATION_AUTO_PROVISION": "false",
+        },
     ],
     indirect=True,
 )

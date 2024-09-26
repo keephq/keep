@@ -63,7 +63,7 @@ const GenericPopover: React.FC<PopoverProps> = ({
                         />
                         {content}
                         <Button
-                            className="mt-5"
+                            className="mt-5 float-right"
                             color="orange"
                             onClick={() => {
                                 if (onApply) onApply();

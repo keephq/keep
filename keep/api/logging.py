@@ -93,6 +93,29 @@ LOG_FORMAT_DEVELOPMENT_TERMINAL = "dev_terminal"
 LOG_FORMAT = os.environ.get("LOG_FORMAT", LOG_FORMAT_OPEN_TELEMETRY)
 
 
+class DevTerminalFormatter(logging.Formatter):
+    def format(self, record):
+        message = super().format(record)
+        extra_info = ""
+
+        # Use inspect to go up the stack until we find the _log function
+        frame = inspect.currentframe()
+        while frame:
+            if frame.f_code.co_name == "_log":
+                # Extract extra from the _log function's local variables
+                extra = frame.f_locals.get("extra", {})
+                if extra:
+                    extra_info = " ".join(
+                        [f"[{k}: {v}]" for k, v in extra.items() if k != "raw_event"]
+                    )
+                else:
+                    extra_info = ""
+                break
+            frame = frame.f_back
+
+        return f"{message} {extra_info}"
+
+
 CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -100,18 +123,26 @@ CONFIG = {
         "json": {
             "format": "%(asctime)s %(message)s %(levelname)s %(name)s %(filename)s %(otelTraceID)s %(otelSpanID)s %(otelServiceName)s %(threadName)s %(process)s %(module)s",
             "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
-        }
+        },
+        "dev_terminal": {
+            "()": DevTerminalFormatter,
+            "format": "%(asctime)s - %(levelname)s - %(message)s",
+        },
     },
     "handlers": {
         "default": {
             "level": "DEBUG",
-            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
+            "formatter": (
+                "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else "dev_terminal"
+            ),
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",
         },
         "context": {
             "level": "DEBUG",
-            "formatter": "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else None,
+            "formatter": (
+                "json" if LOG_FORMAT == LOG_FORMAT_OPEN_TELEMETRY else "dev_terminal"
+            ),
             "class": "keep.api.logging.WorkflowDBHandler",
         },
     },

@@ -45,9 +45,23 @@ import sys
 
 
 def test_sanity(browser):
-    browser.goto("http://localhost:3000/providers")
-    browser.wait_for_url("http://localhost:3000/providers")
-    assert "Keep" in browser.title()
+    try:
+        browser.goto("http://localhost:3000/")
+        browser.wait_for_url("http://localhost:3000/incidents")
+        assert "Keep" in browser.title()
+    except Exception:
+        # Current file + test name for unique html and png dump.
+        current_test_name = (
+            "playwright_dump_"
+            + os.path.basename(__file__)[:-3]
+            + "_"
+            + sys._getframe().f_code.co_name
+        )
+
+        browser.screenshot(path=current_test_name + ".png")
+        with open(current_test_name + ".html", "w") as f:
+            f.write(browser.content())
+        raise
 
 
 def test_insert_new_alert(browser):
