@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
+from keep.api.core.db_utils import get_aggreated_field
 from keep.api.models.db.topology import (
     TopologyApplication,
     TopologyApplicationDtoIn,
@@ -37,6 +38,33 @@ class InvalidApplicationDataException(TopologyException):
 
 class ServiceNotFoundException(TopologyException):
     """Raised when a service is not found"""
+
+
+def get_service_application_ids_dict(
+    session: Session, service_ids: List[int]
+) -> dict[int, List[UUID]]:
+    # TODO: add proper types
+    query = (
+        select(
+            TopologyServiceApplication.service_id,
+            get_aggreated_field(
+                session,
+                TopologyServiceApplication.application_id, # type: ignore
+                "application_ids",
+            ),
+        ) # type: ignore
+        .where(TopologyServiceApplication.service_id.in_(service_ids))
+        .group_by(TopologyServiceApplication.service_id)
+    )
+    results = session.exec(query).all()
+    if session.bind is None:
+        raise ValueError("Session is not bound to a database")
+    if session.bind.dialect.name == "sqlite":
+        result = {}
+        for service_id, application_ids in results:
+            result[service_id] = [UUID(app_id) for app_id in application_ids.split(",")]
+        return result
+    return {service_id: application_ids for service_id, application_ids in results}
 
 
 class TopologiesService:
@@ -83,20 +111,8 @@ class TopologiesService:
             ).all()
 
         # Fetch application IDs for all services in a single query
-        service_ids = [service.id for service in services]
-        application_service_query = (
-            select(TopologyServiceApplication)
-            .where(TopologyServiceApplication.service_id.in_(service_ids))
-            .group_by(TopologyServiceApplication.service_id)
-        )
-        application_service_results = session.exec(application_service_query).all()
-
-        # Create a dictionary mapping service IDs to application IDs
-        service_to_app_ids = {}
-        for result in application_service_results:
-            if result.service_id not in service_to_app_ids:
-                service_to_app_ids[result.service_id] = []
-            service_to_app_ids[result.service_id].append(result.application_id)
+        service_ids = [service.id for service in services if service.id is not None]
+        service_to_app_ids = get_service_application_ids_dict(session, service_ids)
 
         logger.info(f"Service to app ids: {service_to_app_ids}")
 

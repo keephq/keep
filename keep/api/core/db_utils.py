@@ -11,8 +11,10 @@ import os
 import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
-from sqlalchemy import func
-from sqlmodel import create_engine
+from sqlalchemy import String, cast, func
+from sqlalchemy.sql.elements import Label
+from sqlalchemy.sql.sqltypes import String
+from sqlmodel import Session, create_engine
 
 # This import is required to create the tables
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -161,10 +163,23 @@ def create_db_engine():
 
 
 def get_json_extract_field(session, base_field, key):
-
     if session.bind.dialect.name == "postgresql":
         return func.json_extract_path_text(base_field, key)
     elif session.bind.dialect.name == "mysql":
         return func.json_unquote(func.json_extract(base_field, "$.{}".format(key)))
     else:
         return func.json_extract(base_field, "$.{}".format(key))
+
+
+def get_aggreated_field(session: Session, column_name: str, alias: str):
+    if session.bind is None:
+        raise ValueError("Session is not bound to a database")
+    
+    if session.bind.dialect.name == "postgresql":
+        return func.array_agg(column_name).label(alias)
+    elif session.bind.dialect.name == "mysql":
+        return func.json_arrayagg(column_name).label(alias)
+    elif session.bind.dialect.name == "sqlite":
+        return func.group_concat(column_name).label(alias)
+    else:
+        return func.array_agg(column_name).label(alias)
