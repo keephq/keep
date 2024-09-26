@@ -1,5 +1,5 @@
 """
-Ilert Provider is a class that allows to create/close incidents in Ilert.
+ilert Provider is a class that allows to create/close incidents in ilert.
 """
 
 import dataclasses
@@ -18,9 +18,9 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
-class IlertIncidentStatus(str, enum.Enum):
+class ilertIncidentStatus(str, enum.Enum):
     """
-    Ilert incident status.
+    ilert incident status.
     """
 
     INVESTIGATING = "INVESTIGATING"
@@ -30,9 +30,9 @@ class IlertIncidentStatus(str, enum.Enum):
 
 
 @pydantic.dataclasses.dataclass
-class IlertProviderAuthConfig:
+class ilertProviderAuthConfig:
     """
-    Ilert authentication configuration.
+    ilert authentication configuration.
     """
 
     ilert_token: str = dataclasses.field(
@@ -53,8 +53,8 @@ class IlertProviderAuthConfig:
     )
 
 
-class IlertProvider(BaseProvider):
-    """Create/Resolve incidents in Ilert."""
+class ilertProvider(BaseProvider):
+    """Create/Resolve incidents in ilert."""
 
     PROVIDER_SCOPES = [
         ProviderScope("read_permission", "Read permission", mandatory=True),
@@ -89,10 +89,10 @@ class IlertProvider(BaseProvider):
 
     def validate_config(self):
         """
-        Validates required configuration for Ilert provider.
+        Validates required configuration for ilert provider.
 
         """
-        self.authentication_config = IlertProviderAuthConfig(
+        self.authentication_config = ilertProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -123,10 +123,10 @@ class IlertProvider(BaseProvider):
 
     def _query(self, incident_id: str, **kwargs):
         """
-        Query Ilert incident.
+        Query ilert incident.
         """
         self.logger.info(
-            "Querying Ilert incident",
+            "Querying ilert incident",
             extra={
                 "incident_id": incident_id,
                 **kwargs,
@@ -139,24 +139,24 @@ class IlertProvider(BaseProvider):
         )
         if not response.ok:
             self.logger.error(
-                "Failed to query Ilert incident",
+                "Failed to query ilert incident",
                 extra={
                     "status_code": response.status_code,
                     "response": response.text,
                 },
             )
             raise Exception(
-                f"Failed to query Ilert incident: {response.status_code} {response.text}"
+                f"Failed to query ilert incident: {response.status_code} {response.text}"
             )
         self.logger.info(
-            "Ilert incident queried",
+            "ilert incident queried",
             extra={"status_code": response.status_code},
         )
         return response.json()
 
     def _get_alerts(self) -> list[AlertDto]:
         """
-        Get incidents from Ilert.
+        Get incidents from ilert.
         """
         if not self.authentication_config.ilert_host.endswith("/api"):
             self.authentication_config.ilert_host = (
@@ -187,10 +187,10 @@ class IlertProvider(BaseProvider):
 
         alert_dtos = []
         for alert in alerts:
-            severity = IlertProvider.SEVERITIES_MAP.get(
+            severity = ilertProvider.SEVERITIES_MAP.get(
                 alert.get("affectedServices", [{}])[0].get("impact", "OPERATIONAL")
             )
-            status = IlertProvider.STATUS_MAP.get(
+            status = ilertProvider.STATUS_MAP.get(
                 alert.get("status"), AlertStatus.ACKNOWLEDGED
             )
             alert_dto = AlertDto(
@@ -217,7 +217,7 @@ class IlertProvider(BaseProvider):
         self, summary, status, message, affectedServices, id
     ):
         self.logger.info(
-            "Creating/updating Ilert incident",
+            "Creating/updating ilert incident",
             extra={
                 "summary": summary,
                 "status": status,
@@ -271,17 +271,17 @@ class IlertProvider(BaseProvider):
 
         if not response.ok:
             self.logger.error(
-                "Failed to create/update Ilert incident",
+                "Failed to create/update ilert incident",
                 extra={
                     "status_code": response.status_code,
                     "response": response.text,
                 },
             )
             raise Exception(
-                f"Failed to create/update Ilert incident: {response.status_code} {response.text}"
+                f"Failed to create/update ilert incident: {response.status_code} {response.text}"
             )
         self.logger.info(
-            "Ilert incident created/updated",
+            "ilert incident created/updated",
             extra={"status_code": response.status_code},
         )
         return response.json()
@@ -308,13 +308,13 @@ class IlertProvider(BaseProvider):
             "links": links,
             "customDetails": custom_details,
         }
-        self.logger.info("Posting Ilert event", extra=payload)
+        self.logger.info("Posting ilert event", extra=payload)
         response = requests.post(
             f"{self.authentication_config.ilert_host}/events/keep/{self.authentication_config.ilert_token} ",
             json=payload,
         )
         self.logger.info(
-            "Ilert event posted", extra={"status_code": response.status_code}
+            "ilert event posted", extra={"status_code": response.status_code}
         )
         return response.json()
 
@@ -322,7 +322,7 @@ class IlertProvider(BaseProvider):
         self,
         _type: Literal["incident", "event"] = "event",
         summary: str = "",
-        status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
+        status: ilertIncidentStatus = ilertIncidentStatus.INVESTIGATING,
         message: str = "",
         affectedServices: str | list = "[]",
         id: str = "0",
@@ -335,7 +335,7 @@ class IlertProvider(BaseProvider):
         custom_details: dict = {},
         **kwargs: dict,
     ):
-        self.logger.info("Notifying Ilert", extra=locals())
+        self.logger.info("Notifying ilert", extra=locals())
         if _type == "incident":
             return self.__create_or_update_incident(
                 summary, status, message, affectedServices, id
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     provider_config = {
         "authentication": {"ilert_token": api_key, "ilert_host": host},
     }
-    provider: IlertProvider = ProvidersFactory.get_provider(
+    provider: ilertProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
         provider_id="ilert",
         provider_type="ilert",
