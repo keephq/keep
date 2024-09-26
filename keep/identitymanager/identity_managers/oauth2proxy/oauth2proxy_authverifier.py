@@ -17,10 +17,10 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.oauth2_proxy_user_header = config(
-            "KEEP_OAUTH2_PROXY_USER_HEADER", default="X-Auth-Request-Email"
+            "KEEP_OAUTH2_PROXY_USER_HEADER", default="x-forwarded-email"
         )
         self.oauth2_proxy_role_header = config(
-            "KEEP_OAUTH2_PROXY_ROLE_HEADER", default="X-Auth-Request-Role"
+            "KEEP_OAUTH2_PROXY_ROLE_HEADER", default="x-forwarded-groups"
         )
         self.auto_create_user = config(
             "KEEP_OAUTH2_PROXY_AUTO_CREATE_USER", default=True
@@ -60,20 +60,44 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
                 detail=f"Unauthorized - no role in {self.oauth2_proxy_role_header} header found",
             )
 
-        # map the role from the header to Keep's internal role
-        mapped_role = self.role_mappings.get(role)
-        # if not mapped role, check if the role is just the internal role
-        if not mapped_role:
+        # else, if its a list seperated by comma e.g. org:admin, org:foobar or role:admin, role:foobar
+        if "," in role:
+            # split the roles by comma
+            roles = role.split(",")
+            # trim
+            roles = [r.strip() for r in roles]
+        else:
+            roles = [role]
+
+        mapped_role = None
+        for role in roles:
+            # map the role if its a mapped one, or just use the role
+            mapped_role = self.role_mappings.get(role, role)
             # will throw 403 exception if role is not found
-            mapped_role = get_role_by_role_name(role)
+            try:
+                mapped_role = get_role_by_role_name(mapped_role)
+                break
+            # lets check the next role
+            except HTTPException:
+                continue
+
+        # if the role is still a string, it means it was not found in get_role_by_role_name
+        # so we throw a 403 exception
+        if isinstance(mapped_role, str):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Role {roles} not found",
+            )
 
         # auto provision user
-        if self.auto_create_user and not user_exists(username=user_name):
+        if self.auto_create_user and not user_exists(
+            tenant_id=SINGLE_TENANT_UUID, username=user_name
+        ):
             self.logger.info(f"Auto provisioning user: {user_name}")
             create_user(
                 tenant_id=SINGLE_TENANT_UUID,
                 username=user_name,
-                role=mapped_role,
+                role=mapped_role.get_name(),
                 password="",
             )
             self.logger.info(f"User {user_name} created")
@@ -82,5 +106,5 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         return AuthenticatedEntity(
             tenant_id=SINGLE_TENANT_UUID,
             email=user_name,
-            role=mapped_role,
+            role=mapped_role.get_name(),
         )
