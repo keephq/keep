@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, Query
 from pusher import Pusher
 from pydantic.types import UUID
 
@@ -24,17 +24,23 @@ from keep.api.core.db import (
     get_last_incidents,
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
+    change_incident_status_by_id,
     update_incident_from_dto_by_id,
+    get_incidents_meta_for_tenant,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
-    EnrichAlertRequestBody,
     IncidentDto,
     IncidentDtoIn,
-    IncidentStatus,
     IncidentStatusChangeDto,
+    IncidentStatus,
+    EnrichAlertRequestBody,
+    IncidentSorting,
+    IncidentSeverity,
+    IncidentListFilterParamsDto,
 )
+
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -140,6 +146,21 @@ def create_incident_endpoint(
 
 
 @router.get(
+    "/meta",
+    description="Get incidents' metadata for filtering",
+    response_model=IncidentListFilterParamsDto,
+)
+def get_incidents_meta(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> IncidentListFilterParamsDto:
+    tenant_id = authenticated_entity.tenant_id
+    meta = get_incidents_meta_for_tenant(tenant_id=tenant_id)
+    return IncidentListFilterParamsDto(**meta)
+
+
+@router.get(
     "",
     description="Get last incidents",
 )
@@ -148,23 +169,48 @@ def get_all_incidents(
     limit: int = 25,
     offset: int = 0,
     sorting: IncidentSorting = IncidentSorting.creation_time,
+    status: List[IncidentStatus] = Query(None),
+    severity: List[IncidentSeverity] = Query(None),
+    assignee: List[str] = Query(None),
+    sources: List[str] = Query(None),
+    affected_services: List[str] = Query(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
+
+    filters = {}
+    if status:
+        filters["status"] = [s.value for s in status]
+    if severity:
+        filters["severity"] = [s.order for s in severity]
+    if assignee:
+        filters["assignee"] = assignee
+    if sources:
+        filters["sources"] = sources
+    if affected_services:
+        filters["affected_services"] = affected_services
+
+
     logger.info(
         "Fetching incidents from DB",
         extra={
             "tenant_id": tenant_id,
+            "limit": limit,
+            "offset": offset,
+            "sorting": sorting,
+            "filters": filters,
         },
     )
+
     incidents, total_count = get_last_incidents(
         tenant_id=tenant_id,
         is_confirmed=confirmed,
         limit=limit,
         offset=offset,
         sorting=sorting,
+        filters=filters,
     )
 
     incidents_dto = []
@@ -175,6 +221,10 @@ def get_all_incidents(
         "Fetched incidents from DB",
         extra={
             "tenant_id": tenant_id,
+            "limit": limit,
+            "offset": offset,
+            "sorting": sorting,
+            "filters": filters,
         },
     )
 
