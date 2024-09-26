@@ -38,7 +38,12 @@ def get_rules(
             attributes = []
             if rule_dto.type == "csv":
                 attributes = [
-                    key for key in rule.rows[0].keys() if key not in rule.matchers
+                    key
+                    for key in rule.rows[0].keys()
+                    if not any(
+                        key in matcher.replace(" ", "").split("&&")
+                        for matcher in rule.matchers
+                    )
                 ]
             elif rule_dto.type == "topology":
                 attributes = [
