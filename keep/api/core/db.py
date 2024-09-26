@@ -1203,6 +1203,7 @@ def get_last_alerts(
         if lower_timestamp is not None:
             filter_conditions.append(subquery.c.max_timestamp >= lower_timestamp)
 
+        logger.info(f"filter_conditions: {filter_conditions}")
         # Apply the filter conditions
         if filter_conditions:
             subquery = (

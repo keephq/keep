@@ -3,6 +3,7 @@ import { Responsive, WidthProvider, Layout } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { LayoutItem, WidgetData } from "./types";
 import "react-grid-layout/css/styles.css";
+import { Preset } from "app/alerts/models";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -12,9 +13,10 @@ interface GridLayoutProps {
   data: WidgetData[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  presets: Preset[];
 }
 
-const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, onEdit, onDelete }) => {
+const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, onEdit, onDelete, presets }) => {
   const layouts = { lg: layout };
 
   return (
@@ -39,11 +41,15 @@ const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, o
       compactType={null}
       draggableHandle=".grid-item__widget"
     >
-      {data.map((item) => (
-        <div key={item.i} data-grid={item}>
-          <GridItemContainer item={item} onEdit={onEdit} onDelete={onDelete} />
-        </div>
-      ))}
+      {data.map((item) => {
+          //Fixing the static hardcode db value.
+          const preset = presets?.find(p => p?.id === item?.preset?.id);
+          item.preset = { ...item.preset,alerts_count: preset?.alerts_count ?? 0};
+        return (
+          <div key={item.i} data-grid={item}>
+            <GridItemContainer item={item} onEdit={onEdit} onDelete={onDelete} />
+          </div>
+      )})}
     </ResponsiveGridLayout>
   );
 };
