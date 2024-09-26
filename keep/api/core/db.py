@@ -19,7 +19,7 @@ import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, null, update
+from sqlalchemy import and_, desc, null, update, func, case
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -3282,3 +3282,44 @@ def change_incident_status_by_id(
         updated = session.execute(stmt)
         session.commit()
         return updated.rowcount > 0
+
+def get_alerts_metrics_by_provider(
+    tenant_id: str,
+    start_date: Optional[datetime] = None, 
+    end_date: Optional[datetime] = None
+) -> Dict[str, Dict[str, Any]]:
+    
+    # Set default dates to the last 30 days if not provided
+    if start_date is None:
+        start_date = datetime.now() - timedelta(days=30)
+    if end_date is None:
+        end_date = datetime.now()
+
+    #if the below query is not perfomring well, we can try to optimise the query using Venn Diagram or similar(for now we are using the below query)
+    with Session(engine) as session:
+        results = (
+            session.query(
+                Alert.provider_type,
+                func.count(Alert.id).label("total_alerts"),
+                func.sum(case([(AlertToIncident.alert_id.isnot(None), 1)], else_=0)).label("correlated_alerts"),
+                func.sum(case([(func.json_extract(Alert.event, '$.severity').in_(['critical', 'warning']), 1)], else_=0)).label("severity_count")
+            )
+            .outerjoin(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.timestamp >= start_date,
+                Alert.timestamp <= end_date,    
+                Alert.provider_type.isnot(None)
+            )
+            .group_by(Alert.provider_type)
+            .all()
+        )
+        
+    return {
+        row.provider_type: {
+            "total_alerts": row.total_alerts,
+            "correlated_alerts": row.correlated_alerts,
+            "severity_count": row.severity_count,
+        }
+        for row in results
+    }      

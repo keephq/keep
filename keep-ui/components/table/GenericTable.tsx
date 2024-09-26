@@ -26,6 +26,7 @@ interface GenericTableProps<T> {
     limit: number;
     onPaginationChange: ( limit: number, offset: number ) => void;
     onRowClick?: (row: T) => void;
+    dataFetchedAtOneGO?: boolean
 }
 
 export function GenericTable<T>({
@@ -36,6 +37,7 @@ export function GenericTable<T>({
     limit,
     onPaginationChange,
     onRowClick,
+    dataFetchedAtOneGO,
 }: GenericTableProps<T>) {
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [pagination, setPagination] = useState({
@@ -60,9 +62,11 @@ export function GenericTable<T>({
         }
     }, [pagination]);
 
+    const finalData = (dataFetchedAtOneGO ? data.slice(pagination.pageSize * pagination.pageIndex, pagination.pageSize * (pagination.pageIndex + 1)) : data) as T[]
+
     const table = useReactTable({
         columns,
-        data,
+        data: finalData,
         state: { expanded, pagination },
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,

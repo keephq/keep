@@ -25,7 +25,7 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
-from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
+from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts, get_alerts_metrics_by_provider
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
@@ -744,3 +744,22 @@ def get_alert_audit(
 
     grouped_events = AlertAuditDto.from_orm_list(alert_audit)
     return grouped_events
+
+
+@router.get("/quality/metrics", description="Get alert quality")
+def get_alert_quality(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+):
+    logger.info(
+        "Fetching alert quality metrics per provider",
+        extra={
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    db_alerts_quality = get_alerts_metrics_by_provider(
+        tenant_id=authenticated_entity.tenant_id
+    )
+    
+    return db_alerts_quality    
