@@ -617,3 +617,96 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
                 force=False,
                 audit_enabled=True,
             )
+
+
+def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
+    # Setup a mapping rule with complex matchers
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name && severity", "source"],
+        rows=[
+            {
+                "name": "Test Alert",
+                "severity": "high",
+                "service": "high_priority_service",
+            },
+            {
+                "name": "Test Alert",
+                "severity": "low",
+                "service": "low_priority_service",
+            },
+            {"source": "test_source", "service": "source_specific_service"},
+        ],
+        disabled=False,
+        type="csv",
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case 1: Matches "name && severity"
+    mock_alert_dto.name = "Test Alert"
+    mock_alert_dto.severity = "high"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "high_priority_service"
+
+    # Test case 2: Matches "name && severity" (different severity)
+    mock_alert_dto.severity = "low"
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "low_priority_service"
+
+    # Test case 3: Matches "source"
+    mock_alert_dto.name = "Different Alert"
+    mock_alert_dto.severity = "medium"
+    mock_alert_dto.source = ["test_source"]
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert mock_alert_dto.service == "source_specific_service"
+
+    # Test case 4: No match
+    mock_alert_dto.name = "Unmatched Alert"
+    mock_alert_dto.severity = "medium"
+    mock_alert_dto.source = ["different_source"]
+    del mock_alert_dto.service
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+    assert not hasattr(mock_alert_dto, "service")
+
+
+def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
+    # Setup a mapping rule with complex matchers and multiple enrichment fields
+    rule = MappingRule(
+        id=1,
+        tenant_id="test_tenant",
+        priority=1,
+        matchers=["name && severity"],
+        rows=[
+            {
+                "name": "Test Alert",
+                "severity": "high",
+                "service": "high_priority_service",
+                "team": "on-call",
+                "priority": "P1",
+            },
+        ],
+        disabled=False,
+        type="csv",
+    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
+        rule
+    ]
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+
+    # Test case: Matches "name && severity" and applies multiple enrichments
+    mock_alert_dto.name = "Test Alert"
+    mock_alert_dto.severity = "high"
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+
+    assert mock_alert_dto.service == "high_priority_service"
+    assert mock_alert_dto.team == "on-call"
+    assert mock_alert_dto.priority == "P1"
