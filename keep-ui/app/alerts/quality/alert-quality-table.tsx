@@ -1,16 +1,18 @@
 "use client"; // Add this line at the top to make this a Client Component
 
 import React, { useState, useEffect } from 'react';
+import { useFetchProviders } from 'app/providers/page.client';
 import { GenericTable } from '@/components/table/GenericTable';
 
 interface ProviderAlertQuality {
   providerName: string;
   alertsReceived: number;
-  alertsCorrelatedToIncidentsPercentage: number; // Percentage
-  alertsWithFieldFilledPercentage: number; // Percentage
+  alertsCorrelatedToIncidentsPercentage: number;
+  alertsWithFieldFilledPercentage: number;
 }
 
 const AlertQualityTable = () => {
+  const {installedProviders} = useFetchProviders();
   const [data, setData] = useState<ProviderAlertQuality[]>([]);
   const [rowCount, setRowCount] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
@@ -40,14 +42,11 @@ const AlertQualityTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/alert-quality');
-        const result = await response.json();
-
-        const transformedData = result.providers.map((provider: any) => ({
-          providerName: provider.name,
-          alertsReceived: provider.alertsReceived,
-          alertsCorrelatedToIncidentsPercentage: provider.alertsCorrelatedToIncidentsPercentage * 100,
-          alertsWithFieldFilledPercentage: provider.alertsWithFieldFilledPercentage * 100,
+        const transformedData = installedProviders.map((provider: any) => ({
+          providerName: `${provider.details.name}  (${provider.display_name})` || 'Unknown',
+          alertsReceived: provider.alertsReceived || 0,
+          alertsCorrelatedToIncidentsPercentage: provider.alertsCorrelatedToIncidentsPercentage * 100 || 0,
+          alertsWithFieldFilledPercentage: provider.alertsWithFieldFilledPercentage * 100 || 0,
         }));
 
         setData(transformedData);
