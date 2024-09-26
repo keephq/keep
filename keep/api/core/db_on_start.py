@@ -137,12 +137,20 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
                     secret_manager = SecretManagerFactory.get_secret_manager(
                         context_manager
                     )
-                    secret_manager.write_secret(
-                        secret_name=f"{tenant_id}-{api_key_name}",
-                        secret_value=api_key_secret,
-                    )
+                    try:
+                        secret_manager.write_secret(
+                            secret_name=f"{tenant_id}-{api_key_name}",
+                            secret_value=api_key_secret,
+                        )
+                    # probably 409 if the secret already exists, but we don't want to fail on that
+                    except Exception:
+                        logger.exception(
+                            f"Failed to write secret for api key {api_key_name}"
+                        )
+                        pass
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
+
             # commit the changes
             session.commit()
             logger.info("Single tenant created")

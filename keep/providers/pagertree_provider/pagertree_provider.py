@@ -29,7 +29,7 @@ class PagertreeProviderAuthConfig:
 class PagertreeProvider(BaseProvider):
     """Get all alerts from pagertree"""
 
-    PROVIDER_DISPLAY_NAME = "pagertree"
+    PROVIDER_DISPLAY_NAME = "PagerTree"
 
     PROVIDER_SCOPES = [
         ProviderScope(

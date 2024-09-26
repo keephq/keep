@@ -11,6 +11,11 @@ import {
   Badge,
   Button,
   Icon,
+  TabGroup,
+  TabList,
+  Tab,
+  TabPanels,
+  TabPanel,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import {
@@ -27,6 +32,7 @@ import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
+import { useTopology } from "utils/hooks/useTopology";
 
 interface Props {
   editRule: MappingRule | null;
@@ -36,12 +42,15 @@ interface Props {
 export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
+  const [tabIndex, setTabIndex] = useState<number>(0);
   const [mapName, setMapName] = useState<string>("");
   const [fileName, setFileName] = useState<string>("");
+  const [mappingType, setMappingType] = useState<"csv" | "topology">("csv");
   const [mapDescription, setMapDescription] = useState<string>("");
   const [selectedLookupAttributes, setSelectedLookupAttributes] = useState<
     string[]
   >([]);
+  const { topologyData } = useTopology();
   const [priority, setPriority] = useState<number>(0);
   const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
@@ -53,6 +62,8 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       setMapName(editRule.name);
       setFileName(editRule.file_name ? editRule.file_name : "");
       setMapDescription(editRule.description ? editRule.description : "");
+      setMappingType(editRule.type ? editRule.type : "csv");
+      setTabIndex(editRule.type === "csv" ? 0 : 1);
       setSelectedLookupAttributes(editRule.matchers ? editRule.matchers : []);
       setPriority(editRule.priority);
     }
@@ -80,6 +91,17 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const handleFileReset = () => {
     if (inputFile.current) {
       inputFile.current.value = "";
+    }
+  };
+
+  const updateMappingType = (index: number) => {
+    setTabIndex(index);
+    if (index === 0) {
+      setParsedData(null);
+      setMappingType("csv");
+    } else {
+      setParsedData(topologyData!);
+      setMappingType("topology");
     }
   };
 
@@ -123,8 +145,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         name: mapName,
         description: mapDescription,
         file_name: fileName,
+        type: mappingType,
         matchers: selectedLookupAttributes.map((attr) => attr.trim()),
-        rows: parsedData,
+        rows: mappingType === "csv" ? parsedData : null,
       }),
     });
     if (response.ok) {
@@ -142,7 +165,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
     const apiUrl = getApiURL();
-    const response = await fetch(`${apiUrl}/mapping`, {
+    const response = await fetch(`${apiUrl}/mapping/${editRule?.id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
@@ -154,8 +177,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         name: mapName,
         description: mapDescription,
         file_name: fileName,
+        type: mappingType,
         matchers: selectedLookupAttributes.map((attr) => attr.trim()),
-        rows: parsedData,
+        rows: mappingType === "csv" ? parsedData : null,
       }),
     });
     if (response.ok) {
@@ -229,20 +253,45 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       </div>
       <Divider />
       <div>
-        <input
-          type="file"
-          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-          onChange={readFile}
-          required={!editMode}
-          ref={inputFile}
-        />
-        {!parsedData && (
-          <Text className="text-xs text-red-500">
-            {!editMode
-              ? "* Upload a CSV file to begin with creating a new mapping"
-              : ""}
-          </Text>
-        )}
+        <TabGroup
+          index={tabIndex}
+          onIndexChange={(index) => updateMappingType(index)}
+        >
+          <TabList>
+            <Tab>CSV</Tab>
+            <Tab
+              disabled={!topologyData || topologyData.length === 0}
+              className={`${
+                !topologyData || topologyData.length === 0
+                  ? "text-gray-400"
+                  : ""
+              }`}
+            >
+              Topology
+            </Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel>
+              {mappingType === "csv" && (
+                <input
+                  type="file"
+                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                  onChange={readFile}
+                  required={!editMode}
+                  ref={inputFile}
+                />
+              )}
+              {!parsedData && (
+                <Text className="text-xs text-red-500">
+                  {!editMode
+                    ? "* Upload a CSV file to begin with creating a new mapping"
+                    : ""}
+                </Text>
+              )}
+            </TabPanel>
+            <TabPanel></TabPanel>
+          </TabPanels>
+        </TabGroup>
       </div>
       <Subtitle className="mt-2.5">Mapping Schema</Subtitle>
       <div className="mt-2.5">

@@ -10,7 +10,7 @@ In this section we will review the Workflow components.
 ## Triggers
 <Tip>When you run alert with the CLI using `keep run`, the CLI run the alert regardless of the triggers.</Tip>
 A trigger is an event that starts the workflow. It could be a manual trigger, an alert, or an interval depending on your use case.
-Keep support three types of triggers:
+Keep support four types of triggers:
 ### Manual trigger
 ```
 # run manually
@@ -26,6 +26,17 @@ triggers:
     filters:
       - key: source
         value: cloudwatch
+```
+
+### Incident trigger
+```
+# run when incident get created, update or deleted
+# You can use multiple events, but at least one is required
+triggers:
+  - type: incident
+    events:
+      - created
+      - deleted
 ```
 
 ### Interval trigger

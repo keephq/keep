@@ -1,6 +1,7 @@
 import inspect
 import os
 import random
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
@@ -384,7 +385,7 @@ def elastic_client(request):
         pass
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def keycloak_client(request):
     os.environ["KEYCLOAK_URL"] = "http://localhost:8787/auth/"
     os.environ["KEYCLOAK_REALM"] = "keeptest"
@@ -473,6 +474,7 @@ def _create_valid_event(d, lastReceived=None):
     event = {
         "id": str(uuid.uuid4()),
         "name": "some-test-event",
+        "status": "firing",
         "lastReceived": (
             str(lastReceived)
             if lastReceived
@@ -488,6 +490,8 @@ def setup_alerts(elastic_client, db_session, request):
     alert_details = request.param.get("alert_details")
     alerts = []
     for i, detail in enumerate(alert_details):
+        # sleep to avoid same lastReceived
+        time.sleep(0.02)
         detail["fingerprint"] = f"test-{i}"
         alerts.append(
             Alert(

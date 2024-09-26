@@ -1,0 +1,46 @@
+workflow:
+  id: query-victoriametrics
+  name: victoriametrics
+  description: victoriametrics
+  triggers:
+    - type: manual
+  steps:
+    - name: victoriametrics-step
+      provider:
+        config: "{{ providers.victoriametrics }}"
+        type: victoriametrics
+        with:
+          query: avg(rate(process_cpu_seconds_total))
+          queryType: query
+
+  actions:
+    - name: trigger-slack1
+      condition:
+        - name: threshold-condition
+          type: threshold
+          value: "{{ steps.victoriametrics-step.results.data.result.0.value.1 }}"
+          compare_to: 0.0050
+          alias: A
+          operator: ">"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+
+    - name: trigger-slack2
+      if: "{{ A }}"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+
+    - name: trigger-ntfy
+      if: "{{ A }}"
+      provider:
+        type: ntfy
+        config: "{{ providers.ntfy }}"
+        with:
+          message: "Result: {{ steps.victoriametrics-step.results.data.result.0.value.1 }} is greater than 0.0040! 🚨"
+          topic: ezhil

@@ -34,11 +34,25 @@ Chart.register(
 
 const show_real_data = true;
 
-export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
+export default function WorkflowGraph({
+  showLastExecutionStatus = true,
+  workflow,
+  limit = 15,
+  showAll,
+  size,
+}: {
+  showLastExecutionStatus?: boolean;
+  workflow: Partial<Workflow>;
+  limit?: number;
+  size?: string;
+  showAll?: boolean;
+}) {
   const router = useRouter();
   const lastExecutions = useMemo(() => {
-    let executions =
-      workflow?.last_executions?.slice(0, 15) || [];
+    let executions = workflow?.last_executions?.slice(0, limit) || [];
+    if (showAll) {
+      return executions.reverse();
+    }
     //as discussed making usre if all the executions are providers_not_configured. thne ignoring it
     const providerNotConfiguredExecutions = executions.filter(
       (execution) => execution?.status === "providers_not_configured"
@@ -98,6 +112,8 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
       case "fail":
       case "failure":
       case "error":
+      case "timeout":
+      case "time_out":    
         icon = <XCircleIcon className="size-6 cover text-red-500" />;
         break;
       case "in_progress":
@@ -116,14 +132,29 @@ export default function WorkflowGraph({ workflow }: { workflow: Workflow }) {
     );
   }
 
+  let height = "h-36";
+  switch (size) {
+    case "sm":
+      height = "h-24";
+      break;
+    case "md":
+      height = "h-36";
+
+      break;
+    case "lg":
+      height = "h-48";
+      break;
+    default:
+      height = "h-36";
+  }
+
   return (
-    <div className="flex felx-row items-end justify-start h-36 flex-nowrap w-full">
-      <div>{getIcon()}</div>
+    <div
+      className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}
+    >
+      {showLastExecutionStatus &&<div>{getIcon()}</div>}
       <div
-        className="overflow-hidden h-32 w-full flex-shrink-1"
-        onClick={() => {
-          router.push(`/workflows/${workflow.id}`);
-        }}
+        className={`overflow-hidden ${height} w-full`}
       >
         <Bar data={chartData} options={chartOptions} />
       </div>

@@ -9,25 +9,35 @@ import debounce from "lodash.debounce";
 
 const ReactFlowEditor = ({
   providers,
+  installedProviders,
   validatorConfiguration,
   onDefinitionChange
 }: {
   providers: Provider[] | undefined | null;
+  installedProviders: Provider[] | undefined | null;
   validatorConfiguration: {
     step: (step: V2Step, parent?: V2Step, defnition?: ReactFlowDefinition) => boolean;
     root: (def: Definition) => boolean;
   };
   onDefinitionChange: (def: Definition) => void
 }) => {
-  const { selectedNode, changes, v2Properties, nodes, edges, setOpneGlobalEditor, synced, setSynced } = useStore();
+  const { selectedNode, changes, v2Properties, nodes, edges, setOpneGlobalEditor, synced, setSynced, setCanDeploy } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const stepEditorRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isTrigger = ['interval', 'manual', 'alert'].includes(selectedNode || '')
+  const isTrigger = ['interval', 'manual', 'alert', 'incident'].includes(selectedNode || '')
+  const saveRef = useRef<boolean>(false);
+  useEffect(()=>{
+      if(saveRef.current && synced){
+        setCanDeploy(true);
+        saveRef.current = false;
+      }
+  }, [saveRef?.current, synced])
 
   useEffect(() => {
     setIsOpen(true);
     if (selectedNode) {
+      saveRef.current = false;
       const timer = setTimeout(() => {
         if (isTrigger) {
           setOpneGlobalEditor(true);
@@ -112,9 +122,16 @@ const ReactFlowEditor = ({
           </button>
           <div className="flex-1 p-2 bg-white border-2 overflow-y-auto">
             <div style={{ width: "300px" }}>
-              <GlobalEditorV2 synced={synced} />
+              <GlobalEditorV2 synced={synced}
+                saveRef={saveRef}
+              />
               {!selectedNode?.includes('empty') && !isTrigger && <Divider ref={stepEditorRef} />}
-              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2 installedProviders={providers} setSynced={setSynced} />}
+              {!selectedNode?.includes('empty') && !isTrigger && <StepEditorV2
+              providers={providers}
+              installedProviders={installedProviders}
+              setSynced={setSynced}
+              saveRef={saveRef}
+               />}
             </div>
           </div>
         </div>
@@ -124,4 +141,3 @@ const ReactFlowEditor = ({
 };
 
 export default ReactFlowEditor;
-

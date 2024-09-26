@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 from importlib import metadata
 
 import jwt
@@ -19,7 +20,15 @@ from starlette_context.middleware import RawContextMiddleware
 import keep.api.logging
 import keep.api.observability
 from keep.api.arq_worker import get_arq_worker
-from keep.api.consts import KEEP_ARQ_TASK_POOL, KEEP_ARQ_TASK_POOL_NONE
+from keep.api.consts import (
+    KEEP_ARQ_QUEUE_AI,
+    KEEP_ARQ_QUEUE_BASIC,
+    KEEP_ARQ_TASK_POOL,
+    KEEP_ARQ_TASK_POOL_AI,
+    KEEP_ARQ_TASK_POOL_ALL,
+    KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
+    KEEP_ARQ_TASK_POOL_NONE,
+)
 from keep.api.core.db import get_api_key
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
@@ -28,6 +37,7 @@ from keep.api.routes import (
     ai,
     alerts,
     dashboard,
+    deduplications,
     extraction,
     healthcheck,
     incidents,
@@ -53,7 +63,12 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerTypes,
 )
 from keep.posthog.posthog import get_posthog_client
+
+# load all providers into cache
+from keep.providers.providers_factory import ProvidersFactory
+from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
@@ -224,7 +239,9 @@ def get_app(
     app.include_router(tags.router, prefix="/tags", tags=["tags"])
     app.include_router(maintenance.router, prefix="/maintenance", tags=["maintenance"])
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
-
+    app.include_router(
+        deduplications.router, prefix="/deduplications", tags=["deduplications"]
+    )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
@@ -236,15 +253,14 @@ def get_app(
 
     @app.on_event("startup")
     async def on_startup():
-        # load all providers into cache
-        from keep.providers.providers_factory import ProvidersFactory
-        from keep.providers.providers_service import ProvidersService
-
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
         # provision providers from env. relevant only on single tenant.
+        logger.info("Provisioning providers and workflows")
         ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
         logger.info("Providers loaded successfully")
+        WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
+        logger.info("Workflows provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler
@@ -264,9 +280,48 @@ def get_app(
             logger.info("Consumer started successfully")
         if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
             event_loop = asyncio.get_event_loop()
-            arq_worker = get_arq_worker()
-            event_loop.create_task(arq_worker.async_run())
+            if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
+                logger.info("Starting all task pools")
+                basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
+                ai_worker = get_arq_worker(KEEP_ARQ_QUEUE_AI)
+                event_loop.create_task(basic_worker.async_run())
+                event_loop.create_task(ai_worker.async_run())
+            elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+                logger.info("Starting AI task pool")
+                arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_AI)
+                event_loop.create_task(arq_worker.async_run())
+            elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
+                logger.info("Starting Basic Processing task pool")
+                arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
+                event_loop.create_task(arq_worker.async_run())
+            else:
+                raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
         logger.info("Services started successfully")
+
+    @app.on_event("shutdown")
+    async def on_shutdown():
+        logger.info("Shutting down Keep")
+        if SCHEDULER:
+            logger.info("Stopping the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            # stop the scheduler
+            try:
+                await wf_manager.stop()
+            # in pytest, there could be race condition
+            except TypeError:
+                pass
+            logger.info("Scheduler stopped successfully")
+        if CONSUMER:
+            logger.info("Stopping the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            try:
+                await event_subscriber.stop()
+            # in pytest, there could be race condition
+            except TypeError:
+                pass
+            logger.info("Consumer stopped successfully")
+        # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
+        logger.info("Keep shutdown complete")
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
@@ -283,16 +338,19 @@ def get_app(
         )
 
     @app.middleware("http")
-    async def log_middeware(request: Request, call_next):
+    async def log_middleware(request: Request, call_next):
         identity = _extract_identity(request, attribute="keep_tenant_id")
         logger.info(
             f"Request started: {request.method} {request.url.path}",
             extra={"tenant_id": identity},
         )
+        start_time = time.time()
         request.state.tenant_id = identity
         response = await call_next(request)
+
+        end_time = time.time()
         logger.info(
-            f"Request finished: {request.method} {request.url.path} {response.status_code}"
+            f"Request finished: {request.method} {request.url.path} {response.status_code} in {end_time - start_time:.2f}s",
         )
         return response
 

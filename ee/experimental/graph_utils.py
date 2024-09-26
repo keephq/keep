@@ -5,7 +5,7 @@ import networkx as nx
 
 from typing import List, Tuple
 
-from keep.api.core.db import get_pmi_values, get_pmi_values_from_temp_file
+from keep.api.core.db import get_pmi_values_from_temp_file
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def detect_knee_1d_auto_increasing(y: List[float]) -> Tuple[int, float]:
         return knee_index_convex, knee_y_convex
     
     
-def create_graph(tenant_id: str, fingerprints: List[str], temp_dir: str, pmi_threshold: float = 0., knee_threshold: float = 0.8) -> nx.Graph:
+def create_graph(tenant_id: str, fingerprints: List[str], pmi_values: np.ndarray, fingerprint2idx: dict, pmi_threshold: float = 0., delete_nodes: bool = False, knee_threshold: float = 0.8) -> nx.Graph:
     """
     This function creates a graph from a list of fingerprints. The graph is created based on the PMI values between
     the fingerprints. The edges are created between the fingerprints that have a PMI value greater than the threshold.
@@ -69,39 +69,38 @@ def create_graph(tenant_id: str, fingerprints: List[str], temp_dir: str, pmi_thr
     if len(fingerprints) == 1:
         graph.add_node(fingerprints[0])
         return graph
-
-    pmi_values, fingerpint2idx = get_pmi_values_from_temp_file(temp_dir)
-    
-    logger.info(f'Loaded PMI values for {len(pmi_values)**2} fingerprint pairs', extra={'tenant_id': tenant_id})
     
     logger.info(f'Creating alert graph edges', extra={'tenant_id': tenant_id})
 
     for idx_i, fingerprint_i in enumerate(fingerprints):
-        if fingerprint_i not in fingerpint2idx:
+        if fingerprint_i not in fingerprint2idx:
             continue
 
         for idx_j in range(idx_i + 1, len(fingerprints)):
             fingerprint_j = fingerprints[idx_j]
             
-            if fingerprint_j not in fingerpint2idx:
+            if fingerprint_j not in fingerprint2idx:
                 continue
             
-            weight = pmi_values[fingerpint2idx[fingerprint_i], fingerpint2idx[fingerprint_j]]
+            weight = pmi_values[fingerprint2idx[fingerprint_i], fingerprint2idx[fingerprint_j]]
 
             if weight > pmi_threshold:
                 graph.add_edge(fingerprint_i, fingerprint_j, weight=weight)
                 
-    nodes_to_delete = []
-    logger.info(f'Preparing candidate nodes for deletion', extra={'tenant_id': tenant_id})
-    
-    for node in graph.nodes:
-        weights = sorted([edge['weight'] for edge in graph[node].values()])
+    if delete_nodes:
+        nodes_to_delete = []
+        logger.info(f'Preparing candidate nodes for deletion', extra={'tenant_id': tenant_id})
         
-        knee_index, knee_statistic = detect_knee_1d_auto_increasing(weights)
+        for node in graph.nodes:
+            weights = sorted([edge['weight'] for edge in graph[node].values()])
+            
+            knee_index, knee_statistic = detect_knee_1d_auto_increasing(weights)
+            
+            if knee_statistic < knee_threshold:
+                nodes_to_delete.append(node)
         
-        if knee_statistic < knee_threshold:
-            nodes_to_delete.append(node)
-    
-    graph.remove_nodes_from(nodes_to_delete)
+        logger.info(f'Removing nodes from graph, {len(nodes_to_delete)} nodes will be removed, {len(graph.nodes) - len(nodes_to_delete)} nodes will be left',
+                    extra={'tenant_id': tenant_id})
+        graph.remove_nodes_from(nodes_to_delete)
     
     return graph

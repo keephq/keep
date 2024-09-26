@@ -19,6 +19,7 @@ import {
 import "./provider-tile.css";
 import moment from "moment";
 import ImageWithFallback from "@/components/ImageWithFallback";
+import { FaCode } from "react-icons/fa";
 
 interface Props {
   provider: Provider;
@@ -159,9 +160,10 @@ export default function ProviderTile({ provider, onClick }: Props) {
   return (
     <button
       className={
-        "tile-basis text-left min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:shadow-lg hover:grayscale-0 cursor-pointer gap-3" +
+        "tile-basis text-left min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:grayscale-0  gap-3" +
         // Add fixed height only if provider card doesn't have much content
-        (!provider.installed && !provider.linked ? " h-32" : "")
+        (!provider.installed && !provider.linked ? " h-32" : "") +
+        (!provider.linked ? "cursor-pointer hover:shadow-lg" : "")
       }
       onClick={onClick}
     >
@@ -199,6 +201,15 @@ export default function ProviderTile({ provider, onClick }: Props) {
           <Text color={"green"} className="flex text-xs">
             Linked
           </Text>
+        ) : null}
+        {provider.provisioned ? (
+          <Icon
+            icon={FaCode}
+            className="absolute top-[-15px] right-[-15px]"
+            color="orange"
+            size="sm"
+            tooltip="Provisioned"
+          />
         ) : null}
         <div className="flex flex-col gap-2">
           <div>

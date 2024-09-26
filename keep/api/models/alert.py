@@ -4,11 +4,18 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import pytz
-from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    Extra,
+    PrivateAttr,
+    root_validator,
+    validator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +99,15 @@ class AlertStatus(Enum):
     PENDING = "pending"
 
 
+class IncidentStatus(Enum):
+    # Active incident
+    FIRING = "firing"
+    # Incident has been resolved
+    RESOLVED = "resolved"
+    # Incident has been acknowledged but not resolved
+    ACKNOWLEDGED = "acknowledged"
+
+
 class IncidentSeverity(SeverityBaseInterface):
     CRITICAL = ("critical", 5)
     HIGH = ("high", 4)
@@ -108,7 +124,8 @@ class AlertDto(BaseModel):
     lastReceived: str
     firingStartTime: str | None = None
     environment: str = "undefined"
-    isDuplicate: bool | None = None
+    isFullDuplicate: bool | None = False
+    isPartialDuplicate: bool | None = False
     duplicateReason: str | None = None
     service: str | None = None
     source: list[str] | None = []
@@ -289,7 +306,6 @@ class AlertDto(BaseModel):
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
-                    "isDuplicate": False,
                     "duplicateReason": None,
                     "service": "backend",
                     "source": ["keep"],
@@ -348,6 +364,7 @@ class IncidentDtoIn(BaseModel):
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
                     "name": "Incident name",
                     "user_summary": "Keep: Incident description",
+                    "status": "firing",
                 }
             ]
         }
@@ -360,9 +377,10 @@ class IncidentDto(IncidentDtoIn):
     last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
 
-    number_of_alerts: int
+    alerts_count: int
     alert_sources: list[str]
     severity: IncidentSeverity
+    status: IncidentStatus = IncidentStatus.FIRING
     assignee: str | None
     services: list[str]
 
@@ -372,6 +390,10 @@ class IncidentDto(IncidentDtoIn):
     generated_summary: str | None
     ai_generated_name: str | None
 
+    rule_fingerprint: str | None
+
+    _tenant_id: str = PrivateAttr()
+
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
         model_dict = self.dict()
@@ -380,23 +402,54 @@ class IncidentDto(IncidentDtoIn):
     class Config:
         extra = Extra.allow
         schema_extra = IncidentDtoIn.Config.schema_extra
+        underscore_attrs_are_private = True
 
         json_encoders = {
             # Converts UUID to their values for JSON serialization
             UUID: lambda v: str(v),
         }
 
+    @property
+    def name(self):
+        return self.user_generated_name or self.ai_generated_name
+
+    @property
+    def alerts(self) -> List["AlertDto"]:
+        from keep.api.core.db import get_incident_alerts_by_incident_id
+        from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+
+        if not self._tenant_id:
+            return []
+        alerts, _ = get_incident_alerts_by_incident_id(self._tenant_id, str(self.id))
+        return convert_db_alerts_to_dto_alerts(alerts)
+
+    @root_validator(pre=True)
+    def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        # Check and set default status
+        status = values.get("status")
+        try:
+            values["status"] = IncidentStatus(status)
+        except ValueError:
+            logging.warning(
+                f"Invalid status value: {status}, setting default.",
+                extra={"event": values},
+            )
+            values["status"] = IncidentStatus.FIRING
+        return values
+
     @classmethod
     def from_db_incident(cls, db_incident):
 
-        severity = IncidentSeverity.from_number(db_incident.severity) \
-            if isinstance(db_incident.severity, int) \
+        severity = (
+            IncidentSeverity.from_number(db_incident.severity)
+            if isinstance(db_incident.severity, int)
             else db_incident.severity
+        )
 
-        return cls(
+        dto = cls(
             id=db_incident.id,
             user_generated_name=db_incident.user_generated_name,
-            ai_generated_name = db_incident.ai_generated_name,
+            ai_generated_name=db_incident.ai_generated_name,
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
@@ -405,9 +458,50 @@ class IncidentDto(IncidentDtoIn):
             start_time=db_incident.start_time,
             last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
-            number_of_alerts=db_incident.alerts_count,
+            alerts_count=db_incident.alerts_count,
             alert_sources=db_incident.sources,
             severity=severity,
+            status=db_incident.status,
             assignee=db_incident.assignee,
             services=db_incident.affected_services,
+            rule_fingerprint=db_incident.rule_fingerprint,
         )
+
+        # This field is required for getting alerts when required
+        dto._tenant_id = db_incident.tenant_id
+        return dto
+
+
+class DeduplicationRuleDto(BaseModel):
+    id: str | None  # UUID
+    name: str
+    description: str
+    default: bool
+    distribution: list[dict]  # list of {hour: int, count: int}
+    provider_id: str | None  # None for default rules
+    provider_type: str
+    last_updated: str | None
+    last_updated_by: str | None
+    created_at: str | None
+    created_by: str | None
+    ingested: int
+    dedup_ratio: float
+    enabled: bool
+    fingerprint_fields: list[str]
+    full_deduplication: bool
+    ignore_fields: list[str]
+
+
+class DeduplicationRuleRequestDto(BaseModel):
+    name: str
+    description: Optional[str] = None
+    provider_type: str
+    provider_id: Optional[str] = None
+    fingerprint_fields: list[str]
+    full_deduplication: bool = False
+    ignore_fields: Optional[list[str]] = None
+
+
+class IncidentStatusChangeDto(BaseModel):
+    status: IncidentStatus
+    comment: str | None

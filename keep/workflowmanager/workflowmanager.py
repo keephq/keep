@@ -4,13 +4,15 @@ import re
 import typing
 import uuid
 
+from pandas.core.common import flatten
+
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
-from keep.api.models.alert import AlertDto, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
@@ -69,7 +71,78 @@ class WorkflowManager:
                 return value == str(filter_val)
             return value == filter_val
 
-    def insert_events(self, tenant_id, events: typing.List[AlertDto]):
+    def _get_workflow_from_store(self, tenant_id, workflow_model):
+        try:
+            # get the actual workflow that can be triggered
+            self.logger.info("Getting workflow from store")
+            workflow = self.workflow_store.get_workflow(tenant_id, workflow_model.id)
+            self.logger.info("Got workflow from store")
+            return workflow
+        except ProviderConfigurationException:
+            self.logger.exception(
+                "Workflow have a provider that is not configured",
+                extra={
+                    "workflow_id": workflow_model.id,
+                    "tenant_id": tenant_id,
+                },
+            )
+        except Exception:
+            self.logger.exception(
+                "Error getting workflow",
+                extra={
+                    "workflow_id": workflow_model.id,
+                    "tenant_id": tenant_id,
+                },
+            )
+
+    def insert_incident(self, tenant_id: str, incident: IncidentDto, trigger: str):
+        all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
+        self.logger.info(
+            "Got all workflows",
+            extra={
+                "num_of_workflows": len(all_workflow_models),
+            },
+        )
+        for workflow_model in all_workflow_models:
+
+            if workflow_model.is_disabled:
+                self.logger.debug(
+                    f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
+                    f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
+                )
+                continue
+            workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+            if workflow is None:
+                continue
+
+            incident_triggers = flatten(
+                [
+                    t.get("events", [])
+                    for t in workflow.workflow_triggers
+                    if t["type"] == "incident"
+                ]
+            )
+
+            if trigger not in incident_triggers:
+                self.logger.debug(
+                    "workflow does not contain trigger %s, skipping", trigger
+                )
+                continue
+
+            self.logger.info("Adding workflow to run")
+            with self.scheduler.lock:
+                self.scheduler.workflows_to_run.append(
+                    {
+                        "workflow": workflow,
+                        "workflow_id": workflow_model.id,
+                        "tenant_id": tenant_id,
+                        "triggered_by": "incident:{}".format(trigger),
+                        "event": incident,
+                    }
+                )
+            self.logger.info("Workflow added to run")
+
+    def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
             self.logger.info("Getting all workflows")
             all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
@@ -80,31 +153,17 @@ class WorkflowManager:
                 },
             )
             for workflow_model in all_workflow_models:
-                try:
-                    # get the actual workflow that can be triggered
-                    self.logger.info("Getting workflow from store")
-                    workflow = self.workflow_store.get_workflow(
-                        tenant_id, workflow_model.id
-                    )
-                    self.logger.info("Got workflow from store")
-                except ProviderConfigurationException:
-                    self.logger.exception(
-                        "Workflow have a provider that is not configured",
-                        extra={
-                            "workflow_id": workflow_model.id,
-                            "tenant_id": tenant_id,
-                        },
+
+                if workflow_model.is_disabled:
+                    self.logger.debug(
+                        f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
+                        f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
                     )
                     continue
-                except Exception:
-                    self.logger.exception(
-                        "Error getting workflow",
-                        extra={
-                            "workflow_id": workflow_model.id,
-                            "tenant_id": tenant_id,
-                        },
-                    )
+                workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+                if workflow is None:
                     continue
+
                 for trigger in workflow.workflow_triggers:
                     # TODO: handle it better
                     if not trigger.get("type") == "alert":
@@ -366,7 +425,8 @@ class WorkflowManager:
 
         return [errors, results]
 
-    def _get_workflow_results(self, workflow: Workflow):
+    @staticmethod
+    def _get_workflow_results(workflow: Workflow):
         """
         Get the results of the workflow from the DB.
 
@@ -376,8 +436,7 @@ class WorkflowManager:
         Returns:
             dict: The results of the workflow.
         """
-        print("workflowssssss", workflow.workflow_actions)
-        print(workflow.workflow_steps)
+
         workflow_results = {
             action.name: action.provider.results for action in workflow.workflow_actions
         }

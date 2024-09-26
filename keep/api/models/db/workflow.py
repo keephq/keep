@@ -16,8 +16,11 @@ class Workflow(SQLModel, table=True):
     interval: Optional[int]
     workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
+    is_disabled: bool = Field(default=False)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
+    provisioned: bool = Field(default=False)
+    provisioned_file: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -50,6 +53,9 @@ class WorkflowExecution(SQLModel, table=True):
     workflow_to_alert_execution: "WorkflowToAlertExecution" = Relationship(
         back_populates="workflow_execution"
     )
+    workflow_to_incident_execution: "WorkflowToIncidentExecution" = Relationship(
+        back_populates="workflow_execution"
+    )
 
     class Config:
         orm_mode = True
@@ -65,6 +71,18 @@ class WorkflowToAlertExecution(SQLModel, table=True):
     event_id: str | None
     workflow_execution: WorkflowExecution = Relationship(
         back_populates="workflow_to_alert_execution"
+    )
+
+
+class WorkflowToIncidentExecution(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("workflow_execution_id", "incident_id"),)
+
+    # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
+    id: Optional[int] = Field(primary_key=True, default=None)
+    workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
+    incident_id: str | None
+    workflow_execution: WorkflowExecution = Relationship(
+        back_populates="workflow_to_incident_execution"
     )
 
 

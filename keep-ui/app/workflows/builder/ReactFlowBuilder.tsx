@@ -14,12 +14,14 @@ const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = { "custom-edge": CustomEdge as React.ComponentType<any> };
 
 const ReactFlowBuilder = ({
+  providers,
   installedProviders,
   toolboxConfiguration,
   definition,
   onDefinitionChange,
   validatorConfiguration
 }: {
+  providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
   toolboxConfiguration: Record<string, any>;
   definition: any;
@@ -29,7 +31,7 @@ const ReactFlowBuilder = ({
   };
   onDefinitionChange:(def: Definition) => void;
 }) => {
-  
+
   const {
     nodes,
     edges,
@@ -60,13 +62,14 @@ const ReactFlowBuilder = ({
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
-          > 
+          >
             <Controls orientation="horizontal"/>
             <Background/>
           </ReactFlow>
         )}
-        <ReactFlowEditor 
-          providers={installedProviders} 
+        <ReactFlowEditor
+          providers={providers}
+          installedProviders={installedProviders}
           onDefinitionChange= {onDefinitionChange}
           validatorConfiguration= {validatorConfiguration}
         />

@@ -1,7 +1,6 @@
 import dataclasses
 import datetime
 import json
-from typing import Optional
 
 import pydantic
 from splunklib.client import connect
@@ -39,6 +38,8 @@ class SplunkProviderAuthConfig:
 
 class SplunkProvider(BaseProvider):
     """Pull alerts and query incidents from Splunk."""
+
+    PROVIDER_DISPLAY_NAME = "Splunk"
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -148,9 +149,7 @@ class SplunkProvider(BaseProvider):
                 saved_search.update(**creation_updation_kwargs).refresh()
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["SplunkProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         result: dict = event.get("result", event.get("_result", {}))
 
         try:

@@ -18,11 +18,12 @@ export function globalValidatorV2(
 
   if (
     !!definition?.properties && 
-    !definition.properties['manual'] && 
+    !definition.properties['manual'] &&
     !definition.properties['interval'] &&
-    !definition.properties['alert']
+    !definition.properties['alert'] &&
+    !definition.properties['incident']
   ) {
-     setGlobalValidationError('trigger_start', "Workflow Should alteast have one trigger.");
+     setGlobalValidationError('trigger_start', "Workflow Should at least have one trigger.");
     return false;
     
   }
@@ -35,6 +36,12 @@ export function globalValidatorV2(
   const alertSources =  Object.values(definition.properties.alert||{}).filter(Boolean)
   if(definition?.properties && definition.properties['alert'] && alertSources.length==0){
     setGlobalValidationError('alert', "Workflow alert trigger cannot be empty.");
+    return  false;
+  }
+
+  const incidentActions =  Object.values(definition.properties.incident||{}).filter(Boolean)
+  if(definition?.properties && definition.properties['incident'] && incidentActions.length==0){
+    setGlobalValidationError('incident', "Workflow incident trigger cannot be empty.");
     return  false;
   }
 

@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+from uuid import uuid4
 
 from arq import Worker, cron
 from arq.connections import RedisSettings
@@ -8,48 +9,61 @@ from pydantic.utils import import_string
 from starlette.datastructures import CommaSeparatedStrings
 
 import keep.api.logging
-from keep.api.core.config import config
-from keep.api.tasks.process_background_ai_task import process_background_ai_task
-from keep.api.tasks.healthcheck_task import healthcheck_task
 from keep.api.consts import (
+    KEEP_ARQ_QUEUE_AI,
+    KEEP_ARQ_QUEUE_BASIC,
     KEEP_ARQ_TASK_POOL,
     KEEP_ARQ_TASK_POOL_AI,
     KEEP_ARQ_TASK_POOL_ALL,
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
 )
+from keep.api.core.config import config
+from keep.api.tasks.process_background_ai_task import process_background_ai_task
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
-# Current worker will pick up tasks only according to it's execution pool:
-all_tasks_for_the_worker = ["keep.api.tasks.healthcheck_task.healthcheck_task"]
+# Current worker will pick up tasks only according to its execution pool:
+all_tasks_for_the_worker = []
 
-if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
-        KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
+if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_BASIC_PROCESSING]:
     all_tasks_for_the_worker += [
-        "keep.api.tasks.process_event_task.async_process_event",
-        "keep.api.tasks.process_topology_task.async_process_topology",
+        ("keep.api.tasks.process_event_task.async_process_event", KEEP_ARQ_QUEUE_BASIC),
+        (
+            "keep.api.tasks.process_topology_task.async_process_topology",
+            KEEP_ARQ_QUEUE_BASIC,
+        ),
     ]
 
-if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
-        KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_AI]:
     all_tasks_for_the_worker += [
-        "keep.api.tasks.process_background_ai_task.process_background_ai_task",
-        "keep.api.tasks.process_background_ai_task.process_correlation",
-        "keep.api.tasks.process_background_ai_task.process_summary_generation",
-        "keep.api.tasks.process_background_ai_task.process_name_generation",
+        (
+            "keep.api.tasks.process_background_ai_task.process_background_ai_task",
+            KEEP_ARQ_QUEUE_AI,
+        ),
+        (
+            "keep.api.tasks.process_background_ai_task.process_correlation",
+            KEEP_ARQ_QUEUE_AI,
+        ),
+        (
+            "keep.api.tasks.process_background_ai_task.process_summary_generation",
+            KEEP_ARQ_QUEUE_AI,
+        ),
+        (
+            "keep.api.tasks.process_background_ai_task.process_name_generation",
+            KEEP_ARQ_QUEUE_AI,
+        ),
     ]
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     "ARQ_BACKGROUND_FUNCTIONS",
     cast=CommaSeparatedStrings,
-    default=all_tasks_for_the_worker,
+    default=[task for task, _ in all_tasks_for_the_worker],
 )
 
 FUNCTIONS: list = (
     [
-        import_string(background_function)
-        for background_function in list(ARQ_BACKGROUND_FUNCTIONS)
+        import_string(background_function) for background_function in list(ARQ_BACKGROUND_FUNCTIONS)
     ]
     if ARQ_BACKGROUND_FUNCTIONS is not None
     else list()
@@ -64,16 +78,26 @@ async def shutdown(ctx):
     pass
 
 
-def get_arq_worker() -> Worker:
+def get_arq_worker(queue_name: str) -> Worker:
     keep_result = config(
         "ARQ_KEEP_RESULT", cast=int, default=3600
     )  # duration to keep job results for
     expires = config(
         "ARQ_EXPIRES", cast=int, default=3600
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
-    return create_worker(
-        WorkerSettings, keep_result=keep_result, expires_extra_ms=expires
+    expires_ai = config(
+        "ARQ_EXPIRES_AI", cast=int, default=3600*1000
     )
+    # generate a worker id so each worker will have a different health check key
+    worker_id = str(uuid4()).replace("-", "")
+    worker = create_worker(
+        WorkerSettings,
+        keep_result=keep_result,
+        expires_extra_ms=expires_ai if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else expires,
+        queue_name=queue_name,
+        health_check_key=f"{queue_name}:{worker_id}:health-check",
+    )
+    return worker
 
 
 def at_every_x_minutes(x: int, start: int = 0, end: int = 59):
@@ -99,18 +123,15 @@ class WorkerSettings:
     # Only if it's an AI-dedicated worker, we can set large timeout, otherwise keeping low to avoid clogging
     timeout = 60 * 15 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 30
     functions: list = FUNCTIONS
-    cron_jobs = [
-        cron(
-            healthcheck_task,
-            minute=at_every_x_minutes(1),
-            unique=True,
-            timeout=30,
-            max_tries=1,
-            run_at_startup=True,
-        ),
-    ]
-    if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL or \
-            KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI:
+    queue_name: str
+    health_check_interval: int = 10
+    health_check_key: str
+
+    def __init__(self, queue_name: str):
+        self.queue_name = queue_name
+
+    cron_jobs = []
+    if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_AI]:
         cron_jobs.append(
             cron(
                 process_background_ai_task,

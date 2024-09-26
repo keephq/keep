@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { MdDone, MdBlock} from "react-icons/md";
 import { useSession } from "next-auth/react";
-import {IncidentDto, PaginatedIncidentsDto} from "./model";
+import {IncidentDto, PaginatedIncidentsDto} from "./models";
 import React, { useState } from "react";
 import Image from "next/image";
 import { IncidentTableComponent } from "./incident-table-component";
@@ -45,9 +45,9 @@ export default function PredictedIncidentsTable({
       cell: ({ row }) => <div className="text-wrap">{row.original.generated_summary}</div>,
     }),
     columnHelper.display({
-      id: "alert_count",
+      id: "alerts_count",
       header: "Number of Alerts",
-      cell: (context) => context.row.original.number_of_alerts,
+      cell: (context) => context.row.original.alerts_count,
     }),
     columnHelper.display({
       id: "alert_sources",

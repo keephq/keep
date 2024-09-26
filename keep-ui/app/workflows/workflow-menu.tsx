@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { EyeIcon, PencilIcon, PlayIcon, TrashIcon, WrenchIcon } from "@heroicons/react/24/outline";
-import { DownloadIcon } from "@radix-ui/react-icons";
+import {DownloadIcon, LockClosedIcon, LockOpen1Icon} from "@radix-ui/react-icons";
 
 interface WorkflowMenuProps {
   onDelete?: () => Promise<void>;
@@ -11,9 +11,9 @@ interface WorkflowMenuProps {
   onView?: () => void;
   onDownload?: () => void;
   onBuilder?: () => void;
-  allProvidersInstalled: boolean;
-  hasManualTrigger: boolean;
-  hasAlertTrigger: boolean;
+  isRunButtonDisabled: boolean;
+  runButtonToolTip?: string;
+  provisioned?: boolean;
 }
 
 
@@ -23,21 +23,13 @@ export default function WorkflowMenu({
   onView,
   onDownload,
   onBuilder,
-  allProvidersInstalled,
-  hasManualTrigger,
-  hasAlertTrigger
+  isRunButtonDisabled,
+  runButtonToolTip,
+  provisioned,
 }: WorkflowMenuProps) {
-  const getDisabledTooltip = () => {
-    if (!allProvidersInstalled) return "Not all providers are installed.";
-    if (!hasManualTrigger) return "No manual trigger available.";
-    return "";
-  };
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       };
-
-  const isRunButtonDisabled = !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger);
-
 
   return (
     <div className="w-44 text-right">
@@ -76,9 +68,9 @@ export default function WorkflowMenu({
                     <PlayIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                     Run
                   </button>
-                  {isRunButtonDisabled && (
+                  {isRunButtonDisabled && !!runButtonToolTip &&(
                     <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
-                      {getDisabledTooltip()}
+                      {runButtonToolTip}
                     </div>
                   )}
                 </div>
@@ -125,15 +117,23 @@ export default function WorkflowMenu({
               </Menu.Item>
               <Menu.Item>
                 {({ active }) => (
-                  <button
-                  onClick={(e) => { stopPropagation(e); onDelete?.(); }}
-                    className={`${
-                      active ? "bg-slate-200" : "text-gray-900"
-                    } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-                  >
-                    <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Delete
-                  </button>
+                  <div className="relative group">
+                    <button
+                      disabled={provisioned}
+                      onClick={(e) => { stopPropagation(e); onDelete?.(); }}
+                      className={`${
+                        active ? 'bg-slate-200' : 'text-gray-900'
+                      } flex w-full items-center rounded-md px-2 py-2 text-xs ${provisioned ? 'cursor-not-allowed opacity-50' : ''}`}
+                    >
+                      <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Delete
+                    </button>
+                    {provisioned && (
+                      <div className="absolute bottom-full transform -translate-x-1/2 bg-black text-white text-xs rounded px-4 py-1 z-10 opacity-0 group-hover:opacity-100">
+                        Cannot delete a provisioned workflow
+                      </div>
+                    )}
+                  </div>
                 )}
               </Menu.Item>
             </div>

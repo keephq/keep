@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
+from sqlalchemy import String
 from sqlmodel import JSON, Column, Field, SQLModel
 
 
@@ -18,12 +19,21 @@ class MappingRule(SQLModel, table=True):
     # Whether this rule should override existing attributes in the alert
     override: bool = Field(default=True)
     condition: Optional[str] = Field(max_length=2000)
+    # The type of this mapping rule
+    type: str = Field(
+        sa_column=Column(
+            String(255),
+            name="type",
+            server_default="csv",
+        ),
+        max_length=255,
+    )
     # The attributes to match against (e.g. ["service","region"])
     matchers: list[str] = Field(sa_column=Column(JSON), nullable=False)
     # The rows of the CSV file [{service: "service1", region: "region1", ...}, ...]
-    rows: list[dict] = Field(
+    rows: Optional[list[dict]] = Field(
         sa_column=Column(JSON),
-        nullable=False,
+        nullable=True,
     )  # max_length=204800)
     updated_by: Optional[str] = Field(max_length=255, default=None)
     last_updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -35,6 +45,7 @@ class MappRuleDtoBase(BaseModel):
     file_name: Optional[str] = None
     priority: int = 0
     matchers: list[str]
+    type: Literal["csv", "topology"] = "csv"
 
 
 class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
@@ -47,9 +58,10 @@ class MappingRuleDtoOut(MappRuleDtoBase, extra="ignore"):
 
 
 class MappingRuleDtoIn(MappRuleDtoBase):
-    rows: list[dict]
-
-
-class MappingRuleDtoUpdate(MappRuleDtoBase):
-    id: int
     rows: Optional[list[dict]] = None
+
+    @validator("rows", pre=True, always=True)
+    def validate_rows(cls, rows, values):
+        if not rows and values.get("type") == "csv":
+            raise ValueError("Mapping of type CSV cannot have empty rows")
+        return rows

@@ -20,9 +20,9 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
-
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
@@ -34,6 +34,7 @@ from keep.api.models.alert import (
     EnrichAlertRequestBody,
     UnEnrichAlertRequestBody,
 )
+from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
@@ -278,7 +279,7 @@ async def receive_generic_event(
     """
     if REDIS:
         redis: ArqRedis = await get_pool()
-        await redis.enqueue_job(
+        job = await redis.enqueue_job(
             "async_process_event",
             authenticated_entity.tenant_id,
             None,
@@ -287,6 +288,15 @@ async def receive_generic_event(
             authenticated_entity.api_key_name,
             request.state.trace_id,
             event,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
         )
     else:
         bg_tasks.add_task(
@@ -309,7 +319,11 @@ async def receive_generic_event(
     description="Helper function to complete Netdata webhook challenge",
 )
 async def webhook_challenge():
-    token = Request.query_params.get("token").encode("ascii")
+    try:
+        token = Request.query_params.get("token").encode("ascii")
+    except Exception as e:
+        logger.exception("Failed to get token", extra={"error": str(e)})
+        raise HTTPException(status_code=400, detail="Bad request: failed to get token")
     KEY = "keep-netdata-webhook-integration"
 
     # creates HMAC SHA-256 hash from incomming token and your consumer secret
@@ -350,7 +364,7 @@ async def receive_event(
 
     if REDIS:
         redis: ArqRedis = await get_pool()
-        await redis.enqueue_job(
+        job = await redis.enqueue_job(
             "async_process_event",
             authenticated_entity.tenant_id,
             provider_type,
@@ -359,6 +373,15 @@ async def receive_event(
             authenticated_entity.api_key_name,
             trace_id,
             event,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
         )
     else:
         bg_tasks.add_task(
@@ -407,6 +430,15 @@ def get_alert(
 )
 def enrich_alert(
     enrich_data: EnrichAlertRequestBody,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> dict[str, str]:
+    return _enrich_alert(enrich_data, authenticated_entity=authenticated_entity)
+
+
+def _enrich_alert(
+    enrich_data: EnrichAlertRequestBody,
     pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
@@ -427,13 +459,23 @@ def enrich_alert(
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         # Shahar: TODO, change to the specific action type, good enough for now
-        if "status" in enrich_data.enrichments:
+        if (
+            "status" in enrich_data.enrichments
+            and authenticated_entity.api_key_name is None
+        ):
             action_type = (
                 AlertActionType.MANUAL_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
                 else AlertActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
+        elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
+            action_type = (
+                AlertActionType.API_AUTOMATIC_RESOLVE
+                if enrich_data.enrichments["status"] == "resolved"
+                else AlertActionType.API_STATUS_CHANGE
+            )
+            action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
             action_type = AlertActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
@@ -645,16 +687,49 @@ async def search_alerts(
         raise HTTPException(status_code=500, detail="Failed to search alerts")
 
 
+@router.post(
+    "/audit",
+    description="Get alert timeline audit trail for multiple fingerprints",
+)
+def get_multiple_fingerprint_alert_audit(
+    fingerprints: list[str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> list[AlertAuditDto]:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching alert audit",
+        extra={"fingerprints": fingerprints, "tenant_id": tenant_id},
+    )
+    alert_audit = get_alert_audit_db(tenant_id, fingerprints)
+
+    if not alert_audit:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    grouped_events = []
+
+    # Group the results by fingerprint for "deduplication" (2x, 3x, etc.) thingy..
+    grouped_audit = {}
+    for audit in alert_audit:
+        if audit.fingerprint not in grouped_audit:
+            grouped_audit[audit.fingerprint] = []
+        grouped_audit[audit.fingerprint].append(audit)
+
+    for values in grouped_audit.values():
+        grouped_events.extend(AlertAuditDto.from_orm_list(values))
+    return grouped_events
+
+
 @router.get(
     "/{fingerprint}/audit",
-    description="Get alert enrichment",
+    description="Get alert timeline audit trail",
 )
 def get_alert_audit(
     fingerprint: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-):
+) -> list[AlertAuditDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alert audit",
@@ -667,29 +742,5 @@ def get_alert_audit(
     if not alert_audit:
         raise HTTPException(status_code=404, detail="Alert not found")
 
-    grouped_events = []
-    previous_event = None
-    count = 1
-
-    for event in alert_audit:
-        if previous_event and (
-            event.user_id == previous_event.user_id
-            and event.action == previous_event.action
-            and event.description == previous_event.description
-        ):
-            count += 1
-        else:
-            if previous_event:
-                if count > 1:
-                    previous_event.description += f" x{count}"
-                grouped_events.append(previous_event.dict())
-            previous_event = event
-            count = 1
-
-    # Add the last event
-    if previous_event:
-        if count > 1:
-            previous_event.description += f" x{count}"
-        grouped_events.append(previous_event.dict())
-
+    grouped_events = AlertAuditDto.from_orm_list(alert_audit)
     return grouped_events

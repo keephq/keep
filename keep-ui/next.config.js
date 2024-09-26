@@ -41,21 +41,23 @@ const nextConfig = {
       : [
           {
             source: "/",
-            destination: "/providers",
-            permanent: true,
+            destination: "/incidents",
+            permanent: process.env.ENV === "production",
           },
         ];
   },
   async headers() {
     // Allow Keycloak Server as a CORS origin since we use SSO wizard as iframe
     const keycloakIssuer = process.env.KEYCLOAK_ISSUER;
-    const keycloakServer = keycloakIssuer ? keycloakIssuer.split('/auth')[0] : 'http://localhost:8181';
+    const keycloakServer = keycloakIssuer
+      ? keycloakIssuer.split("/auth")[0]
+      : "http://localhost:8181";
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
           {
-            key: 'Access-Control-Allow-Origin',
+            key: "Access-Control-Allow-Origin",
             value: keycloakServer,
           },
         ],

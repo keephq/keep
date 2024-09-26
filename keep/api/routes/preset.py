@@ -64,11 +64,23 @@ def pull_data_from_providers(
         workflow_id=None,
     )
 
-    for provider in ProvidersFactory.get_installed_providers(tenant_id=tenant_id):
+    providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
+
+    logger.info(
+        "Pulling data from providers",
+        extra={
+            "tenant_id": tenant_id,
+            "trace_id": trace_id,
+            "providers_len": len(providers),
+        },
+    )
+
+    for provider in providers:
         extra = {
             "provider_type": provider.type,
             "provider_id": provider.id,
             "tenant_id": tenant_id,
+            "trace_id": trace_id,
         }
 
         if provider.last_pull_time is not None:
@@ -85,54 +97,76 @@ def pull_data_from_providers(
                 )
                 continue
 
-        provider_class = ProvidersFactory.get_provider(
-            context_manager=context_manager,
-            provider_id=provider.id,
-            provider_type=provider.type,
-            provider_config=provider.details,
-        )
-
-        logger.info(
-            f"Pulling alerts from provider {provider.type} ({provider.id})",
-            extra=extra,
-        )
-        sorted_provider_alerts_by_fingerprint = (
-            provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
-        )
-
         try:
-            if isinstance(provider_class, BaseTopologyProvider):
-                logger.info("Getting topology data", extra=extra)
-                topology_data = provider_class.pull_topology()
-                logger.info("Got topology data, processing", extra=extra)
-                process_topology(tenant_id, topology_data, provider.id)
-                logger.info("Processed topology data", extra=extra)
-        except NotImplementedError:
-            logger.warning(
-                f"Provider {provider.type} ({provider.id}) does not support topology data",
+            logger.info(
+                f"Pulling alerts from provider {provider.type} ({provider.id})",
                 extra=extra,
             )
+            # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
+            update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
+
+            provider_class = ProvidersFactory.get_provider(
+                context_manager=context_manager,
+                provider_id=provider.id,
+                provider_type=provider.type,
+                provider_config=provider.details,
+            )
+            sorted_provider_alerts_by_fingerprint = (
+                provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
+            )
+            logger.info(
+                f"Pulling alerts from provider {provider.type} ({provider.id}) completed",
+                extra=extra,
+            )
+
+            try:
+                if isinstance(provider_class, BaseTopologyProvider):
+                    logger.info("Pulling topology data", extra=extra)
+                    topology_data = provider_class.pull_topology()
+                    logger.info(
+                        "Pulling topology data finished, processing",
+                        extra={**extra, "topology_length": len(topology_data)},
+                    )
+                    process_topology(
+                        tenant_id, topology_data, provider.id, provider.type
+                    )
+                    logger.info("Finished processing topology data", extra=extra)
+            except NotImplementedError:
+                logger.debug(
+                    f"Provider {provider.type} ({provider.id}) does not implement puliing topology data",
+                    extra=extra,
+                )
+            except Exception as e:
+                logger.error(
+                    f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
+                    extra={**extra, "error": str(e)},
+                )
+
+            for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
+                process_event(
+                    {},
+                    tenant_id,
+                    provider.type,
+                    provider.id,
+                    fingerprint,
+                    None,
+                    trace_id,
+                    alert,
+                    notify_client=False,
+                )
         except Exception:
-            logger.error(
-                f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
+            logger.exception(
+                f"Unknown error pulling from provider {provider.type} ({provider.id})",
                 extra=extra,
             )
-
-        # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
-        update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
-
-        for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():
-            process_event(
-                {},
-                tenant_id,
-                provider.type,
-                provider.id,
-                fingerprint,
-                None,
-                trace_id,
-                alert,
-                notify_client=False,
-            )
+    logger.info(
+        "Pulling data from providers completed",
+        extra={
+            "tenant_id": tenant_id,
+            "trace_id": trace_id,
+            "providers_len": len(providers),
+        },
+    )
 
 
 @router.get(
@@ -353,7 +387,7 @@ def update_preset(
     "/{preset_name}/alerts",
     description="Get a preset for tenant",
 )
-async def get_preset_alerts(
+def get_preset_alerts(
     request: Request,
     bg_tasks: BackgroundTasks,
     preset_name: str,
@@ -361,7 +395,7 @@ async def get_preset_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:presets"])
     ),
-) -> list[AlertDto]:
+) -> list:
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.
@@ -373,7 +407,10 @@ async def get_preset_alerts(
     )
 
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Getting preset alerts", extra={"preset_name": preset_name})
+    logger.info(
+        "Getting preset alerts",
+        extra={"preset_name": preset_name, "tenant_id": tenant_id},
+    )
     # handle static presets
     if preset_name in STATIC_PRESETS:
         preset = STATIC_PRESETS[preset_name]
@@ -390,7 +427,7 @@ async def get_preset_alerts(
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
 
-    response.headers["X-search-type"] = str(search_engine.search_mode.value)
+    response.headers["X-Search-Type"] = str(search_engine.search_mode.value)
     return preset_alerts
 
 

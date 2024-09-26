@@ -71,6 +71,11 @@ export default function RulesTable({ mappings, editCallback }: Props) {
       cell: (context) => context.row.original.name,
     }),
     columnHelper.display({
+      id: "type",
+      header: "Type",
+      cell: (context) => context.row.original.type,
+    }),
+    columnHelper.display({
       id: "description",
       header: "Description",
       cell: (context) => context.row.original.description,

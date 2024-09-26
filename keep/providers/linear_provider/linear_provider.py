@@ -25,6 +25,7 @@ class LinearProviderAuthConfig:
 class LinearProvider(BaseProvider):
     """Enrich alerts with Linear tickets."""
 
+    PROVIDER_DISPLAY_NAME = "Linear"
     LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql"
 
     def __init__(

@@ -1,15 +1,18 @@
-
-import {Button, Title} from "@tremor/react";
-import { IncidentDto } from "../model";
+import { Button, Icon, Title } from "@tremor/react";
+import { IncidentDto } from "../models";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import React, {useState} from "react";
-import {MdBlock, MdDone, MdModeEdit} from "react-icons/md";
-import {useIncident} from "../../../utils/hooks/useIncidents";
-import {deleteIncident, handleConfirmPredictedIncident} from "../incident-candidate-actions";
-import {useSession} from "next-auth/react";
-import {useRouter} from "next/navigation";
-// import { RiSparkling2Line } from "react-icons/ri";
+import React, { useState } from "react";
+import { MdBlock, MdDone, MdModeEdit } from "react-icons/md";
+import { useIncident } from "../../../utils/hooks/useIncidents";
+import {
+  deleteIncident,
+  handleConfirmPredictedIncident,
+} from "../incident-candidate-actions";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   incident: IncidentDto;
@@ -34,12 +37,17 @@ export default function IncidentInformation({ incident }: Props) {
     mutate();
   };
 
+  const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
+  const summary = incident.user_summary || incident.generated_summary;
+
   return (
     <div className="flex h-full flex-col justify-between">
-      <div>
-        <div className="flex justify-between mb-2.5">
-          <Title className="">{incident.is_confirmed ? "⚔️ " : "Possible "}Incident Information</Title>
-          {incident.is_confirmed &&
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between text-sm">
+          <Title className="">
+            {incident.is_confirmed ? "⚔️ " : "Possible "}Incident
+          </Title>
+          {incident.is_confirmed && (
             <Button
               color="orange"
               size="xs"
@@ -51,9 +59,9 @@ export default function IncidentInformation({ incident }: Props) {
                 handleStartEdit();
               }}
             />
-          }
-          {!incident.is_confirmed &&
-            <div className={"space-x-1 flex flex-row items-center justify-center"}>
+          )}
+          {!incident.is_confirmed && (
+            <div className="space-x-1 flex flex-row items-center justify-center">
               <Button
                 color="orange"
                 size="xs"
@@ -64,9 +72,15 @@ export default function IncidentInformation({ incident }: Props) {
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleConfirmPredictedIncident({incidentId: incident.id!, mutate, session});
+                  handleConfirmPredictedIncident({
+                    incidentId: incident.id!,
+                    mutate,
+                    session,
+                  });
                 }}
-              >Confirm</Button>
+              >
+                Confirm
+              </Button>
               <Button
                 color="red"
                 size="xs"
@@ -76,19 +90,59 @@ export default function IncidentInformation({ incident }: Props) {
                 onClick={async (e: React.MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const success = await deleteIncident({incidentId: incident.id!, mutate, session});
+                  const success = await deleteIncident({
+                    incidentId: incident.id!,
+                    mutate,
+                    session,
+                  });
                   if (success) {
                     router.push("/incidents");
                   }
                 }}
               />
             </div>
-          }
+          )}
         </div>
-        <div className="prose-2xl">{incident.user_generated_name || incident.ai_generated_name}</div>
-        <p>Summary: {incident.user_summary || incident.generated_summary}</p>
-        {!!incident.start_time && <p>Started at: {new Date(incident.start_time + "Z").toLocaleString()}</p>}
-        {!!incident.last_seen_time && <p>Last seen at: {new Date(incident.last_seen_time + "Z").toLocaleString()}</p>}
+        <div className="prose-2xl flex gap-2 items-start">
+          <Icon
+            icon={ArrowUturnLeftIcon}
+            tooltip="Go Back"
+            variant="shadow"
+            className="cursor-pointer"
+            onClick={() => router.back()}
+          />
+          <span>
+            {incident.user_generated_name || incident.ai_generated_name}
+          </span>
+        </div>
+        <div>
+          <h3 className="text-gray-500 text-sm">Summary</h3>
+          {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+        </div>
+        <div className="flex gap-4">
+          {!!incident.start_time && (
+            <div>
+              <h3 className="text-gray-500 text-sm">Started at</h3>
+              <p className="">
+                {format(new Date(incident.start_time), formatString)}
+              </p>
+            </div>
+          )}
+          {!!incident.last_seen_time && (
+            <div>
+              <h3 className="text-gray-500 text-sm">Last seen at</h3>
+              <p>{format(new Date(incident.last_seen_time), formatString)}</p>
+            </div>
+          )}
+        </div>
+        <div>
+          {!!incident.rule_fingerprint && (
+            <>
+              <h3 className="text-sm text-gray-500">Group by value</h3>
+              <p>{incident.rule_fingerprint}</p>
+            </>
+          )}
+        </div>
       </div>
       <Modal
         isOpen={isFormOpen}

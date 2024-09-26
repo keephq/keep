@@ -1,0 +1,36 @@
+---
+title: "Workflow Provisioning"
+---
+
+<Tip>For any questions or issues related to workflow provisioning, please join our [Slack](https://slack.keephq.dev) community.</Tip>
+
+Workflow provisioning in Keep allows you to set up and manage workflows dynamically. This feature enables you to configure various automated processes and tasks within your Keep deployment.
+
+### Configuring Workflows
+
+To provision workflows, follow these steps:
+
+1. Set the `KEEP_WORKFLOWS_DIRECTORY` environment variable to the path of your workflow configuration directory.
+2. Create workflow configuration files in the specified directory.
+
+Example directory structure:
+```
+/path/to/workflows/
+├── workflow1.yaml
+├── workflow2.yaml
+└── workflow3.yaml
+```
+### Update Provisioned Workflows
+
+On every restart, Keep reads the `KEEP_WORKFLOWS_DIRECTORY` environment variable and determines which workflows need to be added, removed, or updated.
+
+This process allows for flexible management of workflows without requiring manual intervention. By simply updating the workflow files in the `KEEP_WORKFLOWS_DIRECTORY` and restarting the application, you can efficiently add new workflows, remove existing ones, or modify their configurations.
+
+The high-level provisioning mechanism:
+1. Keep reads the `KEEP_WORKFLOWS_DIRECTORY` value.
+2. Keep lists all workflow files under the `KEEP_WORKFLOWS_DIRECTORY` directory.
+3. Keep compares the current workflow files with the previously provisioned workflows:
+   - New workflow files are provisioned.
+   - Missing workflow files are deprovisioned.
+   - Updated workflow files are re-provisioned with the new configuration.
+4. Keep updates its internal state to reflect the current set of provisioned workflows.

@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import time
-from typing import Optional
 
 import pydantic
 import requests
@@ -103,6 +102,7 @@ class DatadogProviderAuthConfig:
 class DatadogProvider(BaseTopologyProvider):
     """Pull/push alerts from Datadog."""
 
+    PROVIDER_DISPLAY_NAME = "Datadog"
     OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
     DATADOG_CLIENT_ID = os.environ.get("DATADOG_CLIENT_ID")
     DATADOG_CLIENT_SECRET = os.environ.get("DATADOG_CLIENT_SECRET")
@@ -788,9 +788,7 @@ class DatadogProvider(BaseTopologyProvider):
                 self.logger.info("Monitors updated")
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["DatadogProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")
 

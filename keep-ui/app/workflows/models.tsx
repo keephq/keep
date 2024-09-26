@@ -33,6 +33,7 @@ export type Workflow = {
   interval: string;
   providers: Provider[];
   triggers: Trigger[];
+  disabled:boolean,
   last_execution_time: string;
   last_execution_status: string;
   last_updated: string;
@@ -43,6 +44,7 @@ export type Workflow = {
     WorkflowExecution,
     "execution_time" | "status" | "started"
   >[];
+  provisioned?: boolean;
 };
 
 export type MockProvider = {

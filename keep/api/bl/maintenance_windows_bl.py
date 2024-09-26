@@ -52,9 +52,7 @@ class MaintenanceWindowsBl:
         env = celpy.Environment()
 
         for maintenance_rule in self.maintenance_rules:
-            if maintenance_rule.end_time <= datetime.datetime.now(
-                tz=datetime.timezone.utc
-            ):
+            if maintenance_rule.end_time <= datetime.datetime.now():
                 # this is wtf error, should not happen because of query in init
                 self.logger.error(
                     "Fetched maintenance window which already ended by mistake, should not happen!"

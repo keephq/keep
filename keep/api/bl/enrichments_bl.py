@@ -8,7 +8,11 @@ import chevron
 from sqlmodel import Session
 
 from keep.api.core.db import enrich_alert as enrich_alert_db
-from keep.api.core.db import get_enrichment_with_session, get_mapping_rule_by_id
+from keep.api.core.db import (
+    get_enrichment_with_session,
+    get_mapping_rule_by_id,
+    get_topology_data_by_dynamic_matcher,
+)
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto
 from keep.api.models.db.alert import AlertActionType
@@ -264,41 +268,70 @@ class EnrichmentsBl:
         )
 
         # Apply enrichment to the alert
-        for row in rule.rows:
-            if any(
-                self._check_matcher(alert, row, matcher) for matcher in rule.matchers
-            ):
-                # Extract enrichments from the matched row
-                enrichments = {
-                    key: value for key, value in row.items() if key not in rule.matchers
-                }
+        enrichments = {}
+        if rule.type == "topology":
+            matcher_value = {}
+            for matcher in rule.matchers:
+                matcher_value[matcher] = get_nested_attribute(alert, matcher)
+            topology_service = get_topology_data_by_dynamic_matcher(
+                self.tenant_id, matcher_value
+            )
 
-                # Enrich the alert with the matched data from the row
-                for key, value in enrichments.items():
+            if not topology_service:
+                self.logger.debug(
+                    "No topology service found to match on",
+                    extra={"matcher_value": matcher_value},
+                )
+            else:
+                enrichments = topology_service.dict(exclude_none=True)
+                # Remove redundant fields
+                enrichments.pop("tenant_id", None)
+                enrichments.pop("id", None)
+        elif rule.type == "csv":
+            for row in rule.rows:
+                if any(
+                    self._check_matcher(alert, row, matcher)
+                    for matcher in rule.matchers
+                ):
+                    # Extract enrichments from the matched row
+                    enrichments = {
+                        key: value
+                        for key, value in row.items()
+                        if key not in rule.matchers and value is not None
+                    }
+                    break
+
+        if enrichments:
+            # Enrich the alert with the matched data from the row
+            for key, value in enrichments.items():
+                # It's not relevant to enrich if the value if empty
+                if value is not None:
                     setattr(alert, key, value)
 
-                # Save the enrichments to the database
-                # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
-                #         enrich alert will fail to update the alert in elastic.
-                #         hence should_exist = False
-                self.enrich_alert(
-                    alert.fingerprint,
-                    enrichments,
-                    action_type=AlertActionType.MAPPING_RULE_ENRICH,
-                    action_callee="system",
-                    action_description="Alert enriched with mapping rule",
-                    should_exist=False,
-                )
+            # Save the enrichments to the database
+            # SHAHAR: since when running this enrich_alert, the alert is not in elastic yet (its indexed after),
+            #         enrich alert will fail to update the alert in elastic.
+            #         hence should_exist = False
+            self.enrich_alert(
+                alert.fingerprint,
+                enrichments,
+                action_type=AlertActionType.MAPPING_RULE_ENRICH,
+                action_callee="system",
+                action_description=f"Alert enriched with mapping from rule `{rule.name}`",
+                should_exist=False,
+            )
 
-                self.logger.info(
-                    "Alert enriched",
-                    extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
-                )
+            self.logger.info(
+                "Alert enriched",
+                extra={"fingerprint": alert.fingerprint, "rule_id": rule.id},
+            )
 
-                return (
-                    True  # Exit on first successful enrichment (assuming single match)
-                )
+            return True  # Exit on first successful enrichment (assuming single match)
 
+        self.logger.info(
+            "Alert was not enriched by mapping rule",
+            extra={"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
+        )
         return False
 
     @staticmethod

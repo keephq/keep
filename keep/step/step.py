@@ -91,8 +91,10 @@ class Step:
             index = [i.strip() for i in index]
             items = self.context_manager.get_full_context()
             for i in index:
-                # try to get it as a dict
-                items = items.get(i, {})
+                if isinstance(items, dict):
+                    items = items.get(i, {})
+                else:
+                    items = getattr(items, i, {})
             foreach_items.append(items)
         if not foreach_items:
             return []

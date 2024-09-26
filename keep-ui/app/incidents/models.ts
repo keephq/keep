@@ -1,5 +1,12 @@
 import {AlertDto} from "../alerts/models";
 
+export enum Status {
+  Firing = "firing",
+  Resolved = "resolved",
+  Acknowledged = "acknowledged",
+}
+
+
 export interface IncidentDto {
   id: string;
   user_generated_name: string;
@@ -8,7 +15,8 @@ export interface IncidentDto {
   generated_summary: string;
   assignee: string;
   severity: string;
-  number_of_alerts: number;
+  status: Status;
+  alerts_count: number;
   alert_sources: string[];
   services: string[];
   start_time?: Date;
@@ -16,7 +24,7 @@ export interface IncidentDto {
   end_time?: Date;
   creation_time: Date;
   is_confirmed: boolean;
-  is_predicted: boolean;
+  rule_fingerprint: string;
 }
 
 export interface PaginatedIncidentsDto {
@@ -32,4 +40,3 @@ export interface PaginatedIncidentAlertsDto {
   count: number;
   items: AlertDto[];
 }
-
