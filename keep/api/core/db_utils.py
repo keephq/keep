@@ -11,9 +11,7 @@ import os
 import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
-from sqlalchemy import String, cast, func
-from sqlalchemy.sql.elements import Label
-from sqlalchemy.sql.sqltypes import String
+from sqlalchemy import func
 from sqlmodel import Session, create_engine
 
 # This import is required to create the tables
@@ -174,7 +172,7 @@ def get_json_extract_field(session, base_field, key):
 def get_aggreated_field(session: Session, column_name: str, alias: str):
     if session.bind is None:
         raise ValueError("Session is not bound to a database")
-    
+
     if session.bind.dialect.name == "postgresql":
         return func.array_agg(column_name).label(alias)
     elif session.bind.dialect.name == "mysql":
