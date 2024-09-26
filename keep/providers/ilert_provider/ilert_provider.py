@@ -18,7 +18,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
-class ilertIncidentStatus(str, enum.Enum):
+class IlertIncidentStatus(str, enum.Enum):
     """
     ilert incident status.
     """
@@ -30,7 +30,7 @@ class ilertIncidentStatus(str, enum.Enum):
 
 
 @pydantic.dataclasses.dataclass
-class ilertProviderAuthConfig:
+class IlertProviderAuthConfig:
     """
     ilert authentication configuration.
     """
@@ -53,9 +53,10 @@ class ilertProviderAuthConfig:
     )
 
 
-class ilertProvider(BaseProvider):
+class IlertProvider(BaseProvider):
     """Create/Resolve incidents in ilert."""
 
+    PROVIDER_DISPLAY_NAME = "ilert"
     PROVIDER_SCOPES = [
         ProviderScope("read_permission", "Read permission", mandatory=True),
         ProviderScope("write_permission", "Write permission", mandatory=False),
@@ -92,7 +93,7 @@ class ilertProvider(BaseProvider):
         Validates required configuration for ilert provider.
 
         """
-        self.authentication_config = ilertProviderAuthConfig(
+        self.authentication_config = IlertProviderAuthConfig(
             **self.config.authentication
         )
 
@@ -187,10 +188,10 @@ class ilertProvider(BaseProvider):
 
         alert_dtos = []
         for alert in alerts:
-            severity = ilertProvider.SEVERITIES_MAP.get(
+            severity = IlertProvider.SEVERITIES_MAP.get(
                 alert.get("affectedServices", [{}])[0].get("impact", "OPERATIONAL")
             )
-            status = ilertProvider.STATUS_MAP.get(
+            status = IlertProvider.STATUS_MAP.get(
                 alert.get("status"), AlertStatus.ACKNOWLEDGED
             )
             alert_dto = AlertDto(
@@ -322,7 +323,7 @@ class ilertProvider(BaseProvider):
         self,
         _type: Literal["incident", "event"] = "event",
         summary: str = "",
-        status: ilertIncidentStatus = ilertIncidentStatus.INVESTIGATING,
+        status: IlertIncidentStatus = IlertIncidentStatus.INVESTIGATING,
         message: str = "",
         affectedServices: str | list = "[]",
         id: str = "0",
@@ -371,7 +372,7 @@ if __name__ == "__main__":
     provider_config = {
         "authentication": {"ilert_token": api_key, "ilert_host": host},
     }
-    provider: ilertProvider = ProvidersFactory.get_provider(
+    provider: IlertProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
         provider_id="ilert",
         provider_type="ilert",
