@@ -3292,7 +3292,7 @@ def get_alerts_metrics_by_provider(
     
     # Set default dates to the last 30 days if not provided
     if start_date is None:
-        start_date = datetime.now() - timedelta(days=30)
+        start_date = datetime.now() - timedelta(days=7)
     if end_date is None:
         end_date = datetime.now()
 
