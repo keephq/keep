@@ -307,15 +307,25 @@ class WorkflowStore:
                         elif "alert" in workflow_yaml:
                             workflow_yaml = workflow_yaml["alert"]
 
-                    workflow_name = workflow_yaml.get("name") or workflow_yaml.get("id")
+                    workflow_id = workflow_yaml.get("id", str(uuid.uuid4()))
+                    workflow_yaml["id"] = workflow_id
+                    workflow_name = workflow_yaml.get(
+                        "name", "Workflow-" + workflow_yaml.get("id")
+                    )
                     if not workflow_name:
                         logger.error(f"Workflow from {file} does not have a name or id")
                         continue
-                    workflow_id = str(uuid.uuid4())
                     workflow_description = workflow_yaml.get("description")
                     workflow_interval = parser.parse_interval(workflow_yaml)
                     workflow_disabled = parser.parse_disabled(workflow_yaml)
-
+                    is_valid = True
+                    try:
+                        parser = Parser()
+                        parser.parse(
+                            tenant_id=tenant_id, parsed_workflow_yaml=workflow_yaml
+                        )
+                    except Exception as e:
+                        is_valid = False
                     add_or_update_workflow(
                         id=workflow_id,
                         name=workflow_name,
@@ -324,6 +334,7 @@ class WorkflowStore:
                         created_by="system",
                         interval=workflow_interval,
                         is_disabled=workflow_disabled,
+                        is_valid=is_valid,
                         workflow_raw=yaml.dump(workflow_yaml),
                         provisioned=True,
                         provisioned_file=workflow_path,
