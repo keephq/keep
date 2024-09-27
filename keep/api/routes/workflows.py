@@ -277,7 +277,7 @@ async def run_workflow_from_definition(
 
 
 async def __get_workflow_raw_data(
-    request: Request, file: UploadFile, tenant_id
+    request: Request | None, file: UploadFile, tenant_id
 ) -> Tuple[dict, bool]:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
@@ -304,7 +304,7 @@ async def __get_workflow_raw_data(
         is_valid = True
     except Exception as e:
         is_valid = False
-        logger.error(str(e))
+        logger.error(f"Error while validating workflow yaml {workflow_data['id']}", extra={"exception": e})
 
     return workflow_data, is_valid
 

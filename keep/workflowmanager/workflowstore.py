@@ -325,6 +325,7 @@ class WorkflowStore:
                             tenant_id=tenant_id, parsed_workflow_yaml=workflow_yaml
                         )
                     except Exception as e:
+                        logger.error(f"Error while validating workflow yaml {workflow_id}", extra={"exception": e})
                         is_valid = False
                     add_or_update_workflow(
                         id=workflow_id,
