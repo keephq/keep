@@ -8,18 +8,25 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
+import { usePathname, useSearchParams } from "next/navigation";
+import moment from "moment";
 
-export const usePresets = () => {
+export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();
   const { data: configData } = useConfig();
   const apiUrl = getApiURL();
-
+  //ideally, we can use pathname. but hardcoding it for now.
+  const isDashBoard = type === "dashboard";
   const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>(
     "presets-order",
     []
   );
+  const searchParams = useSearchParams();
+
+  const newPresetsRef = useRef<Preset[] | null>(null);
+
   const [staticPresetsOrderFromLS, setStaticPresetsOrderFromLS] =
-    useLocalStorage<Preset[]>("static-presets-order", []);
+    useLocalStorage<Preset[]>(`static-presets-order`, []);
   // used to sync the presets with the server
   const [isLocalStorageReady, setIsLocalStorageReady] = useState(false);
   const presetsOrderRef = useRef(presetsOrderFromLS);
@@ -32,6 +39,9 @@ export const usePresets = () => {
   }, [presetsOrderFromLS, staticPresetsOrderFromLS]);
 
   const updateLocalPresets = (newPresets: Preset[]) => {
+    if (newPresetsRef) {
+      newPresetsRef.current = newPresets;
+    }
     const updatePresets = (currentPresets: Preset[], newPresets: Preset[]) => {
       const newPresetMap = new Map(newPresets.map((p) => [p.id, p]));
       let updatedPresets = new Map(currentPresets.map((p) => [p.id, p]));
@@ -57,7 +67,6 @@ export const usePresets = () => {
 
       return Array.from(updatedPresets.values());
     };
-
     setPresetsOrderFromLS((current) =>
       updatePresets(
         presetsOrderRef.current,
@@ -102,8 +111,14 @@ export const usePresets = () => {
   );
 
   const useFetchAllPresets = (options?: SWRConfiguration) => {
+    const filters = searchParams?.toString();
     return useSWR<Preset[]>(
-      () => (session ? `${apiUrl}/preset` : null),
+      () =>
+        session
+          ? `${apiUrl}/preset${
+              useFilters && filters && isDashBoard ? `?${filters}` : ""
+            }`
+          : null,
       (url) => fetcher(url, session?.accessToken),
       {
         ...options,
@@ -116,6 +131,12 @@ export const usePresets = () => {
             const staticPresets = data.filter((p) =>
               ["feed", "deleted", "dismissed", "groups"].includes(p.name)
             );
+
+            //if it is dashboard we don't need to merge with local storage.
+            //if we need to merge. we need maintain multiple local storage for each dahboard view which make it very complex to maintain.(if we have more dashboards)
+            if (isDashBoard) {
+              return;
+            }
             mergePresetsWithLocalStorage(
               dynamicPresets,
               presetsOrderFromLS,
@@ -206,5 +227,6 @@ export const usePresets = () => {
     presetsOrderFromLS,
     setPresetsOrderFromLS,
     staticPresetsOrderFromLS,
+    newPresetsRef,
   };
 };

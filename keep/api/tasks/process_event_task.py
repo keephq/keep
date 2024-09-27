@@ -418,13 +418,19 @@ def __handle_formatted_events(
             logger.exception("Failed to push alert to the client")
 
     # Now we need to update the presets
+    # send with pusher
+    if notify_client:
+        pusher_client = get_pusher_client()
+        if not pusher_client:
+            return
     try:
         presets = get_all_presets(tenant_id)
+        rules_engine = RulesEngine(tenant_id=tenant_id)
         presets_do_update = []
         for preset in presets:
             # filter the alerts based on the search query
             preset_dto = PresetDto(**preset.to_dict())
-            filtered_alerts = RulesEngine.filter_alerts(
+            filtered_alerts = rules_engine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )
             # if not related alerts, no need to update
@@ -452,11 +458,6 @@ def __handle_formatted_events(
             ):
                 logger.info("Noisy preset is noisy")
                 preset_dto.should_do_noise_now = True
-        # send with pusher
-        if notify_client:
-            pusher_client = get_pusher_client()
-            if not pusher_client:
-                return
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
