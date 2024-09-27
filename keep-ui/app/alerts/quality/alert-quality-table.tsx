@@ -1,27 +1,33 @@
 "use client"; // Add this line at the top to make this a Client Component
 
 import React, { useState, useEffect } from 'react';
-import { useFetchProviders } from 'app/providers/page.client';
 import { GenericTable } from '@/components/table/GenericTable';
+import { useAlertQualityMetrics } from 'utils/hooks/useAlertQuality';
+import { useProviders } from 'utils/hooks/useProviders';
+import { Providers } from 'app/providers/providers';
 
 interface ProviderAlertQuality {
-  providerName: string;
   alertsReceived: number;
   alertsCorrelatedToIncidentsPercentage: number;
-  alertsWithFieldFilledPercentage: number;
+  // alertsWithFieldFilledPercentage: number;
+  alertsWithSeverityPercentage: number;
 }
 
+interface Pagination {
+  limit: number;
+  offset: number;
+}
 const AlertQualityTable = () => {
-  const {installedProviders} = useFetchProviders();
-  const [data, setData] = useState<ProviderAlertQuality[]>([]);
-  const [rowCount, setRowCount] = useState<number>(0);
-  const [offset, setOffset] = useState<number>(0);
-  const [limit, setLimit] = useState<number>(10);
-
+  const {data: providersMeta} = useProviders(); 
+  const {data: alertsQualityMetrics, error} =  useAlertQualityMetrics()
+  const [pagination, setPagination] = useState<Pagination>({
+    limit: 25,
+    offset: 0,
+});
   const columns = [
     {
       header: 'Provider Name',
-      accessorKey: 'providerName',
+      accessorKey: 'display_name',
     },
     {
       header: 'Alerts Received',
@@ -33,53 +39,55 @@ const AlertQualityTable = () => {
       cell: (info: any) => `${info.getValue().toFixed(2)}%`,
     },
     {
-      header: '% of Alerts Having Field Filled',
-      accessorKey: 'alertsWithFieldFilledPercentage',
+      header: '% of Alerts Having Severity',//we are considering critical and warning as severe
+      accessorKey: 'alertsWithSeverityPercentage',
       cell: (info: any) => `${info.getValue().toFixed(2)}%`,
     },
   ];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const transformedData = installedProviders.map((provider: any) => ({
-          providerName: `${provider.details.name}  (${provider.display_name})` || 'Unknown',
-          alertsReceived: provider.alertsReceived || 0,
-          alertsCorrelatedToIncidentsPercentage: provider.alertsCorrelatedToIncidentsPercentage * 100 || 0,
-          alertsWithFieldFilledPercentage: provider.alertsWithFieldFilledPercentage * 100 || 0,
-        }));
+  const finalData: Providers&ProviderAlertQuality[] = [];
+  const providers =  providersMeta?.providers;
 
-        setData(transformedData);
-        setRowCount(transformedData.length);
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-      }
-    };
 
-    fetchData();
-  }, [offset, limit]);
+  if (alertsQualityMetrics && providers) {
+    providers.forEach( provider => {
+      const  providerType = provider.type;
+      const alertQuality = alertsQualityMetrics[providerType];
+      const totalAlertsReceived = alertQuality?.total_alerts ?? 0;
+      const correlated_alerts = alertQuality?.correlated_alerts ?? 0;
+      const correltedPert = totalAlertsReceived && correlated_alerts ? (correlated_alerts/totalAlertsReceived)*100 : 0;
+      const severityPert = totalAlertsReceived ? ((alertQuality?.severity_count ?? 0)/totalAlertsReceived)*100 : 0
+      finalData.push({
+        ...provider,
+        alertsReceived: totalAlertsReceived,
+        alertsCorrelatedToIncidentsPercentage: correltedPert,
+        alertsWithSeverityPercentage: severityPert,
+      });
+    });
+  }
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
-    setLimit(newLimit);
-    setOffset(newOffset);
+    setPagination({ limit: newLimit, offset: newOffset })
   };
+
 
   return (
     <div className="p-4">
         <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
             Alert Quality Dashboard
         </h1>
-        <GenericTable
-            data={data}
+        {providers && alertsQualityMetrics && <GenericTable
+            data={finalData}
             columns={columns}
-            rowCount={rowCount}
-            offset={offset}
-            limit={limit}
+            rowCount={finalData?.length}
+            offset={pagination.offset}
+            limit={pagination.limit}
             onPaginationChange={handlePaginationChange}
+            dataFetchedAtOneGO={true}
             onRowClick={(row) => {
                 console.log('Row clicked:', row);
             }}
-        />
+        />}
     </div>
   );
 };
