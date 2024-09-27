@@ -299,9 +299,7 @@ async def __get_workflow_raw_data(
 
     try:
         parser = Parser()
-        parsed_workflow = parser.parse(
-            tenant_id=tenant_id, parsed_workflow_yaml=workflow_data
-        )
+        parser.parse(tenant_id=tenant_id, parsed_workflow_yaml=workflow_data)
         workflow_data["id"] = parser._get_workflow_id(tenant_id, workflow_data)
         is_valid = True
     except Exception as e:
