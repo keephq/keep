@@ -192,6 +192,7 @@ def get_workflows_that_should_run():
             .filter(Workflow.is_deleted == False)
             .filter(Workflow.is_disabled == False)
             .filter(Workflow.interval != None)
+            .filter(Workflow.is_valid == True)
             .filter(Workflow.interval > 0)
             .all()
         )
@@ -312,15 +313,16 @@ def add_or_update_workflow(
     interval,
     workflow_raw,
     is_disabled,
+    is_valid,
     provisioned=False,
     provisioned_file=None,
     updated_by=None,
 ) -> Workflow:
     with Session(engine, expire_on_commit=False) as session:
         # TODO: we need to better understanad if that's the right behavior we want
-        existing_workflow = (
+        existing_workflow: Workflow = (
             session.query(Workflow)
-            .filter_by(name=name)
+            .filter_by(id=id)
             .filter_by(tenant_id=tenant_id)
             .first()
         )
@@ -328,6 +330,7 @@ def add_or_update_workflow(
         if existing_workflow:
             # tb: no need to override the id field here because it has foreign key constraints.
             existing_workflow.tenant_id = tenant_id
+            existing_workflow.name = name
             existing_workflow.description = description
             existing_workflow.updated_by = (
                 updated_by or existing_workflow.updated_by
@@ -337,6 +340,7 @@ def add_or_update_workflow(
             existing_workflow.revision += 1  # Increment the revision
             existing_workflow.last_updated = datetime.now()  # Update last_updated
             existing_workflow.is_deleted = False
+            existing_workflow.is_valid = is_valid
             existing_workflow.is_disabled = is_disabled
             existing_workflow.provisioned = provisioned
             existing_workflow.provisioned_file = provisioned_file
@@ -352,6 +356,7 @@ def add_or_update_workflow(
                 updated_by=updated_by,  # Set updated_by to the provided value
                 interval=interval,
                 is_disabled=is_disabled,
+                is_valid=is_valid,
                 workflow_raw=workflow_raw,
                 provisioned=provisioned,
                 provisioned_file=provisioned_file,
@@ -2805,7 +2810,9 @@ def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> i
         ).scalar()
 
 
-def get_last_alerts_for_incidents(incident_ids: List[str | UUID]) -> Dict[str, List[Alert]]:
+def get_last_alerts_for_incidents(
+    incident_ids: List[str | UUID],
+) -> Dict[str, List[Alert]]:
     with Session(engine) as session:
         query = (
             session.query(
@@ -2826,6 +2833,7 @@ def get_last_alerts_for_incidents(incident_ids: List[str | UUID]) -> Dict[str, L
         incidents_alerts[str(incident_id)].append(alert)
 
     return incidents_alerts
+
 
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]

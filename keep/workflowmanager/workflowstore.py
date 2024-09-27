@@ -38,21 +38,25 @@ class WorkflowStore:
         workflow_execution = get_workflow_execution(tenant_id, workflow_execution_id)
         return workflow_execution
 
-    def create_workflow(self, tenant_id: str, created_by, workflow: dict):
-        workflow_id = workflow.get("id")
+    def create_workflow(
+        self, tenant_id: str, created_by, workflow: dict, is_valid: bool
+    ):
+        workflow_id = workflow.get("id", str(uuid.uuid4()))
+        workflow["id"] = workflow_id
         self.logger.info(f"Creating workflow {workflow_id}")
         interval = self.parser.parse_interval(workflow)
         if not workflow.get("name"):  # workflow name is None or empty string
-            workflow_name = workflow_id
+            workflow_name = "Workflow-" + workflow_id
             workflow["name"] = workflow_name
         else:
             workflow_name = workflow.get("name")
 
         workflow = add_or_update_workflow(
-            id=str(uuid.uuid4()),
+            id=workflow_id,
             name=workflow_name,
             tenant_id=tenant_id,
             description=workflow.get("description"),
+            is_valid=is_valid,
             created_by=created_by,
             interval=interval,
             is_disabled=Parser.parse_disabled(workflow),
@@ -112,7 +116,10 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
         workflow_yaml = yaml.safe_load(workflow)
+
+        # This is validating the workflow
         workflow = self.parser.parse(tenant_id, workflow_yaml)
+
         if len(workflow) > 1:
             raise HTTPException(
                 status_code=500,
@@ -524,3 +531,6 @@ class WorkflowStore:
         triggers = self.parser.get_triggers_from_workflow(workflow_yaml)
 
         return providers_dto, triggers
+
+    def validate(self, tenant_id, workflow):
+        return self.parser.parse(tenant_id=tenant_id, parsed_workflow_yaml=workflow)

@@ -1,7 +1,7 @@
 import datetime
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import validators
 import yaml
@@ -129,6 +129,7 @@ def get_workflows(
                 interval=workflow.interval,
                 providers=providers_dto,
                 triggers=triggers,
+                is_valid=workflow.is_valid,
                 workflow_raw=workflow.workflow_raw,
                 revision=workflow.revision,
                 last_updated=workflow.last_updated,
@@ -237,7 +238,9 @@ async def run_workflow_from_definition(
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = await __get_workflow_raw_data(request, file)
+    workflow, is_valid = await __get_workflow_raw_data(
+        request, file, tenant_id=tenant_id
+    )
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
@@ -273,7 +276,9 @@ async def run_workflow_from_definition(
     return workflow_execution
 
 
-async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
+async def __get_workflow_raw_data(
+    request: Request, file: UploadFile, tenant_id
+) -> Tuple[dict, bool]:
     try:
         # we support both File upload (from frontend) or raw yaml (e.g. curl)
         if file:
@@ -291,7 +296,19 @@ async def __get_workflow_raw_data(request: Request, file: UploadFile) -> dict:
     except yaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=400, detail="Invalid YAML format")
-    return workflow_data
+
+    try:
+        parser = Parser()
+        parsed_workflow = parser.parse(
+            tenant_id=tenant_id, parsed_workflow_yaml=workflow_data
+        )
+        workflow_data["id"] = parser._get_workflow_id(tenant_id, workflow_data)
+        is_valid = True
+    except Exception as e:
+        is_valid = False
+        logger.error(str(e))
+
+    return workflow_data, is_valid
 
 
 @router.post(
@@ -305,12 +322,19 @@ async def create_workflow(
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = await __get_workflow_raw_data(request=None, file=file)
+    workflow, is_valid = await __get_workflow_raw_data(
+        request=None, file=file, tenant_id=tenant_id
+    )
+
     workflowstore = WorkflowStore()
+
     # Create the workflow
     try:
         workflow = workflowstore.create_workflow(
-            tenant_id=tenant_id, created_by=created_by, workflow=workflow
+            tenant_id=tenant_id,
+            created_by=created_by,
+            workflow=workflow,
+            is_valid=is_valid,
         )
     except Exception:
         logger.exception(
@@ -323,11 +347,17 @@ async def create_workflow(
         )
     if workflow.revision == 1:
         return WorkflowCreateOrUpdateDTO(
-            workflow_id=workflow.id, status="created", revision=workflow.revision
+            workflow_id=workflow.id,
+            status="created",
+            revision=workflow.revision,
+            is_valid=is_valid,
         )
     else:
         return WorkflowCreateOrUpdateDTO(
-            workflow_id=workflow.id, status="updated", revision=workflow.revision
+            workflow_id=workflow.id,
+            status="updated",
+            revision=workflow.revision,
+            is_valid=is_valid,
         )
 
 
@@ -344,12 +374,19 @@ async def create_workflow_from_body(
 ) -> WorkflowCreateOrUpdateDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
-    workflow = await __get_workflow_raw_data(request, None)
+    workflow, is_valid = await __get_workflow_raw_data(
+        request, None, tenant_id=tenant_id
+    )
+    print("I AM HERE: ", workflow)
     workflowstore = WorkflowStore()
+
     # Create the workflow
     try:
         workflow = workflowstore.create_workflow(
-            tenant_id=tenant_id, created_by=created_by, workflow=workflow
+            tenant_id=tenant_id,
+            created_by=created_by,
+            workflow=workflow,
+            is_valid=is_valid,
         )
     except Exception:
         logger.exception(
@@ -362,11 +399,17 @@ async def create_workflow_from_body(
         )
     if workflow.revision == 1:
         return WorkflowCreateOrUpdateDTO(
-            workflow_id=workflow.id, status="created", revision=workflow.revision
+            workflow_id=workflow.id,
+            status="created",
+            revision=workflow.revision,
+            is_valid=is_valid,
         )
     else:
         return WorkflowCreateOrUpdateDTO(
-            workflow_id=workflow.id, status="updated", revision=workflow.revision
+            workflow_id=workflow.id,
+            status="updated",
+            revision=workflow.revision,
+            is_valid=is_valid,
         )
 
 
@@ -448,7 +491,9 @@ async def update_workflow_by_id(
     if workflow_from_db.provisioned:
         raise HTTPException(403, detail="Cannot update a provisioned workflow")
 
-    workflow = await __get_workflow_raw_data(request, None)
+    workflow, is_valid = await __get_workflow_raw_data(
+        request, None, tenant_id=tenant_id
+    )
     parser = Parser()
     workflow_interval = parser.parse_interval(workflow)
     # In case the workflow name changed to empty string, keep the old name
@@ -459,12 +504,15 @@ async def update_workflow_by_id(
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
     workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.is_valid = is_valid
     workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
     session.refresh(workflow_from_db)
     logger.info(f"Updated workflow {workflow_id}", extra={"tenant_id": tenant_id})
-    return WorkflowCreateOrUpdateDTO(workflow_id=workflow_id, status="updated")
+    return WorkflowCreateOrUpdateDTO(
+        workflow_id=workflow_id, status="updated", is_valid=is_valid
+    )
 
 
 @router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
@@ -589,6 +637,7 @@ def get_workflow_by_id(
         workflow_raw=workflow.workflow_raw,
         last_updated=workflow.last_updated,
         disabled=workflow.is_disabled,
+        is_valid=workflow.is_valid,
     )
     return WorkflowExecutionsPaginatedResultsDto(
         limit=limit,

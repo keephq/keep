@@ -175,7 +175,7 @@ const useWorkflowInitialization = (
     const initializeWorkflow = async () => {
       setIsLoading(true);
       let parsedWorkflow = definition?.value;
-      const name = parsedWorkflow?.properties?.name || parsedWorkflow?.properties?.id;
+      const name = parsedWorkflow?.properties?.name || '';
 
       const sequences = [
         {

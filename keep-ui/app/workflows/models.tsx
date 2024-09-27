@@ -34,6 +34,7 @@ export type Workflow = {
   providers: Provider[];
   triggers: Trigger[];
   disabled:boolean,
+  is_valid: boolean,
   last_execution_time: string;
   last_execution_status: string;
   last_updated: string;

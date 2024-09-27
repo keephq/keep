@@ -36,7 +36,7 @@ class WorkflowDTO(BaseModel):
     workflow_raw: str
     revision: int = 1
     last_updated: datetime = None
-    invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
+    is_valid: bool
     last_executions: List[dict] = None
     last_execution_started: datetime = None
     provisioned: bool = False
@@ -118,4 +118,5 @@ class WorkflowExecutionDTO(BaseModel):
 class WorkflowCreateOrUpdateDTO(BaseModel):
     workflow_id: str
     status: Literal["created", "updated"]
+    is_valid: bool
     revision: int = 1

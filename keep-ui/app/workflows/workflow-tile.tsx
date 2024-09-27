@@ -27,7 +27,7 @@ import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "app/providers/page.client";
 import { Provider as FullProvider } from "app/providers/providers";
 import "./workflow-tile.css";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, XCircleIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
@@ -551,7 +551,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       )}
       <Card
-        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2 overflow-hidden"
+        className={`relative flex flex-col justify-between bg-white rounded shadow p-2 h-full ${workflow.is_valid ? 'hover:border-orange-400' : 'hover:border-red-400'} hover:border-2 overflow-hidden`}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -581,14 +581,20 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         <div className="m-2 flex flex-col justify-around item-start flex-wrap">
           <WorkflowGraph workflow={workflow} />
           <div className="container flex flex-col space-between">
-            <div className="h-24 cursor-default">
+            <div className="h-20 cursor-default">
               <h2 className="truncate leading-6 font-bold text-base md:text-lg lg:text-xl">
-                {workflow?.name || "Unkown"}
+                {workflow?.name || "Unknown"}
               </h2>
               <p className="text-gray-500 line-clamp-2">
                 {workflow?.description || "no description"}
               </p>
+
             </div>
+            {!workflow.is_valid ?
+                <div className={"text-red-900 flex items-center -ml-1 h-9"}>
+                  <Icon icon={InformationCircleIcon} color={"red"} size={"sm"}/> Invalid workflow Configuration
+                </div> : <div className={"h-9"}></div>
+              }
             <div className="flex flex-row justify-between items-center gap-1 flex-wrap text-sm">
               {!!workflow?.interval && (
                 <Button

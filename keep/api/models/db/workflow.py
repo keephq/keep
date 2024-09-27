@@ -17,6 +17,7 @@ class Workflow(SQLModel, table=True):
     workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
     is_disabled: bool = Field(default=False)
+    is_valid: bool = Field(default=True)
     revision: int = Field(default=1, nullable=False)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     provisioned: bool = Field(default=False)
