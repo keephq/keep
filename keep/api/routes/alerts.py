@@ -4,7 +4,7 @@ import hmac
 import json
 import logging
 import os
-from typing import Optional
+from typing import Optional, List
 
 import celpy
 from arq import ArqRedis
@@ -44,6 +44,8 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+from keep.api.utils.time_stamp_helpers import get_time_stamp_filter
+from keep.api.models.time_stamp import TimeStampFilter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -751,15 +753,22 @@ def get_alert_quality(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
+    time_stamp: TimeStampFilter = Depends(get_time_stamp_filter),
+    fields: Optional[List[str]] = Query([]),
 ):
     logger.info(
         "Fetching alert quality metrics per provider",
         extra={
             "tenant_id": authenticated_entity.tenant_id,
+            "fields": fields
         },
+        
     )
+    start_date = time_stamp.lower_timestamp if time_stamp else None
+    end_date = time_stamp.upper_timestamp if time_stamp else None
     db_alerts_quality = get_alerts_metrics_by_provider(
-        tenant_id=authenticated_entity.tenant_id
+        tenant_id=authenticated_entity.tenant_id, start_date=start_date, end_date=end_date,
+        fields=fields
     )
     
-    return db_alerts_quality    
+    return db_alerts_quality
