@@ -551,7 +551,7 @@ def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
             workflow = session.exec(
                 select(Workflow)
                 .where(Workflow.tenant_id == tenant_id)
-                .where(Workflow.name == workflow_id)
+                .where(Workflow.id == workflow_id)
                 .where(Workflow.is_deleted == False)
             ).first()
     if not workflow:

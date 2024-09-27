@@ -304,7 +304,10 @@ async def __get_workflow_raw_data(
         is_valid = True
     except Exception as e:
         is_valid = False
-        logger.error(f"Error while validating workflow yaml {workflow_data['id']}", extra={"exception": e})
+        logger.error(
+            f"Error while validating workflow yaml {workflow_data['id']}",
+            extra={"exception": e},
+        )
 
     return workflow_data, is_valid
 
