@@ -10,13 +10,10 @@ import React, {
 import { GenericTable } from "@/components/table/GenericTable";
 import { useAlertQualityMetrics } from "utils/hooks/useAlertQuality";
 import { useProviders } from "utils/hooks/useProviders";
-import {
-  Provider,
-  Providers,
-  ProvidersResponse,
-} from "app/providers/providers";
+import { Provider, ProvidersResponse } from "app/providers/providers";
 import { TabGroup, TabList, Tab } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
+import { useSearchParams } from "next/navigation";
 
 const tabs = [
   { name: "All", value: "alltime" },
@@ -33,16 +30,16 @@ const ALERT_QUALITY_FILTERS = [
   },
   {
     type: "select",
-    key: "field",
+    key: "fields",
     value: "",
     name: "Field",
     options: [
-      { value: "team", label: "Team" },
-      { value: "application", label: "Application" },
-      { value: "subsystem", label: "Subsystem" },
-      { value: "severity", label: "Severity" },
-      { value: "priority", label: "Priority" },
+      { value: "product", label: "Product" },
+      { value: "department", label: "Department" },
+      { value: "assignee", label: "Affected users" },
+      { value: "service", label: "Service" },
     ],
+    only_one: true
   },
 ];
 
@@ -64,7 +61,7 @@ export const FilterTabs = ({
         }}
       >
         <TabList variant="solid" color="black" className="bg-gray-300">
-          {tabs.map((tabItem, index) => (
+          {tabs.map((tabItem) => (
             <Tab key={tabItem.value}>{tabItem.name}</Tab>
           ))}
         </TabList>
@@ -73,13 +70,14 @@ export const FilterTabs = ({
   );
 };
 
-interface ProviderAlertQuality {
+interface AlertMetricQuality {
   alertsReceived: number;
   alertsCorrelatedToIncidentsPercentage: number;
-  // alertsWithFieldFilledPercentage: number;
   alertsWithSeverityPercentage: number;
+  [key: string]: number;
 }
 
+type FinalAlertQuality = (Provider & AlertMetricQuality)[];
 interface Pagination {
   limit: number;
   offset: number;
@@ -96,6 +94,33 @@ const QualityTable = ({
     limit: 10,
     offset: 0,
   });
+  const searchParams = useSearchParams();
+  const entries = searchParams ? Array.from(searchParams.entries()) : [];
+  const params = entries.reduce((acc, [key, value]) => {
+    if (key in acc) {
+      if (Array.isArray(acc[key])) {
+        acc[key] = [...acc[key], value];
+        return acc;
+      } else {
+        acc[key] = [acc[key] as string, value];
+      }
+      return acc;
+    }
+    acc[key] = value;
+    return acc;
+  }, {} as Record<string, string | string[]>);
+  function toArray(value: string | string[]) {
+    if (!value) {
+      return [];
+    }
+
+    if (!Array.isArray(value) && value) {
+      return [value];
+    }
+
+    return value;
+  }
+  const fields = toArray(params?.["fields"] || []) as string[];
   const [tab, setTab] = useState(0);
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
@@ -104,29 +129,46 @@ const QualityTable = ({
 
   useEffect(() => {
     handlePaginationChange(10, 0);
-  },[tab])
+  }, [tab, searchParams?.toString()]);
 
-  const columns = [
-    {
-      header: "Provider Name",
-      accessorKey: "display_name",
-    },
-    {
-      header: "Alerts Received",
-      accessorKey: "alertsReceived",
-    },
-    {
-      header: "% of Alerts Correlated to Incidents",
-      accessorKey: "alertsCorrelatedToIncidentsPercentage",
-      cell: (info: any) => `${info.getValue().toFixed(2)}%`,
-    },
-    {
-      header: "% of Alerts Having Severity", //we are considering critical and warning as severe
-      accessorKey: "alertsWithSeverityPercentage",
-      cell: (info: any) => `${info.getValue().toFixed(2)}%`,
-    },
-  ];
+  // Construct columns based on the fields selected
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        header: "Provider Name",
+        accessorKey: "display_name",
+      },
+      {
+        header: "Alerts Received",
+        accessorKey: "alertsReceived",
+      },
+      {
+        header: "% of Alerts Correlated to Incidents",
+        accessorKey: "alertsCorrelatedToIncidentsPercentage",
+        cell: (info: any) => `${info.getValue().toFixed(2)}%`,
+      },
+      {
+        header: "% of Alerts Having Severity",
+        accessorKey: "alertsWithSeverityPercentage",
+        cell: (info: any) => `${info.getValue().toFixed(2)}%`,
+      },
+    ];
 
+    // Add dynamic columns based on the fields
+    const dynamicColumns = fields.map((field: string) => ({
+      header: `% of Alerts Having ${
+        field.charAt(0).toUpperCase() + field.slice(1)
+      }`,
+      accessorKey: `alertsWith${
+        field.charAt(0).toUpperCase() + field.slice(1)
+      }Percentage`,
+      cell: (info: any) => `${info.getValue().toFixed(2)}%`,
+    }));
+
+    return [...baseColumns, ...dynamicColumns];
+  }, [fields]);
+
+  // Process data and include dynamic fields
   const finalData = useMemo(() => {
     let providers: Provider[] | null = null;
 
@@ -142,7 +184,7 @@ const QualityTable = ({
         providers = providersMeta?.installed_providers || providers;
         break;
       case 2:
-        providers = providersMeta.linked_providers || providers;
+        providers = providersMeta?.linked_providers || providers;
         break;
       default:
         providers = providersMeta?.providers || providers;
@@ -153,9 +195,7 @@ const QualityTable = ({
       return null;
     }
 
-    const innerData: Providers & ProviderAlertQuality[] = [];
-
-    providers.forEach((provider) => {
+    const innerData: FinalAlertQuality = providers.map((provider) => {
       const providerType = provider.type;
       const alertQuality = alertsQualityMetrics[providerType];
       const totalAlertsReceived = alertQuality?.total_alerts ?? 0;
@@ -167,16 +207,30 @@ const QualityTable = ({
       const severityPert = totalAlertsReceived
         ? ((alertQuality?.severity_count ?? 0) / totalAlertsReceived) * 100
         : 0;
-      innerData.push({
+
+      // Calculate percentages for dynamic fields
+      const dynamicFieldPercentages = fields.reduce((acc, field: string) => {
+        acc[
+          `alertsWith${
+            field.charAt(0).toUpperCase() + field.slice(1)
+          }Percentage`
+        ] = totalAlertsReceived
+          ? ((alertQuality?.[`${field}_count`] ?? 0) / totalAlertsReceived) * 100
+          : 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return {
         ...provider,
         alertsReceived: totalAlertsReceived,
         alertsCorrelatedToIncidentsPercentage: correltedPert,
         alertsWithSeverityPercentage: severityPert,
-      });
+        ...dynamicFieldPercentages, // Add dynamic field percentages here
+      } as FinalAlertQuality[number];
     });
 
     return innerData;
-  }, [tab, providersMeta, alertsQualityMetrics]);
+  }, [tab, providersMeta, alertsQualityMetrics, fields]);
 
   return (
     <>
@@ -185,7 +239,6 @@ const QualityTable = ({
       </h1>
       <div className="flex justify-between  items-end mb-4">
         <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
-        {/* TODO: filters are not working need to intergate with backend logic */}
         <GenericFilters filters={ALERT_QUALITY_FILTERS} />
       </div>
       {finalData && (

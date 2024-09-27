@@ -17,6 +17,7 @@ type Filter = {
   options?: { value: string; label: string }[];
   name: string;
   icon?: IconType;
+  only_one?: boolean;
 };
 
 interface FiltersProps {
@@ -27,6 +28,7 @@ interface PopoverContentProps {
   filterRef: React.MutableRefObject<Filter[]>;
   filterKey: string;
   type: string;
+  only_one?: boolean;
 }
 
 function toArray(value: string | string[]) {
@@ -42,9 +44,11 @@ function toArray(value: string | string[]) {
 function CustomSelect({
   filter,
   setLocalFilter,
+  only_one
 }: {
   filter: Filter | null;
   setLocalFilter: (value: string | string[]) => void;
+  only_one?: boolean
 }) {
   const filterKey = filter?.key || "";
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(
@@ -59,9 +63,13 @@ function CustomSelect({
 
   const handleCheckboxChange = (option: string, checked: boolean) => {
     setSelectedOptions((prev) => {
-      const updatedOptions = new Set(prev);
+      let updatedOptions = new Set(prev);
       if (checked) {
-        updatedOptions.add(option);
+        if(only_one){
+          updatedOptions = new Set([option]);
+        }else{
+          updatedOptions.add(option);
+        }
       } else {
         updatedOptions.delete(option);
       }
@@ -168,6 +176,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   filterRef,
   filterKey,
   type,
+  only_one
 }) => {
   // Initialize local state for selected options
 
@@ -224,7 +233,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   switch (type) {
     case "select":
       return (
-        <CustomSelect filter={localFilter} setLocalFilter={handleLocalFilter} />
+        <CustomSelect filter={localFilter} setLocalFilter={handleLocalFilter} only_one={only_one}/>
       );
     case "date":
       return <CustomDate filter={localFilter} handleDate={handleDate} />;
@@ -312,7 +321,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
   return (
     <div className="relative flex flex-col md:flex-row lg:flex-row gap-4 items-center">
       {filters &&
-        filters?.map(({ key, type, name, icon }) => {
+        filters?.map(({ key, type, name, icon, only_one }) => {
           //only type==select and date need popover i guess other text and textarea can be handled different. for now handling select and date
           icon = icon ?? type === "date" ? MdOutlineDateRange : GoPlusCircle;
           return (
@@ -325,6 +334,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
                     filterRef={filterRef}
                     filterKey={key}
                     type={type}
+                    only_one = {!!only_one}
                   />
                 }
                 onApply={() => setApply(true)}
