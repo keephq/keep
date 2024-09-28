@@ -2,58 +2,83 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">Keep: Open-Source Alert Management and AIOps Platform</h1>
+<h1 align="center">Open-Source Alert Management and AIOps Platform</h1>
 
-<div align="center">
-    <p>Single pane of glass for alert management, bi-directional integrations, workflows, enrichment, and dashboards.</p>
-    <p>AI correlation and AI summarization are under limited preview (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>)</p>
-</div>
+<p align="center">
+    Centralized platform for managing alerts, workflows, integrations, dashboards, and AIOps features.
+    <br>AI Correlation and Summarization features available in <strong>limited preview</strong> 
+    (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>).
+</p>
 
 <div align="center">
     <a href="https://slack.keephq.dev">
-        <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" />
+        <img src="https://img.shields.io/badge/Join-Slack-important.svg?color=4A154B&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" />
     </a>
     <a href="https://codecov.io/gh/keephq/keep">
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
 
-<p align="center">
-    <a href="#why-keep">Why Keep?</a> ·
-    <a href="#getting-started">Getting Started</a> ·
-    <a href="#supported-providers">Supported Providers</a> ·
-    <a href="https://docs.keephq.dev">Docs</a> ·
-    <a href="https://platform.keephq.dev">Try it Out</a> ·
-    <a href="https://keephq.dev">Website</a> ·
-    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a> ·
+<div align="center">
+    <a href="#why-keep">Why Keep?</a> · 
+    <a href="#getting-started">Getting Started</a> · 
+    <a href="#supported-providers">Supported Providers</a> · 
+    <a href="https://docs.keephq.dev">Docs</a> · 
+    <a href="https://platform.keephq.dev">Try it out</a> · 
+    <a href="https://keephq.dev">Website</a> · 
+    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a> · 
     <a href="https://slack.keephq.dev">Slack Community</a>
-</p>
+</div>
+
+## How It Works
+
+### 1. Connect Your Tools
+Integrate everything from monitoring platforms to databases and ticketing systems to receive and manage alerts.
+
+<div align="center">
+    <table>
+        <tr>
+            <th>Connect Providers</th>
+            <th>Receive Alerts</th>
+        </tr>
+        <tr>
+            <td><img src="/assets/connect_providers.gif" /></td>
+            <td><img src="/assets/view_alerts.gif" /></td>
+        </tr>
+    </table>
+</div>
+
+### 2. Set Up Workflows
+Define automated workflows that trigger responses to alerts or operate on custom intervals.
+
+<div align="center">
+    <p>Create and Upload Workflows</p>
+    <img src="/assets/upload_workflow.gif" />
+</div>
+
+### 3. Enhance Operational Efficiency
+Automate alert management to reduce manual handling, allowing teams to focus on high-priority issues.
 
 ---
 
-## Overview
+## Why Choose Keep?
 
-Keep is an open-source platform designed for managing alerts and AIOps workflows. It integrates seamlessly with various tools and provides a centralized dashboard for operational efficiency.
+- **Centralized Dashboard**: Manage all alerts from multiple platforms through one unified interface.
+- **Noise Reduction**: Deduplicate and correlate alerts to minimize alert fatigue.
+- **Automation**: Trigger workflows to enrich alerts and automatically respond to incidents.
+- **Developer-First Approach**: API-first design that supports managing workflows as code.
+- **Integrations**: Seamless integration with numerous platforms and tools (see below).
 
-### Features
+---
 
-- **Centralized Dashboard**: Manage alerts from multiple platforms in a single interface.
-- **Automation**: Automate alert handling and response with customizable workflows.
-- **Noise Reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
-- **Developer-First**: API-first approach allows managing workflows as code.
+## Workflows
 
-## How it Works
-
-1. **Connect Your Tools**: Integrate monitoring platforms, databases, and ticketing systems.
-2. **Set Up Workflows**: Define automated workflows using YAML configuration.
-3. **Operational Efficiency**: Automate alert enrichment and response to streamline operations.
-
-### Example Workflow
+Workflows in Keep are similar to GitHub Actions. They are declarative YAML files composed of triggers, steps, and actions that help automate and respond to alerts. Below is an example of a basic workflow:
 
 ```yaml
 workflow:
-  id: basic-keep-workflow
-  description: Send a Slack message when a CloudWatch alarm is triggered
+  id: basic-slack-alert-workflow
+  description: Send a Slack message when a CloudWatch alarm is triggered.
   triggers:
     - type: alert
       filters:
@@ -61,20 +86,19 @@ workflow:
           value: cloudwatch
     - type: manual
   steps:
-    - name: enrich-alert-with-database-data
+    - name: enrich-alert
       provider:
         type: bigquery
         config: "{{ providers.bigquery-prod }}"
         with:
-          query: "SELECT customer_id, customer_type FROM `customers_prod` LIMIT 1"
+          query: "SELECT customer_id FROM `customers_prod` LIMIT 1"
   actions:
-    - name: trigger-slack
+    - name: send-slack-message
       provider:
         type: slack
         config: "{{ providers.slack-prod }}"
         with:
-          message: "Got alarm from AWS CloudWatch! {{ alert.name }}"
-
+          message: "CloudWatch alarm triggered: {{ alert.name }}"
 ```
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
@@ -248,8 +272,8 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 ### Top Contributors
 A special thanks to our top contributors who help us make Keep great. You are more than awesome!
 
-- [Furkan](https://github.com/pehlicd)
-- [Asharon](https://github.com/asharonbaltazar)
+- [Tal](https://github.com/talboren)
+- [Shahar Glazner](https://github.com/shahargl)
 
 Want to become a top contributor? Join our Slack and DM Tal, Shahar, or Furkan.
 
