@@ -2,99 +2,103 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<h1 align="center">Open-Source Alert Management and AIOps Platform</h1>
 
-<div align="center">Single pane of glass, filtering, bi-directional integrations, alert correlation, workflows, enrichment, dashboards.
-</br>AI correlation and AI summarization are under the limited preview (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>)</div>
-</br>
+<p align="center">
+    Centralized platform for managing alerts, workflows, integrations, dashboards, and AIOps features.
+    <br>AI Correlation and Summarization features available in <strong>limited preview</strong> 
+    (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>).
+</p>
 
 <div align="center">
     <a href="https://slack.keephq.dev">
-      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
-    <a href="https://codecov.io/gh/keephq/keep" >
+        <img src="https://img.shields.io/badge/Join-Slack-important.svg?color=4A154B&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" />
+    </a>
+    <a href="https://codecov.io/gh/keephq/keep">
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
-<p align="center">
-    <a href="#why-keep">Why Keep?</a>
-    ·
-    <a href="#getting-started">Getting started</a>
-    ·
-    <a href="#supported-providers">Supported tools and integrations</a>
-    ·
-    <a href="https://docs.keephq.dev">Docs</a>
-    ·
-    <a href="https://platform.keephq.dev">Try it out</a>
-    ·
-    <a href="https://keephq.dev">Website</a>
-    ·
-    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
-    ·
+
+<div align="center">
+    <a href="#why-keep">Why Keep?</a> · 
+    <a href="#getting-started">Getting Started</a> · 
+    <a href="#supported-providers">Supported Providers</a> · 
+    <a href="https://docs.keephq.dev">Docs</a> · 
+    <a href="https://platform.keephq.dev">Try it out</a> · 
+    <a href="https://keephq.dev">Website</a> · 
+    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a> · 
     <a href="https://slack.keephq.dev">Slack Community</a>
-</p>
-
-
-## How does it work?
-1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
-<div align="center">
-
-| Connect providers | Receive alerts |
-|----------|----------|
-| <img src="/assets/connect_providers.gif" />    | <img src="/assets/view_alerts.gif" />   |
-
 </div>
 
-2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
+## How It Works
+
+### 1. Connect Your Tools
+Integrate everything from monitoring platforms to databases and ticketing systems to receive and manage alerts.
 
 <div align="center">
-
-
-| Create and upload workflows |
-|----------|
-| <img src="/assets/upload_workflow.gif" />    |
-
+    <table>
+        <tr>
+            <th>Connect Providers</th>
+            <th>Receive Alerts</th>
+        </tr>
+        <tr>
+            <td><img src="/assets/Connect_providers1.gif" /></td>
+            <td><img src="/assets/View_alerts1.gif" /></td>
+        </tr>
+    </table>
 </div>
 
-3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
+### 2. Set Up Workflows
+Define automated workflows that trigger responses to alerts or operate on custom intervals.
 
+<div align="center">
+    <p>Create and Upload Workflows</p>
+    <img src="/assets/Upload_workflow1.gif" />
+</div>
 
-## Why Keep?
-1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
-2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
-3. **Automation**: Trigger workflows for alert enrichment and response.
-4. **Developer-first**: Keep is API-first and lets you manage your workflows as code.
-5. **Works with every tool**: Plenty of [supported providers](#supported-providers) and more to come.
+### 3. Enhance Operational Efficiency
+Automate alert management to reduce manual handling, allowing teams to focus on high-priority issues.
 
+---
+
+## Why Choose Keep?
+
+- **Centralized Dashboard**: Manage all alerts from multiple platforms through one unified interface.
+- **Noise Reduction**: Deduplicate and correlate alerts to minimize alert fatigue.
+- **Automation**: Trigger workflows to enrich alerts and automatically respond to incidents.
+- **Developer-First Approach**: API-first design that supports managing workflows as code.
+- **Integrations**: Seamless integration with numerous platforms and tools (see below).
+
+---
 
 ## Workflows
-The easiest way of thinking about Workflow in Keep is GitHub Actions. At its core, a Workflow in Keep is a declarative YAML file, composed of triggers, steps, and actions and serves to manage, enrich, and automate responses to alerts:
+
+Workflows in Keep are similar to GitHub Actions. They are declarative YAML files composed of triggers, steps, and actions that help automate and respond to alerts. Below is an example of a basic workflow:
+
 ```yaml
 workflow:
-  id: most-basic-keep-workflow
-  description: send a slack message when a cloudwatch alarm is triggered
-  # workflow triggers - supports alerts, interval, and manual triggers
+  id: basic-slack-alert-workflow
+  description: Send a Slack message when a CloudWatch alarm is triggered.
   triggers:
     - type: alert
       filters:
         - key: source
           value: cloudwatch
     - type: manual
-  # list of steps that can add context to your alert
   steps:
-    - name: enrich-alert-with-more-data-from-a-database
+    - name: enrich-alert
       provider:
         type: bigquery
         config: "{{ providers.bigquery-prod }}"
         with:
-          query: "SELECT customer_id, customer_type as date FROM `customers_prod` LIMIT 1"
-  # list of actions that can automate response and do things with your alert
+          query: "SELECT customer_id FROM `customers_prod` LIMIT 1"
   actions:
-    - name: trigger-slack
+    - name: send-slack-message
       provider:
         type: slack
-        config: " {{ providers.slack-prod }} "
+        config: "{{ providers.slack-prod }}"
         with:
-          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
+          message: "CloudWatch alarm triggered: {{ alert.name }}"
 ```
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
@@ -236,7 +240,7 @@ Keep composed of three main components:
 2. [Keep Backend](https://github.com/keephq/keep/tree/main/keep) - A FastAPI server that implements the business logic behind Keep, including integrating with the tools, working with alerts and scheduling and running the workflows.
 3. [Keep CLI](https://github.com/keephq/keep/blob/main/keep/cli/cli.py) - A CLI that lets you control and manage Keep via CLI.
 
->**Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for CLI commands)
+>**Disclaimer**:  we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for CLI commands)
 To turn PostHog off, set the `DISABLE_POSTHOG=true` environment variable and remove the `NEXT_PUBLIC_POSTHOG_KEY` environment variable.
 
 ### Quickstart
@@ -268,8 +272,8 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 ### Top Contributors
 A special thanks to our top contributors who help us make Keep great. You are more than awesome!
 
-- [Furkan](https://github.com/pehlicd)
-- [Asharon](https://github.com/asharonbaltazar)
+- [Tal](https://github.com/talboren)
+- [Shahar Glazner](https://github.com/shahargl)
 
 Want to become a top contributor? Join our Slack and DM Tal, Shahar, or Furkan.
 
