@@ -69,24 +69,28 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         else:
             roles = [role]
 
-        mapped_role = None
-        for role in roles:
-            # map the role if its a mapped one, or just use the role
-            mapped_role = self.role_mappings.get(role, role)
-            # will throw 403 exception if role is not found
-            try:
-                mapped_role = get_role_by_role_name(mapped_role)
-                break
-            # lets check the next role
-            except HTTPException:
-                continue
+        # Define the priority order of roles
+        role_priority = ["admin", "noc", "webhook"]
 
-        # if the role is still a string, it means it was not found in get_role_by_role_name
-        # so we throw a 403 exception
-        if isinstance(mapped_role, str):
+        mapped_role = None
+        for priority_role in role_priority:
+            for role in roles:
+                # map the role if its a mapped one, or just use the role
+                mapped_role_name = self.role_mappings.get(role, role)
+                if mapped_role_name == priority_role:
+                    try:
+                        mapped_role = get_role_by_role_name(mapped_role_name)
+                        break
+                    except HTTPException:
+                        continue
+            if mapped_role:
+                break
+
+        # if no valid role was found, throw a 403 exception
+        if not mapped_role:
             raise HTTPException(
                 status_code=403,
-                detail=f"Role {roles} not found",
+                detail=f"No valid role found among {roles}",
             )
 
         # auto provision user

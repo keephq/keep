@@ -29,8 +29,10 @@ class Oauth2proxyIdentityManager(BaseIdentityManager):
     def get_auth_verifier(self, scopes) -> Oauth2proxyAuthVerifier:
         return Oauth2proxyAuthVerifier(scopes)
 
+    # Not implemented
     def create_user(self, **kawrgs) -> User:
-        raise NotImplementedError("create_user not implemented")
+        return None
 
+    # Not implemented
     def delete_user(self, **kwargs) -> User:
-        raise NotImplementedError("delete_user not implemented")
+        return None
