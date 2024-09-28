@@ -39,9 +39,9 @@ const ALERT_QUALITY_FILTERS = [
       { value: "assignee", label: "Affected users" },
       { value: "service", label: "Service" },
     ],
-    only_one: true
+    only_one: true,
   },
-];
+]
 
 export const FilterTabs = ({
   tabs,
@@ -86,14 +86,35 @@ interface Pagination {
 const QualityTable = ({
   providersMeta,
   alertsQualityMetrics,
+  isDashBoard,
+  setFields,
+  fieldsValue,
 }: {
   providersMeta: ProvidersResponse | undefined;
   alertsQualityMetrics: Record<string, Record<string, any>> | undefined;
+  isDashBoard?: boolean;
+  setFields: (fields: string|string[]|Record<string, string>) => void,
+  fieldsValue: string|string[]|Record<string, string>,
 }) => {
   const [pagination, setPagination] = useState<Pagination>({
     limit: 10,
     offset: 0,
   });
+  const customFieldFilter = {
+    type: "select",
+    key: "fields",
+    value: fieldsValue,
+    name: "Field",
+    options: [
+      { value: "product", label: "Product" },
+      { value: "department", label: "Department" },
+      { value: "assignee", label: "Affected users" },
+      { value: "service", label: "Service" },
+    ],
+    only_one: true,
+    searchParamsNotNeed: true,
+    setFilter: setFields,
+  };
   const searchParams = useSearchParams();
   const entries = searchParams ? Array.from(searchParams.entries()) : [];
   const params = entries.reduce((acc, [key, value]) => {
@@ -120,7 +141,7 @@ const QualityTable = ({
 
     return value;
   }
-  const fields = toArray(params?.["fields"] || []) as string[];
+  const fields = toArray(params?.["fields"] || fieldsValue as string || []) as string[];
   const [tab, setTab] = useState(0);
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
@@ -234,12 +255,12 @@ const QualityTable = ({
 
   return (
     <>
-      <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+      {!isDashBoard && <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
         Alert Quality Dashboard
-      </h1>
+      </h1>}
       <div className="flex justify-between  items-end mb-4">
         <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
-        <GenericFilters filters={ALERT_QUALITY_FILTERS} />
+        <GenericFilters filters={isDashBoard ? [customFieldFilter]: ALERT_QUALITY_FILTERS} />
       </div>
       {finalData && (
         <GenericTable
@@ -259,15 +280,19 @@ const QualityTable = ({
   );
 };
 
-const AlertQuality = () => {
+const AlertQuality = ({isDashBoard}:{isDashBoard?:boolean}) => {
+  const [fieldsValue, setFieldsValue]  = useState<string|string[]|Record<string, string>>('');
   const { data: providersMeta } = useProviders();
-  const { data: alertsQualityMetrics, error } = useAlertQualityMetrics();
+  const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(isDashBoard ? fieldsValue as string : "");
 
   return (
-    <div className="p-4">
+    <div className="px-4 ">
       <QualityTable
         providersMeta={providersMeta}
         alertsQualityMetrics={alertsQualityMetrics}
+        isDashBoard={isDashBoard}
+        setFields={setFieldsValue}
+        fieldsValue= {fieldsValue}
       />
     </div>
   );

@@ -12,8 +12,10 @@ export interface LayoutItem {
 
   export interface WidgetData extends LayoutItem {
     thresholds: Threshold[];
-    preset: Preset;
+    preset: Preset | null;
     name: string;
+    widgetType?:string;
+    genericMetrics?: string;
   }
 
   export interface Threshold {

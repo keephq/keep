@@ -18,6 +18,8 @@ type Filter = {
   name: string;
   icon?: IconType;
   only_one?: boolean;
+  searchParamsNotNeed?: boolean;
+  setFilter?: (value: string | string[] | Record<string, string>) => void;
 };
 
 interface FiltersProps {
@@ -43,45 +45,53 @@ function toArray(value: string | string[]) {
 // TODO: Testing is needed
 function CustomSelect({
   filter,
-  setLocalFilter,
-  only_one
+  only_one,
+  handleSelect
 }: {
   filter: Filter | null;
-  setLocalFilter: (value: string | string[]) => void;
-  only_one?: boolean
+  handleSelect: (value: string | string[]) => void;
+  only_one?: boolean;
 }) {
   const filterKey = filter?.key || "";
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(
     new Set<string>()
   );
 
+  const [localFilter, setLocalFilter] = useState<Filter | null>(null);
+
   useEffect(() => {
     if (filter) {
       setSelectedOptions(new Set(toArray(filter.value as string | string[])));
+      setLocalFilter({...filter});
     }
-  }, [filter]);
+  }, [filter, filter?.value]);
 
   const handleCheckboxChange = (option: string, checked: boolean) => {
     setSelectedOptions((prev) => {
       let updatedOptions = new Set(prev);
+      if (only_one) {
+        updatedOptions.clear();
+      }  
       if (checked) {
-        if(only_one){
-          updatedOptions = new Set([option]);
-        }else{
           updatedOptions.add(option);
-        }
       } else {
         updatedOptions.delete(option);
       }
-      if (filter) {
-        setLocalFilter(Array.from(updatedOptions));
-        // setFilter((prev) => ({ ...prev, ...filter }));
-      }
+      let newValues = Array.from(updatedOptions)
+      setLocalFilter((prev)=>{
+        if(prev){
+          return {
+            ...prev, value: newValues
+          }
+        }
+        return prev;
+      });
+      handleSelect(newValues);
       return updatedOptions;
     });
   };
 
-  if (!filter) {
+  if (!localFilter) {
     return null;
   }
 
@@ -91,7 +101,7 @@ function CustomSelect({
         Select {filterKey?.charAt(0)?.toUpperCase() + filterKey?.slice(1)}
       </span>
       <ul className="flex flex-col mt-3 max-h-96 overflow-auto">
-        {filter.options?.map((option) => (
+        {localFilter.options?.map((option) => (
           <li key={option.value}>
             <label className="cursor-pointer p-2 flex items-center">
               <input
@@ -176,40 +186,20 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   filterRef,
   filterKey,
   type,
-  only_one
+  only_one,
 }) => {
   // Initialize local state for selected options
-
   const filter = filterRef.current?.find((filter) => filter.key === filterKey);
 
-  const [localFilter, setLocalFilter] = useState<Filter | null>(null);
 
-  useEffect(() => {
-    if (filter) {
-      setLocalFilter({ ...filter });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (localFilter && filter) {
-      filter.value = localFilter.value;
-    }
-  }, [localFilter?.value]);
-
-  const handleLocalFilter = (value: string | string[]) => {
+  const handleSelect = (value: string | string[]) => {
     if (filter) {
       filter.value = value;
     }
-    setLocalFilter((prev) => {
-      if (prev) {
-        return { ...prev, value };
-      }
-      return null;
-    });
   };
 
   const handleDate = (start?: Date, end?: Date) => {
-    let newValue = ""
+    let newValue = "";
     if (!start && !end) {
       newValue = "";
     } else {
@@ -221,22 +211,20 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
     if (filter) {
       filter.value = newValue;
     }
-    setLocalFilter((prev) => {
-      if (prev) {
-        return { ...prev, value: newValue };
-      }
-      return null;
-    });
   };
 
   // Return the appropriate content based on the selected type
   switch (type) {
     case "select":
       return (
-        <CustomSelect filter={localFilter} setLocalFilter={handleLocalFilter} only_one={only_one}/>
+        <CustomSelect
+          filter={filter ?? null}
+          handleSelect={handleSelect}
+          only_one={only_one}
+        />
       );
     case "date":
-      return <CustomDate filter={localFilter} handleDate={handleDate} />;
+      return <CustomDate filter={filter || null} handleDate={handleDate} />;
     default:
       return null;
   }
@@ -248,7 +236,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const searchParamString = searchParams?.toString();
+  const searchParamString = searchParams?.toString() || "";
   const [apply, setApply] = useState(false);
 
   useEffect(() => {
@@ -259,6 +247,13 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
       const keys = filterRef.current.map((filter) => filter.key);
       keys.forEach((key) => newParams.delete(key));
       for (const { key, value } of filterRef.current) {
+        const filter = filterRef.current.find(
+          (filter) => filter.key === key && filter.searchParamsNotNeed
+        );
+        if (filter) {
+          newParams.delete(key);
+          continue;
+        }
         if (Array.isArray(value)) {
           for (const item of value) {
             newParams.append(key, item);
@@ -271,8 +266,22 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           }
         }
       }
+      if((newParams?.toString() || "") !== searchParamString){
+        router.push(`${pathname}?${newParams.toString()}`);
+      }
+      for (const { key, value } of filterRef.current) {
+        const filter = filterRef.current.find(
+          (filter) => filter.key === key && filter.searchParamsNotNeed
+        );
+        if (filter) {
+          let newValue = Array.isArray(value) && value.length ==0 ? "" : value;
+          if (filter.setFilter) {
+            filter.setFilter(newValue || "");
+          }
+          continue;
+        }
+      }
 
-      router.push(`${pathname}?${newParams.toString()}`);
       setApply(false); // Reset apply state
     }
   }, [apply]);
@@ -286,7 +295,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           if (Array.isArray(acc[key])) {
             acc[key] = [...acc[key], value];
             return acc;
-          }else {
+          } else {
             acc[key] = [acc[key] as string, value];
           }
           return acc;
@@ -298,7 +307,12 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
       // Update filterRef.current with the new params
       filterRef.current = filters.map((filter) => ({
         ...filter,
-        value: params[filter.key] || "",
+        value: params[filter.key] || filter?.value || "",
+      }));
+    } else {
+      filterRef.current = filters.map((filter) => ({
+        ...filter,
+        value: filter.value || "",
       }));
     }
   }, [searchParamString, filters]);
@@ -334,7 +348,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
                     filterRef={filterRef}
                     filterKey={key}
                     type={type}
-                    only_one = {!!only_one}
+                    only_one={!!only_one}
                   />
                 }
                 onApply={() => setApply(true)}

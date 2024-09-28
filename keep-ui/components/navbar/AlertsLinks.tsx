@@ -134,14 +134,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   <Subtitle>Dismissed</Subtitle>
                 </LinkWithIcon>
               </li>
-              <li>
-                <LinkWithIcon
-                  href="/alerts/quality"
-                  icon={AiOutlineGroup}
-                >
-                  <Subtitle>Alert Quality</Subtitle>
-                </LinkWithIcon>
-              </li>
             </Disclosure.Panel>
           </>
         )}
