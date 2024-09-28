@@ -2,10 +2,11 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput, Select, SelectItem, Icon } from "@tremor/react";
 import { Trashcan } from "components/icons";
-import { MerticsMeta, Threshold, WidgetData } from "./types";
+import { Threshold, WidgetData } from "./types";
 import { Preset } from "app/alerts/models";
 import { useForm, Controller, get } from "react-hook-form";
 import { Dashboard } from '../../utils/hooks/useDashboards';
+import { on } from "events";
 
 interface WidgetForm {
   widgetName: string;
@@ -155,9 +156,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
               control={control}
               rules={{ required: { value: true, message: "Preset selection is required" } }}
               render={({ field }) => {
-                useEffect(() => {
-                  setCurrentWidgetType(field.value);
-                }, [field.value]);
+                setCurrentWidgetType(field.value);
                 return <Select
                   {...field}
                   placeholder="Select a Widget Type"
