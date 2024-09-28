@@ -35,7 +35,7 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
   return (
     <Card className="relative w-full h-full p-4">
       <div className="flex flex-col h-full">
-        <div className={`flex-none flex items-center justify-between p-2 ${item.preset ? 'h-1/5':''}`}>
+        <div className={`flex-none flex items-center justify-between p-2 ${item.preset ? 'h-1/5':'h-[10%] grid-item__widget'}`}>
           <span className="text-lg font-semibold truncate">{item.name}</span>
           <MenuButton
             onEdit={() => onEdit(item.i)}
@@ -49,7 +49,7 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
             </div>
           </div>
         )}
-        <div className="w-full">
+        <div className="w-full h-[90%]">
           {getGenericMterics(item)}
         </div>
       </div>

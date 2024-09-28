@@ -57,32 +57,18 @@ const GridLayout: React.FC<GridLayoutProps> = ({
               ...item.preset,
               alerts_count: preset?.alerts_count ?? 0,
             };
-            return (
-              <div key={item.i} data-grid={item}>
-                <GridItemContainer
-                  item={item}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              </div>
-            );
+           
           }
-          return null;
-        })}
-      </ResponsiveGridLayout>
-      <div className="mt-4">
-        {data.map((item) => {
-          if (item.genericMetrics) {
-            return (
+          return (
+            <div key={item.i} data-grid={item}>
               <GridItemContainer
                 item={item}
                 onEdit={onEdit}
                 onDelete={onDelete}
               />
-            );
-          }
-        })}
-      </div>
+            </div>
+          );        })}
+      </ResponsiveGridLayout>
     </>
   );
 };
