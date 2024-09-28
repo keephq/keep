@@ -6,7 +6,7 @@ import dataclasses
 import json
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -322,10 +322,7 @@ class AppdynamicsProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     @staticmethod
-    def _format_alert(
-        event: dict,
-        provider_instance: Optional["AppdynamicsProvider"] = None,
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         return AlertDto(
             id=event["id"],
             name=event["name"],

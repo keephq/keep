@@ -3,7 +3,6 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 """
 
 import datetime
-from typing import Optional
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -64,9 +63,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         pass
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["GcpmonitoringProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         incident = event.get("incident", {})
         description = incident.pop("summary", "")
         status = GcpmonitoringProvider.STATUS_MAP.get(

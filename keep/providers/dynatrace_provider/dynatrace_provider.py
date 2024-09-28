@@ -8,7 +8,6 @@ import datetime
 import json
 import logging
 import os
-from typing import Optional
 
 import pydantic
 import requests
@@ -135,9 +134,9 @@ class DynatraceProvider(BaseProvider):
                 self.logger.info(
                     "Failed to validate dynatrace scopes - wrong environment id"
                 )
-                scopes[
-                    "problems.read"
-                ] = "Failed to validate scope, wrong environment id (Keep got 404)"
+                scopes["problems.read"] = (
+                    "Failed to validate scope, wrong environment id (Keep got 404)"
+                )
                 scopes["settings.read"] = scopes["problems.read"]
                 scopes["settings.write"] = scopes["problems.read"]
                 return scopes
@@ -146,9 +145,9 @@ class DynatraceProvider(BaseProvider):
                 self.logger.info(
                     "Failed to validate dynatrace scopes - invalid API token"
                 )
-                scopes[
-                    "problems.read"
-                ] = "Invalid API token - authentication failed (401)"
+                scopes["problems.read"] = (
+                    "Invalid API token - authentication failed (401)"
+                )
                 scopes["settings.read"] = scopes["problems.read"]
                 scopes["settings.write"] = scopes["problems.read"]
                 return scopes
@@ -156,9 +155,9 @@ class DynatraceProvider(BaseProvider):
                 self.logger.info(
                     "Failed to validate dynatrace scopes - no problems.read scopes"
                 )
-                scopes[
-                    "problems.read"
-                ] = "Token is missing required scope - problems.read (403)"
+                scopes["problems.read"] = (
+                    "Token is missing required scope - problems.read (403)"
+                )
         else:
             self.logger.info("Validated dynatrace scopes - problems.read")
             scopes["problems.read"] = True
@@ -174,9 +173,9 @@ class DynatraceProvider(BaseProvider):
                 f"Failed to validate dynatrace scopes - settings.read: {e}"
             )
             scopes["settings.read"] = str(e)
-            scopes[
-                "settings.write"
-            ] = "Cannot validate the settings.write scope without the settings.read scope, you need to first add the settings.read scope"
+            scopes["settings.write"] = (
+                "Cannot validate the settings.write scope without the settings.read scope, you need to first add the settings.read scope"
+            )
             # we are done
             return scopes
         # if we have settings.read, we can try settings.write
@@ -197,22 +196,20 @@ class DynatraceProvider(BaseProvider):
             )
             # understand if its localhost:
             if "The environment does not allow for site-local URLs" in str(e):
-                scopes[
-                    "settings.write"
-                ] = "Cannot use localhost as a webhook URL, please use a public URL when installing dynatrace webhook (you can use Keep with ngrok or similar)"
+                scopes["settings.write"] = (
+                    "Cannot use localhost as a webhook URL, please use a public URL when installing dynatrace webhook (you can use Keep with ngrok or similar)"
+                )
             else:
-                scopes[
-                    "settings.write"
-                ] = f"Failed to validate the settings.write scope: {e}"
+                scopes["settings.write"] = (
+                    f"Failed to validate the settings.write scope: {e}"
+                )
             return scopes
 
         self.logger.info(f"Validated dynatrace scopes: {scopes}")
         return scopes
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["DynatraceProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         # alert that comes from webhook
         if event.get("ProblemID"):
             tags = event.get("Tags", [])

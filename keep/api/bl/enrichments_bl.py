@@ -294,11 +294,16 @@ class EnrichmentsBl:
                     for matcher in rule.matchers
                 ):
                     # Extract enrichments from the matched row
-                    enrichments = {
-                        key: value
-                        for key, value in row.items()
-                        if key not in rule.matchers and value is not None
-                    }
+                    enrichments = {}
+                    for key, value in row.items():
+                        if value is not None:
+                            is_matcher = False
+                            for matcher in rule.matchers:
+                                if key in matcher.replace(" ", "").split("&&"):
+                                    is_matcher = True
+                                    break
+                            if not is_matcher:
+                                enrichments[key] = value
                     break
 
         if enrichments:

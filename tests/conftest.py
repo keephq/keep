@@ -386,7 +386,7 @@ def elastic_client(request):
         pass
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def keycloak_client(request):
     os.environ["KEYCLOAK_URL"] = "http://localhost:8787/auth/"
     os.environ["KEYCLOAK_REALM"] = "keeptest"
