@@ -62,6 +62,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
           return (
             <div key={item.i} data-grid={item}>
               <GridItemContainer
+                key={item.i}
                 item={item}
                 onEdit={onEdit}
                 onDelete={onDelete}
