@@ -2,99 +2,79 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<h1 align="center">Keep: Open-Source Alert Management and AIOps Platform</h1>
 
-<div align="center">Single pane of glass, filtering, bi-directional integrations, alert correlation, workflows, enrichment, dashboards.
-</br>AI correlation and AI summarization are under the limited preview (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>)</div>
-</br>
+<div align="center">
+    <p>Single pane of glass for alert management, bi-directional integrations, workflows, enrichment, and dashboards.</p>
+    <p>AI correlation and AI summarization are under limited preview (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>)</p>
+</div>
 
 <div align="center">
     <a href="https://slack.keephq.dev">
-      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
-    <a href="https://codecov.io/gh/keephq/keep" >
+        <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" />
+    </a>
+    <a href="https://codecov.io/gh/keephq/keep">
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
+
 <p align="center">
-    <a href="#why-keep">Why Keep?</a>
-    ·
-    <a href="#getting-started">Getting started</a>
-    ·
-    <a href="#supported-providers">Supported tools and integrations</a>
-    ·
-    <a href="https://docs.keephq.dev">Docs</a>
-    ·
-    <a href="https://platform.keephq.dev">Try it out</a>
-    ·
-    <a href="https://keephq.dev">Website</a>
-    ·
-    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
-    ·
+    <a href="#why-keep">Why Keep?</a> ·
+    <a href="#getting-started">Getting Started</a> ·
+    <a href="#supported-providers">Supported Providers</a> ·
+    <a href="https://docs.keephq.dev">Docs</a> ·
+    <a href="https://platform.keephq.dev">Try it Out</a> ·
+    <a href="https://keephq.dev">Website</a> ·
+    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a> ·
     <a href="https://slack.keephq.dev">Slack Community</a>
 </p>
 
+---
 
-## How does it work?
-1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
-<div align="center">
+## Overview
 
-| Connect providers | Receive alerts |
-|----------|----------|
-| <img src="/assets/connect_providers.gif" />    | <img src="/assets/view_alerts.gif" />   |
+Keep is an open-source platform designed for managing alerts and AIOps workflows. It integrates seamlessly with various tools and provides a centralized dashboard for operational efficiency.
 
-</div>
+### Features
 
-2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
+- **Centralized Dashboard**: Manage alerts from multiple platforms in a single interface.
+- **Automation**: Automate alert handling and response with customizable workflows.
+- **Noise Reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
+- **Developer-First**: API-first approach allows managing workflows as code.
 
-<div align="center">
+## How it Works
 
+1. **Connect Your Tools**: Integrate monitoring platforms, databases, and ticketing systems.
+2. **Set Up Workflows**: Define automated workflows using YAML configuration.
+3. **Operational Efficiency**: Automate alert enrichment and response to streamline operations.
 
-| Create and upload workflows |
-|----------|
-| <img src="/assets/upload_workflow.gif" />    |
+### Example Workflow
 
-</div>
-
-3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
-
-
-## Why Keep?
-1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
-2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
-3. **Automation**: Trigger workflows for alert enrichment and response.
-4. **Developer-first**: Keep is API-first and lets you manage your workflows as code.
-5. **Works with every tool**: Plenty of [supported providers](#supported-providers) and more to come.
-
-
-## Workflows
-The easiest way of thinking about Workflow in Keep is GitHub Actions. At its core, a Workflow in Keep is a declarative YAML file, composed of triggers, steps, and actions and serves to manage, enrich, and automate responses to alerts:
 ```yaml
 workflow:
-  id: most-basic-keep-workflow
-  description: send a slack message when a cloudwatch alarm is triggered
-  # workflow triggers - supports alerts, interval, and manual triggers
+  id: basic-keep-workflow
+  description: Send a Slack message when a CloudWatch alarm is triggered
   triggers:
     - type: alert
       filters:
         - key: source
           value: cloudwatch
     - type: manual
-  # list of steps that can add context to your alert
   steps:
-    - name: enrich-alert-with-more-data-from-a-database
+    - name: enrich-alert-with-database-data
       provider:
         type: bigquery
         config: "{{ providers.bigquery-prod }}"
         with:
-          query: "SELECT customer_id, customer_type as date FROM `customers_prod` LIMIT 1"
-  # list of actions that can automate response and do things with your alert
+          query: "SELECT customer_id, customer_type FROM `customers_prod` LIMIT 1"
   actions:
     - name: trigger-slack
       provider:
         type: slack
-        config: " {{ providers.slack-prod }} "
+        config: "{{ providers.slack-prod }}"
         with:
-          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
+          message: "Got alarm from AWS CloudWatch! {{ alert.name }}"
+
 ```
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
