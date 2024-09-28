@@ -1,5 +1,4 @@
 import logging
-import os
 import random
 import time
 
@@ -19,8 +18,10 @@ logger = logging.getLogger(__name__)
 
 def main():
     GENERATE_DEDUPLICATIONS = True
-    keep_api_key = os.environ.get("KEEP_API_KEY")
-    keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
+    keep_api_key = (
+        "2c9e3c53-f0fd-473e-85de-85a30b2ccc7f"  # os.environ.get("KEEP_API_KEY")
+    )
+    keep_api_url = "https://keep-api-442666953093.us-central1.run.app"  # os.environ.get("KEEP_API_URL") or "http://localhost:8080"
     if keep_api_key is None or keep_api_url is None:
         raise Exception("KEEP_API_KEY and KEEP_API_URL must be set")
 

@@ -1,6 +1,5 @@
 import { Fragment, useState } from "react";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
-// import { CorrelationSidebar } from "./CorrelationSidebar";
 import { DeduplicationSankey } from "./DeduplicationSankey";
 
 export const DeduplicationPlaceholder = () => {
