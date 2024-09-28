@@ -54,7 +54,7 @@ const DashboardPage = () => {
   };
   const closeModal = () => setIsModalOpen(false);
 
-  const handleAddWidget = (preset: Preset, thresholds: Threshold[], name: string) => {
+  const handleAddWidget = (preset: Preset|null, thresholds: Threshold[], name: string, widgetType?: string, genericMetrics?: string) => {
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
@@ -71,6 +71,8 @@ const DashboardPage = () => {
       thresholds,
       preset,
       name,
+      widgetType: widgetType || 'preset',
+      genericMetrics: genericMetrics || '',
     };
     setLayout((prevLayout) => [...prevLayout, newItem]);
     setWidgetData((prevData) => [...prevData, newWidget]);
