@@ -39,8 +39,8 @@ export default async function Page({ searchParams }: PageProps) {
         </div>
       </div>
       <TopologyPageClient
-        applications={applications}
-        topologyServices={topologyServices}
+        applications={applications || undefined}
+        topologyServices={topologyServices || undefined}
       />
     </>
   );

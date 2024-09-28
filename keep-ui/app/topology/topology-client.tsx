@@ -11,8 +11,8 @@ export function TopologyPageClient({
   applications,
   topologyServices,
 }: {
-  applications: TopologyApplication[];
-  topologyServices: TopologyService[];
+  applications?: TopologyApplication[];
+  topologyServices?: TopologyService[];
 }) {
   const [tabIndex, setTabIndex] = useState(0);
   const { selectedServiceId } = useContext(ServiceSearchContext);

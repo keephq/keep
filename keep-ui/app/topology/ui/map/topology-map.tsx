@@ -11,7 +11,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Node,
   Edge,
   ReactFlow,
   ReactFlowInstance,
@@ -25,13 +24,7 @@ import {
 import dagre, { graphlib } from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
 import { ServiceNode } from "./service-node";
-import {
-  Card,
-  MultiSelect,
-  MultiSelectItem,
-  Subtitle,
-  Title,
-} from "@tremor/react";
+import { Card, MultiSelect, MultiSelectItem } from "@tremor/react";
 import {
   edgeLabelBgPaddingNoHover,
   edgeLabelBgStyleNoHover,
@@ -55,10 +48,7 @@ import {
   TopologyServiceMinimal,
   TopologyApplicationMinimal,
 } from "../../models";
-import {
-  ApplicationNode,
-  generatePastelColorFromUUID,
-} from "./application-node";
+import { ApplicationNode } from "./application-node";
 import { useTopologyApplications } from "../../../../utils/hooks/useApplications";
 import { ManageSelection } from "./manage-selection";
 import { useTopology } from "../../../../utils/hooks/useTopology";
@@ -77,38 +67,6 @@ function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
 
   return true;
 }
-
-const usePrevious = (value, initialValue) => {
-  const ref = useRef(initialValue);
-  useEffect(() => {
-    ref.current = value;
-  });
-  return ref.current;
-};
-const __debug__useEffect = (effectHook, dependencies, dependencyNames = []) => {
-  const previousDeps = usePrevious(dependencies, []);
-
-  const changedDeps = dependencies.reduce((accum, dependency, index) => {
-    if (dependency !== previousDeps[index]) {
-      const keyName = dependencyNames[index] || index;
-      return {
-        ...accum,
-        [keyName]: {
-          before: previousDeps[index],
-          after: dependency,
-        },
-      };
-    }
-
-    return accum;
-  }, {});
-
-  if (Object.keys(changedDeps).length) {
-    console.log("[use-effect-debugger] ", changedDeps);
-  }
-
-  useEffect(effectHook, dependencies);
-};
 
 const getLayoutedElements = (nodes: TopologyNode[], edges: Edge[]) => {
   const dagreGraph = new graphlib.Graph({});
@@ -130,9 +88,7 @@ const getLayoutedElements = (nodes: TopologyNode[], edges: Edge[]) => {
     dagreGraph.setEdge(edge.source, edge.target);
   });
 
-  dagre.layout(dagreGraph, {
-    debugTiming: true,
-  });
+  dagre.layout(dagreGraph);
 
   nodes.forEach((node) => {
     const gNode = dagreGraph.node(node.id);
@@ -214,15 +170,22 @@ function getNodesAndEdgesFromTopologyData(
 export function TopologyMap({
   topologyServices: initialTopologyServices,
   topologyApplications: initialTopologyApplications,
+  providerId: providerIdProp,
+  service: serviceProp,
+  environment: environmentProp,
 }: {
-  topologyServices: TopologyService[];
-  topologyApplications: TopologyApplication[];
+  topologyServices?: TopologyService[];
+  topologyApplications?: TopologyApplication[];
+  providerId?: string;
+  service?: string;
+  environment?: string;
 }) {
   console.log("render topology map");
   const params = useSearchParams();
-  const providerId = params?.get("providerId") || undefined;
-  const service = params?.get("service") || undefined;
-  const environment = params?.get("environment") || undefined;
+  const providerId = providerIdProp || params?.get("providerId") || undefined;
+  const service = serviceProp || params?.get("service") || undefined;
+  const environment =
+    environmentProp || params?.get("environment") || undefined;
 
   const { topologyData, isLoading, error } = useTopology({
     providerId,
@@ -328,13 +291,10 @@ export function TopologyMap({
       return;
     }
     const node = reactFlowInstanceRef.current?.getNode(selectedServiceId);
-    console.log({
-      selectedServiceId,
-      node,
-    });
     if (node) {
       fitViewToServices([selectedServiceId]);
       highlightNodes([selectedServiceId]);
+      setSelectedServiceId(null);
       return;
     }
     const application = applicationMap.get(selectedServiceId);
@@ -344,6 +304,7 @@ export function TopologyMap({
     const serviceIds = application.services.map((s) => s.service);
     fitViewToServices(serviceIds);
     highlightNodes(serviceIds);
+    setSelectedServiceId(null);
   }, [
     applicationMap,
     fitViewToServices,
@@ -354,7 +315,7 @@ export function TopologyMap({
 
   const previousNodesIds = useRef<Set<string>>(new Set());
 
-  __debug__useEffect(
+  useEffect(
     function createAndSetLayoutedNodesAndEdges() {
       if (!topologyData) return;
 
