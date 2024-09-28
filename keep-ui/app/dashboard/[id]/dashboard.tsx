@@ -60,10 +60,10 @@ const DashboardPage = () => {
       i: uniqueId,
       x: (layout.length % 12) * 2,
       y: Math.floor(layout.length / 12) * 2,
-      w: 3,
-      h: 3,
-      minW: 2,
-      minH: 2,
+      w: genericMetrics ? 12 : 3,
+      h: genericMetrics ? 20 : 3,
+      minW: genericMetrics ? 10 : 2,
+      minH: genericMetrics ? 15 : 2,
       static: false
     };
     const newWidget: WidgetData = {

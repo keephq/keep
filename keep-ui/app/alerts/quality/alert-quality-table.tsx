@@ -254,14 +254,15 @@ const QualityTable = ({
   }, [tab, providersMeta, alertsQualityMetrics, fields]);
 
   return (
-    <>
+    <div className="h-full p-2">
       {!isDashBoard && <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
         Alert Quality Dashboard
       </h1>}
-      <div className="flex justify-between  items-end mb-4">
+      <div className="flex justify-between items-end mb-4 h-[10%]">
         <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
         <GenericFilters filters={isDashBoard ? [customFieldFilter]: ALERT_QUALITY_FILTERS} />
       </div>
+      <div className="h-[90%]">
       {finalData && (
         <GenericTable
           data={finalData}
@@ -276,7 +277,8 @@ const QualityTable = ({
           }}
         />
       )}
-    </>
+       </div>
+    </div>
   );
 };
 
@@ -286,7 +288,7 @@ const AlertQuality = ({isDashBoard}:{isDashBoard?:boolean}) => {
   const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(isDashBoard ? fieldsValue as string : "");
 
   return (
-    <div className="px-4 ">
+    <div className={`px-4 h-full`}>
       <QualityTable
         providersMeta={providersMeta}
         alertsQualityMetrics={alertsQualityMetrics}
