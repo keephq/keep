@@ -75,12 +75,14 @@ const GridLayout: React.FC<GridLayoutProps> = ({
           if (item.genericMetrics) {
             return (
               <GridItemContainer
+                key={item.i}
                 item={item}
                 onEdit={onEdit}
                 onDelete={onDelete}
               />
             );
           }
+          return null;
         })}
       </div>
     </>

@@ -155,7 +155,9 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
               control={control}
               rules={{ required: { value: true, message: "Preset selection is required" } }}
               render={({ field }) => {
-                setCurrentWidgetType(field.value);
+                useEffect(() => {
+                  setCurrentWidgetType(field.value);
+                }, [field.value]);
                 return <Select
                   {...field}
                   placeholder="Select a Widget Type"
