@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { TextInput } from "./TextInput";
 import { cn } from "utils/helpers";
 
-type Option<T> = {
+export type Option<T> = {
   label: string;
   value: T;
 };

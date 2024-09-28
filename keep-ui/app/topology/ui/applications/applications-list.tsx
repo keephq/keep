@@ -14,9 +14,8 @@ import { ServiceSearchContext } from "../../service-search-context";
 export function ApplicationsList({
   applications: initialApplications,
 }: {
-  applications: TopologyApplication[];
+  applications?: TopologyApplication[];
 }) {
-  console.log("rendering ApplicationsList");
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications({
       initialData: initialApplications,
