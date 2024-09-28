@@ -79,6 +79,19 @@ workflow:
         - key: source
           value: cloudwatch
     - type: manual
+    # run when incident get created, update or deleted
+    # You can use multiple events, but at least one is required
+    triggers:
+      - type: incident
+        events:
+          - created
+          - deleted
+    # run every 10 seconds
+    triggers:
+      - type: interval
+        value: 10
+      
+
   # list of steps that can add context to your alert
   steps:
     - name: enrich-alert-with-more-data-from-a-database
@@ -268,10 +281,9 @@ You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.kee
 ### Top Contributors
 A special thanks to our top contributors who help us make Keep great. You are more than awesome!
 
-- [Furkan](https://github.com/pehlicd)
-- [Asharon](https://github.com/asharonbaltazar)
+- [Shoeb](https://github.com/shoebsheik)
 
-Want to become a top contributor? Join our Slack and DM Tal, Shahar, or Furkan.
+Want to become a top contributor? Join our Slack and DM Tal, Shoeb.
 
 ### Contributors
 Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
