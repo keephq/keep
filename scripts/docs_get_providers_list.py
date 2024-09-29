@@ -3,13 +3,14 @@ To execute the script and copy to clipboard:
 `
 cd scripts
 python docs_get_providers_list.py | pbcopy
-python docs_get_providers_list.py --validate # To check docs/providers/overview.mdx
+python docs_get_providers_list.py --validate # To check docs/providers/overview.mdx and if all providers are documented.
 """
 
 import argparse
 import glob
 import os
 import re
+import sys
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
@@ -47,6 +48,8 @@ use scripts/docs_get_providers_list.py to generate recent providers list and upd
 
 
 def validate_all_providers_are_documented(documented_providers):
+    sys.path.insert(0, '..')
+
     documented_providers = [provider.lower() for provider in documented_providers]
     from keep.providers.providers_factory import ProvidersFactory
     for provider in ProvidersFactory.get_all_providers():
