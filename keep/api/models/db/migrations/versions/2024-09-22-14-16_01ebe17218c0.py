@@ -1,7 +1,7 @@
 """Topology applications
 
 Revision ID: 01ebe17218c0
-Revises: 5d7ae55efc6a
+Revises: 493f217af6b6
 Create Date: 2024-09-22 14:16:17.078591
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "01ebe17218c0"
-down_revision = "5d7ae55efc6a"
+down_revision = "493f217af6b6"
 branch_labels = None
 depends_on = None
 
