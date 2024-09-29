@@ -118,7 +118,7 @@ export default function IncidentsTable({
       id: "name",
       header: "Name",
       cell: ({ row }) => (
-        <div className="text-wrap">
+        <div className="text-pretty min-w-40">
           {row.original.user_generated_name || row.original.ai_generated_name}
         </div>
       ),
@@ -127,7 +127,7 @@ export default function IncidentsTable({
       id: "user_summary",
       header: "Summary",
       cell: ({ row }) => (
-        <div className="text-wrap">{row.original.user_summary}</div>
+        <div className="text-pretty min-w-96">{row.original.user_summary}</div>
       ),
     }),
     columnHelper.display({
