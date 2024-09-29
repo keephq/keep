@@ -20,6 +20,7 @@ type Filter = {
   only_one?: boolean;
   searchParamsNotNeed?: boolean;
   setFilter?: (value: string | string[] | Record<string, string>) => void;
+  can_select?: number;
 };
 
 interface FiltersProps {
@@ -31,6 +32,7 @@ interface PopoverContentProps {
   filterKey: string;
   type: string;
   only_one?: boolean;
+  can_select?: number;
 }
 
 function toArray(value: string | string[]) {
@@ -46,11 +48,13 @@ function toArray(value: string | string[]) {
 function CustomSelect({
   filter,
   only_one,
-  handleSelect
+  handleSelect,
+  can_select,
 }: {
   filter: Filter | null;
   handleSelect: (value: string | string[]) => void;
   only_one?: boolean;
+  can_select?: number;
 }) {
   const filterKey = filter?.key || "";
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(
@@ -62,7 +66,7 @@ function CustomSelect({
   useEffect(() => {
     if (filter) {
       setSelectedOptions(new Set(toArray(filter.value as string | string[])));
-      setLocalFilter({...filter});
+      setLocalFilter({ ...filter });
     }
   }, [filter, filter?.value]);
 
@@ -71,18 +75,22 @@ function CustomSelect({
       let updatedOptions = new Set(prev);
       if (only_one) {
         updatedOptions.clear();
-      }  
-      if (checked) {
-          updatedOptions.add(option);
+      }
+      if (
+        checked &&
+        (!can_select || (can_select && updatedOptions.size < can_select))
+      ) {
+        updatedOptions.add(option);
       } else {
         updatedOptions.delete(option);
       }
-      let newValues = Array.from(updatedOptions)
-      setLocalFilter((prev)=>{
-        if(prev){
+      let newValues = Array.from(updatedOptions);
+      setLocalFilter((prev) => {
+        if (prev) {
           return {
-            ...prev, value: newValues
-          }
+            ...prev,
+            value: newValues,
+          };
         }
         return prev;
       });
@@ -95,11 +103,24 @@ function CustomSelect({
     return null;
   }
 
+  const name = `${filterKey?.charAt(0)?.toUpperCase() + filterKey?.slice(1)}`;
+
   return (
-    <>
+    <div>
       <span className="text-gray-400 text-sm">
-        Select {filterKey?.charAt(0)?.toUpperCase() + filterKey?.slice(1)}
+        Select {`${can_select ? `${can_select} ${name}` : name}`}
       </span>
+      {can_select && (
+        <span
+          className={`text-xs text-gray-400 ${
+            selectedOptions.size >= can_select
+              ? "text-red-500"
+              : "text-green-600"
+          }`}
+        >
+          ({selectedOptions.size}/{can_select})
+        </span>
+      )}
       <ul className="flex flex-col mt-3 max-h-96 overflow-auto">
         {localFilter.options?.map((option) => (
           <li key={option.value}>
@@ -117,7 +138,7 @@ function CustomSelect({
           </li>
         ))}
       </ul>
-    </>
+    </div>
   );
 }
 
@@ -155,7 +176,6 @@ function CustomDate({
     const endDate = end || start;
     const endOfDayDate = endDate ? endOfDay(endDate) : end;
 
-
     setDateRange({ from: start ?? undefined, to: endOfDayDate ?? undefined });
     handleDate(start, endOfDayDate);
   };
@@ -187,10 +207,10 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   filterKey,
   type,
   only_one,
+  can_select,
 }) => {
   // Initialize local state for selected options
   const filter = filterRef.current?.find((filter) => filter.key === filterKey);
-
 
   const handleSelect = (value: string | string[]) => {
     if (filter) {
@@ -221,6 +241,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
           filter={filter ?? null}
           handleSelect={handleSelect}
           only_one={only_one}
+          can_select={can_select}
         />
       );
     case "date":
@@ -266,7 +287,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           }
         }
       }
-      if((newParams?.toString() || "") !== searchParamString){
+      if ((newParams?.toString() || "") !== searchParamString) {
         router.push(`${pathname}?${newParams.toString()}`);
       }
       for (const { key, value } of filterRef.current) {
@@ -274,7 +295,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           (filter) => filter.key === key && filter.searchParamsNotNeed
         );
         if (filter) {
-          let newValue = Array.isArray(value) && value.length ==0 ? "" : value;
+          let newValue = Array.isArray(value) && value.length == 0 ? "" : value;
           if (filter.setFilter) {
             filter.setFilter(newValue || "");
           }
@@ -335,7 +356,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
   return (
     <div className="relative flex flex-col md:flex-row lg:flex-row gap-4 items-center">
       {filters &&
-        filters?.map(({ key, type, name, icon, only_one }) => {
+        filters?.map(({ key, type, name, icon, only_one, can_select }) => {
           //only type==select and date need popover i guess other text and textarea can be handled different. for now handling select and date
           icon = icon ?? type === "date" ? MdOutlineDateRange : GoPlusCircle;
           return (
@@ -349,6 +370,7 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
                     filterKey={key}
                     type={type}
                     only_one={!!only_one}
+                    can_select={can_select}
                   />
                 }
                 onApply={() => setApply(true)}
