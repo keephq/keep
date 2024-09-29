@@ -3297,9 +3297,20 @@ def get_alerts_metrics_by_provider(
         end_date = datetime.now()
 
     dynamic_field_sums = [
-        func.sum(case([(func.json_extract(Alert.event, f'$.{field}').isnot(None), 1)], else_=0)).label(f"{field}_count")
+        func.sum(
+            case(
+                [
+                    (
+                        func.json_extract(Alert.event, f'$.{field}').isnot(None) & 
+                        (func.json_extract(Alert.event, f'$.{field}') != False), 
+                        1
+                    )
+                ], 
+                else_=0
+            )
+        ).label(f"{field}_count")
         for field in fields
-    ]    
+    ]
 
     #if the below query is not perfomring well, we can try to optimise the query using Venn Diagram or similar(for now we are using the below query)
     with Session(engine) as session:
@@ -3308,7 +3319,6 @@ def get_alerts_metrics_by_provider(
                 Alert.provider_type,
                 func.count(Alert.id).label("total_alerts"),
                 func.sum(case([(AlertToIncident.alert_id.isnot(None), 1)], else_=0)).label("correlated_alerts"),
-                func.sum(case([(func.json_extract(Alert.event, '$.severity').in_(['critical', 'warning']), 1)], else_=0)).label("severity_count"),
                 *dynamic_field_sums
             )
             .outerjoin(AlertToIncident, Alert.id == AlertToIncident.alert_id)
@@ -3326,7 +3336,6 @@ def get_alerts_metrics_by_provider(
         row.provider_type: {
             "total_alerts": row.total_alerts,
             "correlated_alerts": row.correlated_alerts,
-            "severity_count": row.severity_count,
             **{f"{field}_count": getattr(row, f"{field}_count") for field in fields}  # Add field-specific counts
         }
         for row in results

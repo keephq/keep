@@ -14,6 +14,7 @@ import { Provider, ProvidersResponse } from "app/providers/providers";
 import { TabGroup, TabList, Tab } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useSearchParams } from "next/navigation";
+import { AlertKnownKeys } from "../models";
 
 const tabs = [
   { name: "All", value: "alltime" },
@@ -28,20 +29,7 @@ const ALERT_QUALITY_FILTERS = [
     value: "",
     name: "Last received",
   },
-  {
-    type: "select",
-    key: "fields",
-    value: "",
-    name: "Field",
-    options: [
-      { value: "product", label: "Product" },
-      { value: "department", label: "Department" },
-      { value: "assignee", label: "Affected users" },
-      { value: "service", label: "Service" },
-    ],
-    only_one: true,
-  },
-]
+];
 
 export const FilterTabs = ({
   tabs,
@@ -93,8 +81,8 @@ const QualityTable = ({
   providersMeta: ProvidersResponse | undefined;
   alertsQualityMetrics: Record<string, Record<string, any>> | undefined;
   isDashBoard?: boolean;
-  setFields: (fields: string|string[]|Record<string, string>) => void,
-  fieldsValue: string|string[]|Record<string, string>,
+  setFields: (fields: string | string[] | Record<string, string>) => void;
+  fieldsValue: string | string[] | Record<string, string>;
 }) => {
   const [pagination, setPagination] = useState<Pagination>({
     limit: 10,
@@ -103,16 +91,12 @@ const QualityTable = ({
   const customFieldFilter = {
     type: "select",
     key: "fields",
-    value: fieldsValue,
+    value: isDashBoard ? fieldsValue : "",
     name: "Field",
-    options: [
-      { value: "product", label: "Product" },
-      { value: "department", label: "Department" },
-      { value: "assignee", label: "Affected users" },
-      { value: "service", label: "Service" },
-    ],
-    only_one: true,
-    searchParamsNotNeed: true,
+    options: AlertKnownKeys.map((key) => ({ value: key, label: key })),
+    // only_one: true,
+    searchParamsNotNeed: isDashBoard,
+    can_select: 3,
     setFilter: setFields,
   };
   const searchParams = useSearchParams();
@@ -141,7 +125,9 @@ const QualityTable = ({
 
     return value;
   }
-  const fields = toArray(params?.["fields"] || fieldsValue as string || []) as string[];
+  const fields = toArray(
+    params?.["fields"] || (fieldsValue as string | string[]) || []
+  ) as string[];
   const [tab, setTab] = useState(0);
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
@@ -166,11 +152,6 @@ const QualityTable = ({
       {
         header: "% of Alerts Correlated to Incidents",
         accessorKey: "alertsCorrelatedToIncidentsPercentage",
-        cell: (info: any) => `${info.getValue().toFixed(2)}%`,
-      },
-      {
-        header: "% of Alerts Having Severity",
-        accessorKey: "alertsWithSeverityPercentage",
         cell: (info: any) => `${info.getValue().toFixed(2)}%`,
       },
     ];
@@ -236,7 +217,8 @@ const QualityTable = ({
             field.charAt(0).toUpperCase() + field.slice(1)
           }Percentage`
         ] = totalAlertsReceived
-          ? ((alertQuality?.[`${field}_count`] ?? 0) / totalAlertsReceived) * 100
+          ? ((alertQuality?.[`${field}_count`] ?? 0) / totalAlertsReceived) *
+            100
           : 0;
         return acc;
       }, {} as Record<string, number>);
@@ -254,15 +236,26 @@ const QualityTable = ({
   }, [tab, providersMeta, alertsQualityMetrics, fields]);
 
   return (
-    <div className="h-full p-2">
-      {!isDashBoard && <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
-        Alert Quality Dashboard
-      </h1>}
-      <div className="flex justify-between items-end mb-4 h-[10%]">
-        <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
-        <GenericFilters filters={isDashBoard ? [customFieldFilter]: ALERT_QUALITY_FILTERS} />
+    <div
+      className={`flex flex-col gap-2 p-2 px-4 ${isDashBoard ? "h-[90%]" : ""}`}
+    >
+      <div>
+        {!isDashBoard && (
+          <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+            Alert Quality Dashboard
+          </h1>
+        )}
+        <div className="flex justify-between items-end mb-4">
+          <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
+          <GenericFilters
+            filters={
+              isDashBoard
+                ? [customFieldFilter]
+                : [...ALERT_QUALITY_FILTERS, customFieldFilter]
+            }
+          />
+        </div>
       </div>
-      <div className="h-[90%]">
       {finalData && (
         <GenericTable
           data={finalData}
@@ -277,26 +270,27 @@ const QualityTable = ({
           }}
         />
       )}
-       </div>
     </div>
   );
 };
 
-const AlertQuality = ({isDashBoard}:{isDashBoard?:boolean}) => {
-  const [fieldsValue, setFieldsValue]  = useState<string|string[]|Record<string, string>>('');
+const AlertQuality = ({ isDashBoard }: { isDashBoard?: boolean }) => {
+  const [fieldsValue, setFieldsValue] = useState<
+    string | string[] | Record<string, string>
+  >("severity");
   const { data: providersMeta } = useProviders();
-  const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(isDashBoard ? fieldsValue as string : "");
+  const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(
+    isDashBoard ? (fieldsValue as string) : ""
+  );
 
   return (
-    <div className={`px-4 h-full`}>
-      <QualityTable
-        providersMeta={providersMeta}
-        alertsQualityMetrics={alertsQualityMetrics}
-        isDashBoard={isDashBoard}
-        setFields={setFieldsValue}
-        fieldsValue= {fieldsValue}
-      />
-    </div>
+    <QualityTable
+      providersMeta={providersMeta}
+      alertsQualityMetrics={alertsQualityMetrics}
+      isDashBoard={isDashBoard}
+      setFields={setFieldsValue}
+      fieldsValue={fieldsValue}
+    />
   );
 };
 

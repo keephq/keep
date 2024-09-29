@@ -35,14 +35,16 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
   return (
     <Card className="relative w-full h-full p-4">
       <div className="flex flex-col h-full">
-        <div className={`flex-none flex items-center justify-between p-2 ${item.preset ? 'h-1/5':'h-[10%] grid-item__widget'}`}>
-          <span className="text-lg font-semibold truncate">{item.name}</span>
+        <div className={`flex-none flex items-center justify-between p-2 ${item.preset ? 'h-1/5':'h-[10%]'}`}>
+          {/* For table view we need intract with table filter and pagination.so we aare dragging the widget here */}
+          <span className={`text-lg font-semibold truncate ${item.preset ? "" : "grid-item__widget"}`}>{item.name}</span>
           <MenuButton
             onEdit={() => onEdit(item.i)}
             onDelete={() => onDelete(item.i)}
           />
         </div>
         {item.preset && (
+        //We can remove drag and drop style and make it same as table view. if we want to maintain consistency.
         <div className="flex-1 h-4/5 flex items-center justify-center grid-item__widget">
           <div className="text-4xl font-bold" style={{ color: getColor() }}>
             {item.preset.alerts_count}
