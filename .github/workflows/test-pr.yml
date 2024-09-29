@@ -84,12 +84,8 @@ jobs:
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root
-
-      - name: Validate provider docs
-        run: |
-          cd scripts;
-          python3 docs_get_providers_list.py --validate;
-
+      - name: Validate docs for providers
+        run: cd scripts && python3 docs_get_providers_list.py --validate;
       - name: Run unit tests and report coverage
         run: |
           # Add a step to wait for MySQL to be fully up and running
@@ -99,7 +95,6 @@ jobs:
           done
           echo "MySQL is up and running!"
           poetry run coverage run --branch -m pytest --ignore=tests/e2e_tests/
-
       - name: Convert coverage results to JSON (for CodeCov support)
         run: poetry run coverage json --omit="keep/providers/*"
       - name: Upload coverage reports to Codecov
