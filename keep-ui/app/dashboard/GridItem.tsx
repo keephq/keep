@@ -37,7 +37,7 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
       <div className="flex flex-col h-full">
         <div className={`flex-none flex items-center justify-between p-2 ${item.preset ? 'h-1/5':'h-[10%]'}`}>
           {/* For table view we need intract with table filter and pagination.so we aare dragging the widget here */}
-          <span className={`text-lg font-semibold truncate ${item.preset ? "" : "grid-item__widget"}`}>{item.name}</span>
+          <span className={`flex-1 text-lg font-semibold truncate ${item.preset ? "" : "grid-item__widget"}`}>{item.name}</span>
           <MenuButton
             onEdit={() => onEdit(item.i)}
             onDelete={() => onDelete(item.i)}
