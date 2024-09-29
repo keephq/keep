@@ -1,8 +1,4 @@
-import {
-  Button,
-  Badge,
-  Icon,
-} from "@tremor/react";
+import { Button, Badge, Icon } from "@tremor/react";
 import {
   ExpandedState,
   createColumnHelper,
@@ -12,14 +8,18 @@ import {
   getSortedRowModel,
   ColumnDef,
 } from "@tanstack/react-table";
-import {MdRemoveCircle, MdModeEdit, MdKeyboardDoubleArrowRight} from "react-icons/md";
+import {
+  MdRemoveCircle,
+  MdModeEdit,
+  MdKeyboardDoubleArrowRight,
+} from "react-icons/md";
 import { useSession } from "next-auth/react";
-import {IncidentDto, PaginatedIncidentsDto, Status} from "./models";
-import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
+import { IncidentDto, PaginatedIncidentsDto, Status } from "./models";
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
 import Image from "next/image";
 import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
-import {deleteIncident} from "./incident-candidate-actions";
+import { deleteIncident } from "./incident-candidate-actions";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
@@ -32,31 +32,37 @@ const columnHelper = createColumnHelper<IncidentDto>();
 interface Props {
   incidents: PaginatedIncidentsDto;
   mutate: () => void;
-  sorting: SortingState,
+  sorting: SortingState;
   setSorting: Dispatch<SetStateAction<any>>;
   setPagination: Dispatch<SetStateAction<any>>;
   editCallback: (rule: IncidentDto) => void;
 }
 
 const STATUS_ICONS = {
-  [Status.Firing]: <Icon
-    icon={ExclamationCircleIcon}
-    tooltip={Status.Firing}
-    color="red"
-    className="w-4 h-4 mr-2"
-  />,
-  [Status.Resolved]: <Icon
-    icon={CheckCircleIcon}
-    tooltip={Status.Resolved}
-    color="green"
-    className="w-4 h-4 mr-2"
-  />,
-  [Status.Acknowledged]: <Icon
-    icon={PauseIcon}
-    tooltip={Status.Acknowledged}
-    color="gray"
-    className="w-4 h-4 mr-2"
-  />,
+  [Status.Firing]: (
+    <Icon
+      icon={ExclamationCircleIcon}
+      tooltip={Status.Firing}
+      color="red"
+      className="w-4 h-4 mr-2"
+    />
+  ),
+  [Status.Resolved]: (
+    <Icon
+      icon={CheckCircleIcon}
+      tooltip={Status.Resolved}
+      color="green"
+      className="w-4 h-4 mr-2"
+    />
+  ),
+  [Status.Acknowledged]: (
+    <Icon
+      icon={PauseIcon}
+      tooltip={Status.Acknowledged}
+      color="gray"
+      className="w-4 h-4 mr-2"
+    />
+  ),
 };
 
 export default function IncidentsTable({
@@ -73,35 +79,40 @@ export default function IncidentsTable({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
     pageSize: incidents.limit,
   });
-  const [changeStatusIncident, setChangeStatusIncident] = useState<IncidentDto | null>();
+  const [changeStatusIncident, setChangeStatusIncident] =
+    useState<IncidentDto | null>();
 
   const handleChangeStatus = (e: React.MouseEvent, incident: IncidentDto) => {
     e.preventDefault();
     e.stopPropagation();
     setChangeStatusIncident(incident);
-  }
+  };
 
   useEffect(() => {
     if (incidents.limit != pagination.pageSize) {
       setPagination({
         limit: pagination.pageSize,
         offset: 0,
-      })
+      });
     }
     const currentOffset = pagination.pageSize * pagination.pageIndex;
     if (incidents.offset != currentOffset) {
       setPagination({
         limit: pagination.pageSize,
         offset: currentOffset,
-      })
+      });
     }
-  }, [pagination])
+  }, [pagination]);
 
   const columns = [
     columnHelper.display({
       id: "status",
       header: "Status",
-      cell: ({ row }) => <span onClick={(e) => handleChangeStatus(e, row.original!)}>{STATUS_ICONS[row.original.status]}</span>,
+      cell: ({ row }) => (
+        <span onClick={(e) => handleChangeStatus(e, row.original!)}>
+          {STATUS_ICONS[row.original.status]}
+        </span>
+      ),
     }),
     columnHelper.display({
       id: "name",
@@ -115,12 +126,16 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "user_summary",
       header: "Summary",
-      cell: ({ row }) => <div className="text-wrap">{row.original.user_summary}</div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">{row.original.user_summary}</div>
+      ),
     }),
     columnHelper.display({
       id: "rule_fingerprint",
       header: "Group by value",
-      cell: ({ row }) => <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
+      ),
     }),
     columnHelper.accessor("severity", {
       id: "severity",
@@ -157,16 +172,22 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: ({row}) =>
-        <div className="text-wrap">{row.original.services.map((service) =>
-          <Badge key={service} className="mr-1">{service}</Badge>
-        )}
-      </div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">
+          {row.original.services
+            .filter((service) => service !== "null")
+            .map((service) => (
+              <Badge key={service} className="mr-1">
+                {service}
+              </Badge>
+            ))}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "assignee",
       header: "Assignee",
-      cell: ({ row }) => row.original.assignee
+      cell: ({ row }) => row.original.assignee,
     }),
     columnHelper.accessor("creation_time", {
       id: "creation_time",
@@ -209,7 +230,11 @@ export default function IncidentsTable({
             onClick={async (e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              await deleteIncident({incidentId: row.original.id!, mutate, session});
+              await deleteIncident({
+                incidentId: row.original.id!,
+                mutate,
+                session,
+              });
             }}
           />
         </div>
@@ -228,7 +253,7 @@ export default function IncidentsTable({
     onExpandedChange: setExpanded,
     onSortingChange: (value) => {
       if (typeof value === "function") {
-        setSorting(value)
+        setSorting(value);
       }
     },
     getSortedRowModel: getSortedRowModel(),
@@ -247,7 +272,7 @@ export default function IncidentsTable({
         handleClose={() => setChangeStatusIncident(null)}
       />
       <div className="mt-4 mb-8">
-        <IncidentPagination table={table}  isRefreshAllowed={true}/>
+        <IncidentPagination table={table} isRefreshAllowed={true} />
       </div>
     </div>
   );
