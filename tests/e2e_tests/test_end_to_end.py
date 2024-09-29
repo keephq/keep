@@ -9,9 +9,8 @@
 #   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 #   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
-# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/ 
-# NOTE: to clean the database, run 
-# docker compose stop
+# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+# NOTE: to clean the database, run
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml down --volumes
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
 # NOTE 2: to run the tests with a browser, uncomment this:
