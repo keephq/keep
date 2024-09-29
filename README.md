@@ -30,6 +30,11 @@
     <a href="https://slack.keephq.dev">Slack Community</a>
 </div>
 
+<div align="center">
+    <!-- <p>Create and Upload Workflows</p> -->
+    <img src="/assets/Keep-landingPage.png" />
+</div>
+
 ## How It Works
 
 ### 1. Connect Your Tools
