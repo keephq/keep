@@ -32,7 +32,7 @@ import { getApiURL } from "utils/apiUrl";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
-import { useTopology } from "utils/hooks/useTopology";
+import { useTopology } from "@/app/topology/model";
 
 interface Props {
   editRule: MappingRule | null;
