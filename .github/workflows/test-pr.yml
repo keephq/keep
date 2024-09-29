@@ -92,8 +92,7 @@ jobs:
 
       - name: Validate docs for providers
         run: |
-          source /home/runner/.local/bin/activate;
-          python ./scripts/docs_get_providers_list.py --validate;
+          poetry run python ./scripts/docs_get_providers_list.py --validate
 
       - name: Run unit tests and report coverage
         run: |
