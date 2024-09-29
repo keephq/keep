@@ -15,7 +15,7 @@ env:
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
 
 jobs:
-  tests:
+  tests-docs:
     runs-on: ubuntu-latest
 
     steps:
