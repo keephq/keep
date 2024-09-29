@@ -3,7 +3,7 @@
 import { useOnSelectionChange } from "@xyflow/react";
 import { useState, useCallback, useContext } from "react";
 import { cn } from "@/utils/helpers";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui";
 import {
   useTopologyApplications,
   TopologyApplication,
