@@ -11,7 +11,7 @@ on:
 jobs:
   main:
     name: Validate PR title
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-default
     steps:
       - name: lint_pr_title
         id: lint_pr_title
@@ -41,7 +41,7 @@ jobs:
           header: pr-title-lint-error
           delete: true
   links:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-default
     name: Validate PR to Issue link
     permissions:
       issues: read

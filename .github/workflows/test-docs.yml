@@ -16,7 +16,7 @@ env:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-default
 
     steps:
       - name: Checkout
@@ -37,4 +37,3 @@ jobs:
           python3 docs_get_providers_list.py --validate;
 
           # Todo: validate if openapi schema is matching with the code
-  
