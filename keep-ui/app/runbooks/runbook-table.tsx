@@ -1,19 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import Modal from "react-modal"; // Add this import for react-modal
+import Modal from "react-modal"; 
 import {
     Button,
     Badge,
-    Table as TremorTable,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeaderCell,
-    TableRow,
 } from "@tremor/react";
 import { DisplayColumnDef } from "@tanstack/react-table";
-import { GenericTable } from "@/components/table/GenericTable";   
+import { GenericTable } from "@/components/table/GenericTable";  
+import { useSession } from "next-auth/react";
 
 
 const customStyles = {
@@ -95,6 +90,8 @@ function RunbookIncidentTable() {
     const [repositoryName, setRepositoryName] = useState('');
     const [pathToMdFiles, setPathToMdFiles] = useState('');
 
+    const { data: session } = useSession();
+
     const handlePaginationChange = (newLimit: number, newOffset: number) => {
         setLimit(newLimit);
         setOffset(newOffset);
@@ -110,12 +107,28 @@ function RunbookIncidentTable() {
         setIsModalOpen(false);
     };
 
-    // Handle save action from modal
-    const handleSave = () => {
-        // You can handle saving the data here (e.g., API call or updating state)
-        console.log('Repository:', repositoryName);
-        console.log('Path to MD Files:', pathToMdFiles);
-        closeModal();
+    const handleQuerySettings = async ({ repositoryName, pathToMdFiles }) => {
+        try {
+            const [owner, repo] = repositoryName.split("/"); 
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${pathToMdFiles}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session?.accessToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to query settings');
+            }
+
+            const data = await response.json();
+            console.log('Settings queried successfully:', data);
+
+        } catch (error) {
+            console.error('Error while querying settings:', error);
+            alert('An error occurred while querying settings');
+        }
     };
 
     return (
@@ -149,7 +162,7 @@ function RunbookIncidentTable() {
                         type="text"
                         value={repositoryName}
                         onChange={(e) => setRepositoryName(e.target.value)}
-                        placeholder="Enter repository name"
+                        placeholder="Enter repository name (e.g., owner/repo)"
                         style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
                     />
                 </div>
@@ -167,7 +180,7 @@ function RunbookIncidentTable() {
 
                 <div style={{ textAlign: 'right' }}>
                     <Button onClick={closeModal} style={{ marginRight: '10px' }}>Cancel</Button>
-                    <Button onClick={handleSave} color="blue">Save</Button>
+                    <Button onClick={() => handleQuerySettings({ repositoryName, pathToMdFiles })} color="blue">Query</Button>
                 </div>
             </Modal>
         </div>
