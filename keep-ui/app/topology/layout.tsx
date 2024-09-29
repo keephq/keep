@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ServiceSearchContext } from "./service-search-context";
-import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPollingContext";
 
 export default function Layout({ children }: { children: any }) {
   const [serviceQuery, setServiceQuery] = useState<string>("");
