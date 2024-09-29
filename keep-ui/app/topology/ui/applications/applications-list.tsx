@@ -1,13 +1,15 @@
 "use client";
 
-import { TopologyApplication } from "../../models";
 import { ApplicationCard } from "./application-card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { CreateOrUpdateApplicationForm } from "./create-or-update-application-form";
 import { toast } from "react-toastify";
 import { useCallback, useContext, useState } from "react";
-import { useTopologyApplications } from "../../../../utils/hooks/useApplications";
+import {
+  useTopologyApplications,
+  TopologyApplication,
+} from "@/app/topology/model";
 import { Card, Subtitle, Title } from "@tremor/react";
 import { ServiceSearchContext } from "../../service-search-context";
 

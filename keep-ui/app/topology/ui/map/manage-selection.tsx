@@ -1,18 +1,18 @@
 "use client";
 
-import { OnSelectionChangeParams, useOnSelectionChange } from "@xyflow/react";
+import { useOnSelectionChange } from "@xyflow/react";
 import { useState, useCallback, useContext } from "react";
-import { cn } from "../../../../utils/helpers";
+import { cn } from "@/utils/helpers";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { CreateOrUpdateApplicationForm } from "../applications/create-or-update-application-form";
-import { useTopologyApplications } from "../../../../utils/hooks/useApplications";
 import {
+  useTopologyApplications,
   TopologyApplication,
   ServiceNodeType,
   TopologyServiceMinimal,
   TopologyNode,
-} from "../../models";
+} from "@/app/topology/model";
 import { toast } from "react-toastify";
 import { ServiceSearchContext } from "../../service-search-context";
 

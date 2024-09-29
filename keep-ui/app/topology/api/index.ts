@@ -1,7 +1,7 @@
 import { getApiURL } from "../../../utils/apiUrl";
 import { fetcher } from "../../../utils/fetcher";
 import { Session } from "next-auth";
-import { TopologyApplication, TopologyService } from "../models";
+import { TopologyApplication, TopologyService } from "../model/models";
 
 const isNullOrUndefined = (value: unknown): value is null | undefined =>
   value === null || value === undefined;

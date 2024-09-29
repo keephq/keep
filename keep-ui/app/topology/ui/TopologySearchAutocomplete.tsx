@@ -1,17 +1,17 @@
 import { useMemo } from "react";
-import { useTopology } from "utils/hooks/useTopology";
-import { useTopologyApplications } from "utils/hooks/useApplications";
+import {
+  useTopology,
+  useTopologyApplications,
+  TopologyServiceMinimal,
+  TopologyApplication,
+  TopologyApplicationMinimal,
+} from "@/app/topology/model";
 import { AutocompleteInput } from "@/components/ui";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 import {
   AutocompleteInputProps,
   Option,
 } from "@/components/ui/AutocompleteInput";
-import {
-  TopologyServiceMinimal,
-  TopologyApplication,
-  TopologyApplicationMinimal,
-} from "../models";
 
 type TopologySearchAutocompleteWithApplicationsProps = Omit<
   AutocompleteInputProps<TopologyServiceMinimal | TopologyApplicationMinimal>,

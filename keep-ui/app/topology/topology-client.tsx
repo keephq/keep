@@ -5,7 +5,7 @@ import { TopologyMap } from "./ui/map";
 import { ApplicationsList } from "./ui/applications/applications-list";
 import { useContext, useEffect, useState } from "react";
 import { ServiceSearchContext } from "./service-search-context";
-import { TopologyApplication, TopologyService } from "./models";
+import { TopologyApplication, TopologyService } from "./model";
 
 export function TopologyPageClient({
   applications,
@@ -40,6 +40,7 @@ export function TopologyPageClient({
           <TopologyMap
             topologyApplications={applications}
             topologyServices={topologyServices}
+            isVisible={tabIndex === 0}
           />
         </TabPanel>
         <TabPanel className="flex-1">

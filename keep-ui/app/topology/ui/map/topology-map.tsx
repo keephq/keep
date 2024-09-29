@@ -22,7 +22,6 @@ import {
   Position,
 } from "@xyflow/react";
 import dagre, { graphlib } from "@dagrejs/dagre";
-import "@xyflow/react/dist/style.css";
 import { ServiceNode } from "./service-node";
 import { Card, MultiSelect, MultiSelectItem } from "@tremor/react";
 import {
@@ -40,33 +39,21 @@ import Loading from "../../../loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ServiceSearchContext } from "../../service-search-context";
+import { ApplicationNode } from "./application-node";
+import { ManageSelection } from "./manage-selection";
 import {
+  useTopology,
+  useTopologyApplications,
   TopologyApplication,
   ServiceNodeType,
   TopologyNode,
   TopologyService,
   TopologyServiceMinimal,
   TopologyApplicationMinimal,
-} from "../../models";
-import { ApplicationNode } from "./application-node";
-import { useTopologyApplications } from "../../../../utils/hooks/useApplications";
-import { ManageSelection } from "./manage-selection";
-import { useTopology } from "../../../../utils/hooks/useTopology";
+} from "@/app/topology/model";
 import { TopologySearchAutocomplete } from "../TopologySearchAutocomplete";
-
-function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
-  if (set1.size !== set2.size) {
-    return false;
-  }
-
-  for (const item of set1) {
-    if (!set2.has(item)) {
-      return false;
-    }
-  }
-
-  return true;
-}
+import "@xyflow/react/dist/style.css";
+import { areSetsEqual } from "@/utils/helpers";
 
 const getLayoutedElements = (nodes: TopologyNode[], edges: Edge[]) => {
   const dagreGraph = new graphlib.Graph({});
@@ -92,7 +79,6 @@ const getLayoutedElements = (nodes: TopologyNode[], edges: Edge[]) => {
 
   nodes.forEach((node) => {
     const gNode = dagreGraph.node(node.id);
-    // if (!node.parentId) {
     node.position = {
       x: gNode.x - gNode.width / 2,
       y: gNode.y - gNode.height / 2,
@@ -173,14 +159,15 @@ export function TopologyMap({
   providerId: providerIdProp,
   service: serviceProp,
   environment: environmentProp,
+  isVisible = true,
 }: {
   topologyServices?: TopologyService[];
   topologyApplications?: TopologyApplication[];
   providerId?: string;
   service?: string;
   environment?: string;
+  isVisible?: boolean;
 }) {
-  console.log("render topology map");
   const params = useSearchParams();
   const providerId = providerIdProp || params?.get("providerId") || undefined;
   const service = serviceProp || params?.get("service") || undefined;
@@ -201,9 +188,6 @@ export function TopologyMap({
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<
     string[]
   >([]);
-  // State for nodes and edges
-  const [nodes, setNodes] = useState<TopologyNode[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
   const { selectedServiceId, setSelectedServiceId } =
     useContext(ServiceSearchContext);
   const applicationMap = useMemo(() => {
@@ -214,32 +198,11 @@ export function TopologyMap({
     return map;
   }, [applications]);
 
+  // State for nodes and edges
+  const [nodes, setNodes] = useState<TopologyNode[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+
   const reactFlowInstanceRef = useRef<ReactFlowInstance<TopologyNode, Edge>>();
-
-  const onNodesChange = useCallback(
-    (changes: NodeChange<TopologyNode>[]) =>
-      setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) =>
-      setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
-
-  const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
-    const newEdges = [...edges];
-    const currentEdge = newEdges.find((e) => e.id === edge.id);
-    if (currentEdge) {
-      currentEdge.style = eventType === "enter" ? { stroke: "orange" } : {};
-      currentEdge.labelBgStyle =
-        eventType === "enter" ? edgeLabelBgStyleHover : edgeLabelBgStyleNoHover;
-      currentEdge.markerEnd =
-        eventType === "enter" ? edgeMarkerEndHover : edgeMarkerEndNoHover;
-      currentEdge.labelStyle = eventType === "enter" ? { fill: "white" } : {};
-      setEdges(newEdges);
-    }
-  };
 
   const highlightNodes = useCallback((nodeIds: string[]) => {
     setNodes((nds) =>
@@ -260,13 +223,40 @@ export function TopologyMap({
         nodesToFit.push(node);
       }
     }
-    reactFlowInstanceRef.current?.fitView({
-      padding: 10,
-      minZoom: 0.5,
-      nodes: nodesToFit,
-      duration: 300,
-    });
+    // Wrap in setTimeout to be sure that reactFlow wil handle the fitView correctly
+    setTimeout(() => {
+      reactFlowInstanceRef.current?.fitView({
+        padding: 10,
+        minZoom: 0.5,
+        nodes: nodesToFit,
+        duration: 300,
+      });
+    }, 0);
   }, []);
+
+  const onNodesChange = useCallback((changes: NodeChange<TopologyNode>[]) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  }, []);
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) =>
+      setEdges((eds) => applyEdgeChanges(changes, eds)),
+    []
+  );
+
+  const onEdgeHover = (eventType: "enter" | "leave", edge: Edge) => {
+    const newEdges = [...edges];
+    const currentEdge = newEdges.find((e) => e.id === edge.id);
+    if (currentEdge) {
+      currentEdge.style = eventType === "enter" ? { stroke: "orange" } : {};
+      currentEdge.labelBgStyle =
+        eventType === "enter" ? edgeLabelBgStyleHover : edgeLabelBgStyleNoHover;
+      currentEdge.markerEnd =
+        eventType === "enter" ? edgeMarkerEndHover : edgeMarkerEndNoHover;
+      currentEdge.labelStyle = eventType === "enter" ? { fill: "white" } : {};
+      setEdges(newEdges);
+    }
+  };
 
   const handleSelectFromSearch = useCallback(
     ({
@@ -287,13 +277,13 @@ export function TopologyMap({
   );
 
   useEffect(() => {
-    if (!selectedServiceId || selectedServiceId === "") {
+    if (!isVisible || !selectedServiceId || selectedServiceId === "") {
       return;
     }
     const node = reactFlowInstanceRef.current?.getNode(selectedServiceId);
     if (node) {
-      fitViewToServices([selectedServiceId]);
       highlightNodes([selectedServiceId]);
+      fitViewToServices([selectedServiceId]);
       setSelectedServiceId(null);
       return;
     }
@@ -302,10 +292,11 @@ export function TopologyMap({
       return;
     }
     const serviceIds = application.services.map((s) => s.service);
-    fitViewToServices(serviceIds);
     highlightNodes(serviceIds);
+    fitViewToServices(serviceIds);
     setSelectedServiceId(null);
   }, [
+    isVisible,
     applicationMap,
     fitViewToServices,
     highlightNodes,
@@ -449,13 +440,11 @@ export function TopologyMap({
             edges={edges}
             minZoom={0.1}
             defaultViewport={{ x: 0, y: 0, zoom: 0.5 }}
-            // fitView
             snapToGrid
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             fitViewOptions={{ padding: 0.3 }}
             zoomOnDoubleClick={true}
-            // TODO: Change z-index of node on hover for details to overlay underlying node
             onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
             onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
             nodeTypes={{

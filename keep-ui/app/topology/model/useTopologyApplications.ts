@@ -1,11 +1,11 @@
-import { TopologyApplication } from "../../app/topology/models";
-import { getApiURL } from "utils/apiUrl";
+import { TopologyApplication } from "./models";
+import { getApiURL } from "@/utils/apiUrl";
 import useSWR from "swr";
-import { fetcher } from "utils/fetcher";
+import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
-import { useCallback, useMemo, useTransition } from "react";
+import { useCallback, useMemo } from "react";
 import { topologyBaseKey, useTopology } from "./useTopology";
-import { useRevalidateMultiple } from "utils/state";
+import { useRevalidateMultiple } from "@/utils/state";
 
 type UseTopologyApplicationsOptions = {
   initialData?: TopologyApplication[];
@@ -44,15 +44,14 @@ export function useTopologyApplications({
         revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
       } else {
         // Rollback optimistic update on error
-        const error = new Error("Failed to add application", {
+        throw new Error("Failed to add application", {
           cause: response.statusText,
         });
-        throw error;
       }
       const json = await response.json();
       return json as TopologyApplication;
     },
-    [mutate, mutateTopology, session?.accessToken]
+    [revalidateMultiple, session?.accessToken, topologyApplicationsKey]
   );
 
   const updateApplication = useCallback(
@@ -97,10 +96,9 @@ export function useTopologyApplications({
         // Rollback optimistic update on error
         mutate(applications, false);
         mutateTopology(topologyData, false);
-        const error = new Error("Failed to update application", {
+        throw new Error("Failed to update application", {
           cause: response.statusText,
         });
-        throw error;
       }
       return response;
     },
@@ -152,14 +150,21 @@ export function useTopologyApplications({
         // Rollback optimistic update on error
         mutate(applications, false);
         mutateTopology(topologyData, false);
-        const error = new Error("Failed to delete application", {
+        throw new Error("Failed to delete application", {
           cause: response.statusText,
         });
-        throw error;
       }
       return response;
     },
-    [applications, mutate, mutateTopology, session?.accessToken, topologyData]
+    [
+      applications,
+      mutate,
+      mutateTopology,
+      revalidateMultiple,
+      session?.accessToken,
+      topologyApplicationsKey,
+      topologyData,
+    ]
   );
 
   return {

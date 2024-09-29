@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Handle, NodeProps, Position } from "@xyflow/react";
-import { useAlerts } from "../../../../utils/hooks/useAlerts";
-import { useAlertPolling } from "../../../../utils/hooks/usePusher";
+import { useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlertPolling } from "@/utils/hooks/usePusher";
 import { useRouter } from "next/navigation";
-import { ServiceNodeType } from "../../models";
-import { cn } from "../../../../utils/helpers";
+import { ServiceNodeType } from "../../model/models";
+import { cn } from "@/utils/helpers";
 import { Badge } from "@tremor/react";
-import { generatePastelColorFromUUID } from "./application-node";
 
 const THRESHOLD = 5;
 

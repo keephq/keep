@@ -1,4 +1,4 @@
-import { InterfaceToType } from "utils/type-utils";
+import { InterfaceToType } from "@/utils/type-utils";
 import type { Node } from "@xyflow/react";
 
 export interface TopologyServiceDependency {

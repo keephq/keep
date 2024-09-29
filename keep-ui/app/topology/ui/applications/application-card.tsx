@@ -1,4 +1,4 @@
-import { TopologyApplication } from "../../models";
+import { TopologyApplication } from "@/app/topology/model";
 import { Card, Subtitle, Title } from "@tremor/react";
 
 export function ApplicationCard({

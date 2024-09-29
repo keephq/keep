@@ -1,7 +1,10 @@
 import { Callout } from "@tremor/react";
 import { TextInput, Textarea } from "@/components/ui";
 import { useCallback, useState } from "react";
-import { TopologyApplication, TopologyServiceMinimal } from "../../models";
+import {
+  TopologyApplication,
+  TopologyServiceMinimal,
+} from "@/app/topology/model";
 import { Icon } from "@tremor/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { TopologySearchAutocomplete } from "../TopologySearchAutocomplete";

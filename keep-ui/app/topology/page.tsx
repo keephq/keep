@@ -1,9 +1,10 @@
+import React from "react";
+
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../pages/api/auth/[...nextauth]";
-import { getApplications, getTopology } from "./data/api";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import { getApplications, getTopology } from "./api";
 import { TopologyPageClient } from "./topology-client";
 import { Subtitle, Title } from "@tremor/react";
-import React from "react";
 
 export const metadata = {
   title: "Keep - Service Topology",
