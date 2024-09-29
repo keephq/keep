@@ -31,12 +31,10 @@ jobs:
       - name: Install deps and validate docs
         run: |
           npm i -g mintlify;
-          poetry install --no-interaction --no-root;
           
           cd docs && mintlify broken-links;
           cd ../scripts;
           ./docs_validate_navigation.sh;
-          python3 docs_get_providers_list.py --validate;
 
           # Todo: validate if openapi schema is matching with the code
   

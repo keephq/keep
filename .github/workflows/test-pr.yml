@@ -85,6 +85,11 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root
 
+      - name: Validate provider docs
+        run: |
+          cd scripts;
+          python3 docs_get_providers_list.py --validate;
+
       - name: Run unit tests and report coverage
         run: |
           # Add a step to wait for MySQL to be fully up and running
