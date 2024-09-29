@@ -29,11 +29,12 @@
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a> · 
     <a href="https://slack.keephq.dev">Slack Community</a>
 </div>
-
+<br>
 <div align="center">
     <!-- <p>Create and Upload Workflows</p> -->
     <img src="/assets/Keep-landingPage.png" />
 </div>
+
 
 ## How It Works
 
