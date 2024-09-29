@@ -28,9 +28,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install mintlify and validate docs
+      - name: Install deps and validate docs
         run: |
-          npm i -g mintlify
+          npm i -g mintlify;
+          poetry install --no-interaction --no-root;
+          
           cd docs && mintlify broken-links;
           cd ../scripts;
           ./docs_validate_navigation.sh;
