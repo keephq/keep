@@ -4,11 +4,11 @@ import { cn } from "utils/helpers";
 
 type ButtonVariantType = "destructive" | ButtonProps["variant"];
 
-const Button = ({
+export function Button({
   variant,
   className,
   ...props
-}: { variant: ButtonVariantType } & Omit<ButtonProps, "variant">) => {
+}: { variant: ButtonVariantType } & Omit<ButtonProps, "variant">) {
   let variantClasses = "";
 
   if (variant === "destructive") {
@@ -23,6 +23,4 @@ const Button = ({
       {...props}
     />
   );
-};
-
-export default Button;
+}

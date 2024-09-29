@@ -13,32 +13,31 @@ import {
   Option,
 } from "@/components/ui/AutocompleteInput";
 
-type TopologySearchAutocompleteWithApplicationsProps = Omit<
-  AutocompleteInputProps<TopologyServiceMinimal | TopologyApplicationMinimal>,
-  "options" | "getId"
-> & {
-  includeApplications: true;
+type BaseProps = {
+  excludeServiceIds?: string[];
   providerId?: string;
   service?: string;
   environment?: string;
 };
 
-type TopologySearchAutocompleteWithoutApplicationsProps = Omit<
-  AutocompleteInputProps<TopologyServiceMinimal>,
-  "options" | "getId"
-> & {
-  includeApplications: false;
-  providerId?: string;
-  service?: string;
-  environment?: string;
-};
+type WithApplications = BaseProps &
+  Omit<
+    AutocompleteInputProps<TopologyServiceMinimal | TopologyApplicationMinimal>,
+    "options" | "getId"
+  > & {
+    includeApplications: true;
+  };
 
-type TopologySearchAutocompleteProps =
-  | TopologySearchAutocompleteWithApplicationsProps
-  | TopologySearchAutocompleteWithoutApplicationsProps;
+type WithoutApplications = BaseProps &
+  Omit<AutocompleteInputProps<TopologyServiceMinimal>, "options" | "getId"> & {
+    includeApplications: false;
+  };
+
+type TopologySearchAutocompleteProps = WithApplications | WithoutApplications;
 
 export function TopologySearchAutocomplete({
   includeApplications,
+  excludeServiceIds,
   providerId,
   service,
   environment,
@@ -48,31 +47,29 @@ export function TopologySearchAutocomplete({
   const { topologyData } = useTopology({ providerId, service, environment });
   const { applications } = useTopologyApplications();
   const searchOptions = useMemo(() => {
-    const options: {
-      label: string;
-      value: TopologyServiceMinimal | TopologyApplication;
-    }[] = [];
-    topologyData?.forEach((service) => {
-      options.push({
-        label: service.display_name,
-        value: {
-          id: service.id,
-          name: service.display_name,
-          service: service.service,
-        },
-      });
-    });
+    const serviceOptions =
+      topologyData
+        ?.filter(
+          (service) =>
+            service.service && !excludeServiceIds?.includes(service.service)
+        )
+        .map((service) => ({
+          label: service.display_name,
+          value: {
+            id: service.id,
+            name: service.display_name,
+            service: service.service,
+          },
+        })) || [];
     if (!includeApplications) {
-      return options;
+      return serviceOptions;
     }
-    applications.forEach((application) => {
-      options.push({
-        label: application.name,
-        value: application,
-      });
-    });
-    return options;
-  }, [topologyData, includeApplications, applications]);
+    const applicationOptions = applications.map((application) => ({
+      label: application.name,
+      value: application,
+    }));
+    return [...serviceOptions, ...applicationOptions];
+  }, [topologyData, includeApplications, applications, excludeServiceIds]);
 
   if (includeApplications) {
     return (
@@ -100,11 +97,12 @@ export function TopologySearchAutocomplete({
   return (
     <AutocompleteInput<TopologyServiceMinimal>
       icon={MagnifyingGlassIcon}
-      // TODO: Fix type
-      // @ts-ignore
-      options={searchOptions}
+      options={searchOptions as Option<TopologyServiceMinimal>[]}
       getId={(option) => {
         return option.value.service;
+      }}
+      onSelect={(option) => {
+        onSelect(option as Option<TopologyServiceMinimal>);
       }}
       {...props}
     />

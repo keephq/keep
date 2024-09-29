@@ -4,8 +4,6 @@ import { useOnSelectionChange } from "@xyflow/react";
 import { useState, useCallback, useContext } from "react";
 import { cn } from "@/utils/helpers";
 import Button from "@/components/ui/Button";
-import Modal from "@/components/ui/Modal";
-import { CreateOrUpdateApplicationForm } from "../applications/create-or-update-application-form";
 import {
   useTopologyApplications,
   TopologyApplication,
@@ -15,6 +13,7 @@ import {
 } from "@/app/topology/model";
 import { toast } from "react-toastify";
 import { ServiceSearchContext } from "../../service-search-context";
+import { ApplicationModal } from "@/app/topology/ui/applications/application-modal";
 
 export function ManageSelection({ className }: { className?: string }) {
   const { setSelectedServiceId } = useContext(ServiceSearchContext);
@@ -75,17 +74,9 @@ export function ManageSelection({ className }: { className?: string }) {
     updatedApplication: TopologyApplication
   ) => {
     const startTime = performance.now();
-    console.log("Updating application", startTime);
     setIsModalOpen(false);
     updateApplication(updatedApplication).then(
       () => {
-        const endTime = performance.now();
-        console.log(
-          "Application updated in",
-          endTime - startTime,
-          "ms; ",
-          endTime
-        );
         setSelectedApplication(updatedApplication);
         setSelectedServiceId(updatedApplication.id);
       },
@@ -136,19 +127,14 @@ export function ManageSelection({ className }: { className?: string }) {
             Edit
           </Button>
         </div>
-        <Modal
+        <ApplicationModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Edit application"
-        >
-          <CreateOrUpdateApplicationForm
-            action="edit"
-            application={selectedApplication}
-            onSubmit={handleUpdateApplication}
-            onCancel={() => setIsModalOpen(false)}
-            onDelete={() => deleteApplication(selectedApplication.id)}
-          />
-        </Modal>
+          actionType="edit"
+          application={selectedApplication}
+          onSubmit={handleUpdateApplication}
+          onDelete={() => deleteApplication(selectedApplication.id)}
+        />
       </>
     );
   };
@@ -168,20 +154,15 @@ export function ManageSelection({ className }: { className?: string }) {
         >
           Create Application
         </Button>
-        <Modal
-          title="Create application"
+        <ApplicationModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-        >
-          <CreateOrUpdateApplicationForm
-            action="create"
-            application={{
-              services: selectedServices,
-            }}
-            onSubmit={createApplication}
-            onCancel={() => setIsModalOpen(false)}
-          />
-        </Modal>
+          actionType="create"
+          application={{
+            services: selectedServices,
+          }}
+          onSubmit={createApplication}
+        />
       </>
     );
   };

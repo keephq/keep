@@ -1,5 +1,5 @@
 import { Callout } from "@tremor/react";
-import { TextInput, Textarea } from "@/components/ui";
+import { TextInput, Textarea, Button } from "@/components/ui";
 import { useCallback, useState } from "react";
 import {
   TopologyApplication,
@@ -8,32 +8,31 @@ import {
 import { Icon } from "@tremor/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { TopologySearchAutocomplete } from "../TopologySearchAutocomplete";
-import Button from "@/components/ui/Button";
 
 type FormErrors = {
   name?: string;
   services?: string;
 };
 
-type CreateApplicationFormProps = {
+type BaseProps = {
+  onCancel: () => void;
+};
+
+type CreateProps = BaseProps & {
   action: "create";
   application?: Partial<TopologyApplication>;
   onSubmit: (application: Omit<TopologyApplication, "id">) => Promise<void>;
-  onCancel: () => void;
   onDelete?: undefined;
 };
 
-type UpdateApplicationFormProps = {
+type UpdateProps = BaseProps & {
   action: "edit";
   application: TopologyApplication;
   onSubmit: (application: TopologyApplication) => Promise<void>;
-  onCancel: () => void;
   onDelete: () => void;
 };
 
-type CreatOrUpdateApplicationFormProps =
-  | CreateApplicationFormProps
-  | UpdateApplicationFormProps;
+type CreatOrUpdateApplicationFormProps = CreateProps | UpdateProps;
 
 export function CreateOrUpdateApplicationForm({
   action,
@@ -180,6 +179,7 @@ export function CreateOrUpdateApplicationForm({
           <TopologySearchAutocomplete
             placeholder="Search services by name or id"
             includeApplications={false}
+            excludeServiceIds={selectedServices.map((s) => s.service)}
             onSelect={({ value }: { value: TopologyServiceMinimal }) => {
               setSelectedServices([...selectedServices, value]);
             }}
