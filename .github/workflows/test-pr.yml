@@ -93,6 +93,7 @@ jobs:
       - name: Validate docs for providers
         run: |
           which python;
+          which poetry;
           pip freeze;
           printenv;
           python ./scripts/docs_get_providers_list.py --validate;
