@@ -44,6 +44,7 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
           />
         </div>
         {item.preset && (
+        //We can remove drag and drop style and make it same as table view. if we want to maintain consistency.
         <div className="flex-1 h-4/5 flex items-center justify-center grid-item__widget">
           <div className="text-4xl font-bold" style={{ color: getColor() }}>
             {item.preset.alerts_count}
