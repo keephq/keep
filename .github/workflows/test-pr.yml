@@ -91,7 +91,11 @@ jobs:
         run: poetry install --no-interaction --no-root --with dev
 
       - name: Validate docs for providers
-        run: python ./scripts/docs_get_providers_list.py --validate;
+        run: |
+          which python;
+          pip freeze;
+          printenv;
+          python ./scripts/docs_get_providers_list.py --validate;
 
       - name: Run unit tests and report coverage
         run: |
