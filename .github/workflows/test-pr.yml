@@ -92,10 +92,7 @@ jobs:
 
       - name: Validate docs for providers
         run: |
-          which python;
-          which poetry;
-          pip freeze;
-          printenv;
+          source /home/runner/.local/bin/activate;
           python ./scripts/docs_get_providers_list.py --validate;
 
       - name: Run unit tests and report coverage
