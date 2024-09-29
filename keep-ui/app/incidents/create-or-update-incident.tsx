@@ -7,6 +7,8 @@ import {
   Subtitle,
   Text,
   Button,
+  Select,
+  SelectItem,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
@@ -15,6 +17,7 @@ import { getApiURL } from "utils/apiUrl";
 import { IncidentDto } from "./models";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { Session } from "next-auth";
+import { useUsers } from "utils/hooks/useUsers";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -55,6 +58,7 @@ export default function CreateOrUpdateIncident({
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
+  const { data: users = [] } = useUsers();
   const editMode = incidentToEdit !== null;
 
   // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
@@ -144,7 +148,7 @@ export default function CreateOrUpdateIncident({
     <form className="py-2" onSubmit={editMode ? updateIncident : addIncident}>
       <Subtitle>Incident Metadata</Subtitle>
       <div className="mt-2.5">
-        <Text>
+        <Text className="mb-2">
           Name<span className="text-red-500 text-xs">*</span>
         </Text>
         <TextInput
@@ -155,7 +159,7 @@ export default function CreateOrUpdateIncident({
         />
       </div>
       <div className="mt-2.5">
-        <Text>Summary</Text>
+        <Text className="mb-2">Summary</Text>
         <Textarea
           placeholder="What happened?"
           required={false}
@@ -165,17 +169,31 @@ export default function CreateOrUpdateIncident({
       </div>
 
       <div className="mt-2.5">
-        <Text>Assignee</Text>
-        <TextInput
-          placeholder="Who is responsible"
-          value={incidentAssignee}
-          onValueChange={setIncidentAssignee}
-        />
+        <Text className="mb-2">Assignee</Text>
+        {users.length > 0 ? (
+          <Select
+            placeholder="Who is responsible"
+            value={incidentAssignee}
+            onValueChange={setIncidentAssignee}
+          >
+            {users.map((user) => (
+              <SelectItem key={user.email} value={user.email}>
+                {user.name || user.email}
+              </SelectItem>
+            ))}
+          </Select>
+        ) : (
+          <TextInput
+            placeholder="Who is responsible"
+            value={incidentAssignee}
+            onValueChange={setIncidentAssignee}
+          />
+        )}
       </div>
 
       <Divider />
 
-      <div className={"space-x-1 flex flex-row justify-end items-center"}>
+      <div className="mt-auto pt-6 space-x-1 flex flex-row justify-end items-center">
         {cancellable && (
           <Button
             color="orange"
