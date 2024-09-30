@@ -3073,55 +3073,6 @@ def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incide
         return incident
 
 
-# Fetch all topology data
-def get_all_topology_data(
-    tenant_id: str,
-    provider_id: Optional[str] = None,
-    service: Optional[str] = None,
-    environment: Optional[str] = None,
-) -> List[TopologyServiceDtoOut]:
-    with Session(engine) as session:
-        query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
-
-        # @tb: let's filter by service only for now and take care of it when we handle multilpe
-        # services and environments and cmdbs
-        # the idea is that we show the service topology regardless of the underlying provider/env
-        # if provider_id is not None and service is not None and environment is not None:
-        if service is not None:
-            query = query.where(
-                TopologyService.service == service,
-                # TopologyService.source_provider_id == provider_id,
-                # TopologyService.environment == environment,
-            )
-
-            service_instance = session.exec(query).first()
-            if not service_instance:
-                return []
-
-            services = session.exec(
-                select(TopologyServiceDependency)
-                .where(
-                    TopologyServiceDependency.depends_on_service_id
-                    == service_instance.id
-                )
-                .options(joinedload(TopologyServiceDependency.service))
-            ).all()
-            services = [service_instance, *[service.service for service in services]]
-        else:
-            # Fetch services for the tenant
-            services = session.exec(
-                query.options(
-                    selectinload(TopologyService.dependencies).selectinload(
-                        TopologyServiceDependency.dependent_service
-                    )
-                )
-            ).all()
-
-        service_dtos = [TopologyServiceDtoOut.from_orm(service) for service in services]
-
-        return service_dtos
-
-
 def get_topology_data_by_dynamic_matcher(
     tenant_id: str, matchers_value: dict[str, str]
 ) -> TopologyService | None:
