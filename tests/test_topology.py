@@ -27,7 +27,7 @@ def create_service(db_session, tenant_id, id):
     service = TopologyService(
         tenant_id=tenant_id,
         service="test_service_" + id,
-        display_name="Test Service",
+        display_name=id,
         repository="test_repository",
         tags=["test_tag"],
         description="test_description",
@@ -72,21 +72,28 @@ def test_get_all_topology_data(db_session):
 def test_get_applications_by_tenant_id(db_session):
     service_1 = create_service(db_session, SINGLE_TENANT_UUID, "1")
     service_2 = create_service(db_session, SINGLE_TENANT_UUID, "2")
-    application = TopologyApplication(
+    application_1 = TopologyApplication(
         tenant_id=SINGLE_TENANT_UUID,
         name="Test Application",
         services=[service_1, service_2],
     )
-    db_session.add(application)
+    application_2 = TopologyApplication(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Application 2",
+        services=[service_1],
+    )
+    db_session.add(application_1)
+    db_session.add(application_2)
     db_session.commit()
 
     result = TopologiesService.get_applications_by_tenant_id(
         SINGLE_TENANT_UUID, db_session
     )
-    assert len(result) == 1
+    assert len(result) == 2
     assert result[0].name == "Test Application"
     assert len(result[0].services) == 2
-
+    assert result[1].name == "Test Application 2"
+    assert len(result[1].services) == 1
 
 def test_create_application_by_tenant_id(db_session):
     application_dto = TopologyApplicationDtoIn(name="New Application", services=[])
@@ -171,21 +178,29 @@ def test_get_applications(db_session, client, test_app):
 
     service_1 = create_service(db_session, SINGLE_TENANT_UUID, "1")
     service_2 = create_service(db_session, SINGLE_TENANT_UUID, "2")
+    service_3 = create_service(db_session, SINGLE_TENANT_UUID, "3")
 
-    application = TopologyApplication(
+    application_1 = TopologyApplication(
         tenant_id=SINGLE_TENANT_UUID,
         name="Test Application",
         services=[service_1, service_2],
     )
-    db_session.add(application)
+    application_2 = TopologyApplication(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Application 2",
+        services=[service_3],
+    )
+    db_session.add(application_1)
+    db_session.add(application_2)
     db_session.commit()
 
     response = client.get(
         "/topology/applications", headers={"x-api-key": VALID_API_KEY}
     )
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert len(response.json()) == 2
     assert response.json()[0]["name"] == "Test Application"
+    assert response.json()[1]["services"][0]["name"] == "3"
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
