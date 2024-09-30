@@ -7,14 +7,20 @@ import {
   TableCellsIcon,
 } from "@heroicons/react/24/outline";
 import { Button, Text } from "@tremor/react";
-import { StylesConfig, SingleValueProps, components, GroupBase } from 'react-select';
-import Select from 'react-select';
+import {
+  StylesConfig,
+  SingleValueProps,
+  components,
+  GroupBase,
+} from "react-select";
+import Select from "react-select";
 import { Table } from "@tanstack/react-table";
-import {IncidentDto} from "./models";
-import {AlertDto} from "../alerts/models";
+import { IncidentDto } from "./models";
+import { WorkflowDto } from "../workflows/models";
+import { AlertDto } from "../alerts/models";
 
 interface Props {
-  table: Table<IncidentDto> | Table<AlertDto>;
+  table: Table<IncidentDto> | Table<AlertDto> | Table<WorkflowDto>;
   isRefreshAllowed: boolean;
 }
 
@@ -26,37 +32,38 @@ interface OptionType {
 const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
   control: (provided, state) => ({
     ...provided,
-    borderColor: state.isFocused ? 'orange' : provided.borderColor,
-    '&:hover': { borderColor: 'orange' },
-    boxShadow: state.isFocused ? '0 0 0 1px orange' : provided.boxShadow,
+    borderColor: state.isFocused ? "orange" : provided.borderColor,
+    "&:hover": { borderColor: "orange" },
+    boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
   }),
   singleValue: (provided) => ({
     ...provided,
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
   }),
   menu: (provided) => ({
     ...provided,
-    color: 'orange',
+    color: "orange",
   }),
   option: (provided, state) => ({
     ...provided,
-    backgroundColor: state.isSelected ? 'orange' : provided.backgroundColor,
-    '&:hover': { backgroundColor: state.isSelected ? 'orange' : '#f5f5f5' },
-    color: state.isSelected ? 'white' : provided.color,
+    backgroundColor: state.isSelected ? "orange" : provided.backgroundColor,
+    "&:hover": { backgroundColor: state.isSelected ? "orange" : "#f5f5f5" },
+    color: state.isSelected ? "white" : provided.color,
   }),
 };
 
-const SingleValue = ({ children, ...props }: SingleValueProps<OptionType, false, GroupBase<OptionType>>) => (
+const SingleValue = ({
+  children,
+  ...props
+}: SingleValueProps<OptionType, false, GroupBase<OptionType>>) => (
   <components.SingleValue {...props}>
     {children}
     <TableCellsIcon className="w-4 h-4 ml-2" />
   </components.SingleValue>
 );
 
-
-export default function IncidentPagination({  table, isRefreshAllowed }: Props) {
-
+export default function IncidentPagination({ table, isRefreshAllowed }: Props) {
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
 
@@ -66,18 +73,23 @@ export default function IncidentPagination({  table, isRefreshAllowed }: Props) 
         Showing {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
       </Text>
       <div className="flex gap-1">
-      <Select
-        styles={customStyles}
-        components={{ SingleValue }}
-         value={{ value: table.getState().pagination.pageSize.toString(), label: table.getState().pagination.pageSize.toString() }}
-         onChange={(selectedOption) => table.setPageSize(Number(selectedOption!.value))}
-         options={[
-           { value: "10", label: "10" },
-           { value: "20", label: "20" },
-           { value: "50", label: "50" },
-           { value: "100", label: "100" },
-         ]}
-         menuPlacement="top"
+        <Select
+          styles={customStyles}
+          components={{ SingleValue }}
+          value={{
+            value: table.getState().pagination.pageSize.toString(),
+            label: table.getState().pagination.pageSize.toString(),
+          }}
+          onChange={(selectedOption) =>
+            table.setPageSize(Number(selectedOption!.value))
+          }
+          options={[
+            { value: "10", label: "10" },
+            { value: "20", label: "20" },
+            { value: "50", label: "50" },
+            { value: "100", label: "100" },
+          ]}
+          menuPlacement="top"
         />
         <div className="flex">
           <Button

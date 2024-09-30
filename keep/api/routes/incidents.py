@@ -12,7 +12,9 @@ from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
+    IncidentSorting,
     add_alerts_to_incident_by_incident_id,
+    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
@@ -20,21 +22,26 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     get_last_incidents,
+    get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
-    change_incident_status_by_id,
-    update_incident_from_dto_by_id,
-    IncidentSorting,
 )
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import AlertDto, IncidentDto, IncidentDtoIn, IncidentStatusChangeDto, IncidentStatus, \
-    EnrichAlertRequestBody
+from keep.api.models.alert import (
+    AlertDto,
+    EnrichAlertRequestBody,
+    IncidentDto,
+    IncidentDtoIn,
+    IncidentStatus,
+    IncidentStatusChangeDto,
+)
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
     AlertPaginatedResultsDto,
     IncidentsPaginatedResultsDto,
+    WorkflowExecutionsPaginatedResultsDto,
 )
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -53,9 +60,7 @@ if ee_enabled:
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
     sys.path.insert(0, path_with_ee)
-    from ee.experimental.incident_utils import (  # noqa
-        ALGORITHM_VERBOSE_NAME,
-    )
+    from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa
 
 
 def __update_client_on_incident_change(
@@ -128,10 +133,7 @@ def create_incident_endpoint(
     except Exception:
         logger.exception(
             "Failed to run workflows based on incident",
-            extra={
-                "incident_id": new_incident_dto.id,
-                "tenant_id": tenant_id
-            },
+            extra={"incident_id": new_incident_dto.id, "tenant_id": tenant_id},
         )
 
     return new_incident_dto
@@ -162,7 +164,7 @@ def get_all_incidents(
         is_confirmed=confirmed,
         limit=limit,
         offset=offset,
-        sorting=sorting
+        sorting=sorting,
     )
 
     incidents_dto = []
@@ -243,10 +245,7 @@ def update_incident(
     except Exception:
         logger.exception(
             "Failed to run workflows based on incident",
-            extra={
-                "incident_id": new_incident_dto.id,
-                "tenant_id": tenant_id
-            },
+            extra={"incident_id": new_incident_dto.id, "tenant_id": tenant_id},
         )
     return new_incident_dto
 
@@ -289,10 +288,7 @@ def delete_incident(
     except Exception:
         logger.exception(
             "Failed to run workflows based on incident",
-            extra={
-                "incident_id": incident_dto.id,
-                "tenant_id": tenant_id
-            },
+            extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
         )
     return Response(status_code=202)
 
@@ -348,6 +344,41 @@ def get_incident_alerts(
     )
 
 
+@router.get(
+    "/{incident_id}/workflows",
+    description="Get incident workflows by incident id",
+)
+def get_incident_workflows(
+    incident_id: str,
+    limit: int = 25,
+    offset: int = 0,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+    ),
+) -> WorkflowExecutionsPaginatedResultsDto:
+    """
+    Get all workflows associated with an incident.
+    It associated both with the incident itself and alerts associated with the incident.
+
+    """
+    tenant_id = authenticated_entity.tenant_id
+
+    logger.info(
+        "Fetching incident's workflows",
+        extra={"incident_id": incident_id, "tenant_id": tenant_id},
+    )
+    workflow_execution_dtos, total_count = (
+        get_workflow_executions_for_incident_or_alert(
+            tenant_id=tenant_id, incident_id=incident_id, limit=limit, offset=offset
+        )
+    )
+
+    paginated_workflow_execution_dtos = WorkflowExecutionsPaginatedResultsDto(
+        limit=limit, offset=offset, count=total_count, items=workflow_execution_dtos
+    )
+    return paginated_workflow_execution_dtos
+
+
 @router.post(
     "/{incident_id}/alerts",
     description="Add alerts to incident",
@@ -387,10 +418,7 @@ async def add_alerts_to_incident(
     except Exception:
         logger.exception(
             "Failed to run workflows based on incident",
-            extra={
-                "incident_id": incident_dto.id,
-                "tenant_id": tenant_id
-            },
+            extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
         )
 
     fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
@@ -490,13 +518,13 @@ def mine(
 @router.post(
     "/{incident_id}/confirm",
     description="Confirm predicted incident by id",
-    response_model=IncidentDto
+    response_model=IncidentDto,
 )
 def confirm_incident(
     incident_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    )
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -515,17 +543,18 @@ def confirm_incident(
 
     return new_incident_dto
 
+
 @router.post(
     "/{incident_id}/status",
     description="Change incident status",
-    response_model=IncidentDto
+    response_model=IncidentDto,
 )
 def change_incident_status(
     incident_id: str,
     change: IncidentStatusChangeDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    )
+    ),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -545,16 +574,20 @@ def change_incident_status(
     if not change.status == incident.status:
         result = change_incident_status_by_id(tenant_id, incident_id, change.status)
         if not result:
-            raise HTTPException(status_code=500, detail="Error changing incident status")
+            raise HTTPException(
+                status_code=500, detail="Error changing incident status"
+            )
         # TODO: same this change to audit table with the comment
 
         if change.status == IncidentStatus.RESOLVED:
-            for  alert in incident.alerts:
-                _enrich_alert(EnrichAlertRequestBody(
-                    enrichments={"status": "resolved"},
-                    fingerprint=alert.fingerprint
-                ), authenticated_entity=authenticated_entity)
-
+            for alert in incident.alerts:
+                _enrich_alert(
+                    EnrichAlertRequestBody(
+                        enrichments={"status": "resolved"},
+                        fingerprint=alert.fingerprint,
+                    ),
+                    authenticated_entity=authenticated_entity,
+                )
 
         incident.status = change.status
 

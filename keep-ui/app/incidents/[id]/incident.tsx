@@ -19,7 +19,8 @@ import { CiBellOn, CiChat2, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import IncidentChat from "./incident-chat";
-
+import { Workflows } from "components/icons";
+import IncidentWorkflowTable from "./incident-workflow-table";
 interface Props {
   incidentId: string;
 }
@@ -50,6 +51,7 @@ export default function IncidentView({ incidentId }: Props) {
             <Tab icon={CiBellOn}>Alerts</Tab>
             <Tab icon={CiViewTimeline}>Timeline</Tab>
             <Tab icon={IoIosGitNetwork}>Topology</Tab>
+            <Tab icon={Workflows}>Workflows</Tab>
             <Tab icon={CiChat2}>
               Chat
               <Badge
@@ -74,6 +76,9 @@ export default function IncidentView({ incidentId }: Props) {
                 buttonText="Go to Topology"
                 onClick={() => router.push("/topology")}
               />
+            </TabPanel>
+            <TabPanel>
+              <IncidentWorkflowTable incident={incident} />
             </TabPanel>
             <TabPanel>
               <IncidentChat incident={incident} />
