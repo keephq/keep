@@ -1,6 +1,6 @@
 ---
-title: "Grafana Oncall Provider"
-description: "Grafana Oncall Provider is a class that allows to ingest/digest data from Grafana On-Call."
+title: "Grafana OnCall Provider"
+description: "Grafana Oncall Provider is a class that allows to ingest/digest data from Grafana OnCall."
 ---
 
 ## Inputs
@@ -21,16 +21,16 @@ Grafana Oncall Provider does not currently support the `query` function.
 
 ## Authentication Parameters
 
-The Grafana Oncall Provider uses API token authentication. You need to provide the following authentication parameters to connect to Grafana On-Call:
+The Grafana Oncall Provider uses API token authentication. You need to provide the following authentication parameters to connect to Grafana OnCall:
 
-- **token** (required): Your Grafana On-Call API Token.
-- **host** (required): The URL of your Grafana On-Call host (e.g., https://keephq.grafana.net).
+- **token** (required): Your Grafana OnCall API Token.
+- **host** (required): The URL of your Grafana OnCall host (e.g., https://keephq.grafana.net).
 
 ## Connecting with the Provider
 
-To connect to Grafana On-Call, you need to create an API Token:
+To connect to Grafana OnCall, you need to create an API Token:
 
-1. Log in to your Grafana On-Call account.
+1. Log in to your Grafana OnCall account.
 2. Go to the **API Tokens** page.
 3. Click the **Generate Token** button and provide a name for your token.
 4. Copy the token value and keep it secure.
@@ -38,7 +38,7 @@ To connect to Grafana On-Call, you need to create an API Token:
 
 ## Notes
 
-- This provider allows you to interact with Grafana On-Call to create or update incidents.
+- This provider allows you to interact with Grafana OnCall to create or update incidents.
 - The `random_color` function generates a random color for incident labels.
 - The `startTime` and `endTime` parameters use ISO-8601 format.
 - The `notify` function returns information about the incident created or updated.
@@ -97,5 +97,5 @@ Payload example:
 
 ## Useful Links
 
-- [Grafana On-Call](https://keephq.grafana.net)
-- [Grafana On-Call API Documentation](https://keephq.grafana.net/docs/api)
+- [Grafana OnCall](https://keephq.grafana.net)
+- [Grafana OnCall API Documentation](https://keephq.grafana.net/docs/api)

@@ -67,5 +67,6 @@ if [[ $is_missing -ne 0 ]]; then
     echo "🔴🔴🔴 👆 those files are missing in docs/mint.json. That's a file responsible for rendering docs navigation."
     echo "Please add the new docs page there or to the EXCLUDE_FILE_LIST of the current script."
     echo "Otherwise the page will be really hard to navigate to :)"
+    echo "Run ./scripts/docs_validate_navigation.sh to check if the issue is fixed."
     exit 1 # Exit with an error code to fail the CI/CD process
 fi

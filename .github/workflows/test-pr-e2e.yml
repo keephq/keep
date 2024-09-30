@@ -26,7 +26,7 @@ env:
   EE_ENABLED: true
 
 jobs:
-  tests:
+  tests-e2e:
     runs-on: ubuntu-latest
     strategy:
       matrix:
