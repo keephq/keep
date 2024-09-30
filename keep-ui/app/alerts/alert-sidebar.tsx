@@ -7,6 +7,7 @@ import { IoMdClose } from "react-icons/io";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { TopologyMap } from "../topology/ui/map";
+import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -108,11 +109,13 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                   />
                 </Card>
                 <Title>Related Services</Title>
-                <TopologyMap
-                  providerId={alert.providerId || ""}
-                  service={alert.service || ""}
-                  environment={"unknown"}
-                />
+                <TopologySearchProvider>
+                  <TopologyMap
+                    providerId={alert.providerId || ""}
+                    service={alert.service || ""}
+                    environment={"unknown"}
+                  />
+                </TopologySearchProvider>
               </div>
             )}
           </Dialog.Panel>

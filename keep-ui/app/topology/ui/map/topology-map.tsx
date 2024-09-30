@@ -38,7 +38,10 @@ import "./topology.css";
 import Loading from "../../../loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ServiceSearchContext } from "../../service-search-context";
+import {
+  TopologySearchContext,
+  useTopologySearchContext,
+} from "../../TopologySearchContext";
 import { ApplicationNode } from "./application-node";
 import { ManageSelection } from "./manage-selection";
 import {
@@ -185,11 +188,13 @@ export function TopologyMap({
   });
   const router = useRouter();
 
-  const [selectedApplicationIds, setSelectedApplicationIds] = useState<
-    string[]
-  >([]);
-  const { selectedServiceId, setSelectedServiceId } =
-    useContext(ServiceSearchContext);
+  const {
+    selectedObjectId,
+    setSelectedObjectId,
+    selectedApplicationIds,
+    setSelectedApplicationIds,
+  } = useTopologySearchContext();
+
   const applicationMap = useMemo(() => {
     const map = new Map<string, TopologyApplication>();
     applications.forEach((app) => {
@@ -223,11 +228,10 @@ export function TopologyMap({
         nodesToFit.push(node);
       }
     }
-    // Wrap in setTimeout to be sure that reactFlow wil handle the fitView correctly
+    // setTimeout is used to be sure that reactFlow will handle the fitView correctly
     setTimeout(() => {
       reactFlowInstanceRef.current?.fitView({
-        padding: 10,
-        minZoom: 0.5,
+        padding: 0.2,
         nodes: nodesToFit,
         duration: 300,
       });
@@ -265,43 +269,43 @@ export function TopologyMap({
       value: TopologyServiceMinimal | TopologyApplicationMinimal;
     }) => {
       if ("service" in value) {
-        setSelectedServiceId(value.service);
+        setSelectedObjectId(value.service);
       } else {
         const application = applicationMap.get(value.id);
         if (application) {
-          setSelectedServiceId(application.id);
+          setSelectedObjectId(application.id);
         }
       }
     },
-    [applicationMap, setSelectedServiceId]
+    [applicationMap, setSelectedObjectId]
   );
 
   useEffect(() => {
-    if (!isVisible || !selectedServiceId || selectedServiceId === "") {
+    if (!isVisible || !selectedObjectId || selectedObjectId === "") {
       return;
     }
-    const node = reactFlowInstanceRef.current?.getNode(selectedServiceId);
+    const node = reactFlowInstanceRef.current?.getNode(selectedObjectId);
     if (node) {
-      highlightNodes([selectedServiceId]);
-      fitViewToServices([selectedServiceId]);
-      setSelectedServiceId(null);
+      highlightNodes([selectedObjectId]);
+      fitViewToServices([selectedObjectId]);
+      setSelectedObjectId(null);
       return;
     }
-    const application = applicationMap.get(selectedServiceId);
+    const application = applicationMap.get(selectedObjectId);
     if (!application) {
       return;
     }
     const serviceIds = application.services.map((s) => s.service);
     highlightNodes(serviceIds);
     fitViewToServices(serviceIds);
-    setSelectedServiceId(null);
+    setSelectedObjectId(null);
   }, [
     isVisible,
     applicationMap,
     fitViewToServices,
     highlightNodes,
-    selectedServiceId,
-    setSelectedServiceId,
+    selectedObjectId,
+    setSelectedObjectId,
   ]);
 
   const previousNodesIds = useRef<Set<string>>(new Set());
@@ -350,6 +354,7 @@ export function TopologyMap({
     function watchSelectedApplications() {
       if (selectedApplicationIds.length === 0) {
         setNodes((prev) => prev.map((n) => ({ ...n, hidden: false })));
+        setEdges((prev) => prev.map((e) => ({ ...e, hidden: false })));
         return;
       }
       // Get all service nodes that are part of selected applications
@@ -360,28 +365,39 @@ export function TopologyMap({
             : []
         )
       );
-      // Hide all nodes that are not part of selected applications
-      setNodes((prev) => {
-        const selectedNodes: TopologyNode[] = [];
-        const newNodes = prev.map((n) => {
+      // Hide all nodes and edges that are not part of selected applications
+      setNodes((prev) =>
+        prev.map((n) => {
           const isSelectedService = selectedServiceNodesIds.has(n.id);
-          if (n.type === "service" && isSelectedService) {
-            selectedNodes.push(n);
-          }
           return {
             ...n,
             hidden: n.type === "service" && !isSelectedService,
           };
-        });
-        // Fit view to selected nodes
-        // TODO: handle case when nodes are two far apart and minZoom preventing fitView
-        reactFlowInstanceRef.current?.fitView({
-          padding: 10,
-          minZoom: 0.5,
-          nodes: selectedNodes,
-          duration: 300,
-        });
-        return newNodes;
+        })
+      );
+      setEdges((prev) =>
+        prev.map((e) => {
+          const isSelectedService =
+            selectedServiceNodesIds.has(e.source) &&
+            selectedServiceNodesIds.has(e.target);
+          return {
+            ...e,
+            hidden: !isSelectedService,
+          };
+        })
+      );
+
+      const nodesToFit: TopologyNode[] = Array.from(
+        selectedServiceNodesIds.values()
+      )
+        .map((id) => reactFlowInstanceRef.current?.getNode(id))
+        .filter((node) => !!node);
+      // Then fit view to selected nodes
+      reactFlowInstanceRef.current?.fitView({
+        padding: 10,
+        minZoom: 0.5,
+        nodes: nodesToFit,
+        duration: 300,
       });
     },
     [applications, selectedApplicationIds]
@@ -422,6 +438,7 @@ export function TopologyMap({
         <div className="basis-1/3 relative z-30">
           <MultiSelect
             placeholder="Show application"
+            value={selectedApplicationIds}
             onValueChange={setSelectedApplicationIds}
           >
             {applications.map((app) => (
@@ -440,10 +457,11 @@ export function TopologyMap({
             edges={edges}
             minZoom={0.1}
             defaultViewport={{ x: 0, y: 0, zoom: 0.5 }}
+            fitView
+            fitViewOptions={{ padding: 0.1, minZoom: 0.5 }}
             snapToGrid
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            fitViewOptions={{ padding: 0.3 }}
             zoomOnDoubleClick={true}
             onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
             onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
