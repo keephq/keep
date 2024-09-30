@@ -22,7 +22,10 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/components/*": ["./components/*"]
+      "@/components/*": ["./components/*"],
+      "@/app/*": ["./app/*"],
+      "@/pages/*": ["./pages/*"],
+      "@/utils/*": ["./utils/*"],
     }
   },
   "include": [
