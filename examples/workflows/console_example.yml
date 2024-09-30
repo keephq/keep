@@ -1,0 +1,12 @@
+workflow:
+  id: console-example
+  description: console-example
+  triggers:
+    - type: manual
+  actions:
+    - name: echo
+      provider:
+        type: console
+        with:
+          logger: true
+          message: "Hey"
