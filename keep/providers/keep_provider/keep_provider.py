@@ -3,7 +3,6 @@ Keep Provider is a class that allows to ingest/digest data from Keep.
 """
 
 import logging
-from typing import Optional
 
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
@@ -86,9 +85,7 @@ class KeepProvider(BaseProvider):
         pass
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["KeepProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         return AlertDto(
             **event,
         )

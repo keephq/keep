@@ -11,6 +11,7 @@ import { AILink } from "./AILink";
 import { TbTopologyRing } from "react-icons/tb";
 import { FaVolumeMute } from "react-icons/fa";
 import { FaMarkdown } from "react-icons/fa";
+import { IoMdGitMerge } from "react-icons/io";
 import { useTopology } from "utils/hooks/useTopology";
 
 type NoiseReductionLinksProps = { session: Session | null };
@@ -50,6 +51,11 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
                 <Subtitle>Runbooks</Subtitle>
             </LinkWithIcon>
             </li>
+        <li>
+          <LinkWithIcon href="/deduplication" icon={IoMdGitMerge}>
+            <Subtitle>Deduplication</Subtitle>
+          </LinkWithIcon>
+        </li>
         <li>
           <LinkWithIcon href="/rules" icon={Rules}>
             <Subtitle>Correlations</Subtitle>

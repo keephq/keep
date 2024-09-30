@@ -4,11 +4,18 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import pytz
-from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator, PrivateAttr
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    Extra,
+    PrivateAttr,
+    root_validator,
+    validator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +124,8 @@ class AlertDto(BaseModel):
     lastReceived: str
     firingStartTime: str | None = None
     environment: str = "undefined"
-    isDuplicate: bool | None = None
+    isFullDuplicate: bool | None = False
+    isPartialDuplicate: bool | None = False
     duplicateReason: str | None = None
     service: str | None = None
     source: list[str] | None = []
@@ -298,7 +306,6 @@ class AlertDto(BaseModel):
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
-                    "isDuplicate": False,
                     "duplicateReason": None,
                     "service": "backend",
                     "source": ["keep"],
@@ -410,6 +417,7 @@ class IncidentDto(IncidentDtoIn):
     def alerts(self) -> List["AlertDto"]:
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+
         if not self._tenant_id:
             return []
         alerts, _ = get_incident_alerts_by_incident_id(self._tenant_id, str(self.id))
@@ -432,14 +440,16 @@ class IncidentDto(IncidentDtoIn):
     @classmethod
     def from_db_incident(cls, db_incident):
 
-        severity = IncidentSeverity.from_number(db_incident.severity) \
-            if isinstance(db_incident.severity, int) \
+        severity = (
+            IncidentSeverity.from_number(db_incident.severity)
+            if isinstance(db_incident.severity, int)
             else db_incident.severity
+        )
 
         dto = cls(
             id=db_incident.id,
             user_generated_name=db_incident.user_generated_name,
-            ai_generated_name = db_incident.ai_generated_name,
+            ai_generated_name=db_incident.ai_generated_name,
             user_summary=db_incident.user_summary,
             generated_summary=db_incident.generated_summary,
             is_predicted=db_incident.is_predicted,
@@ -460,6 +470,36 @@ class IncidentDto(IncidentDtoIn):
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
         return dto
+
+
+class DeduplicationRuleDto(BaseModel):
+    id: str | None  # UUID
+    name: str
+    description: str
+    default: bool
+    distribution: list[dict]  # list of {hour: int, count: int}
+    provider_id: str | None  # None for default rules
+    provider_type: str
+    last_updated: str | None
+    last_updated_by: str | None
+    created_at: str | None
+    created_by: str | None
+    ingested: int
+    dedup_ratio: float
+    enabled: bool
+    fingerprint_fields: list[str]
+    full_deduplication: bool
+    ignore_fields: list[str]
+
+
+class DeduplicationRuleRequestDto(BaseModel):
+    name: str
+    description: Optional[str] = None
+    provider_type: str
+    provider_id: Optional[str] = None
+    fingerprint_fields: list[str]
+    full_deduplication: bool = False
+    ignore_fields: Optional[list[str]] = None
 
 
 class IncidentStatusChangeDto(BaseModel):

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 from importlib import metadata
 
 import jwt
@@ -37,6 +38,7 @@ from keep.api.routes import (
     ai,
     alerts,
     dashboard,
+    deduplications,
     extraction,
     healthcheck,
     incidents,
@@ -76,6 +78,7 @@ SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 
 AUTH_TYPE = os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
+PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
 try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
@@ -235,7 +238,9 @@ def get_app(
     app.include_router(tags.router, prefix="/tags", tags=["tags"])
     app.include_router(maintenance.router, prefix="/maintenance", tags=["maintenance"])
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
-
+    app.include_router(
+        deduplications.router, prefix="/deduplications", tags=["deduplications"]
+    )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
@@ -249,12 +254,13 @@ def get_app(
     async def on_startup():
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
-        # provision providers from env. relevant only on single tenant.
-        logger.info("Provisioning providers and workflows")
-        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
-        logger.info("Providers loaded successfully")
-        WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
-        logger.info("Workflows provisioned successfully")
+        if PROVISION_RESOURCES:
+            # provision providers from env. relevant only on single tenant.
+            logger.info("Provisioning providers and workflows")
+            ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
+            logger.info("Providers loaded successfully")
+            WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
+            logger.info("Workflows provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler
@@ -298,12 +304,21 @@ def get_app(
         if SCHEDULER:
             logger.info("Stopping the scheduler")
             wf_manager = WorkflowManager.get_instance()
-            await wf_manager.stop()
+            # stop the scheduler
+            try:
+                await wf_manager.stop()
+            # in pytest, there could be race condition
+            except TypeError:
+                pass
             logger.info("Scheduler stopped successfully")
         if CONSUMER:
             logger.info("Stopping the consumer")
             event_subscriber = EventSubscriber.get_instance()
-            await event_subscriber.stop()
+            try:
+                await event_subscriber.stop()
+            # in pytest, there could be race condition
+            except TypeError:
+                pass
             logger.info("Consumer stopped successfully")
         # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
         logger.info("Keep shutdown complete")
@@ -329,10 +344,13 @@ def get_app(
             f"Request started: {request.method} {request.url.path}",
             extra={"tenant_id": identity},
         )
+        start_time = time.time()
         request.state.tenant_id = identity
         response = await call_next(request)
+
+        end_time = time.time()
         logger.info(
-            f"Request finished: {request.method} {request.url.path} {response.status_code}"
+            f"Request finished: {request.method} {request.url.path} {response.status_code} in {end_time - start_time:.2f}s",
         )
         return response
 

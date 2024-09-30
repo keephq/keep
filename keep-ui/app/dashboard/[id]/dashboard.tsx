@@ -13,12 +13,21 @@ import { useDashboards } from 'utils/hooks/useDashboards';
 import { getApiURL } from 'utils/apiUrl';
 import './../styles.css';
 import { toast } from 'react-toastify';
+import { GenericFilters } from '@/components/filters/GenericFilters';
+import { useDashboardPreset } from 'utils/hooks/useDashboardPresets';
+
+const DASHBOARD_FILTERS = [
+  {
+    type: "date",
+    key: "time_stamp",
+    value: "",
+    name: "Last received",
+  }
+]
 
 const DashboardPage = () => {
-  const { useAllPresets, useStaticPresets } = usePresets();
-  const { data: presets = [] } = useAllPresets();
-  const { data: staticPresets = [] } = useStaticPresets();
-  const { id } : any = useParams();
+  const allPresets = useDashboardPreset();
+  const { id }: any = useParams();
   const { data: session } = useSession();
   const { dashboards, isLoading, mutate: mutateDashboard } = useDashboards();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,8 +47,6 @@ const DashboardPage = () => {
       }
     }
   }, [id, dashboards, isLoading]);
-
-  const allPresets = [...presets, ...staticPresets];
 
   const openModal = () => {
     setEditingItem(null); // Ensure new modal opens without editing item context
@@ -163,6 +170,8 @@ const DashboardPage = () => {
             color="orange"
           />
         </div>
+        <div className="flex gap-1 items-end">
+        <GenericFilters filters={DASHBOARD_FILTERS} />
         <div className="flex">
           <Button
             icon={FiSave}
@@ -172,6 +181,7 @@ const DashboardPage = () => {
             tooltip="Save current dashboard"
           />
           <Button color="orange" onClick={openModal} className="ml-2">Add Widget</Button>
+        </div>
         </div>
       </div>
       {layout.length === 0 ? (
@@ -192,6 +202,7 @@ const DashboardPage = () => {
             data={widgetData}
             onEdit={handleEditWidget}
             onDelete={handleDeleteWidget}
+            presets={allPresets}
           />
         </Card>
       )}

@@ -3,7 +3,7 @@ Site24x7Provider is a class that allows to install webhooks and get alerts in Si
 """
 
 import dataclasses
-from typing import List, Optional
+from typing import List
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -25,6 +25,7 @@ class Site24X7ProviderAuthConfig:
     """
     Site24x7 authentication configuration.
     """
+
     zohoRefreshToken: str = dataclasses.field(
         metadata={
             "required": True,
@@ -82,11 +83,11 @@ class Site24X7Provider(BaseProvider):
         "DOWN": AlertSeverity.WARNING,
         "TROUBLE": AlertSeverity.HIGH,
         "UP": AlertSeverity.INFO,
-        "CRITICAL": AlertSeverity.CRITICAL
+        "CRITICAL": AlertSeverity.CRITICAL,
     }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -133,15 +134,17 @@ class Site24X7Provider(BaseProvider):
         Getting the access token from Zoho API using the permanent refresh token.
         """
         data = {
-            'client_id': self.authentication_config.zohoClientId,
-            'client_secret': self.authentication_config.zohoClientSecret,
-            'refresh_token': self.authentication_config.zohoRefreshToken,
-            'grant_type': 'refresh_token',
+            "client_id": self.authentication_config.zohoClientId,
+            "client_secret": self.authentication_config.zohoClientSecret,
+            "refresh_token": self.authentication_config.zohoRefreshToken,
+            "grant_type": "refresh_token",
         }
-        response = requests.post(f'https://accounts.zoho{self.authentication_config.zohoAccountTLD}/oauth/v2/token',
-                                 data=data).json()
+        response = requests.post(
+            f"https://accounts.zoho{self.authentication_config.zohoAccountTLD}/oauth/v2/token",
+            data=data,
+        ).json()
         return {
-            'Authorization': f'Bearer {response["access_token"]}',
+            "Authorization": f'Bearer {response["access_token"]}',
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
@@ -150,23 +153,32 @@ class Site24X7Provider(BaseProvider):
         authentication_scope = "Validate TLD first"
         if self.authentication_config.zohoAccountTLD in valid_tlds:
             valid_tld_scope = True
-            response = requests.get(f'{self.__get_url(paths=["monitors"])}', headers=self.__get_headers())
+            response = requests.get(
+                f'{self.__get_url(paths=["monitors"])}', headers=self.__get_headers()
+            )
             if response.status_code == 401:
                 authentication_scope = response.json()
-                self.logger.error("Failed to authenticate user", extra=authentication_scope)
+                self.logger.error(
+                    "Failed to authenticate user", extra=authentication_scope
+                )
             elif response.status_code == 200:
                 authentication_scope = True
                 self.logger.info("Authenticated user successfully")
             else:
-                authentication_scope = f"Error while authenticating user, {response.status_code}"
-                self.logger.error("Error while authenticating user", extra={"status_code": response.status_code})
+                authentication_scope = (
+                    f"Error while authenticating user, {response.status_code}"
+                )
+                self.logger.error(
+                    "Error while authenticating user",
+                    extra={"status_code": response.status_code},
+                )
         return {
-            'authenticated': authentication_scope,
-            'valid_tld': valid_tld_scope,
+            "authenticated": authentication_scope,
+            "valid_tld": valid_tld_scope,
         }
 
     def setup_webhook(
-            self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
         webhook_data = {
             "method": "P",
@@ -174,12 +186,7 @@ class Site24X7Provider(BaseProvider):
             "is_poller_webhook": False,
             "type": 8,
             "alert_tags_id": [],
-            "custom_headers": [
-                {
-                    "name": "X-API-KEY",
-                    "value": api_key
-                }
-            ],
+            "custom_headers": [{"name": "X-API-KEY", "value": api_key}],
             "url": keep_api_url,
             "timeout": 30,
             "selection_type": 0,
@@ -190,25 +197,25 @@ class Site24X7Provider(BaseProvider):
             "send_incident_parameters": True,
             "service_status": 0,
             "name": "KeepWebhook",
-            "manage_tickets": False
+            "manage_tickets": False,
         }
-        response = requests.post(self.__get_url(paths=["integration/webhooks"]), json=webhook_data,
-                                 headers=self.__get_headers())
+        response = requests.post(
+            self.__get_url(paths=["integration/webhooks"]),
+            json=webhook_data,
+            headers=self.__get_headers(),
+        )
         if not response.ok:
             response_json = response.json()
             self.logger.error("Error while creating webhook", extra=response_json)
-            raise Exception(response_json['message'])
+            raise Exception(response_json["message"])
         else:
             self.logger.info("Webhook created successfully")
 
     @staticmethod
-    def _format_alert(
-            event: dict,
-            provider_instance: Optional["Site24X7Provider"] = None,
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         return AlertDto(
             url=event.get("MONITORURL", ""),
-            lastReceived=event.get('INCIDENT_TIME', ""),
+            lastReceived=event.get("INCIDENT_TIME", ""),
             description=event.get("INCIDENT_REASON", ""),
             name=event.get("MONITORNAME", ""),
             id=event.get("MONITOR_ID", ""),
@@ -216,11 +223,13 @@ class Site24X7Provider(BaseProvider):
         )
 
     def _get_alerts(self) -> list[AlertDto]:
-        response = requests.get(self.__get_url(paths=['alert_logs']), headers=self.__get_headers())
+        response = requests.get(
+            self.__get_url(paths=["alert_logs"]), headers=self.__get_headers()
+        )
         if response.status_code == 200:
             alerts = []
             response = response.json()
-            for alert in response['data']:
+            for alert in response["data"]:
                 alerts.append(
                     AlertDto(
                         name=alert["display_name"],

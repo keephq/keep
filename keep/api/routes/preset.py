@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-
+from typing import Optional
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -10,6 +10,7 @@ from fastapi import (
     HTTPException,
     Request,
     Response,
+    Query
 )
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -23,6 +24,7 @@ from keep.api.core.db import (
     update_provider_last_pull_time,
 )
 from keep.api.models.alert import AlertDto
+from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.models.db.preset import (
     Preset,
     PresetDto,
@@ -39,6 +41,7 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+import json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -169,6 +172,20 @@ def pull_data_from_providers(
     )
 
 
+# Function to handle the time_stamp query parameter and parse it
+def _get_time_stamp_filter(
+    time_stamp: Optional[str] = Query(None)
+) -> TimeStampFilter:
+    if time_stamp:
+        try:
+            # Parse the JSON string
+            time_stamp_dict = json.loads(time_stamp)
+            # Return the TimeStampFilter object, Pydantic will map 'from' -> lower_timestamp and 'to' -> upper_timestamp
+            return TimeStampFilter(**time_stamp_dict)
+        except (json.JSONDecodeError, TypeError):
+            raise HTTPException(status_code=400, detail="Invalid time_stamp format")
+    return TimeStampFilter()
+
 @router.get(
     "",
     description="Get all presets for tenant",
@@ -178,9 +195,10 @@ def get_presets(
         IdentityManagerFactory.get_auth_verifier(["read:preset"])
     ),
     session: Session = Depends(get_session),
+    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter)
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Getting all presets")
+    logger.info(f"Getting all presets {time_stamp}")
 
     # get all preset ids that the user has access to
     identity_manager = IdentityManagerFactory.get_identity_manager(
@@ -205,7 +223,7 @@ def get_presets(
     # get the number of alerts + noisy alerts for each preset
     search_engine = SearchEngine(tenant_id=tenant_id)
     # get the preset metatada
-    presets_dto = search_engine.search_preset_alerts(presets=presets_dto)
+    presets_dto = search_engine.search_preset_alerts(presets=presets_dto, time_stamp=time_stamp)
 
     return presets_dto
 
@@ -395,7 +413,7 @@ def get_preset_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:presets"])
     ),
-) -> list[AlertDto]:
+) -> list:
 
     # Gathering alerts may take a while and we don't care if it will finish before we return the response.
     # In the worst case, gathered alerts will be pulled in the next request.

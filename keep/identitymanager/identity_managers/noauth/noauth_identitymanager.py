@@ -15,7 +15,7 @@ class NoAuthIdentityManager(BaseIdentityManager):
     def get_users(self) -> list[User]:
         return []
 
-    def create_user(self, secret_name: str, secret_value: str) -> None:
+    def create_user(self, user_email, user_name, password, role, groups=[]) -> None:
         return
 
     def delete_user(self, user_email: str) -> dict:

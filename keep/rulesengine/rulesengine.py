@@ -2,18 +2,41 @@ import json
 import logging
 
 import celpy
+import celpy.c7nlib
+import celpy.celparser
+import celpy.celtypes
+import celpy.evaluation
 
 from keep.api.consts import STATIC_PRESETS
-from keep.api.core.db import get_incident_for_grouping_rule, assign_alert_to_incident
+from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
+
+# Shahar: this is performance enhancment https://github.com/cloud-custodian/cel-python/issues/68
+
+
+celpy.evaluation.Referent.__repr__ = lambda self: ""
+celpy.evaluation.NameContainer.__repr__ = lambda self: ""
+celpy.Activation.__repr__ = lambda self: ""
+celpy.Activation.__str__ = lambda self: ""
+celpy.celtypes.MapType.__repr__ = lambda self: ""
+celpy.celtypes.DoubleType.__repr__ = lambda self: ""
+celpy.celtypes.BytesType.__repr__ = lambda self: ""
+celpy.celtypes.IntType.__repr__ = lambda self: ""
+celpy.celtypes.UintType.__repr__ = lambda self: ""
+celpy.celtypes.ListType.__repr__ = lambda self: ""
+celpy.celtypes.StringType.__repr__ = lambda self: ""
+celpy.celtypes.TimestampType.__repr__ = lambda self: ""
+celpy.c7nlib.C7NContext.__repr__ = lambda self: ""
+celpy.celparser.Tree.__repr__ = lambda self: ""
 
 
 class RulesEngine:
     def __init__(self, tenant_id=None):
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
+        self.env = celpy.Environment()
 
     def run_rules(self, events: list[AlertDto]) -> list[IncidentDto]:
         self.logger.info("Running rules")
@@ -37,15 +60,17 @@ class RulesEngine:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
-                    
+
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
-                    incident = get_incident_for_grouping_rule(self.tenant_id, rule, rule.timeframe, rule_fingerprint)
+                    incident = get_incident_for_grouping_rule(
+                        self.tenant_id, rule, rule.timeframe, rule_fingerprint
+                    )
 
                     incident = assign_alert_to_incident(
                         alert_id=event.event_id,
                         incident_id=incident.id,
-                        tenant_id=self.tenant_id
+                        tenant_id=self.tenant_id,
                     )
 
                     incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
@@ -88,10 +113,9 @@ class RulesEngine:
         # what we do here is to compile the CEL rule and evaluate it
         #   https://github.com/cloud-custodian/cel-python
         #   https://github.com/google/cel-spec
-        env = celpy.Environment()
         for sub_rule in sub_rules:
-            ast = env.compile(sub_rule)
-            prgm = env.program(ast)
+            ast = self.env.compile(sub_rule)
+            prgm = self.env.program(ast)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             try:
                 r = prgm.evaluate(activation)
@@ -150,8 +174,23 @@ class RulesEngine:
             return "none"
         return ",".join(rule_fingerprint)
 
-    @staticmethod
-    def filter_alerts(alerts: list[AlertDto], cel: str):
+    def get_alerts_activation(self, alerts: list[AlertDto]):
+        activations = []
+        for alert in alerts:
+            payload = alert.dict()
+            # TODO: workaround since source is a list
+            #       should be fixed in the future
+            payload["source"] = ",".join(payload["source"])
+            # payload severity could be the severity itself or the order of the severity, cast it to the order
+            if isinstance(payload["severity"], str):
+                payload["severity"] = AlertSeverity(payload["severity"].lower()).order
+            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+            activations.append(activation)
+        return activations
+
+    def filter_alerts(
+        self, alerts: list[AlertDto], cel: str, alerts_activation: list = None
+    ):
         """This function filters alerts according to a CEL
 
         Args:
@@ -162,7 +201,7 @@ class RulesEngine:
             list[AlertDto]: list of alerts that are related to the cel
         """
         logger = logging.getLogger(__name__)
-        env = celpy.Environment()
+
         # tb: temp hack because this function is super slow
         if cel == STATIC_PRESETS.get("feed", {}).options[0].get("value"):
             return [
@@ -176,19 +215,15 @@ class RulesEngine:
             return alerts
         # preprocess the cel expression
         cel = preprocess_cel_expression(cel)
-        ast = env.compile(cel)
-        prgm = env.program(ast)
+        ast = self.env.compile(cel)
+        prgm = self.env.program(ast)
         filtered_alerts = []
-        for alert in alerts:
-            payload = alert.dict()
-            # TODO: workaround since source is a list
-            #       should be fixed in the future
-            payload["source"] = ",".join(payload["source"])
-            # payload severity could be the severity itself or the order of the severity, cast it to the order
-            if isinstance(payload["severity"], str):
-                payload["severity"] = AlertSeverity(payload["severity"].lower()).order
 
-            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+        for i, alert in enumerate(alerts):
+            if alerts_activation:
+                activation = alerts_activation[i]
+            else:
+                activation = self.get_alerts_activation([alert])[0]
             try:
                 r = prgm.evaluate(activation)
             except celpy.evaluation.CELEvalError as e:
@@ -217,4 +252,5 @@ class RulesEngine:
                 continue
             if r:
                 filtered_alerts.append(alert)
+
         return filtered_alerts

@@ -19,7 +19,7 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import get_enrichments
+from keep.api.core.db import get_custom_deduplication_rule, get_enrichments
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -36,9 +36,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
-    PROVIDER_TAGS: list[Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]] = (
-        []
-    )
+    PROVIDER_TAGS: list[
+        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+    ] = []
 
     def __init__(
         self,
@@ -306,12 +306,49 @@ class BaseProvider(metaclass=abc.ABCMeta):
     def format_alert(
         cls,
         event: dict,
-        provider_instance: Optional["BaseProvider"],
+        tenant_id: str,
+        provider_type: str,
+        provider_id: str,
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event, provider_instance)
+        formatted_alert = cls._format_alert(event)
         logger.debug("Alert formatted")
+        # after the provider calculated the default fingerprint
+        #   check if there is a custom deduplication rule and apply
+        custom_deduplication_rule = get_custom_deduplication_rule(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+        )
+
+        if not isinstance(formatted_alert, list):
+            formatted_alert.providerId = provider_id
+            formatted_alert.providerType = provider_type
+            formatted_alert = [formatted_alert]
+
+        else:
+            for alert in formatted_alert:
+                alert.providerId = provider_id
+                alert.providerType = provider_type
+
+        # if there is no custom deduplication rule, return the formatted alert
+        if not custom_deduplication_rule:
+            return formatted_alert
+        # if there is a custom deduplication rule, apply it
+        # apply the custom deduplication rule to calculate the fingerprint
+        for alert in formatted_alert:
+            logger.info(
+                "Applying custom deduplication rule",
+                extra={
+                    "tenant_id": tenant_id,
+                    "provider_id": provider_id,
+                    "alert_id": alert.id,
+                },
+            )
+            alert.fingerprint = cls.get_alert_fingerprint(
+                alert, custom_deduplication_rule.fingerprint_fields
+            )
         return formatted_alert
 
     @staticmethod

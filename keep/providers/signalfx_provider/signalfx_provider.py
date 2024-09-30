@@ -1,7 +1,6 @@
 import base64
 import dataclasses
 import datetime
-from typing import Optional
 from urllib.parse import quote, urlparse
 
 import pydantic
@@ -211,9 +210,7 @@ class SignalfxProvider(BaseProvider):
         return alert_dto
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["SignalfxProvider"] = None
-    ) -> AlertDto:
+    def _format_alert(event: dict) -> AlertDto:
         # Transform a SignalFx event into an AlertDto object
         #   see: https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#observability-cloud-webhook-request-body-fields
         severity = SignalfxProvider.SEVERITIES_MAP.get(
