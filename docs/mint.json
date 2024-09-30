@@ -128,6 +128,7 @@
             "providers/documentation/incidentio-provider",
             "providers/documentation/incidentmanager-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/jira-on-prem-provider",
             "providers/documentation/kibana-provider",
             "providers/documentation/kubernetes-provider",
             "providers/documentation/linear_provider",
