@@ -281,7 +281,13 @@
         },
         {
           "group": "topology",
-          "pages": ["api-ref/topology/get-topology-data"]
+          "pages": [
+            "api-ref/topology/get-topology-data",
+            "api-ref/topology/create-application",
+            "api-ref/topology/delete-application",
+            "api-ref/topology/get-applications",
+            "api-ref/topology/update-application"
+          ]
         },
         {
           "group": "alerts",
