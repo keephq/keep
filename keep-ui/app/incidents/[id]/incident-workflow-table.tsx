@@ -16,11 +16,7 @@ import {
   Button,
   Badge,
 } from "@tremor/react";
-import {
-  ExclamationTriangleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { IncidentDto } from "../models";
@@ -37,6 +33,7 @@ import {
   extractTriggerValue,
   extractTriggerDetails,
 } from "app/workflows/[workflow_id]/workflow-execution-table";
+import IncidentWorkflowSidebar from "./incident-workflow-sidebar";
 
 interface Props {
   incident: IncidentDto;
@@ -55,7 +52,9 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     limit: 20,
     offset: 0,
   });
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedExecution, setSelectedExecution] =
+    useState<WorkflowExecution | null>(null);
 
   const { data: workflows, isLoading } = useIncidentWorkflowExecutions(
     incident.id,
@@ -83,6 +82,15 @@ export default function IncidentWorkflowTable({ incident }: Props) {
       });
     }
   }, [pagination, workflows]);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleRowClick = (execution: WorkflowExecution) => {
+    setSelectedExecution(execution);
+    toggleSidebar();
+  };
 
   const columns = [
     columnHelper.accessor("workflow_name", {
@@ -162,21 +170,6 @@ export default function IncidentWorkflowTable({ incident }: Props) {
         ) : null;
       },
     }),
-    columnHelper.display({
-      id: "expand",
-      header: "",
-      cell: ({ row }) => (
-        <Button
-          variant="light"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleRowExpansion(row.id);
-          }}
-        >
-          {expandedRows.has(row.id) ? <ChevronUpIcon /> : <ChevronDownIcon />}
-        </Button>
-      ),
-    }),
   ];
 
   const table = useReactTable({
@@ -190,18 +183,6 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     },
     onPaginationChange: setTablePagination,
   });
-
-  const toggleRowExpansion = (rowId: string) => {
-    setExpandedRows((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(rowId)) {
-        newSet.delete(rowId);
-      } else {
-        newSet.add(rowId);
-      }
-      return newSet;
-    });
-  };
 
   return (
     <>
@@ -234,45 +215,17 @@ export default function IncidentWorkflowTable({ incident }: Props) {
         {workflows && workflows.items.length > 0 && (
           <TableBody>
             {table.getRowModel().rows.map((row) => (
-              <React.Fragment key={row.id}>
-                <TableRow
-                  className="hover:bg-slate-100 cursor-pointer"
-                  onClick={() => toggleRowExpansion(row.id)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-                {expandedRows.has(row.id) && (
-                  <TableRow>
-                    <TableCell colSpan={columns.length}>
-                      <div className="p-4 bg-gray-50 flex">
-                        <div className="w-1/2 pr-2">
-                          <h3 className="font-bold mb-2">Logs:</h3>
-                          <pre className="whitespace-pre-wrap">
-                            {Array.isArray(row.original.logs)
-                              ? row.original.logs
-                                  .map((log) => JSON.stringify(log))
-                                  .join("\n")
-                              : String(row.original.logs)}
-                          </pre>
-                        </div>
-                        <div className="w-1/2 pl-2">
-                          <h3 className="font-bold mb-2">Results:</h3>
-                          <pre className="whitespace-pre-wrap">
-                            {JSON.stringify(row.original.results, null, 2)}
-                          </pre>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </React.Fragment>
+              <TableRow
+                key={row.id}
+                className="hover:bg-slate-100 cursor-pointer"
+                onClick={() => handleRowClick(row.original)}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
             ))}
           </TableBody>
         )}
@@ -296,6 +249,12 @@ export default function IncidentWorkflowTable({ incident }: Props) {
       <div className="mt-4 mb-8">
         <IncidentPagination table={table} isRefreshAllowed={true} />
       </div>
+
+      <IncidentWorkflowSidebar
+        isOpen={isSidebarOpen}
+        toggle={toggleSidebar}
+        selectedExecution={selectedExecution}
+      />
     </>
   );
 }

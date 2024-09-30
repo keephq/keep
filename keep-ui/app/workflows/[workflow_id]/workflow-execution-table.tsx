@@ -161,17 +161,24 @@ export function extractTriggerDetails(
     details = triggered_by.substring("type:alert".length).trim();
   } else if (triggered_by.startsWith("manual")) {
     details = triggered_by.substring("manual".length).trim();
-  } else if (triggered_by.startsWith("type:incident")) {
-    const [operator, ...rest] = triggered_by
-      .substring("type:incident:".length)
-      .trim()
-      .split(" ");
-    details = `${rest.join(" ")}`;
+  } else if (triggered_by.startsWith("type:incident:")) {
+    // Handle 'type:incident:{some operator}' by removing the operator
+    details = triggered_by.substring("type:incident:".length).trim();
+    const firstSpaceIndex = details.indexOf(" ");
+    if (firstSpaceIndex > -1) {
+      details = details.substring(firstSpaceIndex).trim();
+    } else {
+      details = "";
+    }
   } else {
     details = triggered_by;
   }
 
-  return details.split(" ");
+  // Split the string into key-value pairs, where values may contain spaces
+  const regex = /\b(\w+:[^:]+?)(?=\s\w+:|$)/g;
+  const matches = details.match(regex);
+
+  return matches ? matches : [];
 }
 
 export function ExecutionTable({ executions, setPagination }: Props) {

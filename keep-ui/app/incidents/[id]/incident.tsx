@@ -46,7 +46,7 @@ export default function IncidentView({ incidentId }: Props) {
           <TabList
             variant="line"
             color="orange"
-            className="sticky xl:-top-10 -top-4 bg-white z-[100]"
+            className="sticky xl:-top-10 -top-4 bg-white"
           >
             <Tab icon={CiBellOn}>Alerts</Tab>
             <Tab icon={CiViewTimeline}>Timeline</Tab>
