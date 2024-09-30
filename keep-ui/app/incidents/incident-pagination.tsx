@@ -16,11 +16,11 @@ import {
 import Select from "react-select";
 import { Table } from "@tanstack/react-table";
 import { IncidentDto } from "./models";
-import { WorkflowDto } from "../workflows/models";
+import { WorkflowExecution } from "app/workflows/builder/types";
 import { AlertDto } from "../alerts/models";
 
 interface Props {
-  table: Table<IncidentDto> | Table<AlertDto> | Table<WorkflowDto>;
+  table: Table<IncidentDto> | Table<AlertDto> | Table<WorkflowExecution>;
   isRefreshAllowed: boolean;
 }
 
