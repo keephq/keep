@@ -6,7 +6,7 @@ import { IoMdClose } from "react-icons/io";
 // import AlertMenu from "./alert-menu";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
-import TopologyPage from "app/topology/topology";
+import { TopologyMap } from "../topology/ui/map";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -108,7 +108,7 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                   />
                 </Card>
                 <Title>Related Services</Title>
-                <TopologyPage
+                <TopologyMap
                   providerId={alert.providerId || ""}
                   service={alert.service || ""}
                   environment={"unknown"}
