@@ -80,6 +80,7 @@ SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 
 AUTH_TYPE = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value).lower()
+PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
 try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
@@ -255,12 +256,13 @@ def get_app(
     async def on_startup():
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
-        # provision providers from env. relevant only on single tenant.
-        logger.info("Provisioning providers and workflows")
-        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
-        logger.info("Providers loaded successfully")
-        WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
-        logger.info("Workflows provisioned successfully")
+        if PROVISION_RESOURCES:
+            # provision providers from env. relevant only on single tenant.
+            logger.info("Provisioning providers and workflows")
+            ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
+            logger.info("Providers loaded successfully")
+            WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
+            logger.info("Workflows provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler

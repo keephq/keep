@@ -24,13 +24,13 @@ class GrafanaOncallProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Token",
-            "hint": "Grafana On-Call API Token",
+            "hint": "Grafana OnCall API Token",
         },
     )
     host: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Grafana On-Call Host",
+            "description": "Grafana OnCall Host",
             "hint": "E.g. https://keephq.grafana.net",
         },
     )
@@ -38,13 +38,13 @@ class GrafanaOncallProviderAuthConfig:
 
 class GrafanaOncallProvider(BaseProvider):
     """
-    Create incidents with Grafana On-Call.
+    Create incidents with Grafana OnCall.
     """
 
-    PROVIDER_DISPLAY_NAME = "Grafana On-Call"
+    PROVIDER_DISPLAY_NAME = "Grafana OnCall"
 
     API_URI = "api/plugins/grafana-incident-app/resources/api"
-    provider_description = "Grafana On-Call is a SaaS incident management solution that helps you resolve incidents faster."
+    provider_description = "Grafana OnCall is a SaaS incident management solution that helps you resolve incidents faster."
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

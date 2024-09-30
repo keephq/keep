@@ -13,7 +13,7 @@ from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
@@ -182,7 +182,8 @@ def db_session(request):
     os.environ["DATABASE_CONNECTION_STRING"] = db_connection_string
 
     # Create a session
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=mock_engine)
+    # Passing class_=Session to use the Session class from sqlmodel (https://github.com/fastapi/sqlmodel/issues/75#issuecomment-2109911909)
+    SessionLocal = sessionmaker(class_=Session, autocommit=False, autoflush=False, bind=mock_engine)
     session = SessionLocal()
     # Prepopulate the database with test data
 

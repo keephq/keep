@@ -81,7 +81,7 @@ class JiraonpremProvider(BaseProvider):
         ),
     ]
     PROVIDER_TAGS = ["ticketing"]
-    PROVIDER_DISPLAY_NAME = "Jira On Prem"
+    PROVIDER_DISPLAY_NAME = "Jira On-Prem"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
