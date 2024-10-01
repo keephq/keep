@@ -1421,6 +1421,38 @@ def create_user(tenant_id, username, password, role):
     return user
 
 
+def update_user_last_sign_in(tenant_id, username):
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.username == username)
+        ).first()
+        if user:
+            user.last_sign_in = datetime.utcnow()
+            session.add(user)
+            session.commit()
+    return user
+
+
+def update_user_role(tenant_id, username, role):
+    from keep.api.models.db.user import User
+
+    with Session(engine) as session:
+        user = session.exec(
+            select(User)
+            .where(User.tenant_id == tenant_id)
+            .where(User.username == username)
+        ).first()
+        if user and user.role != role:
+            user.role = role
+            session.add(user)
+            session.commit()
+    return user
+
+
 def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     with Session(engine) as session:
         workflow_execution = session.exec(
