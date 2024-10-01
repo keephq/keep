@@ -1,3 +1,5 @@
+import { Provider } from "app/providers/providers";
+
 export function getApiURL(): string {
   // https://github.com/vercel/next.js/issues/5354#issuecomment-520305040
   // https://stackoverflow.com/questions/49411796/how-do-i-detect-whether-i-am-on-server-on-client-in-next-js
@@ -36,5 +38,16 @@ export function getApiURL(): string {
       serviceName = serviceName.slice(0, -1);
     }
     return process.env.API_URL!.replace("keep-api", serviceName);
+  }
+}
+
+export function getRunBookUrl(provider: Provider): string {
+  switch (provider?.type) {
+    case "github":
+      return "https://api.github.com";
+    case "gitlab":
+      return "https://gitlab.com/api/v4";
+    default:
+      return "";
   }
 }

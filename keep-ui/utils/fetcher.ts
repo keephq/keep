@@ -1,12 +1,17 @@
 import { KeepApiError } from '../app/error';
 
+export interface OverideHeaders {
+  headers: Record<string, string>;
+}
+
 export const fetcher = async (
   url: string,
   accessToken: string | undefined,
-  requestInit: RequestInit = {}
+  requestInit: RequestInit = {},
+  overideHeaders?: OverideHeaders
 ) => {
   const response = await fetch(url, {
-    headers: {
+    headers: overideHeaders?.headers ?? {
       Authorization: `Bearer ${accessToken}`,
     },
     ...requestInit,
