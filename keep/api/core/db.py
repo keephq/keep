@@ -12,7 +12,6 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from enum import Enum
 from typing import Any, Dict, List, Tuple, Union, Callable
 from uuid import uuid4
 
@@ -25,11 +24,11 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, selectinload, subqueryload, aliased
+from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import expression, exists
 from sqlmodel import Session, col, or_, select, text
 
-from keep.api.core.db_utils import create_db_engine, get_json_extract_field, json_table
+from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
 from keep.api.models.alert import IncidentDtoIn, IncidentSorting, AlertStatus
