@@ -19,7 +19,7 @@ import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, desc, null, update
+from sqlalchemy import and_, case, desc, literal, null, union, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -2126,6 +2126,7 @@ def get_presets(
             )
         result = session.exec(statement)
         presets = result.unique().all()
+
     return presets
 
 
@@ -2381,16 +2382,19 @@ def get_alert_audit(
             )
             if limit:
                 query = query.limit(limit)
-            audit = session.exec(query).all()
         else:
-            audit = session.exec(
+            query = (
                 select(AlertAudit)
                 .where(AlertAudit.tenant_id == tenant_id)
                 .where(AlertAudit.fingerprint == fingerprint)
                 .order_by(desc(AlertAudit.timestamp))
                 .limit(limit)
-            ).all()
-    return audit
+            )
+
+        # Execute the query and fetch all results
+        result = session.execute(query).scalars().all()
+
+    return result
 
 
 def get_workflows_with_last_executions_v2(
@@ -2806,7 +2810,9 @@ def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> i
         ).scalar()
 
 
-def get_last_alerts_for_incidents(incident_ids: List[str | UUID]) -> Dict[str, List[Alert]]:
+def get_last_alerts_for_incidents(
+    incident_ids: List[str | UUID],
+) -> Dict[str, List[Alert]]:
     with Session(engine) as session:
         query = (
             session.query(
@@ -2827,6 +2833,7 @@ def get_last_alerts_for_incidents(incident_ids: List[str | UUID]) -> Dict[str, L
         incidents_alerts[str(incident_id)].append(alert)
 
     return incidents_alerts
+
 
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
@@ -3233,3 +3240,70 @@ def change_incident_status_by_id(
         updated = session.execute(stmt)
         session.commit()
         return updated.rowcount > 0
+
+
+def get_workflow_executions_for_incident_or_alert(
+    tenant_id: str, incident_id: str, limit: int = 25, offset: int = 0
+):
+    with Session(engine) as session:
+        # Base query for both incident and alert related executions
+        base_query = (
+            select(
+                WorkflowExecution.id,
+                WorkflowExecution.started,
+                WorkflowExecution.status,
+                WorkflowExecution.execution_number,
+                WorkflowExecution.triggered_by,
+                WorkflowExecution.workflow_id,
+                WorkflowExecution.execution_time,
+                Workflow.name.label("workflow_name"),
+                literal(incident_id).label("incident_id"),
+                case(
+                    (
+                        WorkflowToAlertExecution.alert_fingerprint != None,
+                        WorkflowToAlertExecution.alert_fingerprint,
+                    ),
+                    else_=literal(None),
+                ).label("alert_fingerprint"),
+            )
+            .join(Workflow, WorkflowExecution.workflow_id == Workflow.id)
+            .outerjoin(
+                WorkflowToAlertExecution,
+                WorkflowExecution.id == WorkflowToAlertExecution.workflow_execution_id,
+            )
+            .where(WorkflowExecution.tenant_id == tenant_id)
+        )
+
+        # Query for workflow executions directly associated with the incident
+        incident_query = base_query.join(
+            WorkflowToIncidentExecution,
+            WorkflowExecution.id == WorkflowToIncidentExecution.workflow_execution_id,
+        ).where(WorkflowToIncidentExecution.incident_id == incident_id)
+
+        # Query for workflow executions associated with alerts tied to the incident
+        alert_query = (
+            base_query.join(
+                Alert, WorkflowToAlertExecution.alert_fingerprint == Alert.fingerprint
+            )
+            .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .where(AlertToIncident.incident_id == incident_id)
+        )
+
+        # Combine both queries
+        combined_query = union(incident_query, alert_query).subquery()
+
+        # Count total results
+        count_query = select(func.count()).select_from(combined_query)
+        total_count = session.execute(count_query).scalar()
+
+        # Final query with ordering, offset, and limit
+        final_query = (
+            select(combined_query)
+            .order_by(desc(combined_query.c.started))
+            .offset(offset)
+            .limit(limit)
+        )
+
+        # Execute the query and fetch results
+        results = session.execute(final_query).all()
+        return results, total_count

@@ -2,13 +2,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from keep.api.models.alert import IncidentDto, AlertDto 
-from keep.api.models.workflow import (
-    WorkflowExecutionDTO,
-    WorkflowDTO
-)
-from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
-from typing import Optional
+from keep.api.models.alert import AlertDto, IncidentDto
+from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-importfrom typing import Optional
+from keep.api.models.workflow import WorkflowDTO, WorkflowExecutionDTO
 
 
 class PaginatedResultsDto(BaseModel):
@@ -24,6 +20,7 @@ class IncidentsPaginatedResultsDto(PaginatedResultsDto):
 
 class AlertPaginatedResultsDto(PaginatedResultsDto):
     items: list[AlertDto]
+
 
 class WorkflowExecutionsPaginatedResultsDto(PaginatedResultsDto):
     items: list[WorkflowExecutionDTO]
