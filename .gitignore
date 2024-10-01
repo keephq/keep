@@ -198,6 +198,8 @@ tempo-data/
 # docs
 docs/node_modules/
 
+oauth2.cfg
+
 
 scripts/automatic_extraction_rules.py
 
@@ -209,3 +211,4 @@ ee/experimental/ai_temp/*
 
 oauth2.cfg
 scripts/keep_slack_bot.py
+keepnew.db
