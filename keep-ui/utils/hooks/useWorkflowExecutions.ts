@@ -1,5 +1,8 @@
 import { AlertToWorkflowExecution } from "app/alerts/models";
-import { PaginatedWorkflowExecutionDto, WorkflowExecution } from "app/workflows/builder/types";
+import {
+  PaginatedWorkflowExecutionDto,
+  WorkflowExecution,
+} from "app/workflows/builder/types";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
@@ -17,19 +20,21 @@ export const useWorkflowExecutions = (options?: SWRConfiguration) => {
   );
 };
 
-
-
 export const useWorkflowExecutionsV2 = (
   workflowId: string,
   tab: number = 0,
   limit: number = 25,
-  offset: number = 0,
+  offset: number = 0
 ) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  limit = searchParams?.get("limit") ? Number(searchParams?.get("limit")) : limit;
-  offset = searchParams?.get("offset") ? Number(searchParams?.get("offset")) : offset;
+  limit = searchParams?.get("limit")
+    ? Number(searchParams?.get("limit"))
+    : limit;
+  offset = searchParams?.get("offset")
+    ? Number(searchParams?.get("offset"))
+    : offset;
   tab = searchParams?.get("tab") ? Number(searchParams?.get("tab")) : tab;
   limit = limit > 100 ? 50 : limit;
   limit = limit <= 0 ? 25 : limit;
@@ -38,7 +43,28 @@ export const useWorkflowExecutionsV2 = (
   tab = tab > 3 ? 3 : tab;
 
   return useSWR<PaginatedWorkflowExecutionDto>(
-    () => (session ? `${apiUrl}/workflows/${workflowId}?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${searchParams ? `&${searchParams.toString()}` : ""}` : null),
+    () =>
+      session
+        ? `${apiUrl}/workflows/${workflowId}?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
+            searchParams ? `&${searchParams.toString()}` : ""
+          }`
+        : null,
+    (url: string) => fetcher(url, session?.accessToken)
+  );
+};
+
+export const useWorkflowExecution = (
+  workflowId: string,
+  workflowExecutionId: string
+) => {
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+
+  return useSWR<WorkflowExecution>(
+    () =>
+      session
+        ? `${apiUrl}/workflows/${workflowId}/runs/${workflowExecutionId}`
+        : null,
     (url: string) => fetcher(url, session?.accessToken)
   );
 };
