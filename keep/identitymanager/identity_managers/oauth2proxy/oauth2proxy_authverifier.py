@@ -4,7 +4,12 @@ from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 
 from keep.api.core.config import config
-from keep.api.core.db import create_user, update_user_last_sign_in, user_exists
+from keep.api.core.db import (
+    create_user,
+    update_user_last_sign_in,
+    update_user_role,
+    user_exists,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
@@ -119,6 +124,11 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
             try:
                 update_user_last_sign_in(
                     tenant_id=SINGLE_TENANT_UUID, username=user_name
+                )
+                update_user_role(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    username=user_name,
+                    role=mapped_role.get_name(),
                 )
                 self.logger.debug(f"Last login updated for user: {user_name}")
             except Exception:

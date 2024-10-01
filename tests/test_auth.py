@@ -351,6 +351,7 @@ def test_oauth_proxy(db_session, client, test_app):
             "KEEP_OAUTH2_PROXY_ADMIN_ROLE": "team-platform@example.com",
             "KEEP_OAUTH2_PROXY_NOC_ROLE": "dept-engineering-product@example.com",
             "KEEP_OAUTH2_PROXY_WEBHOOK_ROLE": "foo@example.com",
+            "KEEP_OAUTH2_PROXY_AUTO_CREATE_USER": "true",
         },
     ],
     indirect=True,
@@ -361,7 +362,7 @@ def test_oauth_proxy2(db_session, client, test_app):
         "/auth/users",
         headers={
             "x-forwarded-email": "shahar",
-            "X-Forwarded-Groups": "all@example.com,aws@example.com,dept-engineering-product@example.com,team-platform@example.com",
+            "x-forwarded-groups": "all@example.com,aws@example.com,dept-engineering-product@example.com,team-platform@example.com",
         },
         json={"email": "shahar", "role": "admin"},
     )
