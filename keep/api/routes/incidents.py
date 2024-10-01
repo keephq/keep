@@ -171,7 +171,7 @@ def get_all_incidents(
     sorting: IncidentSorting = IncidentSorting.creation_time,
     status: List[IncidentStatus] = Query(None),
     severity: List[IncidentSeverity] = Query(None),
-    assignee: List[str] = Query(None),
+    assignees: List[str] = Query(None),
     sources: List[str] = Query(None),
     affected_services: List[str] = Query(None),
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -185,8 +185,8 @@ def get_all_incidents(
         filters["status"] = [s.value for s in status]
     if severity:
         filters["severity"] = [s.order for s in severity]
-    if assignee:
-        filters["assignee"] = assignee
+    if assignees:
+        filters["assignee"] = assignees
     if sources:
         filters["sources"] = sources
     if affected_services:

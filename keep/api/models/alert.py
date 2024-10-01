@@ -532,8 +532,8 @@ class IncidentSorting(Enum):
 
 
 class IncidentListFilterParamsDto(BaseModel):
-    status: List[IncidentStatus] = [s.value for s in IncidentStatus]
-    severity: List[IncidentSeverity] = [s.value for s in IncidentSeverity]
+    statuses: List[IncidentStatus] = [s.value for s in IncidentStatus]
+    severities: List[IncidentSeverity] = [s.value for s in IncidentSeverity]
     assignees: List[str]
-    affected_services: List[str]
+    services: List[str]
     sources: List[str]

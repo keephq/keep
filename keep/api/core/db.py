@@ -2512,7 +2512,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             return {
                 "assignees": list(filter(bool, json.loads(results.assignees))),
                 "sources": list(filter(bool, json.loads(results.sources))),
-                "affected_services": list(filter(bool, json.loads(results.affected_services))),
+                "services": list(filter(bool, json.loads(results.affected_services))),
             }
 
         elif session.bind.dialect.name == "mysql":
@@ -2543,7 +2543,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             return {
                 "assignees": results.assignees.split(","),
                 "sources": results.sources.split(","),
-                "affected_services": results.affected_services.split(","),
+                "services": results.affected_services.split(","),
             }
         elif session.bind.dialect.name == "postgresql":
 
@@ -2572,7 +2572,7 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             return {
                 "assignees": list(filter(bool, results.assignees)),
                 "sources": list(filter(bool, results.sources)),
-                "affected_services": list(filter(bool, results.affected_services)),
+                "services": list(filter(bool, results.affected_services)),
             }
         return {}
 
