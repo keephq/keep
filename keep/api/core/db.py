@@ -10,6 +10,7 @@ import logging
 import random
 import uuid
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
@@ -77,6 +78,15 @@ class IncidentSorting(Enum):
             return desc(col(getattr(Incident, self.value[1:])))
 
         return col(getattr(Incident, self.value))
+
+
+@contextmanager
+def existed_or_new_session(session: Optional[Session] = None) -> Session:
+    if session:
+        yield session
+    else:
+        with Session(engine) as session:
+            yield session
 
 
 def get_session() -> Session:
@@ -1561,11 +1571,11 @@ def delete_rule(tenant_id, rule_id):
 
 
 def get_incident_for_grouping_rule(
-    tenant_id, rule, timeframe, rule_fingerprint
+    tenant_id, rule, timeframe, rule_fingerprint, session: Optional[Session] = None
 ) -> Incident:
     # checks if incident with the incident criteria exists, if not it creates it
     #   and then assign the alert to the incident
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         incident = session.exec(
             select(Incident)
             .options(joinedload(Incident.alerts))
@@ -1595,13 +1605,7 @@ def get_incident_for_grouping_rule(
             )
             session.add(incident)
             session.commit()
-
-            # Re-query the incident with joinedload to set up future automatic loading of alerts
-            incident = session.exec(
-                select(Incident)
-                .options(joinedload(Incident.alerts))
-                .where(Incident.id == incident.id)
-            ).first()
+            session.refresh(incident)
 
     return incident
 
@@ -2330,8 +2334,8 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def assign_alert_to_incident(alert_id: UUID | str, incident_id: UUID, tenant_id: str):
-    return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id])
+def assign_alert_to_incident(alert_id: UUID | str, incident_id: UUID, tenant_id: str, session: Optional[Session]=None):
+    return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id], session=session)
 
 
 def is_alert_assigned_to_incident(
@@ -2670,7 +2674,7 @@ def get_alerts_data_for_incident(
     Returns: dict {sources: list[str], services: list[str], count: int}
     """
 
-    def inner(db_session: Session):
+    with existed_or_new_session(session) as session:
 
         fields = (
             get_json_extract_field(session, Alert.event, "service"),
@@ -2678,7 +2682,7 @@ def get_alerts_data_for_incident(
             get_json_extract_field(session, Alert.event, "severity"),
         )
 
-        alerts_data = db_session.exec(
+        alerts_data = session.exec(
             select(*fields).where(
                 col(Alert.id).in_(alert_ids),
             )
@@ -2706,22 +2710,19 @@ def get_alerts_data_for_incident(
             "count": len(alerts_data),
         }
 
-    # Ensure that we have a session to execute the query. If not - make new one
-    if not session:
-        with Session(engine) as session:
-            return inner(session)
-    return inner(session)
-
 
 def add_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
+    tenant_id: str,
+    incident_id: str | UUID,
+    alert_ids: List[UUID],
+    session: Optional[Session] = None,
 ) -> Optional[Incident]:
     logger.info(
         f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts",
         extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}},
     )
 
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         query = select(Incident).where(
             Incident.tenant_id == tenant_id,
             Incident.id == incident_id,
@@ -3136,9 +3137,10 @@ def get_provider_by_type_and_id(
 
 
 def bulk_upsert_alert_fields(
-    tenant_id: str, fields: List[str], provider_id: str, provider_type: str
+    tenant_id: str, fields: List[str], provider_id: str, provider_type: str,
+    session: Optional[Session] = None,
 ):
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         try:
             # Prepare the data for bulk insert
             data = [
