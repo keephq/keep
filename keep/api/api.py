@@ -346,6 +346,11 @@ def get_app(
             f"Request started: {request.method} {request.url.path}",
             extra={"tenant_id": identity},
         )
+
+        # for debugging purposes, log the payload
+        if os.environ.get("LOG_AUTH_PAYLOAD", "false") == "true":
+            logger.info(f"Request headers: {request.headers}")
+
         start_time = time.time()
         request.state.tenant_id = identity
         response = await call_next(request)

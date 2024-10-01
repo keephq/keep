@@ -339,3 +339,41 @@ def test_oauth_proxy(db_session, client, test_app):
         json={"email": "shahar", "role": "admin"},
     )
     assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "OAUTH2PROXY",
+            "KEEP_OAUTH2_PROXY_USER_HEADER": "x-forwarded-email",
+            "KEEP_OAUTH2_PROXY_USER_ROLE": "X-Forwarded-Groups",
+            "KEEP_OAUTH2_PROXY_ADMIN_ROLE": "team-platform@example.com",
+            "KEEP_OAUTH2_PROXY_NOC_ROLE": "dept-engineering-product@example.com",
+            "KEEP_OAUTH2_PROXY_WEBHOOK_ROLE": "foo@example.com",
+        },
+    ],
+    indirect=True,
+)
+def test_oauth_proxy2(db_session, client, test_app):
+    """Tests the oauth2proxy impersonation with different environment settings"""
+    response = client.post(
+        "/auth/users",
+        headers={
+            "x-forwarded-email": "shahar",
+            "X-Forwarded-Groups": "all@example.com,aws@example.com,dept-engineering-product@example.com,team-platform@example.com",
+        },
+        json={"email": "shahar", "role": "admin"},
+    )
+    # admin role should be able to create users, noc would fail
+    assert response.status_code == 200
+
+    response = client.post(
+        "/auth/users",
+        headers={
+            "x-forwarded-email": "shahar",
+            "x-forwarded-groups": "dept-engineering-product@example.com,foo@example.com",
+        },
+        json={"email": "shahar", "role": "admin"},
+    )
+    assert response.status_code == 403
