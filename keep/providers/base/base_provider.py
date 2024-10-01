@@ -39,6 +39,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_TAGS: list[
         Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
     ] = []
+    WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
 
     def __init__(
         self,
@@ -311,6 +312,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         provider_id: str,
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
+
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event)
         logger.debug("Alert formatted")
@@ -469,7 +471,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
-    ):
+    ) -> dict | None:
         """
         Setup a webhook for the provider.
 
@@ -478,6 +480,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
             keep_api_url (str): _description_
             api_key (str): _description_
             setup_alerts (bool, optional): _description_. Defaults to True.
+
+        Returns:
+            dict | None: If some secrets needs to be saved, return them in a dict.
 
         Raises:
             NotImplementedError: _description_
