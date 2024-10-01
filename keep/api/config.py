@@ -3,9 +3,9 @@ import os
 
 import keep.api.logging
 from keep.api.api import AUTH_TYPE
-from keep.api.core.config import AuthenticationType
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 
 PORT = int(os.environ.get("PORT", 8080))
 
@@ -16,15 +16,24 @@ logger = logging.getLogger(__name__)
 def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
     logger.info("Keep server starting")
-    
+
     migrate_db()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
-        AuthenticationType.SINGLE_TENANT.value,
-        AuthenticationType.NO_AUTH.value,
+        IdentityManagerTypes.DB.value,
+        IdentityManagerTypes.NOAUTH.value,
+        IdentityManagerTypes.OAUTH2PROXY.value,
+        "no_auth",  # backwards compatibility
+        "single_tenant",  # backwards compatibility
     ]:
-        try_create_single_tenant(SINGLE_TENANT_UUID)
+        # for oauth2proxy, we don't want to create the default user
+        try_create_single_tenant(
+            SINGLE_TENANT_UUID,
+            create_default_user=(
+                False if AUTH_TYPE == IdentityManagerTypes.OAUTH2PROXY.value else True
+            ),
+        )
 
     if os.environ.get("USE_NGROK", "false") == "true":
         from pyngrok import ngrok

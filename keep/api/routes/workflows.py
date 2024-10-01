@@ -21,7 +21,6 @@ from sqlmodel import Session
 
 from keep.api.core.db import (
     get_installed_providers,
-    get_last_workflow_executions,
     get_last_workflow_workflow_to_alert_executions,
     get_session,
     get_workflow,
@@ -658,54 +657,3 @@ def get_workflow_execution_status(
         results=workflow_execution.results,
     )
     return workflow_execution_dto
-
-
-# todo: move to better URL
-# I can't use "/executions" since we already have "/{workflow_id}" endpoint
-@router.get(
-    "/executions/list",
-    description="List last workflow executions",
-)
-def get_workflow_executions(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
-    ),
-    workflow_execution_id: Optional[str] = Query(
-        None, description="Workflow execution ID"
-    ),
-) -> List[WorkflowExecutionDTO]:
-    tenant_id = authenticated_entity.tenant_id
-    # if specific execution
-    if workflow_execution_id:
-        workflowstore = WorkflowStore()
-        workflow_executions = [
-            workflowstore.get_workflow_execution(
-                workflow_execution_id=workflow_execution_id,
-                tenant_id=tenant_id,
-            )
-        ]
-    else:
-        workflow_executions = get_last_workflow_executions(tenant_id=tenant_id)
-    workflow_executions_dtos = []
-    for workflow_execution in workflow_executions:
-        workflow_execution_dto = WorkflowExecutionDTO(
-            id=workflow_execution.id,
-            workflow_id=workflow_execution.workflow_id,
-            status=workflow_execution.status,
-            started=workflow_execution.started,
-            triggered_by=workflow_execution.triggered_by,
-            error=workflow_execution.error,
-            execution_time=workflow_execution.execution_time,
-            logs=[
-                WorkflowExecutionLogsDTO(
-                    id=log.id,
-                    timestamp=log.timestamp,
-                    message=log.message,
-                    context=log.context if log.context else {},
-                )
-                for log in workflow_execution.logs
-            ],
-            results=workflow_execution.results,
-        )
-        workflow_executions_dtos.append(workflow_execution_dto)
-    return workflow_executions_dtos

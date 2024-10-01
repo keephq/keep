@@ -6,13 +6,14 @@ import uuid
 
 from pandas.core.common import flatten
 
-from keep.api.core.config import AuthenticationType, config
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
+from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler
@@ -74,9 +75,7 @@ class WorkflowManager:
         try:
             # get the actual workflow that can be triggered
             self.logger.info("Getting workflow from store")
-            workflow = self.workflow_store.get_workflow(
-                tenant_id, workflow_model.id
-            )
+            workflow = self.workflow_store.get_workflow(tenant_id, workflow_model.id)
             self.logger.info("Got workflow from store")
             return workflow
         except ProviderConfigurationException:
@@ -117,11 +116,17 @@ class WorkflowManager:
                 continue
 
             incident_triggers = flatten(
-                [t.get("events", []) for t in workflow.workflow_triggers if t["type"] == "incident"]
+                [
+                    t.get("events", [])
+                    for t in workflow.workflow_triggers
+                    if t["type"] == "incident"
+                ]
             )
 
             if trigger not in incident_triggers:
-                self.logger.debug("workflow does not contain trigger %s, skipping", trigger)
+                self.logger.debug(
+                    "workflow does not contain trigger %s, skipping", trigger
+                )
                 continue
 
             self.logger.info("Adding workflow to run")
@@ -369,10 +374,10 @@ class WorkflowManager:
         Raises:
             Exception: If the workflow uses premium providers in multi tenant mode.
         """
-        if (
-            os.environ.get("AUTH_TYPE", AuthenticationType.NO_AUTH.value)
-            == AuthenticationType.MULTI_TENANT.value
-        ):
+        if os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value) in (
+            IdentityManagerTypes.AUTH0.value,
+            "MULTI_TENANT",
+        ):  # backward compatibility
             for provider in workflow.workflow_providers_type:
                 if provider in self.PREMIUM_PROVIDERS:
                     raise Exception(
