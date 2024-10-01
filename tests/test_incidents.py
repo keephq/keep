@@ -352,13 +352,13 @@ def test_incident_metadata(db_session, client, test_app, setup_stress_alerts_no_
 
     data = response.json()
     assert len(data) == 5
-    assert "status" in data
-    assert data["status"] == [s.value for s in IncidentStatus]
-    assert "severity" in data
-    assert data["severity"] == [s.value for s in IncidentSeverity]
+    assert "statuses" in data
+    assert data["statuses"] == [s.value for s in IncidentStatus]
+    assert "severities" in data
+    assert data["severities"] == [s.value for s in IncidentSeverity]
     assert "assignees" in data
     assert data["assignees"] == [f"assignee-{i}" for i in range(5)]
-    assert "affected_services" in data
-    assert data["affected_services"] == ["keep", "keep-test", "keep-test-2"]
+    assert "services" in data
+    assert data["services"] == ["keep", "keep-test", "keep-test-2"]
     assert "sources" in data
     assert data["sources"] == ["keep", "keep-test", "keep-test-2"]
