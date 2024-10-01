@@ -1436,7 +1436,7 @@ def update_user_role(tenant_id, username, role):
             .where(User.tenant_id == tenant_id)
             .where(User.username == username)
         ).first()
-        if user:
+        if user and user.role != role:
             user.role = role
             session.add(user)
             session.commit()

@@ -125,16 +125,23 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
                 update_user_last_sign_in(
                     tenant_id=SINGLE_TENANT_UUID, username=user_name
                 )
-                update_user_role(
-                    tenant_id=SINGLE_TENANT_UUID,
-                    username=user_name,
-                    role=mapped_role.get_name(),
-                )
                 self.logger.debug(f"Last login updated for user: {user_name}")
             except Exception:
                 self.logger.warning(
                     f"Failed to update last login for user: {user_name}"
                 )
+                pass
+            # update role
+            self.logger.debug(f"Updating role for user: {user_name}")
+            try:
+                update_user_role(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    username=user_name,
+                    role=mapped_role.get_name(),
+                )
+                self.logger.debug(f"Role updated for user: {user_name}")
+            except Exception:
+                self.logger.warning(f"Failed to update role for user: {user_name}")
                 pass
 
         self.logger.info(f"User {user_name} authenticated with role {mapped_role}")
