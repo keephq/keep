@@ -1,9 +1,8 @@
-import { Fragment, useEffect } from "react";
+import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { Text, Button, TextInput, Badge, Title, Card } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { WorkflowExecution } from "app/workflows/builder/types";
-import { formatDistanceToNowStrict } from "date-fns";
 import {
   getIcon,
   getTriggerIcon,
@@ -14,7 +13,7 @@ import { useWorkflowExecution } from "utils/hooks/useWorkflowExecutions";
 interface IncidentWorkflowSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  selectedExecution: WorkflowExecution | null;
+  selectedExecution: WorkflowExecution;
 }
 
 const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
@@ -23,11 +22,9 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
   selectedExecution,
 }) => {
   const { data: workflowExecutionData } = useWorkflowExecution(
-    selectedExecution?.workflow_id || "",
-    selectedExecution?.id || ""
+    selectedExecution.workflow_id,
+    selectedExecution.id
   );
-
-  if (!selectedExecution) return null;
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -63,8 +60,8 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       selectedExecution.status === "error"
                         ? "red"
                         : selectedExecution.status === "success"
-                        ? "green"
-                        : "orange"
+                          ? "green"
+                          : "orange"
                     }
                   >
                     {selectedExecution.status}
