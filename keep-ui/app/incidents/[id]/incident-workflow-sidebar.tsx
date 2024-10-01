@@ -80,7 +80,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
               <div>
                 <Dialog.Title className="text-3xl font-bold" as={Title}>
                   Workflow Execution Details
-                  <Badge className="ml-4" color="orange">
+                  <Badge className="ml-4 capitalize" color={selectedExecution.status === "error" ? "red" : selectedExecution.status === "success" ? "green" : "orange"}>
                     {selectedExecution.status}
                   </Badge>
                 </Dialog.Title>
