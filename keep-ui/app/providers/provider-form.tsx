@@ -419,6 +419,7 @@ const ProviderForm = ({
   };
 
   const handleUpdateClick = (e: any) => {
+    if (provider.webhook_required) callInstallWebhook(e);
     e.preventDefault();
     if (validate()) {
       setIsLoading(true);
