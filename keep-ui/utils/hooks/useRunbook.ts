@@ -54,7 +54,6 @@ export const useRunBookTriggers = (values: any) => {
 
   useEffect(() => {
     const getUserRepos = async () => {
-      console.log("entering this", userName, apiUrl);
       if (!userName) {
         return setRepoData([]);
       }
@@ -114,7 +113,6 @@ export const useRunBookTriggers = (values: any) => {
 
   const handleSubmit = async (data: any) => {
     const { pathToMdFile, repoName, userName } = data;
-    console.log("entering this", data);
     if (!pathToMdFile) {
       return { loading: false, data: [], error: "User name is required" };
     }
