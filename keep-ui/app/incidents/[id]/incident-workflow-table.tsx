@@ -250,11 +250,13 @@ export default function IncidentWorkflowTable({ incident }: Props) {
         <IncidentPagination table={table} isRefreshAllowed={true} />
       </div>
 
-      <IncidentWorkflowSidebar
-        isOpen={isSidebarOpen}
-        toggle={toggleSidebar}
-        selectedExecution={selectedExecution}
-      />
+      {selectedExecution ? (
+        <IncidentWorkflowSidebar
+          isOpen={isSidebarOpen}
+          toggle={toggleSidebar}
+          selectedExecution={selectedExecution}
+        />
+      ) : null}
     </>
   );
 }
