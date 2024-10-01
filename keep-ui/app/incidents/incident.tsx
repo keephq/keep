@@ -110,9 +110,6 @@ export default function Incident() {
         ) : null}
 
 
-        {isLoading ? (
-          <Loading />
-        ) : (
           <div className="h-full flex flex-col">
             <div className="flex justify-between items-center">
               <div>
@@ -135,8 +132,8 @@ export default function Incident() {
             <Card className="mt-10 flex-grow">
 
               <IncidentTableFilters />
-
-              {incidents && incidents.items.length > 0 ?
+              {isLoading ? <Loading />
+              : incidents && incidents.items.length > 0 ?
                 <IncidentsTable
                   incidents={incidents}
                   mutate={mutateIncidents}
@@ -149,7 +146,6 @@ export default function Incident() {
               }
             </Card>
           </div>
-        )}
       </div>
       <Modal
         isOpen={isFormOpen}
