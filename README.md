@@ -16,7 +16,7 @@
     </a>
 </div>
 <p align="center">
-    <a href="#why-keep">Why Keep?</a>
+    <a href="#why-keep">Features</a>
     ·
     <a href="#getting-started">Getting started</a>
     ·
@@ -58,7 +58,7 @@
 3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
 
 
-## Why Keep?
+## Features
 1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
 2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
 3. **Automation**: Trigger workflows for alert enrichment and response.
