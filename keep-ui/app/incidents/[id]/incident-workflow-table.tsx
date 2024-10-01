@@ -154,7 +154,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
       },
     }),
     columnHelper.display({
-      id: "triggered_by",
+      id: "triggered_by_details",
       header: "Trigger Details",
       cell: ({ row }) => {
         const triggered_by = row.original.triggered_by;
