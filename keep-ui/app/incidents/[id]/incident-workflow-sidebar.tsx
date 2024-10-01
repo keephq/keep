@@ -107,7 +107,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                     </Text>
                     <div className="flex items-center">
                       {getIcon(selectedExecution.status)}
-                      <span className="ml-2">{selectedExecution.status}</span>
+                      <span className="ml-2 capitalize">{selectedExecution.status}</span>
                     </div>
                   </div>
                   <div>
