@@ -27,30 +27,7 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
     selectedExecution?.id || ""
   );
 
-  useEffect(() => {
-    if (isOpen && selectedExecution) {
-      // You can add any side effects here when the sidebar opens
-    }
-  }, [isOpen, selectedExecution]);
-
   if (!selectedExecution) return null;
-
-  const customFormatter = (value: number, unit: string, suffix: string) => {
-    if (!selectedExecution?.started) {
-      return "";
-    }
-
-    const formattedString = formatDistanceToNowStrict(
-      new Date(selectedExecution.started + "Z"),
-      { addSuffix: true }
-    );
-
-    return formattedString
-      .replace("about ", "")
-      .replace("minute", "min")
-      .replace("second", "sec")
-      .replace("hour", "hr");
-  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -80,7 +57,16 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
               <div>
                 <Dialog.Title className="text-3xl font-bold" as={Title}>
                   Workflow Execution Details
-                  <Badge className="ml-4 capitalize" color={selectedExecution.status === "error" ? "red" : selectedExecution.status === "success" ? "green" : "orange"}>
+                  <Badge
+                    className="ml-4 capitalize"
+                    color={
+                      selectedExecution.status === "error"
+                        ? "red"
+                        : selectedExecution.status === "success"
+                        ? "green"
+                        : "orange"
+                    }
+                  >
                     {selectedExecution.status}
                   </Badge>
                 </Dialog.Title>
@@ -107,7 +93,9 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                     </Text>
                     <div className="flex items-center">
                       {getIcon(selectedExecution.status)}
-                      <span className="ml-2 capitalize">{selectedExecution.status}</span>
+                      <span className="ml-2 capitalize">
+                        {selectedExecution.status}
+                      </span>
                     </div>
                   </div>
                   <div>
