@@ -1,11 +1,13 @@
 import json
 import logging
+from typing import Optional
 
 import celpy
 import celpy.c7nlib
 import celpy.celparser
 import celpy.celtypes
 import celpy.evaluation
+from sqlmodel import Session
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
@@ -38,7 +40,7 @@ class RulesEngine:
         self.logger = logging.getLogger(__name__)
         self.env = celpy.Environment()
 
-    def run_rules(self, events: list[AlertDto]) -> list[IncidentDto]:
+    def run_rules(self, events: list[AlertDto], session: Optional[Session] = None) -> list[IncidentDto]:
         self.logger.info("Running rules")
         rules = get_rules_db(tenant_id=self.tenant_id)
 
@@ -64,13 +66,15 @@ class RulesEngine:
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
                     incident = get_incident_for_grouping_rule(
-                        self.tenant_id, rule, rule.timeframe, rule_fingerprint
+                        self.tenant_id, rule, rule.timeframe, rule_fingerprint,
+                        session=session
                     )
 
                     incident = assign_alert_to_incident(
                         alert_id=event.event_id,
                         incident_id=incident.id,
                         tenant_id=self.tenant_id,
+                        session=session
                     )
 
                     incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)

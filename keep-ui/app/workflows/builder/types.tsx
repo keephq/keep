@@ -14,6 +14,7 @@ export interface WorkflowExecution {
   triggered_by: string;
   status: string;
   results: Record<string, any>;
+  workflow_name?: string;
   logs?: LogEntry[] | null;
   error?: string | null;
   execution_time?: number;

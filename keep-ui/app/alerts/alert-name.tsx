@@ -62,11 +62,11 @@ export default function AlertName({
   }
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="truncate" title={alert.name}>
+    <div className="flex items-start justify-between">
+      <div className="truncate whitespace-pre-wrap" title={alert.name}>
         {name}
       </div>
-      <div>
+      <div className="flex-shrink-0">
         {(url ?? generatorURL) && (
           <a href={url || generatorURL} target="_blank">
             <Icon
