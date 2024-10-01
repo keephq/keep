@@ -1,0 +1,15 @@
+workflow:
+  id: aks-example
+  description: aks-example
+  triggers:
+    - type: incident
+      events:
+        - updated
+        - created
+
+  actions:
+    - name: just-echo
+      provider:
+        type: console
+        with:
+          message: "Hey there! I am an incident!"
