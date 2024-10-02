@@ -3,6 +3,7 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-frontend-common
+    restart: unless-stopped
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
     environment:
       - AUTH_TYPE=NO_AUTH
@@ -16,6 +17,7 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
+    restart: unless-stopped
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
@@ -26,3 +28,4 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+    restart: unless-stopped
