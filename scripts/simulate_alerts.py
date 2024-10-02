@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     GENERATE_DEDUPLICATIONS = True
-    SLEEP_INTERVAL = 0.2  # Configurable sleep interval
+    SLEEP_INTERVAL = float(os.environ.get("SLEEP_INTERVAL", 0.2))  # Configurable sleep interval from env variable
     keep_api_key = os.environ.get("KEEP_API_KEY")
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
     if keep_api_key is None or keep_api_url is None:
