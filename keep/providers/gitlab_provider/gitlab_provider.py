@@ -10,7 +10,7 @@ import requests
 from requests import HTTPError
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, BaseRunBookProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -37,7 +37,7 @@ class GitlabProviderAuthConfig:
     )
     repository: str = dataclasses.field(
         metadata={
-            "description": "GitHub Repository",
+            "description": "GitHub Repository Id",
             "sensitive": False,
         },
         default=None,
@@ -51,7 +51,7 @@ class GitlabProviderAuthConfig:
     )
 
 
-class GitlabProvider(BaseProvider):
+class GitlabProvider(BaseRunBookProvider):
     """Enrich alerts with GitLab tickets."""
 
     PROVIDER_SCOPES = [
@@ -62,7 +62,7 @@ class GitlabProvider(BaseProvider):
             alias="GitLab PAT with api scope",
         ),
     ]
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS = ["ticketing", "runbook"]
     PROVIDER_DISPLAY_NAME = "GitLab"
 
     def __init__(
@@ -156,33 +156,138 @@ class GitlabProvider(BaseProvider):
             else:
                 params[param] = kwargs[param]
         return params
+
+
+    # def query_for_repositories(self,  **kwargs: dict):
+    #    """Retrieve repositories from the Gitlab"""
+    #    project_id = kwargs.get("project_id")
+    #    user_name = self.authentication_config.username
+    #    auth=self.__get_auth_header()
+    #    url = f"{slef.gitlab_host}/api/v4/projects/{project_id}" if project_id else f"{self.gitlab_host}/api/v4/projects"
+    #    resp = requests.get(
+    #        url, headers=self.__get_auth_header()
+    #        auth=auth
+    #    )
+    #    if response.status_code != 200:
+    #        raise Exception(f"Repository Query Failed: {response.content}")
+    #    return response.json()
+
+    def get_gitlab_user_id(self):
+        """
+        Retrieve the user ID from the access token in GitLab.
+        """
+        url = f"{self.gitlab_host}/api/v4/user"
+        headers = self.__get_auth_header()
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            user_data = response.json()
+            print(user_data)
+            return user_data['id']  # The user ID
+        else:
+            raise Exception(f"Failed to retrieve user info: {response.status_code}, {response.text}")
         
-    def query_runbook(self,query):
-        """Retrieve markdown files from the GitHub repository."""
+    def _format_repos(self, repos, project_id=None):
+       """
+       Format the repository data into a list of dictionaries.
+       """
+       if project_id is not None:
+           if repos is not None:
+               return {
+                   "id": repos.get("id"),
+                   "name": repos.get("name"),
+                   "full_name": repos.get("full_name"),
+                   "url": repos.get("web_url"),
+                   "description": repos.get("description"),
+                   "private": repos.get("visibility"),
+                   "option_value": repos.get("id"),
+                   "display_name": repos.get("path_with_namespace"),
+                   "default_branch": repos.get("default_branch"),
+               }
+           return {}
 
-        if not query:
-            raise ValueError("Query is required")
+       formatted_repos = []
+       for repo in repos:
+           formatted_repos.append(
+               {
+                   "id": repo.get("id"),
+                   "name": repo.get("name"),
+                   "full_name": repo.get("full_name"),
+                   "url": repo.get("web_url"),
+                   "description": repo.get("description"),
+                   "private": repo.get("visibility"),
+                   "option_value": repo.get("id"),
+                   "display_name": repo.get("path_with_namespace"),
+                   "default_branch": repo.get("default_branch"),
+               }
+           )
 
-        auth=None
-        if self.authentication_config.repository and self.authentication_config.md_path:
-            auth = HTTPBasicAuth(
-                self.authentication_config.repository,
-                self.authentication_config.md_path,
+       return formatted_repos
+
+    def pull_repositories(self, project_id=None):
+       """Get user repositories."""
+       if self.authentication_config.personal_access_token:
+           user_id = self.get_gitlab_user_id()
+           url = f"{self.gitlab_host}/api/v4/projects/{project_id}" if project_id else f"{self.gitlab_host}/api/v4/users/{user_id}/projects"
+           resp = requests.get(
+               url,
+               headers=self.__get_auth_header()
+           )
+           try:
+               resp.raise_for_status()
+           except HTTPError as e:
+               raise Exception(f"Failed to query repositories: {e}")
+
+           repos = resp.json()
+           return self._format_repos(repos, project_id)
+
+       raise Exception(f"Failed to get repositories: personal_access_token not set")
+
+    def _format_runbook(self, runbook, repo):
+       """
+       Format the runbook data into a dictionary.
+       """
+       if runbook is None:
+           return {}
+
+       return  {
+                "file_name": runbook.get("file_name"),
+                "file_path": runbook.get("file_path"),
+                "file_size": runbook.get("size"),
+                "file_type": runbook.get("type"),
+                "repo_id": repo.get("id"),
+                "repo_name": repo.get("name"),
+                "repo_display_name": repo.get("display_name"),
+                "provider_type": "gitlab",
+                "config": self.config.authentication.get("provider_id"),
+                "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbook.get('file_path')}/raw",
+                "content": runbook.get("content"),
+                "encoding": runbook.get("encoding"),
+                }           
+
+    def pull_runbook(self, repo=None, branch=None, md_path=None):
+        """Retrieve markdown files from the GitLab repository."""
+        repo = repo if repo else self.authentication_config.repository
+        branch = branch if branch else "main"
+        md_path = md_path if md_path else self.authentication_config.md_path
+
+        repo_meta = self.pull_repositories(project_id=repo)
+
+        if repo_meta and branch and md_path:
+            repo_id = repo_meta.get("id")
+            resp = requests.get(
+                f"{self.gitlab_host}/api/v4/projects/{repo_id}/repository/files/{md_path}?ref={branch}",
+                headers=self.__get_auth_header()
             )
 
-        resp = requests.get(
-            f"{self.authentication_config.url}/api/v1/query",
-            params={"query": query},
-            auth=(
-                auth
-                if self.authentication_config.repository and self.authentication_config.md_path
-                else None
-            )
-        )
-        if response.status_code != 200:
-            raise Exception(f"Runbook Query Failed: {response.content}")
+            try:
+                resp.raise_for_status()
+            except HTTPError as e:
+                raise Exception(f"Failed to get runbook: {e}")
 
-        return response.json()
+            return self._format_runbook(resp.json(), repo_meta)
+
+        raise Exception(f"Failed to get runbook: repository or md_path not set")       
 
 
     def _notify(self, id: str, title: str, description: str = "", labels: str = "", issue_type: str = "issue",
@@ -235,3 +340,7 @@ if __name__ == "__main__":
         summary="Test Alert",
         description="Test Alert Description",
     )
+
+    result = provider.pull_runbook()
+    result = provider.pull_repositories()
+    print(result)

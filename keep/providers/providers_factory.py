@@ -22,7 +22,7 @@ from keep.api.core.db import (
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
+from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, BaseRunBookProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -313,7 +313,12 @@ class ProvidersFactory:
                 docs = provider_class.__doc__
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
 
+                can_fetch_runbook = issubclass(provider_class, BaseRunBookProvider)
+
                 provider_tags = set(provider_class.PROVIDER_TAGS)
+
+                if can_fetch_runbook:
+                    provider_tags.add("runbook")
                 if can_fetch_topology:
                     provider_tags.add("topology")
                 if can_query and "data" not in provider_tags:

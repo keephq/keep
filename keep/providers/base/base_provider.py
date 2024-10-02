@@ -37,7 +37,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
     PROVIDER_TAGS: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+        Literal["alert", "ticketing", "messaging", "data", "queue", "topology", "runbook"]
     ] = []
 
     def __init__(
@@ -663,3 +663,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
 class BaseTopologyProvider(BaseProvider):
     def pull_topology(self) -> list[TopologyServiceInDto]:
         raise NotImplementedError("get_topology() method not implemented")
+
+
+class BaseRunBookProvider(BaseProvider):
+    def pull_runbook(self, repo=None, branch=None, md_path=None):
+        raise NotImplementedError("get_runbook() method not implemented")
+
+    def pull_repositories(self):
+        raise NotImplementedError("get_repositories() method not implemented")
+    

@@ -12,14 +12,16 @@ class Runbook(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     tenant: Tenant = Relationship()
-
+    repo_id: str = Field(nullable=False)  # Github repo id
+    relative_path: str = Field(nullable=False) # Relative path to the .md file
     title: str = Field(nullable=False)  # Title of the runbook
     link: str = Field(nullable=False)   # Link to the .md file
 
     incidents: List["Incident"] = Relationship(
         back_populates="runbooks", link_model=RunbookToIncident
     )
-
+    provider_type: str
+    provider_id: str | None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:

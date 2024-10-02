@@ -19,7 +19,7 @@ import {
 import "./provider-tile.css";
 import moment from "moment";
 import ImageWithFallback from "@/components/ImageWithFallback";
-import { FaCode } from "react-icons/fa";
+import { FaCode, FaMarkdown } from "react-icons/fa";
 
 interface Props {
   provider: Provider;
@@ -101,6 +101,8 @@ function getIconForTag(tag: TProviderLabels) {
       return QueueListIcon;
     case "topology":
       return MapIcon;
+    case "runbook": 
+       return FaMarkdown   
     default:
       return ChatBubbleBottomCenterIcon;
   }

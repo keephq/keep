@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Modal from "react-modal";
 import { Button, Badge } from "@tremor/react";
-import { DisplayColumnDef } from "@tanstack/react-table";
+import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
 import { GenericTable } from "@/components/table/GenericTable";
 import { useSession } from "next-auth/react";
 import { useProviders } from "utils/hooks/useProviders";
@@ -11,6 +11,8 @@ import { ProvidersResponse, Provider } from "app/providers/providers";
 import { set } from "date-fns";
 import { useRunBookTriggers } from "utils/hooks/useRunbook";
 import { useForm, get } from "react-hook-form";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const customStyles = {
   content: {
@@ -35,7 +37,7 @@ interface Runbook {
   incidents: Incident[];
 }
 
-const runbookData: Runbook[] = [
+const runbookData = [
   {
     id: 1,
     title: "Database Recovery",
@@ -57,46 +59,88 @@ const runbookData: Runbook[] = [
       { id: 302, name: "Scheduled Maintenance" },
     ],
   },
-];
+] as Runbook[];
 
-const columns: DisplayColumnDef<Runbook>[] = [
-  {
-    accessorKey: "title",
+const columnHelper = createColumnHelper<Runbook>();
+
+const columns = [
+  columnHelper.display({
+    id: "title",
     header: "Runbook Title",
-    cell: (info) => info.getValue(),
-  },
-  {
-    accessorKey: "incidents",
-    header: "Incidents",
-    cell: (info) => (
-      <div>
-        {info.getValue().map((incident: Incident) => (
-          <Badge key={incident.id} color="green" className="mr-2 mb-1">
-            {incident.name}
-          </Badge>
-        ))}
-      </div>
-    ),
-  },
-];
+    cell: ({ row }) => {
+      return <div>{row.original.title}</div>;
+    },
+  }),
+  columnHelper.display({
+    id: "incidents",
+    header: "Incdients",
+    cell: ({ row }) => {
+      return (
+        <div>
+          {row.original.incidents?.map((incident: Incident) => (
+            <Badge key={incident.id} color="green" className="mr-2 mb-1">
+              {incident.name}
+            </Badge>
+          ))}
+        </div>
+      );
+    },
+  }),
+] as DisplayColumnDef<Runbook>[];
 
+// function PreviewContent({type, data}:{type:string, data:string}){
+//   const [isModalOpen, setIsModalOpen] = useState(open);
+
+//   // const closeModal = () => {
+//   //   setIsModalOpen(false);
+//   // };
+//   const decodeBase64 = (encodedContent:string) => {
+//     // Use atob to decode the Base64 string and then handle UTF-8 encoding
+//     return encodedContent ? decodeURIComponent(atob(encodedContent)) : '';
+//   };
+//   return <div className={`w-full h-full p-10`}>
+
+//   <Markdown remarkPlugins={[remarkGfm]}>
+//           {decodeBase64(data)}
+//         </Markdown>
+//   </div>
+// }
+
+// TO DO: Need to work on styling
 function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { register, handleSubmit, reset, getValues, setValue } = useForm();
-  const [userName, setUserName] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  const [openPreview, setOpenPreview] = useState(false);
   const {
     runBookInstalledProviders,
     reposData,
     handleSubmit: submitHandler,
-  } = useRunBookTriggers(getValues());
+    provider,
+    fileData,
+  } = useRunBookTriggers(getValues(), refresh);
+
+  useEffect(() => {
+    setValue(
+      "repoName",
+      reposData?.legnth ? provider?.details?.authentication.repository : ""
+    );
+    setOpenPreview(false);
+  }, [reposData]);
 
   const openModal = () => {
     reset(); // Reset form when opening modal
     setIsModalOpen(true);
+    setOpenPreview(false);
   };
 
-  const closeModal = () => {
+  const closeModal = (openPreview?: boolean) => {
     setIsModalOpen(false);
+    if (openPreview) {
+      setOpenPreview(true);
+    } else {
+      setOpenPreview(false);
+    }
   };
 
   const onSubmit = (data: any) => {
@@ -109,7 +153,7 @@ function SettingsPage() {
       <Button onClick={openModal}>Settings</Button>
       <Modal
         isOpen={isModalOpen}
-        onRequestClose={closeModal}
+        onRequestClose={() => closeModal()}
         style={customStyles}
         contentLabel="Settings Modal"
       >
@@ -121,8 +165,8 @@ function SettingsPage() {
               {...register("providerId")}
               style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
               onChange={(e) => {
-                setValue("userName", "");
-                setUserName("");
+                setValue("providerId", e.target.value);
+                setRefresh((prev) => prev + 1);
               }}
             >
               <option value="" disabled>
@@ -136,20 +180,6 @@ function SettingsPage() {
             </select>
           </div>
           <div>
-            {/* It change according to the provider. for github we neeed user name and for gitlab we need userId */}
-            <label>User Name/User Id</label>
-            <input
-              type="text"
-              {...register("userName")}
-              placeholder="Enter username/userId."
-              style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-              onChange={(e) => {
-                setUserName(e.target.value);
-                setValue("userName", e.target.value);
-              }}
-            />
-          </div>
-          <div>
             <label>Choose Repo</label>
             <select
               {...register("repoName")}
@@ -159,8 +189,8 @@ function SettingsPage() {
                 Select Repo
               </option>
               {reposData.map((repo: any) => (
-                <option key={repo.id} value={repo.name}>
-                  {repo.name}
+                <option key={repo.id} value={repo.option_value}>
+                  {repo.display_name}
                 </option>
               ))}
             </select>
@@ -183,10 +213,20 @@ function SettingsPage() {
               style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
             />
           </div>
+          {/* <div style={{ textAlign: "left" }}>
+            <Button
+              type="button"
+              onClick={()=>{closeModal(true)}}
+              style={{ marginRight: "10px" }}
+            >
+              Preview
+            </Button>
+           
+          </div> */}
           <div style={{ textAlign: "right" }}>
             <Button
               type="button"
-              onClick={closeModal}
+              onClick={() => closeModal()}
               style={{ marginRight: "10px" }}
             >
               Cancel
@@ -197,6 +237,7 @@ function SettingsPage() {
           </div>
         </form>
       </Modal>
+      {/* {fileData?.content && openPreview &&<PreviewContent  type="markdown" data={fileData?.content} />} */}
     </div>
   );
 }
@@ -207,14 +248,10 @@ function RunbookIncidentTable() {
 
   // Modal state management
 
-  const { data: session } = useSession();
-
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setLimit(newLimit);
     setOffset(newOffset);
   };
-
-  // Open modal handler
 
   return (
     <div>
@@ -230,8 +267,6 @@ function RunbookIncidentTable() {
           console.log("Runbook clicked:", row);
         }}
       />
-
-      {/* Modal for Settings */}
     </div>
   );
 }
