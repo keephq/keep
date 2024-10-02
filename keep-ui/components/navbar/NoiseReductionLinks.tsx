@@ -12,7 +12,7 @@ import { TbTopologyRing } from "react-icons/tb";
 import { FaVolumeMute } from "react-icons/fa";
 import { FaMarkdown } from "react-icons/fa";
 import { IoMdGitMerge } from "react-icons/io";
-import { useTopology } from "utils/hooks/useTopology";
+import { useTopology } from "@/app/topology/model/useTopology";
 
 type NoiseReductionLinksProps = { session: Session | null };
 

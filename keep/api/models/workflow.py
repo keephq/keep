@@ -109,6 +109,7 @@ class WorkflowExecutionDTO(BaseModel):
     started: datetime
     triggered_by: str
     status: str
+    workflow_name: Optional[str]  # for UI purposes
     logs: Optional[List[WorkflowExecutionLogsDTO]]
     error: Optional[str]
     execution_time: Optional[float]

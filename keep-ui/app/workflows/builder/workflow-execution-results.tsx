@@ -41,8 +41,6 @@ export default function WorkflowExecutionResults({
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
-  const contentRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const { data: executionData, error: executionError } = useSWR(
     status === "authenticated"

@@ -10,4 +10,4 @@ workflow:
       provider:
         type: console
         with:
-          alert_message: "Hello world"
+          message: "Hello world"

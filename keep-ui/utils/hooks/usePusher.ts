@@ -2,7 +2,7 @@ import Pusher from "pusher-js";
 import { useConfig } from "./useConfig";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 let PUSHER: Pusher | null = null;
 const POLLING_INTERVAL = 3000;
@@ -38,29 +38,38 @@ export const useWebsocket = () => {
     PUSHER.subscribe(channelName);
   }
 
-  const subscribe = () => {
+  const subscribe = useCallback(() => {
     return PUSHER?.subscribe(channelName);
-  };
+  }, [channelName]);
 
-  const unsubscribe = () => {
+  const unsubscribe = useCallback(() => {
     return PUSHER?.unsubscribe(channelName);
-  };
+  }, [channelName]);
 
-  const bind = (event: any, callback: any) => {
-    return PUSHER?.channel(channelName)?.bind(event, callback);
-  };
+  const bind = useCallback(
+    (event: any, callback: any) => {
+      return PUSHER?.channel(channelName)?.bind(event, callback);
+    },
+    [channelName]
+  );
 
-  const unbind = (event: any, callback: any) => {
-    return PUSHER?.channel(channelName)?.unbind(event, callback);
-  };
+  const unbind = useCallback(
+    (event: any, callback: any) => {
+      return PUSHER?.channel(channelName)?.unbind(event, callback);
+    },
+    [channelName]
+  );
 
-  const trigger = (event: any, data: any) => {
-    return PUSHER?.channel(channelName).trigger(event, data);
-  };
+  const trigger = useCallback(
+    (event: any, data: any) => {
+      return PUSHER?.channel(channelName).trigger(event, data);
+    },
+    [channelName]
+  );
 
-  const channel = () => {
+  const channel = useCallback(() => {
     return PUSHER?.channel(channelName);
-  };
+  }, [channelName]);
 
   return {
     subscribe,
