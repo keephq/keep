@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     GENERATE_DEDUPLICATIONS = True
+    SLEEP_INTERVAL = float(os.environ.get("SLEEP_INTERVAL", 0.2))  # Configurable sleep interval from env variable
     keep_api_key = os.environ.get("KEEP_API_KEY")
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
     if keep_api_key is None or keep_api_url is None:
@@ -50,9 +51,10 @@ def main():
                     headers={"x-api-key": keep_api_key},
                     json=alert,
                 )
-            except Exception as e:
+                response.raise_for_status()  # Raise an HTTPError for bad responses
+            except requests.exceptions.RequestException as e:
                 logger.error("Failed to send alert: {}".format(e))
-                time.sleep(0.2)
+                time.sleep(SLEEP_INTERVAL)
                 continue
 
             if response.status_code != 202:
@@ -60,7 +62,7 @@ def main():
             else:
                 logger.info("Alert sent successfully")
 
-            time.sleep(0.2)  # Wait for 0.2 seconds before sending the next alert
+            time.sleep(SLEEP_INTERVAL)  # Wait for the configured interval before sending the next alert
 
 
 if __name__ == "__main__":
