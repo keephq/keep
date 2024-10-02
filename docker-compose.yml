@@ -10,7 +10,13 @@ services:
     volumes:
       - ./state:/state
     depends_on:
-      - keep-backend
+      keep-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   keep-backend:
     extends:
@@ -21,6 +27,11 @@ services:
       - AUTH_TYPE=NO_AUTH
     volumes:
       - ./state:/state
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   keep-websocket-server:
     extends:
