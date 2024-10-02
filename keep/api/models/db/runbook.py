@@ -2,29 +2,9 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
-from sqlalchemy import DateTime, ForeignKey, Column, TEXT, JSON
+from sqlalchemy import ForeignKey, Column, TEXT, JSON
 from sqlmodel import Field, Relationship, SQLModel
 from keep.api.models.db.tenant import Tenant 
-
-# Runbook Model
-class Runbook(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
-    tenant: Tenant = Relationship()
-
-    title: str = Field(nullable=False)  # Title of the runbook
-    link: str = Field(nullable=False)   # Link to the .md file
-
-    incidents: List["Incident"] = Relationship(
-        back_populates="runbooks", link_model=RunbookToIncident
-    )
-
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        arbitrary_types_allowed = True
-
 
 # Link Model between Runbook and Incident
 class RunbookToIncident(SQLModel, table=True):
@@ -41,6 +21,27 @@ class RunbookToIncident(SQLModel, table=True):
     )
 
 
+# Runbook Model
+class Runbook(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: str = Field(foreign_key="tenant.id")
+    tenant: Tenant = Relationship()
+    repo_id: str = Field(nullable=False)  # Github repo id
+    relative_path: str = Field(nullable=False) # Relative path to the .md file
+    title: str = Field(nullable=False)  # Title of the runbook
+    link: str = Field(nullable=False)   # Link to the .md file
+
+    incidents: List["Incident"] = Relationship(
+        back_populates="runbooks", link_model=RunbookToIncident
+    )
+    provider_type: str
+    provider_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
 # Incident Model
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -54,7 +55,7 @@ class Incident(SQLModel, table=True):
     generated_summary: Optional[str] = Field(sa_column=Column(TEXT), nullable=True)
 
     assignee: Optional[str] = None
-    severity: int = Field(default=IncidentSeverity.CRITICAL.order)
+    # severity: int = Field(default=IncidentSeverity.CRITICAL.order)
 
     creation_time: datetime = Field(default_factory=datetime.utcnow)
 
