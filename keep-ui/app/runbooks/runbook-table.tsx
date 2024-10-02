@@ -148,6 +148,7 @@ function SettingsPage() {
     // closeModal(); // Close modal after submit
   };
 
+  console.log("content", fileData);
   return (
     <div>
       <Button onClick={openModal}>Settings</Button>
@@ -167,9 +168,11 @@ function SettingsPage() {
               onChange={(e) => {
                 setValue("providerId", e.target.value);
                 setRefresh((prev) => prev + 1);
+                setValue('repoName', '');
               }}
+              defaultValue={provider?.details?.authentication.provider_id ?? ""}
             >
-              <option value="" disabled>
+              <option value="">
                 Select Provider
               </option>
               {runBookInstalledProviders.map((provider) => (
@@ -184,8 +187,9 @@ function SettingsPage() {
             <select
               {...register("repoName")}
               style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+              defaultValue={provider?.details?.authentication.repository ?? ""}
             >
-              <option value="" disabled>
+              <option value="">
                 Select Repo
               </option>
               {reposData.map((repo: any) => (
