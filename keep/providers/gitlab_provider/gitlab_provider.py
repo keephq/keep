@@ -157,21 +157,6 @@ class GitlabProvider(BaseRunBookProvider):
                 params[param] = kwargs[param]
         return params
 
-
-    # def query_for_repositories(self,  **kwargs: dict):
-    #    """Retrieve repositories from the Gitlab"""
-    #    project_id = kwargs.get("project_id")
-    #    user_name = self.authentication_config.username
-    #    auth=self.__get_auth_header()
-    #    url = f"{slef.gitlab_host}/api/v4/projects/{project_id}" if project_id else f"{self.gitlab_host}/api/v4/projects"
-    #    resp = requests.get(
-    #        url, headers=self.__get_auth_header()
-    #        auth=auth
-    #    )
-    #    if response.status_code != 200:
-    #        raise Exception(f"Repository Query Failed: {response.content}")
-    #    return response.json()
-
     def get_gitlab_user_id(self):
         """
         Retrieve the user ID from the access token in GitLab.
