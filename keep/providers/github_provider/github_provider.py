@@ -8,7 +8,7 @@ import pydantic
 from github import Github, GithubException
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseRunBookProvider
+from keep.providers.base.base_provider import BaseRunBookProvider
 from keep.providers.models.provider_config import ProviderConfig
 
 
@@ -173,7 +173,7 @@ class GithubProvider(BaseRunBookProvider):
             except GithubException as e:
                 raise Exception(f"Failed to retrieve runbook: {e}")
 
-        raise Exception(f"Failed to get runbook: repository, branch, md_path, or access_token not set")        
+        raise Exception("Failed to get runbook: repository, branch, md_path, or access_token not set")        
 
 class GithubStarsProvider(GithubProvider):
     """

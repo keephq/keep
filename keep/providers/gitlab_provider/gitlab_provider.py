@@ -1,5 +1,5 @@
 """
-GitlabProvider is a class that implements the BaseProvider interface for GitLab updates.
+GitlabProvider is a class that implements the BaseRunBookProvider interface for GitLab updates.
 """
 
 import dataclasses
@@ -10,7 +10,7 @@ import requests
 from requests import HTTPError
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseRunBookProvider
+from keep.providers.base.base_provider import BaseRunBookProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -226,7 +226,7 @@ class GitlabProvider(BaseRunBookProvider):
            repos = resp.json()
            return self._format_repos(repos, project_id)
 
-       raise Exception(f"Failed to get repositories: personal_access_token not set")
+       raise Exception("Failed to get repositories: personal_access_token not set")
 
     def _format_runbook(self, runbook, repo):
        """
@@ -272,7 +272,7 @@ class GitlabProvider(BaseRunBookProvider):
 
             return self._format_runbook(resp.json(), repo_meta)
 
-        raise Exception(f"Failed to get runbook: repository or md_path not set")       
+        raise Exception("Failed to get runbook: repository or md_path not set")       
 
 
     def _notify(self, id: str, title: str, description: str = "", labels: str = "", issue_type: str = "issue",
