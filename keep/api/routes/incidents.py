@@ -544,6 +544,7 @@ def confirm_incident(
     return new_incident_dto
 
 
+
 @router.post(
     "/{incident_id}/status",
     description="Change incident status",
