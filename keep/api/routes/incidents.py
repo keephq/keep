@@ -8,7 +8,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pusher import Pusher
-from pydantic.types import UUID
+from pydantic.types import UUID, UUID4
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
@@ -188,7 +188,7 @@ def get_all_incidents(
     description="Get incident by id",
 )
 def get_incident(
-    incident_id: str,
+    incident_id: UUID4,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
@@ -197,11 +197,11 @@ def get_incident(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
@@ -215,7 +215,7 @@ def get_incident(
     description="Update incident by id",
 )
 def update_incident(
-    incident_id: str,
+    incident_id: UUID4,
     updated_incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -225,13 +225,13 @@ def update_incident(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
 
     incident = update_incident_from_dto_by_id(
-        tenant_id, incident_id, updated_incident_dto
+        tenant_id, str(incident_id), updated_incident_dto
     )
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -255,7 +255,7 @@ def update_incident(
     description="Delete incident by incident id",
 )
 def delete_incident(
-    incident_id: str,
+    incident_id: UUID4,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -265,18 +265,18 @@ def delete_incident(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
 
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     incident_dto = IncidentDto.from_db_incident(incident)
 
-    deleted = delete_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    deleted = delete_incident_by_id(tenant_id=tenant_id, incident_id=str(incident_id))
     if not deleted:
         raise HTTPException(status_code=404, detail="Incident not found")
     __update_client_on_incident_change(pusher_client, tenant_id)
@@ -298,7 +298,7 @@ def delete_incident(
     description="Get incident alerts by incident incident id",
 )
 def get_incident_alerts(
-    incident_id: str,
+    incident_id: UUID4,
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -309,24 +309,24 @@ def get_incident_alerts(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     logger.info(
         "Fetching incident's alert",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
     db_alerts, total_count = get_incident_alerts_by_incident_id(
         tenant_id=tenant_id,
-        incident_id=incident_id,
+        incident_id=str(incident_id),
         limit=limit,
         offset=offset,
     )
@@ -349,7 +349,7 @@ def get_incident_alerts(
     description="Get incident workflows by incident id",
 )
 def get_incident_workflows(
-    incident_id: str,
+    incident_id: UUID4,
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -365,11 +365,11 @@ def get_incident_workflows(
 
     logger.info(
         "Fetching incident's workflows",
-        extra={"incident_id": incident_id, "tenant_id": tenant_id},
+        extra={"incident_id": str(incident_id), "tenant_id": tenant_id},
     )
     workflow_execution_dtos, total_count = (
         get_workflow_executions_for_incident_or_alert(
-            tenant_id=tenant_id, incident_id=incident_id, limit=limit, offset=offset
+            tenant_id=tenant_id, incident_id=str(incident_id), limit=limit, offset=offset
         )
     )
 
@@ -386,7 +386,7 @@ def get_incident_workflows(
     response_model=List[AlertDto],
 )
 async def add_alerts_to_incident(
-    incident_id: str,
+    incident_id: UUID4,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -397,16 +397,16 @@ async def add_alerts_to_incident(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
-    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+    add_alerts_to_incident_by_incident_id(tenant_id, str(incident_id), alert_ids)
+    __update_client_on_incident_change(pusher_client, tenant_id, str(incident_id))
 
     incident_dto = IncidentDto.from_db_incident(incident)
 
@@ -421,7 +421,7 @@ async def add_alerts_to_incident(
             extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
         )
 
-    fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
+    fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, str(incident_id))
 
     if (
         ee_enabled
@@ -432,14 +432,14 @@ async def add_alerts_to_incident(
         job = await pool.enqueue_job(
             "process_summary_generation",
             tenant_id=tenant_id,
-            incident_id=incident_id,
+            incident_id=str(incident_id),
         )
         logger.info(
-            f"Summary generation for incident {incident_id} scheduled, job: {job}",
+            f"Summary generation for incident {str(incident_id)} scheduled, job: {job}",
             extra={
                 "algorithm": ALGORITHM_VERBOSE_NAME,
                 "tenant_id": tenant_id,
-                "incident_id": incident_id,
+                "incident_id": str(incident_id),
             },
         )
 
@@ -453,7 +453,7 @@ async def add_alerts_to_incident(
     response_model=List[AlertDto],
 )
 def delete_alerts_from_incident(
-    incident_id: str,
+    incident_id: UUID4,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -463,15 +463,15 @@ def delete_alerts_from_incident(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    remove_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
+    remove_alerts_to_incident_by_incident_id(tenant_id, str(incident_id), alert_ids)
 
     return Response(status_code=202)
 
@@ -521,7 +521,7 @@ def mine(
     response_model=IncidentDto,
 )
 def confirm_incident(
-    incident_id: str,
+    incident_id: UUID4,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -530,12 +530,12 @@ def confirm_incident(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
 
-    incident = confirm_predicted_incident_by_id(tenant_id, incident_id)
+    incident = confirm_predicted_incident_by_id(tenant_id, str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident candidate not found")
 
@@ -550,7 +550,7 @@ def confirm_incident(
     response_model=IncidentDto,
 )
 def change_incident_status(
-    incident_id: str,
+    incident_id: UUID4,
     change: IncidentStatusChangeDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -560,19 +560,19 @@ def change_incident_status(
     logger.info(
         "Fetching incident",
         extra={
-            "incident_id": incident_id,
+            "incident_id": str(incident_id),
             "tenant_id": tenant_id,
         },
     )
 
     with_alerts = change.status == IncidentStatus.RESOLVED
-    incident = get_incident_by_id(tenant_id, incident_id, with_alerts=with_alerts)
+    incident = get_incident_by_id(tenant_id, str(incident_id), with_alerts=with_alerts)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     # We need to do something only if status really changed
     if not change.status == incident.status:
-        result = change_incident_status_by_id(tenant_id, incident_id, change.status)
+        result = change_incident_status_by_id(tenant_id, str(incident_id), change.status)
         if not result:
             raise HTTPException(
                 status_code=500, detail="Error changing incident status"
