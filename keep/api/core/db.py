@@ -1610,7 +1610,6 @@ def get_incident_for_grouping_rule(
     with existed_or_new_session(session) as session:
         incident = session.exec(
             select(Incident)
-            .options(joinedload(Incident.alerts))
             .where(Incident.tenant_id == tenant_id)
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
