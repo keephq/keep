@@ -1,4 +1,4 @@
-import { Button, Icon, Title } from "@tremor/react";
+import {Button, Icon, Subtitle, Title} from "@tremor/react";
 import { IncidentDto } from "../models";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
@@ -13,6 +13,11 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import {Disclosure} from "@headlessui/react";
+import {IoChevronUp} from "react-icons/io5";
+import classNames from "classnames";
+import {LinkWithIcon} from "@/components/LinkWithIcon";
+import {DoorbellNotification} from "@/components/icons";
 
 interface Props {
   incident: IncidentDto;
@@ -117,7 +122,36 @@ export default function IncidentInformation({ incident }: Props) {
         </div>
         <div>
           <h3 className="text-gray-500 text-sm">Summary</h3>
-          {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+          {!summary ? <p>No summary yet</p> : null}
+          {incident.user_summary ? <p>{incident.user_summary}</p> : null}
+
+          {incident.user_summary && incident.generated_summary ?
+            <Disclosure as="div" className="space-y-1">
+              <Disclosure.Button className="w-full flex justify-between items-center p-2">
+                {({ open }) => (
+                  <>
+                    <h4 className="text-gray-500 text-sm -ml-2">AI version</h4>
+                    <IoChevronUp
+                      className={classNames(
+                        {"rotate-180": open},
+                        "mr-2 text-slate-400"
+                      )}
+                    />
+                  </>
+                )}
+              </Disclosure.Button>
+
+              <Disclosure.Panel as="div" className="space-y-2 relative">
+                {incident.generated_summary}
+              </Disclosure.Panel>
+            </Disclosure>
+          : !incident.user_summary && incident.generated_summary ?
+              <div>
+                <h4 className="text-gray-500 text-sm -ml-2">AI version</h4>
+                {incident.generated_summary}
+              </div>
+            : null}
+
         </div>
         <div className="flex gap-4">
           {!!incident.start_time && (
