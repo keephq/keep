@@ -64,7 +64,7 @@ if ee_enabled:
 
 
 def __update_client_on_incident_change(
-    pusher_client: Pusher | None, tenant_id: str, incident_id: str | None = None
+    pusher_client: Pusher | None, tenant_id: str, incident_id: UUID | None = None
 ):
     """
     Update the client on incident change, making the client poll changes.
@@ -188,7 +188,7 @@ def get_all_incidents(
     description="Get incident by id",
 )
 def get_incident(
-    incident_id: str,
+    incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
@@ -215,7 +215,7 @@ def get_incident(
     description="Update incident by id",
 )
 def update_incident(
-    incident_id: str,
+    incident_id: UUID,
     updated_incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -255,7 +255,7 @@ def update_incident(
     description="Delete incident by incident id",
 )
 def delete_incident(
-    incident_id: str,
+    incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -298,7 +298,7 @@ def delete_incident(
     description="Get incident alerts by incident incident id",
 )
 def get_incident_alerts(
-    incident_id: str,
+    incident_id: UUID,
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -349,7 +349,7 @@ def get_incident_alerts(
     description="Get incident workflows by incident id",
 )
 def get_incident_workflows(
-    incident_id: str,
+    incident_id: UUID,
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -386,7 +386,7 @@ def get_incident_workflows(
     response_model=List[AlertDto],
 )
 async def add_alerts_to_incident(
-    incident_id: str,
+    incident_id: UUID,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -453,7 +453,7 @@ async def add_alerts_to_incident(
     response_model=List[AlertDto],
 )
 def delete_alerts_from_incident(
-    incident_id: str,
+    incident_id: UUID,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -521,7 +521,7 @@ def mine(
     response_model=IncidentDto,
 )
 def confirm_incident(
-    incident_id: str,
+    incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -550,7 +550,7 @@ def confirm_incident(
     response_model=IncidentDto,
 )
 def change_incident_status(
-    incident_id: str,
+    incident_id: UUID,
     change: IncidentStatusChangeDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])

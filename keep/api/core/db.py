@@ -2557,7 +2557,7 @@ def get_last_incidents(
 
 
 def get_incident_by_id(
-    tenant_id: str, incident_id: str | UUID, with_alerts: bool = False
+    tenant_id: str, incident_id: UUID, with_alerts: bool = False
 ) -> Optional[Incident]:
     with Session(engine) as session:
         query = session.query(
@@ -2595,7 +2595,7 @@ def create_incident_from_dict(
 
 def update_incident_from_dto_by_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: UUID,
     updated_incident_dto: IncidentDtoIn,
 ) -> Optional[Incident]:
     with Session(engine) as session:
@@ -2623,7 +2623,7 @@ def update_incident_from_dto_by_id(
 
 def delete_incident_by_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: UUID,
 ) -> bool:
     with Session(engine) as session:
         incident = (
@@ -2666,7 +2666,7 @@ def get_incidents_count(
 
 def get_incident_alerts_by_incident_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: UUID,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
 ) -> (List[Alert], int):
@@ -2745,7 +2745,7 @@ def get_alerts_data_for_incident(
 
 def add_alerts_to_incident_by_incident_id(
     tenant_id: str,
-    incident_id: str | UUID,
+    incident_id: UUID,
     alert_ids: List[UUID],
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
@@ -2830,7 +2830,7 @@ def add_alerts_to_incident_by_incident_id(
         return incident
 
 
-def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> int:
+def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: UUID) -> int:
     with Session(engine) as session:
         return session.execute(
             select(func.count(1))
@@ -2869,7 +2869,7 @@ def get_last_alerts_for_incidents(
 
 
 def remove_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
+    tenant_id: str, incident_id: UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(
@@ -2994,7 +2994,7 @@ def get_first_alert_datetime(
 
 def confirm_predicted_incident_by_id(
     tenant_id: str,
-    incident_id: UUID | str,
+    incident_id: UUID,
 ):
     with Session(engine) as session:
         incident = session.exec(
@@ -3260,7 +3260,7 @@ def get_alerts_fields(tenant_id: str) -> List[AlertField]:
 
 
 def change_incident_status_by_id(
-    tenant_id: str, incident_id: UUID | str, status: IncidentStatus
+    tenant_id: str, incident_id: UUID, status: IncidentStatus
 ) -> bool:
     with Session(engine) as session:
         stmt = (
@@ -3277,7 +3277,7 @@ def change_incident_status_by_id(
 
 
 def get_workflow_executions_for_incident_or_alert(
-    tenant_id: str, incident_id: str, limit: int = 25, offset: int = 0
+    tenant_id: str, incident_id: UUID, limit: int = 25, offset: int = 0
 ):
     with Session(engine) as session:
         # Base query for both incident and alert related executions
