@@ -1,9 +1,9 @@
 import type { FC } from "react";
 import { MultiSelect, MultiSelectItem } from "@tremor/react";
-import {useIncidentFilterContext} from "./incident-table-filters-context";
+import { useIncidentFilterContext } from "./incident-table-filters-context";
+import { capitalize } from "@/utils/helpers";
 
 export const IncidentTableFilters: FC = (props) => {
-
   const {
     meta,
     statuses,
@@ -16,73 +16,70 @@ export const IncidentTableFilters: FC = (props) => {
     setAssignees,
     setServices,
     setSources,
-  } = useIncidentFilterContext()
-
+  } = useIncidentFilterContext();
 
   return (
-    <div className="flex">
-
+    <div className="flex flex-col md:flex-row gap-2">
+      {/* TODO: use copy-and-paste multiselect component to be able to control the width */}
       <MultiSelect
         onValueChange={setStatuses}
         value={statuses}
-        placeholder="Filter by status..."
-        className="w-full ml-2.5"
-        // icon={TagIcon}
+        placeholder="Status"
       >
         {meta?.statuses.map((value) => (
-          <MultiSelectItem key={value} value={value}>{value}</MultiSelectItem>
+          <MultiSelectItem key={value} value={value}>
+            {capitalize(value)}
+          </MultiSelectItem>
         ))}
       </MultiSelect>
 
       <MultiSelect
         onValueChange={setSeverities}
         value={severities}
-        placeholder="Filter by severity..."
-        className="w-full ml-2.5"
-        // icon={TagIcon}
+        placeholder="Severity"
       >
         {meta?.severities.map((value) => (
-          <MultiSelectItem key={value} value={value}>{value}</MultiSelectItem>
+          <MultiSelectItem key={value} value={value}>
+            {capitalize(value)}
+          </MultiSelectItem>
         ))}
       </MultiSelect>
 
       <MultiSelect
         onValueChange={setAssignees}
         value={assignees}
-        placeholder="Filter by assinee..."
-        className="w-full ml-2.5"
-        // icon={TagIcon}
+        placeholder="Assignee"
       >
         {meta?.assignees.map((value) => (
-          <MultiSelectItem key={value} value={value}>{value}</MultiSelectItem>
+          <MultiSelectItem key={value} value={value}>
+            {capitalize(value)}
+          </MultiSelectItem>
         ))}
       </MultiSelect>
 
       <MultiSelect
         onValueChange={setServices}
         value={services}
-        placeholder="Filter by service..."
-        className="w-full ml-2.5"
-        // icon={TagIcon}
+        placeholder="Service"
       >
         {meta?.services.map((value) => (
-          <MultiSelectItem key={value} value={value}>{value}</MultiSelectItem>
+          <MultiSelectItem key={value} value={value}>
+            {capitalize(value)}
+          </MultiSelectItem>
         ))}
       </MultiSelect>
 
       <MultiSelect
         onValueChange={setSources}
         value={sources}
-        placeholder="Filter by source..."
-        className="w-full ml-2.5"
-        // icon={TagIcon}
+        placeholder="Source"
       >
         {meta?.sources.map((value) => (
-          <MultiSelectItem key={value} value={value}>{value}</MultiSelectItem>
+          <MultiSelectItem key={value} value={value}>
+            {capitalize(value)}
+          </MultiSelectItem>
         ))}
       </MultiSelect>
-
-
     </div>
-  )
-}
+  );
+};

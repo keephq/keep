@@ -10,9 +10,9 @@ import { IncidentPlaceholder } from "./IncidentPlaceholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "./predicted-incidents-table";
-import {SortingState} from "@tanstack/react-table";
-import {IncidentTableFilters} from "./incident-table-filters";
-import {useIncidentFilterContext} from "./incident-table-filters-context";
+import { SortingState } from "@tanstack/react-table";
+import { IncidentTableFilters } from "./incident-table-filters";
+import { useIncidentFilterContext } from "./incident-table-filters-context";
 
 interface Pagination {
   limit: number;
@@ -20,11 +20,11 @@ interface Pagination {
 }
 
 interface Filters {
-  status: string[],
-  severity: string[],
-  assignees: string[]
-  sources: string[],
-  affected_services: string[],
+  status: string[];
+  severity: string[];
+  assignees: string[];
+  sources: string[];
+  affected_services: string[];
 }
 
 export default function Incident() {
@@ -37,13 +37,8 @@ export default function Incident() {
     { id: "creation_time", desc: true },
   ]);
 
-  const {
-    statuses,
-    severities,
-    assignees,
-    services,
-    sources,
-  } = useIncidentFilterContext()
+  const { statuses, severities, assignees, services, sources } =
+    useIncidentFilterContext();
 
   const filters: Filters = {
     status: statuses,
@@ -51,14 +46,19 @@ export default function Incident() {
     assignees: assignees,
     affected_services: services,
     sources: sources,
-  }
+  };
 
   const {
     data: incidents,
     isLoading,
     mutate: mutateIncidents,
   } = useIncidents(
-    true, incidentsPagination.limit, incidentsPagination.offset, incidentsSorting[0], filters);
+    true,
+    incidentsPagination.limit,
+    incidentsPagination.offset,
+    incidentsSorting[0],
+    filters
+  );
   const {
     data: predictedIncidents,
     isLoading: isPredictedLoading,
@@ -109,43 +109,42 @@ export default function Incident() {
           </Card>
         ) : null}
 
-
-          <div className="h-full flex flex-col">
-            <div className="flex justify-between items-center">
-              <div>
-                <Title>Incidents</Title>
-                <Subtitle>Manage your incidents</Subtitle>
-              </div>
-
-              <div>
-                <Button
-                  color="orange"
-                  size="md"
-                  icon={PlusCircleIcon}
-                  onClick={() => setIsFormOpen(true)}
-                >
-                  Create Incident
-                </Button>
-              </div>
+        <div className="h-full flex flex-col gap-5">
+          <div className="flex justify-between items-center">
+            <div>
+              <Title>Incidents</Title>
+              <Subtitle>Manage your incidents</Subtitle>
             </div>
 
-            <Card className="mt-10 flex-grow">
-
-              <IncidentTableFilters />
-              {isLoading ? <Loading />
-              : incidents && incidents.items.length > 0 ?
-                <IncidentsTable
-                  incidents={incidents}
-                  mutate={mutateIncidents}
-                  setPagination={setIncidentsPagination}
-                  sorting={incidentsSorting}
-                  setSorting={setIncidentsSorting}
-                  editCallback={handleStartEdit}
-                /> :
-                <IncidentPlaceholder setIsFormOpen={setIsFormOpen} />
-              }
-            </Card>
+            <div>
+              <Button
+                color="orange"
+                size="md"
+                icon={PlusCircleIcon}
+                onClick={() => setIsFormOpen(true)}
+              >
+                Create Incident
+              </Button>
+            </div>
           </div>
+          <IncidentTableFilters />
+          <Card className="flex-grow">
+            {isLoading ? (
+              <Loading />
+            ) : incidents && incidents.items.length > 0 ? (
+              <IncidentsTable
+                incidents={incidents}
+                mutate={mutateIncidents}
+                setPagination={setIncidentsPagination}
+                sorting={incidentsSorting}
+                setSorting={setIncidentsSorting}
+                editCallback={handleStartEdit}
+              />
+            ) : (
+              <IncidentPlaceholder setIsFormOpen={setIsFormOpen} />
+            )}
+          </Card>
+        </div>
       </div>
       <Modal
         isOpen={isFormOpen}
