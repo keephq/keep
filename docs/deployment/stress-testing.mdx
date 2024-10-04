@@ -35,11 +35,11 @@ The primary parameters that affect the specification requirements for Keep are:
 
 ### Testing Scenarios:
 
-- **Low Volume (< 10,000 total alerts, hundreds of alerts per day)**:
+1. **Low Volume (< 10,000 total alerts, hundreds of alerts per day)**:
    - **Setup**: Use a standard relational database (e.g., MySQL, PostgreSQL) with default configurations.
    - **Expectations**: Keep should handle queries and alert ingestion with minimal resource usage.
 
-- **Medium Volume (10,000 - 100,000 total alerts, thousands of alerts per day)**:
+2. **Medium Volume (10,000 - 100,000 total alerts, thousands of alerts per day)**:
    - **Setup**: Scale the database to larger instances or clusters. Adjust best practices to the DB (e.g. increasing innodb_buffer_pool_size)
    - **Expectations**: CPU and RAM usage should increase proportionally but remain within acceptable limits.
 
@@ -105,8 +105,8 @@ Redis is recommended when your alert ingestion rate exceeds 1,000 alerts per min
 
 ### 4. What should I do if Keep's performance is still inadequate?
 If you have scaled according to the recommendations and are still facing performance issues, consider:
-- **Optimizing your database configuration**: Indexing, sharding, and query optimization can make a significant difference.
-- **Horizontal scaling**: Distribute the load across multiple instances of the API and database services.
-- **Reach out to our Slack community**: For personalized support, reach out to us on Slack, and we’ll help you troubleshoot and optimize your Keep deployment.
+   - **Optimizing your database configuration**: Indexing, sharding, and query optimization can make a significant difference.
+   - **Horizontal scaling**: Distribute the load across multiple instances of the API and database services.
+   - **Reach out to our Slack community**: For personalized support, reach out to us on Slack, and we’ll help you troubleshoot and optimize your Keep deployment.
 
 For any additional questions or tailored advice, feel free to join our Slack community where our team and other users are available to assist you.
