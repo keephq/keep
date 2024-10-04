@@ -110,7 +110,3 @@ kubectl -n keep exec -it keep-backend-64c4d7ddb7-7p5q5 /bin/bash
 # Load 100 alerts per minute
 
 # Load 1000 alerts per minute
-
-- **Load 10 alerts per minute**: (details)
-- **Load 100 alerts per minute**: (details)
-- **Load 1,000 alerts per minute**: (details)
