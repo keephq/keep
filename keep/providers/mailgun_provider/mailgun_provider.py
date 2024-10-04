@@ -116,16 +116,17 @@ class MailgunProvider(BaseProvider):
         return {"route_id": route_id, "email": email}
 
     @staticmethod
-    def _format_alert(event: FormData) -> AlertDto:
+    def _format_alert(event: FormData, **kwargs) -> AlertDto:
         name = event["subject"]
         source = event["from"]
         message = event["stripped-text"]
         timestamp = datetime.datetime.fromtimestamp(
             float(event["timestamp"])
         ).isoformat()
-        # todo: understand how we extract if we don't have config here
-        severity = "info"  # to extract
-        status = "firing"  # to extract
+        severity = "info"
+        status = "firing"
+        # extraction_rules = kwargs.get("extraction_rules", {})
+
         return AlertDto(
             name=name,
             source=[source],

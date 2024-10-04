@@ -285,15 +285,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: Optional["BaseProvider"] = None
-    ) -> AlertDto | list[AlertDto]:
+    def _format_alert(event: dict, **kwargs) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
 
         Args:
             event (dict): The raw provider event payload.
-            provider_instance (Optional[&quot;BaseProvider&quot;]): The tenant provider instance if it was successfully loaded.
 
         Raises:
             NotImplementedError: For providers who does not implement this method.
