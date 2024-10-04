@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 engine = create_db_engine()
 
 
-def try_create_single_tenant(tenant_id: str) -> None:
+def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
     """
     Creates the single tenant and the default user if they don't exist.
     """
@@ -71,7 +71,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
             # check if at least one user exists:
             user = session.exec(select(User)).first()
             # if no users exist, let's create the default user
-            if not user:
+            if not user and create_default_user:
                 logger.info("Creating default user")
                 default_username = os.environ.get("KEEP_DEFAULT_USERNAME", "keep")
                 default_password = hashlib.sha256(
@@ -150,7 +150,7 @@ def try_create_single_tenant(tenant_id: str) -> None:
                         pass
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
-                    
+
             # commit the changes
             session.commit()
             logger.info("Single tenant created")

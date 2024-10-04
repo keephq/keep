@@ -63,7 +63,8 @@
             "deployment/authentication/no-auth",
             "deployment/authentication/db-auth",
             "deployment/authentication/auth0-auth",
-            "deployment/authentication/keycloak-auth"
+            "deployment/authentication/keycloak-auth",
+            "deployment/authentication/oauth2proxy-auth"
           ]
         },
         {
@@ -128,6 +129,7 @@
             "providers/documentation/incidentio-provider",
             "providers/documentation/incidentmanager-provider",
             "providers/documentation/jira-provider",
+            "providers/documentation/jira-on-prem-provider",
             "providers/documentation/kibana-provider",
             "providers/documentation/kubernetes-provider",
             "providers/documentation/linear_provider",
@@ -280,7 +282,13 @@
         },
         {
           "group": "topology",
-          "pages": ["api-ref/topology/get-topology-data"]
+          "pages": [
+            "api-ref/topology/get-topology-data",
+            "api-ref/topology/create-application",
+            "api-ref/topology/delete-application",
+            "api-ref/topology/get-applications",
+            "api-ref/topology/update-application"
+          ]
         },
         {
           "group": "alerts",

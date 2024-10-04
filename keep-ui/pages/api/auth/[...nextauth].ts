@@ -331,6 +331,7 @@ export const authOptions =
     ? singleTenantAuthOptions
     : authType === AuthenticationType.KEYCLOAK
     ? keycloakAuthOptions
+    // oauth2proxy same configuration as noauth
     : noAuthOptions;
 
 export default NextAuth(authOptions);
