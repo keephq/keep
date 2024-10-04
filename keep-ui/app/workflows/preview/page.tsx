@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import PageClient from "../builder/page.client";
 import Link from "next/link";
 

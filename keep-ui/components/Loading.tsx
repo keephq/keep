@@ -1,7 +1,7 @@
 import { Subtitle, Title } from "@tremor/react";
 import Image from "next/image";
 
-export default function Loading({
+export function Loading({
   includeMinHeight = true,
   slowLoading = false,
 }: {

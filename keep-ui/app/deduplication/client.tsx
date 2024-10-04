@@ -3,7 +3,7 @@
 import { useDeduplicationRules } from "utils/hooks/useDeduplicationRules";
 import { DeduplicationPlaceholder } from "./DeduplicationPlaceholder";
 import { DeduplicationTable } from "./DeduplicationTable";
-import Loading from "app/loading";
+import { Loading } from "@/components/Loading";
 
 export const Client = () => {
     const { data: deduplicationRules = [], isLoading, mutate: mutateDeduplicationRules } = useDeduplicationRules();

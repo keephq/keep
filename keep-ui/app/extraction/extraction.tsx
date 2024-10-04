@@ -3,7 +3,7 @@ import { Badge, Callout, Card } from "@tremor/react";
 import CreateOrUpdateExtractionRule from "./create-or-update-extraction-rule";
 import ExtractionsTable from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { MdWarning } from "react-icons/md";
 import { useState } from "react";
 import { ExtractionRule } from "./model";

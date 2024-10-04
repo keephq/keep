@@ -1,7 +1,7 @@
 "use client";
 import { Badge, Callout, Card } from "@tremor/react";
 import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { MdWarning } from "react-icons/md";
 import { useState } from "react";
 import { MaintenanceRule } from "./model";

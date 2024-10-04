@@ -9,7 +9,7 @@ import {
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { getApiURL } from "../../../utils/apiUrl";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import {
   Callout,

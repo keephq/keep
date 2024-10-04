@@ -12,7 +12,7 @@ import {
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import "./incident-chat.css";
-import Loading from "app/loading";
+import { Loading } from "@/components/Loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { updateIncidentRequest } from "../create-or-update-incident";
 import { useSession } from "next-auth/react";

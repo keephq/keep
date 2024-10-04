@@ -1,5 +1,5 @@
 import { AreaChart } from "@tremor/react";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { AlertDto } from "./models";
 import { calculateFatigue } from "utils/fatigue";
 

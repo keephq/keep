@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { Card, Title, Subtitle, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow, Button, Icon } from '@tremor/react';
 import { fetcher } from 'utils/fetcher';
 import { getApiURL } from 'utils/apiUrl';
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import Image from "next/image";
 
 interface SSOProvider {

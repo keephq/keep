@@ -13,7 +13,7 @@ import { useSession } from "next-auth/react";
 import {
     ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkflowExecutionsV2 } from "utils/hooks/useWorkflowExecutions";
 

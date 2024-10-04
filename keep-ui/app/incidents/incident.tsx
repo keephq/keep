@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { useState } from "react";
 import { IncidentDto, PaginatedIncidentsDto } from "./models";
 import CreateOrUpdateIncident from "./create-or-update-incident";

@@ -1,5 +1,5 @@
 "use client";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { useIncident } from "utils/hooks/useIncidents";
 import IncidentInformation from "./incident-info";
 import {

@@ -14,7 +14,7 @@ const mulish = Mulish({
 import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
 import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPollingContext";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 
 type RootLayoutProps = {
   children: ReactNode;

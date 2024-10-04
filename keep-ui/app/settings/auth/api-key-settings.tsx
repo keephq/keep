@@ -12,7 +12,7 @@ import {
   Text,
   Badge,
 } from "@tremor/react";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { CopyBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
 import { getApiURL } from "utils/apiUrl";

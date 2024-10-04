@@ -13,7 +13,7 @@ import {
   Badge,
   TextInput,
 } from "@tremor/react";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 import { useGroups } from "utils/hooks/useGroups";
 import { useUsers } from "utils/hooks/useUsers";
 import { useRoles } from "utils/hooks/useRoles";

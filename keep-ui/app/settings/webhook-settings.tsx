@@ -15,7 +15,7 @@ import {
   Callout
 
 } from "@tremor/react";
-import Loading from "app/loading";
+import { Loading } from "@/components/Loading";
 import { useRouter } from "next/navigation";
 import { CodeBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";

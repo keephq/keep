@@ -2,14 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Loading from "../loading";
+import { Loading } from "@/components/Loading";
 import Alerts from "./alerts";
+import { AlertDto } from "@/app/alerts/models";
 
 type AlertsPageProps = {
   presetName: string;
+  initialAlerts: AlertDto[] | null;
 };
 
-export default function AlertsPage({ presetName }: AlertsPageProps) {
+export default function AlertsPage({
+  presetName,
+  initialAlerts,
+}: AlertsPageProps) {
   const { data: session, status } = useSession();
 
   const router = useRouter();
@@ -26,5 +31,5 @@ export default function AlertsPage({ presetName }: AlertsPageProps) {
     router.push("/signin");
   }
 
-  return <Alerts presetName={presetName} />;
+  return <Alerts presetName={presetName} initialAlerts={initialAlerts} />;
 }

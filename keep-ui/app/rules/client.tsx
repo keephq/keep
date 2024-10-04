@@ -3,7 +3,7 @@
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationPlaceholder } from "./CorrelationPlaceholder";
 import { CorrelationTable } from "./CorrelationTable";
-import Loading from "@/components/loading";
+import { Loading } from "@/components/Loading";
 
 export const Client = () => {
   const { data: rules = [], isLoading } = useRules();
