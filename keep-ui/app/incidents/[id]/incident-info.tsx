@@ -1,10 +1,10 @@
-import {Button, Icon, Subtitle, Title} from "@tremor/react";
+import { Button, Icon, Title } from "@tremor/react";
 import { IncidentDto } from "../models";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import React, { useState } from "react";
 import { MdBlock, MdDone, MdModeEdit } from "react-icons/md";
-import { useIncident } from "../../../utils/hooks/useIncidents";
+import { useIncident } from "@/utils/hooks/useIncidents";
 import {
   deleteIncident,
   handleConfirmPredictedIncident,
@@ -13,14 +13,53 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-import {Disclosure} from "@headlessui/react";
-import {IoChevronUp} from "react-icons/io5";
+import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
-import {LinkWithIcon} from "@/components/LinkWithIcon";
-import {DoorbellNotification} from "@/components/icons";
+import { IoChevronDown } from "react-icons/io5";
 
 interface Props {
   incident: IncidentDto;
+}
+
+function Summary({
+  title,
+  summary,
+  collapsable,
+  className,
+}: {
+  title: string;
+  summary: string;
+  collapsable?: boolean;
+  className?: string;
+}) {
+  if (collapsable) {
+    return (
+      <Disclosure as="div" className={classNames("space-y-1", className)}>
+        <Disclosure.Button>
+          {({ open }) => (
+            <h4 className="text-gray-500 text-sm inline-flex justify-between items-center gap-1">
+              <span>{title}</span>
+              <IoChevronDown
+                className={classNames({ "rotate-180": open }, "text-slate-400")}
+              />
+            </h4>
+          )}
+        </Disclosure.Button>
+
+        <Disclosure.Panel as="div" className="space-y-2 relative">
+          {summary}
+        </Disclosure.Panel>
+      </Disclosure>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <h3 className="text-gray-500 text-sm">{title}</h3>
+      {/*TODO: suggest generate summary if it's empty*/}
+      {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+    </div>
+  );
 }
 
 export default function IncidentInformation({ incident }: Props) {
@@ -43,10 +82,14 @@ export default function IncidentInformation({ incident }: Props) {
   };
 
   const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
-  const summary = incident.user_summary || incident.generated_summary;
+  // const summary = incident.user_summary || incident.generated_summary;
+
+  incident.generated_summary =
+    "Multiple critical alerts detected for database connection failures. Five affected services are experiencing connection issues as monitored by Grafana. The issue was first observed at 2024-10-01T13:40:12. The incident is currently active with multiple alerts firing simultaneously.";
+  const summary = incident.generated_summary;
 
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex w-full h-full flex-col justify-between">
       <div className="flex flex-col gap-2">
         <div className="flex justify-between text-sm">
           <Title className="">
@@ -120,38 +163,15 @@ export default function IncidentInformation({ incident }: Props) {
             {incident.user_generated_name || incident.ai_generated_name}
           </span>
         </div>
-        <div>
-          <h3 className="text-gray-500 text-sm">Summary</h3>
-          {!summary ? <p>No summary yet</p> : null}
-          {incident.user_summary ? <p>{incident.user_summary}</p> : null}
-
-          {incident.user_summary && incident.generated_summary ?
-            <Disclosure as="div" className="space-y-1">
-              <Disclosure.Button className="w-full flex justify-between items-center p-2">
-                {({ open }) => (
-                  <>
-                    <h4 className="text-gray-500 text-sm -ml-2">AI version</h4>
-                    <IoChevronUp
-                      className={classNames(
-                        {"rotate-180": open},
-                        "mr-2 text-slate-400"
-                      )}
-                    />
-                  </>
-                )}
-              </Disclosure.Button>
-
-              <Disclosure.Panel as="div" className="space-y-2 relative">
-                {incident.generated_summary}
-              </Disclosure.Panel>
-            </Disclosure>
-          : !incident.user_summary && incident.generated_summary ?
-              <div>
-                <h4 className="text-gray-500 text-sm -ml-2">AI version</h4>
-                {incident.generated_summary}
-              </div>
-            : null}
-
+        <div className="flex flex-col gap-2 max-w-3xl">
+          <Summary title="Summary" summary={summary} />
+          {incident.user_summary && incident.generated_summary ? (
+            <Summary
+              title="AI version"
+              summary={incident.generated_summary}
+              collapsable={true}
+            />
+          ) : null}
         </div>
         <div className="flex gap-4">
           {!!incident.start_time && (
