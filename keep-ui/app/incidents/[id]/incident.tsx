@@ -17,18 +17,21 @@ import { useRouter } from "next/navigation";
 import IncidentTimeline from "./incident-timeline";
 import { CiBellOn, CiChat2, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import IncidentChat from "./incident-chat";
 import { Workflows } from "components/icons";
 import IncidentWorkflowTable from "./incident-workflow-table";
+import { TopologyMap } from "@/app/topology/ui/map";
+import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
+import { useState } from "react";
+
 interface Props {
   incidentId: string;
 }
 
 // TODO: generate metadata with incident name
-
 export default function IncidentView({ incidentId }: Props) {
   const { data: incident, isLoading, error } = useIncident(incidentId);
+  const [index, setIndex] = useState(0);
 
   const router = useRouter();
 
@@ -41,7 +44,12 @@ export default function IncidentView({ incidentId }: Props) {
         <IncidentInformation incident={incident} />
       </div>
       <Card className="flex flex-col items-center justify-center gap-y-8 mt-10 p-4 relative mx-auto">
-        <TabGroup id="incidentTabs" defaultIndex={0}>
+        <TabGroup
+          id="incidentTabs"
+          index={index}
+          defaultIndex={0}
+          onIndexChange={setIndex}
+        >
           {/* Compensating for page-container padding, TODO: more robust solution  */}
           <TabList
             variant="line"
@@ -70,12 +78,12 @@ export default function IncidentView({ incidentId }: Props) {
               <IncidentTimeline incident={incident} />
             </TabPanel>
             <TabPanel>
-              <EmptyStateCard
-                title="Coming Soon..."
-                description="Topology view of the incident is coming soon."
-                buttonText="Go to Topology"
-                onClick={() => router.push("/topology")}
-              />
+              <TopologySearchProvider>
+                <TopologyMap
+                  services={incident.services}
+                  isVisible={index === 2}
+                />
+              </TopologySearchProvider>
             </TabPanel>
             <TabPanel>
               <IncidentWorkflowTable incident={incident} />

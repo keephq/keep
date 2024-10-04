@@ -1,7 +1,6 @@
 "use client";
 import React, {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -19,33 +18,27 @@ import {
   applyEdgeChanges,
   NodeChange,
   EdgeChange,
-  Position,
+  FitViewOptions,
 } from "@xyflow/react";
-import dagre, { graphlib } from "@dagrejs/dagre";
 import { ServiceNode } from "./service-node";
 import { Card, MultiSelect, MultiSelectItem } from "@tremor/react";
 import {
-  edgeLabelBgPaddingNoHover,
   edgeLabelBgStyleNoHover,
-  edgeLabelBgBorderRadiusNoHover,
   edgeMarkerEndNoHover,
   edgeLabelBgStyleHover,
   edgeMarkerEndHover,
-  nodeHeight,
-  nodeWidth,
 } from "./styles";
 import "./topology.css";
 import Loading from "../../../loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ServiceSearchContext } from "../../service-search-context";
+import { useTopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationNode } from "./application-node";
 import { ManageSelection } from "./manage-selection";
 import {
   useTopology,
   useTopologyApplications,
   TopologyApplication,
-  ServiceNodeType,
   TopologyNode,
   TopologyService,
   TopologyServiceMinimal,
@@ -54,129 +47,44 @@ import {
 import { TopologySearchAutocomplete } from "../TopologySearchAutocomplete";
 import "@xyflow/react/dist/style.css";
 import { areSetsEqual } from "@/utils/helpers";
+import { getLayoutedElements } from "@/app/topology/ui/map/getLayoutedElements";
+import { getNodesAndEdgesFromTopologyData } from "@/app/topology/ui/map/getNodesAndEdgesFromTopologyData";
 
-const getLayoutedElements = (nodes: TopologyNode[], edges: Edge[]) => {
-  const dagreGraph = new graphlib.Graph({});
-
-  // Function to create a Dagre layout
-  dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  dagreGraph.setGraph({
-    rankdir: "LR",
-    nodesep: 50,
-    ranksep: 200,
-  });
-
-  nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
-  });
-
-  edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
-  });
-
-  dagre.layout(dagreGraph);
-
-  nodes.forEach((node) => {
-    const gNode = dagreGraph.node(node.id);
-    node.position = {
-      x: gNode.x - gNode.width / 2,
-      y: gNode.y - gNode.height / 2,
-    };
-    node.style = {
-      ...node.style,
-      width: gNode.width as number,
-      height: gNode.height as number,
-    };
-    node.targetPosition = Position.Left;
-    node.sourcePosition = Position.Right;
-  });
-
-  return { nodes, edges };
+const defaultFitViewOptions: FitViewOptions = {
+  padding: 0.1,
+  minZoom: 0.3,
 };
 
-function getNodesAndEdgesFromTopologyData(
-  topologyData: TopologyService[],
-  applicationsMap: Map<string, TopologyApplication>
-) {
-  const nodeMap = new Map<string, TopologyNode>();
-  const edgeMap = new Map<string, Edge>();
-  // Create nodes from service definitions
-  for (const service of topologyData) {
-    const node: ServiceNodeType = {
-      id: service.service.toString(),
-      type: "service",
-      data: service,
-      position: { x: 0, y: 0 }, // Dagre will handle the actual positioning
-      selectable: true,
-    };
-    if (service.application_ids.length > 0) {
-      node.data.applications = service.application_ids
-        .map((id) => {
-          const app = applicationsMap.get(id);
-          if (!app) {
-            return null;
-          }
-          return {
-            id: app.id,
-            name: app.name,
-          };
-        })
-        .filter((a) => !!a);
-    }
-    nodeMap.set(service.service.toString(), node);
-    service.dependencies.forEach((dependency) => {
-      const dependencyService = topologyData.find(
-        (s) => s.service === dependency.serviceName
-      );
-      const edgeId = `${service.service}_${dependency.protocol}_${
-        dependencyService
-          ? dependencyService.service
-          : dependency.serviceId.toString()
-      }`;
-      if (!edgeMap.has(edgeId)) {
-        edgeMap.set(edgeId, {
-          id: edgeId,
-          source: service.service.toString(),
-          target: dependency.serviceName.toString(),
-          label: dependency.protocol === "unknown" ? "" : dependency.protocol,
-          animated: false,
-          labelBgPadding: edgeLabelBgPaddingNoHover,
-          labelBgStyle: edgeLabelBgStyleNoHover,
-          labelBgBorderRadius: edgeLabelBgBorderRadiusNoHover,
-          markerEnd: edgeMarkerEndNoHover,
-        });
-      }
-    });
-  }
-
-  return { nodeMap, edgeMap };
-}
+type TopologyMapProps = {
+  topologyServices?: TopologyService[];
+  topologyApplications?: TopologyApplication[];
+  providerIds?: string[];
+  services?: string[];
+  environment?: string;
+  isVisible?: boolean;
+};
 
 export function TopologyMap({
   topologyServices: initialTopologyServices,
   topologyApplications: initialTopologyApplications,
-  providerId: providerIdProp,
-  service: serviceProp,
+  providerIds: providerIdProp,
+  services: serviceProp,
   environment: environmentProp,
   isVisible = true,
-}: {
-  topologyServices?: TopologyService[];
-  topologyApplications?: TopologyApplication[];
-  providerId?: string;
-  service?: string;
-  environment?: string;
-  isVisible?: boolean;
-}) {
+}: TopologyMapProps) {
   const params = useSearchParams();
-  const providerId = providerIdProp || params?.get("providerId") || undefined;
-  const service = serviceProp || params?.get("service") || undefined;
+  const providerIds =
+    providerIdProp || params?.get("providerIds")?.split(",") || undefined;
+  const services =
+    serviceProp || params?.get("services")?.split(",") || undefined;
   const environment =
     environmentProp || params?.get("environment") || undefined;
 
+  const [initiallyFitted, setInitiallyFitted] = useState(false);
+
   const { topologyData, isLoading, error } = useTopology({
-    providerId,
-    service,
+    providerIds,
+    services,
     environment,
     initialData: initialTopologyServices,
   });
@@ -185,11 +93,13 @@ export function TopologyMap({
   });
   const router = useRouter();
 
-  const [selectedApplicationIds, setSelectedApplicationIds] = useState<
-    string[]
-  >([]);
-  const { selectedServiceId, setSelectedServiceId } =
-    useContext(ServiceSearchContext);
+  const {
+    selectedObjectId,
+    setSelectedObjectId,
+    selectedApplicationIds,
+    setSelectedApplicationIds,
+  } = useTopologySearchContext();
+
   const applicationMap = useMemo(() => {
     const map = new Map<string, TopologyApplication>();
     applications.forEach((app) => {
@@ -223,11 +133,10 @@ export function TopologyMap({
         nodesToFit.push(node);
       }
     }
-    // Wrap in setTimeout to be sure that reactFlow wil handle the fitView correctly
+    // setTimeout is used to be sure that reactFlow will handle the fitView correctly
     setTimeout(() => {
       reactFlowInstanceRef.current?.fitView({
-        padding: 10,
-        minZoom: 0.5,
+        padding: 0.2,
         nodes: nodesToFit,
         duration: 300,
       });
@@ -265,43 +174,55 @@ export function TopologyMap({
       value: TopologyServiceMinimal | TopologyApplicationMinimal;
     }) => {
       if ("service" in value) {
-        setSelectedServiceId(value.service);
+        setSelectedObjectId(value.service);
       } else {
         const application = applicationMap.get(value.id);
         if (application) {
-          setSelectedServiceId(application.id);
+          setSelectedObjectId(application.id);
         }
       }
     },
-    [applicationMap, setSelectedServiceId]
+    [applicationMap, setSelectedObjectId]
+  );
+
+  // if the topology is not visible on first load, we need to fit the view manually
+  useEffect(
+    function fallbackFitView() {
+      if (!isVisible || initiallyFitted) return;
+      setTimeout(() => {
+        reactFlowInstanceRef.current?.fitView(defaultFitViewOptions);
+      }, 0);
+      setInitiallyFitted(true);
+    },
+    [isVisible, initiallyFitted]
   );
 
   useEffect(() => {
-    if (!isVisible || !selectedServiceId || selectedServiceId === "") {
+    if (!isVisible || !selectedObjectId || selectedObjectId === "") {
       return;
     }
-    const node = reactFlowInstanceRef.current?.getNode(selectedServiceId);
+    const node = reactFlowInstanceRef.current?.getNode(selectedObjectId);
     if (node) {
-      highlightNodes([selectedServiceId]);
-      fitViewToServices([selectedServiceId]);
-      setSelectedServiceId(null);
+      highlightNodes([selectedObjectId]);
+      fitViewToServices([selectedObjectId]);
+      setSelectedObjectId(null);
       return;
     }
-    const application = applicationMap.get(selectedServiceId);
+    const application = applicationMap.get(selectedObjectId);
     if (!application) {
       return;
     }
     const serviceIds = application.services.map((s) => s.service);
     highlightNodes(serviceIds);
     fitViewToServices(serviceIds);
-    setSelectedServiceId(null);
+    setSelectedObjectId(null);
   }, [
     isVisible,
     applicationMap,
     fitViewToServices,
     highlightNodes,
-    selectedServiceId,
-    setSelectedServiceId,
+    selectedObjectId,
+    setSelectedObjectId,
   ]);
 
   const previousNodesIds = useRef<Set<string>>(new Set());
@@ -350,6 +271,7 @@ export function TopologyMap({
     function watchSelectedApplications() {
       if (selectedApplicationIds.length === 0) {
         setNodes((prev) => prev.map((n) => ({ ...n, hidden: false })));
+        setEdges((prev) => prev.map((e) => ({ ...e, hidden: false })));
         return;
       }
       // Get all service nodes that are part of selected applications
@@ -360,28 +282,39 @@ export function TopologyMap({
             : []
         )
       );
-      // Hide all nodes that are not part of selected applications
-      setNodes((prev) => {
-        const selectedNodes: TopologyNode[] = [];
-        const newNodes = prev.map((n) => {
+      // Hide all nodes and edges that are not part of selected applications
+      setNodes((prev) =>
+        prev.map((n) => {
           const isSelectedService = selectedServiceNodesIds.has(n.id);
-          if (n.type === "service" && isSelectedService) {
-            selectedNodes.push(n);
-          }
           return {
             ...n,
             hidden: n.type === "service" && !isSelectedService,
           };
-        });
-        // Fit view to selected nodes
-        // TODO: handle case when nodes are two far apart and minZoom preventing fitView
-        reactFlowInstanceRef.current?.fitView({
-          padding: 10,
-          minZoom: 0.5,
-          nodes: selectedNodes,
-          duration: 300,
-        });
-        return newNodes;
+        })
+      );
+      setEdges((prev) =>
+        prev.map((e) => {
+          const isSelectedService =
+            selectedServiceNodesIds.has(e.source) &&
+            selectedServiceNodesIds.has(e.target);
+          return {
+            ...e,
+            hidden: !isSelectedService,
+          };
+        })
+      );
+
+      const nodesToFit: TopologyNode[] = Array.from(
+        selectedServiceNodesIds.values()
+      )
+        .map((id) => reactFlowInstanceRef.current?.getNode(id))
+        .filter((node) => !!node);
+      // Then fit view to selected nodes
+      reactFlowInstanceRef.current?.fitView({
+        padding: 10,
+        minZoom: 0.5,
+        nodes: nodesToFit,
+        duration: 300,
       });
     },
     [applications, selectedApplicationIds]
@@ -412,8 +345,8 @@ export function TopologyMap({
         <TopologySearchAutocomplete
           wrapperClassName="w-full flex-1"
           includeApplications={true}
-          providerId={providerId}
-          service={service}
+          providerIds={providerIds}
+          services={services}
           environment={environment}
           placeholder="Search for a service or application"
           onSelect={handleSelectFromSearch}
@@ -422,6 +355,7 @@ export function TopologyMap({
         <div className="basis-1/3 relative z-30">
           <MultiSelect
             placeholder="Show application"
+            value={selectedApplicationIds}
             onValueChange={setSelectedApplicationIds}
           >
             {applications.map((app) => (
@@ -432,18 +366,18 @@ export function TopologyMap({
           </MultiSelect>
         </div>
       </div>
-      <Card className="p-0 mx-auto h-full my-4 relative overflow-hidden flex flex-col">
+      <Card className="p-0 mx-auto h-[800px] my-4 relative overflow-hidden flex flex-col">
         <ReactFlowProvider>
           <ManageSelection />
           <ReactFlow
             nodes={nodes}
             edges={edges}
             minZoom={0.1}
-            defaultViewport={{ x: 0, y: 0, zoom: 0.5 }}
             snapToGrid
+            fitView
+            fitViewOptions={defaultFitViewOptions}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            fitViewOptions={{ padding: 0.3 }}
             zoomOnDoubleClick={true}
             onEdgeMouseEnter={(_event, edge) => onEdgeHover("enter", edge)}
             onEdgeMouseLeave={(_event, edge) => onEdgeHover("leave", edge)}
