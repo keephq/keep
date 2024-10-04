@@ -3,7 +3,6 @@ import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "./models";
 import { Button, Title, Card, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-// import AlertMenu from "./alert-menu";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { TopologyMap } from "../topology/ui/map";
@@ -111,9 +110,8 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                 <Title>Related Services</Title>
                 <TopologySearchProvider>
                   <TopologyMap
-                    providerId={alert.providerId || ""}
-                    service={alert.service || ""}
-                    environment={"unknown"}
+                    providerIds={alert.providerId ? [alert.providerId] : []}
+                    services={alert.service ? [alert.service] : []}
                   />
                 </TopologySearchProvider>
               </div>
