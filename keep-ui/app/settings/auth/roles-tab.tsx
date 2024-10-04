@@ -19,7 +19,7 @@ import { useScopes } from "utils/hooks/useScopes";
 import { useRoles } from "utils/hooks/useRoles";
 import React from "react";
 import RoleSidebar from "./roles-sidebar";
-import Loading from "../../loading";
+import Loading from "@/components/loading";
 import { Role } from "app/settings/models";
 import "./multiselect.css";
 import { TrashIcon } from "@heroicons/react/24/outline";

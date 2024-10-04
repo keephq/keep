@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import { NextAuthProvider } from "./auth-provider";
 import { Mulish } from "next/font/google";
 
@@ -14,6 +14,7 @@ const mulish = Mulish({
 import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
 import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPollingContext";
+import Loading from "@/components/loading";
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -29,7 +30,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             <Navbar />
             {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
             <main className="page-container flex flex-col col-start-3 overflow-auto">
-              <div className="flex-1">{children}</div>
+              <div className="flex-1">
+                <Suspense fallback={<Loading />}>{children}</Suspense>
+              </div>
               <ToastContainer />
             </main>
           </TopologyPollingContextProvider>

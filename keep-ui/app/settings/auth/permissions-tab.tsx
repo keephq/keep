@@ -12,7 +12,7 @@ import {
   Badge,
   Button,
 } from "@tremor/react";
-import Loading from "app/loading";
+import Loading from "@/components/loading";
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";

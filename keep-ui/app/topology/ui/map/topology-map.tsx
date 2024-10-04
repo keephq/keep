@@ -29,7 +29,7 @@ import {
   edgeMarkerEndHover,
 } from "./styles";
 import "./topology.css";
-import Loading from "../../../loading";
+import Loading from "@/components/loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTopologySearchContext } from "../../TopologySearchContext";

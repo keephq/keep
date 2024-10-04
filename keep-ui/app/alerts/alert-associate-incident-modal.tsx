@@ -8,7 +8,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { getApiURL } from "../../utils/apiUrl";
 import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
-import Loading from "../loading";
+import Loading from "@/components/loading";
 import { AlertDto } from "./models";
 
 interface AlertAssociateIncidentModalProps {

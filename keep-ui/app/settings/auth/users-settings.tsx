@@ -6,7 +6,7 @@ import {
   Button,
   TextInput,
 } from "@tremor/react";
-import Loading from "app/loading";
+import Loading from "@/components/loading";
 import { User as AuthUser } from "next-auth";
 import { TiUserAdd } from "react-icons/ti";
 import { AuthenticationType } from "utils/authenticationType";

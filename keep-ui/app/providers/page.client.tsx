@@ -11,7 +11,7 @@ import { KeepApiError } from "../error";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, Suspense, useContext, useEffect } from "react";
 import useSWR from "swr";
-import Loading from "../loading";
+import Loading from "@/components/loading";
 import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";

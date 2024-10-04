@@ -10,7 +10,6 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
-import { SortingState } from "@tanstack/react-table";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -27,13 +26,11 @@ export const useIncidents = (
 ) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
+  const url = `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
+    sorting.desc ? "-" : ""
+  }${sorting.id}`;
   return useSWR<PaginatedIncidentsDto>(
-    () =>
-      session
-        ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
-            sorting.desc ? "-" : ""
-          }${sorting.id}`
-        : null,
+    () => (session ? url : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

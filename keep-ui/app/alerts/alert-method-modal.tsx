@@ -8,7 +8,7 @@ import {
 import { getSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
-import Loading from "app/loading";
+import Loading from "@/components/loading";
 import {
   Button,
   TextInput,

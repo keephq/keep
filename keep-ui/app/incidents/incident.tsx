@@ -1,8 +1,8 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import Loading from "app/loading";
+import Loading from "@/components/loading";
 import { useState } from "react";
-import { IncidentDto } from "./models";
+import { IncidentDto, PaginatedIncidentsDto } from "./models";
 import CreateOrUpdateIncident from "./create-or-update-incident";
 import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
@@ -10,33 +10,56 @@ import { IncidentPlaceholder } from "./IncidentPlaceholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "./predicted-incidents-table";
-import {SortingState} from "@tanstack/react-table";
+import { SortingState } from "@tanstack/react-table";
+import {
+  defaultPagination,
+  defaultSorting,
+  Pagination,
+} from "@/app/incidents/api";
 
-interface Pagination {
-  limit: number;
-  offset: number;
-}
+type IncidentProps = {
+  initialIncidents?: PaginatedIncidentsDto;
+  initialPredictedIncidents?: PaginatedIncidentsDto;
+};
 
-export default function Incident() {
-  const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
-    limit: 20,
-    offset: 0,
-  });
+export default function Incident({
+  initialIncidents,
+  initialPredictedIncidents,
+}: IncidentProps) {
+  const [incidentsPagination, setIncidentsPagination] =
+    useState<Pagination>(defaultPagination);
 
-  const [incidentsSorting, setIncidentsSorting] = useState<SortingState>([
-    { id: "creation_time", desc: true },
-  ]);
+  const [incidentsSorting, setIncidentsSorting] =
+    useState<SortingState>(defaultSorting);
 
   const {
     data: incidents,
     isLoading,
     mutate: mutateIncidents,
-  } = useIncidents(true, incidentsPagination.limit, incidentsPagination.offset, incidentsSorting[0]);
+  } = useIncidents(
+    true,
+    incidentsPagination.limit,
+    incidentsPagination.offset,
+    incidentsSorting[0],
+    {
+      revalidateOnFocus: false,
+      fallbackData: initialIncidents,
+    }
+  );
   const {
     data: predictedIncidents,
     isLoading: isPredictedLoading,
     mutate: mutatePredictedIncidents,
-  } = useIncidents(false);
+  } = useIncidents(
+    false,
+    incidentsPagination.limit,
+    incidentsPagination.offset,
+    incidentsSorting[0],
+    {
+      revalidateOnFocus: false,
+      fallbackData: initialPredictedIncidents,
+    }
+  );
   usePollIncidents(mutateIncidents);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
