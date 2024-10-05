@@ -1,7 +1,7 @@
 
 # UNDER CONSTRUCTION
 
-# First, create a kubernetes cluster
+# First, create a Kubernetes cluster
 
 
 # Install Keep
@@ -35,11 +35,11 @@ kubectl -n keep exec -it keep-database-659c69689-vxhkz  -- bash -c "mysql -u roo
 
 # No Load
 ## 500k alerts - 1Gi/250m cpu: get_last_alerts 2 minutes and 30 seconds
-- Keep Backend Workers get timeout after a one minutes (500's for preset and alert endpoints)
+- Keep Backend Workers get a timeout after one minute (500's for preset and alert endpoints)
 ## 500k alerts - 2Gi/500m cpu:
 - default mysql: get_last_alerts 1 minutes and 30 seconds
 - innodb_buffer_pool_size = 4294967296: 25 seconds, 3 seconds after cache
-## 500k alerts - 4Gi/1 cpu: get_last_alerts 2 minutes and 30 seconds
+## 500k alerts - 4Gi/1 CPU: get_last_alerts 2 minutes and 30 seconds
 -
 ## 500k alerts - 8Gi/1 cpu: get_last_alerts 2 minutes and 30 seconds
 
