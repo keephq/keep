@@ -14,22 +14,18 @@
     <a href="https://codecov.io/gh/keephq/keep" >
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
+    <a href="https://github.com/keephq/keep/stargazers" target="_blank">
+        <img src="https://img.shields.io/github/stars/keephq/keep.svg" alt="GitHub stars">
+    </a>
 </div>
 <p align="center">
-    <a href="#why-keep">Why Keep?</a>
-    ·
-    <a href="#getting-started">Getting started</a>
-    ·
-    <a href="#supported-providers">Supported tools and integrations</a>
-    ·
-    <a href="https://docs.keephq.dev">Docs</a>
-    ·
-    <a href="https://platform.keephq.dev">Try it out</a>
-    ·
-    <a href="https://keephq.dev">Website</a>
-    ·
-    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
-    ·
+    <a href="#why-keep">Why Keep?</a> | 
+    <a href="#getting-started">Getting started</a> | 
+    <a href="#supported-providers">Supported tools and integrations</a> | 
+    <a href="https://docs.keephq.dev">Docs</a> | 
+    <a href="https://platform.keephq.dev">Try it out</a> | 
+    <a href="https://keephq.dev">Website</a> | 
+    <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a> | 
     <a href="https://slack.keephq.dev">Slack Community</a>
 </p>
 
@@ -101,7 +97,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
 ## Supported Providers
 > Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we will add it in the blink of an eye.
 
-<h3 align="center">Observability tools</h3>
+<h4 align="center">Observability tools</h4>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/newrelic-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -140,7 +136,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/coralogix-icon.png?raw=true" />
 </p>
-<h3 align="center">Databases and data warehouses</h3>
+<h4 align="center">Databases and data warehouses</h5>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/bigquery-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -152,7 +148,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/clickhouse-icon.png?raw=true"/>
 </p>
-<h3 align="center">Communication platforms</h2>
+<h4 align="center">Communication platforms</h4>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/slack-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -174,7 +170,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/sendgrid-icon.png?raw=true"/>
 </p>
-<h3 align="center">Incident Management tools</h2>
+<h4 align="center">Incident Management tools</h4>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/pagerduty-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -208,7 +204,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/webhook-icon.png?raw=true"/>
 </p>
-<h3 align="center">Ticketing tools</h2>
+<h align="center">Ticketing tools</h4>
 <p align="center">
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/jira-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -248,7 +244,7 @@ curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
 The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
 
 #### Spinning up Keep with Helm on Kubernetes/Openshift
-To install Keep to your Kubernetes ease free with Helm, run the following commands:
+To install Keep to your Kubernetes ease-free with Helm, run the following commands:
 
 ```shell
 helm repo add keephq https://keephq.github.io/helm-charts
@@ -259,23 +255,31 @@ helm install keep keephq/keep
 More information about the Helm chart can be found [here](https://github.com/keephq/helm-charts).
 
 #### Local development
-You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
+You can also start to Keep within your favorite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
 
 #### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
 
 ## 🫵 Keepers
 
 ### Top Contributors
-A special thanks to our top contributors who help us make Keep great. You are more than awesome!
+A special thanks to our top contributors who help us make Keep Great. You are more than awesome!
 
 - [Furkan](https://github.com/pehlicd)
 - [Asharon](https://github.com/asharonbaltazar)
 
 Want to become a top contributor? Join our Slack and DM Tal, Shahar, or Furkan.
 
-### Contributors
+## Contributors
 Thank you for contributing and continuously making <b>Keep</b> better, <b>you're awesome</b> 🫶
 
 <a href="https://github.com/keephq/keep/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=keephq/keep" />
 </a>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=keephq/keep&type=Timeline)](https://star-history.com/#keephq/keep&Timeline)
+
+---
+
+<p align="center">If you find [keephq/keep](https://github.com/keephq/keep) helpful, please give us a ⭐️!</p>
