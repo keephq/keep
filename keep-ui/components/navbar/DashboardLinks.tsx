@@ -141,6 +141,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
             )}
           </SortableContext>
         </DndContext>
+        {/* TODO: use link instead of button */}
         <Button
           size="xs"
           color="orange"
