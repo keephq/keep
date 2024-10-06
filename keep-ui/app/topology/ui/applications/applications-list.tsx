@@ -9,7 +9,10 @@ import {
   TopologyApplication,
 } from "@/app/topology/model";
 import { Card, Subtitle, Title } from "@tremor/react";
-import { ServiceSearchContext } from "../../service-search-context";
+import {
+  TopologySearchContext,
+  useTopologySearchContext,
+} from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/topology/ui/applications/application-modal";
 
 type ModalState = {
@@ -33,7 +36,8 @@ export function ApplicationsList({
     useTopologyApplications({
       initialData: initialApplications,
     });
-  const { setSelectedServiceId } = useContext(ServiceSearchContext);
+  const { setSelectedObjectId, setSelectedApplicationIds } =
+    useTopologySearchContext();
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     actionType: "create",
@@ -147,7 +151,8 @@ export function ApplicationsList({
                       variant="light"
                       color="orange"
                       onClick={() => {
-                        setSelectedServiceId(application.id);
+                        setSelectedApplicationIds([application.id]);
+                        setSelectedObjectId(application.id);
                       }}
                     >
                       Show on map
