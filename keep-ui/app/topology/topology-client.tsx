@@ -27,7 +27,7 @@ export function TopologyPageClient({
   return (
     <TabGroup
       id="topology-tabs"
-      className="h-[calc(100%-7rem)] flex flex-col"
+      className="flex flex-col"
       index={tabIndex}
       onIndexChange={setTabIndex}
     >
@@ -36,8 +36,9 @@ export function TopologyPageClient({
         <Tab>Applications</Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
-        <TabPanel className="flex-1">
+        <TabPanel className="h-[calc(100vh-10rem)]">
           <TopologyMap
+            standalone
             topologyApplications={applications}
             topologyServices={topologyServices}
             isVisible={tabIndex === 0}

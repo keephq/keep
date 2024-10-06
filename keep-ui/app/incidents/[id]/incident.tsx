@@ -77,7 +77,7 @@ export default function IncidentView({ incidentId }: Props) {
             <TabPanel>
               <IncidentTimeline incident={incident} />
             </TabPanel>
-            <TabPanel>
+            <TabPanel className="pt-3 h-[calc(100vh-28rem)]">
               <TopologySearchProvider>
                 <TopologyMap
                   services={incident.services}

@@ -22,6 +22,7 @@ import {
 } from "@xyflow/react";
 import { ServiceNode } from "./service-node";
 import { Card, MultiSelect, MultiSelectItem } from "@tremor/react";
+import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import {
   edgeLabelBgStyleNoHover,
   edgeMarkerEndNoHover,
@@ -30,8 +31,8 @@ import {
 } from "./styles";
 import "./topology.css";
 import Loading from "../../../loading";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import { useRouter, useSearchParams } from "next/navigation";
+import { EmptyStateCard, Link } from "@/components/ui";
+import { useRouter } from "next/navigation";
 import { useTopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationNode } from "./application-node";
 import { ManageSelection } from "./manage-selection";
@@ -62,24 +63,18 @@ type TopologyMapProps = {
   services?: string[];
   environment?: string;
   isVisible?: boolean;
+  standalone?: boolean;
 };
 
 export function TopologyMap({
   topologyServices: initialTopologyServices,
   topologyApplications: initialTopologyApplications,
-  providerIds: providerIdProp,
-  services: serviceProp,
-  environment: environmentProp,
+  providerIds,
+  services,
+  environment,
   isVisible = true,
+  standalone = false,
 }: TopologyMapProps) {
-  const params = useSearchParams();
-  const providerIds =
-    providerIdProp || params?.get("providerIds")?.split(",") || undefined;
-  const services =
-    serviceProp || params?.get("services")?.split(",") || undefined;
-  const environment =
-    environmentProp || params?.get("environment") || undefined;
-
   const [initiallyFitted, setInitiallyFitted] = useState(false);
 
   const { topologyData, isLoading, error } = useTopology({
@@ -139,6 +134,7 @@ export function TopologyMap({
         padding: 0.2,
         nodes: nodesToFit,
         duration: 300,
+        maxZoom: 1,
       });
     }, 0);
   }, []);
@@ -229,7 +225,9 @@ export function TopologyMap({
 
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
-      if (!topologyData) return;
+      if (!topologyData) {
+        return;
+      }
 
       const { nodeMap, edgeMap } = getNodesAndEdgesFromTopologyData(
         topologyData,
@@ -340,8 +338,8 @@ export function TopologyMap({
   }
 
   return (
-    <>
-      <div className="flex justify-between gap-4 mb-4">
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-baseline gap-4">
         <TopologySearchAutocomplete
           wrapperClassName="w-full flex-1"
           includeApplications={true}
@@ -365,8 +363,20 @@ export function TopologyMap({
             ))}
           </MultiSelect>
         </div>
+        {!standalone ? (
+          <div>
+            <Link
+              icon={ArrowUpRightIcon}
+              iconPosition="right"
+              className="mr-2"
+              href="/topology"
+            >
+              Full topology map
+            </Link>
+          </div>
+        ) : null}
       </div>
-      <Card className="p-0 mx-auto h-[800px] my-4 relative overflow-hidden flex flex-col">
+      <Card className="p-0 mx-auto h-[800px] relative overflow-hidden flex flex-col">
         <ReactFlowProvider>
           <ManageSelection />
           <ReactFlow
@@ -411,6 +421,6 @@ export function TopologyMap({
             </>
           ))}
       </Card>
-    </>
+    </div>
   );
 }
