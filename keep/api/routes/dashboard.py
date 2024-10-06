@@ -1,3 +1,6 @@
+import json
+import logging
+import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -31,6 +34,41 @@ class DashboardResponseDTO(BaseModel):
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def provision_dashboards(tenant_id: str):
+    dashboards_raw = json.loads(os.environ.get("KEEP_DASHBOARDS", "[]"))
+    logger.info(
+        "Provisioning Dashboards", extra={"num_of_dashboards": len(dashboards_raw)}
+    )
+    dashboards_to_provision = [
+        DashboardCreateDTO.parse_obj(dashboard) for dashboard in dashboards_raw
+    ]
+    for dashboard in dashboards_to_provision:
+        logger.info(
+            "Provisioning Dashboard",
+            extra={"dashboard_name": dashboard.dashboard_name},
+        )
+        try:
+            create_dashboard_db(
+                tenant_id,
+                dashboard.dashboard_name,
+                dashboard.dashboard_config,
+                "system",
+            )
+            logger.info(
+                "Provisioned Dashboard",
+                extra={"dashboard_name": dashboard.dashboard_name},
+            )
+        except Exception:
+            logger.exception(
+                "Failed to provision dashboard",
+                extra={"dashboard_name": dashboard.dashboard_name},
+            )
+    logger.info(
+        "Provisioned Dashboards", extra={"num_of_dashboards": len(dashboards_raw)}
+    )
 
 
 @router.get("", response_model=List[DashboardResponseDTO])
