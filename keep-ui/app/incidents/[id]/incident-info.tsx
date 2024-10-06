@@ -4,7 +4,7 @@ import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import React, { useState } from "react";
 import { MdBlock, MdDone, MdModeEdit } from "react-icons/md";
-import { useIncident } from "../../../utils/hooks/useIncidents";
+import { useIncident } from "@/utils/hooks/useIncidents";
 import {
   deleteIncident,
   handleConfirmPredictedIncident,
@@ -13,11 +13,55 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
+import { Disclosure } from "@headlessui/react";
+import classNames from "classnames";
+import { IoChevronDown } from "react-icons/io5";
 import IncidentChangeStatusModal from "@/app/incidents/incident-change-status-modal";
 import {STATUS_ICONS} from "@/app/incidents/statuses";
 
 interface Props {
   incident: IncidentDto;
+}
+
+function Summary({
+  title,
+  summary,
+  collapsable,
+  className,
+}: {
+  title: string;
+  summary: string;
+  collapsable?: boolean;
+  className?: string;
+}) {
+  if (collapsable) {
+    return (
+      <Disclosure as="div" className={classNames("space-y-1", className)}>
+        <Disclosure.Button>
+          {({ open }) => (
+            <h4 className="text-gray-500 text-sm inline-flex justify-between items-center gap-1">
+              <span>{title}</span>
+              <IoChevronDown
+                className={classNames({ "rotate-180": open }, "text-slate-400")}
+              />
+            </h4>
+          )}
+        </Disclosure.Button>
+
+        <Disclosure.Panel as="div" className="space-y-2 relative">
+          {summary}
+        </Disclosure.Panel>
+      </Disclosure>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <h3 className="text-gray-500 text-sm">{title}</h3>
+      {/*TODO: suggest generate summary if it's empty*/}
+      {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+    </div>
+  );
 }
 
 export default function IncidentInformation({ incident }: Props) {
@@ -58,7 +102,7 @@ export default function IncidentInformation({ incident }: Props) {
   else if (severity === "warning") severityColor = "yellow";
 
   return (
-    <div className="flex h-full flex-col justify-between">
+    <div className="flex w-full h-full flex-col justify-between">
       <div className="flex flex-col gap-2">
         <div className="flex justify-between text-sm gap-1">
           <Title className="flex-grow items-center">
@@ -141,9 +185,15 @@ export default function IncidentInformation({ incident }: Props) {
             </div>
           </div>
         </div>
-        <div>
-          <h3 className="text-gray-500 text-sm">Summary</h3>
-          {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+        <div className="flex flex-col gap-2 max-w-3xl">
+          <Summary title="Summary" summary={summary} />
+          {incident.user_summary && incident.generated_summary ? (
+            <Summary
+              title="AI version"
+              summary={incident.generated_summary}
+              collapsable={true}
+            />
+          ) : null}
         </div>
         <div className="flex gap-4">
           {!!incident.start_time && (
