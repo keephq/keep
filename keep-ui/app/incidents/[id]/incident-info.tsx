@@ -93,11 +93,7 @@ export default function IncidentInformation({ incident }: Props) {
   };
 
   const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
-  // const summary = incident.user_summary || incident.generated_summary;
-
-  incident.generated_summary =
-    "Multiple critical alerts detected for database connection failures. Five affected services are experiencing connection issues as monitored by Grafana. The issue was first observed at 2024-10-01T13:40:12. The incident is currently active with multiple alerts firing simultaneously.";
-  const summary = incident.generated_summary;
+  const summary = incident.user_summary || incident.generated_summary;
 
   const severity = incident.severity;
   let severityColor;
