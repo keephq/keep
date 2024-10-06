@@ -54,8 +54,8 @@ def provision_dashboards(tenant_id: str):
             create_dashboard_db(
                 tenant_id,
                 dashboard.dashboard_name,
-                dashboard.dashboard_config,
                 "system",
+                dashboard.dashboard_config,
             )
             logger.info(
                 "Provisioned Dashboard",
