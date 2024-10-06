@@ -80,7 +80,8 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
         incident.id,
         name,
         summary,
-        incident.assignee
+        incident.assignee,
+        true
       );
       if (response.ok) {
         mutate();
