@@ -76,7 +76,7 @@
     "commander": "^4.1.1",
     "concat-map": "^0.0.1",
     "convert-source-map": "^1.9.0",
-    "cookie": "^0.5.0",
+    "cookie": "^0.7.0",
     "cosmiconfig": "^7.1.0",
     "cross-spawn": "^7.0.3",
     "css-unit-converter": "^1.1.2",
