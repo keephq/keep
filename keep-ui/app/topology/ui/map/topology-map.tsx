@@ -338,7 +338,7 @@ export function TopologyMap({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 h-full">
       <div className="flex justify-between items-baseline gap-4">
         <TopologySearchAutocomplete
           wrapperClassName="w-full flex-1"
@@ -355,6 +355,7 @@ export function TopologyMap({
             placeholder="Show application"
             value={selectedApplicationIds}
             onValueChange={setSelectedApplicationIds}
+            disabled={!applications.length}
           >
             {applications.map((app) => (
               <MultiSelectItem key={app.id} value={app.id}>
@@ -376,7 +377,7 @@ export function TopologyMap({
           </div>
         ) : null}
       </div>
-      <Card className="p-0 mx-auto h-[800px] relative overflow-hidden flex flex-col">
+      <Card className="p-0 h-full mx-auto relative overflow-hidden flex flex-col">
         <ReactFlowProvider>
           <ManageSelection />
           <ReactFlow
