@@ -125,7 +125,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
           onDragEnd={onDragEnd}
         >
           <SortableContext items={dashboards.map((dashboard) => dashboard.id)}>
-            {dashboards && dashboards.length ?
+            {dashboards && dashboards.length ? (
               dashboards.map((dashboard) => (
                 <DashboardLink
                   key={dashboard.id}
@@ -133,18 +133,25 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
                   pathname={pathname}
                   deleteDashboard={deleteDashboard}
                 />
-              )): <Text className="text-xs">Dashboards will appear here when saved.</Text> }
+              ))
+            ) : (
+              <Text className="text-xs max-w-[200px] px-2">
+                Dashboards will appear here when saved.
+              </Text>
+            )}
           </SortableContext>
         </DndContext>
-        <div className="flex flex-col justify-center items-center">
+        {/* TODO: use link instead of button */}
         <Button
           size="xs"
           color="orange"
           variant="secondary"
-          className="h-5"
+          className="h-5 mx-2"
           onClick={handleCreateDashboard}
           icon={PlusIcon}
-        /></div>
+        >
+          Add Dashboard
+        </Button>
       </Disclosure.Panel>
     </Disclosure>
   );
