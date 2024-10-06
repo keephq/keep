@@ -15,8 +15,8 @@ import {
 
 type BaseProps = {
   excludeServiceIds?: string[];
-  providerId?: string;
-  service?: string;
+  providerIds?: string[];
+  services?: string[];
   environment?: string;
 };
 
@@ -38,13 +38,13 @@ type TopologySearchAutocompleteProps = WithApplications | WithoutApplications;
 export function TopologySearchAutocomplete({
   includeApplications,
   excludeServiceIds,
-  providerId,
-  service,
+  providerIds,
+  services,
   environment,
   onSelect,
   ...props
 }: Omit<TopologySearchAutocompleteProps, "options">) {
-  const { topologyData } = useTopology({ providerId, service, environment });
+  const { topologyData } = useTopology({ providerIds, services, environment });
   const { applications } = useTopologyApplications();
   const searchOptions = useMemo(() => {
     const serviceOptions =

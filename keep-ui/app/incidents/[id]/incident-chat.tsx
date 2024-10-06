@@ -12,7 +12,7 @@ import {
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import "./incident-chat.css";
-import Loading from "app/loading";
+import { Loading } from "@/components/Loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { updateIncidentRequest } from "../create-or-update-incident";
 import { useSession } from "next-auth/react";
@@ -110,6 +110,7 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
             "rgb(249 115 22 / var(--tw-bg-opacity))",
         } as CopilotKitCSSProperties
       }
+      className="max-w-3xl mx-auto"
     >
       <CopilotChat
         className="-mx-2"

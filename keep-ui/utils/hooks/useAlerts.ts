@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AlertDto } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
@@ -53,17 +53,13 @@ export const useAlerts = () => {
     presetName: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
-      new Map()
-    );
-
     const {
       data: alertsFromEndpoint = [],
       mutate,
       isLoading,
     } = useAllAlerts(presetName, options);
 
-    useEffect(() => {
+    const data = useMemo(() => {
       if (alertsFromEndpoint.length) {
         const newAlertsMap = new Map<string, AlertDto>(
           alertsFromEndpoint.map((alertFromEndpoint) => [
@@ -77,12 +73,12 @@ export const useAlerts = () => {
           ])
         );
 
-        setAlertsMap(newAlertsMap);
+        return Array.from(newAlertsMap.values());
       }
     }, [alertsFromEndpoint]);
 
     return {
-      data: Array.from(alertsMap.values()),
+      data,
       mutate: mutate,
       isLoading: isLoading,
     };

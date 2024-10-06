@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useMemo, useState } from "react";
 import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -25,7 +26,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "dismissed",
@@ -35,7 +36,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "groups",
@@ -45,15 +46,16 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
 ];
 
 type AlertsProps = {
   presetName: string;
+  initialAlerts: AlertDto[] | null;
 };
 
-export default function Alerts({ presetName }: AlertsProps) {
+export default function Alerts({ presetName, initialAlerts }: AlertsProps) {
   const { usePresetAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -92,7 +94,10 @@ export default function Alerts({ presetName }: AlertsProps) {
     data: alerts = [],
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
-  } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+  } = usePresetAlerts(selectedPreset ? selectedPreset.name : "", {
+    revalidateOnFocus: false,
+    fallbackData: initialAlerts,
+  });
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     if (fingerprint) {
