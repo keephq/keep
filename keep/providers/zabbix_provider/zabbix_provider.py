@@ -576,7 +576,7 @@ class ZabbixProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         environment = "unknown"
         tags_raw = event.pop("tags", "[]")

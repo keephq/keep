@@ -251,7 +251,7 @@ class StatuscakeProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
 
         status = StatuscakeProvider.STATUS_MAP.get(

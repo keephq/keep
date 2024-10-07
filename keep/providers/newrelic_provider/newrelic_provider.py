@@ -430,7 +430,7 @@ class NewrelicProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
         logger = logging.getLogger(__name__)

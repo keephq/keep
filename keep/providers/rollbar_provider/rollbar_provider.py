@@ -155,7 +155,7 @@ class RollbarProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         item_data = event["data"]["item"]
         occurrence_data = event["data"]["occurrence"]

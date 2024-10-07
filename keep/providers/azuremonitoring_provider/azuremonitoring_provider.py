@@ -62,7 +62,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         essentials = event.get("data", {}).get("essentials", {})
         alert_context = event.get("data", {}).get("alertContext", {})

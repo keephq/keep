@@ -789,7 +789,7 @@ class DatadogProvider(BaseTopologyProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseTopologyProvider" | None = None
+        event: dict, provider_instance: "BaseTopologyProvider" = None
     ) -> AlertDto:
         tags_list = event.get("tags", "").split(",")
         tags_list.remove("monitor")

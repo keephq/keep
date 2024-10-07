@@ -144,7 +144,7 @@ class PingdomProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         # https://pingdom.com/resources/webhooks/#Examples-of-webhook-JSON-output-for-uptime-checks
 

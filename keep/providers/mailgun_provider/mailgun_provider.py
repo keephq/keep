@@ -34,13 +34,13 @@ class MailgunProviderAuthConfig:
         },
         default="",
     )
-    extraction: typing.Optional[dict[str, str]] = dataclasses.field(
+    extraction: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
             "description": "Extraction Rules",
             "type": "form",
             "required": False,
-            "hint": "Read how extraction works in the documentation",
+            "hint": "Read more about extraction in Keep's Mailgun documentation",
         },
     )
 
@@ -118,7 +118,7 @@ class MailgunProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "MailgunProvider" | None = None
+        event: dict, provider_instance: "MailgunProvider" = None
     ) -> AlertDto:
         name = event["subject"]
         source = event["from"]
@@ -143,12 +143,26 @@ class MailgunProvider(BaseProvider):
         if provider_instance:
             extraction_rules = provider_instance.authentication_config.extraction
             if extraction_rules:
-                for key, regex in extraction_rules.items():
-                    if key in event:
-                        match = re.search(regex, event[key])
-                        if match:
-                            for group_name, group_value in match.groupdict().items():
-                                setattr(alert, group_name, group_value)
+                for rule in extraction_rules:
+                    key = rule.get("key")
+                    regex = rule.get("value")
+                    if key in dict(event):
+                        try:
+                            match = re.search(regex, event[key])
+                            if match:
+                                for (
+                                    group_name,
+                                    group_value,
+                                ) in match.groupdict().items():
+                                    setattr(alert, group_name, group_value)
+                        except Exception as e:
+                            logging.error(
+                                f"Error extracting key {key} with regex {regex}: {e}",
+                                extra={
+                                    "provider_id": provider_instance.provider_id,
+                                    "tenant_id": provider_instance.context_manager.tenant_id,
+                                },
+                            )
 
         return alert
 

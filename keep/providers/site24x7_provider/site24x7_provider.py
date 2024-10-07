@@ -213,7 +213,7 @@ class Site24X7Provider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         return AlertDto(
             url=event.get("MONITORURL", ""),

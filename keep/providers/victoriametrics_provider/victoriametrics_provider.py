@@ -161,7 +161,7 @@ receivers:
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         alerts = []
         for alert in event["alerts"]:

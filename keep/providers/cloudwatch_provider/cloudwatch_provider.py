@@ -503,7 +503,7 @@ class CloudwatchProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         logger = logging.getLogger(__name__)
         # if its confirmation event, we need to confirm the subscription

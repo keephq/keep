@@ -50,6 +50,7 @@ import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -61,10 +62,8 @@ type ProviderFormProps = {
   ) => void;
   onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
-  onAddProvider?: (provider: Provider) => void;
   isProviderNameDisabled?: boolean;
   installedProvidersMode: boolean;
-  onDelete?: (provider: Provider) => void;
   isLocalhost?: boolean;
 };
 
@@ -142,14 +141,13 @@ const ProviderForm = ({
   formData,
   onFormChange,
   onConnectChange,
-  onAddProvider,
   closeModal,
   isProviderNameDisabled,
   installedProvidersMode,
-  onDelete,
   isLocalhost,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
+  const { mutate } = useProviders();
   const searchParams = useSearchParams();
   const [activeTabsState, setActiveTabsState] = useState({});
   const initialData = {
@@ -257,7 +255,7 @@ const ProviderForm = ({
           response.json().then((newValidatedScopes) => {
             setProviderValidatedScopes(newValidatedScopes);
             provider.validatedScopes = newValidatedScopes;
-            onAddProvider(provider);
+            mutate();
             setRefreshLoading(false);
           });
         } else {
@@ -279,7 +277,7 @@ const ProviderForm = ({
         }
       );
       if (response.ok) {
-        onDelete!(provider);
+        mutate();
         closeModal();
       } else {
         toast.error(`Failed to delete ${provider.type} 😢`);
@@ -426,7 +424,7 @@ const ProviderForm = ({
       submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
-          onAddProvider({ ...provider, ...data } as Provider);
+          mutate();
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
@@ -437,12 +435,12 @@ const ProviderForm = ({
     }
   };
 
-  const handleConnectClick = () => {
+  const handleConnectClick = async () => {
     if (validate()) {
       setIsLoading(true);
       onConnectChange(true, false);
       submit(`${getApiURL()}/providers/install`)
-        .then((data) => {
+        .then(async (data) => {
           console.log("Connect Result:", data);
           setIsLoading(false);
           onConnectChange(false, true);
@@ -451,9 +449,10 @@ const ProviderForm = ({
             provider.can_setup_webhook &&
             !isLocalhost
           ) {
-            installWebhook(data as Provider, accessToken);
+            // mutate after webhook installation
+            await installWebhook(data as Provider, accessToken);
           }
-          onAddProvider({ ...provider, ...data } as Provider);
+          mutate();
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();

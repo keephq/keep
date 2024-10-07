@@ -27,7 +27,6 @@ from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assig
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
-from keep.providers.providers_factory import ProvidersFactory
 
 tracer = trace.get_tracer(__name__)
 
@@ -287,7 +286,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
@@ -316,6 +315,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         provider_instance: BaseProvider | None = None
         if provider_id and provider_type and tenant_id:
             try:
+                # To prevent circular imports
+                from keep.providers.providers_factory import ProvidersFactory
+
                 provider_instance: BaseProvider = (
                     ProvidersFactory.get_installed_provider(
                         tenant_id, provider_id, provider_type

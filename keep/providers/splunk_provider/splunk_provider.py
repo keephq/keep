@@ -150,7 +150,7 @@ class SplunkProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         result: dict = event.get("result", event.get("_result", {}))
 

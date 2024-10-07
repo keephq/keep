@@ -155,7 +155,7 @@ receivers:
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> list[AlertDto]:
         # TODO: need to support more than 1 alert per event
         alert_dtos = []
