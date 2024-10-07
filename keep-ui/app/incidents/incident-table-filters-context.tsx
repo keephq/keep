@@ -38,7 +38,6 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({ children 
       const valuesArray = values?.split(',').filter(
         value => incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
       );
-      console.log(filterName, values, valuesArray);
 
       return (valuesArray || []) as string[];
     }

@@ -2575,6 +2575,57 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             }
         return {}
 
+def apply_incident_filters(session: Session, filters: dict, query):
+    for field_name, value in filters.items():
+        if field_name in ALLOWED_INCIDENT_FILTERS:
+            if field_name in ["affected_services", "sources"]:
+                field = getattr(Incident, field_name)
+
+                # Rare case with empty values
+                if isinstance(value, list) and not any(value):
+                    continue
+
+                query = filter_query(session, query, field, value)
+
+            else:
+                field = getattr(Incident, field_name)
+                if isinstance(value, list):
+                    query = query.filter(
+                        col(field).in_(value)
+                    )
+                else:
+                    query = query.filter(
+                        col(field) == value
+                    )
+    return query
+
+def filter_query(session: Session, query, field, value):
+    if session.bind.dialect.name in ["mysql", "postgresql"]:
+        if isinstance(value, list):
+            if session.bind.dialect.name == "mysql":
+                query = query.filter(
+                    func.json_overlaps(field, func.json_array(value))
+                )
+            else:
+                query = query.filter(
+                    col(field).op('?|')(func.array(value))
+                )
+
+        else:
+            query = query.filter(
+                func.json_contains(field, value)
+            )
+
+    elif session.bind.dialect.name == "sqlite":
+        json_each_alias = func.json_each(field).table_valued("value")
+        subquery = select(1).select_from(json_each_alias)
+        if isinstance(value, list):
+            subquery = subquery.where(json_each_alias.c.value.in_(value))
+        else:
+            subquery = subquery.where(json_each_alias.c.value == value)
+
+        query = query.filter(subquery.exists())
+    return query
 
 def get_last_incidents(
     tenant_id: str,
@@ -2635,51 +2686,7 @@ def get_last_incidents(
             query = query.filter(Incident.last_seen_time >= lower_timestamp)
 
         if filters:
-            for field_name, value in filters.items():
-                if field_name in ALLOWED_INCIDENT_FILTERS:
-                    if field_name in ["affected_services", "sources"]:
-                        field = getattr(Incident, field_name)
-
-                        # Rare case with empty values
-                        if isinstance(value, list) and not any(value):
-                            continue
-
-                        if session.bind.dialect.name in ["mysql", "postgresql"]:
-                            if isinstance(value, list):
-                                if session.bind.dialect.name == "mysql":
-                                    query = query.filter(
-                                        func.json_overlaps(field, func.json_array(value))
-                                    )
-                                else:
-                                    query = query.filter(
-                                        col(field).op('?|')(func.array(value))
-                                    )
-
-                            else:
-                               query = query.filter(
-                                   func.json_contains(field, value)
-                               )
-
-                        elif session.bind.dialect.name == "sqlite":
-                            json_each_alias = func.json_each(field).table_valued("value")
-                            subquery = select(1).select_from(json_each_alias)
-                            if isinstance(value, list):
-                                subquery = subquery.where(json_each_alias.c.value.in_(value))
-                            else:
-                                subquery = subquery.where(json_each_alias.c.value == value)
-
-                            query = query.filter(subquery.exists())
-
-                    else:
-                        field = getattr(Incident, field_name)
-                        if isinstance(value, list):
-                            query = query.filter(
-                                col(field).in_(value)
-                            )
-                        else:
-                            query = query.filter(
-                                col(field) == value
-                            )
+            query = apply_incident_filters(session, filters, query)
 
         if sorting:
             query = query.order_by(sorting.get_order_by(Incident))
