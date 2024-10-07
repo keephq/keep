@@ -166,7 +166,6 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
                   {[
                     { key: 'preset', value: 'Preset' },
                     { key: 'generic_metrics', value: 'Generic Metrics' },
-                    { key: 'custom_metrics', value: 'Custom Metrics' }
                   ].map(({ key, value }) => (
                     <SelectItem key={key} value={key}>
                       {value}
