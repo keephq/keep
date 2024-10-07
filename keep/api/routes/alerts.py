@@ -349,18 +349,30 @@ async def webhook_challenge():
 )
 async def receive_event(
     provider_type: str,
-    event: dict | bytes,
     bg_tasks: BackgroundTasks,
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
+    event=Depends(extract_generic_body),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-    provider_class = ProvidersFactory.get_provider_class(provider_type)
+
+    provider_class = None
+    try:
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+    except ModuleNotFoundError:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+    if not provider_class:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+
     # Parse the raw body
     event = provider_class.parse_event_raw_body(event)
 

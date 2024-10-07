@@ -39,6 +39,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_TAGS: list[
         Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
     ] = []
+    WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
 
     def __init__(
         self,
@@ -285,14 +286,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: Optional["BaseProvider"] = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
 
         Args:
             event (dict): The raw provider event payload.
-            provider_instance (Optional[&quot;BaseProvider&quot;]): The tenant provider instance if it was successfully loaded.
 
         Raises:
             NotImplementedError: For providers who does not implement this method.
@@ -306,13 +306,34 @@ class BaseProvider(metaclass=abc.ABCMeta):
     def format_alert(
         cls,
         event: dict,
-        tenant_id: str,
-        provider_type: str,
-        provider_id: str,
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
+
+        provider_instance: BaseProvider | None = None
+        if provider_id and provider_type and tenant_id:
+            try:
+                # To prevent circular imports
+                from keep.providers.providers_factory import ProvidersFactory
+
+                provider_instance: BaseProvider = (
+                    ProvidersFactory.get_installed_provider(
+                        tenant_id, provider_id, provider_type
+                    )
+                )
+            except Exception:
+                logger.exception(
+                    "Failed loading provider instance although all parameters were given",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    },
+                )
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event)
+        formatted_alert = cls._format_alert(event, provider_instance)
         logger.debug("Alert formatted")
         # after the provider calculated the default fingerprint
         #   check if there is a custom deduplication rule and apply
@@ -469,7 +490,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
-    ):
+    ) -> dict | None:
         """
         Setup a webhook for the provider.
 
@@ -478,6 +499,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
             keep_api_url (str): _description_
             api_key (str): _description_
             setup_alerts (bool, optional): _description_. Defaults to True.
+
+        Returns:
+            dict | None: If some secrets needs to be saved, return them in a dict.
 
         Raises:
             NotImplementedError: _description_
