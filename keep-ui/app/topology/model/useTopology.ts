@@ -1,8 +1,8 @@
 import { TopologyService } from "@/app/topology/model/models";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
-import { getApiURL } from "../../../utils/apiUrl";
-import { fetcher } from "../../../utils/fetcher";
+import { getApiURL } from "@/utils/apiUrl";
+import { fetcher } from "@/utils/fetcher";
 import { useEffect } from "react";
 import { buildTopologyUrl } from "@/app/topology/api";
 import { useTopologyPollingContext } from "@/app/topology/model/TopologyPollingContext";
@@ -10,16 +10,16 @@ import { useTopologyPollingContext } from "@/app/topology/model/TopologyPollingC
 export const topologyBaseKey = `${getApiURL()}/topology`;
 
 type UseTopologyOptions = {
-  providerId?: string;
-  service?: string;
+  providerIds?: string[];
+  services?: string[];
   environment?: string;
   initialData?: TopologyService[];
 };
 
 // TODO: ensure that hook is memoized so could be used multiple times in the tree without rerenders
 export const useTopology = ({
-  providerId,
-  service,
+  providerIds,
+  services,
   environment,
   initialData: fallbackData,
 }: UseTopologyOptions = {}) => {
@@ -28,7 +28,7 @@ export const useTopology = ({
 
   const url = !session
     ? null
-    : buildTopologyUrl({ providerId, service, environment });
+    : buildTopologyUrl({ providerIds, services, environment });
 
   const { data, error, mutate } = useSWR<TopologyService[]>(
     url,

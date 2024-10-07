@@ -31,8 +31,8 @@ router = APIRouter()
     "", description="Get all topology data", response_model=List[TopologyServiceDtoOut]
 )
 def get_topology_data(
-    provider_id: Optional[str] = None,
-    service_id: Optional[str] = None,
+    provider_ids: Optional[str] = None,
+    services: Optional[str] = None,
     environment: Optional[str] = None,
     include_empty_deps: Optional[bool] = False,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -43,7 +43,7 @@ def get_topology_data(
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting topology data", extra={tenant_id: tenant_id})
     topology_data = TopologiesService.get_all_topology_data(
-        tenant_id, session, provider_id, service_id, environment, include_empty_deps
+        tenant_id, session, provider_ids, services, environment, include_empty_deps
     )
     return topology_data
 
