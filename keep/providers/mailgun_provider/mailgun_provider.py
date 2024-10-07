@@ -36,7 +36,12 @@ class MailgunProviderAuthConfig:
     )
     extraction: typing.Optional[dict[str, str]] = dataclasses.field(
         default=None,
-        metadata={"description": "Extraction Rules", "type": "form", "required": False},
+        metadata={
+            "description": "Extraction Rules",
+            "type": "form",
+            "required": False,
+            "hint": "Read how extraction works in the documentation",
+        },
     )
 
 
