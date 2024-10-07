@@ -57,6 +57,7 @@ from keep.api.routes import (
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
+from keep.api.routes.dashboard import provision_dashboards
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
@@ -263,6 +264,8 @@ def get_app(
             logger.info("Providers loaded successfully")
             WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
             logger.info("Workflows provisioned successfully")
+            provision_dashboards(SINGLE_TENANT_UUID)
+            logger.info("Dashboards provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler
