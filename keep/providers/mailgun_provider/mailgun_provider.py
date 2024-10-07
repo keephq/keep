@@ -120,6 +120,9 @@ class MailgunProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: "MailgunProvider" = None
     ) -> AlertDto:
+        # We receive FormData here, convert it to simple dict.
+        event = dict(event)
+
         name = event["subject"]
         source = event["from"]
         message = event["stripped-text"]
