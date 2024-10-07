@@ -126,8 +126,13 @@ class MailgunProvider(BaseProvider):
         timestamp = datetime.datetime.fromtimestamp(
             float(event["timestamp"])
         ).isoformat()
+        # default values
         severity = "info"
         status = "firing"
+
+        # clean redundant
+        event.pop("signature", "")
+        event.pop("token", "")
 
         alert = AlertDto(
             name=name,
