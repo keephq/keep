@@ -26,7 +26,7 @@ from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts, get_alerts_metrics_by_provider
-from keep.api.core.dependencies import get_pusher_client
+from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
@@ -349,18 +349,30 @@ async def webhook_challenge():
 )
 async def receive_event(
     provider_type: str,
-    event: dict | bytes,
     bg_tasks: BackgroundTasks,
     request: Request,
     provider_id: str | None = None,
     fingerprint: str | None = None,
+    event=Depends(extract_generic_body),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-    provider_class = ProvidersFactory.get_provider_class(provider_type)
+
+    provider_class = None
+    try:
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+    except ModuleNotFoundError:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+    if not provider_class:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+
     # Parse the raw body
     event = provider_class.parse_event_raw_body(event)
 

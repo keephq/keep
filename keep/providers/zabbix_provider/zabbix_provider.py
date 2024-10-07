@@ -575,7 +575,9 @@ class ZabbixProvider(BaseProvider):
         self.logger.info("Finished installing webhook")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         environment = "unknown"
         tags_raw = event.pop("tags", "[]")
         try:
