@@ -1,8 +1,6 @@
 import GenericPopover from "@/components/popover/GenericPopover";
-import { Textarea, Badge, Button, Tab, TabGroup, TabList } from "@tremor/react";
-import moment from "moment";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { useRef, useState, useEffect, ChangeEvent } from "react";
+import { useRef, useState, useEffect, ChangeEvent, useMemo } from "react";
 import { GoPlusCircle } from "react-icons/go";
 import { DateRangePicker, DateRangePickerValue, Title } from "@tremor/react";
 import { MdOutlineDateRange } from "react-icons/md";
@@ -33,6 +31,7 @@ interface PopoverContentProps {
   type: string;
   only_one?: boolean;
   can_select?: number;
+  onApply?: () => void;
 }
 
 function toArray(value: string | string[]) {
@@ -208,13 +207,20 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   type,
   only_one,
   can_select,
+  onApply,
 }) => {
   // Initialize local state for selected options
-  const filter = filterRef.current?.find((filter) => filter.key === filterKey);
+  const filter =  filterRef.current?.find((f) => f.key === filterKey);
+  if (!filter) {
+    return null;
+  }
 
   const handleSelect = (value: string | string[]) => {
-    if (filter) {
-      filter.value = value;
+    if (filterRef.current) {
+      const updatedFilters = filterRef.current.map((f) =>
+        f.key === filterKey ? { ...f, value: value } : f
+      );
+      filterRef.current = updatedFilters;
     }
   };
 
@@ -228,8 +234,12 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
         end: end || start,
       });
     }
-    if (filter) {
-      filter.value = newValue;
+    if (filterRef.current) {
+      const updatedFilters = filterRef.current.map((f) =>
+        f.key === filterKey ? { ...f, value: newValue } : f
+      );
+      filterRef.current = updatedFilters;
+      onApply?.();
     }
   };
 
@@ -287,22 +297,21 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           }
         }
       }
-      if ((newParams?.toString() || "") !== searchParamString) {
-        router.push(`${pathname}?${newParams.toString()}`);
-      }
       for (const { key, value } of filterRef.current) {
         const filter = filterRef.current.find(
           (filter) => filter.key === key && filter.searchParamsNotNeed
         );
-        if (filter) {
-          let newValue = Array.isArray(value) && value.length == 0 ? "" : value;
+        if (filter && filter.type == 'select') {
+          let newValue = Array.isArray(value) && value.length == 0 ? "" : toArray(value as string | string[]);
           if (filter.setFilter) {
             filter.setFilter(newValue || "");
           }
           continue;
         }
       }
-
+      if ((newParams?.toString() || "") !== searchParamString) {
+        router.push(`${pathname}?${newParams.toString()}`);
+      }
       setApply(false); // Reset apply state
     }
   }, [apply]);
@@ -361,20 +370,31 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           icon = icon ?? type === "date" ? MdOutlineDateRange : GoPlusCircle;
           return (
             <div key={key} className="flex gap-4">
-              <GenericPopover
-                triggerText={name}
-                triggerIcon={icon}
-                content={
-                  <PopoverContent
-                    filterRef={filterRef}
-                    filterKey={key}
-                    type={type}
-                    only_one={!!only_one}
-                    can_select={can_select}
-                  />
-                }
-                onApply={() => setApply(true)}
-              />
+              {type !== "date" ? (
+                <GenericPopover
+                  triggerText={name}
+                  triggerIcon={icon}
+                  content={
+                    <PopoverContent
+                      filterRef={filterRef}
+                      filterKey={key}
+                      type={type}
+                      only_one={!!only_one}
+                      can_select={can_select}
+                    />
+                  }
+                  onApply={() => setApply(true)}
+                />
+              ) : (
+                <PopoverContent
+                  filterRef={filterRef}
+                  filterKey={key}
+                  type={type}
+                  only_one={!!only_one}
+                  can_select={can_select}
+                  onApply={() => setApply(true)}
+                />
+              )}
             </div>
           );
         })}

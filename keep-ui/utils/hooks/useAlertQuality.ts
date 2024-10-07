@@ -27,7 +27,7 @@ export const useAlertQualityMetrics = (
         : fieldParams.toString();
     }
     return params;
-  }, [fields, searchParams]);
+  }, [fields?.toString(), searchParams?.toString()]);
   // TODO: Proper type needs to be defined.
   return useSWRImmutable<Record<string, Record<string, any>>>(
     () =>
