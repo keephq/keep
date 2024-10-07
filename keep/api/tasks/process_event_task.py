@@ -10,6 +10,7 @@ import dateutil
 
 # third-parties
 from arq import Retry
+from fastapi.datastructures import FormData
 from sqlmodel import Session
 
 # internals
@@ -516,7 +517,11 @@ def process_event(
         except Exception:
             logger.exception("Failed to run pre-formatting extraction rules")
 
-        if provider_type is not None and isinstance(event, dict):
+        if (
+            provider_type is not None
+            and isinstance(event, dict)
+            or isinstance(event, FormData)
+        ):
             provider_class = ProvidersFactory.get_provider_class(provider_type)
             event = provider_class.format_alert(
                 tenant_id=tenant_id,

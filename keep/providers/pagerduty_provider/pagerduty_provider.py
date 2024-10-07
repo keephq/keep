@@ -306,7 +306,9 @@ class PagerdutyProvider(BaseProvider):
         return incidents
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})
         url = data.pop("self", data.pop("html_url"))
