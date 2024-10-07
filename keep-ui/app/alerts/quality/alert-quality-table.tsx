@@ -128,7 +128,7 @@ const QualityTable = ({
   const fields = toArray(
     params?.["fields"] || (fieldsValue as string | string[]) || []
   ) as string[];
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(1);
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setPagination({ limit: newLimit, offset: newOffset });
@@ -276,8 +276,9 @@ const QualityTable = ({
             Alert Quality Dashboard
           </h1>
         )}
-        <div className="flex justify-between items-end mb-4">
-          <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
+        <div className="flex justify-end items-end mb-4">
+          {/* if we want to use tabs. we can enable it */}
+          {/* <FilterTabs tabs={tabs} setTab={setTab} tab={tab} /> */}
           <GenericFilters
             filters={
               isDashBoard

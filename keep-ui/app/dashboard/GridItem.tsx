@@ -42,23 +42,6 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
     }
   }
 
-  const getDateRange = () => {
-    if (item.preset) {
-      return "";
-    }
-
-    if (timeStamp &&timeStamp.start && timeStamp.end) {
-      const startDateUTC = parseISO(timeStamp.start);
-      const endDateUTC = parseISO(timeStamp.end);
-      return ` (${format(startDateUTC, "MM/dd/yyyy")} - ${format(
-        endDateUTC,
-        "MM/dd/yyyy"
-      )})`;
-    }
-
-    return "";
-  };
-
   return (
     <Card className="relative w-full h-full p-4">
       <div className="flex flex-col h-full">
@@ -74,7 +57,6 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
             }`}
           >
             {item.name}
-            {getDateRange()}
           </span>
           <MenuButton
             onEdit={() => onEdit(item.i)}
