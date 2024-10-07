@@ -297,22 +297,21 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
           }
         }
       }
-      if ((newParams?.toString() || "") !== searchParamString) {
-        router.push(`${pathname}?${newParams.toString()}`);
-      }
       for (const { key, value } of filterRef.current) {
         const filter = filterRef.current.find(
           (filter) => filter.key === key && filter.searchParamsNotNeed
         );
-        if (filter) {
-          let newValue = Array.isArray(value) && value.length == 0 ? "" : value;
+        if (filter && filter.type == 'select') {
+          let newValue = Array.isArray(value) && value.length == 0 ? "" : toArray(value as string | string[]);
           if (filter.setFilter) {
             filter.setFilter(newValue || "");
           }
           continue;
         }
       }
-
+      if ((newParams?.toString() || "") !== searchParamString) {
+        router.push(`${pathname}?${newParams.toString()}`);
+      }
       setApply(false); // Reset apply state
     }
   }, [apply]);
