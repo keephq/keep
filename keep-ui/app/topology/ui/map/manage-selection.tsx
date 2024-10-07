@@ -12,11 +12,11 @@ import {
   TopologyNode,
 } from "@/app/topology/model";
 import { toast } from "react-toastify";
-import { ServiceSearchContext } from "../../service-search-context";
+import { TopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/topology/ui/applications/application-modal";
 
 export function ManageSelection({ className }: { className?: string }) {
-  const { setSelectedServiceId } = useContext(ServiceSearchContext);
+  const { setSelectedObjectId } = useContext(TopologySearchContext);
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications();
   const [selectedApplication, setSelectedApplication] =
@@ -78,7 +78,7 @@ export function ManageSelection({ className }: { className?: string }) {
     updateApplication(updatedApplication).then(
       () => {
         setSelectedApplication(updatedApplication);
-        setSelectedServiceId(updatedApplication.id);
+        setSelectedObjectId(updatedApplication.id);
       },
       (error) => {
         toast.error("Failed to update application");
@@ -93,7 +93,7 @@ export function ManageSelection({ className }: { className?: string }) {
     setIsModalOpen(false);
     setSelectedApplication(application);
     setSelectedServices([]);
-    setSelectedServiceId(application.id);
+    setSelectedObjectId(application.id);
   };
 
   const deleteApplication = useCallback(

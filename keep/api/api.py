@@ -54,9 +54,11 @@ from keep.api.routes import (
     topology,
     whoami,
     workflows,
+    runbooks,
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
+from keep.api.routes.dashboard import provision_dashboards
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
@@ -243,6 +245,9 @@ def get_app(
     app.include_router(
         deduplications.router, prefix="/deduplications", tags=["deduplications"]
     )
+    app.include_router(
+        runbooks.router, prefix="/runbooks", tags=["runbooks"]
+    )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
@@ -263,6 +268,8 @@ def get_app(
             logger.info("Providers loaded successfully")
             WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
             logger.info("Workflows provisioned successfully")
+            provision_dashboards(SINGLE_TENANT_UUID)
+            logger.info("Dashboards provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler
