@@ -89,8 +89,8 @@ class TopologiesService:
     def get_all_topology_data(
         tenant_id: str,
         session: Session,
-        provider_id: Optional[str] = None,
-        service: Optional[str] = None,
+        provider_ids: Optional[str] = None,
+        services: Optional[str] = None,
         environment: Optional[str] = None,
         include_empty_deps: Optional[bool] = False,
     ) -> List[TopologyServiceDtoOut]:
@@ -99,10 +99,8 @@ class TopologiesService:
         # @tb: let's filter by service only for now and take care of it when we handle multiple
         # services and environments and cmdbs
         # the idea is that we show the service topology regardless of the underlying provider/env
-        if service is not None:
-            query = query.where(
-                TopologyService.service == service,
-            )
+        if services is not None:
+            query = query.where(TopologyService.service.in_(services.split(",")))
 
             service_instance = session.exec(query).first()
             if not service_instance:

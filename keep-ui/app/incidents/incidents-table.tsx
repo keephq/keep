@@ -1,4 +1,4 @@
-import { Button, Badge, Icon } from "@tremor/react";
+import { Button, Badge } from "@tremor/react";
 import {
   ExpandedState,
   createColumnHelper,
@@ -14,18 +14,14 @@ import {
   MdKeyboardDoubleArrowRight,
 } from "react-icons/md";
 import { useSession } from "next-auth/react";
-import { IncidentDto, PaginatedIncidentsDto, Status } from "./models";
+import { IncidentDto, PaginatedIncidentsDto } from "./models";
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
 import Image from "next/image";
 import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
-import {
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  PauseIcon,
-} from "@heroicons/react/24/outline";
 import IncidentChangeStatusModal from "./incident-change-status-modal";
+import {STATUS_ICONS} from "@/app/incidents/statuses";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -37,33 +33,6 @@ interface Props {
   setPagination: Dispatch<SetStateAction<any>>;
   editCallback: (rule: IncidentDto) => void;
 }
-
-const STATUS_ICONS = {
-  [Status.Firing]: (
-    <Icon
-      icon={ExclamationCircleIcon}
-      tooltip={Status.Firing}
-      color="red"
-      className="w-4 h-4 mr-2"
-    />
-  ),
-  [Status.Resolved]: (
-    <Icon
-      icon={CheckCircleIcon}
-      tooltip={Status.Resolved}
-      color="green"
-      className="w-4 h-4 mr-2"
-    />
-  ),
-  [Status.Acknowledged]: (
-    <Icon
-      icon={PauseIcon}
-      tooltip={Status.Acknowledged}
-      color="gray"
-      className="w-4 h-4 mr-2"
-    />
-  ),
-};
 
 export default function IncidentsTable({
   incidents: incidents,

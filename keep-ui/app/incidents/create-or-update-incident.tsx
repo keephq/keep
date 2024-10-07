@@ -30,21 +30,25 @@ export const updateIncidentRequest = async (
   incidentId: string,
   incidentName: string,
   incidentUserSummary: string,
-  incidentAssignee: string
+  incidentAssignee: string,
+  generatedByAi: boolean = false
 ) => {
   const apiUrl = getApiURL();
-  const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${session?.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_generated_name: incidentName,
-      user_summary: incidentUserSummary,
-      assignee: incidentAssignee,
-    }),
-  });
+  const response = await fetch(
+    `${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_generated_name: incidentName,
+        user_summary: incidentUserSummary,
+        assignee: incidentAssignee,
+      }),
+    }
+  );
   return response;
 };
 
