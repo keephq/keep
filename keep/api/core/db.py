@@ -13,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Callable
 from uuid import uuid4
 
 import numpy as np
@@ -26,13 +26,13 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import expression, exists
 from sqlmodel import Session, col, or_, select, text
 
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.alert import IncidentDtoIn
+from keep.api.models.alert import IncidentDtoIn, AlertStatus
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -1504,6 +1504,7 @@ def create_rule(
     grouping_criteria=None,
     group_description=None,
     require_approve=False,
+    resolve_on=ResolveOn.NEVER.value
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1519,6 +1520,7 @@ def create_rule(
             grouping_criteria=grouping_criteria,
             group_description=group_description,
             require_approve=require_approve,
+            resolve_on=resolve_on,
         )
         session.add(rule)
         session.commit()
@@ -1537,6 +1539,7 @@ def update_rule(
     updated_by,
     grouping_criteria,
     require_approve,
+    resolve_on,
 ):
     with Session(engine) as session:
         rule = session.exec(
@@ -1553,6 +1556,7 @@ def update_rule(
             rule.require_approve = require_approve
             rule.updated_by = updated_by
             rule.update_time = datetime.utcnow()
+            rule.resolve_on = resolve_on
             session.commit()
             session.refresh(rule)
             return rule
@@ -3356,3 +3360,91 @@ def get_workflow_executions_for_incident_or_alert(
         # Execute the query and fetch results
         results = session.execute(final_query).all()
         return results, total_count
+
+
+def is_all_incident_alerts_resolved(incident: Incident, session: Optional[Session] = None) -> bool:
+
+    if incident.alerts_count == 0:
+        return False
+
+    with existed_or_new_session(session) as session:
+
+        enriched_status_field = get_json_extract_field(session, AlertEnrichment.enrichments, "status")
+        status_field = get_json_extract_field(session, Alert.event, "status")
+
+        subquery = (
+            select(
+                enriched_status_field.label("enriched_status"),
+                status_field.label("status"),
+            )
+            .select_from(Alert)
+            .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .where(
+                AlertToIncident.incident_id == incident.id,
+            )
+            .group_by(Alert.fingerprint)
+            .having(func.max(Alert.timestamp))
+        ).subquery()
+
+        not_resolved_exists = session.query(
+            exists(
+                select(
+                    subquery.c.enriched_status,
+                    subquery.c.status,
+                )
+                .select_from(subquery)
+                .where(
+                    or_(
+                        subquery.c.enriched_status != AlertStatus.RESOLVED.value,
+                        and_(
+                            subquery.c.enriched_status.is_(None),
+                            subquery.c.status != AlertStatus.RESOLVED.value
+                        )
+                    )
+                )
+            )
+        ).scalar()
+
+        return not not_resolved_exists
+
+
+def is_last_incident_alert_resolved(incident: Incident, session: Optional[Session] = None) -> bool:
+    return is_edge_incident_alert_resolved(incident, func.max, session)
+
+
+def is_first_incident_alert_resolved(incident: Incident, session: Optional[Session] = None) -> bool:
+    return is_edge_incident_alert_resolved(incident, func.min, session)
+
+
+def is_edge_incident_alert_resolved(incident: Incident, direction: Callable, session: Optional[Session] = None) -> bool:
+
+    if incident.alerts_count == 0:
+        return False
+
+    with existed_or_new_session(session) as session:
+
+        enriched_status_field = get_json_extract_field(session, AlertEnrichment.enrichments, "status")
+        status_field = get_json_extract_field(session, Alert.event, "status")
+
+        finerprint, enriched_status, status = session.exec(
+            select(
+                Alert.fingerprint,
+                enriched_status_field,
+                status_field
+            )
+            .select_from(Alert)
+            .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .where(
+                AlertToIncident.incident_id == incident.id
+            )
+            .group_by(Alert.fingerprint)
+            .having(func.max(Alert.timestamp))
+            .order_by(direction(Alert.timestamp))
+        ).first()
+
+        return (
+            enriched_status == AlertStatus.RESOLVED.value or
+            (enriched_status is None and status == AlertStatus.RESOLVED.value)
+        )

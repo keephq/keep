@@ -10,9 +10,11 @@ import celpy.evaluation
 from sqlmodel import Session
 
 from keep.api.consts import STATIC_PRESETS
-from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
+from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule, is_all_incident_alerts_resolved, \
+    is_first_incident_alert_resolved, is_last_incident_alert_resolved
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
+from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus
+from keep.api.models.db.rule import ResolveOn
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
 # Shahar: this is performance enhancment https://github.com/cloud-custodian/cel-python/issues/68
@@ -76,6 +78,22 @@ class RulesEngine:
                         tenant_id=self.tenant_id,
                         session=session
                     )
+
+                    should_resolve = False
+
+                    if rule.resolve_on == ResolveOn.ALL.value and is_all_incident_alerts_resolved(incident, session=session):
+                        should_resolve = True
+
+                    elif rule.resolve_on == ResolveOn.FIRST.value and is_first_incident_alert_resolved(incident, session=session):
+                        should_resolve = True
+
+                    if rule.resolve_on == ResolveOn.LAST.value and is_last_incident_alert_resolved(incident, session=session):
+                        should_resolve = True
+
+                    if should_resolve:
+                        incident.status = IncidentStatus.RESOLVED.value
+                        session.add(incident)
+                        session.commit()
 
                     incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
                 else:

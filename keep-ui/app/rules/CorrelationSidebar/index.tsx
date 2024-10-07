@@ -11,6 +11,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
   timeUnit: "hours",
   groupedAttributes: [],
   requireApprove: false,
+  resolveOn: "never",
   query: {
     combinator: "or",
     rules: [
@@ -33,6 +34,7 @@ export type CorrelationForm = {
   timeUnit: "minutes" | "seconds" | "hours" | "days";
   groupedAttributes: string[];
   requireApprove: boolean;
+  resolveOn: "all" | "first" | "last" | "never";
   query: RuleGroupType;
 };
 
