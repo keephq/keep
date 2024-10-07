@@ -277,7 +277,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto | list[AlertDto]:
         raise NotImplementedError("format_alert() method not implemented")
 
     @classmethod

@@ -429,7 +429,9 @@ class NewrelicProvider(BaseProvider):
         return formatted_alerts
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         """We are already registering template same as generic AlertDTO"""
         logger = logging.getLogger(__name__)
         logger.info("Got event from New Relic")

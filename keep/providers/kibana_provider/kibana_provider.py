@@ -471,7 +471,9 @@ class KibanaProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto | list[AlertDto]:
         """
         Formats an alert from Kibana to a standard format.
 

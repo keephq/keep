@@ -160,7 +160,9 @@ receivers:
             return self.authentication_config.VMAlertHost.rstrip("/")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto | list[AlertDto]:
         alerts = []
         for alert in event["alerts"]:
             alerts.append(

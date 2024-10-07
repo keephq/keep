@@ -59,7 +59,9 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
         pass
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         alert = AlertDto(
             id=event["id"] if "id" in event else None,
             name=event["name"] if "name" in event else None,

@@ -1,7 +1,3 @@
-"""
-Simple Console Output Provider
-"""
-
 import dataclasses
 import datetime
 import os
@@ -9,7 +5,6 @@ import typing
 
 import pydantic
 import requests
-from fastapi.datastructures import FormData
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -116,7 +111,9 @@ class MailgunProvider(BaseProvider):
         return {"route_id": route_id, "email": email}
 
     @staticmethod
-    def _format_alert(event: FormData, **kwargs) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         name = event["subject"]
         source = event["from"]
         message = event["stripped-text"]

@@ -27,6 +27,7 @@ from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assig
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
+from keep.providers.providers_factory import ProvidersFactory
 
 tracer = trace.get_tracer(__name__)
 
@@ -285,7 +286,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return results
 
     @staticmethod
-    def _format_alert(event: dict, **kwargs) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
 
@@ -304,14 +307,31 @@ class BaseProvider(metaclass=abc.ABCMeta):
     def format_alert(
         cls,
         event: dict,
-        tenant_id: str,
-        provider_type: str,
-        provider_id: str,
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
     ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
 
+        provider_instance: BaseProvider | None = None
+        if provider_id and provider_type and tenant_id:
+            try:
+                provider_instance: BaseProvider = (
+                    ProvidersFactory.get_installed_provider(
+                        tenant_id, provider_id, provider_type
+                    )
+                )
+            except Exception:
+                logger.exception(
+                    "Failed loading provider instance although all parameters were given",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    },
+                )
         logger.debug("Formatting alert")
-        formatted_alert = cls._format_alert(event)
+        formatted_alert = cls._format_alert(event, provider_instance)
         logger.debug("Alert formatted")
         # after the provider calculated the default fingerprint
         #   check if there is a custom deduplication rule and apply

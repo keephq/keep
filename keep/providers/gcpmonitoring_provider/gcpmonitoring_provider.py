@@ -63,7 +63,9 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         pass
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         incident = event.get("incident", {})
         description = incident.pop("summary", "")
         status = GcpmonitoringProvider.STATUS_MAP.get(

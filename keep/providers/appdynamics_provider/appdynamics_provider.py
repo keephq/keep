@@ -322,7 +322,9 @@ class AppdynamicsProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         return AlertDto(
             id=event["id"],
             name=event["name"],

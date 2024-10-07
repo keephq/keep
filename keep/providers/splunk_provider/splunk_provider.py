@@ -149,7 +149,9 @@ class SplunkProvider(BaseProvider):
                 saved_search.update(**creation_updation_kwargs).refresh()
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         result: dict = event.get("result", event.get("_result", {}))
 
         try:

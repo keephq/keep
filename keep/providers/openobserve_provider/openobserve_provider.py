@@ -369,7 +369,9 @@ class OpenobserveProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" | None = None
+    ) -> AlertDto:
         logger = logging.getLogger(__name__)
         name = event.pop("alert_name", "")
         # openoboserve does not provide severity
