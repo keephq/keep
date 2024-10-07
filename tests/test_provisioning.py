@@ -239,3 +239,65 @@ def test_provision_dashboard(monkeypatch, db_session, client, test_app):
     dashboards = response.json()
     assert len(dashboards) == 1
     assert dashboards[0]["dashboard_name"] == "My Dashboard"
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_DASHBOARDS": '{"dashboard_name": "a"}]',
+        },
+    ],
+    indirect=True,
+)
+def test_provision_dashboard_invalid_json(monkeypatch, db_session, client, test_app):
+    response = client.get("/dashboard", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    dashboards = response.json()
+    assert len(dashboards) == 0
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+            "KEEP_DASHBOARDS": '[{"dashboard_name":"Initial Dashboard","dashboard_config":{"layout":[{"i":"w-1728223503577","x":0,"y":0,"w":3,"h":3,"minW":2,"minH":2,"static":false}],"widget_data":[{"i":"w-1728223503577","x":0,"y":0,"w":3,"h":3,"minW":2,"minH":2,"static":false,"thresholds":[{"value":0,"color":"#22c55e"},{"value":20,"color":"#ef4444"}],"preset":{"id":"11111111-1111-1111-1111-111111111111","name":"feed","options":[{"label":"CEL","value":"(!deleted && !dismissed)"},{"label":"SQL","value":{"sql":"(deleted=false AND dismissed=false)","params":{}}}],"created_by":null,"is_private":false,"is_noisy":false,"should_do_noise_now":false,"alerts_count":98,"static":true,"tags":[]},"name":"Test"}]}}]',
+        },
+    ],
+    indirect=True,
+)
+def test_reprovision_dashboard(monkeypatch, db_session, client, test_app):
+    response = client.get("/dashboard", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    dashboards = response.json()
+    assert len(dashboards) == 1
+    assert dashboards[0]["dashboard_name"] == "Initial Dashboard"
+
+    # Step 2: Change environment variables (simulating new provisioning)
+    monkeypatch.setenv(
+        "KEEP_DASHBOARDS",
+        '[{"dashboard_name":"New Dashboard","dashboard_config":{"layout":[{"i":"w-1728223503578","x":0,"y":0,"w":3,"h":3,"minW":2,"minH":2,"static":false}],"widget_data":[{"i":"w-1728223503578","x":0,"y":0,"w":3,"h":3,"minW":2,"minH":2,"static":false,"thresholds":[{"value":0,"color":"#22c55e"},{"value":20,"color":"#ef4444"}],"preset":{"id":"11111111-1111-1111-1111-111111111112","name":"feed","options":[{"label":"CEL","value":"(!deleted && !dismissed)"},{"label":"SQL","value":{"sql":"(deleted=false AND dismissed=false)","params":{}}}],"created_by":null,"is_private":false,"is_noisy":false,"should_do_noise_now":false,"alerts_count":98,"static":true,"tags":[]},"name":"Test"}]}}]',
+    )
+
+    # Reload the app to apply the new environment changes
+    importlib.reload(sys.modules["keep.api.api"])
+
+    # Reinitialize the TestClient with the new app instance
+    from keep.api.api import get_app
+
+    app = get_app()
+
+    # Manually trigger the startup event
+    for event_handler in app.router.on_startup:
+        asyncio.run(event_handler())
+
+    client = TestClient(app)
+
+    # Step 3: Verify if the new dashboard is provisioned after reloading
+    response = client.get("/dashboard", headers={"x-api-key": "someapikey"})
+    assert response.status_code == 200
+    dashboards = response.json()
+    assert len(dashboards) == 2
+    assert dashboards[1]["dashboard_name"] == "New Dashboard"
