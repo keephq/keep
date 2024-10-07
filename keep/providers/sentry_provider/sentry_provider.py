@@ -201,7 +201,9 @@ class SentryProvider(BaseProvider):
         return validated_scopes
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         logger.info(
             "Formatting Sentry alert",

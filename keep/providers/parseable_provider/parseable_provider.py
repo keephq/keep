@@ -118,7 +118,9 @@ class ParseableProvider(BaseProvider):
         )
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         environment = "unknown"
         id = event.pop("id", str(uuid4()))
         name = event.pop("alert", "")

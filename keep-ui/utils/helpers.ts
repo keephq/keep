@@ -36,7 +36,7 @@ export function toDateObjectWithFallback(date: string | Date) {
 }
 
 export async function installWebhook(provider: Provider, accessToken: string) {
-  toast.promise(
+  return toast.promise(
     fetch(
       `${getApiURL()}/providers/install/webhook/${provider.type}/${
         provider.id
