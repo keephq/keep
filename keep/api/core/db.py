@@ -2366,8 +2366,15 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
     return preset
 
 
-def assign_alert_to_incident(alert_id: UUID | str, incident_id: UUID, tenant_id: str, session: Optional[Session]=None):
-    return add_alerts_to_incident_by_incident_id(tenant_id, incident_id, [alert_id], session=session)
+def assign_alert_to_incident(
+    alert_id: UUID | str,
+    incident_id: UUID,
+    tenant_id: str,
+    session: Optional[Session] = None,
+):
+    return add_alerts_to_incident_by_incident_id(
+        tenant_id, incident_id, [alert_id], session=session
+    )
 
 
 def is_alert_assigned_to_incident(
@@ -2597,6 +2604,7 @@ def update_incident_from_dto_by_id(
     tenant_id: str,
     incident_id: UUID,
     updated_incident_dto: IncidentDtoIn,
+    generated_by_ai: bool = False,
 ) -> Optional[Incident]:
     with Session(engine) as session:
         incident = session.exec(
@@ -2612,8 +2620,12 @@ def update_incident_from_dto_by_id(
             return None
 
         incident.user_generated_name = updated_incident_dto.user_generated_name
-        incident.user_summary = updated_incident_dto.user_summary
         incident.assignee = updated_incident_dto.assignee
+
+        if generated_by_ai:
+            incident.generated_summary = updated_incident_dto.user_summary
+        else:
+            incident.user_summary = updated_incident_dto.user_summary
 
         session.commit()
         session.refresh(incident)
@@ -3169,7 +3181,10 @@ def get_provider_by_type_and_id(
 
 
 def bulk_upsert_alert_fields(
-    tenant_id: str, fields: List[str], provider_id: str, provider_type: str,
+    tenant_id: str,
+    fields: List[str],
+    provider_id: str,
+    provider_type: str,
     session: Optional[Session] = None,
 ):
     with existed_or_new_session(session) as session:

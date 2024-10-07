@@ -1,38 +1,34 @@
-import { getApiURL } from "../../../utils/apiUrl";
-import { fetcher } from "../../../utils/fetcher";
+import { getApiURL } from "@/utils/apiUrl";
+import { fetcher } from "@/utils/fetcher";
 import { Session } from "next-auth";
 import { TopologyApplication, TopologyService } from "../model/models";
 
-const isNullOrUndefined = (value: unknown): value is null | undefined =>
-  value === null || value === undefined;
-
 export function buildTopologyUrl({
-  providerId,
-  service,
+  providerIds,
+  services,
   environment,
 }: {
-  providerId?: string;
-  service?: string;
+  providerIds?: string[];
+  services?: string[];
   environment?: string;
 }) {
   const apiUrl = getApiURL();
 
   const baseUrl = `${apiUrl}/topology`;
 
-  if (
-    !isNullOrUndefined(providerId) &&
-    !isNullOrUndefined(service) &&
-    !isNullOrUndefined(environment)
-  ) {
-    const params = new URLSearchParams({
-      provider_id: providerId,
-      service_id: service,
-      environment: environment,
-    });
-    return `${baseUrl}?${params.toString()}`;
+  const params = new URLSearchParams();
+
+  if (providerIds) {
+    params.append("provider_ids", providerIds.join(","));
+  }
+  if (services) {
+    params.append("services", services.join(","));
+  }
+  if (environment) {
+    params.append("environment", environment);
   }
 
-  return baseUrl;
+  return `${baseUrl}?${params.toString()}`;
 }
 
 export async function getApplications(session: Session | null) {
@@ -48,18 +44,18 @@ export async function getApplications(session: Session | null) {
 export function getTopology(
   session: Session | null,
   {
-    providerId,
-    service,
+    providerIds,
+    services,
     environment,
   }: {
-    providerId?: string;
-    service?: string;
+    providerIds?: string[];
+    services?: string[];
     environment?: string;
   }
 ) {
   if (!session) {
     return null;
   }
-  const url = buildTopologyUrl({ providerId, service, environment });
+  const url = buildTopologyUrl({ providerIds, services, environment });
   return fetcher(url, session.accessToken) as Promise<TopologyService[]>;
 }
