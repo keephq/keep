@@ -1,5 +1,6 @@
 import Modal from "@/components/ui/Modal";
-import { Button, Divider, Select, SelectItem, Title } from "@tremor/react";
+import { Button, Divider, SelectItem, Title } from "@tremor/react";
+import Select from "@/components/ui/Select";
 import CreateOrUpdateIncident from "app/incidents/create-or-update-incident";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -28,7 +29,9 @@ const AlertAssociateIncidentModal = ({
   const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
   usePollIncidents(mutate);
 
-  const [selectedIncident, setSelectedIncident] = useState<string | undefined>();
+  const [selectedIncident, setSelectedIncident] = useState<
+    string | undefined
+  >();
   // get the token
   const { data: session } = useSession();
   const router = useRouter();
@@ -106,20 +109,33 @@ const AlertAssociateIncidentModal = ({
           <div className="h-full justify-center">
             <Select
               className="my-2.5"
-              placeholder={`Select incident`}
-              value={selectedIncident}
-              onValueChange={(value) => setSelectedIncident(value)}
-            >
-              {
-                incidents.items?.map((incident) => {
-                  return (
-                    <SelectItem key={incident.id} value={incident.id}>
-                      {incident.user_generated_name || incident.ai_generated_name}
-                    </SelectItem>
-                  );
-                })!
+              placeholder="Select incident"
+              value={
+                selectedIncident
+                  ? {
+                      value: selectedIncident,
+                      label:
+                        incidents.items.find(
+                          (incident) => incident.id === selectedIncident
+                        )?.user_generated_name ||
+                        incidents.items.find(
+                          (incident) => incident.id === selectedIncident
+                        )?.ai_generated_name ||
+                        "",
+                    }
+                  : null
               }
-            </Select>
+              onChange={(selectedOption) =>
+                setSelectedIncident(selectedOption?.value)
+              }
+              options={incidents.items?.map((incident) => ({
+                value: incident.id,
+                label:
+                  incident.user_generated_name ||
+                  incident.ai_generated_name ||
+                  "",
+              }))}
+            />
             <Divider />
             <div className="flex items-center justify-between gap-6">
               <Button
@@ -133,7 +149,8 @@ const AlertAssociateIncidentModal = ({
 
               <Button
                 className="flex-1"
-                color="green"
+                color="orange"
+                variant="secondary"
                 onClick={showCreateIncidentForm}
               >
                 Create a new incident

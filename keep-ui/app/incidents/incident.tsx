@@ -27,8 +27,6 @@ export default function Incident() {
     { id: "creation_time", desc: true },
   ]);
 
-  console.log('incidentSorting', incidentsSorting)
-
   const {
     data: incidents,
     isLoading,
