@@ -13,8 +13,8 @@ export const metadata = {
 
 type PageProps = {
   searchParams: {
-    provider?: string;
-    service?: string;
+    providerIds?: string[];
+    services?: string[];
     environment?: string;
   };
 };
@@ -24,8 +24,8 @@ export default async function Page({ searchParams }: PageProps) {
 
   const applications = await getApplications(session);
   const topologyServices = await getTopology(session, {
-    providerId: searchParams.provider,
-    service: searchParams.service,
+    providerIds: searchParams.providerIds,
+    services: searchParams.services,
     environment: searchParams.environment,
   });
 
