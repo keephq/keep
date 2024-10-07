@@ -54,6 +54,7 @@ from keep.api.routes import (
     topology,
     whoami,
     workflows,
+    runbooks,
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
@@ -242,6 +243,9 @@ def get_app(
     app.include_router(topology.router, prefix="/topology", tags=["topology"])
     app.include_router(
         deduplications.router, prefix="/deduplications", tags=["deduplications"]
+    )
+    app.include_router(
+        runbooks.router, prefix="/runbooks", tags=["runbooks"]
     )
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")

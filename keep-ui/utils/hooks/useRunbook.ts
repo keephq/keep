@@ -35,7 +35,7 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
           return setRepoData([]);
         }
         const data = await fetcher(
-          `${baseApiurl}/providers/${provider?.type}/${provider?.id}/repositories`,
+          `${baseApiurl}/runbooks/${provider?.type}/${provider?.id}/repositories`,
           session?.accessToken
         );
         setRepoData(data);
@@ -69,7 +69,7 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
       }
       //TO DO backend runbook records needs to be created.
       const response = await fetcher(
-        `${baseApiurl}/providers/${provider?.type}/${
+        `${baseApiurl}/runbooks/${provider?.type}/${
           provider?.id
         }/runbook?${params.toString()}`,
         session?.accessToken
