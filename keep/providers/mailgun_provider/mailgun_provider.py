@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import os
+import re
 import typing
 
 import pydantic
@@ -112,7 +113,7 @@ class MailgunProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" | None = None
+        event: dict, provider_instance: "MailgunProvider" | None = None
     ) -> AlertDto:
         name = event["subject"]
         source = event["from"]
@@ -122,9 +123,8 @@ class MailgunProvider(BaseProvider):
         ).isoformat()
         severity = "info"
         status = "firing"
-        # extraction_rules = kwargs.get("extraction_rules", {})
 
-        return AlertDto(
+        alert = AlertDto(
             name=name,
             source=[source],
             message=message,
@@ -134,6 +134,18 @@ class MailgunProvider(BaseProvider):
             status=status,
             raw_email={**event},
         )
+
+        if provider_instance:
+            extraction_rules = provider_instance.authentication_config.extraction
+            if extraction_rules:
+                for key, regex in extraction_rules.items():
+                    if key in event:
+                        match = re.search(regex, event[key])
+                        if match:
+                            for group_name, group_value in match.groupdict().items():
+                                setattr(alert, group_name, group_value)
+
+        return alert
 
 
 if __name__ == "__main__":
