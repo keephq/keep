@@ -17,9 +17,8 @@ import { useSearchParams } from "next/navigation";
 import { AlertKnownKeys } from "../models";
 
 const tabs = [
-  { name: "All", value: "alltime" },
-  { name: "Installed", value: "last_30d" },
-  { name: "Linked", value: "last_7d" },
+  { name: "All", value: "all" },
+  { name: "Installed", value: "installed" },
 ];
 
 const ALERT_QUALITY_FILTERS = [
@@ -65,7 +64,8 @@ interface AlertMetricQuality {
   [key: string]: number;
 }
 
-type FinalAlertQuality = (Provider & AlertMetricQuality)[];
+type FinalAlertQuality = (Provider &
+  AlertMetricQuality & { provider_display_name: string })[];
 interface Pagination {
   limit: number;
   offset: number;
@@ -143,7 +143,7 @@ const QualityTable = ({
     const baseColumns = [
       {
         header: "Provider Name",
-        accessorKey: "display_name",
+        accessorKey: "provider_display_name",
       },
       {
         header: "Alerts Received",
@@ -185,9 +185,6 @@ const QualityTable = ({
       case 1:
         providers = providersMeta?.installed_providers || providers;
         break;
-      case 2:
-        providers = providersMeta?.linked_providers || providers;
-        break;
       default:
         providers = providersMeta?.providers || providers;
         break;
@@ -197,9 +194,41 @@ const QualityTable = ({
       return null;
     }
 
+    const groupedMetrics: { [key: string]: any } = {};
+
+    if (tab === 0) {
+      // Iterate over each provider in the alertsMetrics object
+      for (const provider in alertsQualityMetrics) {
+        const metrics = alertsQualityMetrics[provider];
+        const providerType = metrics.provider_type;
+
+        // If the provider_type doesn't exist in the result, initialize it
+        if (!groupedMetrics[providerType]) {
+          groupedMetrics[providerType] = {
+            total_alerts: 0,
+            correlated_alerts: 0,
+          };
+        }
+
+        // Aggregate the values for total_alerts, correlated_alerts, etc.
+        groupedMetrics[providerType].total_alerts += metrics.total_alerts;
+        groupedMetrics[providerType].correlated_alerts +=
+          metrics.correlated_alerts;
+
+        fields.forEach((field) => {
+          const key = `${field}_count`;
+          groupedMetrics[providerType][key] =
+            groupedMetrics[providerType][key] || 0;
+          groupedMetrics[providerType][key] += metrics[key];
+        });
+      }
+    }
+
     const innerData: FinalAlertQuality = providers.map((provider) => {
+      const providerId = provider.id;
       const providerType = provider.type;
-      const alertQuality = alertsQualityMetrics[providerType];
+      const key =`${providerId}_${providerType}`;
+      const alertQuality = tab ===0 ? groupedMetrics[providerType] :  alertsQualityMetrics[key];
       const totalAlertsReceived = alertQuality?.total_alerts ?? 0;
       const correlated_alerts = alertQuality?.correlated_alerts ?? 0;
       const correltedPert =
@@ -229,6 +258,8 @@ const QualityTable = ({
         alertsCorrelatedToIncidentsPercentage: correltedPert,
         alertsWithSeverityPercentage: severityPert,
         ...dynamicFieldPercentages, // Add dynamic field percentages here
+        provider_display_name:
+          provider?.details?.name ? `${provider.details.name} (${provider.display_name})` : provider.display_name || "",
       } as FinalAlertQuality[number];
     });
 

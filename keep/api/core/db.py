@@ -3364,12 +3364,6 @@ def get_alerts_metrics_by_provider(
     fields: Optional[List[str]] = []
 ) -> Dict[str, Dict[str, Any]]:
     
-    # Set default dates to the last 30 days if not provided
-    if start_date is None:
-        start_date = datetime.now() - timedelta(days=7)
-    if end_date is None:
-        end_date = datetime.now()
-
     dynamic_field_sums = [
         func.sum(
             case(
@@ -3386,11 +3380,11 @@ def get_alerts_metrics_by_provider(
         for field in fields
     ]
 
-    #if the below query is not perfomring well, we can try to optimise the query using Venn Diagram or similar(for now we are using the below query)
     with Session(engine) as session:
-        results = (
+        query = (
             session.query(
                 Alert.provider_type,
+                Alert.provider_id,
                 func.count(Alert.id).label("total_alerts"),
                 func.sum(case([(AlertToIncident.alert_id.isnot(None), 1)], else_=0)).label("correlated_alerts"),
                 *dynamic_field_sums
@@ -3398,18 +3392,23 @@ def get_alerts_metrics_by_provider(
             .outerjoin(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
                 Alert.tenant_id == tenant_id,
-                Alert.timestamp >= start_date,
-                Alert.timestamp <= end_date,    
-                Alert.provider_type.isnot(None)
             )
-            .group_by(Alert.provider_type)
-            .all()
         )
+
+        # Add timestamp filter only if both start_date and end_date are provided
+        if start_date and end_date:
+            query = query.filter(
+                Alert.timestamp >= start_date,
+                Alert.timestamp <= end_date
+            )
+
+        results = query.group_by(Alert.provider_id, Alert.provider_type).all()
         
     return {
-        row.provider_type: {
+        f"{row.provider_id}_{row.provider_type}": {
             "total_alerts": row.total_alerts,
             "correlated_alerts": row.correlated_alerts,
+            "provider_type": row.provider_type,
             **{f"{field}_count": getattr(row, f"{field}_count") for field in fields}  # Add field-specific counts
         }
         for row in results
