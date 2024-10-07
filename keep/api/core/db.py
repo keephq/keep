@@ -2635,7 +2635,7 @@ def update_incident_from_dto_by_id(
 
 def delete_incident_by_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: UUID,
 ) -> bool:
     with Session(engine) as session:
         incident = (
@@ -2881,7 +2881,7 @@ def get_last_alerts_for_incidents(
 
 
 def remove_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
+    tenant_id: str, incident_id:  str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(
