@@ -38,7 +38,14 @@ logger = logging.getLogger(__name__)
 
 
 def provision_dashboards(tenant_id: str):
-    dashboards_raw = json.loads(os.environ.get("KEEP_DASHBOARDS", "[]"))
+    try:
+        dashboards_raw = json.loads(os.environ.get("KEEP_DASHBOARDS", "[]"))
+    except Exception:
+        logger.exception("Failed to load dashboards from environment variable")
+        return
+    if not dashboards_raw:
+        logger.debug("No dashboards to provision")
+        return
     logger.info(
         "Provisioning Dashboards", extra={"num_of_dashboards": len(dashboards_raw)}
     )
