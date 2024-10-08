@@ -1169,6 +1169,7 @@ def get_last_alerts(
     timeframe=None,
     upper_timestamp=None,
     lower_timestamp=None,
+    fingerprints=None,
 ) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
@@ -1176,6 +1177,11 @@ def get_last_alerts(
     Args:
         tenant_id (_type_): The tenant_id to filter the alerts by.
         provider_id (_type_, optional): The provider id to filter by. Defaults to None.
+        limit (int, optional): The maximum number of alerts to return. Defaults to 1000.
+        timeframe (int, optional): The number of days to look back. Defaults to None.
+        upper_timestamp (datetime, optional): The upper bound for the timestamp filter. Defaults to None.
+        lower_timestamp (datetime, optional): The lower bound for the timestamp filter. Defaults to None.
+        fingerprints (List[str], optional): List of fingerprints to filter by. Defaults to None.
 
     Returns:
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
@@ -1186,15 +1192,14 @@ def get_last_alerts(
             session.query(
                 Alert.fingerprint,
                 func.max(Alert.timestamp).label("max_timestamp"),
-                func.min(Alert.timestamp).label(
-                    "min_timestamp"
-                ),  # Include minimum timestamp
+                func.min(Alert.timestamp).label("min_timestamp"),
             )
             .filter(Alert.tenant_id == tenant_id)
             .group_by(Alert.fingerprint)
             .subquery()
         )
-        # if timeframe is provided, filter the alerts by the timeframe
+
+        # Apply timeframe filter if provided
         if timeframe:
             subquery = (
                 session.query(subquery)
@@ -1213,21 +1218,19 @@ def get_last_alerts(
         if lower_timestamp is not None:
             filter_conditions.append(subquery.c.max_timestamp >= lower_timestamp)
 
+        if fingerprints:
+            filter_conditions.append(subquery.c.fingerprint.in_(tuple(fingerprints)))
+
         logger.info(f"filter_conditions: {filter_conditions}")
         # Apply the filter conditions
         if filter_conditions:
-            subquery = (
-                session.query(subquery)
-                .filter(*filter_conditions)  # Unpack and apply all conditions
-                .subquery()
-            )
+            subquery = session.query(subquery).filter(*filter_conditions).subquery()
+
         # Main query joins the subquery to select alerts with their first and last occurrence.
         query = (
             session.query(
                 Alert,
-                subquery.c.min_timestamp.label(
-                    "startedAt"
-                ),  # Include "startedAt" in the selected columns
+                subquery.c.min_timestamp.label("startedAt"),
             )
             .filter(Alert.tenant_id == tenant_id)
             .join(
@@ -1243,17 +1246,13 @@ def get_last_alerts(
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
-        if timeframe:
-            query = query.filter(
-                subquery.c.max_timestamp
-                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
-            )
-
         # Order by timestamp in descending order and limit the results
         query = query.order_by(desc(Alert.timestamp)).limit(limit)
+
         # Execute the query
         alerts_with_start = query.all()
-        # Convert result to list of Alert objects and include "startedAt" information if needed
+
+        # Convert result to list of Alert objects and include "startedAt" information
         alerts = []
         for alert, startedAt in alerts_with_start:
             alert.event["startedAt"] = str(startedAt)
@@ -2705,13 +2704,14 @@ def get_incident_alerts_by_incident_id(
 
 
 def get_alerts_data_for_incident(
-    alert_ids: list[str | UUID], session: Optional[Session] = None
+    tenant_id: str, alert_ids: list[str | UUID], session: Optional[Session] = None
 ) -> dict:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
     Logic is wrapped to the inner function for better usability with an optional database session
 
     Args:
+        tenant_id (str): The tenant ID to filter alerts
         alert_ids (list[str | UUID]): list of alert ids for aggregation
         session (Optional[Session]): The database session or None
 
@@ -2728,6 +2728,7 @@ def get_alerts_data_for_incident(
 
         alerts_data = session.exec(
             select(*fields).where(
+                Alert.tenant_id == tenant_id,
                 col(Alert.id).in_(alert_ids),
             )
         ).all()
@@ -2750,7 +2751,7 @@ def get_alerts_data_for_incident(
         return {
             "sources": set(sources),
             "services": set(services),
-            "max_severity": max(severities),
+            "max_severity": max(severities) if severities else None,
             "count": len(alerts_data),
         }
 
@@ -2881,7 +2882,7 @@ def get_last_alerts_for_incidents(
 
 
 def remove_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id:  str | UUID, alert_ids: List[UUID]
+    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(

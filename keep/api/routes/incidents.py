@@ -9,6 +9,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pusher import Pusher
 from pydantic.types import UUID
+from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
@@ -21,7 +22,9 @@ from keep.api.core.db import (
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
+    get_last_alerts,
     get_last_incidents,
+    get_session,
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
@@ -598,3 +601,221 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+import json  # noqa
+from typing import List  # noqa
+
+from pydantic import BaseModel, Field  # noqa
+
+from keep.topologies.topologies_service import TopologiesService  # noqa
+
+
+class Alert(BaseModel):
+    id: str
+    description: str
+
+
+class Incident(BaseModel):
+    incident_name: str
+    alerts: List[int] = Field(
+        description="List of alert numbers (1-based index) included in this incident"
+    )
+    reasoning: str
+    severity: str = Field(
+        description="Assessed severity level",
+        enum=["Low", "Medium", "High", "Critical"],
+    )
+    recommended_actions: List[str]
+    confidence_score: float = Field(
+        description="Confidence score of the incident clustering (0.0 to 1.0)"
+    )
+    confidence_explanation: str = Field(
+        description="Explanation of how the confidence score was calculated"
+    )
+
+
+class IncidentClustering(BaseModel):
+    incidents: List[Incident]
+
+
+@router.post(
+    "/create-with-ai",
+    description="Create incident with AI",
+    response_model=List[IncidentDto],
+    status_code=202,
+)
+async def create_with_ai(
+    alerts_fingerprints: List[str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> List[IncidentDto]:
+
+    tenant_id = authenticated_entity.tenant_id
+    if len(alerts_fingerprints) > 50:
+        raise HTTPException(status_code=400, detail="Too many alerts to process")
+
+    logger.info(
+        "Creating incident with AI",
+        extra={
+            "alert_ids": alerts_fingerprints,
+            "tenant_id": tenant_id,
+        },
+    )
+    alerts = get_last_alerts(tenant_id, fingerprints=alerts_fingerprints)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    topology_data = TopologiesService.get_all_topology_data(tenant_id, session)
+    alert_descriptions = "\n".join(
+        [
+            f"Alert {idx+1}: {json.dumps(alert.dict())}"
+            for idx, alert in enumerate(alerts_dto)
+        ]
+    )
+
+    topology_data = "\n".join(
+        [
+            f"Topology {idx+1}: {json.dumps(topology.dict(), default=str)}"
+            for idx, topology in enumerate(topology_data)
+        ]
+    )
+
+    system_prompt = """
+    You are an advanced AI system specializing in IT operations and incident management.
+    Your task is to analyze the provided IT operations alerts and topology data, and cluster them into meaningful incidents.
+    Consider factors such as:
+    1. Alert description and content
+    2. Potential temporal proximity
+    3. Affected systems or services
+    4. Type of IT issue (e.g., performance degradation, service outage, resource utilization)
+    5. Potential root causes
+    6. Relationships and dependencies between services in the topology data
+
+    Group related alerts into distinct incidents and provide a detailed analysis for each incident.
+    For each incident:
+    1. Assess its severity
+    2. Recommend initial actions for the IT operations team
+    3. Provide a confidence score (0.0 to 1.0) for the incident clustering
+    4. Explain how the confidence score was calculated, considering factors like alert similarity, topology relationships, and the strength of the correlation between alerts
+
+    Use the topology data to improve your incident clustering by considering service dependencies and relationships.
+    """
+
+    user_prompt = f"""
+    Analyze the following IT operations alerts and topology data, then group the alerts into incidents:
+
+    Alerts:
+    {alert_descriptions}
+
+    Topology data:
+    {topology_data}
+
+    Provide your analysis and clustering in the specified JSON format.
+    """
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI()
+        completion = client.chat.completions.create(
+            model="gpt-4o-2024-08-06",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "incident_clustering",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "incidents": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "incident_name": {"type": "string"},
+                                        "alerts": {
+                                            "type": "array",
+                                            "items": {"type": "integer"},
+                                            "description": "List of alert numbers (1-based index) included in this incident",
+                                        },
+                                        "reasoning": {"type": "string"},
+                                        "severity": {
+                                            "type": "string",
+                                            "enum": [
+                                                "Low",
+                                                "Medium",
+                                                "High",
+                                                "Critical",
+                                            ],
+                                            "description": "Assessed severity level",
+                                        },
+                                        "recommended_actions": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                        },
+                                        "confidence_score": {
+                                            "type": "number",
+                                            "description": "Confidence score of the incident clustering (0.0 to 1.0)",
+                                        },
+                                        "confidence_explanation": {
+                                            "type": "string",
+                                            "description": "Explanation of how the confidence score was calculated",
+                                        },
+                                    },
+                                    "required": [
+                                        "incident_name",
+                                        "alerts",
+                                        "reasoning",
+                                        "severity",
+                                        "recommended_actions",
+                                        "confidence_score",
+                                        "confidence_explanation",
+                                    ],
+                                    "additionalProperties": False,
+                                },
+                            }
+                        },
+                        "required": ["incidents"],
+                        "additionalProperties": False,
+                    },
+                    "strict": True,
+                },
+            },
+            temperature=0.2,
+        )
+
+        incident_clustering = IncidentClustering.parse_raw(
+            completion.choices[0].message.content
+        )
+
+        # Process the incidents
+        processed_incidents = process_incidents(
+            incident_clustering.incidents, alerts_dto
+        )
+
+        return processed_incidents
+
+    except Exception as e:
+        logger.error(f"AI incident creation failed: {e}")
+        raise HTTPException(status_code=500, detail="AI service is unavailable.")
+
+
+def process_incidents(
+    incidents: List[Incident], alerts_dto: List[AlertDto]
+) -> List[IncidentDto]:
+    processed_incidents = []
+    for incident in incidents:
+        incident_dto = IncidentDto(
+            name=incident.incident_name,
+            description=f"{incident.reasoning}\n\nConfidence Score: {incident.confidence_score}\nConfidence Explanation: {incident.confidence_explanation}",
+            severity=incident.severity,
+            alert_ids=[alerts_dto[i - 1].id for i in incident.alerts],
+            recommended_actions=incident.recommended_actions,
+        )
+        processed_incidents.append(incident_dto)
+    return processed_incidents
