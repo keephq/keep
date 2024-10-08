@@ -24,12 +24,15 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
         dict | bytes | FormData: The body of the request.
     """
     content_type = request.headers.get("Content-Type")
-    if content_type == "application/json":
-        return await request.json()
-    elif content_type == "application/x-www-form-urlencoded":
+    if content_type == "application/x-www-form-urlencoded":
         return await request.form()
     else:
-        return await request.body()
+        try:
+            body = await request.json()
+            return body
+        except Exception:
+            logger.debug("Failed to parse body as json, returning raw body")
+            return await request.body()
 
 
 def get_pusher_client() -> Pusher | None:
