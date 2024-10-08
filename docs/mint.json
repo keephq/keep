@@ -165,6 +165,7 @@
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
+            "providers/documentation/smtp-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
