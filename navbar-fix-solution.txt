@@ -1,0 +1,77 @@
+I am not able to find the exact file or folder to change. But here is a general solution to fix the issue.
+To resolve the issue of the navbar being broken on smaller screens, you will likely need to make changes to the CSS and possibly the HTML/JavaScript of the navbar component.
+
+
+================================================ CSS =================================================================
+
+/* Base Styles */
+.navbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #333;
+    color: #fff;
+}
+
+.navbar .menu {
+    display: flex;
+    list-style: none;
+}
+
+.navbar .menu li {
+    margin: 0 1rem;
+}
+
+.navbar .menu li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .navbar .menu {
+        flex-direction: column;
+        width: 100%;
+        display: none; /* Initially hidden */
+    }
+
+    .navbar .menu.show {
+        display: flex; /* Show when toggled */
+    }
+
+    .navbar .menu li {
+        margin: 0.5rem 0;
+    }
+
+    .navbar .menu-toggle {
+        display: block;
+        cursor: pointer;
+    }
+}
+
+
+================================================ HTML =================================================================
+
+
+<nav class="navbar">
+    <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+    <ul class="menu">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+    </ul>
+</nav>
+
+
+================================================ JAVASCRIPT =================================================================
+
+function toggleMenu() {
+    const menu = document.querySelector('.navbar .menu');
+    menu.classList.toggle('show');
+}
+
+
+This should ensure the navbar displays correctly on smaller screens, with a toggle button to show/hide the menu items. Adjust the styles as necessary to fit the design of your site.
