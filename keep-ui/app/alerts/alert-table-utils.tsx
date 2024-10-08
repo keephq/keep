@@ -18,7 +18,10 @@ import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
 import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
 import { severityMapping } from "./models";
-import { MdOutlineNotificationsActive, MdOutlineNotificationsOff } from "react-icons/md";
+import {
+  MdOutlineNotificationsActive,
+  MdOutlineNotificationsOff,
+} from "react-icons/md";
 
 export const DEFAULT_COLS = [
   "noise",
@@ -82,11 +85,12 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
 
 const columnHelper = createColumnHelper<AlertDto>();
 
-const invertedSeverityMapping = Object.entries(severityMapping).reduce<{ [key: string]: number }>((acc, [key, value]) => {
+const invertedSeverityMapping = Object.entries(severityMapping).reduce<{
+  [key: string]: number;
+}>((acc, [key, value]) => {
   acc[value as keyof typeof acc] = Number(key);
   return acc;
 }, {});
-
 
 const customSeveritySortFn = (rowA: any, rowB: any) => {
   // Adjust the way to access severity values according to your data structure
@@ -160,39 +164,38 @@ export const useAlertTableCols = (
   ) as ColumnDef<AlertDto>[];
 
   return [
-      // noisy column
-      columnHelper.display({
-        id: "noise",
-        size: 5,
-        header: () => <></>,
-        cell: (context) => {
-          // Get the status of the alert
-          const status = context.row.original.status;
-          const isNoisy = context.row.original.isNoisy;
+    // noisy column
+    columnHelper.display({
+      id: "noise",
+      size: 5,
+      header: () => <></>,
+      cell: (context) => {
+        // Get the status of the alert
+        const status = context.row.original.status;
+        const isNoisy = context.row.original.isNoisy;
 
-          // Return null if presetNoisy is not true
-          if (!presetNoisy && !isNoisy) {
+        // Return null if presetNoisy is not true
+        if (!presetNoisy && !isNoisy) {
+          return null;
+        } else if (presetNoisy) {
+          // Decide which icon to display based on the status
+          if (status === "firing") {
+            return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+          } else {
+            return <Icon icon={MdOutlineNotificationsOff} color="red" />;
+          }
+        }
+        // else, noisy alert in non noisy preset
+        else {
+          if (status === "firing") {
+            return <Icon icon={MdOutlineNotificationsActive} color="red" />;
+          } else {
             return null;
           }
-          else if (presetNoisy) {
-                // Decide which icon to display based on the status
-              if (status === "firing") {
-                return <Icon icon={MdOutlineNotificationsActive} color="red" />;
-              } else {
-                return <Icon icon={MdOutlineNotificationsOff} color="red" />;
-              }
-          }
-          // else, noisy alert in non noisy preset
-          else {
-            if (status === "firing") {
-              return <Icon icon={MdOutlineNotificationsActive} color="red" />;
-            } else {
-              return null;
-            }
-          }
-        },
-        enableSorting: false,
-      }),
+        }
+      },
+      enableSorting: false,
+    }),
     ,
     ...(isCheckboxDisplayed
       ? [
@@ -222,7 +225,6 @@ export const useAlertTableCols = (
       minSize: 100,
       cell: (context) => <AlertSeverity severity={context.getValue()} />,
       sortingFn: customSeveritySortFn,
-
     }),
     columnHelper.display({
       id: "name",
@@ -267,17 +269,23 @@ export const useAlertTableCols = (
       header: "Source",
       minSize: 100,
       cell: (context) =>
-        (context.getValue() ?? []).map((source, index) => (
-          <Image
-            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-            key={source}
-            alt={source}
-            height={24}
-            width={24}
-            title={source}
-            src={`/icons/${source}-icon.png`}
-          />
-        )),
+        (context.getValue() ?? []).map((source, index) => {
+          let imagePath = `/icons/${source}-icon.png`;
+          if (source.includes("@")) {
+            imagePath = "/icons/mailgun-icon.png";
+          }
+          return (
+            <Image
+              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+              key={source}
+              alt={source}
+              height={24}
+              width={24}
+              title={source}
+              src={imagePath}
+            />
+          );
+        }),
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",

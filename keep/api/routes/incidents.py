@@ -83,7 +83,7 @@ def __update_client_on_incident_change(
         pusher_client.trigger(
             f"private-{tenant_id}",
             "incident-change",
-            {"incident_id": incident_id},
+            {"incident_id": str(incident_id)},
         )
         logger.info(
             "Client notified on incident change",

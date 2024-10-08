@@ -66,7 +66,9 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         return None
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         alert = AlertDto(
             id=(
                 CoralogixProvider.get_value_by_key(

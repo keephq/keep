@@ -51,7 +51,9 @@ interface AlertDistritbuionData {
   number: number;
 }
 
+
 export type TProviderLabels = 'alert' | 'topology' | 'messaging' | 'ticketing' | 'data' | 'queue' | 'runbook';
+
 
 export interface Provider {
   // key value pair of auth method name and auth method config
@@ -81,6 +83,7 @@ export interface Provider {
   notify_params?: string[];
   type: string;
   can_setup_webhook?: boolean;
+  webhook_required?: boolean;
   supports_webhook?: boolean;
   provider_description?: string;
   oauth2_url?: string;

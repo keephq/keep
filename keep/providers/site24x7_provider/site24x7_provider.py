@@ -212,7 +212,9 @@ class Site24X7Provider(BaseProvider):
             self.logger.info("Webhook created successfully")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         return AlertDto(
             url=event.get("MONITORURL", ""),
             lastReceived=event.get("INCIDENT_TIME", ""),

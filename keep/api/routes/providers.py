@@ -657,9 +657,8 @@ def install_provider_webhook(
         tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
     )
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-    provider_config = secret_manager.read_secret(
-        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
-    )
+    provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
+    provider_config = secret_manager.read_secret(provider_secret_name, is_json=True)
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
     )
@@ -676,7 +675,15 @@ def install_provider_webhook(
     )
 
     try:
-        provider.setup_webhook(tenant_id, keep_webhook_api_url, webhook_api_key, True)
+        extra_config = provider.setup_webhook(
+            tenant_id, keep_webhook_api_url, webhook_api_key, True
+        )
+        if extra_config:
+            provider_config["authentication"].update(extra_config)
+            secret_manager.write_secret(
+                secret_name=provider_secret_name,
+                secret_value=json.dumps(provider_config),
+            )
     except HTTPException:
         raise
     except Exception as e:
