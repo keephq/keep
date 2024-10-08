@@ -55,7 +55,7 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
   }, [refresh]);
 
   const handleSubmit = async (data: any) => {
-    const { pathToMdFile, repoName } = data;
+    const { pathToMdFile, repoName, runBookTitle } = data;
     try {
       if(!provider){
         return toast("Please select a provider");
@@ -67,18 +67,31 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
       if (repoName) {
         params.append("repo", repoName);
       }
+      if(runBookTitle){
+        params.append("title", runBookTitle);
+
+      }
       //TO DO backend runbook records needs to be created.
-      const response = await fetcher(
-        `${baseApiurl}/runbooks/${provider?.type}/${
+      const response = await fetch(`${baseApiurl}/runbooks/${provider?.type}/${
           provider?.id
-        }/runbook?${params.toString()}`,
-        session?.accessToken
-      );
+        }?${params.toString()}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,  
+        },
+      });
 
       if (!response) {
         return setError("Something went wrong. try agian after some time");
       }
-      setFileData(response);
+
+      if(!response.ok) {
+        return setError("Something went wrong. try agian after some time");
+
+      }
+      const result = await response.json();
+      setFileData(result);
       setSynced(false);
     } catch (err) {
       return setError("Something went wrong. try agian after some time");

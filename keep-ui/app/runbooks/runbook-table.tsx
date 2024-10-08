@@ -17,6 +17,10 @@ import { useRunBookTriggers } from "utils/hooks/useRunbook";
 import { useForm, get } from "react-hook-form";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { getApiURL } from "@/utils/apiUrl";
+import useSWR from "swr";
+import { fetcher } from "@/utils/fetcher";
+import { useSession } from "next-auth/react";
 
 const customStyles = {
   content: {
@@ -30,67 +34,49 @@ const customStyles = {
   },
 };
 
-interface Incident {
-  id: number;
-  name: string;
+interface Content {
+  id: string;
+  content: string;
+  link: string;
+  encoding: string|null;
+  file_name: string;
 }
-
-interface Runbook {
+interface RunbookV2 {
   id: number;
   title: string;
-  incidents: Incident[];
+  contents:Content[],
+  provider_type: string,
+  provider_id: string
+  repo_id: string
+  file_path: string
 }
 
-const runbookData = [
-  {
-    id: 1,
-    title: "Database Recovery",
-    incidents: [
-      { id: 101, name: "DB Outage on 2024-01-01" },
-      { id: 102, name: "DB Backup Failure" },
-    ],
-  },
-  {
-    id: 2,
-    title: "API Health Check",
-    incidents: [{ id: 201, name: "API Latency Issue" }],
-  },
-  {
-    id: 3,
-    title: "Server Restart Guide",
-    incidents: [
-      { id: 301, name: "Unexpected Server Crash" },
-      { id: 302, name: "Scheduled Maintenance" },
-    ],
-  },
-] as Runbook[];
+const columnHelperv2 = createColumnHelper<RunbookV2>();
 
-const columnHelper = createColumnHelper<Runbook>();
-
-const columns = [
-  columnHelper.display({
+const columnsv2 = [
+  columnHelperv2.display({
     id: "title",
     header: "Runbook Title",
     cell: ({ row }) => {
       return <div>{row.original.title}</div>;
     },
   }),
-  columnHelper.display({
-    id: "incidents",
-    header: "Incdients",
+  columnHelperv2.display({
+    id: "contents",
+    header: "Contents",
     cell: ({ row }) => {
       return (
         <div>
-          {row.original.incidents?.map((incident: Incident) => (
-            <Badge key={incident.id} color="green" className="mr-2 mb-1">
-              {incident.name}
+          {row.original.contents?.map((content: Content) => (
+            <Badge key={content.id} color="green" className="mr-2 mb-1">
+              {content.file_name}
             </Badge>
           ))}
         </div>
       );
     },
   }),
-] as DisplayColumnDef<Runbook>[];
+] as DisplayColumnDef<RunbookV2>[];
 
 // function PreviewContent({type, data}:{type:string, data:string}){
 //   const [isModalOpen, setIsModalOpen] = useState(open);
@@ -230,6 +216,7 @@ function SettingsPage() {
               <TextInput
                 {...register("pathToMdFile")}
                 placeholder="Enter path to markdown files"
+                required
               />
             </div>
           </div>
@@ -265,6 +252,17 @@ function SettingsPage() {
 function RunbookIncidentTable() {
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(10);
+  const { data: session, status } = useSession();
+
+
+  let shouldFetch = session?.accessToken ? true : false;
+
+  const { data: runbooksData, error } = useSWR<RunbookV2[]>(
+    shouldFetch ? `${getApiURL()}/runbooks` : null,
+    (url:string) => {
+      return fetcher(url, session?.accessToken!);
+    }, 
+  );
 
   // Modal state management
 
@@ -280,17 +278,17 @@ function RunbookIncidentTable() {
         <SettingsPage />
       </div>
       <Card className="flex-1 overflow-auto">
-        <GenericTable<Runbook>
-          data={runbookData}
-          columns={columns}
-          rowCount={runbookData.length}
+        {runbooksData && <GenericTable<RunbookV2>
+          data={runbooksData}
+          columns={columnsv2}
+          rowCount={runbooksData.length}
           offset={offset}
           limit={limit}
           onPaginationChange={handlePaginationChange}
           onRowClick={(row) => {
             console.log("Runbook clicked:", row);
           }}
-        />
+        />}
       </Card>
     </div>
   );
