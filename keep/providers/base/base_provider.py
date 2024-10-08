@@ -666,7 +666,7 @@ class BaseTopologyProvider(BaseProvider):
 
 
 class BaseRunBookProvider(BaseProvider):
-    def pull_runbook(self, repo=None, branch=None, md_path=None):
+    def pull_runbook(self, repo=None, branch=None, md_path=None, title=None):
         raise NotImplementedError("get_runbook() method not implemented")
 
     def pull_repositories(self):

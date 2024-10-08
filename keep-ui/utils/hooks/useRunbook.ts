@@ -14,7 +14,7 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
   const [synced, setSynced] = useState(false);
   const [fileData, setFileData] = useState<any>({});
   const [reposData, setRepoData] = useState<any>([]);
-  const { pathToMdFile, repoName, userName, providerId, domain } = values || {};
+  const { pathToMdFile, repoName, userName, providerId, domain, runBookTitle } = values || {};
   const { data: session } = useSession();
   const { installed_providers, providers } = (providersData?.data ||
     {}) as ProvidersResponse;
@@ -67,18 +67,31 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
       if (repoName) {
         params.append("repo", repoName);
       }
+      if(runBookTitle){
+        params.append("title", runBookTitle);
+
+      }
       //TO DO backend runbook records needs to be created.
-      const response = await fetcher(
-        `${baseApiurl}/runbooks/${provider?.type}/${
+      const response = await fetch(`${baseApiurl}/runbooks/${provider?.type}/${
           provider?.id
-        }/runbook?${params.toString()}`,
-        session?.accessToken
-      );
+        }?${params.toString()}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,  
+        },
+      });
 
       if (!response) {
         return setError("Something went wrong. try agian after some time");
       }
-      setFileData(response);
+
+      if(!response.ok) {
+        return setError("Something went wrong. try agian after some time");
+
+      }
+      const result = await response.json();
+      setFileData(result);
       setSynced(false);
     } catch (err) {
       return setError("Something went wrong. try agian after some time");

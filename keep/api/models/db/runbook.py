@@ -1,93 +1,82 @@
+from uuid import UUID, uuid4
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID, uuid4
-
-from sqlalchemy import ForeignKey, Column, TEXT, JSON
 from sqlmodel import Field, Relationship, SQLModel
-from keep.api.models.db.tenant import Tenant 
+from sqlalchemy import Column, ForeignKey, Text
+from pydantic import BaseModel
 
-# Link Model between Runbook and Incident
-class RunbookToIncident(SQLModel, table=True):
-    tenant_id: str = Field(foreign_key="tenant.id")
-    runbook_id: UUID = Field(foreign_key="runbook.id", primary_key=True)
-    incident_id: UUID = Field(foreign_key="incident.id", primary_key=True)
 
-    incident_id: UUID = Field(
-        sa_column=Column(
-            UUID(binary=False),
-            ForeignKey("incident.id", ondelete="CASCADE"),
-            primary_key=True,
-        )
+# RunbookContent Model
+class RunbookContent(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    runbook_id: UUID = Field(
+        sa_column=Column(ForeignKey("runbook.id", ondelete="CASCADE"))  # Foreign key with CASCADE delete
     )
+    runbook: Optional["Runbook"] = Relationship(back_populates="contents")
+    content: str = Field(sa_column=Column(Text), nullable=False)  # Using SQLAlchemy's Text type
+    link: str = Field(sa_column=Column(Text), nullable=False)  # Using SQLAlchemy's Text type
+    encoding: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)  # Timestamp for creation
 
+    class Config:
+        orm_mode = True
 
 # Runbook Model
 class Runbook(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
-    tenant: Tenant = Relationship()
-    repo_id: str = Field(nullable=False)  # Github repo id
-    relative_path: str = Field(nullable=False) # Relative path to the .md file
-    title: str = Field(nullable=False)  # Title of the runbook
-    link: str = Field(nullable=False)   # Link to the .md file
-
-    incidents: List["Incident"] = Relationship(
-        back_populates="runbooks", link_model=RunbookToIncident
+    tenant_id: str = Field(
+        sa_column=Column(ForeignKey("tenant.id", ondelete="CASCADE"))  # Foreign key with CASCADE delete
     )
+    repo_id: str  # Repository ID
+    relative_path: str = Field(sa_column=Column(Text), nullable=False)  # Path in the repo, must be set
+    title: str = Field(sa_column=Column(Text), nullable=False)  # Title of the runbook, must be set
+    contents: List["RunbookContent"] = Relationship(back_populates="runbook")  # Relationship to RunbookContent
+    provider_type: str  # Type of the provider
+    provider_id: Optional[str] = None  # Optional provider ID
+    created_at: datetime = Field(default_factory=datetime.utcnow)  # Timestamp for creation
+
+    class Config:
+        orm_mode = True  # Enable ORM mode for compatibility with Pydantic models
+
+        
+class RunbookDto(BaseModel, extra="ignore"):
+    id: UUID
+    tenant_id: str
+    repo_id: str
+    relative_path: str
+    title: str
+    contents: List["RunbookContent"] = []
     provider_type: str
     provider_id: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        arbitrary_types_allowed = True
+class RunbookContentDto(BaseModel, extra="ignore"):
+    id: UUID
+    content: str
+    link: str
+    encoding: Optional[str] = None
 
+    @classmethod
+    def from_orm(cls, content: "RunbookContent") -> "RunbookContentDto":
+        return cls(
+            id=content.id,
+            content=content.content,
+            link=content.link,
+            encoding=content.encoding
+        )
 
-# Incident Model
-class Incident(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    tenant_id: str = Field(foreign_key="tenant.id")
-    tenant: Tenant = Relationship()
-
-    user_generated_name: Optional[str] = None
-    ai_generated_name: Optional[str] = None
-
-    user_summary: Optional[str] = Field(sa_column=Column(TEXT), nullable=True)
-    generated_summary: Optional[str] = Field(sa_column=Column(TEXT), nullable=True)
-
-    assignee: Optional[str] = None
-    # severity: int = Field(default=IncidentSeverity.CRITICAL.order)
-
-    creation_time: datetime = Field(default_factory=datetime.utcnow)
-
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    last_seen_time: Optional[datetime] = None
-
-    runbooks: List["Runbook"] = Relationship(
-        back_populates="incidents", link_model=RunbookToIncident
-    )
-
-    is_predicted: bool = Field(default=False)
-    is_confirmed: bool = Field(default=False)
-
-    alerts_count: int = Field(default=0)
-    affected_services: List = Field(sa_column=Column(JSON), default_factory=list)
-    sources: List = Field(sa_column=Column(JSON), default_factory=list)
-
-    rule_id: Optional[UUID] = Field(
-        sa_column=Column(
-            UUID(binary=False),
-            ForeignKey("rule.id", ondelete="CASCADE"),
-            nullable=True,
-        ),
-    )
-
-    rule_fingerprint: str = Field(default="", sa_column=Column(TEXT))
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if "runbooks" not in kwargs:
-            self.runbooks = []
-
-    class Config:
-        arbitrary_types_allowed = True
+class RunbookDtoOut(RunbookDto):
+   contents: List[RunbookContentDto] = []
+   @classmethod
+   def from_orm(
+       cls, runbook: "Runbook"
+   ) -> "RunbookDtoOut":
+       return cls(
+           id=runbook.id,
+           title=runbook.title,
+           tenant_id=runbook.tenant_id,
+           repo_id=runbook.repo_id,
+           relative_path=runbook.relative_path,
+           provider_type=runbook.provider_type,
+           provider_id=runbook.provider_id,
+           contents=[RunbookContentDto.from_orm(content) for content in runbook.contents]
+       )

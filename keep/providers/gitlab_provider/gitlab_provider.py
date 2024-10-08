@@ -228,13 +228,12 @@ class GitlabProvider(BaseRunBookProvider):
 
        raise Exception("Failed to get repositories: personal_access_token not set")
 
-    def _format_runbook(self, runbook, repo):
+    def _format_runbook(self, runbook, repo, title):
        """
        Format the runbook data into a dictionary.
        """
-       if runbook is None:
-           return {}
-
+       
+       # TO DO. currently we are handling the one file only. we user give folder path. then we might get multiple files as input(runbook)
        return  {
                 "file_name": runbook.get("file_name"),
                 "file_path": runbook.get("file_path"),
@@ -244,13 +243,16 @@ class GitlabProvider(BaseRunBookProvider):
                 "repo_name": repo.get("name"),
                 "repo_display_name": repo.get("display_name"),
                 "provider_type": "gitlab",
-                "config": self.config.authentication.get("provider_id"),
-                "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbook.get('file_path')}/raw",
-                "content": runbook.get("content"),
-                "encoding": runbook.get("encoding"),
+                "config": self.provider_id,
+                "contents": [{
+                    "content": runbook.get("content"),
+                    "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbook.get('file_path')}/raw",
+                    "encoding": runbook.get("encoding"),
+                    }],
+                "title": title,
                 }           
 
-    def pull_runbook(self, repo=None, branch=None, md_path=None):
+    def pull_runbook(self, repo=None, branch=None, md_path=None, title=None):
         """Retrieve markdown files from the GitLab repository."""
         repo = repo if repo else self.authentication_config.repository
         branch = branch if branch else "main"
@@ -270,7 +272,7 @@ class GitlabProvider(BaseRunBookProvider):
             except HTTPError as e:
                 raise Exception(f"Failed to get runbook: {e}")
 
-            return self._format_runbook(resp.json(), repo_meta)
+            return self._format_runbook(resp.json(), repo_met, title)
 
         raise Exception("Failed to get runbook: repository or md_path not set")       
 
@@ -326,6 +328,6 @@ if __name__ == "__main__":
         description="Test Alert Description",
     )
 
-    result = provider.pull_runbook()
+    result = provider.pull_runbook(title="test")
     result = provider.pull_repositories()
     print(result)
