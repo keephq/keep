@@ -32,7 +32,7 @@ export function getApiURL(): string {
         maxBranchNameLength
       );
     }
-    let serviceName = `keep-api-${branchNameSanitized}-3jg67kxyna-uc`;
+    let serviceName = `keep-api-${branchNameSanitized}`;
     return process.env.API_URL!.replace("keep-api", serviceName);
   }
 }
