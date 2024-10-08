@@ -7,6 +7,13 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+from keep.runbooks.runbooks_service import (
+    RunbookService
+    )
+from keep.api.models.db.runbook import (
+    RunbookDtoOut
+    )
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +52,8 @@ def get_repositories(
     return provider.pull_repositories()
 
 
-@router.get("/{provider_type}/{provider_id}/runbook")
-def get_repositories(
+@router.get("/{provider_type}/{provider_id}")
+def get_runbook(
     provider_type: str,
     provider_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -56,6 +63,7 @@ def get_repositories(
     repo: str = Query(None),
     branch: str = Query(None),
     md_path: str = Query(None),
+    title: str = Query(None),
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting runbook", extra={"provider_type": provider_type, "provider_id": provider_id})
@@ -76,4 +84,37 @@ def get_repositories(
         context_manager, provider_id, provider_type, provider_config
     )
 
-    return provider.pull_runbook(repo=repo, branch=branch, md_path=md_path)
+    return provider.pull_runbook(repo=repo, branch=branch, md_path=md_path, title=title)
+
+
+@router.post(
+    "/{provider_type}/{provider_id}",
+    description="Create a new Runbook",
+    # response_model=RunbookDtoOut,
+)
+def create_runbook(
+    provider_type: str,
+    provider_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:runbook"])
+    ),
+    session: Session = Depends(get_session),
+    repo: str = Query(None),
+    branch: str = Query(None),
+    md_path: str = Query(None),
+    title: str = Query(None),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info("Creating Runbook", extra={tenant_id: tenant_id})
+    context_manager = ContextManager(tenant_id=tenant_id)
+    secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+    provider_config = secret_manager.read_secret(
+        f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
+    )
+    provider = ProvidersFactory.get_provider(
+        context_manager, provider_id, provider_type, provider_config
+    )
+
+    runbook_dto= provider.pull_runbook(repo=repo, branch=branch, md_path=md_path, title=title)
+    return RunbookService.create_runbook(session, tenant_id, runbook_dto)
+

@@ -230,6 +230,7 @@ function SettingsPage() {
               <TextInput
                 {...register("pathToMdFile")}
                 placeholder="Enter path to markdown files"
+                required
               />
             </div>
           </div>
