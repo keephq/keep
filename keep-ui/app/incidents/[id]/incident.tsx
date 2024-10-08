@@ -23,6 +23,7 @@ import IncidentWorkflowTable from "./incident-workflow-table";
 import { TopologyMap } from "@/app/topology/ui/map";
 import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
 import { useState } from "react";
+import { FiActivity } from "react-icons/fi";
 
 interface Props {
   incidentId: string;
@@ -56,6 +57,15 @@ export default function IncidentView({ incidentId }: Props) {
             color="orange"
             className="sticky xl:-top-10 -top-4 bg-white z-10"
           >
+            <Tab icon={FiActivity}>
+              Activity
+              <Badge
+                color="green"
+                className="ml-1.5 text-xs px-1 py-0.5 -my-0.5 pointer-events-none"
+              >
+                New
+              </Badge>
+            </Tab>
             <Tab icon={CiBellOn}>Alerts</Tab>
             <Tab icon={CiViewTimeline}>Timeline</Tab>
             <Tab icon={IoIosGitNetwork}>Topology</Tab>
@@ -71,6 +81,7 @@ export default function IncidentView({ incidentId }: Props) {
             </Tab>
           </TabList>
           <TabPanels>
+            <TabPanel>Activity</TabPanel>
             <TabPanel>
               <IncidentAlerts incident={incident} />
             </TabPanel>
