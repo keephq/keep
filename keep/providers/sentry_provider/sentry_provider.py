@@ -250,13 +250,14 @@ class SentryProvider(BaseProvider):
                 exception["stacktrace"] = False
 
         logger.debug("Formatted Sentry alert", extra={"event": event})
-        name = (event_data.get("title", "").replace("'", "").replace('"', ""),)
+        name = event_data.get("title", "").replace("'", "").replace('"', "")
         message = (
             event_data.get("metadata", {})
             .get("value", "")
             .replace("'", "")
             .replace('"', "")
         )
+
         return AlertDto(
             id=event_data.pop("event_id"),
             name=name,
