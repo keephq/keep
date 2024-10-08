@@ -85,6 +85,7 @@ class SplunkProvider(BaseProvider):
                 host=self.authentication_config.host,
                 port=self.authentication_config.port,
             )
+
             for user in service.users:
                 user_roles = user.content["roles"]
                 for role_name in user_roles:
