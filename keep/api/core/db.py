@@ -1614,7 +1614,6 @@ def get_incident_for_grouping_rule(
     with existed_or_new_session(session) as session:
         incident = session.exec(
             select(Incident)
-            .options(joinedload(Incident.alerts))
             .where(Incident.tenant_id == tenant_id)
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
@@ -2371,13 +2370,12 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
 
 
 def assign_alert_to_incident(
-    alert_id: UUID | str,
-    incident_id: UUID,
-    tenant_id: str,
-    session: Optional[Session] = None,
-):
-    return add_alerts_to_incident_by_incident_id(
-        tenant_id, incident_id, [alert_id], session=session
+        alert_id: UUID | str,
+        incident: Incident,
+        tenant_id: str,
+        session: Optional[Session]=None):
+    return add_alerts_to_incident(
+        tenant_id, incident, [alert_id], session=session
     )
 
 
@@ -2765,11 +2763,6 @@ def add_alerts_to_incident_by_incident_id(
     alert_ids: List[UUID],
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
-    logger.info(
-        f"Adding alerts to incident {incident_id} in database, total {len(alert_ids)} alerts",
-        extra={"tags": {"tenant_id": tenant_id, "incident_id": incident_id}},
-    )
-
     with existed_or_new_session(session) as session:
         query = select(Incident).where(
             Incident.tenant_id == tenant_id,
@@ -2779,71 +2772,86 @@ def add_alerts_to_incident_by_incident_id(
 
         if not incident:
             return None
+        return add_alerts_to_incident(tenant_id, incident, alert_ids, session)
 
-        # Use a set for faster membership checks
-        existing_alert_ids = set(
-            session.exec(
-                select(AlertToIncident.alert_id).where(
+
+def add_alerts_to_incident(
+    tenant_id: str,
+    incident: Incident,
+    alert_ids: List[UUID],
+    session: Optional[Session] = None,
+) -> Optional[Incident]:
+    logger.info(
+        f"Adding alerts to incident {incident.id} in database, total {len(alert_ids)} alerts",
+        extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}},
+    )
+
+    with existed_or_new_session(session) as session:
+        with session.no_autoflush:
+            # Use a set for faster membership checks
+            existing_alert_ids = set(
+                session.exec(
+                    select(AlertToIncident.alert_id).where(
+                        AlertToIncident.tenant_id == tenant_id,
+                        AlertToIncident.incident_id == incident.id,
+                        col(AlertToIncident.alert_id).in_(alert_ids),
+                    )
+                ).all()
+            )
+
+            new_alert_ids = [
+                alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids
+            ]
+
+            if not new_alert_ids:
+                return incident
+
+            alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
+
+            incident.sources = list(
+                set(incident.sources) | set(alerts_data_for_incident["sources"])
+            )
+            incident.affected_services = list(
+                set(incident.affected_services) | set(alerts_data_for_incident["services"])
+            )
+            incident.alerts_count += alerts_data_for_incident["count"]
+
+            alert_to_incident_entries = [
+                AlertToIncident(
+                    alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
+                )
+                for alert_id in new_alert_ids
+            ]
+
+            for idx, entry in enumerate(alert_to_incident_entries):
+                session.add(entry)
+                if (idx + 1) % 100 == 0:
+                    logger.info(
+                        f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
+                        extra={
+                            "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
+                        },
+                    )
+                    session.flush()
+            session.commit()
+
+            started_at, last_seen_at = session.exec(
+                select(func.min(Alert.timestamp), func.max(Alert.timestamp))
+                .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+                .where(
                     AlertToIncident.tenant_id == tenant_id,
                     AlertToIncident.incident_id == incident.id,
-                    col(AlertToIncident.alert_id).in_(alert_ids),
                 )
-            ).all()
-        )
+            ).one()
 
-        new_alert_ids = [
-            alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids
-        ]
+            incident.start_time = started_at
+            incident.last_seen_time = last_seen_at
+            incident.severity = alerts_data_for_incident["max_severity"].order
 
-        if not new_alert_ids:
+            session.add(incident)
+            session.commit()
+            session.refresh(incident)
             return incident
-
-        alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
-
-        incident.sources = list(
-            set(incident.sources) | set(alerts_data_for_incident["sources"])
-        )
-        incident.affected_services = list(
-            set(incident.affected_services) | set(alerts_data_for_incident["services"])
-        )
-        incident.alerts_count += alerts_data_for_incident["count"]
-
-        alert_to_incident_entries = [
-            AlertToIncident(
-                alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
-            )
-            for alert_id in new_alert_ids
-        ]
-
-        for idx, entry in enumerate(alert_to_incident_entries):
-            session.add(entry)
-            if (idx + 1) % 100 == 0:
-                logger.info(
-                    f"Added {idx + 1}/{len(alert_to_incident_entries)} alerts to incident {incident.id} in database",
-                    extra={
-                        "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
-                    },
-                )
-                session.commit()
-                session.flush()
-
-        started_at, last_seen_at = session.exec(
-            select(func.min(Alert.timestamp), func.max(Alert.timestamp))
-            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
-            .where(
-                AlertToIncident.tenant_id == tenant_id,
-                AlertToIncident.incident_id == incident.id,
-            )
-        ).one()
-
-        incident.start_time = started_at
-        incident.last_seen_time = last_seen_at
-        incident.severity = alerts_data_for_incident["max_severity"].order
-
-        session.add(incident)
-        session.commit()
-        session.refresh(incident)
-        return incident
 
 
 def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> int:
