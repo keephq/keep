@@ -19,8 +19,9 @@ export type Rule = {
   updated_by: string | null;
   update_time: string | null;
   require_approve: boolean;
+  resolve_on: "all" | "first" | "last" | "never";
   distribution: { [group: string]: { [timestamp: string]: number } };
-  incidents: number
+  incidents: number;
 };
 
 export const useRules = (options?: SWRConfiguration) => {
