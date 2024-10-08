@@ -74,7 +74,7 @@ class RulesEngine:
 
                     incident = assign_alert_to_incident(
                         alert_id=event.event_id,
-                        incident_id=incident.id,
+                        incident=incident,
                         tenant_id=self.tenant_id,
                         session=session
                     )
