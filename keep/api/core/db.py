@@ -2853,7 +2853,6 @@ def get_future_incidents_by_incident_id(
         query = (
             session.query(
                 Incident,
-                
             ).filter(Incident.same_incident_in_the_past_id == incident_id)
         )
         

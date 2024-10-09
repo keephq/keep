@@ -403,7 +403,7 @@ def get_incident_alerts(
     "/{incident_id}/future_incidents",
     description="Get same incidents linked to this one",
 )
-def get_incident_alerts(
+def get_future_incidents_for_an_incident(
     incident_id: str,
     limit: int = 25,
     offset: int = 0,
