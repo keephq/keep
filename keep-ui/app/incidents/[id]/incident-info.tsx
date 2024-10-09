@@ -26,9 +26,7 @@ interface Props {
 }
 
 function FollowingIncident({incidentId}: {incidentId: string}) {
-
   const { data: incident } = useIncident(incidentId);
-
   return (
     <div>
       <a className="text-orange-500" href={'/incidents/' + incidentId}>{incident?.user_generated_name || incident?.ai_generated_name}</a>
