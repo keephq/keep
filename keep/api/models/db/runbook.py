@@ -11,8 +11,6 @@ from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from sqlalchemy.engine.url import make_url
-from keep.api.models.db.alert import Incident
-
 
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
