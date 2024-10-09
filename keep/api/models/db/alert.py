@@ -15,7 +15,6 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.models.alert import IncidentSeverity, IncidentStatus
 from keep.api.models.db.tenant import Tenant
-from keep.api.models.db.runbook import RunbookToIncident, Runbook
 
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
@@ -84,10 +83,6 @@ class Incident(SQLModel, table=True):
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
         back_populates="incidents", link_model=AlertToIncident
-    )
-
-    runbooks: List["Runbook"] = Relationship(
-        back_populates="incidents", link_model=RunbookToIncident
     )
 
     is_predicted: bool = Field(default=False)
