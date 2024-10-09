@@ -35,7 +35,6 @@ const SortableHeaderCell = ({
               size="xs"
               color="neutral"
               onClick={(event) => {
-                console.log("clicked for sorting");
                 event.stopPropagation();
                 const toggleSorting = header.column.getToggleSortingHandler();
                 if (toggleSorting) toggleSorting(event);
