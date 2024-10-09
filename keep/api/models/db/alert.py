@@ -16,6 +16,7 @@ from keep.api.core.config import config
 from keep.api.models.alert import IncidentSeverity, IncidentStatus
 from keep.api.models.db.tenant import Tenant
 
+
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 logger = logging.getLogger(__name__)
 # managed (mysql)
@@ -88,6 +89,7 @@ class Incident(SQLModel, table=True):
     is_confirmed: bool = Field(default=False)
 
     alerts_count: int = Field(default=0)
+    runbooks_count: int = Field(default=0)
     affected_services: list = Field(sa_column=Column(JSON), default_factory=list)
     sources: list = Field(sa_column=Column(JSON), default_factory=list)
 

@@ -11,7 +11,11 @@ import {
   Title,
   Card,
 } from "@tremor/react";
-import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  DisplayColumnDef,
+  Table,
+} from "@tanstack/react-table";
 import { GenericTable } from "@/components/table/GenericTable";
 import { useRunBookTriggers } from "utils/hooks/useRunbook";
 import { useForm, get } from "react-hook-form";
@@ -21,6 +25,8 @@ import { getApiURL } from "@/utils/apiUrl";
 import useSWR from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
+import RunbookActions from "./runbook-actions";
+import { RunbookDto } from "./models";
 
 const customStyles = {
   content: {
@@ -38,17 +44,17 @@ interface Content {
   id: string;
   content: string;
   link: string;
-  encoding: string|null;
+  encoding: string | null;
   file_name: string;
 }
 interface RunbookV2 {
   id: number;
   title: string;
-  contents:Content[],
-  provider_type: string,
-  provider_id: string
-  repo_id: string
-  file_path: string
+  contents: Content[];
+  provider_type: string;
+  provider_id: string;
+  repo_id: string;
+  file_path: string;
 }
 
 const columnHelperv2 = createColumnHelper<RunbookV2>();
@@ -254,14 +260,13 @@ function RunbookIncidentTable() {
   const [limit, setLimit] = useState(10);
   const { data: session, status } = useSession();
 
-
   let shouldFetch = session?.accessToken ? true : false;
 
-  const { data: runbooksData, error } = useSWR<RunbookV2[]>(
+  const { data: runbooksData, error } = useSWR<RunbookDto[]>(
     shouldFetch ? `${getApiURL()}/runbooks` : null,
-    (url:string) => {
+    (url: string) => {
       return fetcher(url, session?.accessToken!);
-    }, 
+    }
   );
 
   // Modal state management
@@ -271,6 +276,16 @@ function RunbookIncidentTable() {
     setOffset(newOffset);
   };
 
+  const getActions = (table: Table<RunbookDto>, selectedRowIds: string[]) => {
+    return (
+      <RunbookActions
+        selectedRowIds={selectedRowIds}
+        runbooks={runbooksData || []}
+        clearRowSelection={table.resetRowSelection}
+      />
+    );
+  };
+
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex justify-between items-center h-[10%]">
@@ -278,17 +293,21 @@ function RunbookIncidentTable() {
         <SettingsPage />
       </div>
       <Card className="flex-1 overflow-auto">
-        {runbooksData && <GenericTable<RunbookV2>
-          data={runbooksData}
-          columns={columnsv2}
-          rowCount={runbooksData.length}
-          offset={offset}
-          limit={limit}
-          onPaginationChange={handlePaginationChange}
-          onRowClick={(row) => {
-            console.log("Runbook clicked:", row);
-          }}
-        />}
+        {runbooksData && (
+          <GenericTable<RunbookDto>
+            data={runbooksData}
+            columns={columnsv2}
+            rowCount={runbooksData.length}
+            offset={offset}
+            limit={limit}
+            onPaginationChange={handlePaginationChange}
+            onRowClick={(row) => {
+              console.log("Runbook clicked:", row);
+            }}
+            getActions={getActions}
+            isRowSelectable={true}
+          />
+        )}
       </Card>
     </div>
   );

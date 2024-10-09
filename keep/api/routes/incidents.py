@@ -27,6 +27,7 @@ from keep.api.core.db import (
     change_incident_status_by_id,
     update_incident_from_dto_by_id,
     get_incidents_meta_for_tenant,
+    add_runbooks_to_incident_by_incident_id,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import (
@@ -52,6 +53,7 @@ from keep.api.utils.pagination import (
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.api.models.db.runbook import RunbookDto
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -59,6 +61,11 @@ logger = logging.getLogger(__name__)
 MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
     os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5)
 )
+
+MIN_INCIDENT_RUNBOOKS_FOR_SUMMARY_GENERATION = int(
+    os.environ.get("MIN_INCIDENT_RUNBOOKS_FOR_SUMMARY_GENERATION", 5)
+)
+
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
 if ee_enabled:
@@ -648,3 +655,71 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post(
+    "/{incident_id}/runbooks",
+    description="Add runbooks to incident",
+    status_code=202,
+    response_model=List[RunbookDto],
+)
+async def add_runbooks_to_incident(
+    incident_id: UUID,
+    runbooks_ids: List[UUID],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    add_runbooks_to_incident_by_incident_id(tenant_id, incident_id, runbooks_ids)
+    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+
+    incident_dto = IncidentDto.from_db_incident(incident)
+
+    try:
+        workflow_manager = WorkflowManager.get_instance()
+        logger.info("Adding incident to the workflow manager queue")
+        workflow_manager.insert_incident(tenant_id, incident_dto, "updated")
+        logger.info("Added incident to the workflow manager queue")
+    except Exception:
+        logger.exception(
+            "Failed to run workflows based on incident",
+            extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
+        )
+
+    fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
+
+    if (
+        ee_enabled
+        and fingerprints_count > MIN_INCIDENT_RUNBOOKS_FOR_SUMMARY_GENERATION
+        and not incident.user_summary
+    ):
+        pool = await get_pool()
+        job = await pool.enqueue_job(
+            "process_summary_generation",
+            tenant_id=tenant_id,
+            incident_id=incident_id,
+        )
+        logger.info(
+            f"Summary generation for incident {incident_id} scheduled, job: {job}",
+            extra={
+                "algorithm": ALGORITHM_VERBOSE_NAME,
+                "tenant_id": tenant_id,
+                "incident_id": incident_id,
+            },
+        )
+
+    return Response(status_code=202)
+
