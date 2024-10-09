@@ -16,7 +16,14 @@ interface GridLayoutProps {
   presets: Preset[];
 }
 
-const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, onEdit, onDelete, presets }) => {
+const GridLayout: React.FC<GridLayoutProps> = ({
+  layout,
+  onLayoutChange,
+  data,
+  onEdit,
+  onDelete,
+  presets,
+}) => {
   const layouts = { lg: layout };
 
   return (
@@ -24,9 +31,9 @@ const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, o
       className="layout"
       layouts={layouts}
       onLayoutChange={(currentLayout: Layout[]) => {
-        const updatedLayout = currentLayout.map(item => ({
+        const updatedLayout = currentLayout.map((item) => ({
           ...item,
-          static: item.static ?? false // Ensure static is a boolean
+          static: item.static ?? false, // Ensure static is a boolean
         }));
         onLayoutChange(updatedLayout as LayoutItem[]);
       }}
@@ -42,14 +49,22 @@ const GridLayout: React.FC<GridLayoutProps> = ({ layout, onLayoutChange, data, o
       draggableHandle=".grid-item__widget"
     >
       {data.map((item) => {
-          //Fixing the static hardcode db value.
-          const preset = presets?.find(p => p?.id === item?.preset?.id);
-          item.preset = { ...item.preset,alerts_count: preset?.alerts_count ?? 0};
+        //Fixing the static hardcode db value.
+        const preset = presets?.find((p) => p?.id === item?.preset?.id);
+        item.preset = {
+          ...item.preset,
+          alerts_count: preset?.alerts_count ?? 0,
+        };
         return (
           <div key={item.i} data-grid={item}>
-            <GridItemContainer item={item} onEdit={onEdit} onDelete={onDelete} />
+            <GridItemContainer
+              item={item}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
           </div>
-      )})}
+        );
+      })}
     </ResponsiveGridLayout>
   );
 };

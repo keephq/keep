@@ -312,9 +312,19 @@ def whoami(info: Info):
 
 @cli.command()
 @click.option("--multi-tenant", is_flag=True, help="Enable multi-tenant mode")
-@click.option("--port", "-p", type=int, default=int(os.environ.get("PORT", 8080)), help="The port to run the API on")
 @click.option(
-    "--host", "-h", type=str, default=os.environ.get("HOST", "0.0.0.0"), help="The host to run the API on"
+    "--port",
+    "-p",
+    type=int,
+    default=int(os.environ.get("PORT", 8080)),
+    help="The port to run the API on",
+)
+@click.option(
+    "--host",
+    "-h",
+    type=str,
+    default=os.environ.get("HOST", "0.0.0.0"),
+    help="The host to run the API on",
 )
 def api(multi_tenant: bool, port: int, host: str):
     """Start the API."""

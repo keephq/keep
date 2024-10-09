@@ -2,7 +2,7 @@ import {
   IncidentDto,
   IncidentsMetaDto,
   PaginatedIncidentAlertsDto,
-  PaginatedIncidentsDto
+  PaginatedIncidentsDto,
 } from "../../app/incidents/models";
 import { PaginatedWorkflowExecutionDto } from "app/workflows/builder/types";
 import { useSession } from "next-auth/react";
@@ -18,11 +18,11 @@ interface IncidentUpdatePayload {
 }
 
 interface Filters {
-  status: string[],
-  severity: string[],
-  assignees: string[]
-  sources: string[],
-  affected_services: string[],
+  status: string[];
+  severity: string[];
+  assignees: string[];
+  sources: string[];
+  affected_services: string[];
 }
 
 export const useIncidents = (
@@ -45,7 +45,7 @@ export const useIncidents = (
       filtersParams.delete(key as string);
     } else {
       value.forEach((s: string) => {
-        filtersParams.append(key, s)
+        filtersParams.append(key, s);
       });
     }
   });
@@ -153,7 +153,6 @@ export const usePollIncidents = (mutateIncidents: any) => {
     };
   }, [bind, unbind, handleIncoming]);
 };
-
 
 export const useIncidentsMeta = (
   options: SWRConfiguration = {

@@ -1,10 +1,10 @@
-import { Disclosure } from '@headlessui/react';
-import classNames from 'classnames';
-import { IoChevronUp } from 'react-icons/io5';
+import { Disclosure } from "@headlessui/react";
+import classNames from "classnames";
+import { IoChevronUp } from "react-icons/io5";
 import { Title, Subtitle, Button } from "@tremor/react";
-import { LinkWithIcon } from '@/components/LinkWithIcon';
-import React from 'react';
-import { IconType } from 'react-icons';
+import { LinkWithIcon } from "@/components/LinkWithIcon";
+import React from "react";
+import { IconType } from "react-icons";
 
 interface DisclosureSectionProps {
   title: string;
@@ -13,7 +13,7 @@ interface DisclosureSectionProps {
     icon: IconType | React.ReactNode;
     label: string;
     isLink: boolean;
-    handleClick?: (e:any) => void;
+    handleClick?: (e: any) => void;
     newTab?: boolean;
   }>;
 }
@@ -29,8 +29,8 @@ export function DisclosureSection({ title, links }: DisclosureSectionProps) {
             </div>
             <IoChevronUp
               className={classNames(
-                { 'rotate-180': open },
-                'mr-2 text-slate-400'
+                { "rotate-180": open },
+                "mr-2 text-slate-400"
               )}
             />
           </Disclosure.Button>
@@ -40,13 +40,17 @@ export function DisclosureSection({ title, links }: DisclosureSectionProps) {
           >
             {links.map((link, index) => (
               <li key={index} className="w-full">
-                <LinkWithIcon 
-                href={link.isLink ? link.href : "#"}
-                 icon={link.icon as IconType}
-                 target= {link.newTab ? "_blank": ""}
-                 className="min-w-[max-content] px-4"
-                 >
-                  <Subtitle onClick={link.handleClick? link.handleClick: ()=>{}}>{link.label}</Subtitle>
+                <LinkWithIcon
+                  href={link.isLink ? link.href : "#"}
+                  icon={link.icon as IconType}
+                  target={link.newTab ? "_blank" : ""}
+                  className="min-w-[max-content] px-4"
+                >
+                  <Subtitle
+                    onClick={link.handleClick ? link.handleClick : () => {}}
+                  >
+                    {link.label}
+                  </Subtitle>
                 </LinkWithIcon>
               </li>
             ))}

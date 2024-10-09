@@ -1,7 +1,7 @@
-import React from 'react';
+import React from "react";
 import { Button, Card } from "@tremor/react";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
-import Image from 'next/image';
+import Image from "next/image";
 
 interface EmptyStateImageProps {
   message: string;
@@ -42,7 +42,7 @@ export function EmptyStateImage({
             <Button
               className="mt-4"
               color="orange"
-              onClick={() => window.open(documentationURL, '_blank')}
+              onClick={() => window.open(documentationURL, "_blank")}
             >
               View Documentation
             </Button>

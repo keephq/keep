@@ -5,11 +5,20 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import useStore, { FlowNode } from "./builder-store";
 import { IoMdSettings } from "react-icons/io";
 
-export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: string }) {
+export default function NodeMenu({
+  data,
+  id,
+}: {
+  data: FlowNode["data"];
+  id: string;
+}) {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
-  const hideMenu = data?.type?.includes("empty") || id?.includes('end') || id?.includes("start")
+  const hideMenu =
+    data?.type?.includes("empty") ||
+    id?.includes("end") ||
+    id?.includes("start");
   const { deleteNodes, setSelectedNode, setStepEditorOpenForNode } = useStore();
 
   return (
@@ -42,8 +51,9 @@ export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: str
                         stopPropagation(e);
                         deleteNodes(id);
                       }}
-                      className={`${active ? "bg-slate-200" : "text-gray-900"
-                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      className={`${
+                        active ? "bg-slate-200" : "text-gray-900"
+                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     >
                       <TrashIcon className="mr-2 h-4 w-4" aria-hidden="true" />
                       Delete
@@ -58,8 +68,9 @@ export default function NodeMenu({ data, id }: { data: FlowNode["data"], id: str
                         setSelectedNode(id);
                         setStepEditorOpenForNode(id);
                       }}
-                      className={`${active ? "bg-slate-200" : "text-gray-900"
-                        } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                      className={`${
+                        active ? "bg-slate-200" : "text-gray-900"
+                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     >
                       <IoMdSettings
                         className="mr-2 h-4 w-4"

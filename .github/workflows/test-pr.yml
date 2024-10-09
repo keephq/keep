@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-    
+
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"

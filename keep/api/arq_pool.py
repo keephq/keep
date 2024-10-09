@@ -1,6 +1,8 @@
 from arq import create_pool
 from arq.connections import RedisSettings
+
 from keep.api.core.config import config
+
 
 async def get_pool():
     return await create_pool(

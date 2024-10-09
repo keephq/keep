@@ -61,7 +61,7 @@ export function AlertTable({
   presetPrivate = false,
   presetNoisy = false,
   presetStatic = false,
-  presetId = '',
+  presetId = "",
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
@@ -76,7 +76,6 @@ export function AlertTable({
       {}
     )
   );
-
 
   const columnsIds = getColumnsIds(columns);
 
@@ -108,7 +107,7 @@ export function AlertTable({
     ...presetTabs.map((tab) => ({
       name: tab.name,
       filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
-      id: tab.id
+      id: tab.id,
     })),
     { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
   ]);
@@ -207,9 +206,15 @@ export function AlertTable({
           </Callout>
         )}
         {/* For dynamic preset, add alert tabs*/}
-        { !presetStatic &&
-          <AlertTabs presetId={presetId} tabs={tabs} setTabs={setTabs} selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
-        }
+        {!presetStatic && (
+          <AlertTabs
+            presetId={presetId}
+            tabs={tabs}
+            setTabs={setTabs}
+            selectedTab={selectedTab}
+            setSelectedTab={setSelectedTab}
+          />
+        )}
         <Table className="flex-grow mt-4 overflow-auto [&>table]:table-fixed [&>table]:w-full">
           <AlertsTableHeaders
             columns={columns}
@@ -227,7 +232,11 @@ export function AlertTable({
         </Table>
       </Card>
       <div className="mt-2 mb-8">
-        <AlertPagination table={table} presetName={presetName} isRefreshAllowed={isRefreshAllowed} />
+        <AlertPagination
+          table={table}
+          presetName={presetName}
+          isRefreshAllowed={isRefreshAllowed}
+        />
       </div>
       <AlertSidebar
         isOpen={isSidebarOpen}

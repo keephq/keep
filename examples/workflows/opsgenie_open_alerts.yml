@@ -19,10 +19,10 @@ alert:
           message: >
             Opsgenie has {{ steps.get-open-alerts.results.number_of_alerts }} open alerts
           blocks:
-          - type: section
-            text:
-              type: mrkdwn
-              text: |-
-                {{#steps.get-open-alerts.results.alerts}}
-                  - Alert Id: {{id}} | Priortiy: {{priority}} | Created at: {{created_at}} | Message: {{message}}
-                {{/steps.get-open-alerts.results.alerts}}
+            - type: section
+              text:
+                type: mrkdwn
+                text: |-
+                  {{#steps.get-open-alerts.results.alerts}}
+                    - Alert Id: {{id}} | Priortiy: {{priority}} | Created at: {{created_at}} | Message: {{message}}
+                  {{/steps.get-open-alerts.results.alerts}}

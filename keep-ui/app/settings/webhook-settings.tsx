@@ -12,8 +12,7 @@ import {
   Title,
   TabPanels,
   TabPanel,
-  Callout
-
+  Callout,
 } from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
@@ -48,19 +47,22 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   );
   const router = useRouter();
 
-  if (error) return <Callout
+  if (error)
+    return (
+      <Callout
         className="mt-4"
         title="Error"
         icon={ExclamationCircleIcon}
         color="rose"
       >
         Failed to load webhook settings.
-        <br></br><br></br>
+        <br></br>
+        <br></br>
         {error.message}
       </Callout>
+    );
 
   if (!data || isLoading) return <Loading />;
-
 
   const [example] = data.modelSchema.examples;
 

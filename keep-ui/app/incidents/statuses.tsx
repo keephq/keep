@@ -1,6 +1,10 @@
-import {Status} from "@/app/incidents/models";
-import {Icon} from "@tremor/react";
-import {CheckCircleIcon, ExclamationCircleIcon, PauseIcon} from "@heroicons/react/24/outline";
+import { Status } from "@/app/incidents/models";
+import { Icon } from "@tremor/react";
+import {
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  PauseIcon,
+} from "@heroicons/react/24/outline";
 import React from "react";
 
 export const STATUS_ICONS = {

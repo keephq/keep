@@ -1,11 +1,10 @@
-import {AlertDto} from "../alerts/models";
+import { AlertDto } from "../alerts/models";
 
 export enum Status {
   Firing = "firing",
   Resolved = "resolved",
   Acknowledged = "acknowledged",
 }
-
 
 export interface IncidentDto {
   id: string;

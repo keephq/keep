@@ -35,9 +35,7 @@ const Title: React.FC<TitleProps> = ({ title, onEdit }) => {
                       active ? "bg-slate-200" : "text-gray-900"
                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                   >
-                    <Subtitle>
-                      Edit
-                    </Subtitle>
+                    <Subtitle>Edit</Subtitle>
                   </Menu.Button>
                 )}
               </Menu.Item>

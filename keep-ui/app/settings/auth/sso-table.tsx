@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -26,7 +26,7 @@ export function SSOTable({
   providers,
   onConnect,
   onDisconnect,
-  isDisabled = false
+  isDisabled = false,
 }: SSOTableProps) {
   return (
     <Table>
@@ -38,10 +38,12 @@ export function SSOTable({
         </TableRow>
       </TableHead>
       <TableBody>
-        {providers.map(provider => (
+        {providers.map((provider) => (
           <TableRow key={provider.id}>
             <TableCell>{provider.name}</TableCell>
-            <TableCell>{provider.connected ? "Connected" : "Not connected"}</TableCell>
+            <TableCell>
+              {provider.connected ? "Connected" : "Not connected"}
+            </TableCell>
             <TableCell>
               <Button
                 style={{ marginRight: "10px" }}

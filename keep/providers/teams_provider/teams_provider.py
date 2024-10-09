@@ -1,6 +1,7 @@
 """
 TeamsProvider is a class that implements the BaseOutputProvider interface for Microsoft Teams messages.
 """
+
 import dataclasses
 
 import pydantic

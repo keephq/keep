@@ -2,23 +2,23 @@ workflow:
   id: jiraonprem-example
   description: JIRA on-prem example
   triggers:
-  - type: manual
+    - type: manual
   name: test
   owners: []
   services: []
   steps: []
   actions:
-  - name: jiraonprem-action
-    provider:
-      config: '{{ providers.jira }}'
-      type: jiraonprem
-      with:
-        board_name: SA
-        custom_fields: ''
-        description: test
-        issue_type: Incident
-        labels:
-          - "SRE_Team"
-        priority: Low
-        project_key: SA
-        summary: test
+    - name: jiraonprem-action
+      provider:
+        config: "{{ providers.jira }}"
+        type: jiraonprem
+        with:
+          board_name: SA
+          custom_fields: ""
+          description: test
+          issue_type: Incident
+          labels:
+            - "SRE_Team"
+          priority: Low
+          project_key: SA
+          summary: test

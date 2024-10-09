@@ -29,10 +29,17 @@ interface RolesTabProps {
   customRolesAllowed: boolean;
 }
 
-export default function RolesTab({ accessToken, customRolesAllowed }: RolesTabProps) {
+export default function RolesTab({
+  accessToken,
+  customRolesAllowed,
+}: RolesTabProps) {
   const apiUrl = getApiURL();
   const { data: scopes = [], isLoading: scopesLoading } = useScopes();
-  const { data: roles = [], isLoading: rolesLoading, mutate: mutateRoles } = useRoles();
+  const {
+    data: roles = [],
+    isLoading: rolesLoading,
+    mutate: mutateRoles,
+  } = useRoles();
 
   const [resources, setResources] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,13 +48,19 @@ export default function RolesTab({ accessToken, customRolesAllowed }: RolesTabPr
 
   useEffect(() => {
     if (scopes && scopes.length > 0) {
-      const extractedResources = [...new Set(scopes.map(scope => scope.split(':')[1]).filter(resource => resource !== '*'))];
+      const extractedResources = [
+        ...new Set(
+          scopes
+            .map((scope) => scope.split(":")[1])
+            .filter((resource) => resource !== "*")
+        ),
+      ];
       setResources(extractedResources);
     }
   }, [scopes]);
 
   const filteredRoles = useMemo(() => {
-    return roles.filter(role =>
+    return roles.filter((role) =>
       role.name.toLowerCase().includes(filter.toLowerCase())
     );
   }, [roles, filter]);
@@ -64,7 +77,7 @@ export default function RolesTab({ accessToken, customRolesAllowed }: RolesTabPr
     if (window.confirm("Are you sure you want to delete this role?")) {
       try {
         const response = await fetch(`${apiUrl}/auth/roles/${roleId}`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -98,7 +111,11 @@ export default function RolesTab({ accessToken, customRolesAllowed }: RolesTabPr
               setIsSidebarOpen(true);
             }}
             disabled={!customRolesAllowed}
-            tooltip={customRolesAllowed ? undefined : "This feature is not available in your authentication mode."}
+            tooltip={
+              customRolesAllowed
+                ? undefined
+                : "This feature is not available in your authentication mode."
+            }
           >
             Create Custom Role
           </Button>
@@ -121,54 +138,68 @@ export default function RolesTab({ accessToken, customRolesAllowed }: RolesTabPr
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredRoles.sort((a, b) => (a.predefined === b.predefined ? 0 : a.predefined ? -1 : 1)).map((role) => (
-              <TableRow
-                key={role.name}
-                className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
-                onClick={() => handleRowClick(role)}
-              >
-                <TableCell className="w-4/24">
-                  <div className="flex items-center justify-between">
-                    <Text className="truncate">{role.name}</Text>
-                    <div className="flex items-center">
-                      {role.predefined ? (
-                        <Badge color="orange" className="ml-2 w-24 text-center">Predefined</Badge>
-                      ) : (
-                        <Badge color="orange" className="ml-2 w-24 text-center">Custom</Badge>
+            {filteredRoles
+              .sort((a, b) =>
+                a.predefined === b.predefined ? 0 : a.predefined ? -1 : 1
+              )
+              .map((role) => (
+                <TableRow
+                  key={role.name}
+                  className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
+                  onClick={() => handleRowClick(role)}
+                >
+                  <TableCell className="w-4/24">
+                    <div className="flex items-center justify-between">
+                      <Text className="truncate">{role.name}</Text>
+                      <div className="flex items-center">
+                        {role.predefined ? (
+                          <Badge
+                            color="orange"
+                            className="ml-2 w-24 text-center"
+                          >
+                            Predefined
+                          </Badge>
+                        ) : (
+                          <Badge
+                            color="orange"
+                            className="ml-2 w-24 text-center"
+                          >
+                            Custom
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-4/24">
+                    <Text>{role.description}</Text>
+                  </TableCell>
+                  <TableCell className="w-15/24">
+                    <div className="flex flex-wrap gap-1">
+                      {role.scopes.slice(0, 4).map((scope, index) => (
+                        <Badge key={index} color="orange" className="text-xs">
+                          {scope}
+                        </Badge>
+                      ))}
+                      {role.scopes.length > 4 && (
+                        <Badge color="orange" className="text-xs">
+                          +{role.scopes.length - 4} more
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="w-4/24">
-                  <Text>{role.description}</Text>
-                </TableCell>
-                <TableCell className="w-15/24">
-                  <div className="flex flex-wrap gap-1">
-                    {role.scopes.slice(0, 4).map((scope, index) => (
-                      <Badge key={index} color="orange" className="text-xs">
-                        {scope}
-                      </Badge>
-                    ))}
-                    {role.scopes.length > 4 && (
-                      <Badge color="orange" className="text-xs">
-                        +{role.scopes.length - 4} more
-                      </Badge>
+                  </TableCell>
+                  <TableCell className="w-1/24">
+                    {!role.predefined && (
+                      <Button
+                        icon={TrashIcon}
+                        variant="light"
+                        color="orange"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => handleDeleteRole(role.id, e)}
+                      />
                     )}
-                  </div>
-                </TableCell>
-                <TableCell className="w-1/24">
-                  {!role.predefined && (
-                    <Button
-                      icon={TrashIcon}
-                      variant="light"
-                      color="orange"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleDeleteRole(role.id, e)}
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       </Card>

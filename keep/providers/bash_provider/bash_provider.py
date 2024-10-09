@@ -1,6 +1,7 @@
 """
 BashProvider is a class that implements the BaseOutputProvider.
 """
+
 import shlex
 import subprocess
 
@@ -19,12 +20,7 @@ class BashProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def _query(
-            self,
-            timeout: int = 60,
-            command: str = "",
-            **kwargs
-            ):
+    def _query(self, timeout: int = 60, command: str = "", **kwargs):
         """Bash provider eval shell command to get results
 
         Returns:

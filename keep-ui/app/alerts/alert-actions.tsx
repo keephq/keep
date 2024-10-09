@@ -28,7 +28,8 @@ export default function AlertActions({
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
   });
-  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] = useState<boolean>(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
 
   const selectedAlerts = alerts.filter((_alert, index) =>
     selectedRowIds.includes(index.toString())
@@ -80,15 +81,15 @@ export default function AlertActions({
 
   const showIncidentSelector = () => {
     setIsIncidentSelectorOpen(true);
-  }
+  };
   const hideIncidentSelector = () => {
     setIsIncidentSelectorOpen(false);
-  }
+  };
 
   const handleSuccessfulAlertsAssociation = () => {
     hideIncidentSelector();
     clearRowSelection();
-  }
+  };
 
   return (
     <div className="w-full flex justify-end items-center">
@@ -125,10 +126,11 @@ export default function AlertActions({
         Associate with incident
       </Button>
       <AlertAssociateIncidentModal
-          isOpen={isIncidentSelectorOpen}
-          alerts={selectedAlerts}
-          handleSuccess={handleSuccessfulAlertsAssociation}
-          handleClose={hideIncidentSelector}/>
+        isOpen={isIncidentSelectorOpen}
+        alerts={selectedAlerts}
+        handleSuccess={handleSuccessfulAlertsAssociation}
+        handleClose={hideIncidentSelector}
+      />
     </div>
   );
 }

@@ -18,8 +18,10 @@ class ExtractionRule(SQLModel, table=True):
     updated_by: Optional[str] = Field(max_length=255)
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
-            DateTime(timezone=True), name="updated_at",
-            onupdate=func.now(), server_default=func.now()
+            DateTime(timezone=True),
+            name="updated_at",
+            onupdate=func.now(),
+            server_default=func.now(),
         )
     )
     disabled: bool = Field(default=False)

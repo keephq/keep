@@ -2,7 +2,6 @@
 PythonProvider is a class that implements the BaseOutputProvider.
 """
 
-
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.iohandler.iohandler import IOHandler
@@ -22,12 +21,7 @@ class PythonProvider(BaseProvider):
     def validate_config(self):
         pass
 
-    def _query(
-            self,
-            code: str = "",
-            imports: str = "",
-            **kwargs
-            ):
+    def _query(self, code: str = "", imports: str = "", **kwargs):
         """Python provider eval python code to get results
 
         Returns:

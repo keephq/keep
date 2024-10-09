@@ -30,4 +30,5 @@ Contributions to Keep UI are welcome and encouraged. To contribute to the projec
 Please ensure that your contributions align with the project's coding standards, documentation guidelines, and overall goals. For major changes or new features, it is advisable to discuss them with the project maintainers or open an issue to gather feedback and ensure they align with the project roadmap.
 
 ## License
+
 Keep UI is released under the MIT License.

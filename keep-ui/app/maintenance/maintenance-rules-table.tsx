@@ -32,7 +32,10 @@ interface Props {
   editCallback: (rule: MaintenanceRule) => void;
 }
 
-export default function MaintenanceRulesTable({ maintenanceRules, editCallback }: Props) {
+export default function MaintenanceRulesTable({
+  maintenanceRules,
+  editCallback,
+}: Props) {
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 

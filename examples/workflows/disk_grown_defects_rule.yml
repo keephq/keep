@@ -1,4 +1,3 @@
-
 # Alert description: this alert will trigger if the disk defects is over 50%, 40% or 30%.
 # Alert breakdown:
 # 1. Read the disk status from postgres (select * from disk)
@@ -19,7 +18,7 @@ alert:
       condition:
         - name: threshold-condition
           type: threshold
-          value:  " {{ foreach.value[13] }} " # disk defect is the 13th column
+          value: " {{ foreach.value[13] }} " # disk defect is the 13th column
           compare_to: 50, 40, 30
           level: major, medium, minor
       provider:
@@ -36,4 +35,4 @@ providers:
       username: "{{ env.POSTGRES_USER }}"
       password: "{{ env.POSTGRES_PASSWORD }}"
       database: "{{ env.POSTGRES_DATABASE }}"
-      host:  "{{ env.POSTGRES_HOST }}"
+      host: "{{ env.POSTGRES_HOST }}"

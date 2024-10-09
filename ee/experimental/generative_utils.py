@@ -5,7 +5,6 @@ import numpy as np
 from openai import OpenAI
 
 from keep.api.core.db import get_incident_by_id
-
 from keep.api.models.db.alert import Incident
 
 logger = logging.getLogger(__name__)
@@ -14,6 +13,7 @@ SUMMARY_GENERATOR_VERBOSE_NAME = "Summary generator v0.1"
 NAME_GENERATOR_VERBOSE_NAME = "Name generator v0.1"
 MAX_SUMMARY_LENGTH = 900
 MAX_NAME_LENGTH = 75
+
 
 def generate_incident_summary(
     incident: Incident,
@@ -24,8 +24,11 @@ def generate_incident_summary(
     if "OPENAI_API_KEY" not in os.environ:
         logger.error(
             "OpenAI API key is not set. Incident summary generation is not available.",
-            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
-                   "incident_id": incident.id, "tenant_id": incident.tenant_id}
+            extra={
+                "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
         )
         return ""
 
@@ -33,16 +36,21 @@ def generate_incident_summary(
         generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
 
     if generate_summary == "False":
-        logger.info(f"Incident summary generation is disabled. Aborting.",
-                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+        logger.info(
+            "Incident summary generation is disabled. Aborting.",
+            extra={
+                "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
+        )
         return ""
 
     if incident.user_summary:
         return ""
 
     if not max_summary_length:
-        max_summary_length = os.environ.get(
-            "MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
+        max_summary_length = os.environ.get("MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
 
     try:
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -96,12 +104,24 @@ def generate_incident_summary(
             .message.content
         )
 
-        logger.info(f"Generated incident summary with length {len(summary)} symbols",
-                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+        logger.info(
+            f"Generated incident summary with length {len(summary)} symbols",
+            extra={
+                "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
+        )
 
         if len(summary) > max_summary_length:
-            logger.info(f"Generated incident summary is too long. Applying smart truncation",
-                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+            logger.info(
+                "Generated incident summary is too long. Applying smart truncation",
+                extra={
+                    "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                    "incident_id": incident.id,
+                    "tenant_id": incident.tenant_id,
+                },
+            )
 
             summary = (
                 client.chat.completions.create(
@@ -124,27 +144,53 @@ def generate_incident_summary(
                 .message.content
             )
 
-            logger.info(f"Generated new incident summary with length {len(summary)} symbols",
-                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+            logger.info(
+                f"Generated new incident summary with length {len(summary)} symbols",
+                extra={
+                    "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                    "incident_id": incident.id,
+                    "tenant_id": incident.tenant_id,
+                },
+            )
 
             if len(summary) > max_summary_length:
-                logger.info(f"Generated incident summary is too long. Applying hard truncation",
-                            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-                summary = summary[: max_summary_length]
+                logger.info(
+                    "Generated incident summary is too long. Applying hard truncation",
+                    extra={
+                        "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                        "incident_id": incident.id,
+                        "tenant_id": incident.tenant_id,
+                    },
+                )
+                summary = summary[:max_summary_length]
 
         return summary
     except Exception as e:
-        logger.error(f"Error in generating incident summary: {e}",
-                     extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+        logger.error(
+            f"Error in generating incident summary: {e}",
+            extra={
+                "algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
+        )
         return ""
 
 
-def generate_incident_name(incident: Incident, generate_name: str = None, max_name_length: int = None, use_n_alerts_for_name: int = -1) -> str:
+def generate_incident_name(
+    incident: Incident,
+    generate_name: str = None,
+    max_name_length: int = None,
+    use_n_alerts_for_name: int = -1,
+) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error(
             "OpenAI API key is not set. Incident name generation is not available.",
-            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME,
-                   "incident_id": incident.id, "tenant_id": incident.tenant_id}
+            extra={
+                "algorithm": NAME_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
         )
         return ""
 
@@ -152,16 +198,21 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
         generate_name = os.environ.get("GENERATE_INCIDENT_NAME", "True")
 
     if generate_name == "False":
-        logger.info(f"Incident name generation is disabled. Aborting.",
-                    extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+        logger.info(
+            "Incident name generation is disabled. Aborting.",
+            extra={
+                "algorithm": NAME_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
+        )
         return ""
 
     if incident.user_generated_name:
         return ""
 
     if not max_name_length:
-        max_name_length = os.environ.get(
-            "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
+        max_name_length = os.environ.get("MAX_NAME_LENGTH", MAX_NAME_LENGTH)
 
     try:
         client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -169,11 +220,13 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
         incident = get_incident_by_id(incident.tenant_id, incident.id)
 
         description_strings = np.unique(
-            [f'{alert.event["name"]}' for alert in incident.alerts]).tolist()
+            [f'{alert.event["name"]}' for alert in incident.alerts]
+        ).tolist()
 
         if use_n_alerts_for_name > 0:
             incident_description = "\n".join(
-                description_strings[:use_n_alerts_for_name])
+                description_strings[:use_n_alerts_for_name]
+            )
         else:
             incident_description = "\n".join(description_strings)
 
@@ -182,58 +235,98 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
         model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-        name = client.chat.completions.create(model=model, messages=[
-            {
-                "role": "system",
-                "content": f"""You are a very skilled DevOps specialist who can name any incident based on alert descriptions. 
-                When provided with information, output a short descriptive name of incident that could cause these alerts. 
+        name = (
+            client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"""You are a very skilled DevOps specialist who can name any incident based on alert descriptions.
+                When provided with information, output a short descriptive name of incident that could cause these alerts.
                 Add information about start time to the name. ONLY USE WHAT YOU SEE. Answer with max a {int(max_name_length * 0.9)}
                 symbols excerpt.
-                
-                EXAMPLE:
-                Kubernetes rollout stuck (started on 2022.11.17 14:11)"""
-            },
-            {
-                "role": "user",
-                "content": f"""This incident started  on {incident_start}. 
-                Here are  alerts of an incident:\n{incident_description}\n"""
-            }
-        ]).choices[0].message.content
 
-        logger.info(f"Generated incident name with length {len(name)} symbols",
-                    extra={"incident_id": incident.id, "tenant_id": incident.tenant_id})
+                EXAMPLE:
+                Kubernetes rollout stuck (started on 2022.11.17 14:11)""",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""This incident started  on {incident_start}.
+                Here are  alerts of an incident:\n{incident_description}\n""",
+                    },
+                ],
+            )
+            .choices[0]
+            .message.content
+        )
+
+        logger.info(
+            f"Generated incident name with length {len(name)} symbols",
+            extra={"incident_id": incident.id, "tenant_id": incident.tenant_id},
+        )
 
         if len(name) > max_name_length:
-            logger.info(f"Generated incident name is too long. Applying smart truncation",
-                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-
-            name = client.chat.completions.create(model=model, messages=[
-                {
-                    "role": "system",
-                    "content": f"""You are a very skilled DevOps specialist who can name any incident based on a description.  
-                    Add information about start time to the name.When provided with information, answer with max a 
-                    {int(max_name_length * 0.9)} symbols.
-                    
-                    EXAMPLE:
-                    Kubernetes rollout stuck (started on 2022.11.17 14:11)"""
+            logger.info(
+                "Generated incident name is too long. Applying smart truncation",
+                extra={
+                    "algorithm": NAME_GENERATOR_VERBOSE_NAME,
+                    "incident_id": incident.id,
+                    "tenant_id": incident.tenant_id,
                 },
-                {
-                    "role": "user",
-                    "content": f"""This incident started on {incident_start}.
-                    Here is the description of an incident to name:\n{name}."""
-                }
-            ]).choices[0].message.content
+            )
 
-            logger.info(f"Generated new incident name with length {len(name)} symbols",
-                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+            name = (
+                client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": f"""You are a very skilled DevOps specialist who can name any incident based on a description.
+                    Add information about start time to the name.When provided with information, answer with max a
+                    {int(max_name_length * 0.9)} symbols.
+
+                    EXAMPLE:
+                    Kubernetes rollout stuck (started on 2022.11.17 14:11)""",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"""This incident started on {incident_start}.
+                    Here is the description of an incident to name:\n{name}.""",
+                        },
+                    ],
+                )
+                .choices[0]
+                .message.content
+            )
+
+            logger.info(
+                f"Generated new incident name with length {len(name)} symbols",
+                extra={
+                    "algorithm": NAME_GENERATOR_VERBOSE_NAME,
+                    "incident_id": incident.id,
+                    "tenant_id": incident.tenant_id,
+                },
+            )
 
             if len(name) > max_name_length:
-                logger.info(f"Generated incident name is too long. Applying hard truncation",
-                            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
-                name = name[: max_name_length]
+                logger.info(
+                    "Generated incident name is too long. Applying hard truncation",
+                    extra={
+                        "algorithm": NAME_GENERATOR_VERBOSE_NAME,
+                        "incident_id": incident.id,
+                        "tenant_id": incident.tenant_id,
+                    },
+                )
+                name = name[:max_name_length]
 
         return name
     except Exception as e:
-        logger.error(f"Error in generating incident name: {e}",
-                     extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+        logger.error(
+            f"Error in generating incident name: {e}",
+            extra={
+                "algorithm": NAME_GENERATOR_VERBOSE_NAME,
+                "incident_id": incident.id,
+                "tenant_id": incident.tenant_id,
+            },
+        )
         return ""

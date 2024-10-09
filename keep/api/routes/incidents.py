@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pusher import Pusher
 from pydantic.types import UUID
 
@@ -21,26 +21,24 @@ from keep.api.core.db import (
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
+    get_incidents_meta_for_tenant,
     get_last_incidents,
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
-    change_incident_status_by_id,
     update_incident_from_dto_by_id,
-    get_incidents_meta_for_tenant,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
+    EnrichAlertRequestBody,
     IncidentDto,
     IncidentDtoIn,
-    IncidentStatusChangeDto,
-    IncidentStatus,
-    EnrichAlertRequestBody,
-    IncidentSorting,
-    IncidentSeverity,
     IncidentListFilterParamsDto,
+    IncidentSeverity,
+    IncidentSorting,
+    IncidentStatus,
+    IncidentStatusChangeDto,
 )
-
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -191,7 +189,6 @@ def get_all_incidents(
         filters["sources"] = sources
     if affected_services:
         filters["affected_services"] = affected_services
-
 
     logger.info(
         "Fetching incidents from DB",

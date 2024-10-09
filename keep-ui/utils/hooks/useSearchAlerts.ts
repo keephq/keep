@@ -30,7 +30,7 @@ export const useSearchAlerts = (
         body: JSON.stringify({
           query: {
             cel_query: formatQuery(debouncedRules, "cel"),
-            sql_query: formatQuery(debouncedRules, "parameterized_named")
+            sql_query: formatQuery(debouncedRules, "parameterized_named"),
           },
           timeframe: debouncedTimeframe,
         }),

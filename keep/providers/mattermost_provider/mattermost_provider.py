@@ -59,7 +59,7 @@ class MattermostProvider(BaseProvider):
         webhook_url = self.authentication_config.webhook_url
         payload = {"text": message, "blocks": blocks}
         # channel is currently bugged (and unnecessary, as a webhook url is already one per channel) and so it is ignored for now
-        #if channel:
+        # if channel:
         #    payload["channel"] = channel
 
         response = requests.post(webhook_url, json=payload, verify=False)

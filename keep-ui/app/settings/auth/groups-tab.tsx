@@ -28,11 +28,21 @@ interface Props {
 }
 
 export default function GroupsTab({ accessToken }: Props) {
-  const { data: groups = [], isLoading: groupsLoading, mutate: mutateGroups } = useGroups();
-  const { data: users = [], isLoading: usersLoading, mutate: mutateUsers } = useUsers();
+  const {
+    data: groups = [],
+    isLoading: groupsLoading,
+    mutate: mutateGroups,
+  } = useGroups();
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    mutate: mutateUsers,
+  } = useUsers();
   const { data: roles = [] } = useRoles();
 
-  const [groupStates, setGroupStates] = useState<{ [key: string]: { members: string[], roles: string[] } }>({});
+  const [groupStates, setGroupStates] = useState<{
+    [key: string]: { members: string[]; roles: string[] };
+  }>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [filter, setFilter] = useState("");
@@ -40,21 +50,26 @@ export default function GroupsTab({ accessToken }: Props) {
 
   useEffect(() => {
     if (groups) {
-      const initialGroupStates = groups.reduce((acc, group) => {
-        acc[group.id] = {
-          members: group.members || [],
-          roles: group.roles || [],
-        };
-        return acc;
-      }, {} as { [key: string]: { members: string[], roles: string[] } });
+      const initialGroupStates = groups.reduce(
+        (acc, group) => {
+          acc[group.id] = {
+            members: group.members || [],
+            roles: group.roles || [],
+          };
+          return acc;
+        },
+        {} as { [key: string]: { members: string[]; roles: string[] } }
+      );
       setGroupStates(initialGroupStates);
     }
   }, [groups]);
 
   const filteredGroups = useMemo(() => {
-    return groups?.filter(group =>
-      group.name.toLowerCase().includes(filter.toLowerCase())
-    ) || [];
+    return (
+      groups?.filter((group) =>
+        group.name.toLowerCase().includes(filter.toLowerCase())
+      ) || []
+    );
   }, [groups, filter]);
 
   if (groupsLoading || usersLoading || !roles) return <Loading />;
@@ -71,13 +86,16 @@ export default function GroupsTab({ accessToken }: Props) {
     setIsSidebarOpen(true);
   };
 
-  const handleDeleteGroup = async (groupName: string, event: React.MouseEvent) => {
+  const handleDeleteGroup = async (
+    groupName: string,
+    event: React.MouseEvent
+  ) => {
     event.stopPropagation();
     if (window.confirm("Are you sure you want to delete this group?")) {
       try {
         const url = `${getApiURL()}/auth/groups/${groupName}`;
         const response = await fetch(url, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },

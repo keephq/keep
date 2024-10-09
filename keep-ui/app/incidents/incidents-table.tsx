@@ -21,7 +21,7 @@ import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
 import IncidentChangeStatusModal from "./incident-change-status-modal";
-import {STATUS_ICONS} from "@/app/incidents/statuses";
+import { STATUS_ICONS } from "@/app/incidents/statuses";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 

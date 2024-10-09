@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 
 def main():
     GENERATE_DEDUPLICATIONS = True
-    SLEEP_INTERVAL = float(os.environ.get("SLEEP_INTERVAL", 0.2))  # Configurable sleep interval from env variable
+    SLEEP_INTERVAL = float(
+        os.environ.get("SLEEP_INTERVAL", 0.2)
+    )  # Configurable sleep interval from env variable
     keep_api_key = os.environ.get("KEEP_API_KEY")
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
     if keep_api_key is None or keep_api_url is None:
@@ -62,7 +64,9 @@ def main():
             else:
                 logger.info("Alert sent successfully")
 
-            time.sleep(SLEEP_INTERVAL)  # Wait for the configured interval before sending the next alert
+            time.sleep(
+                SLEEP_INTERVAL
+            )  # Wait for the configured interval before sending the next alert
 
 
 if __name__ == "__main__":

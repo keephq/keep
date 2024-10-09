@@ -250,8 +250,8 @@ export const Search = () => {
     const platform = navigator.platform.toLowerCase();
     const userAgent = navigator.userAgent.toLowerCase();
     return (
-      platform.includes('mac') ||
-      (platform.includes('iphone') && !userAgent.includes('windows'))
+      platform.includes("mac") ||
+      (platform.includes("iphone") && !userAgent.includes("windows"))
     );
   };
 

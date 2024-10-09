@@ -23,27 +23,37 @@ migration_metadata = sa.MetaData()
 
 # Direct table definition for AlertToIncident
 alert_to_incident_table = sa.Table(
-    'alerttoincident',
+    "alerttoincident",
     migration_metadata,
-    sa.Column('alert_id', UUID(as_uuid=False), sa.ForeignKey('alert.id', ondelete='CASCADE'), primary_key=True),
-    sa.Column('incident_id', UUID(as_uuid=False), sa.ForeignKey('incident.id', ondelete='CASCADE'), primary_key=True)
+    sa.Column(
+        "alert_id",
+        UUID(as_uuid=False),
+        sa.ForeignKey("alert.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    sa.Column(
+        "incident_id",
+        UUID(as_uuid=False),
+        sa.ForeignKey("incident.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
 
 # Direct table definition for Incident
 incident_table = sa.Table(
-    'incident',
+    "incident",
     migration_metadata,
-    sa.Column('id', UUID(as_uuid=False), primary_key=True),
-    sa.Column('start_time', sa.DateTime, nullable=True),
-    sa.Column('last_seen_time', sa.DateTime, nullable=True),
+    sa.Column("id", UUID(as_uuid=False), primary_key=True),
+    sa.Column("start_time", sa.DateTime, nullable=True),
+    sa.Column("last_seen_time", sa.DateTime, nullable=True),
 )
 
 # Direct table definition for Alert
 alert_table = sa.Table(
-    'alert',
+    "alert",
     migration_metadata,
-    sa.Column('id', UUID(as_uuid=False), primary_key=True),
-    sa.Column('timestamp', sa.DateTime),
+    sa.Column("id", UUID(as_uuid=False), primary_key=True),
+    sa.Column("timestamp", sa.DateTime),
 )
 
 
@@ -54,19 +64,26 @@ def populate_db():
 
     for incident in incidents:
         stmt = (
-            sa.select([sa.func.min(alert_table.c.timestamp), sa.func.max(alert_table.c.timestamp)])
+            sa.select(
+                [
+                    sa.func.min(alert_table.c.timestamp),
+                    sa.func.max(alert_table.c.timestamp),
+                ]
+            )
             .select_from(alert_table)
-            .join(alert_to_incident_table, alert_table.c.id == alert_to_incident_table.c.alert_id)
+            .join(
+                alert_to_incident_table,
+                alert_table.c.id == alert_to_incident_table.c.alert_id,
+            )
             .where(alert_to_incident_table.c.incident_id == str(incident.id))
         )
 
         started_at, last_seen_at = session.execute(stmt).one()
 
         stmt = (
-            sa.update(incident_table).where(incident_table.c.id == incident.id).values(
-                start_time=started_at,
-                last_seen_time=last_seen_at
-            )
+            sa.update(incident_table)
+            .where(incident_table.c.id == incident.id)
+            .values(start_time=started_at, last_seen_time=last_seen_at)
         )
         session.execute(stmt)
     session.commit()

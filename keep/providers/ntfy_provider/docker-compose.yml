@@ -1,4 +1,4 @@
-version: '2.3'
+version: "2.3"
 
 services:
   ntfy:
@@ -16,7 +16,7 @@ services:
     healthcheck: # optional: remember to adapt the host:port to your environment
       test:
         [
-          'CMD-SHELL',
+          "CMD-SHELL",
           "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eo '\"healthy\"\\s*:\\s*true' || exit 1",
         ]
       interval: 60s

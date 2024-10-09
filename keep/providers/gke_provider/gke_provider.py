@@ -87,9 +87,9 @@ class GkeProvider(BaseProvider):
             scopes["roles/container.viewer"] = True
         except Exception as e:
             if "404" in str(e):
-                scopes[
-                    "roles/container.viewer"
-                ] = "Cluster not found (404 from GKE), please check the cluster name and region"
+                scopes["roles/container.viewer"] = (
+                    "Cluster not found (404 from GKE), please check the cluster name and region"
+                )
             elif "403" in str(e):
                 scopes["roles/container.viewer"] = "Permission denied (403 from GKE)"
             else:

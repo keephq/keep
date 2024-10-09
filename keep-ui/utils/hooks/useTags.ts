@@ -5,7 +5,6 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { Tag } from "app/alerts/models";
 
-
 export const useTags = (options: SWRConfiguration = {}) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();

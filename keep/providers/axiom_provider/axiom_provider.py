@@ -1,6 +1,7 @@
 """
 AxiomProvider is a class that allows to ingest/digest data from Axiom.
 """
+
 import dataclasses
 from typing import Optional
 

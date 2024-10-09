@@ -1,11 +1,10 @@
-import chevron
-
-from fastapi import Query
 from typing import List
-from fastapi import APIRouter, Depends, Response
 
+import chevron
+from fastapi import APIRouter, Depends, Query, Response
+
+from keep.api.core.db import get_last_alerts_for_incidents, get_last_incidents
 from keep.api.models.alert import AlertDto
-from keep.api.core.db import get_last_incidents, get_last_alerts_for_incidents
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -39,7 +38,7 @@ def get_metrics(
         type: Bearer
         credentials: "{Your API Key}"
 
-      # Optional, you can add labels to exported incidents. 
+      # Optional, you can add labels to exported incidents.
       # Label values will be equal to the last incident's alert payload value matching the label.
       # Attention! Don't add "flaky" labels which could change from alert to alert within the same incident.
       # Good labels: ['labels.department', 'labels.team'], bad labels: ['labels.severity', 'labels.pod_id']
@@ -67,17 +66,23 @@ def get_metrics(
         is_confirmed=True,
     )
 
-    last_alerts_for_incidents = get_last_alerts_for_incidents([incident.id for incident in incidents])
-    
+    last_alerts_for_incidents = get_last_alerts_for_incidents(
+        [incident.id for incident in incidents]
+    )
+
     for incident in incidents:
-        incident_name = incident.user_generated_name if incident.user_generated_name else incident.ai_generated_name
+        incident_name = (
+            incident.user_generated_name
+            if incident.user_generated_name
+            else incident.ai_generated_name
+        )
         extra_labels = ""
         try:
             last_alert = last_alerts_for_incidents[str(incident.id)][0]
             last_alert_dto = AlertDto(**last_alert.event)
         except IndexError:
             last_alert_dto = None
-        
+
         if labels is not None:
             for label in labels:
                 label_value = chevron.render("{{ " + label + " }}", last_alert_dto)
@@ -85,7 +90,7 @@ def get_metrics(
                 extra_labels += f' {label}="{label_value}"'
 
         export += f'alerts_total{{incident_name="{incident_name}" incident_id="{incident.id}"{extra_labels}}} {incident.alerts_count}\n'
-    
+
     # Exporting stats about open incidents
     export += "\n\n"
     export += "# HELP open_incidents_total The total number of open incidents.\r\n"

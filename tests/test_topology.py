@@ -1,5 +1,6 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 import pytest
 from sqlmodel import select
 
@@ -12,13 +13,12 @@ from keep.api.models.db.topology import (
     TopologyServiceDtoIn,
 )
 from keep.topologies.topologies_service import (
-    TopologiesService,
     ApplicationNotFoundException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
+    TopologiesService,
 )
-from tests.fixtures.client import setup_api_key, client, test_app
-
+from tests.fixtures.client import setup_api_key
 
 VALID_API_KEY = "valid_api_key"
 
@@ -94,6 +94,7 @@ def test_get_applications_by_tenant_id(db_session):
     assert len(result[0].services) == 2
     assert result[1].name == "Test Application 2"
     assert len(result[1].services) == 1
+
 
 def test_create_application_by_tenant_id(db_session):
     application_dto = TopologyApplicationDtoIn(name="New Application", services=[])

@@ -4,11 +4,11 @@ SMTP Provider is a class that provides the functionality to send emails using SM
 
 import dataclasses
 import typing
-
-import pydantic
-from smtplib import SMTP, SMTP_SSL
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from smtplib import SMTP, SMTP_SSL
+
+import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -75,18 +75,18 @@ class SmtpProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "SMTP Provider"
 
     def __init__(
-        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig 
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         pass
-    
+
     def validate_config(self):
         self.authentication_config = SmtpProviderAuthConfig(
             **self.config.authentication
         )
-    
+
     def validate_scopes(self):
         """
         Validate that the scopes provided are correct.
@@ -97,7 +97,7 @@ class SmtpProvider(BaseProvider):
             return {"send_email": True}
         except Exception as e:
             return {"send_email": str(e)}
-            
+
     def generate_smtp_client(self):
         """
         Generate an SMTP client.
@@ -108,18 +108,20 @@ class SmtpProvider(BaseProvider):
         smtp_port = self.authentication_config.smtp_port
         encryption = self.authentication_config.encryption
 
-        if (encryption == "SSL"):
+        if encryption == "SSL":
             smtp = SMTP_SSL(smtp_server, smtp_port)
             smtp.login(smtp_username, smtp_password)
             return smtp
-            
-        elif (encryption == "TLS"):
+
+        elif encryption == "TLS":
             smtp = SMTP(smtp_server, smtp_port)
             smtp.starttls()
             smtp.login(smtp_username, smtp_password)
             return smtp
-            
-    def send_email(self, from_email: str, from_name: str, to_email: str, subject: str, body: str):
+
+    def send_email(
+        self, from_email: str, from_name: str, to_email: str, subject: str, body: str
+    ):
         """
         Send an email using SMTP protocol.
         """
@@ -127,9 +129,9 @@ class SmtpProvider(BaseProvider):
         if from_name == "":
             msg["From"] = from_email
         msg["From"] = f"{from_name} <{from_email}>"
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
 
         try:
             smtp = self.generate_smtp_client()
@@ -138,18 +140,16 @@ class SmtpProvider(BaseProvider):
 
         except Exception as e:
             raise Exception(f"Failed to send email: {str(e)}")
-        
-    def _notify(self, from_email: str, from_name: str, to_email: str, subject: str, body: str):
+
+    def _notify(
+        self, from_email: str, from_name: str, to_email: str, subject: str, body: str
+    ):
         """
         Send an email using SMTP protocol.
         """
         self.send_email(from_email, from_name, to_email, subject, body)
-        return {
-            "from": from_email,
-            "to": to_email,
-            "subject": subject,
-            "body": body
-        }
+        return {"from": from_email, "to": to_email, "subject": subject, "body": body}
+
 
 if __name__ == "__main__":
     import logging

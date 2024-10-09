@@ -1,6 +1,7 @@
 """
 Elasticsearch provider.
 """
+
 import dataclasses
 import json
 

@@ -1,6 +1,13 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
-import { Button, Subtitle, TextInput, Select, SelectItem, Icon } from "@tremor/react";
+import {
+  Button,
+  Subtitle,
+  TextInput,
+  Select,
+  SelectItem,
+  Icon,
+} from "@tremor/react";
 import { Trashcan } from "components/icons";
 import { Threshold, WidgetData } from "./types";
 import { Preset } from "app/alerts/models";
@@ -21,54 +28,76 @@ interface WidgetModalProps {
   editingItem?: WidgetData | null;
 }
 
-const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget, onEditWidget, presets, editingItem }) => {
+const WidgetModal: React.FC<WidgetModalProps> = ({
+  isOpen,
+  onClose,
+  onAddWidget,
+  onEditWidget,
+  presets,
+  editingItem,
+}) => {
   const [thresholds, setThresholds] = useState<Threshold[]>([
-    { value: 0, color: '#22c55e' }, // Green
-    { value: 20, color: '#ef4444' } // Red
+    { value: 0, color: "#22c55e" }, // Green
+    { value: 20, color: "#ef4444" }, // Red
   ]);
 
-  const { control, handleSubmit, setValue, formState: { errors }, reset } = useForm<WidgetForm>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+    reset,
+  } = useForm<WidgetForm>({
     defaultValues: {
-      widgetName: '',
-      selectedPreset: '',
+      widgetName: "",
+      selectedPreset: "",
       thresholds: thresholds,
-    }
+    },
   });
 
   useEffect(() => {
     if (editingItem) {
-      setValue('widgetName', editingItem.name);
-      setValue('selectedPreset', editingItem.preset.id);
+      setValue("widgetName", editingItem.name);
+      setValue("selectedPreset", editingItem.preset.id);
       setThresholds(editingItem.thresholds);
     } else {
       reset({
-        widgetName: '',
-        selectedPreset: '',
+        widgetName: "",
+        selectedPreset: "",
         thresholds: thresholds,
       });
     }
   }, [editingItem, setValue, reset]);
 
-  const handleThresholdChange = (index: number, field: 'value' | 'color', e: ChangeEvent<HTMLInputElement>) => {
-    const value = field === 'value' ? e.target.value : e.target.value;
-    const updatedThresholds = thresholds.map((t, i) => i === index ? { ...t, [field]: value } : t);
+  const handleThresholdChange = (
+    index: number,
+    field: "value" | "color",
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = field === "value" ? e.target.value : e.target.value;
+    const updatedThresholds = thresholds.map((t, i) =>
+      i === index ? { ...t, [field]: value } : t
+    );
     setThresholds(updatedThresholds);
   };
 
   const handleThresholdBlur = () => {
-    setThresholds(prevThresholds => {
+    setThresholds((prevThresholds) => {
       return prevThresholds
-        .map(t => ({
+        .map((t) => ({
           ...t,
-          value: parseInt(t.value.toString(), 10) || 0
+          value: parseInt(t.value.toString(), 10) || 0,
         }))
         .sort((a, b) => a.value - b.value);
     });
   };
 
   const handleAddThreshold = () => {
-    const maxThreshold = Math.max(...thresholds.map(t => t.value), 0);
-    setThresholds([...thresholds, { value: maxThreshold + 10, color: '#000000' }]);
+    const maxThreshold = Math.max(...thresholds.map((t) => t.value), 0);
+    setThresholds([
+      ...thresholds,
+      { value: maxThreshold + 10, color: "#000000" },
+    ]);
   };
 
   const handleRemoveThreshold = (index: number) => {
@@ -76,11 +105,11 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
   };
 
   const onSubmit = (data: WidgetForm) => {
-    const preset = presets.find(p => p.id === data.selectedPreset);
+    const preset = presets.find((p) => p.id === data.selectedPreset);
     if (preset) {
-      const formattedThresholds = thresholds.map(t => ({
+      const formattedThresholds = thresholds.map((t) => ({
         ...t,
-        value: parseInt(t.value.toString(), 10) || 0
+        value: parseInt(t.value.toString(), 10) || 0,
       }));
 
       if (editingItem) {
@@ -95,12 +124,12 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
         onAddWidget(preset, formattedThresholds, data.widgetName);
         // cleanup form
         setThresholds([
-          { value: 0, color: '#22c55e' }, // Green
-          { value: 20, color: '#ef4444' } // Red
+          { value: 0, color: "#22c55e" }, // Green
+          { value: 20, color: "#ef4444" }, // Red
         ]);
         reset({
-          widgetName: '',
-          selectedPreset: '',
+          widgetName: "",
+          selectedPreset: "",
           thresholds: thresholds,
         });
       }
@@ -109,14 +138,20 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingItem ? "Edit Widget" : "Add Widget"}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingItem ? "Edit Widget" : "Add Widget"}
+    >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mb-4 mt-2">
           <Subtitle>Widget Name</Subtitle>
           <Controller
             name="widgetName"
             control={control}
-            rules={{ required: { value: true, message: "Widget name is required" } }}
+            rules={{
+              required: { value: true, message: "Widget name is required" },
+            }}
             render={({ field }) => (
               <TextInput
                 {...field}
@@ -132,7 +167,12 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
           <Controller
             name="selectedPreset"
             control={control}
-            rules={{ required: { value: true, message: "Preset selection is required" } }}
+            rules={{
+              required: {
+                value: true,
+                message: "Preset selection is required",
+              },
+            }}
             render={({ field }) => (
               <Select
                 {...field}
@@ -140,7 +180,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
                 error={!!get(errors, "selectedPreset.message")}
                 errorMessage={get(errors, "selectedPreset.message")}
               >
-                {presets.map(preset => (
+                {presets.map((preset) => (
                   <SelectItem key={preset.id} value={preset.id}>
                     {preset.name}
                   </SelectItem>
@@ -152,7 +192,12 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
         <div className="mb-4">
           <div className="flex items-center justify-between">
             <Subtitle>Thresholds</Subtitle>
-            <Button color="orange" variant="secondary" type="button" onClick={handleAddThreshold}>
+            <Button
+              color="orange"
+              variant="secondary"
+              type="button"
+              onClick={handleAddThreshold}
+            >
               +
             </Button>
           </div>
@@ -161,7 +206,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
               <div key={index} className="flex items-center space-x-2 mb-2">
                 <TextInput
                   value={threshold.value.toString()}
-                  onChange={(e) => handleThresholdChange(index, 'value', e)}
+                  onChange={(e) => handleThresholdChange(index, "value", e)}
                   onBlur={handleThresholdBlur}
                   placeholder="Threshold value"
                   required
@@ -169,12 +214,16 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
                 <input
                   type="color"
                   value={threshold.color}
-                  onChange={(e) => handleThresholdChange(index, 'color', e)}
+                  onChange={(e) => handleThresholdChange(index, "color", e)}
                   className="w-10 h-10 p-1 border"
                   required
                 />
                 {thresholds.length > 1 && (
-                  <button type="button" onClick={() => handleRemoveThreshold(index)} className="p-2">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveThreshold(index)}
+                    className="p-2"
+                  >
                     <Icon color="orange" icon={Trashcan} className="h-5 w-5" />
                   </button>
                 )}
@@ -182,7 +231,9 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
             ))}
           </div>
         </div>
-        <Button color="orange" type="submit">{editingItem ? "Update Widget" : "Add Widget"}</Button>
+        <Button color="orange" type="submit">
+          {editingItem ? "Update Widget" : "Add Widget"}
+        </Button>
       </form>
     </Modal>
   );

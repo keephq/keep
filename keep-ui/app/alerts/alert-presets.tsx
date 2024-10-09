@@ -157,7 +157,9 @@ export default function AlertPresets({
     setSelectedTags((prevTags) => [...prevTags, newTag]);
   };
 
-  const handleChange = (newValue: MultiValue<{ value: string; label: string }>) => {
+  const handleChange = (
+    newValue: MultiValue<{ value: string; label: string }>
+  ) => {
     setSelectedTags(
       newValue.map((tag) => ({
         id: tags.find((t) => t.name === tag.value)?.id,
@@ -175,9 +177,7 @@ export default function AlertPresets({
       >
         <div className="space-y-2">
           <div className="text-lg font-semibold">
-            <p>
-              {presetName ? "Update preset" : "Enter new preset name"}
-            </p>
+            <p>{presetName ? "Update preset" : "Enter new preset name"}</p>
           </div>
 
           <div className="space-y-2">

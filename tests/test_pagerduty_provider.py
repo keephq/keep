@@ -1,8 +1,9 @@
-import unittest
 import json
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
-from keep.providers.pagerduty_provider.pagerduty_provider import PagerdutyProvider
 import os
+import unittest
+
+from keep.api.models.alert import AlertSeverity, AlertStatus
+from keep.providers.pagerduty_provider.pagerduty_provider import PagerdutyProvider
 
 
 class TestPagerdutyProvider(unittest.TestCase):
@@ -27,4 +28,3 @@ class TestPagerdutyProvider(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-        

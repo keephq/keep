@@ -1,7 +1,8 @@
 import {
   Badge,
   Button,
-  Card, Icon,
+  Card,
+  Icon,
   Subtitle,
   Table,
   TableBody,
@@ -28,14 +29,13 @@ import { DefaultRuleGroupType, parseCEL } from "react-querybuilder";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
-import {PlusIcon} from "@radix-ui/react-icons";
+import { PlusIcon } from "@radix-ui/react-icons";
 
-
-const TIMEFRAME_UNITS_FROM_SECONDS= {
+const TIMEFRAME_UNITS_FROM_SECONDS = {
   seconds: (amount: number) => amount,
   minutes: (amount: number) => amount / 60,
   hours: (amount: number) => amount / 3600,
-  days: (amount: number) => amount  / 86400,
+  days: (amount: number) => amount / 86400,
 } as const;
 
 const columnHelper = createColumnHelper<Rule>();
@@ -72,7 +72,9 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       return {
         name: selectedRule.name,
         description: selectedRule.group_description ?? "",
-        timeAmount: TIMEFRAME_UNITS_FROM_SECONDS[timeunit](selectedRule.timeframe),
+        timeAmount: TIMEFRAME_UNITS_FROM_SECONDS[timeunit](
+          selectedRule.timeframe
+        ),
         timeUnit: timeunit,
         groupedAttributes: selectedRule.grouping_criteria,
         requireApprove: selectedRule.require_approve,
@@ -117,22 +119,21 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
       }),
       columnHelper.accessor("grouping_criteria", {
         header: "Grouped by",
-        cell: (context) => (
-          context.getValue().map((group, index) =>
+        cell: (context) =>
+          context.getValue().map((group, index) => (
             <>
-              <Badge color="orange" key={group}>{group}</Badge>
+              <Badge color="orange" key={group}>
+                {group}
+              </Badge>
               {context.getValue().length !== index + 1 && (
-              <Icon  icon={PlusIcon} size="xs" color="slate" />
-            )}
+                <Icon icon={PlusIcon} size="xs" color="slate" />
+              )}
             </>
-          )
-        ),
+          )),
       }),
       columnHelper.accessor("incidents", {
         header: "Incidents",
-        cell: (context) => (
-          context.getValue()
-        ),
+        cell: (context) => context.getValue(),
       }),
       columnHelper.display({
         id: "menu",

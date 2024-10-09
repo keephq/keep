@@ -1,6 +1,7 @@
 """
 TwilioProvider is a class that implements the BaseProvider interface for Twilio updates.
 """
+
 import dataclasses
 
 import pydantic
@@ -113,11 +114,8 @@ class TwilioProvider(BaseProvider):
         pass
 
     def _notify(
-            self,
-            message_body: str = "",
-            to_phone_number: str = "",
-            **kwargs: dict
-            ):
+        self, message_body: str = "", to_phone_number: str = "", **kwargs: dict
+    ):
         """
         Notify alert with twilio SMS
         """

@@ -27,7 +27,7 @@ class Workflow:
         workflow_steps: typing.List[Step],
         workflow_actions: typing.List[Step],
         workflow_description: str = None,
-        workflow_disabled:bool = False,
+        workflow_disabled: bool = False,
         workflow_providers: typing.List[dict] = None,
         workflow_providers_type: typing.List[str] = [],
         workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,

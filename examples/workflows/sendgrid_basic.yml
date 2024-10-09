@@ -9,8 +9,8 @@ workflow:
         type: sendgrid
         config: " {{ providers.Sendgrid }} "
         with:
-         to:
-          - "youremail@gmail.com"
-          - "youranotheremail@gmail.com"
-         subject: "Hello from Keep!"
-         html: "<strong>Test</strong> with HTML"
+          to:
+            - "youremail@gmail.com"
+            - "youranotheremail@gmail.com"
+          subject: "Hello from Keep!"
+          html: "<strong>Test</strong> with HTML"

@@ -13,7 +13,7 @@ from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
@@ -183,7 +183,9 @@ def db_session(request):
 
     # Create a session
     # Passing class_=Session to use the Session class from sqlmodel (https://github.com/fastapi/sqlmodel/issues/75#issuecomment-2109911909)
-    SessionLocal = sessionmaker(class_=Session, autocommit=False, autoflush=False, bind=mock_engine)
+    SessionLocal = sessionmaker(
+        class_=Session, autocommit=False, autoflush=False, bind=mock_engine
+    )
     session = SessionLocal()
     # Prepopulate the database with test data
 
@@ -577,7 +579,9 @@ def create_alert(db_session):
             tenant_id=SINGLE_TENANT_UUID,
             provider_id="test",
             provider_type=(
-                details["source"][0] if details and "source" in details and details["source"] else None
+                details["source"][0]
+                if details and "source" in details and details["source"]
+                else None
             ),
             fingerprint=fingerprint,
             api_key_name="test",

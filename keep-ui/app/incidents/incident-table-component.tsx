@@ -1,9 +1,17 @@
-import {Icon, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow} from "@tremor/react";
-import {flexRender, Header, Table as ReactTable} from "@tanstack/react-table";
-import React, {ReactNode} from "react";
+import {
+  Icon,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+} from "@tremor/react";
+import { flexRender, Header, Table as ReactTable } from "@tanstack/react-table";
+import React, { ReactNode } from "react";
 import { IncidentDto } from "./models";
 import { useRouter } from "next/navigation";
-import {FaArrowDown, FaArrowRight, FaArrowUp} from "react-icons/fa";
+import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
 interface Props {
   table: ReactTable<IncidentDto>;
 }
@@ -13,11 +21,7 @@ interface SortableHeaderCellProps {
   children: ReactNode;
 }
 
-const SortableHeaderCell = ({
-  header,
-  children,
-}: SortableHeaderCellProps) => {
-
+const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
   const { column } = header;
 
   return (
@@ -46,30 +50,27 @@ const SortableHeaderCell = ({
                   ? "Sort descending"
                   : "Clear sort"
               }
-              icon= {column.getIsSorted() ? (
-                column.getIsSorted() === "asc" ? FaArrowDown : FaArrowUp
-              ) : (
-                FaArrowRight
-              )}
+              icon={
+                column.getIsSorted()
+                  ? column.getIsSorted() === "asc"
+                    ? FaArrowDown
+                    : FaArrowUp
+                  : FaArrowRight
+              }
             >
               {/* Icon logic */}
-
             </Icon>
             {/* Custom styled vertical line separator */}
             <div className="w-px h-5 mx-2 bg-gray-400"></div>
           </>
         )}
-
         {children} {/* Column name or text */}
       </div>
-
     </TableHeaderCell>
-
   );
 };
 
 export const IncidentTableComponent = (props: Props) => {
-
   const { table } = props;
 
   const router = useRouter();
@@ -84,10 +85,7 @@ export const IncidentTableComponent = (props: Props) => {
           >
             {headerGroup.headers.map((header) => {
               return (
-                <SortableHeaderCell
-                  header={header}
-                  key={header.id}
-                >
+                <SortableHeaderCell header={header} key={header.id}>
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()
@@ -118,8 +116,7 @@ export const IncidentTableComponent = (props: Props) => {
         ))}
       </TableBody>
     </Table>
-  )
-
-}
+  );
+};
 
 export default IncidentTableComponent;

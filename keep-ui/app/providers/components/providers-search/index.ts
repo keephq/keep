@@ -1,1 +1,1 @@
-export { ProvidersSearch } from './providers-search';
+export { ProvidersSearch } from "./providers-search";

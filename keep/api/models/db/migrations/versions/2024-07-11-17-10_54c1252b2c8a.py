@@ -1,16 +1,17 @@
 """First migration
 
 Revision ID: 54c1252b2c8a
-Revises: 
+Revises:
 Create Date: 2024-07-11 17:10:10.815182
 
 """
 
+import logging
+
 import sqlalchemy as sa
+import sqlalchemy_utils
 import sqlmodel
 from alembic import op
-import sqlalchemy_utils
-import logging
 
 # revision identifiers, used by Alembic.
 revision = "54c1252b2c8a"
@@ -441,6 +442,7 @@ def _upgrade() -> None:
     )
     # ### end Alembic commands ###
 
+
 def upgrade() -> None:
     """
     This migration is special because it creates the tables from scratch,
@@ -451,7 +453,9 @@ def upgrade() -> None:
     except Exception as e:
         if "already exists" in str(e):
             logging.warning(str(e))
-            logging.warning("Table already exists, which most likely means that tables has already been created before the migration mechanism was introduced. It's ok!")
+            logging.warning(
+                "Table already exists, which most likely means that tables has already been created before the migration mechanism was introduced. It's ok!"
+            )
         else:
             raise e
 

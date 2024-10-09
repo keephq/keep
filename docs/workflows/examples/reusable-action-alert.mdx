@@ -29,7 +29,7 @@ alert:
   actions:
     - name: trigger-telegram1
       use: @trigger-telegrame
-      provider: 
+      provider:
         config:
           authentication:
             bot_token: "{{ env.TELEGRAM_BOT_TOKEN1 }}"
@@ -37,7 +37,7 @@ alert:
           chat_id: "{{ env.TELEGRAM_CHAT_ID1 }}"
     - name: trigger-telegram2
       use: @trigger-telegrame
-      provider: 
+      provider:
         config:
           authentication:
             bot_token: "{{ env.TELEGRAM_BOT_TOKEN2 }}"
@@ -116,10 +116,10 @@ actions:
         message: Keep Alert Test
 ```
 
-The action uses the `if` statement to alert if **one** of the databases has less than 10% disk space left. 
+The action uses the `if` statement to alert if **one** of the databases has less than 10% disk space left.
 Note that we don't define any telegram `chat_id`  and `bot_token` here because we want to define two separate telegram credentials for the two channels.
 
-The credentials are defined in `actions` definitions within the `alert` configuration. 
+The credentials are defined in `actions` definitions within the `alert` configuration.
 Note that we declare `use: @trigger-telegram` to use the defined action template.
 
 ```
@@ -128,7 +128,7 @@ alert:
   actions:
     - name: trigger-telegram1
       use: @trigger-telegram
-      provider: 
+      provider:
         config:
           authentication:
             bot_token: "{{ env.TELEGRAM_BOT_TOKEN1 }}"
@@ -136,7 +136,7 @@ alert:
           chat_id: "{{ env.TELEGRAM_CHAT_ID1 }}"
     - name: trigger-telegram2
       use: @trigger-telegram
-      provider: 
+      provider:
         config:
           authentication:
             bot_token: "{{ env.TELEGRAM_BOT_TOKEN2 }}"

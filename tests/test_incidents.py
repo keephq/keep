@@ -27,7 +27,6 @@ from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
 
 
-
 def test_get_alerts_data_for_incident(db_session, setup_stress_alerts_no_elastic):
     alerts = setup_stress_alerts_no_elastic(100)
     assert 100 == db_session.query(func.count(Alert.id)).scalar()
@@ -136,13 +135,16 @@ def test_get_last_incidents(db_session, create_alert):
     for i in range(50):
         severity = next(severity_cycle)
         status = next(status_cycle)
-        incident = create_incident_from_dict(SINGLE_TENANT_UUID, {
-            "user_generated_name": f"test-{i}",
-            "user_summary": f"test-{i}",
-            "is_confirmed": True,
-            "severity": severity,
-            "status": status,
-        })
+        incident = create_incident_from_dict(
+            SINGLE_TENANT_UUID,
+            {
+                "user_generated_name": f"test-{i}",
+                "user_summary": f"test-{i}",
+                "is_confirmed": True,
+                "severity": severity,
+                "status": status,
+            },
+        )
         create_alert(
             f"alert-test-{i}",
             AlertStatus(status),
@@ -150,7 +152,7 @@ def test_get_last_incidents(db_session, create_alert):
             {
                 "severity": AlertSeverity.from_number(severity),
                 "service": next(services_cycle),
-            }
+            },
         )
         alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
@@ -210,34 +212,45 @@ def test_get_last_incidents(db_session, create_alert):
     # Test filters
 
     filters_1 = {"severity": [1]}
-    incidents_with_filters_1, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100)
+    incidents_with_filters_1, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100
+    )
     assert len(incidents_with_filters_1) == 10
     assert all([i.severity == 1 for i in incidents_with_filters_1])
 
     filters_2 = {"status": ["firing", "acknowledged"]}
-    incidents_with_filters_2, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100)
+    incidents_with_filters_2, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100
+    )
     assert len(incidents_with_filters_2) == 17 + 16
-    assert all([i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2])
+    assert all(
+        [i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2]
+    )
 
     filters_3 = {"sources": ["keep"]}
-    incidents_with_filters_3, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100)
+    incidents_with_filters_3, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100
+    )
     assert len(incidents_with_filters_3) == 50
     assert all(["keep" in i.sources for i in incidents_with_filters_3])
 
     filters_4 = {"sources": ["grafana"]}
-    incidents_with_filters_4, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100)
+    incidents_with_filters_4, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100
+    )
     assert len(incidents_with_filters_4) == 0
     filters_5 = {"affected_services": "keep"}
-    incidents_with_filters_5, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100)
+    incidents_with_filters_5, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100
+    )
     assert len(incidents_with_filters_5) == 25
     assert all(["keep" in i.affected_services for i in incidents_with_filters_5])
 
 
-
-@pytest.mark.parametrize(
-    "test_app", ["NO_AUTH"], indirect=True
-)
-def test_incident_status_change(db_session, client, test_app, setup_stress_alerts_no_elastic):
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_incident_status_change(
+    db_session, client, test_app, setup_stress_alerts_no_elastic
+):
 
     alerts = setup_stress_alerts_no_elastic(100)
     incident = create_incident_from_dict(
@@ -318,10 +331,10 @@ def test_incident_status_change(db_session, client, test_app, setup_stress_alert
     )
 
 
-@pytest.mark.parametrize(
-    "test_app", ["NO_AUTH"], indirect=True
-)
-def test_incident_metadata(db_session, client, test_app, setup_stress_alerts_no_elastic):
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_incident_metadata(
+    db_session, client, test_app, setup_stress_alerts_no_elastic
+):
     severity_cycle = cycle([s.order for s in IncidentSeverity])
     status_cycle = cycle([s.value for s in IncidentStatus])
     sources_cycle = cycle(["keep", "keep-test", "keep-test-2"])
@@ -332,16 +345,19 @@ def test_incident_metadata(db_session, client, test_app, setup_stress_alerts_no_
         status = next(status_cycle)
         service = next(services_cycle)
         source = next(sources_cycle)
-        create_incident_from_dict(SINGLE_TENANT_UUID, {
-            "user_generated_name": f"test-{i}",
-            "user_summary": f"test-{i}",
-            "is_confirmed": True,
-            "assignee": f"assignee-{i % 5}",
-            "severity": severity,
-            "status": status,
-            "sources": [source],
-            "affected_services": [service],
-        })
+        create_incident_from_dict(
+            SINGLE_TENANT_UUID,
+            {
+                "user_generated_name": f"test-{i}",
+                "user_summary": f"test-{i}",
+                "is_confirmed": True,
+                "assignee": f"assignee-{i % 5}",
+                "severity": severity,
+                "status": status,
+                "sources": [source],
+                "affected_services": [service],
+            },
+        )
 
     response = client.get(
         "/incidents/meta/",

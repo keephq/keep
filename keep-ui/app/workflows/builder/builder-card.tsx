@@ -23,7 +23,7 @@ interface Props {
   triggerRun: number;
   workflow?: string;
   workflowId?: string;
-  isPreview?:boolean;
+  isPreview?: boolean;
 }
 
 export function BuilderCard({
@@ -37,7 +37,7 @@ export function BuilderCard({
   triggerSave,
   workflow,
   workflowId,
-  isPreview
+  isPreview,
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [installedProviders, setInstalledProviders] = useState<
@@ -51,7 +51,7 @@ export function BuilderCard({
     throw new KeepApiError(
       "The builder has failed to load providers",
       `${apiUrl}/providers`,
-        `Failed to query ${apiUrl}/providers, is Keep API up?`
+      `Failed to query ${apiUrl}/providers, is Keep API up?`
     );
   }
 

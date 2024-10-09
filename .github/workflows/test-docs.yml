@@ -2,12 +2,12 @@ name: Test docs
 on:
   push:
     paths:
-      - 'keep/poviders/**'
-      - 'docs/**'
+      - "keep/poviders/**"
+      - "docs/**"
   pull_request:
     paths:
-      - 'keep/poviders/**'
-      - 'docs/**'
+      - "keep/poviders/**"
+      - "docs/**"
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}-${{ github.job }}
@@ -46,19 +46,18 @@ jobs:
 
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
-  
+
       - name: Validate docs for providers
         run: |
           cd scripts;
-          poetry run python ./docs_get_providers_list.py --validate    
+          poetry run python ./docs_get_providers_list.py --validate
 
       - name: Install deps and validate docs
         run: |
           npm i -g mintlify;
-          
+
           cd docs && mintlify broken-links;
           cd ../scripts;
           ./docs_validate_navigation.sh;
 
           # Todo: validate if openapi schema is matching with the code
-  

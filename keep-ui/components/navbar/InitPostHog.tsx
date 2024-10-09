@@ -13,7 +13,12 @@ export const InitPostHog = () => {
   const { data: session } = useSession();
   const { data: configData } = useConfig();
 
-  if (typeof window !== "undefined" && configData && configData.POSTHOG_KEY && configData.POSTHOG_DISABLED !== "true") {
+  if (
+    typeof window !== "undefined" &&
+    configData &&
+    configData.POSTHOG_KEY &&
+    configData.POSTHOG_DISABLED !== "true"
+  ) {
     posthog.init(configData.POSTHOG_KEY!, {
       api_host: configData.POSTHOG_HOST,
     });

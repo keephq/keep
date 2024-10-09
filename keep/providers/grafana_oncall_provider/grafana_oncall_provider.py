@@ -1,6 +1,7 @@
 """
 Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
+
 import dataclasses
 import random
 from typing import Literal

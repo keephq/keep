@@ -2,7 +2,6 @@
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 
-
 export default function Layout({
   children,
   params,
@@ -10,7 +9,6 @@ export default function Layout({
   children: any;
   params: { workflow_id: string };
 }) {
-
   return (
     <>
       <div className="flex items-center mb-4 max-h-full">

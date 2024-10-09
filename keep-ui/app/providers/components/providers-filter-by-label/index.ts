@@ -1,1 +1,1 @@
-export { ProvidersFilterByLabel } from './providers-filter-by-label';
+export { ProvidersFilterByLabel } from "./providers-filter-by-label";

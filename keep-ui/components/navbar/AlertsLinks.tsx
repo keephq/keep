@@ -34,7 +34,10 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   const [staticPresets, setStaticPresets] = useState(staticPresetsOrderFromLS);
 
-  const [storedTags, setStoredTags] = useLocalStorage<string[]>("selectedTags", []);
+  const [storedTags, setStoredTags] = useLocalStorage<string[]>(
+    "selectedTags",
+    []
+  );
 
   useEffect(() => {
     if (
@@ -89,7 +92,8 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                     "absolute left-full ml-2 cursor-pointer text-gray-400 transition-opacity",
                     {
                       "opacity-100 text-orange-500": selectedTags.length > 0,
-                      "opacity-0 group-hover:opacity-100 group-hover:text-orange-500": selectedTags.length === 0
+                      "opacity-0 group-hover:opacity-100 group-hover:text-orange-500":
+                        selectedTags.length === 0,
                     }
                   )}
                   size={16}
@@ -145,7 +149,9 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       >
         <div className="space-y-2">
           <Subtitle>Select tags to watch</Subtitle>
-          <Callout title="" color="orange">Customize your presets list by watching specific tags.</Callout>
+          <Callout title="" color="orange">
+            Customize your presets list by watching specific tags.
+          </Callout>
           <CreatableMultiSelect
             value={tempSelectedTags.map((tag) => ({
               value: tag,

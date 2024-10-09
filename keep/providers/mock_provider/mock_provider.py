@@ -1,6 +1,7 @@
 """
 MockProvider is a class that implements the BaseOutputProvider interface for Mock messages.
 """
+
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig

@@ -9,7 +9,6 @@ import { MdOutlineDateRange } from "react-icons/md";
 import { IconType } from "react-icons";
 import { endOfDay } from "date-fns";
 
-
 type Filter = {
   key: string;
   value: string | string[] | Record<string, string>;
@@ -137,7 +136,6 @@ function CustomDate({
     const endDate = end || start;
     const endOfDayDate = endDate ? endOfDay(endDate) : end;
 
-
     setDateRange({ from: start ?? undefined, to: endOfDayDate ?? undefined });
     handleDate(start, endOfDayDate);
   };
@@ -200,7 +198,7 @@ const PopoverContent: React.FC<PopoverContentProps> = ({
   };
 
   const handleDate = (start?: Date, end?: Date) => {
-    let newValue = ""
+    let newValue = "";
     if (!start && !end) {
       newValue = "";
     } else {
@@ -272,19 +270,22 @@ export const GenericFilters: React.FC<FiltersProps> = ({ filters }) => {
     if (searchParams) {
       // Convert URLSearchParams to a key-value pair object
       const entries = Array.from(searchParams.entries());
-      const params = entries.reduce((acc, [key, value]) => {
-        if (key in acc) {
-          if (Array.isArray(acc[key])) {
-            acc[key] = [...acc[key], value];
+      const params = entries.reduce(
+        (acc, [key, value]) => {
+          if (key in acc) {
+            if (Array.isArray(acc[key])) {
+              acc[key] = [...acc[key], value];
+              return acc;
+            } else {
+              acc[key] = [acc[key] as string, value];
+            }
             return acc;
-          }else {
-            acc[key] = [acc[key] as string, value];
           }
+          acc[key] = value;
           return acc;
-        }
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string | string[]>);
+        },
+        {} as Record<string, string | string[]>
+      );
 
       // Update filterRef.current with the new params
       filterRef.current = filters.map((filter) => ({

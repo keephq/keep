@@ -144,7 +144,9 @@ export function ManageSelection({ className }: { className?: string }) {
       <>
         <p>
           {selectedServices.length > 0 &&
-            `Selected: ${selectedServices.map((service) => service.name).join(", ")}`}
+            `Selected: ${selectedServices
+              .map((service) => service.name)
+              .join(", ")}`}
         </p>
         <Button
           color="orange"

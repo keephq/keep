@@ -8,9 +8,17 @@ interface GridItemContainerProps {
   onDelete: (id: string) => void;
 }
 
-const GridItemContainer: React.FC<GridItemContainerProps> = ({ item, onEdit, onDelete }) => {
+const GridItemContainer: React.FC<GridItemContainerProps> = ({
+  item,
+  onEdit,
+  onDelete,
+}) => {
   return (
-    <GridItem item={item} onEdit={() => onEdit(item.i)} onDelete={() => onDelete(item.i)}/>
+    <GridItem
+      item={item}
+      onEdit={() => onEdit(item.i)}
+      onDelete={() => onDelete(item.i)}
+    />
   );
 };
 

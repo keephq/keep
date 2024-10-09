@@ -11,8 +11,8 @@
 - UUID LDAP attribute: entryUUID
 - User object classes: inetOrgPerson
 
-
 ## Mappers
+
 - groups
   - LDAP Groups DN: ou=groups,dc=keep,dc=com
   - Group Name LDAP Attribute: cn

@@ -1,6 +1,6 @@
-from argparse import ArgumentParser
-import typing as t
 import json
+import typing as t
+from argparse import ArgumentParser
 
 Json = dict[str | t.Literal["anyOf", "type"], "Json"] | list["Json"] | str | bool
 
@@ -47,6 +47,7 @@ def convert_3_dot_1_to_3_dot_0(json: dict[str, Json]):
 
     inner(json)
     return json
+
 
 if __name__ == "__main__":
 

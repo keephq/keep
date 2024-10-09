@@ -109,23 +109,26 @@ export default function AlertChangeStatusModal({
     }
 
     try {
-      const response = await fetch(`${getApiURL()}/alerts/enrich?dispose_on_new_alert=true`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
-          enrichments: {
-            status: selectedStatus,
-            ...(selectedStatus !== Status.Suppressed && {
-              dismissed: false,
-              dismissUntil: "",
-            }),
+      const response = await fetch(
+        `${getApiURL()}/alerts/enrich?dispose_on_new_alert=true`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
           },
-          fingerprint: alert.fingerprint,
-        }),
-      });
+          body: JSON.stringify({
+            enrichments: {
+              status: selectedStatus,
+              ...(selectedStatus !== Status.Suppressed && {
+                dismissed: false,
+                dismissUntil: "",
+              }),
+            },
+            fingerprint: alert.fingerprint,
+          }),
+        }
+      );
 
       if (response.ok) {
         toast.success("Alert status changed successfully!");

@@ -63,7 +63,8 @@ ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
 
 FUNCTIONS: list = (
     [
-        import_string(background_function) for background_function in list(ARQ_BACKGROUND_FUNCTIONS)
+        import_string(background_function)
+        for background_function in list(ARQ_BACKGROUND_FUNCTIONS)
     ]
     if ARQ_BACKGROUND_FUNCTIONS is not None
     else list()
@@ -85,15 +86,15 @@ def get_arq_worker(queue_name: str) -> Worker:
     expires = config(
         "ARQ_EXPIRES", cast=int, default=3600
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
-    expires_ai = config(
-        "ARQ_EXPIRES_AI", cast=int, default=3600*1000
-    )
+    expires_ai = config("ARQ_EXPIRES_AI", cast=int, default=3600 * 1000)
     # generate a worker id so each worker will have a different health check key
     worker_id = str(uuid4()).replace("-", "")
     worker = create_worker(
         WorkerSettings,
         keep_result=keep_result,
-        expires_extra_ms=expires_ai if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else expires,
+        expires_extra_ms=(
+            expires_ai if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else expires
+        ),
         queue_name=queue_name,
         health_check_key=f"{queue_name}:{worker_id}:health-check",
     )

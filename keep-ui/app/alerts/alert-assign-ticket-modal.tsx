@@ -225,18 +225,14 @@ const AlertAssignTicketModal = ({
             </div>
             <div className="mt-6 flex gap-2">
               <Button color="orange" type="submit">
-                <Text>
-                  Assign Ticket
-                </Text>
+                <Text>Assign Ticket</Text>
               </Button>
               <Button
                 onClick={handleClose}
                 variant="secondary"
                 className="border border-orange-500 text-orange-500"
               >
-                <Text>
-                  Cancel
-                </Text>
+                <Text>Cancel</Text>
               </Button>
             </div>
           </form>

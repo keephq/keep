@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -34,7 +34,7 @@ export function APIKeysTable({
   apiKeys,
   onRegenerate,
   onDelete,
-  isDisabled = false
+  isDisabled = false,
 }: APIKeysTableProps) {
   const getCopyBlockProps = (secret: string) => ({
     theme: { ...a11yLight },
@@ -86,7 +86,9 @@ export function APIKeysTable({
                   icon={UpdateIcon}
                   variant="light"
                   color="orange"
-                  onClick={(e) => !isDisabled && onRegenerate(key.reference_id, e)}
+                  onClick={(e) =>
+                    !isDisabled && onRegenerate(key.reference_id, e)
+                  }
                   disabled={isDisabled}
                 />
                 <Button

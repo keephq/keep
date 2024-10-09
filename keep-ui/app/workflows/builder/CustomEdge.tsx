@@ -4,7 +4,7 @@ import type { Edge, EdgeProps } from "@xyflow/react";
 import useStore from "./builder-store";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
-import '@xyflow/react/dist/style.css';
+import "@xyflow/react/dist/style.css";
 
 interface CustomEdgeProps extends EdgeProps {
   label?: string;
@@ -40,13 +40,22 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
 
   let dynamicLabel = label;
   const isLayouted = !!data?.isLayouted;
-  let showAddButton = !source?.includes('empty') && !target?.includes('trigger_end') && source !== 'start';
+  let showAddButton =
+    !source?.includes("empty") &&
+    !target?.includes("trigger_end") &&
+    source !== "start";
 
   if (!showAddButton) {
-    showAddButton = target?.includes('trigger_end') && source?.includes("trigger_start");
+    showAddButton =
+      target?.includes("trigger_end") && source?.includes("trigger_start");
   }
 
-  const color = dynamicLabel === "True" ? "left-0 bg-green-500" : dynamicLabel === "False" ? "bg-red-500" : "bg-orange-500";
+  const color =
+    dynamicLabel === "True"
+      ? "left-0 bg-green-500"
+      : dynamicLabel === "False"
+      ? "bg-red-500"
+      : "bg-orange-500";
   return (
     <>
       <BaseEdge
@@ -57,7 +66,6 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
           ...style,
           strokeWidth: 2,
         }}
-
       />
       <defs>
         <marker
@@ -83,7 +91,7 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
         className="stroke-gray-700 stroke-2"
         style={{
           markerEnd: `url(#arrow-${id})`,
-          opacity: isLayouted ? 1 : 0
+          opacity: isLayouted ? 1 : 0,
         }} // Add arrowhead
       />
       <EdgeLabelRenderer>
@@ -91,31 +99,39 @@ const CustomEdge: React.FC<CustomEdgeProps> = ({
           <div
             className={`absolute ${color} text-white rounded px-3 py-1 border border-gray-700`}
             style={{
-              transform: `translate(-50%, -50%) translate(${dynamicLabel === "True" ? labelX - 45 : labelX + 48}px, ${labelY}px)`,
+              transform: `translate(-50%, -50%) translate(${
+                dynamicLabel === "True" ? labelX - 45 : labelX + 48
+              }px, ${labelY}px)`,
               pointerEvents: "none",
-              opacity: isLayouted ? 1 : 0
+              opacity: isLayouted ? 1 : 0,
             }}
           >
             {dynamicLabel}
           </div>
         )}
-        {showAddButton && <Button
-          style={{
-            position: "absolute",
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-            pointerEvents: "all",
-            opacity: isLayouted ? 1 : 0
-          }}
-          className={`p-0 m-0 bg-transparent text-transparent border-none`}
-          // tooltip="Add node"
-          onClick={(e) => {
-            setSelectedEdge(id);
-          }}
-        >
-          <PlusIcon
-            className={`size-7 hover:text-black rounded text-sm bg-white border text-gray-700 ${selectedEdge === id ? "border-2 border-orange-500" : "border-gray-700"
+        {showAddButton && (
+          <Button
+            style={{
+              position: "absolute",
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              pointerEvents: "all",
+              opacity: isLayouted ? 1 : 0,
+            }}
+            className={`p-0 m-0 bg-transparent text-transparent border-none`}
+            // tooltip="Add node"
+            onClick={(e) => {
+              setSelectedEdge(id);
+            }}
+          >
+            <PlusIcon
+              className={`size-7 hover:text-black rounded text-sm bg-white border text-gray-700 ${
+                selectedEdge === id
+                  ? "border-2 border-orange-500"
+                  : "border-gray-700"
               }`}
-          />        </Button>}
+            />{" "}
+          </Button>
+        )}
       </EdgeLabelRenderer>
     </>
   );

@@ -1,6 +1,7 @@
 """
 BigQuery provider.
 """
+
 import dataclasses
 import os
 from typing import Optional

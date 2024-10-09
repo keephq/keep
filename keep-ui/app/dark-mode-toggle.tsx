@@ -53,7 +53,13 @@ export default function DarkModeToggle() {
         />
         <Subtitle className="ml-2">Dark Mode</Subtitle>
       </span>
-      <Switch id="dark-mode" name="dark-mode" color="orange" onChange={toggleDarkMode} checked={darkMode} />
+      <Switch
+        id="dark-mode"
+        name="dark-mode"
+        color="orange"
+        onChange={toggleDarkMode}
+        checked={darkMode}
+      />
     </label>
   );
 }

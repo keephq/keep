@@ -6,6 +6,5 @@ export default function Page() {
 
 export const metadata = {
   title: "Keep - Incidents",
-  description:
-    "List of incidents",
+  description: "List of incidents",
 };

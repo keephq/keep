@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
-import { Button } from '@tremor/react';
+import { Button } from "@tremor/react";
 import { WidgetData, Threshold } from "./types";
 
 interface EditGridItemModalProps {
@@ -10,7 +10,12 @@ interface EditGridItemModalProps {
   onSave: (updatedItem: WidgetData) => void;
 }
 
-const EditGridItemModal: React.FC<EditGridItemModalProps> = ({ isOpen, onClose, item, onSave }) => {
+const EditGridItemModal: React.FC<EditGridItemModalProps> = ({
+  isOpen,
+  onClose,
+  item,
+  onSave,
+}) => {
   const [thresholds, setThresholds] = useState<Threshold[]>([]);
 
   useEffect(() => {
@@ -29,7 +34,12 @@ const EditGridItemModal: React.FC<EditGridItemModalProps> = ({ isOpen, onClose, 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Widget">
       {item && (
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+        >
           <div>
             <label>Thresholds:</label>
             {thresholds.map((threshold, index) => (
@@ -37,13 +47,27 @@ const EditGridItemModal: React.FC<EditGridItemModalProps> = ({ isOpen, onClose, 
                 <input
                   type="number"
                   value={threshold.value}
-                  onChange={(e) => setThresholds(thresholds.map((t, i) => i === index ? { ...t, value: parseInt(e.target.value, 10) } : t))}
+                  onChange={(e) =>
+                    setThresholds(
+                      thresholds.map((t, i) =>
+                        i === index
+                          ? { ...t, value: parseInt(e.target.value, 10) }
+                          : t
+                      )
+                    )
+                  }
                   className="border p-1"
                 />
                 <input
                   type="color"
                   value={threshold.color}
-                  onChange={(e) => setThresholds(thresholds.map((t, i) => i === index ? { ...t, color: e.target.value } : t))}
+                  onChange={(e) =>
+                    setThresholds(
+                      thresholds.map((t, i) =>
+                        i === index ? { ...t, color: e.target.value } : t
+                      )
+                    )
+                  }
                   className="border p-1"
                 />
               </div>

@@ -7,7 +7,6 @@ import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 
-
 export const useAIStats = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,

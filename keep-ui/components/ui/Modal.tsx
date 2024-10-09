@@ -16,7 +16,9 @@ export default function Modal({
 }) {
   return (
     <Dialog open={isOpen} onClose={onClose}>
-      <DialogPanel className={`border-2 border-orange-300 rounded-lg ring-0 ${className}`}>
+      <DialogPanel
+        className={`border-2 border-orange-300 rounded-lg ring-0 ${className}`}
+      >
         {title && <Title>{title}</Title>}
         {children}
       </DialogPanel>

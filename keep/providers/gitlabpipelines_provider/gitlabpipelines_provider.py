@@ -49,12 +49,7 @@ class GitlabpipelinesProvider(BaseProvider):
         """
         pass
 
-    def _notify(
-            self,
-            gitlab_url: str = "",
-            gitlab_method: str = "",
-            **kwargs
-            ):
+    def _notify(self, gitlab_url: str = "", gitlab_method: str = "", **kwargs):
         url = gitlab_url
         method = gitlab_method.upper()
 

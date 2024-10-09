@@ -9,11 +9,16 @@ export const FilterContext = createContext<IFilterContext | null>(null);
 export const FilerContextProvider: FC<PropsWithChildren> = ({ children }) => {
   const searchParams = useSearchParams();
 
-  const [providersSearchString, setProvidersSearchString] = useState<string>("");
+  const [providersSearchString, setProvidersSearchString] =
+    useState<string>("");
 
-  const [providersSelectedTags, setProvidersSelectedTags] = useState<TProviderLabels[]>(() => {
+  const [providersSelectedTags, setProvidersSelectedTags] = useState<
+    TProviderLabels[]
+  >(() => {
     const labels = searchParams?.get("labels");
-    const labelArray = labels?.split(',').filter(label => PROVIDER_LABELS_KEYS.includes(label));
+    const labelArray = labels
+      ?.split(",")
+      .filter((label) => PROVIDER_LABELS_KEYS.includes(label));
 
     return (labelArray || []) as TProviderLabels[];
   });
@@ -23,7 +28,11 @@ export const FilerContextProvider: FC<PropsWithChildren> = ({ children }) => {
     providersSelectedTags,
     setProvidersSelectedTags,
     setProvidersSearchString,
-  }
+  };
 
-  return <FilterContext.Provider value={contextValue}>{children}</FilterContext.Provider>
-}
+  return (
+    <FilterContext.Provider value={contextValue}>
+      {children}
+    </FilterContext.Provider>
+  );
+};

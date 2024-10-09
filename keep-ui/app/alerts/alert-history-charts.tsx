@@ -36,23 +36,26 @@ export default function AlertHistoryCharts({
     timeUnit = "Hours";
   }
 
-  const rawChartData = [...alerts].reverse().reduce((prev, curr) => {
-    const date = curr.lastReceived;
-    const dateKey = getDateKey(date, timeUnit);
-    if (!prev[dateKey]) {
-      prev[dateKey] = {
-        [curr.status]: 1,
-      };
-    } else {
-      prev[dateKey][curr.status]
-        ? (prev[dateKey][curr.status] += 1)
-        : (prev[dateKey][curr.status] = 1);
-    }
-    if (categoriesByStatus.includes(curr.status) === false) {
-      categoriesByStatus.push(curr.status);
-    }
-    return prev;
-  }, {} as { [date: string]: any });
+  const rawChartData = [...alerts].reverse().reduce(
+    (prev, curr) => {
+      const date = curr.lastReceived;
+      const dateKey = getDateKey(date, timeUnit);
+      if (!prev[dateKey]) {
+        prev[dateKey] = {
+          [curr.status]: 1,
+        };
+      } else {
+        prev[dateKey][curr.status]
+          ? (prev[dateKey][curr.status] += 1)
+          : (prev[dateKey][curr.status] = 1);
+      }
+      if (categoriesByStatus.includes(curr.status) === false) {
+        categoriesByStatus.push(curr.status);
+      }
+      return prev;
+    },
+    {} as { [date: string]: any }
+  );
 
   if (categoriesByStatus.includes("Fatigueness") === false) {
     categoriesByStatus.push("Fatigueness");

@@ -1,16 +1,18 @@
-import pytest
-from unittest.mock import Mock, patch
-from fastapi import HTTPException
-import threading
 import queue
+import threading
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
+from fastapi import HTTPException
+
+from keep.parser.parser import Parser
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
 from keep.workflowmanager.workflow import Workflow
-from keep.workflowmanager.workflowstore import WorkflowStore
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler
-from keep.parser.parser import Parser
-from pathlib import Path
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 path_to_test_resources = Path(__file__).parent / "workflows"
 

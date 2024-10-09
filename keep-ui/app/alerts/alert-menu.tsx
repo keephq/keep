@@ -256,9 +256,7 @@ export default function AlertMenu({
               <Menu.Item key={method.name}>
                 {({ active }) => (
                   <button
-                    className={`${
-                      active ? "bg-slate-200" : "text-gray-900"
-                    } ${
+                    className={`${active ? "bg-slate-200" : "text-gray-900"} ${
                       !methodEnabled ? "text-slate-300 cursor-not-allowed" : ""
                     } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
                     disabled={!methodEnabled}
@@ -287,7 +285,10 @@ export default function AlertMenu({
               active ? "bg-slate-200" : "text-gray-900"
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
-            <IoNotificationsOffOutline className="mr-2 h-4 w-4" aria-hidden="true" />
+            <IoNotificationsOffOutline
+              className="mr-2 h-4 w-4"
+              aria-hidden="true"
+            />
             {alert.dismissed ? "Restore" : "Dismiss"}
           </button>
         )}
@@ -303,7 +304,10 @@ export default function AlertMenu({
               active ? "bg-slate-200" : "text-gray-900"
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
-            <ChevronDoubleRightIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            <ChevronDoubleRightIcon
+              className="mr-2 h-4 w-4"
+              aria-hidden="true"
+            />
             Change Status
           </button>
         )}
@@ -354,9 +358,7 @@ export default function AlertMenu({
         </Menu>
       ) : (
         <Menu>
-          <div className="flex space-x-2">
-            {menuItems}
-          </div>
+          <div className="flex space-x-2">{menuItems}</div>
         </Menu>
       )}
     </>

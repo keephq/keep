@@ -11,9 +11,9 @@ workflow:
         type: keep
         with:
           filters:
-          # filter out alerts that are closed
-          - key: status
-            value: open
+            # filter out alerts that are closed
+            - key: status
+              value: open
           timerange:
             from: "{{ state.workflows.alerts-daily-digest.last_run_time }}"
             to: now

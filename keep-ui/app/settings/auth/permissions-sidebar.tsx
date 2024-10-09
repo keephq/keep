@@ -71,10 +71,15 @@ const PermissionSidebar = ({
                   <MultiSelect
                     placeholder="Select permissions"
                     value={selectedPermissions[preset.id] || []}
-                    onValueChange={(value) => onPermissionChange(preset.id, value)}
+                    onValueChange={(value) =>
+                      onPermissionChange(preset.id, value)
+                    }
                   >
                     {permissions.map((permission) => (
-                      <MultiSelectItem key={permission.id} value={permission.id}>
+                      <MultiSelectItem
+                        key={permission.id}
+                        value={permission.id}
+                      >
                         {permission.name} ({permission.type})
                       </MultiSelectItem>
                     ))}

@@ -98,17 +98,20 @@ export default function IncidentChangeStatusModal({
     }
 
     try {
-      const response = await fetch(`${getApiURL()}/incidents/${incident.id}/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
+      const response = await fetch(
+        `${getApiURL()}/incidents/${incident.id}/status`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: JSON.stringify({
             status: selectedStatus,
             comment: comment,
-        }),
-      });
+          }),
+        }
+      );
 
       if (response.ok) {
         toast.success("Incident status changed successfully!");
@@ -126,7 +129,8 @@ export default function IncidentChangeStatusModal({
     <Modal onClose={handleClose} isOpen={!!incident}>
       <Title>Change Incident Status</Title>
       <Subtitle className="flex items-center">
-        Change status from <strong className="mx-2">{incident.status}</strong> to:
+        Change status from <strong className="mx-2">{incident.status}</strong>{" "}
+        to:
         <div className="flex-1">
           <Select
             options={statusOptions}

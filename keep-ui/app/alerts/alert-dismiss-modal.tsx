@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { Button, Title, Subtitle, Card, Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
+import {
+  Button,
+  Title,
+  Subtitle,
+  Card,
+  Tab,
+  TabGroup,
+  TabList,
+  TabPanel,
+  TabPanels,
+} from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -34,7 +44,9 @@ export default function AlertDismissModal({
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets();
   const { usePresetAlerts } = useAlerts();
-  const { mutate: alertsMutator } = usePresetAlerts(presetName, { revalidateOnMount: false });
+  const { mutate: alertsMutator } = usePresetAlerts(presetName, {
+    revalidateOnMount: false,
+  });
 
   const { data: session } = useSession();
 
@@ -42,7 +54,11 @@ export default function AlertDismissModal({
   useEffect(() => {
     const now = new Date();
     const roundedMinutes = Math.ceil(now.getMinutes() / 15) * 15;
-    const defaultTime = set(now, { minutes: roundedMinutes, seconds: 0, milliseconds: 0 });
+    const defaultTime = set(now, {
+      minutes: roundedMinutes,
+      seconds: 0,
+      milliseconds: 0,
+    });
     setSelectedDateTime(defaultTime);
   }, []);
 
@@ -69,7 +85,8 @@ export default function AlertDismissModal({
       return;
     }
 
-    const dismissUntil = selectedTab === 0 ? null : selectedDateTime?.toISOString();
+    const dismissUntil =
+      selectedTab === 0 ? null : selectedDateTime?.toISOString();
     const requests = alerts.map((alert: AlertDto) => {
       const requestData = {
         enrichments: {
@@ -181,9 +198,12 @@ export default function AlertDismissModal({
                       filterTime={filterPassedTime}
                       inline
                       calendarClassName="custom-datepicker"
-
                     />
-                    {showError && <div className="text-red-500 mt-2">Must choose a date</div>}
+                    {showError && (
+                      <div className="text-red-500 mt-2">
+                        Must choose a date
+                      </div>
+                    )}
                   </div>
                 </Card>
                 <Title className="mt-2">Dismiss Comment</Title>

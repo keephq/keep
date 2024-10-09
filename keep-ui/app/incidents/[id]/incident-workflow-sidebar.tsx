@@ -60,8 +60,8 @@ const IncidentWorkflowSidebar: React.FC<IncidentWorkflowSidebarProps> = ({
                       selectedExecution.status === "error"
                         ? "red"
                         : selectedExecution.status === "success"
-                          ? "green"
-                          : "orange"
+                        ? "green"
+                        : "orange"
                     }
                   >
                     {selectedExecution.status}

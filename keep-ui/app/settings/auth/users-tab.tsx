@@ -7,7 +7,11 @@ interface Props {
   groupsAllowed: boolean;
 }
 
-export default function UserTab({ accessToken, currentUser, groupsAllowed }: Props) {
+export default function UserTab({
+  accessToken,
+  currentUser,
+  groupsAllowed,
+}: Props) {
   return (
     <UsersSettings
       accessToken={accessToken}

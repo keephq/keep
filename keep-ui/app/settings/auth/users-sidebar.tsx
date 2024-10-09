@@ -1,8 +1,23 @@
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { Text, Subtitle, Button, TextInput, SearchSelect, SearchSelectItem, MultiSelect, MultiSelectItem, Callout } from "@tremor/react";
+import {
+  Text,
+  Subtitle,
+  Button,
+  TextInput,
+  SearchSelect,
+  SearchSelectItem,
+  MultiSelect,
+  MultiSelectItem,
+  Callout,
+} from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  SubmitHandler,
+  FieldValues,
+} from "react-hook-form";
 import { useRoles } from "utils/hooks/useRoles";
 import { useGroups } from "utils/hooks/useGroups";
 import { getApiURL } from "utils/apiUrl";
@@ -10,7 +25,7 @@ import { useSession } from "next-auth/react";
 import { User, Group } from "app/settings/models";
 import { AuthenticationType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
-import Select  from "@/components/ui/Select";
+import Select from "@/components/ui/Select";
 
 interface UserSidebarProps {
   isOpen: boolean;
@@ -19,11 +34,27 @@ interface UserSidebarProps {
   isNewUser: boolean;
   mutateUsers: (data?: any, shouldRevalidate?: boolean) => Promise<any>;
   groupsEnabled?: boolean;
-  identifierType: 'email' | 'username';
+  identifierType: "email" | "username";
 }
 
-const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnabled = true, identifierType }: UserSidebarProps) => {
-  const { control, handleSubmit, setValue, reset, formState: { errors, isDirty }, clearErrors, setError } = useForm<{
+const UsersSidebar = ({
+  isOpen,
+  toggle,
+  user,
+  isNewUser,
+  mutateUsers,
+  groupsEnabled = true,
+  identifierType,
+}: UserSidebarProps) => {
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors, isDirty },
+    clearErrors,
+    setError,
+  } = useForm<{
     username: string;
     name: string;
     role: string;
@@ -35,7 +66,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
       name: "",
       role: "",
       groups: [],
-      password: ""
+      password: "",
     },
   });
 
@@ -50,7 +81,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
   useEffect(() => {
     if (isOpen) {
       if (user) {
-        if (identifierType === 'email') {
+        if (identifierType === "email") {
           // server parse as email
           setValue("username", user.email);
           setValue("name", user.name);
@@ -67,7 +98,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
           groups: [],
         });
       }
-      clearErrors();  // Clear errors when the modal is opened
+      clearErrors(); // Clear errors when the modal is opened
     }
   }, [user, setValue, isOpen, reset, clearErrors, identifierType]);
 
@@ -76,7 +107,11 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
     clearErrors("root.serverError");
 
     const method = isNewUser ? "POST" : "PUT";
-    const url = isNewUser ? `${getApiURL()}/auth/users` : `${getApiURL()}/auth/users/${identifierType === 'email' ? user?.email : user?.name}`;
+    const url = isNewUser
+      ? `${getApiURL()}/auth/users`
+      : `${getApiURL()}/auth/users/${
+          identifierType === "email" ? user?.email : user?.name
+        }`;
     try {
       const response = await fetch(url, {
         method: method,
@@ -93,7 +128,11 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
         handleClose();
       } else {
         const errorData = await response.json();
-        setError("root.serverError", { type: "manual", message: errorData.detail || errorData.message || "Failed to save user" });
+        setError("root.serverError", {
+          type: "manual",
+          message:
+            errorData.detail || errorData.message || "Failed to save user",
+        });
       }
     } catch (error) {
       setError("root.serverError", {
@@ -107,12 +146,12 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
 
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
-    clearErrors();  // Clear errors on each submit click
+    clearErrors(); // Clear errors on each submit click
     handleSubmit(onSubmit)();
   };
 
   const handleClose = () => {
-    setIsSubmitting(false);  // Ensure isSubmitting is reset when closing the modal
+    setIsSubmitting(false); // Ensure isSubmitting is reset when closing the modal
     clearErrors("root.serverError");
     reset();
     toggle();
@@ -150,9 +189,12 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                 <IoMdClose className="h-6 w-6 text-gray-500" />
               </Button>
             </div>
-            <form onSubmit={handleSubmitClick} className="mt-4 flex flex-col h-full">
+            <form
+              onSubmit={handleSubmitClick}
+              className="mt-4 flex flex-col h-full"
+            >
               <div className="flex-grow">
-                {identifierType === 'email' ? (
+                {identifierType === "email" ? (
                   <>
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-gray-700">
@@ -174,9 +216,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                             error={!!errors.username}
                             errorMessage={errors.username?.message}
                             disabled={!isNewUser}
-                            className={`${
-                                isNewUser ? "" : "bg-gray-200"
-                              }`}
+                            className={`${isNewUser ? "" : "bg-gray-200"}`}
                           />
                         )}
                       />
@@ -195,9 +235,7 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                             error={!!errors.name}
                             errorMessage={errors.name?.message}
                             disabled={!isNewUser}
-                            className={`${
-                              isNewUser ? "" : "bg-gray-200"
-                            }`}
+                            className={`${isNewUser ? "" : "bg-gray-200"}`}
                           />
                         )}
                       />
@@ -218,38 +256,38 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                           error={!!errors.username}
                           errorMessage={errors.username?.message}
                           disabled={!isNewUser}
-                          className={`${
-                              isNewUser ? "" : "bg-gray-200"
-                            }`}
+                          className={`${isNewUser ? "" : "bg-gray-200"}`}
                         />
                       )}
                     />
                   </div>
                 )}
                 {/* Password Field */}
-                {(authType === AuthenticationType.DB || authType === AuthenticationType.KEYCLOAK) && isNewUser && (
-                <div className="mt-4">
-                    <Subtitle>Password</Subtitle>
-                    <Controller
-                    name="password"
-                    control={control}
-                    rules={{ required: "Password is required" }}
-                    render={({ field }) => (
-                        <TextInput
-                        type="password"
-                        {...field}
-                        error={!!errors.password}
-                        errorMessage={
-                            errors.password &&
-                            typeof errors.password.message === "string"
-                            ? errors.password.message
-                            : undefined
-                        }
-                        />
-                    )}
-                    />
-                </div>
-                )}
+                {(authType === AuthenticationType.DB ||
+                  authType === AuthenticationType.KEYCLOAK) &&
+                  isNewUser && (
+                    <div className="mt-4">
+                      <Subtitle>Password</Subtitle>
+                      <Controller
+                        name="password"
+                        control={control}
+                        rules={{ required: "Password is required" }}
+                        render={({ field }) => (
+                          <TextInput
+                            type="password"
+                            {...field}
+                            error={!!errors.password}
+                            errorMessage={
+                              errors.password &&
+                              typeof errors.password.message === "string"
+                                ? errors.password.message
+                                : undefined
+                            }
+                          />
+                        )}
+                      />
+                    </div>
+                  )}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
                     Role
@@ -260,8 +298,10 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                     render={({ field }) => (
                       <Select
                         {...field}
-                        onChange={(selectedOption) => field.onChange(selectedOption?.name)} // Assuming you want to store the role ID
-                        value={roles.find(role => role.name === field.value)} // Ensure the value is a Role object
+                        onChange={(selectedOption) =>
+                          field.onChange(selectedOption?.name)
+                        } // Assuming you want to store the role ID
+                        value={roles.find((role) => role.name === field.value)} // Ensure the value is a Role object
                         options={roles} // Pass the full Role objects
                         getOptionLabel={(role) => role.name} // Use the name for display
                         getOptionValue={(role) => role.name} // Use the name as the value
@@ -298,7 +338,11 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
               </div>
               {/* Display API Error */}
               {errors.root?.serverError && (
-                <Callout className="mt-4" title="Error while saving user" color="rose">
+                <Callout
+                  className="mt-4"
+                  title="Error while saving user"
+                  color="rose"
+                >
                   {errors.root.serverError.message}
                 </Callout>
               )}
@@ -319,7 +363,11 @@ const UsersSidebar = ({ isOpen, toggle, user, isNewUser, mutateUsers, groupsEnab
                   type="submit"
                   disabled={isSubmitting || (isNewUser ? false : !isDirty)}
                 >
-                  {isSubmitting ? "Saving..." : isNewUser ? "Create User" : "Save"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : isNewUser
+                    ? "Create User"
+                    : "Save"}
                 </Button>
               </div>
             </form>

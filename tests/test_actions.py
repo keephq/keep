@@ -1,15 +1,17 @@
-import pytest
 import time
-from uuid import uuid4
 from typing import List
+from uuid import uuid4
 
-from keep.api.models.db.action import Action
+import pytest
+
+from keep.actions.actions_exception import ActionsCRUDException
+from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.db import create_action
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.actions.actions_factory import ActionsCRUD
-from keep.actions.actions_exception import ActionsCRUDException
+from keep.api.models.db.action import Action
 
 NUMBER_OF_SEEDS = 10
+
 
 @pytest.fixture
 def setup_db(db_session):
@@ -39,8 +41,11 @@ class TestActionFactory:
         try:
             action = ActionsCRUD.get_action(SINGLE_TENANT_UUID, "test_no_found")
             assert action is None
-        except ActionsCRUDException: 
-            pytest.fail(pytrace=True, msg="Get an non-exist action should not raise ActionsCRUDException")
+        except ActionsCRUDException:
+            pytest.fail(
+                pytrace=True,
+                msg="Get an non-exist action should not raise ActionsCRUDException",
+            )
 
     @pytest.mark.usefixtures("setup_db")
     def test_get_all_actions(self, db_session):
@@ -87,7 +92,7 @@ class TestActionFactory:
             )
         except ActionsCRUDException:
             pass
-    
+
     @pytest.mark.usefixtures("setup_db")
     def test_remove_action(self, db_session):
         try:
@@ -96,43 +101,58 @@ class TestActionFactory:
             actions = ActionsCRUD.get_all_actions(SINGLE_TENANT_UUID)
             assert len(actions) == 9
         except ActionsCRUDException:
-            pytest.fail(pytrace=True, msg="Remove an valid action should not raise ActionsCRUDException")
+            pytest.fail(
+                pytrace=True,
+                msg="Remove an valid action should not raise ActionsCRUDException",
+            )
 
     @pytest.mark.usefixtures("setup_db")
     def test_remove_action_no_found(self, db_session):
         try:
-            removed_action = ActionsCRUD.remove_action(SINGLE_TENANT_UUID, "no_found_action")
+            removed_action = ActionsCRUD.remove_action(
+                SINGLE_TENANT_UUID, "no_found_action"
+            )
             assert removed_action is False
         except ActionsCRUDException:
-            pytest.fail(pytrace=True, msg="Remove an no-found action should not raise ActionsCRUDException")
-     
-        
+            pytest.fail(
+                pytrace=True,
+                msg="Remove an no-found action should not raise ActionsCRUDException",
+            )
+
     @pytest.mark.usefixtures("setup_db")
     def test_update_action(self, db_session):
         actions = ActionsCRUD.get_all_actions(SINGLE_TENANT_UUID)
         update_action = actions[0]
         try:
-            ActionsCRUD.update_action(SINGLE_TENANT_UUID, update_action.id, {
-                'name': 'test_updated',
-                'use': '@test_updated'
-            })
+            ActionsCRUD.update_action(
+                SINGLE_TENANT_UUID,
+                update_action.id,
+                {"name": "test_updated", "use": "@test_updated"},
+            )
             action = ActionsCRUD.get_action(SINGLE_TENANT_UUID, update_action.id)
-            assert action.name == 'test_updated' and action.use == '@test_updated'
+            assert action.name == "test_updated" and action.use == "@test_updated"
         except ActionsCRUDException:
-            pytest.fail(pytrace=True, msg="Update an valid action should not raise ActionsCRUDException")
-
+            pytest.fail(
+                pytrace=True,
+                msg="Update an valid action should not raise ActionsCRUDException",
+            )
 
     @pytest.mark.usefixtures("setup_db")
     def test_update_action_no_found(self, db_session):
-        action_id = 'no_found'
+        action_id = "no_found"
         try:
-            ActionsCRUD.update_action(SINGLE_TENANT_UUID, action_id, {
-                'name': 'test_updated',
-                'use': '@test_updated'
-            })
-            pytest.fail(pytrace=True, msg="Update an action that does not exist  in database shoudl raise ActionsCRUDException")
+            ActionsCRUD.update_action(
+                SINGLE_TENANT_UUID,
+                action_id,
+                {"name": "test_updated", "use": "@test_updated"},
+            )
+            pytest.fail(
+                pytrace=True,
+                msg="Update an action that does not exist  in database shoudl raise ActionsCRUDException",
+            )
         except ActionsCRUDException:
             pass
+
 
 class TestActionAPI:
     pass

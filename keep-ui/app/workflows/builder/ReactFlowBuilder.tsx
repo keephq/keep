@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { ReactFlow, Background, Controls, EdgeTypes as EdgeTypesType, Edge, useReactFlow } from "@xyflow/react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  EdgeTypes as EdgeTypesType,
+  Edge,
+  useReactFlow,
+} from "@xyflow/react";
 import CustomNode from "./CustomNode";
 import CustomEdge from "./CustomEdge";
 import useWorkflowInitialization from "utils/hooks/useWorkflowInitialization";
@@ -7,11 +14,12 @@ import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "app/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
-import { ReactFlowDefinition, V2Step, Definition} from "./builder-store";
-
+import { ReactFlowDefinition, V2Step, Definition } from "./builder-store";
 
 const nodeTypes = { custom: CustomNode as any };
-const edgeTypes: EdgeTypesType = { "custom-edge": CustomEdge as React.ComponentType<any> };
+const edgeTypes: EdgeTypesType = {
+  "custom-edge": CustomEdge as React.ComponentType<any>,
+};
 
 const ReactFlowBuilder = ({
   providers,
@@ -19,19 +27,22 @@ const ReactFlowBuilder = ({
   toolboxConfiguration,
   definition,
   onDefinitionChange,
-  validatorConfiguration
+  validatorConfiguration,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders: Provider[] | undefined | null;
   toolboxConfiguration: Record<string, any>;
   definition: any;
   validatorConfiguration: {
-    step: (step: V2Step, parent?:V2Step, defnition?: ReactFlowDefinition)=>boolean;
-    root: (def: Definition) => boolean
+    step: (
+      step: V2Step,
+      parent?: V2Step,
+      defnition?: ReactFlowDefinition
+    ) => boolean;
+    root: (def: Definition) => boolean;
   };
-  onDefinitionChange:(def: Definition) => void;
+  onDefinitionChange: (def: Definition) => void;
 }) => {
-
   const {
     nodes,
     edges,
@@ -41,15 +52,12 @@ const ReactFlowBuilder = ({
     onConnect,
     onDragOver,
     onDrop,
-  } = useWorkflowInitialization(
-      definition,
-      toolboxConfiguration,
-    );
+  } = useWorkflowInitialization(definition, toolboxConfiguration);
 
   return (
     <div className="sqd-designer-react">
       <div className="sqd-designer sqd-theme-light sqd-layout-desktop">
-        <DragAndDropSidebar isDraggable={false}/>
+        <DragAndDropSidebar isDraggable={false} />
         {!isLoading && (
           <ReactFlow
             nodes={nodes}
@@ -63,15 +71,15 @@ const ReactFlowBuilder = ({
             edgeTypes={edgeTypes}
             fitView
           >
-            <Controls orientation="horizontal"/>
-            <Background/>
+            <Controls orientation="horizontal" />
+            <Background />
           </ReactFlow>
         )}
         <ReactFlowEditor
           providers={providers}
           installedProviders={installedProviders}
-          onDefinitionChange= {onDefinitionChange}
-          validatorConfiguration= {validatorConfiguration}
+          onDefinitionChange={onDefinitionChange}
+          validatorConfiguration={validatorConfiguration}
         />
       </div>
     </div>

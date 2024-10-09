@@ -18,7 +18,10 @@ const MenuButton: React.FC<MenuButtonProps> = ({ onEdit, onDelete }) => {
     <div className="w-44 text-right">
       <Menu as="div" className="relative inline-block text-left z-10">
         <div>
-          <Menu.Button className="inline-flex w-full justify-center rounded-md text-sm mt-2" onClick={stopPropagation}>
+          <Menu.Button
+            className="inline-flex w-full justify-center rounded-md text-sm mt-2"
+            onClick={stopPropagation}
+          >
             <Icon
               size="sm"
               icon={Bars3Icon}

@@ -236,9 +236,9 @@ export const RuleFields = ({
   };
 
   const { watch } = useFormContext<CorrelationForm>();
-  const timeframeInSeconds = watch("timeUnit") ? TIMEFRAME_UNITS_TO_SECONDS[watch("timeUnit")](
-    +watch("timeAmount")
-  ) : 0;
+  const timeframeInSeconds = watch("timeUnit")
+    ? TIMEFRAME_UNITS_TO_SECONDS[watch("timeUnit")](+watch("timeAmount"))
+    : 0;
 
   const { data: alertsFound = [], isLoading } = useSearchAlerts({
     query: { combinator: "and", rules: ruleFields },
@@ -260,7 +260,9 @@ export const RuleFields = ({
               <Field
                 ruleField={ruleField}
                 key={ruleField.id}
-                onRemoveFieldClick={() => onRemoveRuleFieldClick(ruleFieldIndex)}
+                onRemoveFieldClick={() =>
+                  onRemoveRuleFieldClick(ruleFieldIndex)
+                }
                 // add the rule field as an available selection
                 avaliableFields={availableFields.concat({
                   label: ruleField.field,

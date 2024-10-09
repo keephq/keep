@@ -5,12 +5,7 @@ import {
   SubmitHandler,
   FieldValues,
 } from "react-hook-form";
-import {
-  TextInput,
-  Button,
-  Subtitle,
-  Icon,
-} from "@tremor/react";
+import { TextInput, Button, Subtitle, Icon } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { ApiKey } from "./auth/api-key-settings";
 import { Role } from "app/settings/models";
@@ -126,8 +121,10 @@ export default function CreateApiKeyModal({
             render={({ field }) => (
               <Select
                 {...field}
-                onChange={(selectedOption) => field.onChange(selectedOption?.name)}
-                value={roles.find(role => role.id === field.value)}
+                onChange={(selectedOption) =>
+                  field.onChange(selectedOption?.name)
+                }
+                value={roles.find((role) => role.id === field.value)}
                 options={roles}
                 getOptionLabel={(role) => role.name}
                 formatOptionLabel={(option) => (

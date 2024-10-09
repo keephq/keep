@@ -18,13 +18,16 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
     <div className="container flex gap-2 mb-4 mt-6 items-center overflow-x-auto max-w-full whitespace-nowrap">
       {workflow?.steps?.map((step: any, index: number) => {
         const provider = step?.provider;
-        if (['threshold', 'assert', 'foreach'].includes(provider?.type)) {
+        if (["threshold", "assert", "foreach"].includes(provider?.type)) {
           return null;
         }
         return (
           <>
             {provider && (
-              <div key={`step-${step.id}`} className="flex items-center gap-2 flex-shrink-0">
+              <div
+                key={`step-${step.id}`}
+                className="flex items-center gap-2 flex-shrink-0"
+              >
                 {index > 0 && (
                   <TiArrowRight size={24} className="text-gray-500" />
                 )}
@@ -42,13 +45,16 @@ export function WorkflowSteps({ workflow }: { workflow: MockWorkflow }) {
       })}
       {workflow?.actions?.map((action: any, index: number) => {
         const provider = action?.provider;
-        if (['threshold', 'assert', 'foreach'].includes(provider?.type)) {
+        if (["threshold", "assert", "foreach"].includes(provider?.type)) {
           return null;
         }
         return (
           <>
             {provider && (
-              <div key={`action-${action.id}`} className="flex items-center gap-2 flex-shrink-0">
+              <div
+                key={`action-${action.id}`}
+                className="flex items-center gap-2 flex-shrink-0"
+              >
                 {(index > 0 || isStepPresent) && (
                   <TiArrowRight size={24} className="text-gray-500" />
                 )}
@@ -98,7 +104,7 @@ export default function MockWorkflowCardSection({
   mockLoading: boolean | null;
 }) {
   const router = useRouter();
-  const [loadingId, setLoadingId] = useState<string|null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const getNameFromId = (id: string) => {
     if (!id) {
@@ -147,7 +153,7 @@ export default function MockWorkflowCardSection({
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full gap-4 p-4">
-      {mockError && (
+        {mockError && (
           <p className="text-center text-red-100">
             Error: {mockError.message || "Something went wrong!"}
           </p>

@@ -1,6 +1,7 @@
 """
 ResendProvider is a class that implements the Resend API and allows email sending through Keep.
 """
+
 import dataclasses
 
 import pydantic

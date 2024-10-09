@@ -22,7 +22,6 @@ interface Providers {
   };
 }
 
-
 export async function getServerSideProps(context: any) {
   return {
     props: { params: context.query }, // will be passed to the page component as props
@@ -59,8 +58,8 @@ export default function SignIn({ params }: { params?: { amt: string } }) {
         console.log("Signing in with credentials provider");
         signIn("credentials", { callbackUrl: "/" });
       } else if (providers.keycloak) {
-        console.log('Signing in with keycloak provider');
-        signIn('keycloak', { callbackUrl: "/" });
+        console.log("Signing in with keycloak provider");
+        signIn("keycloak", { callbackUrl: "/" });
       }
     }
   }, [providers]);

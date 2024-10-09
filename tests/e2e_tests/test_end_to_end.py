@@ -9,8 +9,8 @@
 #   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 #   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
-# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/ 
-# NOTE: to clean the database, run 
+# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+# NOTE: to clean the database, run
 # docker compose stop
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml down --volumes
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
@@ -33,7 +33,6 @@ import random
 #    - Spin up the environment using docker-compose.
 #    - Run "playwright codegen localhost:3000"
 #    - Copy the generated code to a new test function.
-import re
 import string
 import sys
 

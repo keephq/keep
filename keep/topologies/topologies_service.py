@@ -1,10 +1,10 @@
+import json
 import logging
 from typing import List, Optional
+from uuid import UUID
+
 from pydantic import ValidationError
 from sqlalchemy.orm import joinedload, selectinload
-from uuid import UUID
-import json
-
 from sqlmodel import Session, select
 
 from keep.api.core.db_utils import get_aggreated_field

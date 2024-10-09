@@ -5,7 +5,6 @@ import { stringify } from "yaml";
 import { V2Properties, V2Step, Definition } from "./builder-store";
 import { v4 as uuidv4 } from "uuid";
 
-
 export function getToolboxConfiguration(providers: Provider[]) {
   /**
    * Generates the toolbox items
@@ -44,7 +43,7 @@ export function getToolboxConfiguration(providers: Provider[]) {
             type: "manual",
             componentType: "trigger",
             name: "Manual",
-            id: 'manual',
+            id: "manual",
             properties: {
               manual: "true",
             },
@@ -53,31 +52,31 @@ export function getToolboxConfiguration(providers: Provider[]) {
             type: "interval",
             componentType: "trigger",
             name: "Interval",
-            id: 'interval',
+            id: "interval",
             properties: {
-              interval: ""
+              interval: "",
             },
           },
           {
             type: "alert",
             componentType: "trigger",
             name: "Alert",
-            id: 'alert',
+            id: "alert",
             properties: {
               alert: {
                 source: "",
-              }
+              },
             },
           },
           {
             type: "incident",
             componentType: "trigger",
             name: "Incident",
-            id: 'incident',
+            id: "incident",
             properties: {
               incident: {
                 events: [],
-              }
+              },
             },
           },
         ],
@@ -237,7 +236,7 @@ export function generateWorkflow(
       id: workflowId,
       name: name,
       description: description,
-      disabled:disabled,
+      disabled: disabled,
       isLocked: true,
       ...triggers,
     },
@@ -310,7 +309,7 @@ export function parseWorkflow(
       } else if (currType === "manual") {
         value = "true";
       } else if (currType === "incident") {
-        value = {events: curr.events};
+        value = { events: curr.events };
       }
       prev[currType] = value;
       return prev;
@@ -342,7 +341,7 @@ function getWithParams(s: V2Step): any {
         const withParamValue = withParams[key] as string;
         const withParamJson = JSON.parse(withParamValue);
         withParams[key] = withParamJson;
-      } catch { }
+      } catch {}
     });
   }
   return withParams;
@@ -357,7 +356,7 @@ function getActionsFromCondition(
     type: condition.type.replace("condition-", ""),
     ...condition.properties,
   };
-  const steps = condition?.branches?.true || [] as V2Step[];
+  const steps = condition?.branches?.true || ([] as V2Step[]);
   const compiledActions = steps.map((a: V2Step) => {
     const withParams = getWithParams(a);
     const providerType = a?.type?.replace("action-", "");
@@ -400,7 +399,7 @@ export function buildAlert(definition: Definition): Alert {
   const alertId = alert.properties.id as string;
   const name = (alert.properties.name as string) ?? "";
   const description = (alert.properties.description as string) ?? "";
-  const disabled = (alert.properties.disabled) ?? false
+  const disabled = alert.properties.disabled ?? false;
   const owners = (alert.properties.owners as string[]) ?? [];
   const services = (alert.properties.services as string[]) ?? [];
   // Steps (move to func?)
@@ -442,8 +441,7 @@ export function buildAlert(definition: Definition): Alert {
           provider: provider,
           if: ifParam as string,
         };
-      }
-      else {
+      } else {
         return {
           name: s.name,
           provider: provider,
@@ -462,8 +460,8 @@ export function buildAlert(definition: Definition): Alert {
       if (condition) {
         foreachActions = getActionsFromCondition(condition, forEachValue);
       } else {
-        const forEachSequence = forEach?.sequence || [] as V2Step[];
-        const stepOrAction = forEachSequence[0] || {} as V2Step[];
+        const forEachSequence = forEach?.sequence || ([] as V2Step[]);
+        const stepOrAction = forEachSequence[0] || ({} as V2Step[]);
         const withParams = getWithParams(stepOrAction);
         const providerType = stepOrAction.type
           .replace("action-", "")
@@ -479,7 +477,7 @@ export function buildAlert(definition: Definition): Alert {
         };
         foreachActions = [
           {
-            name: stepOrAction.name || '',
+            name: stepOrAction.name || "",
             provider: provider,
             foreach: forEachValue,
             if: ifParam as string,
@@ -492,9 +490,7 @@ export function buildAlert(definition: Definition): Alert {
   alert.sequence
     .filter((step) => step.type.startsWith("condition-"))
     ?.forEach((condition) => {
-      const conditionActions = getActionsFromCondition(
-        condition as V2Step
-      );
+      const conditionActions = getActionsFromCondition(condition as V2Step);
       actions = [...actions, ...conditionActions];
     });
 
@@ -532,7 +528,7 @@ export function buildAlert(definition: Definition): Alert {
     name: name,
     triggers: triggers,
     description: description,
-    disabled : Boolean(disabled),
+    disabled: Boolean(disabled),
     owners: owners,
     services: services,
     steps: steps,
@@ -540,13 +536,20 @@ export function buildAlert(definition: Definition): Alert {
   } as Alert;
 }
 
-
-export function wrapDefinitionV2({ properties, sequence, isValid }: { properties: V2Properties, sequence: V2Step[], isValid?: boolean }) {
+export function wrapDefinitionV2({
+  properties,
+  sequence,
+  isValid,
+}: {
+  properties: V2Properties;
+  sequence: V2Step[];
+  isValid?: boolean;
+}) {
   return {
     value: {
       sequence: sequence,
-      properties: properties
+      properties: properties,
     },
-    isValid: !!isValid
-  }
+    isValid: !!isValid,
+  };
 }

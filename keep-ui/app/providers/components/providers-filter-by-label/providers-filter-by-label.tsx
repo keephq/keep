@@ -5,11 +5,12 @@ import { useFilterContext, PROVIDER_LABELS } from "../../filter-context";
 import type { TProviderLabels } from "../../providers";
 
 export const ProvidersFilterByLabel: FC = (props) => {
-  const { setProvidersSelectedTags, providersSelectedTags } = useFilterContext();
+  const { setProvidersSelectedTags, providersSelectedTags } =
+    useFilterContext();
 
   const headerSelect = (value: string[]) => {
-    setProvidersSelectedTags(value as TProviderLabels[])
-  }
+    setProvidersSelectedTags(value as TProviderLabels[]);
+  };
 
   const options = Object.entries(PROVIDER_LABELS);
 
@@ -22,8 +23,10 @@ export const ProvidersFilterByLabel: FC = (props) => {
       icon={TagIcon}
     >
       {options.map(([value, label]) => (
-        <MultiSelectItem key={value} value={value}>{label}</MultiSelectItem>
+        <MultiSelectItem key={value} value={value}>
+          {label}
+        </MultiSelectItem>
       ))}
     </MultiSelect>
-  )
-}
+  );
+};

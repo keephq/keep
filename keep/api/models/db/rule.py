@@ -7,12 +7,14 @@ from sqlmodel import JSON, Column, Field, SQLModel
 # Currently a rule_definition is a list of SQL expressions
 # We use querybuilder for that
 
+
 class ResolveOn(Enum):
     # the alert was triggered
     FIRST = "first_resolved"
     LAST = "last_resolved"
     ALL = "all_resolved"
     NEVER = "never"
+
 
 # TODOs/Pitfalls down the road which we hopefully need to address in the future:
 # 1. nested attibtues (event.foo.bar = 1)

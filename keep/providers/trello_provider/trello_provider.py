@@ -1,6 +1,7 @@
 """
 TrelloOutput is a class that implements the BaseOutputProvider interface for Trello updates.
 """
+
 import dataclasses
 
 import pydantic
@@ -49,12 +50,7 @@ class TrelloProvider(BaseProvider):
         """
         pass
 
-    def _query(
-            self,
-            board_id: str = "",
-            filter: str = "createCard",
-            **kwargs: dict
-            ):
+    def _query(self, board_id: str = "", filter: str = "createCard", **kwargs: dict):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
         https://api.slack.com/messaging/webhooks

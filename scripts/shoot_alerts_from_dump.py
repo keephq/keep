@@ -1,16 +1,13 @@
-import logging
-import os
-import sys
-import json
+import argparse
 import copy
 import csv
-
+import json
+import logging
+import sys
 
 from keep.api.core.db import get_session_sync
 from keep.api.models.alert import AlertDto
 from keep.api.tasks.process_event_task import __handle_formatted_events
-import sys
-import argparse
 
 # configure logging
 logging.basicConfig(
@@ -24,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def count_alerts_for_tenants(csv_file):
     tenants = {}
-    with open(csv_file, 'r') as file:
+    with open(csv_file, "r") as file:
         reader = csv.reader(file)
         progress = 0
         for row in reader:
@@ -34,14 +31,18 @@ def count_alerts_for_tenants(csv_file):
             if len(row) > 2:
                 tenants[row[2]] = tenants.get(row[2], 0) + 1
     print("Tenants and their alerts count:")
-    print({k: v for k, v in sorted(tenants.items(),
-          key=lambda item: item[1], reverse=True)})
+    print(
+        {
+            k: v
+            for k, v in sorted(tenants.items(), key=lambda item: item[1], reverse=True)
+        }
+    )
 
 
 def shoot_tenants_alerts(file, tenant_id):
     new_tenant_id = "keep"
     session = get_session_sync()
-    with open(file, 'r') as file:
+    with open(file, "r") as file:
         reader = csv.reader(file)
         file.seek(0)
 
@@ -57,7 +58,7 @@ def shoot_tenants_alerts(file, tenant_id):
                     session=session,
                     raw_events=raw_event,
                     formatted_events=[alert],
-                    timestamp_forced=alert.lastReceived
+                    timestamp_forced=alert.lastReceived,
                 )
     session.close()
 
@@ -65,35 +66,38 @@ def shoot_tenants_alerts(file, tenant_id):
 def shoot_tenants_alerts_from_json(file):
     new_tenant_id = "keep"
     session = get_session_sync()
-    with open(file, 'r') as file:
+    with open(file, "r") as file:
         dict = json.load(file)
         for row in dict:
-            if 'incident' in row['event']:
+            if "incident" in row["event"]:
                 pass
 
-            alert = json.loads(row['event'])
+            alert = json.loads(row["event"])
             alert["tenant_id"] = new_tenant_id
             raw_event = [copy.deepcopy(alert)]
             alert = AlertDto(**alert)
             __handle_formatted_events(
                 new_tenant_id,
-                provider_type=row['provider_type'],
+                provider_type=row["provider_type"],
                 session=session,
                 raw_events=raw_event,
                 formatted_events=[alert],
-                timestamp_forced=alert.lastReceived
+                timestamp_forced=alert.lastReceived,
             )
     session.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Shoot alerts from dump")
+    parser.add_argument("--csv_file", help="Path to the CSV file", default=None)
     parser.add_argument(
-        "--csv_file", help="Path to the CSV file", default=None)
+        "--tenant-id",
+        help="ID of the tenant, if no tenant_id is provided, listing tenants.",
+        default=None,
+    )
     parser.add_argument(
-        "--tenant-id", help="ID of the tenant, if no tenant_id is provided, listing tenants.", default=None)
-    parser.add_argument(
-        "--json", help="JSON dump file for a single tenant", default=None)
+        "--json", help="JSON dump file for a single tenant", default=None
+    )
 
     args = parser.parse_args()
 

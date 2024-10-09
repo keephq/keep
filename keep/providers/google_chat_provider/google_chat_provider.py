@@ -1,6 +1,7 @@
-import os
-import pydantic
 import dataclasses
+import os
+
+import pydantic
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -31,7 +32,7 @@ class GoogleChatProvider(BaseProvider):
     PROVIDER_TAGS = ["messaging"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 

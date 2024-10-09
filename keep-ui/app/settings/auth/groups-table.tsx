@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -29,7 +29,7 @@ export function GroupsTable({
   groups,
   onRowClick,
   onDeleteGroup,
-  isDisabled = false
+  isDisabled = false,
 }: GroupsTableProps) {
   return (
     <Table>

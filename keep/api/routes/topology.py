@@ -15,11 +15,11 @@ from keep.api.models.db.topology import (
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.topologies.topologies_service import (
-    TopologiesService,
     ApplicationNotFoundException,
+    ApplicationParseException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
-    ApplicationParseException,
+    TopologiesService,
 )
 
 logger = logging.getLogger(__name__)

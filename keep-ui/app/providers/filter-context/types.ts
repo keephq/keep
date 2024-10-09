@@ -3,7 +3,7 @@ import { TProviderLabels } from "../providers";
 
 export interface IFilterContext {
   providersSearchString: string;
-  providersSelectedTags: TProviderLabels[],
+  providersSelectedTags: TProviderLabels[];
   setProvidersSearchString: Dispatch<SetStateAction<string>>;
   setProvidersSelectedTags: Dispatch<SetStateAction<TProviderLabels[]>>;
 }

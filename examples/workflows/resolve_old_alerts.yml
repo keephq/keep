@@ -21,6 +21,6 @@ workflow:
         type: mock
         with:
           enrich_alert:
-          - key: status
-            value: resolved
-            disposable: true
+            - key: status
+              value: resolved
+              disposable: true

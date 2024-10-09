@@ -113,7 +113,7 @@ export default function WorkflowGraph({
       case "failure":
       case "error":
       case "timeout":
-      case "time_out":    
+      case "time_out":
         icon = <XCircleIcon className="size-6 cover text-red-500" />;
         break;
       case "in_progress":
@@ -152,10 +152,8 @@ export default function WorkflowGraph({
     <div
       className={`flex felx-row items-end justify-start flex-nowrap w-full ${height}`}
     >
-      {showLastExecutionStatus &&<div>{getIcon()}</div>}
-      <div
-        className={`overflow-hidden ${height} w-full`}
-      >
+      {showLastExecutionStatus && <div>{getIcon()}</div>}
+      <div className={`overflow-hidden ${height} w-full`}>
         <Bar data={chartData} options={chartOptions} />
       </div>
     </div>

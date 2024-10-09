@@ -1,5 +1,13 @@
 import { FormEventHandler, useState } from "react";
-import { Button, TextInput, Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
+import {
+  Button,
+  TextInput,
+  Tab,
+  TabGroup,
+  TabList,
+  TabPanel,
+  TabPanels,
+} from "@tremor/react";
 import { AlertDto } from "./models";
 import AlertTabModal from "./alert-tab-modal";
 import { evalWithContext } from "./alerts-rules-builder";
@@ -20,7 +28,13 @@ interface Props {
   setSelectedTab: (index: number) => void;
 }
 
-const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Props) => {
+const AlertTabs = ({
+  presetId,
+  tabs,
+  setTabs,
+  selectedTab,
+  setSelectedTab,
+}: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: session } = useSession();
 
@@ -29,7 +43,10 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
   };
 
   const addNewTab = (name: string, filter: string) => {
-    const newTab = { name: name, filter: (alert: AlertDto) => evalWithContext(alert, filter) };
+    const newTab = {
+      name: name,
+      filter: (alert: AlertDto) => evalWithContext(alert, filter),
+    };
     const updatedTabs = [...tabs];
     updatedTabs.splice(tabs.length - 1, 0, newTab); // Insert the new tab before the last tab
 
@@ -38,20 +55,22 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
     setSelectedTab(0); // Set the selected tab to first tab
   };
 
-
   const deleteTab = async (index: number) => {
     const tabToDelete = tabs[index];
 
     // if the tab has id, means it already in the database
     try {
       const apiUrl = getApiURL();
-      const response = await fetch(`${apiUrl}/preset/${presetId}/tab/${tabToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
+      const response = await fetch(
+        `${apiUrl}/preset/${presetId}/tab/${tabToDelete.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete the tab");
@@ -72,38 +91,39 @@ const AlertTabs = ({ presetId, tabs, setTabs, selectedTab, setSelectedTab }: Pro
     <div className="tabs-container">
       <TabGroup index={selectedTab} onChange={handleTabChange}>
         <TabList color="orange">
-            <>
+          <>
             {tabs.slice(0, -1).map((tab, index) => (
-                <div key={index} className="relative group">
-                    <Tab className="pr-8">{tab.name.toLowerCase()}</Tab>
-                    {index !== 0 && (
-                    <button
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"
-                        onClick={() => deleteTab(index)}
-                    >
-                        <XMarkIcon className="h-4 w-4 text-red-500" />
-                    </button>
-                    )}
-                </div>
+              <div key={index} className="relative group">
+                <Tab className="pr-8">{tab.name.toLowerCase()}</Tab>
+                {index !== 0 && (
+                  <button
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600"
+                    onClick={() => deleteTab(index)}
+                  >
+                    <XMarkIcon className="h-4 w-4 text-red-500" />
+                  </button>
+                )}
+              </div>
             ))}
-            <Tab onClick={() => setIsModalOpen(true)}>{tabs[tabs.length - 1].name}</Tab>
-            </>
+            <Tab onClick={() => setIsModalOpen(true)}>
+              {tabs[tabs.length - 1].name}
+            </Tab>
+          </>
         </TabList>
         <TabPanels>
-            {tabs.slice(0, -1).map((tab, index) => (
+          {tabs.slice(0, -1).map((tab, index) => (
             <TabPanel key={index}></TabPanel>
-            ))}
-            <TabPanel></TabPanel>
+          ))}
+          <TabPanel></TabPanel>
         </TabPanels>
-        </TabGroup>
+      </TabGroup>
 
-        <AlertTabModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onAddTab={addNewTab}
-          presetId={presetId}
-
-        />
+      <AlertTabModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAddTab={addNewTab}
+        presetId={presetId}
+      />
     </div>
   );
 };

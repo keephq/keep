@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  Title,
-  Subtitle,
-  Card,
-  Button,
-  TextInput,
-} from "@tremor/react";
+import { Title, Subtitle, Card, Button, TextInput } from "@tremor/react";
 import Loading from "app/loading";
 import { User as AuthUser } from "next-auth";
 import { TiUserAdd } from "react-icons/ti";
@@ -41,7 +35,9 @@ export default function UsersSettings({
   const { data: groups } = useGroups();
   const { data: configData } = useConfig();
 
-  const [userStates, setUserStates] = useState<{ [key: string]: { role: string, groups: string[] } }>({});
+  const [userStates, setUserStates] = useState<{
+    [key: string]: { role: string; groups: string[] };
+  }>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [filter, setFilter] = useState("");
@@ -53,21 +49,25 @@ export default function UsersSettings({
 
   useEffect(() => {
     if (users) {
-      const initialUserStates = users.reduce((acc, user) => {
-        acc[user.email] = {
-          role: user.role,
-          groups: user.groups ? user.groups.map(group => group.name) : [],
-        };
-        return acc;
-      }, {} as { [key: string]: { role: string, groups: string[] } });
+      const initialUserStates = users.reduce(
+        (acc, user) => {
+          acc[user.email] = {
+            role: user.role,
+            groups: user.groups ? user.groups.map((group) => group.name) : [],
+          };
+          return acc;
+        },
+        {} as { [key: string]: { role: string; groups: string[] } }
+      );
       setUserStates(initialUserStates);
     }
   }, [users]);
 
   const filteredUsers = useMemo(() => {
-    const filtered = users?.filter(user =>
-      user.email.toLowerCase().includes(filter.toLowerCase())
-    ) || [];
+    const filtered =
+      users?.filter((user) =>
+        user.email.toLowerCase().includes(filter.toLowerCase())
+      ) || [];
 
     return filtered.sort((a, b) => {
       if (a.last_login && !b.last_login) return -1;
@@ -90,13 +90,16 @@ export default function UsersSettings({
     setIsSidebarOpen(true);
   };
 
-  const handleDeleteUser = async (userEmail: string, event: React.MouseEvent) => {
+  const handleDeleteUser = async (
+    userEmail: string,
+    event: React.MouseEvent
+  ) => {
     event.stopPropagation();
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
         const url = `${getApiURL()}/auth/users/${userEmail}`;
         const response = await fetch(url, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -156,7 +159,9 @@ export default function UsersSettings({
         isNewUser={isNewUser}
         mutateUsers={mutateUsers}
         groupsEnabled={groupsAllowed}
-        identifierType={authType === AuthenticationType.DB ? "username" : "email"}
+        identifierType={
+          authType === AuthenticationType.DB ? "username" : "email"
+        }
       />
     </div>
   );

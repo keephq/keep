@@ -40,14 +40,14 @@ class ZendutyProvider(BaseProvider):
         pass
 
     def _notify(
-            self,
-            title: str = "",
-            summary: str = "",
-            service: str = "",
-            user: str = "",
-            policy: str = "",
-            **kwargs: dict
-            ):
+        self,
+        title: str = "",
+        summary: str = "",
+        service: str = "",
+        user: str = "",
+        policy: str = "",
+        **kwargs: dict
+    ):
         """
         Create incident Zenduty using the Zenduty API
 

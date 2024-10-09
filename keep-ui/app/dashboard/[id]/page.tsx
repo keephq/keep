@@ -6,7 +6,7 @@ type PageProps = {
 };
 
 export default function Page({ params }: PageProps) {
-  return <DashboardPage/>;
+  return <DashboardPage />;
 }
 
 export const metadata = {

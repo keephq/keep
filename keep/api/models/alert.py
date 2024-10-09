@@ -14,7 +14,7 @@ from pydantic import (
     Extra,
     PrivateAttr,
     root_validator,
-    validator
+    validator,
 )
 from sqlalchemy import desc
 from sqlmodel import col

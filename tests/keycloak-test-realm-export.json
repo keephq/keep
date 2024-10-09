@@ -64,9 +64,7 @@
       "name": "Keep Application",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "redirectUris": [
-        "http://localhost:3000/*"
-      ],
+      "redirectUris": ["http://localhost:3000/*"],
       "webOrigins": [],
       "protocol": "openid-connect",
       "attributes": {
@@ -80,8 +78,19 @@
       "fullScopeAllowed": true,
       "authorizationServicesEnabled": true,
       "serviceAccountsEnabled": true,
-      "defaultClientScopes": ["email", "roles", "web-origins", "profile", "active_organization"],
-      "optionalClientScopes": ["offline_access", "microprofile-jwt", "phone", "address"],
+      "defaultClientScopes": [
+        "email",
+        "roles",
+        "web-origins",
+        "profile",
+        "active_organization"
+      ],
+      "optionalClientScopes": [
+        "offline_access",
+        "microprofile-jwt",
+        "phone",
+        "address"
+      ],
       "access": {
         "view": true,
         "configure": true,
