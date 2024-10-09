@@ -15,6 +15,7 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.models.alert import IncidentSeverity, IncidentStatus
 from keep.api.models.db.tenant import Tenant
+from keep.api.models.db.runbook import RunbookToIncident
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 logger = logging.getLogger(__name__)
@@ -84,10 +85,15 @@ class Incident(SQLModel, table=True):
         back_populates="incidents", link_model=AlertToIncident
     )
 
+    runbooks: List["Runbook"] = Relationship(
+        back_populates="incidents", link_model=RunbookToIncident
+    )
+
     is_predicted: bool = Field(default=False)
     is_confirmed: bool = Field(default=False)
 
     alerts_count: int = Field(default=0)
+    runbooks_count: int = Field(default=0)
     affected_services: list = Field(sa_column=Column(JSON), default_factory=list)
     sources: list = Field(sa_column=Column(JSON), default_factory=list)
 

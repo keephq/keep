@@ -1,10 +1,54 @@
+import logging
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import List, Optional
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, DateTime
 from sqlalchemy import Column, ForeignKey, Text
 from pydantic import BaseModel
+from sqlalchemy_utils import UUIDType
+from keep.api.core.config import config
+from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
+from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
+from keep.api.consts import RUNNING_IN_CLOUD_RUN
 
+
+db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
+logger = logging.getLogger(__name__)
+# managed (mysql)
+if RUNNING_IN_CLOUD_RUN or db_connection_string == "impersonate":
+    # Millisecond precision
+    datetime_column_type = MySQL_DATETIME(fsp=3)
+# self hosted (mysql, sql server, sqlite / postgres)
+else:
+    try:
+        url = make_url(db_connection_string)
+        dialect = url.get_dialect().name
+        if dialect == "mssql":
+            # Millisecond precision
+            datetime_column_type = MSSQL_DATETIME2(precision=3)
+        elif dialect == "mysql":
+            # Millisecond precision
+            datetime_column_type = MySQL_DATETIME(fsp=3)
+        else:
+            datetime_column_type = DateTime
+    except Exception:
+        logger.warning(
+            "Could not determine the database dialect, falling back to default datetime column type"
+        )
+        # give it a default
+        datetime_column_type = DateTime
+
+class RunbookToIncident(SQLModel, table=True):
+    tenant_id: str = Field(foreign_key="tenant.id")
+    runbook_id: UUID = Field(foreign_key="runbook.id", primary_key=True)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    incident_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
 
 # RunbookContent Model
 class RunbookContent(SQLModel, table=True):
@@ -34,8 +78,16 @@ class Runbook(SQLModel, table=True):
     contents: List["RunbookContent"] = Relationship(back_populates="runbook")  # Relationship to RunbookContent
     provider_type: str  # Type of the provider
     provider_id: Optional[str] = None  # Optional provider ID
+    incidents: List["Incident"] = Relationship(
+        back_populates="runbooks", link_model=RunbookToIncident
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)  # Timestamp for creation
-
+    timestamp: datetime = Field(
+        sa_column=Column(datetime_column_type, index=True),
+        default_factory=lambda: datetime.utcnow().replace(
+            microsecond=int(datetime.utcnow().microsecond / 1000) * 1000
+        ),
+    )
     class Config:
         orm_mode = True  # Enable ORM mode for compatibility with Pydantic models
 
