@@ -3,6 +3,11 @@
 </div>
 
 <h1 align="center">The open-source alert management and AIOps platform</h1>
+<p align="center">
+  Keep is an open-source platform designed to centralize your alert management and AIOps workflows. 
+  Filter, correlate, and enrich alerts from multiple tools, and automate responses using customizable workflows.
+</p>
+
 
 <div align="center">Single pane of glass, filtering, bi-directional integrations, alert correlation, workflows, enrichment, dashboards.
 </br>AI correlation and AI summarization are under the limited preview (<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>)</div>
