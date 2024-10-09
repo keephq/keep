@@ -81,6 +81,14 @@ class SplunkProvider(BaseProvider):
                 host=self.authentication_config.host,
                 port=self.authentication_config.port,
             )
+            if len(service.users) > 1:
+                self.logger.warning(
+                    "Splunk provider has more than one user",
+                    extra={
+                        "users_count": len(service.users),
+                        "users": [user.content for user in service.users],
+                    },
+                )
 
             all_permissions = []
             for user in service.users:
