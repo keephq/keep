@@ -4,7 +4,7 @@ import json
 
 import pydantic
 from splunklib.client import connect
-from splunklib.binding import AuthenticationError
+from splunklib.binding import AuthenticationError, HTTPError
 from xml.etree.ElementTree import ParseError
 
 from keep.api.models.alert import AlertDto, AlertSeverity
@@ -72,15 +72,40 @@ class SplunkProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
 
+    def __debug_fetch_users_response(self):
+        try:
+            from splunklib.client import PATH_USERS
+            import requests
+
+            response = requests.get(
+                f"https://{self.authentication_config.host}:{self.authentication_config.port}/services/{PATH_USERS}",
+                headers={
+                    "Authorization": f"Bearer {self.authentication_config.api_key}"
+                },
+                verify=False,
+            )
+            return response
+        except Exception as e:
+            self.logger.exception("Error getting debug users", extra={"error": str(e)})
+            return None
+
     def validate_scopes(self) -> dict[str, bool | str]:
+        self.logger.debug("Validating scopes for Splunk provider")
+
         validated_scopes = {}
 
         try:
+            self.logger.debug(
+                "Connecting to Splunk",
+                extra={"auth_config": self.authentication_config},
+            )
             service = connect(
                 token=self.authentication_config.api_key,
                 host=self.authentication_config.host,
                 port=self.authentication_config.port,
             )
+            self.logger.debug("Connected to Splunk", extra={"service": service})
+
             if len(service.users) > 1:
                 self.logger.warning(
                     "Splunk provider has more than one user",
@@ -90,14 +115,14 @@ class SplunkProvider(BaseProvider):
                     },
                 )
 
-            all_permissions = []
+            all_permissions = set()
             for user in service.users:
                 user_roles = user.content["roles"]
                 for role_name in user_roles:
                     perms = self.__get_role_capabilities(
                         role_name=role_name, service=service
                     )
-                    all_permissions.extend(perms)
+                    all_permissions.update(perms)
 
             for scope in self.PROVIDER_SCOPES:
                 if scope.name in all_permissions:
@@ -109,26 +134,51 @@ class SplunkProvider(BaseProvider):
             validated_scopes = dict(
                 [[scope.name, "AUTHENTICATION_ERROR"] for scope in self.PROVIDER_SCOPES]
             )
+        except HTTPError as e:
+            self.logger.exception(
+                "Error connecting to Splunk",
+            )
+            self.logger.debug(
+                "Splunk error response",
+                extra={"body": e.body, "status": e.status, "headers": e.headers},
+            )
+            validated_scopes = dict(
+                [
+                    [scope.name, "HTTP_ERROR ({status})".format(status=e.status)]
+                    for scope in self.PROVIDER_SCOPES
+                ]
+            )
         except ConnectionRefusedError:
             self.logger.exception(
                 "Error connecting to Splunk",
-                extra={
-                    "host": self.authentication_config.host,
-                    "port": self.authentication_config.port,
-                },
             )
             validated_scopes = dict(
                 [[scope.name, "CONNECTION_REFUSED"] for scope in self.PROVIDER_SCOPES]
             )
         except ParseError as e:
-            self.logger.exception("Error parsing XML", extra={"error": str(e)})
+            self.logger.exception(
+                "Error parsing XML",
+                extra={
+                    "error": str(e),
+                },
+            )
+            if self.logger.getEffectiveLevel() == logging.DEBUG:
+                response = self.__debug_fetch_users_response()
+                self.logger.exception(
+                    "Raw users response",
+                    extra={
+                        "url": response.url,
+                        "status": response.status_code,
+                        "text": response.text,
+                    },
+                )
             validated_scopes = dict(
                 [[scope.name, "PARSE_ERROR"] for scope in self.PROVIDER_SCOPES]
             )
         except Exception as e:
-            self.logger.exception("Error validating scopes")
+            self.logger.exception("Error validating scopes", extra={"error": str(e)})
             validated_scopes = dict(
-                [[scope.name, str(e)] for scope in self.PROVIDER_SCOPES]
+                [[scope.name, "UNKNOWN_ERROR"] for scope in self.PROVIDER_SCOPES]
             )
 
         return validated_scopes
