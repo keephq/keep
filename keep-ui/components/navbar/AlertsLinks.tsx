@@ -55,6 +55,9 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const dismissedPreset = staticPresets.find(
     (preset) => preset.name === "dismissed"
   );
+  const withoutIncidentPreset = staticPresets.find(
+    (preset) => preset.name === "without-incident"
+  );
 
   const handleTagSelect = (
     newValue: MultiValue<{ value: string; label: string }>,
@@ -117,6 +120,15 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   count={mainPreset?.alerts_count}
                 >
                   <Subtitle>Feed</Subtitle>
+                </LinkWithIcon>
+              </li>
+              <li>
+                <LinkWithIcon
+                  href="/alerts/without-incident"
+                  icon={AiOutlineSwap}
+                  count={withoutIncidentPreset?.alerts_count}
+                >
+                  <Subtitle>Without Incident</Subtitle>
                 </LinkWithIcon>
               </li>
               {session && (
