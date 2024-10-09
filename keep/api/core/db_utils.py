@@ -12,6 +12,9 @@ import pymysql
 from dotenv import find_dotenv, load_dotenv
 from google.cloud.sql.connector import Connector
 from sqlalchemy import func
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.ddl import CreateColumn
+from sqlalchemy.sql.functions import GenericFunction
 from sqlmodel import Session, create_engine
 
 # This import is required to create the tables
@@ -181,3 +184,19 @@ def get_aggreated_field(session: Session, column_name: str, alias: str):
         return func.group_concat(column_name).label(alias)
     else:
         return func.array_agg(column_name).label(alias)
+
+
+class json_table(GenericFunction):
+    inherit_cache = True
+
+
+@compiles(json_table, "mysql")
+def _compile_json_table(element, compiler, **kw):
+    ddl_compiler = compiler.dialect.ddl_compiler(compiler.dialect, None)
+    return "JSON_TABLE({}, '$[*]' COLUMNS({} PATH '$'))".format(
+        compiler.process(element.clauses.clauses[0], **kw),
+        ",".join(
+            ddl_compiler.process(CreateColumn(clause), **kw)
+            for clause in element.clauses.clauses[1:]
+        ),
+    )
