@@ -2614,6 +2614,7 @@ def update_incident_from_dto_by_id(
         incident.user_generated_name = updated_incident_dto.user_generated_name
         incident.user_summary = updated_incident_dto.user_summary
         incident.assignee = updated_incident_dto.assignee
+        incident.same_incident_in_the_past_id = updated_incident_dto.same_incident_in_the_past_id
 
         session.commit()
         session.refresh(incident)
@@ -2688,6 +2689,30 @@ def get_incident_alerts_by_incident_id(
 
     if limit and offset:
         query = query.limit(limit).offset(offset)
+
+    return query.all(), total_count
+
+
+
+def get_future_incidents_by_incident_id(
+    incident_id: str,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+) -> (List[Incident], int):
+    with Session(engine) as session:
+        query = (
+            session.query(
+                Incident,
+                
+            ).filter(Incident.same_incident_in_the_past_id == incident_id)
+        )
+        
+        if limit:
+            query = query.limit(limit)
+        if offset:
+            query = query.offset(offset)
+
+    total_count = query.count()
 
     return query.all(), total_count
 

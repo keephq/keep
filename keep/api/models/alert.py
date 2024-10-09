@@ -355,6 +355,7 @@ class IncidentDtoIn(BaseModel):
     user_generated_name: str | None
     assignee: str | None
     user_summary: str | None
+    same_incident_in_the_past_id: UUID | None
 
     class Config:
         extra = Extra.allow
@@ -391,6 +392,8 @@ class IncidentDto(IncidentDtoIn):
     ai_generated_name: str | None
 
     rule_fingerprint: str | None
+
+    same_incident_in_the_past_id: UUID | None
 
     _tenant_id: str = PrivateAttr()
 
@@ -465,6 +468,7 @@ class IncidentDto(IncidentDtoIn):
             assignee=db_incident.assignee,
             services=db_incident.affected_services,
             rule_fingerprint=db_incident.rule_fingerprint,
+            same_incident_in_the_past_id=db_incident.same_incident_in_the_past_id,
         )
 
         # This field is required for getting alerts when required
