@@ -235,7 +235,7 @@ class GitlabProvider(BaseRunBookProvider):
         return {
             "content": runbookContent.get("content"),
             "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbookContent.get('file_path')}/raw",
-            "encoding": runbook.get("encoding"),
+            "encoding": runbookContent.get("encoding"),
             "file_name": runbookContent.get("file_name"),
         }
 

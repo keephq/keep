@@ -1,9 +1,8 @@
 import logging
-from typing import List
 from pydantic import ValidationError
 from sqlalchemy.orm import  selectinload
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 from keep.api.models.db.runbook import (
     Runbook,
     RunbookContent,
@@ -54,10 +53,10 @@ class RunbookService:
         query = session.query(Runbook).filter(
             Runbook.tenant_id == tenant_id,
         )
-    
+
         total_count = query.count()  # Get the total count of runbooks matching the tenant_id
         runbooks = query.options(selectinload(Runbook.contents)).limit(limit).offset(offset).all()  # Fetch the paginated runbooks
         result = [RunbookDtoOut.from_orm(runbook) for runbook in runbooks]  # Convert runbooks to DTOs
-    
+
         # Return total count and list of runbooks
         return {"total_count": total_count, "runbooks": result}    
