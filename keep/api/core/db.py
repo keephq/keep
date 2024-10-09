@@ -3482,7 +3482,6 @@ def get_runbooks_data_for_incident(
 
         sources = []
         services = []
-        severities = []
 
         for provider_type in runbooks_data:
             if provider_type:

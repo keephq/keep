@@ -15,7 +15,8 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
 from keep.api.models.alert import IncidentSeverity, IncidentStatus
 from keep.api.models.db.tenant import Tenant
-from keep.api.models.db.runbook import RunbookToIncident
+from keep.api.models.db.runbook import RunbookToIncident, Runbook
+
 
 db_connection_string = config("DATABASE_CONNECTION_STRING", default=None)
 logger = logging.getLogger(__name__)
