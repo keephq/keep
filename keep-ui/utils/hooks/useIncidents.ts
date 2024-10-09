@@ -109,7 +109,7 @@ export const useIncident = (
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
-    () => (session ? `${apiUrl}/incidents/${incidentId}` : null),
+    () => (session && incidentId ? `${apiUrl}/incidents/${incidentId}` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );

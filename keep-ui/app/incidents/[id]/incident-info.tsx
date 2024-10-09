@@ -227,7 +227,7 @@ export default function IncidentInformation({ incident }: Props) {
                 <h3 className="text-gray-500 text-sm">Same incident in the past</h3>
                   {same_incident_in_the_past ? 
                   <p><a className="text-orange-500" href={'/incidents/' + same_incident_in_the_past.id}>{same_incident_in_the_past.user_generated_name || same_incident_in_the_past.ai_generated_name}</a> (<a href="#" onClick={(e) => handleChangeSameIncidentInThePast(e, incident)} className="cursor-pointer text-orange-500">edit</a>)</p> : 
-                  <p>No linked incidents 🤔 (<a onClick={(e) => handleChangeSameIncidentInThePast(e, incident)} className="cursor-pointer text-orange-500">add</a>)</p>}
+                  <p>No linked incidents. Link same incident from the past to help the AI classifier. 🤔(<a onClick={(e) => handleChangeSameIncidentInThePast(e, incident)} className="cursor-pointer text-orange-500">link</a>)</p>}
               </div>
               <div>
 
