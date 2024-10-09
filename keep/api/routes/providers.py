@@ -5,7 +5,7 @@ import time
 import uuid
 from typing import Callable, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
