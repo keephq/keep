@@ -254,7 +254,7 @@ class GitlabProvider(BaseRunBookProvider):
             runbook_contents = [runbook] 
 
         # Filter runbook contents where type is "file"
-        filtered_runbook_contents = [runbookContent for runbookContent in runbook_contents if runbookContent.get("type") == "file"]
+        filtered_runbook_contents = [runbookContent for runbookContent in runbook_contents]
 
         # Format the contents using a helper function
         contents = [self._format_content(runbookContent, repo) for runbookContent in filtered_runbook_contents]
@@ -279,9 +279,8 @@ class GitlabProvider(BaseRunBookProvider):
         md_path = md_path if md_path else self.authentication_config.md_path
 
         repo_meta = self.pull_repositories(project_id=repo)
-
-        if repo_meta and branch and md_path:
-            repo_id = repo_meta.get("id")
+        repo_id = repo_meta.get("id")
+        if repo_id and branch and md_path:
             resp = requests.get(
                 f"{self.gitlab_host}/api/v4/projects/{repo_id}/repository/files/{md_path}?ref={branch}",
                 headers=self.__get_auth_header()
