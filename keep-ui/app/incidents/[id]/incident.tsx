@@ -24,6 +24,7 @@ import { TopologyMap } from "@/app/topology/ui/map";
 import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
 import { useState } from "react";
 import { FiActivity } from "react-icons/fi";
+import IncidentActivity from "./incident-activity";
 
 interface Props {
   incidentId: string;
@@ -81,7 +82,9 @@ export default function IncidentView({ incidentId }: Props) {
             </Tab>
           </TabList>
           <TabPanels>
-            <TabPanel>Activity</TabPanel>
+            <TabPanel>
+              <IncidentActivity incident={incident} />
+            </TabPanel>
             <TabPanel>
               <IncidentAlerts incident={incident} />
             </TabPanel>
