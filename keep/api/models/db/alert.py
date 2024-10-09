@@ -1,5 +1,6 @@
 import enum
 import logging
+from typing import Optional
 from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
@@ -101,6 +102,25 @@ class Incident(SQLModel, table=True):
 
     # Note: IT IS NOT A UNIQUE IDENTIFIER (as in alerts)
     rule_fingerprint: str = Field(default="", sa_column=Column(TEXT))
+
+    same_incident_in_the_past_id: UUID | None = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", use_alter=False, ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
+
+    same_incident_in_the_past: Optional['Incident'] = Relationship(
+        back_populates="same_incidents_in_the_future",
+        sa_relationship_kwargs=dict(
+            remote_side='Incident.id',
+        )
+    )
+
+    same_incidents_in_the_future: list['Incident'] = Relationship(
+        back_populates="same_incident_in_the_past",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

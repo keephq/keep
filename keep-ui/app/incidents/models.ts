@@ -25,6 +25,8 @@ export interface IncidentDto {
   creation_time: Date;
   is_confirmed: boolean;
   rule_fingerprint: string;
+  same_incident_in_the_past_id: string;
+  following_incidents_ids: string[];
 }
 
 export interface PaginatedIncidentsDto {
