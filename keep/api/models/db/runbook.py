@@ -79,9 +79,6 @@ class Runbook(SQLModel, table=True):
     contents: List["RunbookContent"] = Relationship(back_populates="runbook")  # Relationship to RunbookContent
     provider_type: str  # Type of the provider
     provider_id: Optional[str] = None  # Optional provider ID
-    incidents: List["Incident"] = Relationship(
-        back_populates="runbooks", link_model=RunbookToIncident
-    )
     created_at: datetime = Field(default_factory=datetime.utcnow)  # Timestamp for creation
     timestamp: datetime = Field(
         sa_column=Column(datetime_column_type, index=True),
