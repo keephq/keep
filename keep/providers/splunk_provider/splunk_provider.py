@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import json
+import logging
 
 import pydantic
 from splunklib.client import connect
@@ -90,7 +91,7 @@ class SplunkProvider(BaseProvider):
             return None
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        self.logger.debug("Validating scopes for Splunk provider")
+        self.logger.info("Validating scopes for Splunk provider")
 
         validated_scopes = {}
 
@@ -164,14 +165,15 @@ class SplunkProvider(BaseProvider):
             )
             if self.logger.getEffectiveLevel() == logging.DEBUG:
                 response = self.__debug_fetch_users_response()
-                self.logger.exception(
-                    "Raw users response",
-                    extra={
-                        "url": response.url,
-                        "status": response.status_code,
-                        "text": response.text,
-                    },
-                )
+                if response is not None:
+                    self.logger.debug(
+                        "Raw users response",
+                        extra={
+                            "url": response.url,
+                            "status": response.status_code,
+                            "text": response.text,
+                        },
+                    )
             validated_scopes = dict(
                 [[scope.name, "PARSE_ERROR"] for scope in self.PROVIDER_SCOPES]
             )
@@ -290,7 +292,6 @@ class SplunkProvider(BaseProvider):
 
 if __name__ == "__main__":
     # Output debug messages
-    import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(
