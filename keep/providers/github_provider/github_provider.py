@@ -122,30 +122,51 @@ class GithubProvider(BaseRunBookProvider):
         repos_list = self._format_repos(repos)
         return repos_list
 
-    def _format_runbook(self, runbook, repo, title):
+
+    def _format_content(self, runbookContent, repo):
+        """
+        Format the content data into a dictionary.
+        """
+        return {
+            "content": runbookContent.content,
+            "link": f"https://api.github.com/{repo.get('full_name')}/blob/{repo.get('default_branch')}/{runbookContent.path}",
+            "encoding": runbookContent.encoding,
+            "file_name": runbookContent.name
+        }    
+
+    def _format_runbook(self, runbook, repo, title, md_path):
         """
         Format the runbook data into a dictionary.
         """
-       
-        # TO DO. currently we are handling the one file only. we user give folder path. then we might get multiple files as input(runbook)
+        self.logger.info("runbook: %s", runbook)
+
+        if runbook is None:
+            raise Exception("Got empty runbook. Please check the runbook path and try again.")
+
+        # Check if the runbook is a list, then set runbook_contents accordingly
+        if isinstance(runbook, list):
+            runbook_contents = runbook           
+        else:
+            runbook_contents = [runbook] 
+
+        # Filter contents where type is "file"
+        filtered_runbook_contents = [runbookContent for runbookContent in runbook_contents if runbookContent.type == "file"]
+
+        # Format the contents using a helper function
+        contents = [self._format_content(runbookContent, repo) for runbookContent in filtered_runbook_contents]
+
+        # Return the formatted runbook data as a dictionary
         return {
-            "file_name": runbook.name,
-            "file_path": runbook.path,
-            "file_size": runbook.size,
-            "file_type": runbook.type,
+            "relative_path": md_path,
             "repo_id": repo.get("id"),
             "repo_name": repo.get("name"),
             "repo_display_name": repo.get("display_name"),
             "provider_type": "github",
             "provider_id": self.provider_id,
-            "contents": [{
-                "content":runbook.content,
-                "link": f"https://api.github.com/{repo.get('full_name')}/blob/{repo.get('default_branch')}/{runbook.path}",
-                "encoding": runbook.encoding,
-                "file_name": runbook.name
-                }],
+            "contents": contents,
             "title": title,
         }
+
 
         
 
@@ -170,7 +191,7 @@ class GithubProvider(BaseRunBookProvider):
                     raise Exception(f"Repository {repo_name} not found")
 
                 runbook = repo.get_contents(md_path, branch)
-                response = self._format_runbook(runbook, self._format_repo(repo), title)
+                response = self._format_runbook(runbook, self._format_repo(repo), title, md_path)
                 return response
 
             except GithubException as e:

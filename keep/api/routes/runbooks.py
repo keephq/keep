@@ -118,10 +118,10 @@ def create_runbook(
 @router.get(
     "",
     description="All Runbooks",
-    # response_model=RunbookDtoOut,
 )
-def create_runbook(
-    
+def get_all_runbooks(
+    limit: int = 25,
+    offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:runbook"])
     ),
@@ -129,5 +129,5 @@ def create_runbook(
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("get all Runbooks", extra={tenant_id: tenant_id})
-    return RunbookService.get_all_runbooks(session, tenant_id)    
+    return RunbookService.get_all_runbooks(session, tenant_id, limit, offset)    
 

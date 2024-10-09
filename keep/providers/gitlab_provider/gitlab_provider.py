@@ -228,29 +228,49 @@ class GitlabProvider(BaseRunBookProvider):
 
        raise Exception("Failed to get repositories: personal_access_token not set")
 
-    def _format_runbook(self, runbook, repo, title):
-       """
-       Format the runbook data into a dictionary.
-       """
-       
-       # TO DO. currently we are handling the one file only. we user give folder path. then we might get multiple files as input(runbook)
-       return  {
-                "file_name": runbook.get("file_name"),
-                "file_path": runbook.get("file_path"),
-                "file_size": runbook.get("size"),
-                "file_type": runbook.get("type"),
-                "repo_id": repo.get("id"),
-                "repo_name": repo.get("name"),
-                "repo_display_name": repo.get("display_name"),
-                "provider_type": "gitlab",
-                "config": self.provider_id,
-                "contents": [{
-                    "content": runbook.get("content"),
-                    "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbook.get('file_path')}/raw",
-                    "encoding": runbook.get("encoding"),
-                    }],
-                "title": title,
-                }           
+    def _format_content(self, runbookContent, repo):
+        """
+        Format the content data into a dictionary.
+        """
+        return {
+            "content": runbookContent.get("content"),
+            "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbookContent.get('file_path')}/raw",
+            "encoding": runbook.get("encoding"),
+            "file_name": runbookContent.get("file_name"),
+        }
+
+
+    def _format_runbook(self, runbook, repo, title, md_path):
+        """
+        Format the runbook data into a dictionary.
+        """
+        if runbook is None:
+            raise Exception("Got empty runbook. Please check the runbook path and try again.")
+
+        # Check if runbook is a list, if not convert to list
+        if isinstance(runbook, list):
+            runbook_contents = runbook      
+        else:
+            runbook_contents = [runbook] 
+
+        # Filter runbook contents where type is "file"
+        filtered_runbook_contents = [runbookContent for runbookContent in runbook_contents if runbookContent.get("type") == "file"]
+
+        # Format the contents using a helper function
+        contents = [self._format_content(runbookContent, repo) for runbookContent in filtered_runbook_contents]
+
+        # Return formatted runbook data as dictionary
+        return {
+            "relative_path": md_path,
+            "repo_id": repo.get("id"),
+            "repo_name": repo.get("name"),
+            "repo_display_name": repo.get("display_name"),
+            "provider_type": "gitlab",  # This was changed from "github" to "gitlab", assuming it is intentional
+            "provider_id": self.provider_id,  # Assuming this is supposed to be 'provider_id', not 'config'
+            "contents": contents,
+            "title": title,
+        }
+     
 
     def pull_runbook(self, repo=None, branch=None, md_path=None, title=None):
         """Retrieve markdown files from the GitLab repository."""
@@ -272,7 +292,7 @@ class GitlabProvider(BaseRunBookProvider):
             except HTTPError as e:
                 raise Exception(f"Failed to get runbook: {e}")
 
-            return self._format_runbook(resp.json(), repo_meta, title)
+            return self._format_runbook(resp.json(), repo_meta, title, md_path)
 
         raise Exception("Failed to get runbook: repository or md_path not set")       
 

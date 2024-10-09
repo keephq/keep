@@ -20,7 +20,7 @@ class RunbookService:
                 tenant_id=tenant_id,
                 title=runbook_dto["title"],
                 repo_id=runbook_dto["repo_id"],
-                relative_path=runbook_dto["file_path"],
+                relative_path=runbook_dto["relative_path"],
                 provider_type=runbook_dto["provider_type"],
                 provider_id=runbook_dto["provider_id"]
             )
@@ -50,11 +50,14 @@ class RunbookService:
             logger.exception(f"Failed to create runbook {e}")
 
     @staticmethod
-    def get_all_runbooks(session: Session, tenant_id: str) -> List[RunbookDtoOut]:
-        runbooks = session.exec(
-            select(Runbook)
-            .where(Runbook.tenant_id == tenant_id)
-            .options(selectinload(Runbook.contents)).limit(1000)
+    def get_all_runbooks(session: Session, tenant_id: str, limit=25, offset=0) -> dict:
+        query = session.query(Runbook).filter(
+            Runbook.tenant_id == tenant_id,
         )
-
-        return [RunbookDtoOut.from_orm(runbook) for runbook in runbooks]            
+    
+        total_count = query.count()  # Get the total count of runbooks matching the tenant_id
+        runbooks = query.options(selectinload(Runbook.contents)).limit(limit).offset(offset).all()  # Fetch the paginated runbooks
+        result = [RunbookDtoOut.from_orm(runbook) for runbook in runbooks]  # Convert runbooks to DTOs
+    
+        # Return total count and list of runbooks
+        return {"total_count": total_count, "runbooks": result}    

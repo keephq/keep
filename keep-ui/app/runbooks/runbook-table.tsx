@@ -26,7 +26,7 @@ import useSWR from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
 import RunbookActions from "./runbook-actions";
-import { RunbookDto } from "./models";
+import { RunbookDto, RunbookResponse } from "./models";
 
 const customStyles = {
   content: {
@@ -71,13 +71,20 @@ const columnsv2 = [
     id: "contents",
     header: "Contents",
     cell: ({ row }) => {
+      const contents = row.original.contents || [];
+      const isMoreContentAvailable = contents.length > 4;
       return (
         <div>
-          {row.original.contents?.map((content: Content) => (
+          {contents.slice(0, 4)?.map((content: Content) => (
             <Badge key={content.id} color="green" className="mr-2 mb-1">
               {content.file_name}
             </Badge>
           ))}
+          {isMoreContentAvailable && (
+            <Badge color="green" className="mr-2 mb-1">{`${
+              contents.length - 4
+            } more...`}</Badge>
+          )}
         </div>
       );
     },
@@ -262,12 +269,19 @@ function RunbookIncidentTable() {
 
   let shouldFetch = session?.accessToken ? true : false;
 
-  const { data: runbooksData, error } = useSWR<RunbookDto[]>(
-    shouldFetch ? `${getApiURL()}/runbooks` : null,
+  const { data: runbooksData, error } = useSWR<RunbookResponse>(
+    shouldFetch
+      ? `${getApiURL()}/runbooks?limit=${limit}&offset=${offset}`
+      : null,
     (url: string) => {
       return fetcher(url, session?.accessToken!);
     }
   );
+
+  const { total_count, runbooks } = runbooksData || {
+    total_count: 0,
+    runbooks: [],
+  };
 
   // Modal state management
 
@@ -280,7 +294,7 @@ function RunbookIncidentTable() {
     return (
       <RunbookActions
         selectedRowIds={selectedRowIds}
-        runbooks={runbooksData || []}
+        runbooks={runbooks || []}
         clearRowSelection={table.resetRowSelection}
       />
     );
@@ -293,11 +307,11 @@ function RunbookIncidentTable() {
         <SettingsPage />
       </div>
       <Card className="flex-1 overflow-auto">
-        {runbooksData && (
+        {!!total_count && (
           <GenericTable<RunbookDto>
-            data={runbooksData}
+            data={runbooks}
             columns={columnsv2}
-            rowCount={runbooksData.length}
+            rowCount={total_count}
             offset={offset}
             limit={limit}
             onPaginationChange={handlePaginationChange}
