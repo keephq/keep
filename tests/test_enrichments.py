@@ -194,9 +194,9 @@ def test_run_extraction_rules_handle_source_special_case(mock_session):
 
     # We'll mock chevron to return the exact content of 'source' to simulate the template rendering
     with patch("chevron.render", return_value="incorrect_format"):
-        # We need to mock 're.match' to return a match object with a groupdict that includes 'source'
+        # We need to mock 're.search' to return a match object with a groupdict that includes 'source'
         with patch(
-            "re.match",
+            "re.search",
             return_value=Mock(groupdict=lambda: {"source": "incorrect_format"}),
         ):
             enriched_event = enrichment_bl.run_extraction_rules(event)
