@@ -39,6 +39,7 @@ const ChangeSameIncidentInThePast = ({
       incidentName: incident.user_generated_name,
       incidentUserSummary: incident.user_summary,
       incidentAssignee: incident.assignee,
+      generatedByAi: false,
     });
     if (response.ok) {
       mutate();

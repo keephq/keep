@@ -83,6 +83,7 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
         incidentUserSummary: summary,
         incidentAssignee: incident.assignee,
         incidentSameIncidentInThePastId: incident.same_incident_in_the_past_id,
+        generatedByAi: true,
       });
 
       if (response.ok) {
