@@ -126,7 +126,7 @@ class EnrichmentsBl:
                         extra={"rule_id": rule.id},
                     )
                     continue
-            match_result = re.match(rule.regex, attribute_value)
+            match_result = re.search(rule.regex, attribute_value)
             if match_result:
                 match_dict = match_result.groupdict()
 
@@ -343,7 +343,7 @@ class EnrichmentsBl:
     def _is_match(value, pattern):
         if value is None or pattern is None:
             return False
-        return re.match(pattern, value) is not None
+        return re.search(pattern, value) is not None
 
     def _check_matcher(self, alert: AlertDto, row: dict, matcher: str) -> bool:
         """
