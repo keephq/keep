@@ -3658,7 +3658,7 @@ def add_runbooks_to_incident(
                 runbook_id for runbook_id in runbook_ids if runbook_id not in existing_runbook_ids
             ]
 
-            if not new_runbook_ids:
+            if not new_runbook_ids or not len(new_runbook_ids)== 0:
                 return incident
 
             runbooks_data_for_incident = get_runbooks_data_for_incident(new_runbook_ids, session)

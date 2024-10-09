@@ -149,7 +149,7 @@ const RunbookAssociateIncidentModal = ({
                 onClick={handleAssociateRunbooks}
                 disabled={selectedIncident === null}
               >
-                Associate {runbooks.length} alert{runbooks.length > 1 ? "s" : ""}
+                Associate {runbooks.length} Runbook{runbooks.length > 1 ? "s" : ""}
               </Button>
 
               <Button
