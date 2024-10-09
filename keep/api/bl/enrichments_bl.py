@@ -343,7 +343,7 @@ class EnrichmentsBl:
     def _is_match(value, pattern):
         if value is None or pattern is None:
             return False
-        return re.match(pattern, value) is not None
+        return re.search(pattern, value) is not None
 
     def _check_matcher(self, alert: AlertDto, row: dict, matcher: str) -> bool:
         """
