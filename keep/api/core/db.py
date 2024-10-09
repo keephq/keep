@@ -2540,9 +2540,9 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 return {}
 
             return {
-                "assignees": results.assignees.split(","),
-                "sources": results.sources.split(","),
-                "services": results.affected_services.split(","),
+                "assignees": results.assignees.split(",") if results.assignees else [],
+                "sources": results.sources.split(",") if results.sources else [],
+                "services": results.affected_services.split(",") if results.affected_services else [],
             }
         elif session.bind.dialect.name == "postgresql":
 
