@@ -4,6 +4,8 @@ import json
 
 import pydantic
 from splunklib.client import connect
+from splunklib.binding import AuthenticationError
+from xml.etree.ElementTree import ParseError
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
@@ -43,12 +45,6 @@ class SplunkProvider(BaseProvider):
 
     PROVIDER_SCOPES = [
         ProviderScope(
-            name="authenticated",
-            description="The user can connect to the client",
-            mandatory=True,
-            alias="Connect to the client",
-        ),
-        ProviderScope(
             name="list_all_objects",
             description="The user can get all the alerts",
             mandatory=True,
@@ -77,40 +73,57 @@ class SplunkProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        list_all_objects_scope = "NOT_FOUND"
-        edit_own_object_scope = "NOT_FOUND"
+        validated_scopes = {}
+
         try:
             service = connect(
                 token=self.authentication_config.api_key,
                 host=self.authentication_config.host,
                 port=self.authentication_config.port,
             )
+
+            all_permissions = []
             for user in service.users:
                 user_roles = user.content["roles"]
                 for role_name in user_roles:
                     perms = self.__get_role_capabilities(
                         role_name=role_name, service=service
                     )
-                    if not list_all_objects_scope and "list_all_objects" in perms:
-                        list_all_objects_scope = True
-                    if not edit_own_object_scope and "edit_own_objects" in perms:
-                        edit_own_object_scope = True
-                    if list_all_objects_scope and edit_own_object_scope:
-                        break
+                    all_permissions.extend(perms)
 
-            scopes = {
-                "authenticated": True,
-                "list_all_objects": list_all_objects_scope,
-                "edit_own_objects": edit_own_object_scope,
-            }
+            for scope in self.PROVIDER_SCOPES:
+                if scope.name in all_permissions:
+                    validated_scopes[scope.name] = True
+                else:
+                    validated_scopes[scope.name] = "NOT_FOUND"
+        except AuthenticationError:
+            self.logger.exception("Error authenticating to Splunk")
+            validated_scopes = dict(
+                [[scope.name, "AUTHENTICATION_ERROR"] for scope in self.PROVIDER_SCOPES]
+            )
+        except ConnectionRefusedError:
+            self.logger.exception(
+                "Error connecting to Splunk",
+                extra={
+                    "host": self.authentication_config.host,
+                    "port": self.authentication_config.port,
+                },
+            )
+            validated_scopes = dict(
+                [[scope.name, "CONNECTION_REFUSED"] for scope in self.PROVIDER_SCOPES]
+            )
+        except ParseError as e:
+            self.logger.exception("Error parsing XML", extra={"error": str(e)})
+            validated_scopes = dict(
+                [[scope.name, "PARSE_ERROR"] for scope in self.PROVIDER_SCOPES]
+            )
         except Exception as e:
             self.logger.exception("Error validating scopes")
-            scopes = {
-                "connect_to_client": str(e),
-                "list_all_objects": "UNAUTHENTICATED",
-                "edit_own_objects": "UNAUTHENTICATED",
-            }
-        return scopes
+            validated_scopes = dict(
+                [[scope.name, str(e)] for scope in self.PROVIDER_SCOPES]
+            )
+
+        return validated_scopes
 
     def validate_config(self):
         self.authentication_config = SplunkProviderAuthConfig(
@@ -204,7 +217,7 @@ class SplunkProvider(BaseProvider):
             exception=exception,
             logger=logger,
             kubernetes=kubernetes,
-            **event
+            **event,
         )
         alert.fingerprint = SplunkProvider.get_alert_fingerprint(
             alert,
