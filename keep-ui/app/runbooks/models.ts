@@ -14,3 +14,8 @@ export interface RunbookDto {
   repo_id: string;
   file_path: string;
 }
+
+export type RunbookResponse = {
+  runbooks: RunbookDto[];
+  total_count: number;
+};
