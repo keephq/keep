@@ -1,7 +1,7 @@
 """Incident linking to each other
 
 Revision ID: bf756df80e9d
-Revises: 01ebe17218c0
+Revises: 017d759805d9
 Create Date: 2024-10-08 10:47:25.326327
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "bf756df80e9d"
-down_revision = "01ebe17218c0"
+down_revision = "017d759805d9"
 branch_labels = None
 depends_on = None
 
