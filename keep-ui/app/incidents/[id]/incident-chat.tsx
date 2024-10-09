@@ -76,14 +76,16 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
       },
     ],
     handler: async ({ name, summary }) => {
-      const response = await updateIncidentRequest(
-        session,
-        incident.id,
-        name,
-        summary,
-        incident.assignee,
-        true
-      );
+      const response = await updateIncidentRequest({
+        session: session,
+        incidentId: incident.id,
+        incidentName: name,
+        incidentUserSummary: summary,
+        incidentAssignee: incident.assignee,
+        incidentSameIncidentInThePastId: incident.same_incident_in_the_past_id,
+        generatedByAi: true,
+      });
+
       if (response.ok) {
         mutate();
         mutateIncident();

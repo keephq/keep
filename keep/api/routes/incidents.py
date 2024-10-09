@@ -18,6 +18,7 @@ from keep.api.core.db import (
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
+    get_future_incidents_by_incident_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
@@ -395,6 +396,56 @@ def get_incident_alerts(
 
     return AlertPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=enriched_alerts_dto
+    )
+
+
+@router.get(
+    "/{incident_id}/future_incidents",
+    description="Get same incidents linked to this one",
+)
+def get_future_incidents_for_an_incident(
+    incident_id: str,
+    limit: int = 25,
+    offset: int = 0,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+    ),
+) -> IncidentsPaginatedResultsDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    logger.info(
+        "Fetching future incidents from",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    db_incidents, total_count = get_future_incidents_by_incident_id(
+        limit=limit,
+        offset=offset,
+        incident_id=incident_id,
+    )
+    future_incidents = [IncidentDto.from_db_incident(incident) for incident in db_incidents]
+    logger.info(
+        "Fetched future incidents from DB",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return IncidentsPaginatedResultsDto(
+        limit=limit, offset=offset, count=total_count, items=future_incidents
     )
 
 
