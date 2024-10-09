@@ -2541,9 +2541,9 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                 return {}
 
             return {
-                "assignees": results.assignees.split(","),
-                "sources": results.sources.split(","),
-                "services": results.affected_services.split(","),
+                "assignees": results.assignees.split(",") if results.assignees else [],
+                "sources": results.sources.split(",") if results.sources else [],
+                "services": results.affected_services.split(",") if results.affected_services else [],
             }
         elif session.bind.dialect.name == "postgresql":
 
@@ -2760,6 +2760,7 @@ def update_incident_from_dto_by_id(
 
         incident.user_generated_name = updated_incident_dto.user_generated_name
         incident.assignee = updated_incident_dto.assignee
+        incident.same_incident_in_the_past_id = updated_incident_dto.same_incident_in_the_past_id
 
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary
@@ -2839,6 +2840,29 @@ def get_incident_alerts_by_incident_id(
 
     if limit and offset:
         query = query.limit(limit).offset(offset)
+
+    return query.all(), total_count
+
+
+
+def get_future_incidents_by_incident_id(
+    incident_id: str,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+) -> (List[Incident], int):
+    with Session(engine) as session:
+        query = (
+            session.query(
+                Incident,
+            ).filter(Incident.same_incident_in_the_past_id == incident_id)
+        )
+        
+        if limit:
+            query = query.limit(limit)
+        if offset:
+            query = query.offset(offset)
+
+    total_count = query.count()
 
     return query.all(), total_count
 

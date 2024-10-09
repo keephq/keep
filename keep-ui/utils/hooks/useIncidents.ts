@@ -11,7 +11,6 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
-import { SortingState } from "@tanstack/react-table";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -33,7 +32,7 @@ export const useIncidents = (
   filters: Filters | {} = {},
   options: SWRConfiguration = {
     revalidateOnFocus: false,
-  }
+  },
 ) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
@@ -84,6 +83,22 @@ export const useIncidentAlerts = (
   );
 };
 
+export const useIncidentFutureIncidents = (
+  incidentId: string,
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const apiUrl = getApiURL();
+  const { data: session } = useSession();
+
+  return useSWR<PaginatedIncidentsDto>(
+    () => (session ? `${apiUrl}/incidents/${incidentId}/future_incidents` : null),
+    (url) => fetcher(url, session?.accessToken),
+    options
+  );
+};
+
 export const useIncident = (
   incidentId: string,
   options: SWRConfiguration = {
@@ -94,7 +109,7 @@ export const useIncident = (
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
-    () => (session ? `${apiUrl}/incidents/${incidentId}` : null),
+    () => (session && incidentId ? `${apiUrl}/incidents/${incidentId}` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );
