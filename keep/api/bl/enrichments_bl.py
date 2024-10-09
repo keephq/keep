@@ -126,7 +126,7 @@ class EnrichmentsBl:
                         extra={"rule_id": rule.id},
                     )
                     continue
-            match_result = re.match(rule.regex, attribute_value)
+            match_result = re.search(rule.regex, attribute_value)
             if match_result:
                 match_dict = match_result.groupdict()
 
