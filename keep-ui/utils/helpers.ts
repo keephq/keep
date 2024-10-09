@@ -13,6 +13,10 @@ function isValidDate(d: Date) {
   return d instanceof Date && !isNaN(d.getTime());
 }
 
+export function capitalize(string: string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 export function toDateObjectWithFallback(date: string | Date) {
   /**
    * Since we have a weak typing validation in the backend today (lastReceived is just a string),

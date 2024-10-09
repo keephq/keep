@@ -14,8 +14,10 @@ from pydantic import (
     Extra,
     PrivateAttr,
     root_validator,
-    validator,
+    validator
 )
+from sqlalchemy import desc
+from sqlmodel import col
 
 logger = logging.getLogger(__name__)
 
@@ -459,11 +461,11 @@ class IncidentDto(IncidentDtoIn):
             last_seen_time=db_incident.last_seen_time,
             end_time=db_incident.end_time,
             alerts_count=db_incident.alerts_count,
-            alert_sources=db_incident.sources,
+            alert_sources=db_incident.sources or [],
             severity=severity,
             status=db_incident.status,
             assignee=db_incident.assignee,
-            services=db_incident.affected_services,
+            services=db_incident.affected_services or [],
             rule_fingerprint=db_incident.rule_fingerprint,
         )
 
@@ -505,3 +507,33 @@ class DeduplicationRuleRequestDto(BaseModel):
 class IncidentStatusChangeDto(BaseModel):
     status: IncidentStatus
     comment: str | None
+
+
+class IncidentSorting(Enum):
+    creation_time = "creation_time"
+    start_time = "start_time"
+    last_seen_time = "last_seen_time"
+    severity = "severity"
+    status = "status"
+    alerts_count = "alerts_count"
+
+    creation_time_desc = "-creation_time"
+    start_time_desc = "-start_time"
+    last_seen_time_desc = "-last_seen_time"
+    severity_desc = "-severity"
+    status_desc = "-status"
+    alerts_count_desc = "-alerts_count"
+
+    def get_order_by(self, model):
+        if self.value.startswith("-"):
+            return desc(col(getattr(model, self.value[1:])))
+
+        return col(getattr(model, self.value))
+
+
+class IncidentListFilterParamsDto(BaseModel):
+    statuses: List[IncidentStatus] = [s.value for s in IncidentStatus]
+    severities: List[IncidentSeverity] = [s.value for s in IncidentSeverity]
+    assignees: List[str]
+    services: List[str]
+    sources: List[str]
