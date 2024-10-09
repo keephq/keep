@@ -5,7 +5,7 @@ SumoLogic Provider is a class that allows to install webhooks in SumoLogic.
 import dataclasses
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from urllib.parse import urlencode, urljoin, urlparse
 
 import pydantic
@@ -415,7 +415,6 @@ class SumologicProvider(BaseProvider):
     @staticmethod
     def _format_alert(
         event: dict,
-        provider_instance: Optional["SumologicProvider"] = None,
     ) -> AlertDto:
         return AlertDto(
             id=event["id"],

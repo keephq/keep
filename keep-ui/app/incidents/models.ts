@@ -42,3 +42,11 @@ export interface PaginatedIncidentAlertsDto {
   count: number;
   items: AlertDto[];
 }
+
+export interface IncidentsMetaDto {
+  statuses: string[];
+  severities: string[];
+  assignees: string[];
+  services: string[];
+  sources: string[];
+}

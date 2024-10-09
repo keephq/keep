@@ -72,7 +72,8 @@
           "pages": [
             "deployment/provision/overview",
             "deployment/provision/provider",
-            "deployment/provision/workflow"
+            "deployment/provision/workflow",
+            "deployment/provision/dashboard"
           ]
         },
         "deployment/secret-manager",
@@ -140,6 +141,7 @@
             "providers/documentation/mock-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
+            "providers/documentation/mailgun-provider",
             "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
@@ -163,6 +165,7 @@
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
+            "providers/documentation/smtp-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",

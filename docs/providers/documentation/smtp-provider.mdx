@@ -1,0 +1,25 @@
+---
+title: 'SMTP'
+sidebarTitle: 'SMTP Provider'
+description: 'SMTP Provider allows you to send emails.'
+---
+
+## Overview
+
+SMTP Provider allows you to send emails from Keep. Most of the email services like Gmail, Yahoo, Mailgun, etc. provide SMTP servers to send emails. You can use these SMTP servers to send emails from Keep.
+
+## Authentication Parameters
+
+The SMTP provider requires the following authentication parameters:
+
+- `SMTP Username` - The username of the SMTP server or the email address.
+- `SMTP Password` - The password of the SMTP server.
+- `SMTP Server Address` - The host address of the SMTP server. Example: `smtp.gmail.com`.
+- `SMTP Port` - The port of the SMTP server. It is `587` for TLS and `465` for SSL. If you are using a custom SMTP server, you can use the port provided by the SMTP server.
+- `SMTP Encryption` - The security protocol of the SMTP server. It can be `SSL`, or `TLS`.
+
+## Connecting with SMTP Provider
+
+1. Obtain the SMTP credentials from your email service provider. Example: Gmail, Yahoo, Mailgun, etc.
+2. Add SMTP Provider in Keep with the obtained credentials.
+3. Connect the SMTP Provider with Keep.

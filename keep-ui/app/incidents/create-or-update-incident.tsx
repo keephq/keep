@@ -32,6 +32,7 @@ export const updateIncidentRequest = async ({
   incidentUserSummary,
   incidentAssignee,
   incidentSameIncidentInThePastId,
+  generatedByAi: boolean = false
 }: {
   session: Session | null;
   incidentId: string;
@@ -41,7 +42,7 @@ export const updateIncidentRequest = async ({
   incidentSameIncidentInThePastId: string | null;
 }) => {
   const apiUrl = getApiURL();
-  const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
+  const response = await fetch(`${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${session?.accessToken}`,

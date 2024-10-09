@@ -201,9 +201,11 @@ class SentryProvider(BaseProvider):
         return validated_scopes
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto | list[AlertDto]:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
-        logger.info(
+        logger.debug(
             "Formatting Sentry alert",
             extra={
                 "event": event,
@@ -247,10 +249,18 @@ class SentryProvider(BaseProvider):
             if isinstance(exception, dict) and "stacktrace" not in exception:
                 exception["stacktrace"] = False
 
-        logger.info("Formatted Sentry alert", extra={"event": event})
+        logger.debug("Formatted Sentry alert", extra={"event": event})
+        name = event_data.get("title", "").replace("'", "").replace('"', "")
+        message = (
+            event_data.get("metadata", {})
+            .get("value", "")
+            .replace("'", "")
+            .replace('"', "")
+        )
+
         return AlertDto(
             id=event_data.pop("event_id"),
-            name=event_data.get("title"),
+            name=name,
             status=status,
             lastReceived=str(last_received),
             service=tags_as_dict.get("server_name"),
@@ -258,7 +268,7 @@ class SentryProvider(BaseProvider):
             environment=event_data.pop(
                 "environment", tags_as_dict.pop("environment", "unknown")
             ),
-            message=event_data.get("metadata", {}).get("value"),
+            message=message,
             description=event.get("culprit", ""),
             pushed=True,
             severity=severity,

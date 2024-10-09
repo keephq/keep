@@ -6,12 +6,14 @@ import time
 import uuid
 
 import pytest
+from sqlalchemy import desc, asc
 
-from keep.api.core.db import create_rule as create_rule_db
+from keep.api.core.db import create_rule as create_rule_db, get_last_incidents, get_incident_alerts_by_incident_id
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentSeverity, IncidentStatus
 from keep.api.models.db.alert import Alert
+from keep.api.models.db.rule import ResolveOn
 from keep.rulesengine.rulesengine import RulesEngine
 
 
@@ -325,6 +327,236 @@ def test_incident_severity(db_session):
     assert results[0].severity.value == IncidentSeverity.INFO.value
 
 
+def test_incident_resolution_on_all(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        require_approve=False,
+        resolve_on=ResolveOn.ALL.value
+    )
+
+    incidents, total_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=1,
+    )
+    assert total_count == 0
+
+    create_alert(
+        f"Something went wrong",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        f"Something went wrong again",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+    assert incident.status == IncidentStatus.FIRING.value
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 2
+
+    create_alert(
+        f"Something went wrong",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 3
+    assert incident.status == IncidentStatus.FIRING.value
+
+    create_alert(
+        f"Something went wrong again",
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 4
+    assert incident.status == IncidentStatus.RESOLVED.value
+
+
+@pytest.mark.parametrize(
+    "direction,second_fire_order",
+    [(ResolveOn.FIRST.value, ('fp2', 'fp1')), (ResolveOn.LAST.value, ('fp2', 'fp1'))]
+)
+def test_incident_resolution_on_edge(db_session, create_alert, direction, second_fire_order):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='(severity == "critical")',
+        created_by="test@keephq.dev",
+        require_approve=False,
+        resolve_on=direction,
+    )
+
+    incidents, total_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=1,
+    )
+    assert total_count == 0
+
+    create_alert(
+        "fp1",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "fp2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+    assert incident.status == IncidentStatus.FIRING.value
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 2
+
+    fp1, fp2 = second_fire_order
+
+    create_alert(
+        fp1,
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 3
+    assert incident.status == IncidentStatus.FIRING.value
+
+    create_alert(
+        fp2,
+        AlertStatus.RESOLVED,
+        datetime.datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    incidents, incidents_count = get_last_incidents(
+        tenant_id=SINGLE_TENANT_UUID,
+        is_confirmed=True,
+        limit=10,
+        offset=0,
+    )
+
+    assert incidents_count == 1
+
+    incident = incidents[0]
+
+    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        limit=10,
+        offset=0,
+    )
+    assert alert_count == 4
+    assert incident.status == IncidentStatus.RESOLVED.value
 
 # Next steps:
 #   - test that alerts in the same group are being updated correctly

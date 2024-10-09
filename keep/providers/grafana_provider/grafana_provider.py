@@ -195,7 +195,9 @@ class GrafanaProvider(BaseProvider):
         return GrafanaAlertFormatDescription.schema()
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         alerts = event.get("alerts", [])
         formatted_alerts = []
         for alert in alerts:

@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from uuid import UUID, uuid4
 
 from sqlmodel import JSON, Column, Field, SQLModel
@@ -6,6 +7,12 @@ from sqlmodel import JSON, Column, Field, SQLModel
 # Currently a rule_definition is a list of SQL expressions
 # We use querybuilder for that
 
+class ResolveOn(Enum):
+    # the alert was triggered
+    FIRST = "first_resolved"
+    LAST = "last_resolved"
+    ALL = "all_resolved"
+    NEVER = "never"
 
 # TODOs/Pitfalls down the road which we hopefully need to address in the future:
 # 1. nested attibtues (event.foo.bar = 1)
@@ -33,3 +40,4 @@ class Rule(SQLModel, table=True):
     # e.g. The {{ labels.queue }} is more than third full on {{ num_of_alerts }} queue managers
     item_description: str = None
     require_approve: bool = False
+    resolve_on: str = ResolveOn.NEVER.value

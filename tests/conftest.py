@@ -577,7 +577,7 @@ def create_alert(db_session):
             tenant_id=SINGLE_TENANT_UUID,
             provider_id="test",
             provider_type=(
-                details["source"][0] if details and "source" in details else None
+                details["source"][0] if details and "source" in details and details["source"] else None
             ),
             fingerprint=fingerprint,
             api_key_name="test",
