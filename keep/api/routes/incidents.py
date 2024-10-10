@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import sys
+import uuid
 from datetime import datetime
 from typing import List
 
@@ -661,7 +662,7 @@ async def create_with_ai(
     logger.info(
         "Creating incident with AI",
         extra={
-            "alert_ids": alerts_fingerprints,
+            "alerts_fingerprints": alerts_fingerprints,
             "tenant_id": tenant_id,
         },
     )
@@ -747,10 +748,11 @@ async def create_with_ai(
                                         "severity": {
                                             "type": "string",
                                             "enum": [
-                                                "Low",
-                                                "Medium",
-                                                "High",
-                                                "Critical",
+                                                "critical",
+                                                "high",
+                                                "warning",
+                                                "info",
+                                                "low",
                                             ],
                                             "description": "Assessed severity level",
                                         },
@@ -810,12 +812,37 @@ def process_incidents(
 ) -> List[IncidentDto]:
     processed_incidents = []
     for incident in incidents:
+        alert_sources = set()
+        alert_services = set()
+        for alert_index in incident.alerts:
+            # TODO: more than one source?
+            alert = alerts_dto[alert_index - 1]
+            alert_sources.add(alert.source[0])
+            if alert.service:
+                alert_services.add(alert.service)
+
+        # start time is the earliest alert time
+        incident_alerts = [alerts_dto[i - 1] for i in incident.alerts]
+        start_time = min([alert.lastReceived for alert in incident_alerts])
+        last_seen_time = max([alert.lastReceived for alert in incident_alerts])
+
         incident_dto = IncidentDto(
+            id=uuid.uuid4(),
             name=incident.incident_name,
-            description=f"{incident.reasoning}\n\nConfidence Score: {incident.confidence_score}\nConfidence Explanation: {incident.confidence_explanation}",
+            start_time=start_time,
+            last_seen_time=last_seen_time,
+            description=incident.reasoning,
+            confidence_score=incident.confidence_score,
+            confidence_explanation=incident.confidence_explanation,
             severity=incident.severity,
             alert_ids=[alerts_dto[i - 1].id for i in incident.alerts],
             recommended_actions=incident.recommended_actions,
+            is_predicted=True,
+            is_confirmed=False,
+            alerts_count=len(incident.alerts),
+            alert_sources=list(alert_sources),
+            alerts=incident_alerts,  # return the alerts as well
+            services=list(alert_services),
         )
         processed_incidents.append(incident_dto)
     return processed_incidents

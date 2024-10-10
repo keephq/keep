@@ -1,4 +1,8 @@
-export function getApiURL(): string {
+"use client";
+
+import { useConfig } from "utils/hooks/useConfig";
+
+function getApiURL(): string {
   const componentType = typeof window === "undefined" ? "server" : "client";
 
   if (componentType === "client") {
@@ -25,4 +29,16 @@ export function getApiURL(): string {
     }
     return process.env.API_URL!.replace("keep-api", serviceName);
   }
+}
+
+export function getApiUrlNoMiddleware(): string {
+  const componentType = typeof window === "undefined" ? "server" : "client";
+
+  if (componentType === "client") {
+    const { data: configData } = useConfig();
+    return configData?.API_URL!;
+  }
+
+  // SERVER ONLY FROM HERE ON
+  return getApiURL();
 }
