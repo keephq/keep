@@ -143,7 +143,7 @@ export function GenericTable<T>({
 
     return (
         <div className="flex flex-col w-full h-full max-h-full">
-            <div className="overflow-auto h-[85%">
+            <div className="overflow-auto h-[85%]">
             {!!selectedRowIds.length  && getActions && <div className="mb-2">{getActions(table, selectedRowIds)}</div>}
                 <TremorTable className="w-full rounded border border-tremor-border dark:border-dark-tremor-border">
                     <TableHead>
