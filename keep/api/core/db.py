@@ -10,6 +10,7 @@ import logging
 import random
 import uuid
 from collections import defaultdict
+from collections.abc import Sequence
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union, Callable
@@ -2312,21 +2313,23 @@ def update_action(
     return found_action
 
 
-def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
+def get_tenants() -> Sequence[Tenant]:
     with Session(engine) as session:
         try:
-            tenants = session.exec(select(Tenant)).all()
+            return session.exec(select(Tenant)).all()
         # except column configuration does not exist (new column added)
         except OperationalError as e:
             if "Unknown column" in str(e):
                 logger.warning("Column configuration does not exist in the database")
-                return {}
+                return ()
             else:
                 logger.exception("Failed to get tenants configurations")
-                return {}
+                return ()
 
+
+def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
     tenants_configurations = {}
-    for tenant in tenants:
+    for tenant in get_tenants():
         if only_with_config and not tenant.configuration:
             continue
         tenants_configurations[tenant.id] = tenant.configuration or {}
