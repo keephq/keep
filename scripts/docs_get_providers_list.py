@@ -27,6 +27,7 @@ NON_DOCUMENTED_PROVIDERS = [
     "keep",
     "bigquery",
     "parseable",
+    "smtp",
 ] # known not documented providers https://github.com/keephq/keep/issues/2033
 
 
