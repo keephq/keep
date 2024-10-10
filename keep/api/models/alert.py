@@ -157,6 +157,7 @@ class AlertDto(BaseModel):
     isNoisy: bool = False  # Whether the alert is noisy
 
     enriched_fields: list = []
+    incident: str | None = None
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary

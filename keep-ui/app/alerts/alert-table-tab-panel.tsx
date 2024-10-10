@@ -19,6 +19,11 @@
       return alert.dismissed === true;
     }
 
+    if (presetName === "without-incident") {
+      return alert.incident === null;
+    }
+
+
     return true;
   };
 
@@ -31,6 +36,7 @@
     setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
     setDismissModalAlert: (alert: AlertDto[] | null) => void;
     setChangeStatusAlert: (alert: AlertDto | null) => void;
+    mutateAlerts: () => void;
   }
 
   export default function AlertTableTabPanel({
@@ -42,6 +48,7 @@
     setRunWorkflowModalAlert,
     setDismissModalAlert,
     setChangeStatusAlert,
+    mutateAlerts
   }: Props) {
     const sortedPresetAlerts = alerts
       .filter((alert) => getPresetAlerts(alert, preset.name))
@@ -92,9 +99,10 @@
           presetName={preset.name}
           presetPrivate={preset.is_private}
           presetNoisy={preset.is_noisy}
-          presetStatic={preset.name === "feed" || preset.name === "groups" || preset.name === "dismissed"}
+          presetStatic={preset.name === "feed" || preset.name === "groups" || preset.name === "dismissed" || preset.name === "without-incident"}
           presetId={preset.id}
           presetTabs={presetTabs}
+          mutateAlerts={mutateAlerts}
       />
     );
   }

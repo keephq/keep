@@ -41,6 +41,21 @@ STATIC_PRESETS = {
         static=True,
         tags=[],
     ),
+    "without-incident": PresetDto(
+        id=StaticPresetsId.WITHOUT_INCIDENT_PRESET_ID.value,
+        name="without-incident",
+        options=[
+            {"label": "CEL", "value": "incident == null"},
+            {"label": "SQL", "value": {"sql": "incident is null", "params": {}}},
+        ],
+        created_by=None,
+        is_private=False,
+        is_noisy=False,
+        should_do_noise_now=False,
+        static=True,
+        tags=[],
+    ),
+
 }
 
 ###
