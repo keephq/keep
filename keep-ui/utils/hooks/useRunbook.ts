@@ -8,15 +8,13 @@ import { debounce } from "lodash";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 
-export const useRunBookTriggers = (values: any, refresh: number) => {
+export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:  React.Dispatch<React.SetStateAction<boolean>>) => {
   const providersData = useProviders();
-  const [error, setError] = useState("");
-  const [synced, setSynced] = useState(false);
   const [fileData, setFileData] = useState<any>({});
   const [reposData, setRepoData] = useState<any>([]);
-  const { pathToMdFile, repoName, userName, providerId, domain } = values || {};
+  const { providerId } = values || {};
   const { data: session } = useSession();
-  const { installed_providers, providers } = (providersData?.data ||
+  const { installed_providers } = (providersData?.data ||
     {}) as ProvidersResponse;
   const runBookInstalledProviders =
     installed_providers?.filter((provider) =>
@@ -41,6 +39,7 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
         setRepoData(data);
       } catch (err) {
         console.log("error occurred while fetching data");
+        toast.error("Failed to fetch repositories. Please check the provider settings.");
         setRepoData([]);
       }
     };
@@ -83,20 +82,23 @@ export const useRunBookTriggers = (values: any, refresh: number) => {
       });
 
       if (!response) {
-        return setError("Something went wrong. try agian after some time");
+        toast.error("Failed to create runbook. Something went wrong, please try again later.");
+        return;
       }
 
       if(!response.ok) {
-        return setError("Something went wrong. try agian after some time");
+        toast.error("Failed to create runbook. Something went wrong, please try again later.");
+        return;
 
       }
       const result = await response.json();
       setFileData(result);
-      setSynced(false);
+      setIsModalOpen(false);
+      toast.success("Runbook created successfully");
     } catch (err) {
-      return setError("Something went wrong. try agian after some time");
+      return;
     } finally {
-      setSynced(true);
+      
     }
   };
 

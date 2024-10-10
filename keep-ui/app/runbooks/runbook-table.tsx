@@ -10,6 +10,7 @@ import {
   TextInput,
   Title,
   Card,
+  Callout,
 } from "@tremor/react";
 import {
   createColumnHelper,
@@ -27,6 +28,7 @@ import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
 import RunbookActions from "./runbook-actions";
 import { RunbookDto, RunbookResponse } from "./models";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 
 const customStyles = {
   content: {
@@ -123,7 +125,7 @@ function SettingsPage() {
     handleSubmit: submitHandler,
     provider,
     fileData,
-  } = useRunBookTriggers(getValues(), refresh);
+  } = useRunBookTriggers(getValues(), refresh, setIsModalOpen);
 
   const selectedProviderId = watch(
     "providerId",
@@ -269,7 +271,7 @@ function RunbookIncidentTable() {
 
   let shouldFetch = session?.accessToken ? true : false;
 
-  const { data: runbooksData, error } = useSWR<RunbookResponse>(
+  const { data: runbooksData, error, isLoading } = useSWR<RunbookResponse>(
     shouldFetch
       ? `${getApiURL()}/runbooks?limit=${limit}&offset=${offset}`
       : null,
@@ -301,13 +303,13 @@ function RunbookIncidentTable() {
   };
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      <div className="flex justify-between items-center h-[10%]">
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-center">
         <Title>Runbook</Title>
         <SettingsPage />
       </div>
-      <Card className="flex-1 overflow-auto">
-        {!!total_count && (
+      <Card className="flex-grow">
+        {!isLoading && !error && (
           <GenericTable<RunbookDto>
             data={runbooks}
             columns={columnsv2}
@@ -321,6 +323,12 @@ function RunbookIncidentTable() {
             getActions={getActions}
             isRowSelectable={true}
           />
+        )}
+        {error && (
+          <Callout title={""}>
+            <ExclamationCircleIcon className="h-6 w-6 text-red-600" />
+            Something went wrong. please try again or reach out support team.
+          </Callout>
         )}
       </Card>
     </div>
