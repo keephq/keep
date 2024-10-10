@@ -994,7 +994,7 @@ def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
 
 
 def get_alerts_with_filters(
-    tenant_id, provider_id=None, filters=None, time_delta=1
+    tenant_id, provider_id=None, filters=None, time_delta=1, with_incidents=False,
 ) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
@@ -1002,6 +1002,8 @@ def get_alerts_with_filters(
 
         # Apply subqueryload to force-load the alert_enrichment relationship
         query = query.options(subqueryload(Alert.alert_enrichment))
+        if with_incidents:
+            query = query.options(joinedload(Alert.incidents))
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
@@ -2825,11 +2827,12 @@ def get_incidents_count(
 
 def get_incident_alerts_by_incident_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: UUID | str,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
+    session: Optional[Session] = None,
 ) -> (List[Alert], int):
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         query = (
             session.query(
                 Alert,

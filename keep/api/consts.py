@@ -46,7 +46,7 @@ STATIC_PRESETS = {
         name="without-incident",
         options=[
             {"label": "CEL", "value": "incident == null"},
-            {"label": "SQL", "value": {"sql": "alerttoincident.incident_id is null", "params": {}}},
+            {"label": "SQL", "value": {"sql": "incident is null", "params": {}}},
         ],
         created_by=None,
         is_private=False,
