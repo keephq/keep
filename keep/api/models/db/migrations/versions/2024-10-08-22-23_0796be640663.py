@@ -1,7 +1,7 @@
 """Add  runbook tables
 
 Revision ID: 0796be640663
-Revises: 017d759805d9
+Revises: bf756df80e9d
 Create Date: 2024-10-08 22:23:47.905179
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0796be640663"
-down_revision = "017d759805d9"
+down_revision = "bf756df80e9d"
 branch_labels = None
 depends_on = None
 
