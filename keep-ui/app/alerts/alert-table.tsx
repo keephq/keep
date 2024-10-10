@@ -51,7 +51,7 @@ interface Props {
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
-  mutateAlerts: () => void;
+  mutateAlerts?: () => void;
 }
 
 export function AlertTable({
