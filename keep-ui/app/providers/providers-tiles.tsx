@@ -26,12 +26,9 @@ const ProvidersTiles = ({
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
-  const [panelSize, setPanelSize] = useState<number>(40);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const providerType = searchParams?.get("provider_type");
   const providerName = searchParams?.get("provider_name");
@@ -45,53 +42,21 @@ const ProvidersTiles = ({
 
       if (provider) {
         setSelectedProvider(provider);
-        if (providerName) {
-          setFormValues({
-            provider_name: providerName,
-          });
-        }
         setOpenPanel(true);
       }
     }
   }, [providerType, providerName, providers]);
 
-  useEffect(() => {
-    const pageWidth = window.innerWidth;
-
-    if (pageWidth < 640) {
-      setPanelSize(100);
-    } else {
-      setPanelSize(40);
-    }
-  }, [openPanel]);
-
-  const handleFormChange = (
-    updatedFormValues: Record<string, string>,
-    updatedFormErrors: Record<string, string>
-  ) => {
-    setFormValues(updatedFormValues);
-    setFormErrors(updatedFormErrors);
-  };
-
   const handleConnectProvider = (provider: Provider) => {
     // on linked providers, don't open the modal
     if (provider.linked) return;
-
     setSelectedProvider(provider);
-    if (installedProvidersMode) {
-      setFormValues({
-        provider_name: provider.details.name!,
-        ...provider.details?.authentication,
-      });
-    }
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
     setSelectedProvider(null);
-    setFormValues({});
-    setFormErrors({});
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
@@ -111,12 +76,17 @@ const ProvidersTiles = ({
   };
 
   const sortedProviders = providers
-    .filter(provider => Object.keys(provider.config || {}).length > 0 || (provider.tags && provider.tags.includes('alert')))
+    .filter(
+      (provider) =>
+        Object.keys(provider.config || {}).length > 0 ||
+        (provider.tags && provider.tags.includes("alert"))
+    )
     .sort(
       (a, b) =>
         Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
         Number(b.supports_webhook) - Number(a.supports_webhook) ||
-        Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
+        Number(b.oauth2_url ? true : false) -
+          Number(a.oauth2_url ? true : false)
     );
 
   return (
@@ -148,16 +118,13 @@ const ProvidersTiles = ({
       <SlidingPanel
         type={"right"}
         isOpen={openPanel}
-        size={panelSize}
+        size={window.innerWidth < 640 ? 100 : 40}
         backdropClicked={handleCloseModal}
         panelContainerClassName="bg-white z-[2000]"
       >
         {selectedProvider && (
           <ProviderForm
             provider={selectedProvider}
-            formData={formValues}
-            formErrorsData={formErrors}
-            onFormChange={handleFormChange}
             onConnectChange={handleConnecting}
             onAddProvider={addProvider}
             closeModal={handleCloseModal}

@@ -272,8 +272,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
     null
   );
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
   const alertSource = workflow?.triggers
@@ -293,23 +291,12 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
     // prepopulate it with the name
-    setFormValues({ provider_name: provider.details.name || "" });
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
     setSelectedProvider(null);
-    setFormValues({});
-    setFormErrors({});
-  };
-  // Function to handle form change
-  const handleFormChange = (
-    updatedFormValues: Record<string, string>,
-    updatedFormErrors: Record<string, string>
-  ) => {
-    setFormValues(updatedFormValues);
-    setFormErrors(updatedFormErrors);
   };
 
   const handleDeleteClick = async () => {
@@ -672,9 +659,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             {selectedProvider && (
               <ProviderForm
                 provider={selectedProvider}
-                formData={formValues}
-                formErrorsData={formErrors}
-                onFormChange={handleFormChange}
                 onConnectChange={handleConnecting}
                 closeModal={handleCloseModal}
                 installedProvidersMode={selectedProvider.installed}
@@ -727,8 +711,6 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
     null
   );
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const { providers } = useFetchProviders();
   const {
@@ -741,24 +723,12 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
-    // prepopulate it with the name
-    setFormValues({ provider_name: provider.details.name || "" });
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
     setSelectedProvider(null);
-    setFormValues({});
-    setFormErrors({});
-  };
-  // Function to handle form change
-  const handleFormChange = (
-    updatedFormValues: Record<string, string>,
-    updatedFormErrors: Record<string, string>
-  ) => {
-    setFormValues(updatedFormValues);
-    setFormErrors(updatedFormErrors);
   };
 
   const handleDeleteClick = async () => {
@@ -1011,9 +981,6 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           {selectedProvider && (
             <ProviderForm
               provider={selectedProvider}
-              formData={formValues}
-              formErrorsData={formErrors}
-              onFormChange={handleFormChange}
               onConnectChange={handleConnecting}
               closeModal={handleCloseModal}
               installedProvidersMode={selectedProvider.installed}

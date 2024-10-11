@@ -1,15 +1,18 @@
 export interface ProviderAuthConfig {
-  name: string;
   description: string;
   hint?: string;
   placeholder?: string;
   validation: string; // regex
   required?: boolean;
   value?: string;
+  default: string | number | boolean | null;
+  options?: Array<string | number>;
   sensitive?: boolean;
   hidden?: boolean;
   type?: string;
   file_type?: string;
+  config_main_group?: string;
+  config_sub_group?: string;
 }
 
 export interface ProviderMethodParam {
@@ -51,7 +54,13 @@ interface AlertDistritbuionData {
   number: number;
 }
 
-export type TProviderLabels = 'alert' | 'topology' | 'messaging' | 'ticketing' | 'data' | 'queue';
+export type TProviderLabels =
+  | "alert"
+  | "topology"
+  | "messaging"
+  | "ticketing"
+  | "data"
+  | "queue";
 
 export interface Provider {
   // key value pair of auth method name and auth method config

@@ -1,9 +1,14 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
-// @ts-nocheck
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useSession } from "next-auth/react";
-import { Provider } from "./providers";
+import { Provider, ProviderAuthConfig } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
 import Image from "next/image";
 import {
@@ -41,7 +46,7 @@ import {
   GlobeAltIcon,
   DocumentTextIcon,
   PlusIcon,
-  TrashIcon
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -50,15 +55,10 @@ import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
+import { toast } from "react-toastify";
 
 type ProviderFormProps = {
   provider: Provider;
-  formData: Record<string, string>; // New prop for form data
-  formErrorsData: Record<string, string>; // New prop for form data
-  onFormChange?: (
-    formValues: Record<string, string>,
-    formErrors: Record<string, string>
-  ) => void;
   onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
   onAddProvider?: (provider: Provider) => void;
@@ -68,8 +68,19 @@ type ProviderFormProps = {
   isLocalhost?: boolean;
 };
 
-function dec2hex(dec) {
-  return ("0" + dec.toString(16)).substr(-2);
+type KVFormData = Record<string, string>[];
+type ProviderFormValue =
+  | string
+  | number
+  | boolean
+  | File
+  | KVFormData
+  | undefined;
+type ProviderFormData = Record<string, ProviderFormValue>;
+type InputErrors = Record<string, string>;
+
+function dec2hex(dec: number) {
+  return ("0" + dec.toString(16)).substring(-2);
 }
 
 function generateRandomString() {
@@ -78,14 +89,14 @@ function generateRandomString() {
   return Array.from(array, dec2hex).join("");
 }
 
-function sha256(plain) {
+function sha256(plain: string) {
   // returns promise ArrayBuffer
   const encoder = new TextEncoder();
   const data = encoder.encode(plain);
   return window.crypto.subtle.digest("SHA-256", data);
 }
 
-function base64urlencode(a) {
+function base64urlencode(a: ArrayBuffer) {
   var str = "";
   var bytes = new Uint8Array(a);
   var len = bytes.byteLength;
@@ -95,52 +106,49 @@ function base64urlencode(a) {
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-const DictInput = ({ name, value, onChange, error }) => {
-  const handleEntryChange = (index, field, newValue) => {
-    const newEntries = value.map((entry, i) =>
-      i === index ? { ...entry, [field]: newValue } : entry
+function getRequiredConfigs(config: Provider["config"]): Provider["config"] {
+  return Object.entries(config)
+    .filter(([_, config]) => config.required && !config.config_main_group)
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+}
+
+function getOptionalConfigs(config: Provider["config"]): Provider["config"] {
+  return Object.entries(config)
+    .filter(
+      ([_, config]) =>
+        !config.required && !config.hidden && !config.config_main_group
+    )
+    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+}
+
+function getConfigGroup(type: "config_main_group" | "config_sub_group") {
+  return (configs: Provider["config"]) => {
+    return Object.entries(configs).reduce(
+      (acc: Record<string, Provider["config"]>, [key, config]) => {
+        const group = config[type];
+        if (!group) return acc;
+        acc[group] ??= {};
+        acc[group][key] = config;
+        return acc;
+      },
+      {}
     );
-    onChange(newEntries);
   };
+}
 
-  const removeEntry = (index) => {
-    const newEntries = value.filter((_, i) => i !== index);
-    onChange(newEntries);
-  };
+const getConfigByMainGroup = getConfigGroup("config_main_group");
+const getConfigBySubGroup = getConfigGroup("config_sub_group");
 
-  return (
-    <div>
-      {value.map((entry, index) => (
-        <div key={index} className="flex items-center mb-2">
-          <TextInput
-            value={entry.key}
-            onChange={(e) => handleEntryChange(index, 'key', e.target.value)}
-            placeholder="Key"
-            className="mr-2"
-          />
-          <TextInput
-            value={entry.value}
-            onChange={(e) => handleEntryChange(index, 'value', e.target.value)}
-            placeholder="Value"
-            className="mr-2"
-          />
-          <Button
-            icon={TrashIcon}
-            variant="secondary"
-            color="orange"
-            size="xs"
-            onClick={() => removeEntry(index)}
-          />
-        </div>
-      ))}
-    </div>
-  );
+const providerNameFieldConfig: ProviderAuthConfig = {
+  required: true,
+  description: "Provider Name",
+  placeholder: "Enter provider name",
+  validation: "",
+  default: null,
 };
 
 const ProviderForm = ({
   provider,
-  formData,
-  onFormChange,
   onConnectChange,
   onAddProvider,
   closeModal,
@@ -151,72 +159,70 @@ const ProviderForm = ({
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const searchParams = useSearchParams();
-  const [activeTabsState, setActiveTabsState] = useState({});
-  const initialData = {
-    provider_id: provider.id, // Include the provider ID in formValues
-    ...formData,
-  };
-  if (provider.can_setup_webhook) {
-    initialData["install_webhook"] = provider.can_setup_webhook;
-  }
-  const [formValues, setFormValues] = useState<{
-    [key: string]: string | boolean;
-  }>(() => {
-    const initialValues = {
+  const [formValues, setFormValues] = useState<ProviderFormData>(() => {
+    const initialValues: ProviderFormData = {
       provider_id: provider.id,
-      ...formData,
+      install_webhook: provider.can_setup_webhook ?? false,
     };
+    if (provider.installed)
+      Object.assign(initialValues, {
+        provider_name: provider.details.name,
+        ...provider.details.authentication,
+      });
 
     // Set default values for select inputs
     Object.entries(provider.config).forEach(([configKey, method]) => {
-      if (method.type === 'select' && method.default && !initialValues[configKey]) {
+      if (
+        method.type === "select" &&
+        method.default &&
+        !initialValues[configKey]
+      ) {
         initialValues[configKey] = method.default;
       }
     });
 
-    if (provider.can_setup_webhook) {
-      initialValues["install_webhook"] = provider.can_setup_webhook;
-    }
     return initialValues;
   });
 
-  const [formErrors, setFormErrors] = useState<string>(null);
-  const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+  const [formErrors, setFormErrors] = useState<string | null>(null);
+  const [inputErrors, setInputErrors] = useState<InputErrors>({});
   // Related to scopes
   const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
     [key: string]: boolean | string;
   }>(provider.validatedScopes);
-  const [triggerRevalidateScope, setTriggerRevalidateScope] = useState(0);
   const [refreshLoading, setRefreshLoading] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
-  const inputFileRef = useRef(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const requiredConfigs = useMemo(
+    () => getRequiredConfigs(provider.config),
+    [provider]
+  );
+  const optionalConfigs = useMemo(
+    () => getOptionalConfigs(provider.config),
+    [provider]
+  );
+  const groupedConfigs = useMemo(
+    () => getConfigByMainGroup(provider.config),
+    [provider]
+  );
 
   const { data: session } = useSession();
-
   const accessToken = session?.accessToken;
 
-  const callInstallWebhook = async (e: Event) => {
+  const callInstallWebhook = async () => {
     await installWebhook(provider, accessToken!);
-    e.preventDefault();
   };
 
-  async function handleOauth(e: MouseEvent) {
-    e.preventDefault();
+  async function handleOauth() {
     const verifier = generateRandomString();
     cookieCutter.set("verifier", verifier);
     const verifierChallenge = base64urlencode(await sha256(verifier));
 
     let oauth2Url = provider.oauth2_url;
-    if (searchParams?.get("domain")) {
+    const domain = searchParams?.get("domain");
+    if (domain) {
       // TODO: this is a hack for Datadog OAuth2 since it can be initated from different domains
-      oauth2Url = oauth2Url?.replace(
-        "datadoghq.com",
-        searchParams.get("domain")
-      );
+      oauth2Url = oauth2Url?.replace("datadoghq.com", domain);
     }
 
     let url = `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`;
@@ -228,40 +234,26 @@ const ProviderForm = ({
     window.location.assign(url);
   }
 
-  useEffect(() => {
-    // Set initial active tabs for each main group
-    const initialActiveTabsState = {};
-    Object.keys(groupedConfigs).forEach(mainGroup => {
-      const subGroups = getSubGroups(groupedConfigs[mainGroup]);
-      if (subGroups.length > 0) {
-        initialActiveTabsState[mainGroup] = subGroups[0];
+  function revalidateScopes() {
+    setRefreshLoading(true);
+    fetch(`${getApiURL()}/providers/${provider.id}/scopes`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }).then((response) => {
+      if (response.ok) {
+        response.json().then((newValidatedScopes) => {
+          setProviderValidatedScopes(newValidatedScopes);
+          provider.validatedScopes = newValidatedScopes;
+          onAddProvider?.(provider);
+          setRefreshLoading(false);
+        });
+      } else {
+        setRefreshLoading(false);
       }
     });
-    setActiveTabsState(initialActiveTabsState);
-  }, []);
-
-  useEffect(() => {
-    if (triggerRevalidateScope !== 0) {
-      setRefreshLoading(true);
-      fetch(`${getApiURL()}/providers/${provider.id}/scopes`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
-          response.json().then((newValidatedScopes) => {
-            setProviderValidatedScopes(newValidatedScopes);
-            provider.validatedScopes = newValidatedScopes;
-            onAddProvider(provider);
-            setRefreshLoading(false);
-          });
-        } else {
-          setRefreshLoading(false);
-        }
-      });
-    }
-  }, [triggerRevalidateScope, accessToken, provider.id]);
+  }
 
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
@@ -283,54 +275,44 @@ const ProviderForm = ({
     }
   }
 
-  const validateForm = (updatedFormValues) => {
-    const errors = {};
+  const validateForm = (updatedFormValues: ProviderFormData) => {
+    const errors: InputErrors = {};
     for (const [configKey, method] of Object.entries(provider.config)) {
       if (!formValues[configKey] && method.required) {
-        errors[configKey] = true;
+        errors[configKey] = "This field is required";
       }
       if (
         "validation" in method &&
-        formValues[configKey] &&
-        !method.validation(updatedFormValues[configKey])
+        formValues[configKey]
+        // TODO:add form validation here
       ) {
-        errors[configKey] = true;
+        errors[configKey] = "";
       }
       if (!formValues.provider_name) {
-        errors["provider_name"] = true;
+        errors["provider_name"] = "This field is required";
       }
     }
     setInputErrors(errors);
     return errors;
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, type } = event.target;
-    let value;
-
-    // If the input is a file, retrieve the file object, otherwise retrieve the value
-    if (type === "file") {
-      value = event.target.files?.[0]; // Assumes single file upload
-    } else {
-      value = event.target.value;
-    }
-
-    setFormValues((prevValues) => {
-      const updatedValues = { ...prevValues, [name]: value };
-      onFormChange(updatedValues, formErrors);
+  function handleFormChange(key: string, value: ProviderFormValue) {
+    setFormValues((prev) => {
+      const prevValue = prev[key];
+      const updatedValues = {
+        ...prev,
+        [key]:
+          Array.isArray(value) && Array.isArray(prevValue) ? [...value] : value,
+      };
       return updatedValues;
     });
 
-    const updatedFormValues = { ...formValues, [name]: value };
-
-    if (Object.keys(inputErrors).includes(name) && value !== "") {
+    if (Object.keys(inputErrors).includes(key) && value !== "") {
       const updatedInputErrors = { ...inputErrors };
-      delete updatedInputErrors[name];
+      delete updatedInputErrors[key];
       setInputErrors(updatedInputErrors);
     }
-
-    onFormChange(updatedFormValues, formErrors);
-  };
+  }
 
   const handleWebhookChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
@@ -362,20 +344,24 @@ const ProviderForm = ({
   ): Promise<any> => {
     let headers = {
       Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
     };
 
     let body;
-
     if (Object.values(formValues).some((value) => value instanceof File)) {
       // FormData for file uploads
       let formData = new FormData();
       for (let key in formValues) {
-        formData.append(key, formValues[key]);
+        const value = formValues[key];
+        if (!value) continue;
+        value instanceof File
+          ? formData.append(key, value)
+          : formData.append(key, value.toString());
       }
       body = formData;
+      headers["Content-Type"] = "multipart/form-data";
     } else {
       // Standard JSON for non-file submissions
-      headers["Content-Type"] = "application/json";
       body = JSON.stringify(formValues);
     }
 
@@ -421,12 +407,11 @@ const ProviderForm = ({
       submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
-          onAddProvider({ ...provider, ...data } as Provider);
+          onAddProvider?.({ ...provider, ...data } as Provider);
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
           setFormErrors(updatedFormErrors);
-          onFormChange(formValues, updatedFormErrors);
           setIsLoading(false);
         });
     }
@@ -435,27 +420,27 @@ const ProviderForm = ({
   const handleConnectClick = () => {
     if (validate()) {
       setIsLoading(true);
-      onConnectChange(true, false);
+      onConnectChange?.(true, false);
       submit(`${getApiURL()}/providers/install`)
         .then((data) => {
           console.log("Connect Result:", data);
           setIsLoading(false);
-          onConnectChange(false, true);
+          onConnectChange?.(false, true);
           if (
             formValues.install_webhook &&
             provider.can_setup_webhook &&
+            accessToken &&
             !isLocalhost
           ) {
             installWebhook(data as Provider, accessToken);
           }
-          onAddProvider({ ...provider, ...data } as Provider);
+          onAddProvider?.({ ...provider, ...data } as Provider);
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
           setFormErrors(updatedFormErrors);
-          onFormChange(formValues, updatedFormErrors);
           setIsLoading(false);
-          onConnectChange(false, false);
+          onConnectChange?.(false, false);
         });
     }
   };
@@ -464,237 +449,6 @@ const ProviderForm = ({
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
-
-    const addEntry = (fieldName) => (e) => {
-      e.preventDefault();
-      setFormValues((prevValues) => {
-        const currentEntries = prevValues[fieldName] || [];
-        const updatedEntries = [...currentEntries, { key: "", value: "" }];
-        const updatedValues = { ...prevValues, [fieldName]: updatedEntries };
-        onFormChange(updatedValues, formErrors);
-        return updatedValues;
-      });
-    };
-
-    const handleDictInputChange = (fieldName, newValue) => {
-      setFormValues((prevValues) => {
-        const updatedValues = { ...prevValues, [fieldName]: newValue };
-        onFormChange(updatedValues, formErrors);
-        return updatedValues;
-      });
-    };
-
-
-
-
-    const renderFormField = (configKey, method) => {
-      if (method.hidden) return null;
-
-      const renderFieldHeader = () => (
-        <label htmlFor={configKey} className="flex items-center mb-1">
-          <Text className="capitalize">
-            {method.description}
-            {method.required === true && <span className="text-red-400">*</span>}
-          </Text>
-          {method.hint && (
-            <Icon
-              icon={QuestionMarkCircleIcon}
-              variant="simple"
-              color="gray"
-              size="sm"
-              tooltip={`${method.hint}`}
-            />
-          )}
-        </label>
-      );
-
-      switch (method.type) {
-        case "select":
-          return (
-            <>
-              {renderFieldHeader()}
-              <Select
-                id={configKey}
-                name={configKey}
-                value={formValues[configKey] || method.default}
-                onChange={(value) => handleInputChange({ target: { name: configKey, value } })}
-                placeholder={method.placeholder || `Select ${configKey}`}
-                error={Object.keys(inputErrors).includes(configKey)}
-                disabled={provider.provisioned}
-              >
-                {method.options.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </Select>
-            </>
-          );
-          case "form":
-        return (
-          <div>
-            <div className="flex items-center mb-2">
-              {renderFieldHeader()}
-              <Button
-                className="ml-2"
-                icon={PlusIcon}
-                variant="secondary"
-                color="orange"
-                size="xs"
-                onClick={addEntry(configKey)}
-                disabled={provider.provisioned}
-              >
-                Add Entry
-              </Button>
-            </div>
-            <DictInput
-              name={configKey}
-              value={formValues[configKey] || []}
-              onChange={(value) => handleDictInputChange(configKey, value)}
-              error={Object.keys(inputErrors).includes(configKey)}
-              disabled={provider.provisioned}
-            />
-          </div>
-        );
-        case "file":
-          return (
-            <>
-              {renderFieldHeader()}
-              <Button
-                color="orange"
-                size="md"
-                onClick={(e) => {
-                  e.preventDefault();
-                  inputFileRef.current.click();
-                }}
-                icon={ArrowDownOnSquareIcon}
-                disabled={provider.provisioned}
-              >
-                {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
-              </Button>
-              <input
-                ref={inputFileRef}
-                type="file"
-                id={configKey}
-                name={configKey}
-                accept={method.file_type}
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setSelectedFile(e.target.files[0].name);
-                  }
-                  handleInputChange(e);
-                }}
-                disabled={provider.provisioned}
-              />
-            </>
-          );
-        default:
-          return (
-            <>
-              {renderFieldHeader()}
-              <TextInput
-                type={method.sensitive ? "password" : method.type}
-                id={configKey}
-                name={configKey}
-                value={formValues[configKey] || ""}
-                onChange={handleInputChange}
-                autoComplete="off"
-                error={Object.keys(inputErrors).includes(configKey)}
-                placeholder={method.placeholder || `Enter ${configKey}`}
-                disabled={provider.provisioned}
-              />
-            </>
-          );
-      }
-    };
-
-
-
-  const requiredConfigs = Object.entries(provider.config)
-    .filter(([_, config]) => config.required && !config.config_main_group)
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-
-  const optionalConfigs = Object.entries(provider.config)
-    .filter(([_, config]) => !config.required && !config.hidden && !config.config_main_group)
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-
-    const groupConfigsByMainGroup = (configs) => {
-      return Object.entries(configs).reduce((acc, [key, config]) => {
-        const mainGroup = config.config_main_group;
-        if (mainGroup) {
-          if (!acc[mainGroup]) {
-            acc[mainGroup] = {};
-          }
-          acc[mainGroup][key] = config;
-        }
-        return acc;
-      }, {});
-    };
-
-    const groupConfigsBySubGroup = (configs) => {
-      return Object.entries(configs).reduce((acc, [key, config]) => {
-        const subGroup = config.config_sub_group || 'default';
-        if (!acc[subGroup]) {
-          acc[subGroup] = {};
-        }
-        acc[subGroup][key] = config;
-        return acc;
-      }, {});
-    };
-
-    const getSubGroups = (configs) => {
-    return [...new Set(Object.values(configs).map(config => config.config_sub_group))].filter(Boolean);
-  };
-
-  const renderGroupFields = (groupName, groupConfigs) => {
-    const subGroups = groupConfigsBySubGroup(groupConfigs);
-    const subGroupNames = getSubGroups(groupConfigs);
-
-    if (subGroupNames.length === 0) {
-      // If no subgroups, render fields directly
-      return (
-        <Card className="mt-4">
-          <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
-          {Object.entries(groupConfigs).map(([configKey, config]) => (
-            <div className="mt-2.5" key={configKey}>
-              {renderFormField(configKey, config)}
-            </div>
-          ))}
-        </Card>
-      );
-    }
-
-    return (
-      <Card className="mt-4">
-        <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
-        <TabGroup
-          className="mt-2"
-          onIndexChange={(index) => setActiveTabsState(prev => ({...prev, [groupName]: subGroupNames[index]}))}
-        >
-          <TabList>
-            {subGroupNames.map((subGroup) => (
-              <Tab key={subGroup}>{subGroup.replace('_', ' ').toUpperCase()}</Tab>
-            ))}
-          </TabList>
-          <TabPanels>
-            {subGroupNames.map((subGroup) => (
-              <TabPanel key={subGroup}>
-                {Object.entries(subGroups[subGroup] || {}).map(([configKey, config]) => (
-                  <div className="mt-2.5" key={configKey}>
-                    {renderFormField(configKey, config)}
-                  </div>
-                ))}
-              </TabPanel>
-            ))}
-          </TabPanels>
-        </TabGroup>
-      </Card>
-    );
-  };
-
-  const groupedConfigs = groupConfigsByMainGroup(provider.config);
-  console.log("ProviderForm component loaded");
   return (
     <div className="flex flex-col justify-between p-5">
       <div>
@@ -721,9 +475,10 @@ const ProviderForm = ({
           </Link>
         </div>
 
-        {provider.provisioned &&
+        {provider.provisioned && (
           <div className="w-full mt-4">
             <Callout
+              title=""
               icon={ExclamationTriangleIcon}
               color="orange"
               className="w-full"
@@ -733,7 +488,7 @@ const ProviderForm = ({
               </Text>
             </Callout>
           </div>
-        }
+        )}
 
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
@@ -770,13 +525,12 @@ const ProviderForm = ({
             />
           </div>
         )}
-        {provider.scopes?.length > 0 && (
+        {provider.scopes && provider.scopes.length > 0 && (
           <ProviderFormScopes
             provider={provider}
             validatedScopes={providerValidatedScopes}
-            installedProvidersMode={installedProvidersMode}
-            triggerRevalidateScope={setTriggerRevalidateScope}
             refreshLoading={refreshLoading}
+            onRevalidate={revalidateScopes}
           />
         )}
         <form>
@@ -784,6 +538,7 @@ const ProviderForm = ({
             {provider.oauth2_url && !provider.installed ? (
               <>
                 <Button
+                  type="button"
                   color="orange"
                   variant="secondary"
                   icon={ArrowTopRightOnSquareIcon}
@@ -796,61 +551,72 @@ const ProviderForm = ({
             ) : null}
             {Object.keys(provider.config).length > 0 && (
               <>
-                <label htmlFor="provider_name" className="label-container mb-1">
-                  <Text>
-                    Provider Name
-                    <span className="text-red-400">*</span>
-                  </Text>
-                </label>
-                <TextInput
-                  type="text"
+                <FormField
                   id="provider_name"
-                  name="provider_name"
-                  value={formValues.provider_name || ""}
-                  onChange={handleInputChange}
-                  placeholder="Enter provider name"
-                  color="orange"
-                  autoComplete="off"
-                  disabled={isProviderNameDisabled}
-                  error={Object.keys(inputErrors).includes("provider_name")}
+                  config={providerNameFieldConfig}
+                  value={(formValues["provider_name"] ?? "").toString()}
+                  error={inputErrors["provider_name"]}
+                  disabled={isProviderNameDisabled ?? false}
                   title={
                     isProviderNameDisabled
                       ? "This field is disabled because it is pre-filled from the workflow."
                       : ""
                   }
+                  onChange={handleFormChange}
                 />
               </>
             )}
           </div>
           {/* Render required fields */}
-          {Object.entries(requiredConfigs).map(([configKey, config]) => (
-            <div className="mt-2.5" key={configKey}>
-              {renderFormField(configKey, config)}
+          {Object.entries(requiredConfigs).map(([field, config]) => (
+            <div className="mt-2.5" key={field}>
+              <FormField
+                id={field}
+                config={config}
+                value={formValues[field]}
+                error={inputErrors[field]}
+                disabled={provider.provisioned ?? false}
+                onChange={handleFormChange}
+              />
             </div>
           ))}
 
           {/* Render grouped fields */}
-          {Object.entries(groupedConfigs).map(([groupName, groupConfigs]) => (
-            <React.Fragment key={groupName}>
-              {renderGroupFields(groupName, groupConfigs)}
+          {Object.entries(groupedConfigs).map(([name, fields]) => (
+            <React.Fragment key={name}>
+              <GroupFields
+                groupName={name}
+                fields={fields}
+                data={formValues}
+                errors={inputErrors}
+                disabled={provider.provisioned ?? false}
+                onChange={handleFormChange}
+              />
             </React.Fragment>
           ))}
 
           {/* Render optional fields in a card */}
           {Object.keys(optionalConfigs).length > 0 && (
-          <Accordion className="mt-4" defaultOpen={true}>
-            <AccordionHeader>Provider Optional Settings</AccordionHeader>
-            <AccordionBody>
-              <Card>
-                {Object.entries(optionalConfigs).map(([configKey, config]) => (
-                  <div className="mt-2.5" key={configKey}>
-                    {renderFormField(configKey, config)}
-                  </div>
-                ))}
-              </Card>
-            </AccordionBody>
-          </Accordion>
-        )}
+            <Accordion className="mt-4" defaultOpen={true}>
+              <AccordionHeader>Provider Optional Settings</AccordionHeader>
+              <AccordionBody>
+                <Card>
+                  {Object.entries(optionalConfigs).map(([field, config]) => (
+                    <div className="mt-2.5" key={field}>
+                      <FormField
+                        id={field}
+                        config={config}
+                        value={formValues[field]}
+                        error={inputErrors[field]}
+                        disabled={provider.provisioned ?? false}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  ))}
+                </Card>
+              </AccordionBody>
+            </Accordion>
+          )}
           <div className="w-full mt-2" key="install_webhook">
             {provider.can_setup_webhook && !installedProvidersMode && (
               <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
@@ -862,7 +628,10 @@ const ProviderForm = ({
                     className="mr-2.5"
                     onChange={handleWebhookChange}
                     checked={
-                      (formValues["install_webhook"] || false) && !isLocalhost
+                      "install_webhook" in formValues &&
+                      typeof formValues["install_webhook"] === "boolean" &&
+                      formValues["install_webhook"] &&
+                      !isLocalhost
                     }
                     disabled={isLocalhost}
                   />
@@ -883,6 +652,7 @@ const ProviderForm = ({
                 {isLocalhost && (
                   <span className="text-sm">
                     <Callout
+                      title=""
                       className="mt-4"
                       icon={ExclamationTriangleIcon}
                       color="gray"
@@ -907,6 +677,7 @@ const ProviderForm = ({
 
           {provider.can_setup_webhook && installedProvidersMode && (
             <Button
+              type="button"
               icon={GlobeAltIcon}
               onClick={callInstallWebhook}
               variant="secondary"
@@ -925,7 +696,7 @@ const ProviderForm = ({
           {provider.supports_webhook && (
             <ProviderSemiAutomated
               provider={provider}
-              accessToken={accessToken}
+              accessToken={accessToken ?? ""}
             />
           )}
           {formErrors && (
@@ -955,7 +726,13 @@ const ProviderForm = ({
         </Button>
         {installedProvidersMode && Object.keys(provider.config).length > 0 && (
           <>
-            <Button onClick={deleteProvider} color="orange" className="mr-2.5" disabled={provider.provisioned} variant="secondary">
+            <Button
+              onClick={deleteProvider}
+              color="orange"
+              className="mr-2.5"
+              disabled={provider.provisioned}
+              variant="secondary"
+            >
               Delete
             </Button>
             <div className="relative">
@@ -984,5 +761,408 @@ const ProviderForm = ({
     </div>
   );
 };
+
+function GroupFields({
+  groupName,
+  fields,
+  data,
+  errors,
+  disabled,
+  onChange,
+}: {
+  groupName: string;
+  fields: Provider["config"];
+  data: ProviderFormData;
+  errors: InputErrors;
+  disabled: boolean;
+  onChange: (key: string, value: ProviderFormValue) => void;
+}) {
+  const subGroups = useMemo(() => getConfigBySubGroup(fields), [fields]);
+
+  if (Object.keys(subGroups).length === 0) {
+    // If no subgroups, render fields directly
+    return (
+      <Card className="mt-4">
+        <Title className="capitalize"> {groupName} </Title>
+        {Object.entries(fields).map(([field, config]) => (
+          <div className="mt-2.5" key={field}>
+            <FormField
+              id={field}
+              config={config}
+              value={data[field]}
+              error={errors[field]}
+              disabled={disabled}
+              onChange={onChange}
+            />
+          </div>
+        ))}
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mt-4">
+      <Title className="capitalize">{groupName}</Title>
+      <TabGroup className="mt-2">
+        <TabList>
+          {Object.keys(subGroups).map((name) => (
+            <Tab key={name} className="capitalize">
+              {name}
+            </Tab>
+          ))}
+        </TabList>
+        <TabPanels>
+          {Object.entries(subGroups).map(([name, subGroup]) => (
+            <TabPanel key={name}>
+              {Object.entries(subGroup).map(([field, config]) => (
+                <div className="mt-2.5" key={field}>
+                  <FormField
+                    id={field}
+                    config={config}
+                    value={data[field]}
+                    error={errors[field]}
+                    disabled={disabled}
+                    onChange={onChange}
+                  />
+                </div>
+              ))}
+            </TabPanel>
+          ))}
+        </TabPanels>
+      </TabGroup>
+    </Card>
+  );
+}
+
+function FormField({
+  id,
+  config,
+  value,
+  error,
+  disabled,
+  title,
+  onChange,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+  value: ProviderFormValue;
+  error?: string;
+  disabled: boolean;
+  title?: string;
+  onChange: (key: string, value: ProviderFormValue) => void;
+}) {
+  function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
+    let value;
+    const files = event.target.files;
+    const name = event.target.name;
+
+    // If the input is a file, retrieve the file object, otherwise retrieve the value
+    if (files && files.length > 0) {
+      value = files[0]; // Assumes single file upload
+    } else {
+      value = event.target.value;
+    }
+
+    onChange(name, value);
+  }
+
+  switch (config.type) {
+    case "select":
+      return (
+        <SelectField
+          id={id}
+          config={config}
+          value={value}
+          error={error}
+          disabled={disabled}
+          onChange={(value) => onChange(id, value)}
+        />
+      );
+    case "form":
+      return (
+        <KVForm
+          id={id}
+          config={config}
+          value={value}
+          error={error}
+          disabled={disabled}
+          onAdd={(data) => onChange(id, data)}
+          onChange={(value) => onChange(id, value)}
+        />
+      );
+    case "file":
+      return (
+        <FileField
+          id={id}
+          config={config}
+          disabled={disabled}
+          onChange={handleInputChange}
+        />
+      );
+    default:
+      return (
+        <TextField
+          id={id}
+          config={config}
+          value={value}
+          error={error}
+          disabled={disabled}
+          title={title}
+          onChange={handleInputChange}
+        />
+      );
+  }
+}
+
+function TextField({
+  id,
+  config,
+  value,
+  error,
+  disabled,
+  title,
+  onChange,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+  value: ProviderFormValue;
+  error?: string;
+  disabled: boolean;
+  title?: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <>
+      <FieldLabel id={id} config={config} />
+      <TextInput
+        type={config.sensitive ? "password" : "text"}
+        id={id}
+        name={id}
+        value={value?.toString()}
+        onChange={onChange}
+        autoComplete="off"
+        error={Boolean(error)}
+        errorMessage={error}
+        placeholder={config.placeholder ?? `Enter ${id}`}
+        disabled={disabled}
+        title={title ?? ""}
+      />
+    </>
+  );
+}
+
+function SelectField({
+  id,
+  config,
+  value,
+  error,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+  value: ProviderFormValue;
+  error?: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <>
+      <FieldLabel id={id} config={config} />
+      <Select
+        name={id}
+        value={value?.toString() ?? config.default?.toString()}
+        onValueChange={onChange}
+        placeholder={config.placeholder || `Select ${id}`}
+        error={Boolean(error)}
+        errorMessage={error}
+        disabled={disabled}
+      >
+        {config.options?.map((option) => (
+          <SelectItem key={option} value={option.toString()}>
+            {option}
+          </SelectItem>
+        ))}
+      </Select>
+    </>
+  );
+}
+
+function FileField({
+  id,
+  config,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+  disabled: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const [selected, setSelected] = useState<string>();
+  const ref = useRef<HTMLInputElement>(null);
+
+  function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (ref.current) ref.current.click();
+  }
+  return (
+    <>
+      <FieldLabel id={id} config={config} />
+      <Button
+        type="button"
+        color="orange"
+        size="md"
+        icon={ArrowDownOnSquareIcon}
+        disabled={disabled}
+        onClick={handleClick}
+      >
+        {selected ? `File Chosen: ${selected}` : `Upload a ${id}`}
+      </Button>
+      <input
+        type="file"
+        ref={ref}
+        id={id}
+        name={id}
+        accept={config.file_type}
+        style={{ display: "none" }}
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            setSelected(e.target.files[0].name);
+          }
+          onChange(e);
+        }}
+        disabled={disabled}
+      />
+    </>
+  );
+}
+
+function KVForm({
+  id,
+  config,
+  value,
+  error,
+  disabled,
+  onAdd,
+  onChange,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+  value: ProviderFormValue;
+  error?: string;
+  disabled: boolean;
+  onAdd: (data: KVFormData) => void;
+  onChange: (value: KVFormData) => void;
+}) {
+  function handleAdd() {
+    const newData = Array.isArray(value)
+      ? [...value, { key: "", value: "" }]
+      : [{ key: "", value: "" }];
+    onAdd(newData);
+  }
+
+  return (
+    <div>
+      <div className="flex items-center mb-2">
+        <FieldLabel id={id} config={config} />
+        <Button
+          type="button"
+          className="ml-2"
+          icon={PlusIcon}
+          variant="secondary"
+          color="orange"
+          size="xs"
+          onClick={handleAdd}
+          disabled={disabled}
+        >
+          Add Entry
+        </Button>
+      </div>
+      {Array.isArray(value) && (
+        <KVInput name={id} data={value} onChange={onChange} error={error} />
+      )}
+    </div>
+  );
+}
+
+const KVInput = ({
+  name,
+  data,
+  onChange,
+  error,
+}: {
+  name: string;
+  data: KVFormData;
+  onChange: (entries: KVFormData) => void;
+  error?: string;
+}) => {
+  const handleEntryChange = (index: number, name: string, value: string) => {
+    const newEntries = data.map((entry, i) =>
+      i === index ? { ...entry, [name]: value } : entry
+    );
+    onChange(newEntries);
+  };
+
+  const removeEntry = (index: number) => {
+    const newEntries = data.filter((_, i) => i !== index);
+    onChange(newEntries);
+  };
+
+  return (
+    <div>
+      {data.map((entry, index) => (
+        <div key={index} className="flex items-center mb-2">
+          <TextInput
+            value={entry.key}
+            onChange={(e) => handleEntryChange(index, "key", e.target.value)}
+            placeholder="Key"
+            className="mr-2"
+          />
+          <TextInput
+            value={entry.value}
+            onChange={(e) => handleEntryChange(index, "value", e.target.value)}
+            placeholder="Value"
+            className="mr-2"
+          />
+          <Button
+            type="button"
+            icon={TrashIcon}
+            variant="secondary"
+            color="orange"
+            size="xs"
+            onClick={() => removeEntry(index)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+};
+
+function FieldLabel({
+  id,
+  config,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+}) {
+  return (
+    <label htmlFor={id} className="flex items-center mb-1">
+      <Text className="capitalize">
+        {config.description}
+        {config.required === true && <span className="text-red-400">*</span>}
+      </Text>
+      {config.hint && (
+        <Icon
+          icon={QuestionMarkCircleIcon}
+          variant="simple"
+          color="gray"
+          size="sm"
+          tooltip={`${config.hint}`}
+        />
+      )}
+    </label>
+  );
+}
 
 export default ProviderForm;
