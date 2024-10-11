@@ -1,0 +1,46 @@
+---
+title: "Bash"
+sidebarTitle: "Bash Provider"
+description: "Bash provider allows executing Bash scripts in the workflow."
+---
+
+## Inputs
+
+- `script`: str : Bash script to execute
+
+## Outputs
+
+- `result`: The output of the executed Bash script
+
+## Authentication Parameters
+
+_None required for local execution._
+
+## Limitations
+
+- The Bash provider is currently **disabled for cloud execution** due to security concerns regarding script execution in a cloud environment. It is recommended to use this provider locally or in a controlled environment.
+
+## Connecting with the Provider
+
+The Bash provider allows you to run Bash scripts as actions. Ensure you have the necessary permissions to execute scripts in your environment.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: bash-example
+  description: Bash example
+  triggers:
+    - type: manual
+  actions:
+    - name: bash
+      provider:
+        type: bash
+        config: "{{ providers.bashtest }}"
+        with:
+          script: |
+            echo "Hello, world!"
+
+
+## Usefull Links
+-[Parseable API Documentation](https://www.parseable.com/docs/api)

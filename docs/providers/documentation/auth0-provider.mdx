@@ -1,0 +1,52 @@
+---
+title: "Auth0"
+sidebarTitle: "Auth0 Provider"
+description: "Auth0 provider allows integration with Auth0 for user authentication and authorization."
+---
+
+## Inputs
+
+- `client_id`: str : The Auth0 Client ID.
+- `client_secret`: str : The Auth0 Client Secret.
+- `audience`: str : The audience (API identifier) for which the token is intended.
+- `grant_type`: str : The grant type for authentication (e.g., `client_credentials`).
+
+## Outputs
+
+- `access_token`: str : The access token received from Auth0.
+- `expires_in`: int : The token expiration time in seconds.
+
+## Authentication Parameters
+
+- `domain`: The domain for your Auth0 tenant (e.g., `your-tenant.auth0.com`).
+- `client_id`: The Client ID for the application.
+- `client_secret`: The Client Secret associated with the application.
+- `audience`: API identifier for which the token is requested.
+
+## Connecting with the Provider
+
+1. Create an application in your Auth0 dashboard.
+2. Go to the "Applications" section, select your application, and get the `client_id` and `client_secret`.
+3. Define the `audience` (API identifier) for which you want to request a token.
+4. Provide the `grant_type` (typically `client_credentials` for machine-to-machine applications).
+
+## Example of usage
+
+```yaml
+workflow:
+  id: auth0-example
+  description: Auth0 example
+  triggers:
+    - type: manual
+  actions:
+    - name: auth0
+      provider:
+        type: auth0
+        config: "{{ providers.auth0test }}"
+        with:
+          client_id: "{{ secrets.auth0_client_id }}"
+          client_secret: "{{ secrets.auth0_client_secret }}"
+          audience: "https://api.yourapp.com"
+          grant_type: "client_credentials"
+##Usefull Links
+-[Auth0 API Documentation](https://auth0.com/docs/api)

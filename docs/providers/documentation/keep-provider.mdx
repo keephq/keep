@@ -1,0 +1,39 @@
+---
+title: "Keep"
+sidebarTitle: "Keep Provider"
+description: "Keep provider acts as a placeholder for alerts without a specific provider."
+---
+
+## Inputs
+
+- `alert_message`: str: The message to display in the alert
+- `severity`: str (optional): The severity level of the alert (e.g., `low`, `medium`, `high`)
+
+## Outputs
+
+_No outputs as this is a placeholder provider._
+
+## Authentication Parameters
+
+_None required for the Keep provider, as it acts as a placeholder for non-provider alerts._
+
+## Connecting with the Provider
+
+The Keep provider does not connect to any external service. It serves as a placeholder for cases where alerts do not need a specific provider.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: keep-provider-example
+  description: Keep Provider example
+  triggers:
+    - type: manual
+  actions:
+    - name: keep-alert
+      provider:
+        type: keep
+        config: "{{ providers.keep }}"
+        with:
+          alert_message: "This is a placeholder alert."
+          severity: "low"

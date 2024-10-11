@@ -1,0 +1,48 @@
+---
+title: "Service Now"
+sidebarTitle: "Service Now Provider"
+description: "Service Now provider allows sending notifications and updates to Service Now."
+---
+
+## Inputs
+
+- message: str: The message to send to Service Now
+- incident_id: str (optional): The ID of the incident to update
+- urgency: str (optional): The urgency level of the message
+
+## Outputs
+
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page._
+
+## Authentication Parameters
+
+- `api_key`: API key required to authenticate with the Service Now instance.
+- `instance_url`: URL of the Service Now instance.
+
+## Connecting with the Provider
+
+1. Go to your Service Now account.
+2. Navigate to "API Keys" in your user settings.
+3. Create or copy your API key and the instance URL.
+4. Configure your provider using these values.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: service-now-example
+  description: Service Now example
+  triggers:
+    - type: manual
+  actions:
+    - name: service-now
+      provider:
+        type: service-now
+        config: "{{ providers.servicenowtest }}"
+        with:
+          message: "Incident created"
+          incident_id: "INC001234"
+          urgency: "High"
+
+## Useful Links
+- [Service Now API documentation](https://docs.servicenow.com/bundle/xanadu-api-reference/page/build/applications/concept/api-rest.html)

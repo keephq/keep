@@ -1,0 +1,47 @@
+---
+title: "BigQuery"
+sidebarTitle: "BigQuery Provider"
+description: "BigQuery provider allows interaction with Google BigQuery for querying and managing datasets."
+---
+
+## Inputs
+
+- `query`: str : The SQL query to execute against the BigQuery dataset
+- `dataset`: str : The name of the dataset in BigQuery to use for the query
+- `project_id`: str : The Google Cloud project ID where the BigQuery dataset is located
+
+## Outputs
+
+- `result`: The results of the executed query, returned as a list of dictionaries.
+
+## Authentication Parameters
+
+- `service_account_key`: JSON key file for the Google Cloud service account with permissions to access BigQuery.
+
+## Connecting with the Provider
+
+1. Create a Google Cloud project and enable the BigQuery API.
+2. Create a service account in your Google Cloud project and download the JSON key file.
+3. Share the necessary datasets with the service account.
+4. Configure your provider using the `service_account_key`, `project_id`, and `dataset`.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: bigquery-example
+  description: BigQuery example
+  triggers:
+    - type: manual
+  actions:
+    - name: bigquery
+      provider:
+        type: bigquery
+        config: "{{ providers.bigquerytest }}"
+        with:
+          query: "SELECT * FROM `my_dataset.my_table` WHERE condition = 'value'"
+          dataset: "my_dataset"
+          project_id: "my_project_id"
+
+##Usefull Links
+-[BigQuery Documentation](https://cloud.google.com/bigquery/docs)
