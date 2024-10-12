@@ -3,6 +3,8 @@ Test the context manager
 """
 
 import json
+import logging
+import os
 import tempfile
 
 import pytest
@@ -209,3 +211,16 @@ def test_context_manager_get_last_alert_run(
 def test_context_manager_singleton(context_manager: ContextManager):
     with pytest.raises(Exception):
         ContextManager()
+
+
+def test_custom_logger_with_env_based_level(context_manager: ContextManager):
+
+    # Default log levelD
+    assert context_manager.get_logger().getEffectiveLevel() == logging.WARNING
+
+    context_manager.set_logger_by_name("test")
+    assert context_manager.get_logger().getEffectiveLevel() == logging.WARNING
+
+    os.environ["KEEP_PROVIDER_TEST_LOG_LEVEL"] = "DEBUG"
+    context_manager.set_logger_by_name("test")
+    assert context_manager.get_logger().getEffectiveLevel() == logging.DEBUG

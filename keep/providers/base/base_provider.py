@@ -66,6 +66,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
+        context_manager.set_logger_by_name("provider_{}".format(self.provider_id))
         self.logger = context_manager.get_logger()
         self.validate_config()
         self.logger.debug(
