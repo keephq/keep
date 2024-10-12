@@ -216,6 +216,7 @@ async function refreshAccessToken(token: any) {
 
 // No authentication
 const noAuthOptions = {
+  debug: true,
   providers: [
     CredentialsProvider({
       name: "NoAuth",
