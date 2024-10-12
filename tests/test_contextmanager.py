@@ -216,10 +216,10 @@ def test_context_manager_singleton(context_manager: ContextManager):
 def test_custom_logger_with_env_based_level(context_manager: ContextManager):
 
     # Default log levelD
-    assert context_manager.get_logger().getEffectiveLevel() == logging.WARNING
+    assert context_manager.get_logger().getEffectiveLevel() == logging.INFO
 
     context_manager.set_logger_by_name("test")
-    assert context_manager.get_logger().getEffectiveLevel() == logging.WARNING
+    assert context_manager.get_logger().getEffectiveLevel() == logging.INFO
 
     os.environ["KEEP_PROVIDER_TEST_LOG_LEVEL"] = "DEBUG"
     context_manager.set_logger_by_name("test")
