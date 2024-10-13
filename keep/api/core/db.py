@@ -2815,16 +2815,17 @@ def get_incidents_count(
         )
 
 
-def get_incident_alerts_by_incident_id(
+def get_incident_alerts_and_links_by_incident_id(
     tenant_id: str,
     incident_id: str,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-) -> (List[Alert], int):
+) -> tuple[List[tuple[Alert, AlertToIncident]], int]:
     with Session(engine) as session:
         query = (
             session.query(
                 Alert,
+                AlertToIncident,
             )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .join(Incident, AlertToIncident.incident_id == Incident.id)
@@ -2843,12 +2844,20 @@ def get_incident_alerts_by_incident_id(
     return query.all(), total_count
 
 
+def get_incident_alerts_by_incident_id(*args, **kwargs) -> tuple[List[Alert], int]:
+    """
+    Unpacking (List[(Alert, AlertToIncident)], int) to (List[Alert], int).
+    """
+    alerts_and_links, total_alerts = get_incident_alerts_and_links_by_incident_id(*args, **kwargs)
+    alerts = [alert_and_link[0] for alert_and_link in alerts_and_links]
+    return alerts, total_alerts
+
 
 def get_future_incidents_by_incident_id(
     incident_id: str,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-) -> (List[Incident], int):
+) -> tuple[List[Incident], int]:
     with Session(engine) as session:
         query = (
             session.query(

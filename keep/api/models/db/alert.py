@@ -46,8 +46,9 @@ else:
 
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
-    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     incident_id: UUID = Field(
         sa_column=Column(
             UUIDType(binary=False),
@@ -55,7 +56,11 @@ class AlertToIncident(SQLModel, table=True):
             primary_key=True,
         )
     )
-
+    alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
+    incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
+    
+    is_created_by_ai: bool = Field(default_factory=False)
+    deleted_at: datetime = Field(default_factory=None, nullable=True)
 
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -122,6 +127,10 @@ class Incident(SQLModel, table=True):
         back_populates="same_incident_in_the_past",
     )
 
+    alert_to_incident_link: List[AlertToIncident] = Relationship(
+        back_populates="incident",
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if "alerts" not in kwargs:
@@ -164,6 +173,9 @@ class Alert(SQLModel, table=True):
             "primaryjoin": "and_(Alert.fingerprint == foreign(AlertEnrichment.alert_fingerprint), Alert.tenant_id == AlertEnrichment.tenant_id)",
             "uselist": False,
         }
+    )
+    alert_to_incident_link: List[AlertToIncident] = Relationship(
+        back_populates="alert",
     )
 
     class Config:

@@ -3,8 +3,8 @@ from datetime import datetime
 
 from opentelemetry import trace
 
-from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import Alert
+from keep.api.models.alert import AlertDto, AlertStatus, AlertWithIncidentLinkMetadataDto
+from keep.api.models.db.alert import Alert, AlertToIncident
 
 tracer = trace.get_tracer(__name__)
 logger = logging.getLogger(__name__)
@@ -76,7 +76,9 @@ def calculated_start_firing_time(
         return alert.lastReceived
 
 
-def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
+def convert_db_alerts_to_dto_alerts(
+        alerts: list[Alert | tuple[Alert, AlertToIncident]]
+    ) -> list[AlertDto | AlertWithIncidentLinkMetadataDto]:
     """
     Enriches the alerts with the enrichment data.
 
@@ -84,16 +86,26 @@ def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
         alerts (list[Alert]): The alerts to enrich.
 
     Returns:
-        list[AlertDto]: The enriched alerts.
+        list[AlertDto | AlertWithIncidentLinkMetadataDto]: The enriched alerts.
     """
     alerts_dto = []
     with tracer.start_as_current_span("alerts_enrichment"):
         # enrich the alerts with the enrichment data
-        for alert in alerts:
+        for _object in alerts:
+
+            # We may have an Alert only or and Alert with an AlertToIncident
+            if isinstance(_object, Alert):
+                alert, alert_to_incident = _object, None
+            else:
+                alert, alert_to_incident = _object
+
             if alert.alert_enrichment:
                 alert.event.update(alert.alert_enrichment.enrichments)
             try:
-                alert_dto = AlertDto(**alert.event)
+                if alert_to_incident is not None:
+                    alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(alert, alert_to_incident)
+                else:
+                    alert_dto = AlertDto(**alert.event)
                 if alert.alert_enrichment:
                     parse_and_enrich_deleted_and_assignees(
                         alert_dto, alert.alert_enrichment.enrichments
