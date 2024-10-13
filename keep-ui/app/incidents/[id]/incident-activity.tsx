@@ -1,4 +1,4 @@
-import { AlertDto, Severity, Status } from "@/app/alerts/models";
+import { AlertDto } from "@/app/alerts/models";
 import { IncidentDto } from "../models";
 import { Chrono } from "react-chrono";
 import { useUsers } from "@/utils/hooks/useUsers";
@@ -131,16 +131,17 @@ export default function IncidentActivity({
   )
     return <Loading />;
 
-  const activities = [
-    {
-      id: "newcomment",
-      type: "newcomment",
-      timestamp: new Date().toISOString(),
-      initiator:
-        users?.find((u) => u.email === session?.user.email)?.picture ||
-        session?.user.email,
-    }, // this is placeholder for the new comment activity
-    ...(auditEvents
+  const newCommentActivity = {
+    id: "newcomment",
+    type: "newcomment",
+    timestamp: new Date().toISOString(),
+    initiator:
+      users?.find((u) => u.email === session?.user.email)?.picture ||
+      session?.user.email,
+  };
+
+  const auditActivities =
+    auditEvents
       ?.concat(incidentEvents || [])
       .sort(
         (a, b) =>
@@ -148,7 +149,7 @@ export default function IncidentActivity({
       )
       .map((auditEvent) => {
         const _type =
-          auditEvent.action === "A comment was added to the incident"
+          auditEvent.action === "A comment was added to the incident" // @tb: I wish this was INCIDENT_COMMENT and not the text..
             ? "comment"
             : "alert";
         return {
@@ -164,8 +165,9 @@ export default function IncidentActivity({
           text: auditEvent.description,
           timestamp: auditEvent.timestamp,
         } as IncidentActivity;
-      }) || []),
-  ];
+      }) || [];
+
+  const activities = [newCommentActivity, ...auditActivities];
 
   const chronoContent = activities?.map((activity, index) =>
     activity.type === "newcomment" ? (
