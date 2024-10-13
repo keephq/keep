@@ -56,6 +56,7 @@
     {
       "group": "Deployment",
       "pages": [
+        "deployment/configuration",
         {
           "group": "Authentication",
           "pages": [
