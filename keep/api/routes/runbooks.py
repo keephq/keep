@@ -84,7 +84,6 @@ def get_runbook(
 @router.post(
     "/{provider_type}/{provider_id}",
     description="Create a new Runbook",
-    # response_model=RunbookDtoOut,
 )
 def create_runbook(
     provider_type: str,

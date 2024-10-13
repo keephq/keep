@@ -253,7 +253,6 @@ class GitlabProvider(BaseRunBookProvider):
         else:
             runbook_contents = [runbook] 
 
-        # Filter runbook contents where type is "file"
         filtered_runbook_contents = [runbookContent for runbookContent in runbook_contents]
 
         # Format the contents using a helper function
@@ -265,8 +264,8 @@ class GitlabProvider(BaseRunBookProvider):
             "repo_id": repo.get("id"),
             "repo_name": repo.get("name"),
             "repo_display_name": repo.get("display_name"),
-            "provider_type": "gitlab",  # This was changed from "github" to "gitlab", assuming it is intentional
-            "provider_id": self.provider_id,  # Assuming this is supposed to be 'provider_id', not 'config'
+            "provider_type": "gitlab",
+            "provider_id": self.provider_id,
             "contents": contents,
             "title": title,
         }
