@@ -11,7 +11,7 @@ import { Button, TextInput } from "@tremor/react";
 import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
 import Loading from "@/app/loading";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { getApiURL } from "@/utils/apiUrl";
 import { useSession } from "next-auth/react";
 import { KeyedMutator } from "swr";
@@ -56,6 +56,8 @@ export function IncidentActivityChronoItem({ activity }: { activity: any }) {
   );
 }
 
+import { useEffect } from "react";
+
 export function IncidentActivityChronoItemComment({
   incident,
   mutator,
@@ -67,7 +69,7 @@ export function IncidentActivityChronoItemComment({
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 
-  const onSubmit = async () => {
+  const onSubmit = useCallback(async () => {
     const response = await fetch(`${apiUrl}/incidents/${incident.id}/comment`, {
       method: "POST",
       headers: {
@@ -86,7 +88,34 @@ export function IncidentActivityChronoItemComment({
     } else {
       toast.error("Failed to add comment", { position: "top-right" });
     }
-  };
+  }, [
+    apiUrl,
+    incident.id,
+    incident.status,
+    comment,
+    session?.accessToken,
+    mutator,
+  ]);
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (
+        event.key === "Enter" &&
+        (event.metaKey || event.ctrlKey) &&
+        comment
+      ) {
+        onSubmit();
+      }
+    },
+    [onSubmit, comment]
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [comment, handleKeyDown]);
 
   return (
     <div className="flex h-full w-full relative items-center">
