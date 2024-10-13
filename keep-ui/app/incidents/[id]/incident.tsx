@@ -13,7 +13,6 @@ import {
   Title,
 } from "@tremor/react";
 import IncidentAlerts from "./incident-alerts";
-import { useRouter } from "next/navigation";
 import IncidentTimeline from "./incident-timeline";
 import { CiBellOn, CiChat2, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
@@ -34,8 +33,6 @@ interface Props {
 export default function IncidentView({ incidentId }: Props) {
   const { data: incident, isLoading, error } = useIncident(incidentId);
   const [index, setIndex] = useState(0);
-
-  const router = useRouter();
 
   if (isLoading || !incident) return <Loading />;
   if (error) return <Title>Incident does not exist.</Title>;
@@ -82,7 +79,7 @@ export default function IncidentView({ incidentId }: Props) {
             </Tab>
           </TabList>
           <TabPanels>
-            <TabPanel>
+            <TabPanel className="pt-3 max-h-[calc(100vh-37rem)] overflow-y-scroll">
               <IncidentActivity incident={incident} />
             </TabPanel>
             <TabPanel>
@@ -91,7 +88,7 @@ export default function IncidentView({ incidentId }: Props) {
             <TabPanel>
               <IncidentTimeline incident={incident} />
             </TabPanel>
-            <TabPanel className="pt-3 h-[calc(100vh-28rem)]">
+            <TabPanel className="pt-3 h-[calc(100vh-37rem)]">
               <TopologySearchProvider>
                 <TopologyMap
                   services={incident.services}
