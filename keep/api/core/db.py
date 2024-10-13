@@ -3706,7 +3706,6 @@ def add_runbooks_to_incident(
                 set(incident.affected_services) | set(runbooks_data_for_incident["services"])
             )
             incident.runbooks_count += runbooks_data_for_incident["count"]
-            # incident.alerts_count += runbooks_data_for_incident["count"]
 
             runbook_to_incident_entries = [
                 RunbookToIncident(
