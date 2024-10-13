@@ -26,10 +26,15 @@ const nextConfig = {
     ],
   },
   compiler: {
-    removeConsole: false,
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error"],
+          }
+        : false,
   },
   output: "standalone",
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: process.env.ENV === "development",
   async redirects() {
     return process.env.DISABLE_REDIRECTS === "true"
       ? []
