@@ -47,6 +47,16 @@ const defaultPresets: Preset[] = [
     should_do_noise_now: false,
     tags: []
   },
+  {
+    id: "without-incident",
+    name: "without-incident",
+    options: [],
+    is_private: false,
+    is_noisy: false,
+    alerts_count: 0,
+    should_do_noise_now: false,
+    tags: []
+  },
 ];
 
 type AlertsProps = {
@@ -125,6 +135,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
+        mutateAlerts={mutateAlerts}
       />
 
       {selectedPreset && (

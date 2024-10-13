@@ -1,0 +1,318 @@
+---
+title: "GKE"
+sidebarTitle: "GKE"
+---
+
+## Step 0: Prerequisites
+
+1. GKE cluster (**required**)
+2. kubectl and helm installed (**required**)
+3. Domain + Certificate (**optional**, for TLS)
+
+
+
+## Step 1: Configure Keep's helm repo
+```bash
+# configure the helm repo
+helm repo add keephq https://keephq.github.io/helm-charts
+helm pull keephq/keep
+
+
+# make sure you are going to install Keep
+helm search repo keep
+NAME       	CHART VERSION	APP VERSION	DESCRIPTION
+keephq/keep	0.1.20       	0.25.4     	Keep Helm Chart
+```
+
+## Step 2: Install Keep
+
+<Tip>Do not install Keep in your default namespace. Its best practice to create a dedicated namespace.</Tip>
+
+Let's create a dedicated namespace and install Keep in it:
+```bash
+# create a dedicated namespace for Keep
+kubectl create ns keep
+
+# Install keep
+helm install -n keep keep keephq/keep --set isGKE=true --set namespace=keep
+
+# You should see something like:
+NAME: keep
+LAST DEPLOYED: Thu Oct 10 11:31:07 2024
+NAMESPACE: keep
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+```
+
+<Tip>
+As number of cofiguration change from the vanilla helm chart increase, it may be more convient to create a `values.yaml` and use it:
+
+
+```bash
+cat values.yaml
+isGke=true
+namespace=keep
+
+helm install -n keep keep keephq/keep -f values.yaml
+```
+
+</Tip>
+
+Now, let's make sure everything installed correctly:
+
+```bash
+# Note: it can take few minutes until GKE assign the public IP's to the ingresses
+helm-charts % kubectl -n keep get ingress,svc,pod,backendconfig
+NAME                                      CLASS    HOSTS                         ADDRESS         PORTS   AGE
+ingress.networking.k8s.io/keep-backend    <none>   *                             34.54.XXX.XXX   80      5m27s
+ingress.networking.k8s.io/keep-frontend   <none>   *                             34.49.XXX.XXX   80      5m27s
+
+NAME                     TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/keep-backend     ClusterIP   34.118.239.9     <none>        8080/TCP   5m28s
+service/keep-database    ClusterIP   34.118.228.60    <none>        3306/TCP   5m28s
+service/keep-frontend    ClusterIP   34.118.230.132   <none>        3000/TCP   5m28s
+service/keep-websocket   ClusterIP   34.118.227.128   <none>        6001/TCP   5m28s
+
+NAME                                  READY   STATUS    RESTARTS   AGE
+pod/keep-backend-7466b5fcbb-5vst4     1/1     Running   0          5m27s
+pod/keep-database-7c65c996f7-nl59n    1/1     Running   0          5m27s
+pod/keep-frontend-6dd6897bbb-mbddn    1/1     Running   0          5m27s
+pod/keep-websocket-7fc496997b-bz68z   1/1     Running   0          5m27s
+
+NAME                                                         AGE
+backendconfig.cloud.google.com/keep-backend-backendconfig    5m28s
+backendconfig.cloud.google.com/keep-frontend-backendconfig   5m28s
+```
+
+You can access Keep by browsing the frontend IP:
+```
+frontend_ip=$(kubectl -n keep get ingress | grep frontend | awk '{ print $4 }')
+```
+
+<Tip>Keep is now running with its vanilla configuration. This tutorial focus on how to spin up Keep on GKE using Keep's helm chart and doesn't cover all Keep's environment variables and configuration.</Tip>
+
+
+<Frame>
+     <img src="/images/gke.png" />
+</Frame>
+
+
+## Step 3: Configure domain and certificate (TLS)
+
+### Background
+
+Keep has three ingresses that allow external access to its various components:
+
+<Tip>
+In this tutorial we focus om exposing the frontend, but exposing the backend and the websocket server is basically the same.
+</Tip>
+
+#### Frontend Ingress (Required)
+This ingress serves the main UI of Keep. It is required for users to access the dashboard and interact with the platform. The frontend is exposed on port 80 by default (or 443 when TLS is configured) and typically points to the public-facing interface of your Keep installation.
+
+#### Backend Ingress (Optional, enabled by default in `values.yaml`)
+This ingress provides access to the backend API, which powers all the business logic, integrations, and alerting services of Keep. The backend ingress is usually accessed by frontend components or other services through internal or external API calls. By default, this ingress is enabled in the Helm chart and exposed internally unless explicitly configured with external domain access.
+
+#### Websocket Ingress (Optional, disabled by default in `values.yaml`)
+This ingress supports real-time communication and push updates for the frontend without requiring page reloads. It is essential for use cases where live alert updates or continuous status changes need to be reflected immediately on the dashboard. Since not every deployment requires real-time updates, the WebSocket ingress is disabled by default but can be enabled as needed by updating the Helm chart configuration.
+
+
+
+### Prerequisites
+
+#### Domain
+e.g. keep.yourcomapny.com will be used to access Keep UI.
+
+#### Certificate
+Both private key (.pem) and certificate (.crt)
+
+<Tip>
+There are other ways to assign the certificate to the ingress, which are not covered by this tutorial, contributions are welcomed here, just open a PR and we will review and merge.
+
+
+1. Google's Managed Certificate - if you domain is managed by Google Cloud DNS, you can spin up the ceritificate automatically using Google's Managed Certificate.
+2. Using cert-manager - you can install cert-manager and use LetsEncrypt to spin up ceritificate for Keep.
+
+</Tip>
+
+
+### Add an A record for the domain to point to the frontend IP
+You can get the frontend IP by:
+```
+frontend_ip=$(kubectl -n keep get ingress | grep frontend | awk '{ print $4 }')
+```
+Now go into the domain controller and add the A record that points to that IP.
+
+<Info>At this stage, you should be able to access your Keep UI via http://keep.yourcomapny.com </Info>
+
+### Store the certificate as kubernetes secret
+Assuming the private key stored as `tls.key` and the certificate stored as `tls.crt`:
+
+```bash
+kubectl create secret tls frontend-tls --cert=./tls.crt --key=./tls.key -n keep
+
+# you should see:
+secret/frontend-tls created
+```
+
+
+### Upgrade Keep to use TLS
+
+Create this `values.yaml`:
+** Note to change keep.yourcomapny.com to your domain **
+
+```yaml
+namespace: keep
+isGKE: true
+frontend:
+  ingress:
+    enabled: true
+    hosts:
+      - host: keep.yourcompany.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - keep.yourcompany.com
+        secretName: frontend-tls
+  env:
+    - name: NEXTAUTH_SECRET
+      value: secret
+    # Changed the NEXTAUTH_URL
+    - name: NEXTAUTH_URL
+      value: https://keep.yourcompany.com
+    # https://github.com/nextauthjs/next-auth/issues/600
+    - name: VERCEL
+      value: 1
+    - name: API_URL
+      value: http://keep-backend:8080
+    - name: NEXT_PUBLIC_POSTHOG_KEY
+      value: "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+    - name: NEXT_PUBLIC_POSTHOG_HOST
+      value: https://app.posthog.com
+    - name: ENV
+      value: development
+    - name: NODE_ENV
+      value: development
+    - name: HOSTNAME
+      value: 0.0.0.0
+    - name: PUSHER_HOST
+      value: keep-websocket.default.svc.cluster.local
+    - name: PUSHER_PORT
+      value: 6001
+    - name: PUSHER_APP_KEY
+      value: "keepappkey"
+
+backend:
+  env:
+    # Added the KEEP_API_URL
+    - name: KEEP_API_URL
+      value: https://keep.yourcompany.com/backend
+    - name: DATABASE_CONNECTION_STRING
+      value: mysql+pymysql://root@keep-database:3306/keep
+    - name: SECRET_MANAGER_TYPE
+      value: k8s
+    - name: PORT
+      value: "8080"
+    - name: PUSHER_APP_ID
+      value: 1
+    - name: PUSHER_APP_KEY
+      value: keepappkey
+    - name: PUSHER_APP_SECRET
+      value: keepappsecret
+    - name: PUSHER_HOST
+      value: keep-websocket
+    - name: PUSHER_PORT
+      value: 6001
+database:
+  # this is needed since o/w helm install fails. if you are using different storageClass, edit the value here.
+  pvc:
+    storageClass: "standard-rwo"
+```
+
+Now, update Keep:
+```
+helm upgrade -n keep keep keephq/keep -f values.yaml
+```
+
+### Validate everything works
+
+First, you should be able to access Keep's UI with https now, using https://keep.yourcompany.com if that's working - you can skip the other validations.
+<Info>The "Not Secure" in the screenshot is due to self-signed certificate.</Info>
+
+<Frame>
+     <img src="/images/gke2.png" />
+</Frame>
+
+#### Validate ingress host
+
+```bash
+kubectl -n keep get ingress
+
+# You should see now the HOST underyour ingress, now with port 443:
+NAME            CLASS    HOSTS                         ADDRESS         PORTS     AGE
+keep-backend    <none>   *                             34.54.XXX.XXX   80        2d16h
+keep-frontend   <none>   keep.yourcompany.com          34.49.XXX.XXX   80, 443   2d16h
+```
+
+#### Validate the ingress using the TLS
+
+You should see `frontend-tls terminates keep.yourcompany.com`:
+
+```bash
+kubectl -n keep describe ingress.networking.k8s.io/keep-frontend
+Name:             keep-frontend
+Labels:           app.kubernetes.io/instance=keep
+                  app.kubernetes.io/managed-by=Helm
+                  app.kubernetes.io/name=keep
+                  app.kubernetes.io/version=0.25.4
+                  helm.sh/chart=keep-0.1.21
+Namespace:        keep
+Address:          34.54.XXX.XXX
+Ingress Class:    <none>
+Default backend:  <default>
+TLS:
+  frontend-tls terminates keep.yourcompany.com
+Rules:
+  Host                    Path  Backends
+  ----                    ----  --------
+  gkefrontend.keephq.dev
+                          /   keep-frontend:3000 (10.24.8.93:3000)
+Annotations:              ingress.kubernetes.io/backends:
+                            {"k8s1-0864ab44-keep-keep-frontend-3000-98c56664":"HEALTHY","k8s1-0864ab44-kube-system-default-http-backend-80-2d92bedb":"HEALTHY"}
+                          ingress.kubernetes.io/forwarding-rule: k8s2-fr-h7ydn1yg-keep-keep-frontend-ldr6qtxe
+                          ingress.kubernetes.io/https-forwarding-rule: k8s2-fs-h7ydn1yg-keep-keep-frontend-ldr6qtxe
+                          ingress.kubernetes.io/https-target-proxy: k8s2-ts-h7ydn1yg-keep-keep-frontend-ldr6qtxe
+                          ingress.kubernetes.io/ssl-cert: k8s2-cr-h7ydn1yg-7taujpdzbehr1ghm-64d2ca9e282d3ef5
+                          ingress.kubernetes.io/static-ip: k8s2-fr-h7ydn1yg-keep-keep-frontend-ldr6qtxe
+                          ingress.kubernetes.io/target-proxy: k8s2-tp-h7ydn1yg-keep-keep-frontend-ldr6qtxe
+                          ingress.kubernetes.io/url-map: k8s2-um-h7ydn1yg-keep-keep-frontend-ldr6qtxe
+                          meta.helm.sh/release-name: keep
+                          meta.helm.sh/release-namespace: keep
+Events:
+  Type    Reason     Age                   From                     Message
+  ----    ------     ----                  ----                     -------
+  Normal  Sync       8m49s                 loadbalancer-controller  UrlMap "k8s2-um-h7ydn1yg-keep-keep-frontend-ldr6qtxe" created
+  Normal  Sync       8m46s                 loadbalancer-controller  TargetProxy "k8s2-tp-h7ydn1yg-keep-keep-frontend-ldr6qtxe" created
+  Normal  Sync       8m33s                 loadbalancer-controller  ForwardingRule "k8s2-fr-h7ydn1yg-keep-keep-frontend-ldr6qtxe" created
+  Normal  Sync       8m25s                 loadbalancer-controller  TargetProxy "k8s2-ts-h7ydn1yg-keep-keep-frontend-ldr6qtxe" created
+  Normal  Sync       8m12s                 loadbalancer-controller  ForwardingRule "k8s2-fs-h7ydn1yg-keep-keep-frontend-ldr6qtxe" created
+  Normal  IPChanged  8m11s                 loadbalancer-controller  IP is now 34.54.XXX.XXX
+  Normal  Sync       7m39s                 loadbalancer-controller  UrlMap "k8s2-um-h7ydn1yg-keep-keep-frontend-ldr6qtxe" updated
+  Normal  Sync       116s (x6 over 9m47s)  loadbalancer-controller  Scheduled for sync
+  ```
+
+## Uninstall Keep
+
+### Uninstall the helm package
+```bash
+helm uninstall -n keep keep
+```
+
+###  Delete the namespace
+
+```bash
+kubectl delete ns keep
+```
