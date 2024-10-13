@@ -1,45 +1,45 @@
 ---
-title: "Bash"
-sidebarTitle: "Bash Provider"
-description: "Bash provider allows executing Bash scripts in the workflow."
+title: "Parseable"
+sidebarTitle: "Parseable Provider"
+description: "Parseable provider allows integration with Parseable, a tool for collecting and querying logs."
 ---
 
 ## Inputs
 
-- `script`: str : Bash script to execute
+- log_message: str: The log message to send to Parseable
+- log_level: str (optional): The log level (e.g., `info`, `error`, `warning`)
 
 ## Outputs
 
-- `result`: The output of the executed Bash script
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page._
 
 ## Authentication Parameters
 
-_None required for local execution._
-
-## Limitations
-
-- The Bash provider is currently **disabled for cloud execution** due to security concerns regarding script execution in a cloud environment. It is recommended to use this provider locally or in a controlled environment.
+- `api_key`: API key for authenticating with Parseable.
+- `parseable_url`: The URL of the Parseable instance where logs will be sent.
 
 ## Connecting with the Provider
 
-The Bash provider allows you to run Bash scripts as actions. Ensure you have the necessary permissions to execute scripts in your environment.
+1. Obtain an API key from your Parseable instance.
+2. Configure your provider using the `api_key` and `parseable_url`.
 
 ## Example of usage
 
 ```yaml
 workflow:
-  id: bash-example
-  description: Bash example
+  id: parseable-example
+  description: Parseable example
   triggers:
     - type: manual
   actions:
-    - name: bash
+    - name: parseable
       provider:
-        type: bash
-        config: "{{ providers.bashtest }}"
+        type: parseable
+        config: "{{ providers.parseabletest }}"
         with:
-          script: |
-            echo "Hello, world!"
+          log_message: "This is a test log message"
+          log_level: "info"
+
 
 
 ## Usefull Links
