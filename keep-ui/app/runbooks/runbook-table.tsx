@@ -19,9 +19,7 @@ import {
 } from "@tanstack/react-table";
 import { GenericTable } from "@/components/table/GenericTable";
 import { useRunBookTriggers } from "utils/hooks/useRunbook";
-import { useForm, get } from "react-hook-form";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useForm } from "react-hook-form";
 import { getApiURL } from "@/utils/apiUrl";
 import useSWR from "swr";
 import { fetcher } from "@/utils/fetcher";
@@ -93,25 +91,6 @@ const columnsv2 = [
   }),
 ] as DisplayColumnDef<RunbookV2>[];
 
-// function PreviewContent({type, data}:{type:string, data:string}){
-//   const [isModalOpen, setIsModalOpen] = useState(open);
-
-//   // const closeModal = () => {
-//   //   setIsModalOpen(false);
-//   // };
-//   const decodeBase64 = (encodedContent:string) => {
-//     // Use atob to decode the Base64 string and then handle UTF-8 encoding
-//     return encodedContent ? decodeURIComponent(atob(encodedContent)) : '';
-//   };
-//   return <div className={`w-full h-full p-10`}>
-
-//   <Markdown remarkPlugins={[remarkGfm]}>
-//           {decodeBase64(data)}
-//         </Markdown>
-//   </div>
-// }
-
-// TO DO: Need to work on styling
 function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { register, handleSubmit, reset, getValues, setValue, watch } =
@@ -160,8 +139,7 @@ function SettingsPage() {
   };
 
   const onSubmit = (data: any) => {
-    submitHandler(data); // Call the submit handler with form data
-    // closeModal(); // Close modal after submit
+    submitHandler(data);
   };
 
   const handleProviderChange = (value: string) => {
@@ -183,9 +161,8 @@ function SettingsPage() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 w-full my-4 h-full overflow-hidden">
             <div>
-              {/* <label>Choose Provider</label> */}
               <Select
-                onValueChange={handleProviderChange} // Update the form value manually on change
+                onValueChange={handleProviderChange}
                 placeholder="Select Provider"
                 required={true}
                 value={selectedProviderId}
@@ -235,16 +212,6 @@ function SettingsPage() {
               />
             </div>
           </div>
-          {/* <div style={{ textAlign: "left" }}>
-            <Button
-              type="button"
-              onClick={()=>{closeModal(true)}}
-              style={{ marginRight: "10px" }}
-            >
-              Preview
-            </Button>
-           
-          </div> */}
           <div style={{ textAlign: "right" }}>
             <Button
               type="button"
@@ -259,7 +226,6 @@ function SettingsPage() {
           </div>
         </form>
       </Modal>
-      {/* {fileData?.content && openPreview &&<PreviewContent  type="markdown" data={fileData?.content} />} */}
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useProviders } from "./useProviders";
@@ -70,7 +69,6 @@ export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:
         params.append("title", runBookTitle);
 
       }
-      //TO DO backend runbook records needs to be created.
       const response = await fetch(`${baseApiurl}/runbooks/${provider?.type}/${
           provider?.id
         }?${params.toString()}`, {
