@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union, Callable
 from uuid import uuid4
+from pydantic import ValidationError
 
 import numpy as np
 import validators
@@ -3764,4 +3765,51 @@ def add_runbooks_to_incident_by_incident_id(
 
         if not incident:
             return None
-        return add_runbooks_to_incident(tenant_id, incident, runbook_ids, session)        
+        return add_runbooks_to_incident(tenant_id, incident, runbook_ids, session)
+    
+def create_runbook_in_db(session: Session, tenant_id: str, runbook_dto: dict):
+        try:
+            new_runbook = Runbook(
+                tenant_id=tenant_id,
+                title=runbook_dto["title"],
+                repo_id=runbook_dto["repo_id"],
+                relative_path=runbook_dto["relative_path"],
+                provider_type=runbook_dto["provider_type"],
+                provider_id=runbook_dto["provider_id"]
+            )
+
+            session.add(new_runbook)
+            session.flush()
+            contents = runbook_dto["contents"] if runbook_dto["contents"] else []
+
+            new_contents = [
+                RunbookContent(
+                    runbook_id=new_runbook.id,
+                    content=content["content"],
+                    link=content["link"],
+                    encoding=content["encoding"],
+                    file_name=content["file_name"]
+                )
+                for content in contents
+            ]
+
+            session.add_all(new_contents)
+            session.commit()
+            session.expire(new_runbook, ["contents"])
+            session.refresh(new_runbook)  # Refresh the runbook instance
+            result = RunbookDtoOut.from_orm(new_runbook)
+            return result
+        except ValidationError as e:
+            logger.exception(f"Failed to create runbook {e}")            
+            
+def get_all_runbooks_from_db(session: Session, tenant_id: str, limit=25, offset=0) -> dict:
+        query = session.query(Runbook).filter(
+            Runbook.tenant_id == tenant_id,
+        )
+
+        total_count = query.count()
+        runbooks = query.options(selectinload(Runbook.contents)).limit(limit).offset(offset).all()
+        result = [RunbookDtoOut.from_orm(runbook) for runbook in runbooks]
+
+        return {"total_count": total_count, "runbooks": result}            
+            

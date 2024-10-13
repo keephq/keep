@@ -7,9 +7,12 @@ import { debounce } from "lodash";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 
-export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:  React.Dispatch<React.SetStateAction<boolean>>) => {
+export const useRunBookTriggers = (
+  values: any,
+  refresh: number,
+  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
+) => {
   const providersData = useProviders();
-  const [fileData, setFileData] = useState<any>({});
   const [reposData, setRepoData] = useState<any>([]);
   const { providerId } = values || {};
   const { data: session } = useSession();
@@ -28,7 +31,7 @@ export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:
   useEffect(() => {
     const getUserRepos = async () => {
       try {
-        if(!provider) {
+        if (!provider) {
           return setRepoData([]);
         }
         const data = await fetcher(
@@ -38,7 +41,9 @@ export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:
         setRepoData(data);
       } catch (err) {
         console.log("error occurred while fetching data");
-        toast.error("Failed to fetch repositories. Please check the provider settings.");
+        toast.error(
+          "Failed to fetch repositories. Please check the provider settings."
+        );
         setRepoData([]);
       }
     };
@@ -52,10 +57,10 @@ export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:
     };
   }, [refresh]);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: any, handleRunbookMutation: () => void) => {
     const { pathToMdFile, repoName, runBookTitle } = data;
     try {
-      if(!provider){
+      if (!provider) {
         return toast("Please select a provider");
       }
       const params = new URLSearchParams();
@@ -65,38 +70,41 @@ export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:
       if (repoName) {
         params.append("repo", repoName);
       }
-      if(runBookTitle){
+      if (runBookTitle) {
         params.append("title", runBookTitle);
-
       }
-      const response = await fetch(`${baseApiurl}/runbooks/${provider?.type}/${
+      const response = await fetch(
+        `${baseApiurl}/runbooks/${provider?.type}/${
           provider?.id
-        }?${params.toString()}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,  
-        },
-      });
+        }?${params.toString()}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
 
       if (!response) {
-        toast.error("Failed to create runbook. Something went wrong, please try again later.");
+        toast.error(
+          "Failed to create runbook. Something went wrong, please try again later."
+        );
         return;
       }
 
-      if(!response.ok) {
-        toast.error("Failed to create runbook. Something went wrong, please try again later.");
+      if (!response.ok) {
+        toast.error(
+          "Failed to create runbook. Something went wrong, please try again later."
+        );
         return;
-
       }
-      const result = await response.json();
-      setFileData(result);
       setIsModalOpen(false);
       toast.success("Runbook created successfully");
+      handleRunbookMutation();
     } catch (err) {
       return;
     } finally {
-      
     }
   };
 
@@ -107,7 +115,6 @@ export const useRunBookTriggers = (values: any, refresh: number, setIsModalOpen:
     providersData,
     reposData,
     handleSubmit,
-    fileData,
     HandlePreview,
     provider,
   };

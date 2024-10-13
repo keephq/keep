@@ -7,9 +7,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
-from keep.runbooks.runbooks_service import (
-    RunbookService
-    )
+from keep.api.core.db import create_runbook_in_db, get_all_runbooks_from_db
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +110,7 @@ def create_runbook(
     )
 
     runbook_dto= provider.pull_runbook(repo=repo, branch=branch, md_path=md_path, title=title)
-    return RunbookService.create_runbook(session, tenant_id, runbook_dto)
+    return create_runbook_in_db(session, tenant_id, runbook_dto)
 
 
 @router.get(
@@ -129,5 +127,6 @@ def get_all_runbooks(
 ):
     tenant_id = authenticated_entity.tenant_id
     logger.info("get all Runbooks", extra={tenant_id: tenant_id})
-    return RunbookService.get_all_runbooks(session, tenant_id, limit, offset)    
+    return get_all_runbooks_from_db(session, tenant_id, limit, offset)
+
 
