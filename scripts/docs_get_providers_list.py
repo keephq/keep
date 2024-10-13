@@ -27,7 +27,6 @@ NON_DOCUMENTED_PROVIDERS = [
     "keep",
     "bigquery",
     "parseable",
-    "smtp",
 ] # known not documented providers https://github.com/keephq/keep/issues/2033
 
 
@@ -58,11 +57,15 @@ def validate_all_providers_are_documented(documented_providers):
     for provider in ProvidersFactory.get_all_providers():
         provider_name = provider.display_name.lower()
         if provider_name not in documented_providers and provider_name not in NON_DOCUMENTED_PROVIDERS:
-            print(
-                f"""Provider {provider_name} is not documented in the docs/providers/documentation folder,
-please document it and run the scripts/docs_get_providers_list.py --validate script again."""
-            )
-            raise Exception(f"Provider {provider_name} is not documented.")
+            raise Exception(f"""Provider "{provider_name}" is not documented in the docs/providers/documentation folder,
+please document it and run the scripts/docs_get_providers_list.py --validate script again.
+
+Provider's PROVIDER_DISPLAY_NAME should match the title in the documentation file: {{PROVIDER_DISPLAY_NAME}}-provider.mdx.
+
+{provider_name}-provider.mdx not found.
+
+Documented providers: {documented_providers}
+Excluded list: {NON_DOCUMENTED_PROVIDERS}""")
 
 def main():
     """
