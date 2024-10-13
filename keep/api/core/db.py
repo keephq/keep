@@ -994,7 +994,7 @@ def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
 
 
 def get_alerts_with_filters(
-    tenant_id, provider_id=None, filters=None, time_delta=1
+    tenant_id, provider_id=None, filters=None, time_delta=1, with_incidents=False,
 ) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
@@ -1002,6 +1002,8 @@ def get_alerts_with_filters(
 
         # Apply subqueryload to force-load the alert_enrichment relationship
         query = query.options(subqueryload(Alert.alert_enrichment))
+        if with_incidents:
+            query = query.options(joinedload(Alert.incidents))
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
@@ -1154,6 +1156,7 @@ def get_last_alerts(
     timeframe=None,
     upper_timestamp=None,
     lower_timestamp=None,
+    with_incidents=False,
 ) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
@@ -1165,7 +1168,7 @@ def get_last_alerts(
     Returns:
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
-    with Session(engine) as session:
+    with (Session(engine) as session):
         # Subquery that selects the max and min timestamp for each fingerprint.
         subquery = (
             session.query(
@@ -1225,6 +1228,12 @@ def get_last_alerts(
             .options(subqueryload(Alert.alert_enrichment))
         )
 
+        if with_incidents:
+            query = query.add_columns(AlertToIncident.incident_id.label("incident"))
+            query = query.outerjoin(
+                AlertToIncident, AlertToIncident.alert_id == Alert.id,
+            )
+
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
@@ -1240,9 +1249,10 @@ def get_last_alerts(
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed
         alerts = []
-        for alert, startedAt in alerts_with_start:
+        for alert, startedAt, incident_id in alerts_with_start:
             alert.event["startedAt"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
+            alert.event["incident"] = str(incident_id) if incident_id else None
             alerts.append(alert)
 
     return alerts
@@ -2817,11 +2827,12 @@ def get_incidents_count(
 
 def get_incident_alerts_by_incident_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: UUID | str,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
+    session: Optional[Session] = None,
 ) -> (List[Alert], int):
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         query = (
             session.query(
                 Alert,
@@ -2969,10 +2980,10 @@ def add_alerts_to_incident(
             alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
 
             incident.sources = list(
-                set(incident.sources) | set(alerts_data_for_incident["sources"])
+                set(incident.sources if incident.sources else []) | set(alerts_data_for_incident["sources"])
             )
             incident.affected_services = list(
-                set(incident.affected_services) | set(alerts_data_for_incident["services"])
+                set(incident.affected_services if incident.affected_services else []) | set(alerts_data_for_incident["services"])
             )
             incident.alerts_count += alerts_data_for_incident["count"]
 

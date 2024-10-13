@@ -3,13 +3,12 @@
 import { usePathname } from "next/navigation";
 import { Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
-import { DoorbellNotification } from "components/icons";
 import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
-import { MdNearbyError } from "react-icons/md";
+import {MdFlashOn} from "react-icons/md";
 
 type IncidentsLinksProps = { session: Session | null };
 const SHOW_N_INCIDENTS = 3;
@@ -46,7 +45,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
         <li className="relative">
           <LinkWithIcon
             href="/incidents"
-            icon={DoorbellNotification}
+            icon={MdFlashOn}
             count={incidents?.count}
           >
             <Subtitle>Incidents</Subtitle>

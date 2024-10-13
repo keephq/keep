@@ -305,6 +305,7 @@
             "api-ref/alerts/webhook-challenge",
             "api-ref/alerts/receive-event",
             "api-ref/alerts/get-alert",
+            "api-ref/alerts/get-multiple-fingerprint-alert-audit",
             "api-ref/alerts/enrich-alert",
             "api-ref/alerts/unenrich-alert",
             "api-ref/alerts/search-alerts",
@@ -313,10 +314,30 @@
           ]
         },
         {
+          "group": "deduplications",
+          "pages": [
+            "api-ref/deduplications/create-deduplication-rule",
+            "api-ref/deduplications/delete-deduplication-rule",
+            "api-ref/deduplications/get-deduplication-fields",
+            "api-ref/deduplications/get-deduplications",
+            "api-ref/deduplications/update-deduplication-rule"
+          ]
+        },
+        {
+          "group": "maintenance",
+          "pages": [
+            "api-ref/maintenance/create-maintenance-rule",
+            "api-ref/maintenance/delete-maintenance-rule",
+            "api-ref/maintenance/get-maintenance-rules",
+            "api-ref/maintenance/update-maintenance-rule"
+          ]
+        },
+        {
           "group": "incidents",
           "pages": [
-            "api-ref/incidents/get-all-incidents",
+            "api-ref/incidents/change-incident-status",
             "api-ref/incidents/create-incident-endpoint",
+            "api-ref/incidents/get-all-incidents",
             "api-ref/incidents/get-incident",
             "api-ref/incidents/update-incident",
             "api-ref/incidents/delete-incident",
