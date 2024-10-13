@@ -64,7 +64,8 @@ class SearchEngine:
 
         alerts = get_last_alerts(
             tenant_id=self.tenant_id, limit=limit, timeframe=timeframe,
-            lower_timestamp=lower_timestamp, upper_timestamp=upper_timestamp
+            lower_timestamp=lower_timestamp, upper_timestamp=upper_timestamp,
+            with_incidents=True
         )
         # convert the alerts to DTO
         alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
