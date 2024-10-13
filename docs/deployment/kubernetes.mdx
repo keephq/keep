@@ -53,7 +53,7 @@ Keep's Kubernetes architecture is composed of several components, each with its 
 | BackendConfig (GKE) | Configures health checks for Google Cloud Load Balancing | Optional (GKE only) | [backendconfig.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/gke/backend-gke-healthcheck-config.yaml) |
 
 #### Database Components
-<Tip>Database components are optional. You can spin up Keep with external database that doesn't by Keep or event not deployed in Kubernetes</Tip>
+<Tip>Database components are optional. You can spin up Keep with your own database.</Tip>
 
 | Kubernetes Resource | Purpose | Required/Optional | Source |
 |:-------------------:|:-------:|:-----------------:|:------:|
@@ -63,7 +63,7 @@ Keep's Kubernetes architecture is composed of several components, each with its 
 | Database PersistentVolumeClaim | Claims the persistent storage for the database | Optional | [db-pvc.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/db-pvc.yaml) |
 
 #### WebSocket Components
-<Tip>WebSocket components are optional. You can spin up Keep with external database that doesn't by Keep or event not deployed in Kubernetes</Tip>
+<Tip>WebSocket components are optional. You can spin up Keep with your own *Pusher compatible* WebSocket server.</Tip>
 
 | Kubernetes Resource | Purpose | Required/Optional | Source |
 |:-------------------:|:-------:|:-----------------:|:------:|

@@ -1249,10 +1249,14 @@ def get_last_alerts(
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed
         alerts = []
-        for alert, startedAt, incident_id in alerts_with_start:
+        for alert_data in alerts_with_start:
+            alert = alert_data[0]
+            startedAt = alert_data[1]
             alert.event["startedAt"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
-            alert.event["incident"] = str(incident_id) if incident_id else None
+            if with_incidents:
+                incident_id = alert_data[2]
+                alert.event["incident"] = str(incident_id) if incident_id else None
             alerts.append(alert)
 
     return alerts
