@@ -13,7 +13,6 @@ export const useRunBookTriggers = (
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   const providersData = useProviders();
-  const [fileData, setFileData] = useState<any>({});
   const [reposData, setRepoData] = useState<any>([]);
   const { providerId } = values || {};
   const { data: session } = useSession();
@@ -100,9 +99,6 @@ export const useRunBookTriggers = (
         );
         return;
       }
-
-      const result = await response.json();
-      setFileData(result);
       setIsModalOpen(false);
       toast.success("Runbook created successfully");
       handleRunbookMutation();
@@ -119,7 +115,6 @@ export const useRunBookTriggers = (
     providersData,
     reposData,
     handleSubmit,
-    fileData,
     HandlePreview,
     provider,
   };

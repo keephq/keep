@@ -104,7 +104,6 @@ function SettingsPage({handleRunbookMutation}:{
     reposData,
     handleSubmit: submitHandler,
     provider,
-    fileData,
   } = useRunBookTriggers(getValues(), refresh, setIsModalOpen);
 
   const selectedProviderId = watch(
@@ -255,8 +254,6 @@ function RunbookIncidentTable() {
     total_count: 0,
     runbooks: [],
   };
-
-  // Modal state management
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setLimit(newLimit);
