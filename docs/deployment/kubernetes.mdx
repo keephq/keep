@@ -3,24 +3,285 @@ title: "Kubernetes"
 sidebarTitle: "Kubernetes"
 ---
 
-Keep can be installed via Helm Chart.
+
+## Overview
+
+### High Level Architecture
+Keep architecture composes of two main components:
+
+1. **Keep API** (aka keep backend) - a pythonic server (FastAPI) which serves as Keep's backend
+2. **Keep Frontend** - (aka keep ui) - a nextjs server which serves as Keep's frontend
+
+Keep is also using the following (optional) components:
+
+3. **Websocket Server** - a soketi server serves as the websocket server to allow real time updates from the server to the browser without refreshing the page
+4. **Database Server** - a database which Keep reads/writes for persistency. Keep currently supports sqlite, postgres, mysql and sql server (enterprise)
+
+### Kubernetes Architecture
+Keep's Kubernetes architecture is composed of several components, each with its own set of Kubernetes resources. Here's a detailed breakdown of each component and its associated resources:
+
+#### General Components
+<Tip>Keep uses kubernetes secret manager to store secrets such as integrations credentials.</Tip>
+
+| Kubernetes Resource | Purpose | Required/Optional | Source |
+|:-------------------:|:-------:|:-----------------:|:------:|
+| ServiceAccount | Provides an identity for processes that run in a Pod. Used mainly for Keep API to access kubernetes secret manager | Required | [serviceaccount.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/serviceaccount.yaml) |
+| Role | Defines permissions for the ServiceAccount to manage secrets | Required | [role-secret-manager.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/role-secret-manager.yaml) |
+| RoleBinding | Associates the Role with the ServiceAccount | Required | [role-binding-secret-manager.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/role-binding-secret-manager.yaml) |
+| Secret Deletion Job | Cleans up Keep-related secrets when the Helm release is deleted | Required | [delete-secret-job.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/delete-secret-job.yaml) |
+
+#### Frontend Components
+
+| Kubernetes Resource | Purpose | Required/Optional | Source |
+|:-------------------:|:-------:|:-----------------:|:------:|
+| Frontend Deployment | Manages the frontend application containers | Required | [frontend.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend.yaml) |
+| Frontend Service | Exposes the frontend deployment within the cluster | Required | [frontend-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-service.yaml) |
+| Frontend Ingress | Exposes the frontend service to external traffic | Optional | [frontend-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-ingress.yaml) |
+| Frontend Route (OpenShift) | Exposes the frontend service to external traffic on OpenShift | Optional | [frontend-route.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-route.yaml) |
+| Frontend HorizontalPodAutoscaler | Automatically scales the number of frontend pods | Optional | [frontend-hpa.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-hpa.yaml) |
+| Frontend BackendConfig (GKE) | Configures health checks for Google Cloud Load Balancing | Optional (GKE only) | [backendconfig.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/gke/frontend-gke-healthcheck-config.yaml) |
+
+#### Backend Components
+
+| Kubernetes Resource | Purpose | Required/Optional | Source |
+|:-------------------:|:-------:|:-----------------:|:------:|
+| Backend Deployment | Manages the backend application containers | Required (if backend enabled) | [backend.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend.yaml) |
+| Backend Service | Exposes the backend deployment within the cluster | Required (if backend enabled) | [backend-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-service.yaml) |
+| Backend Ingress | Exposes the backend service to external traffic | Optional | [backend-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-ingress.yaml) |
+| Backend Route (OpenShift) | Exposes the backend service to external traffic on OpenShift | Optional | [backend-route.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-route.yaml) |
+| Backend HorizontalPodAutoscaler | Automatically scales the number of backend pods | Optional | [backend-hpa.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-hpa.yaml) |
+| BackendConfig (GKE) | Configures health checks for Google Cloud Load Balancing | Optional (GKE only) | [backendconfig.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/gke/backend-gke-healthcheck-config.yaml) |
+
+#### Database Components
+<Tip>Database components are optional. You can spin up Keep with external database that doesn't by Keep or event not deployed in Kubernetes</Tip>
+
+| Kubernetes Resource | Purpose | Required/Optional | Source |
+|:-------------------:|:-------:|:-----------------:|:------:|
+| Database Deployment | Manages the database containers (e.g. MySQL or Postgres) | Optional | [db.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/db.yaml) |
+| Database Service | Exposes the database deployment within the cluster | Required (if deployment enabled) | [db-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/db-service.yaml) |
+| Database PersistentVolume | Provides persistent storage for the database | Optional | [db-pv.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/db-pv.yaml) |
+| Database PersistentVolumeClaim | Claims the persistent storage for the database | Optional | [db-pvc.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/db-pvc.yaml) |
+
+#### WebSocket Components
+<Tip>WebSocket components are optional. You can spin up Keep with external database that doesn't by Keep or event not deployed in Kubernetes</Tip>
+
+| Kubernetes Resource | Purpose | Required/Optional | Source |
+|:-------------------:|:-------:|:-----------------:|:------:|
+| WebSocket Deployment | Manages the WebSocket server containers (Soketi) | Optional | [websocket-server.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server.yaml) |
+| WebSocket Service | Exposes the WebSocket deployment within the cluster | Required (if WebSocket enabled) | [websocket-server-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-service.yaml) |
+| WebSocket Ingress | Exposes the WebSocket service to external traffic | Optional | [websocket-server-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-ingress.yaml) |
+| WebSocket Route (OpenShift) | Exposes the WebSocket service to external traffic on OpenShift | Optional | [websocket-server-route.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-route.yaml) |
+| WebSocket HorizontalPodAutoscaler | Automatically scales the number of WebSocket server pods | Optional | [websocket-server-hpa.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-hpa.yaml) |
+
+These tables provide a comprehensive overview of the Kubernetes resources used in the Keep architecture, organized by component type. Each table describes the purpose of each resource, indicates whether it's required or optional, and provides a direct link to the source template in the Keep Helm charts GitHub repository.
+
+
+### Kubernetes Configuration
+<Tip>This sections covers only kubernetes-specific configuration. To learn about Keep-specific configuration, controlled by environment variables, see [Keep Configuration](/deployment/configuration)</Tip>
+
+Each of these components can be customized via the `values.yaml` file in the Helm chart.
+
+
+Below are key configurations that can be adjusted for each component.
+
+#### 1. Frontend Configuration
+```yaml
+frontend:
+  enabled: true                 # Enable or disable the frontend deployment.
+  replicaCount: 1               # Number of frontend replicas.
+  image:
+    repository: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    pullPolicy: Always          # Image pull policy (Always, IfNotPresent).
+    tag: latest
+  serviceAccount:
+    create: true                # Create a new service account.
+    name: ""                    # Service account name (empty for default).
+  podAnnotations: {}            # Annotations for frontend pods.
+  podSecurityContext: {}        # Security context for the frontend pods.
+  securityContext: {}           # Security context for the containers.
+  service:
+    type: ClusterIP              # Service type (ClusterIP, NodePort, LoadBalancer).
+    port: 3000                  # Port on which the frontend service is exposed.
+  # Enable or disable frontend ingress.
+  ingress:
+    enabled: true
+    hosts:
+    - host: keep.yourcompany.com
+      paths:
+      - path: /
+        pathType: Prefix
+    tls:
+    - hosts:
+      - keep.yourcompany.com
+        secretName: frontend-tls  # Secret for TLS certificates.
+```
+
+#### 2. Backend Configuration
+```yaml
+backend:
+  enabled: true                # Enable or disable the backend deployment.
+  replicaCount: 1              # Number of backend replicas.
+  image:
+    repository: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    pullPolicy: Always         # Image pull policy (Always, IfNotPresent).
+  serviceAccount:
+    create: true               # Create a new service account.
+    name: ""                   # Service account name (empty for default).
+  podAnnotations: {}           # Annotations for backend pods.
+  podSecurityContext: {}       # Security context for backend pods.
+  securityContext: {}          # Security context for containers.
+  service:
+    type: ClusterIP      # Service type (ClusterIP, NodePort, LoadBalancer).
+    port: 8080           # Port on which the backend API is exposed.
+  ingress:
+    enabled: true         # Enable or disable backend ingress.
+    hosts:
+     - paths:
+      - path: /
+           pathType: Prefix
+```
+
+#### 3. WebSocket Server Configuration
+Keep uses Soketi as its websocket server. To learn how to configure it, please see [Soketi docs](https://github.com/soketi/charts/tree/master/charts/soketi).
+
+
+#### 4. Database Configuration
+Keep supports plenty of database (e.g. postgresql, mysql, sqlite, etc). It is out of scope to describe here how to deploy all of them to k8s. If you have specific questions - [contact us](https://slack.keephq.dev) and we will be happy to help.
+
+
+
+## Installation
+The recommended way to install Keep in kubernetes is via Helm Chart.
 
 First, add the Helm repository of Keep and pull the latest version of the chart:
-```
+```bash
 helm repo add keephq https://keephq.github.io/helm-charts
 helm pull keephq/keep
 ```
 
-Next, install using:
-```
-helm install keep keephq/keep
+Next, install Keep using:
+```bash
+
+# it is always recommended to install Keep in a seperate namespace
+kubectl create ns keep
+
+helm install -n keep keep keephq/keep --set namespace=keep
 ```
 
+
+## Expose Keep with port-forward
 Notice for it to work locally, you'll need this port forwarding:
 ```
 # expose the UI
-kubectl port-forward svc/keep-frontend 3000:3000
+kubectl -n keep port-forward svc/keep-frontend 3000:3000
 ```
+
+## Expose Keep with ingress (HTTP)
+Once you are ready to expose Keep to the outer world, Keep's helm chart comes with pre-configured ingress
+
+```bash
+kubectl -n keep get ingress
+NAME            CLASS    HOSTS                         ADDRESS         PORTS     AGE
+keep-backend    <none>                                 34.54.XXX.XXX    80        75m
+keep-frontend   <none>                                 34.54.XXX.XXX    80        70m
+```
+
+## Expose Keep with ingress (HTTPS)
+
+#### Prerequisites
+
+1. Domain -e.g. keep.yourcomapny.com will be used to access Keep UI.
+2. Certificate - both private key (.pem) and certificate (.crt)
+
+#### Store the certificate as kubernetes secret
+Assuming the private key stored as `tls.key` and the certificate stored as `tls.crt`:
+
+```bash
+kubectl create secret tls frontend-tls --cert=./tls.crt --key=./tls.key -n keep
+
+# you should see:
+secret/frontend-tls created
+```
+
+#### Upgrade Keep to use TLS
+
+Create this `values.yaml`:
+** Note to change keep.yourcomapny.com to your domain **
+
+```yaml
+namespace: keep
+frontend:
+  ingress:
+    enabled: true
+    hosts:
+      - host: keep.yourcompany.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - keep.yourcompany.com
+        secretName: frontend-tls
+  env:
+    - name: NEXTAUTH_SECRET
+      value: secret
+    # Changed the NEXTAUTH_URL
+    - name: NEXTAUTH_URL
+      value: https://keep.yourcompany.com
+    # https://github.com/nextauthjs/next-auth/issues/600
+    - name: VERCEL
+      value: 1
+    - name: API_URL
+      value: http://keep-backend:8080
+    - name: NEXT_PUBLIC_POSTHOG_KEY
+      value: "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+    - name: NEXT_PUBLIC_POSTHOG_HOST
+      value: https://app.posthog.com
+    - name: ENV
+      value: development
+    - name: NODE_ENV
+      value: development
+    - name: HOSTNAME
+      value: 0.0.0.0
+    - name: PUSHER_HOST
+      value: keep-websocket.default.svc.cluster.local
+    - name: PUSHER_PORT
+      value: 6001
+    - name: PUSHER_APP_KEY
+      value: "keepappkey"
+
+backend:
+  env:
+    # Added the KEEP_API_URL
+    - name: KEEP_API_URL
+      value: https://keep.yourcompany.com/backend
+    - name: DATABASE_CONNECTION_STRING
+      value: mysql+pymysql://root@keep-database:3306/keep
+    - name: SECRET_MANAGER_TYPE
+      value: k8s
+    - name: PORT
+      value: "8080"
+    - name: PUSHER_APP_ID
+      value: 1
+    - name: PUSHER_APP_KEY
+      value: keepappkey
+    - name: PUSHER_APP_SECRET
+      value: keepappsecret
+    - name: PUSHER_HOST
+      value: keep-websocket
+    - name: PUSHER_PORT
+      value: 6001
+database:
+  # this is needed since o/w helm install fails. if you are using different storageClass, edit the value here.
+  pvc:
+    storageClass: "standard-rwo"
+```
+
+Now, update Keep:
+```
+helm upgrade -n keep keep keephq/keep -f values.yaml
+```
+
 
 To learn more about Keep's helm chart, see https://github.com/keephq/helm-charts/blob/main/README.md
 
