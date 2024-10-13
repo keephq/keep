@@ -109,6 +109,7 @@ export const CustomPresetAlertLinks = ({
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
+
   const pathname = usePathname();
   const router = useRouter();
   const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
@@ -125,7 +126,7 @@ export const CustomPresetAlertLinks = ({
 
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
-      (preset) => !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
+      (preset) => !["feed", "deleted", "dismissed", "without-incident", "groups"].includes(preset.name)
     );
 
     // Combine live presets and local storage order

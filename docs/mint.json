@@ -56,6 +56,7 @@
     {
       "group": "Deployment",
       "pages": [
+        "deployment/configuration",
         {
           "group": "Authentication",
           "pages": [
@@ -81,6 +82,7 @@
         "deployment/kubernetes",
         "deployment/openshift",
         "deployment/ecs",
+        "deployment/gke",
         "deployment/stress-testing"
       ]
     },

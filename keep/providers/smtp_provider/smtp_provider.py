@@ -72,7 +72,7 @@ class SmtpProvider(BaseProvider):
     ]
 
     PROVIDER_TAGS = ["messaging"]
-    PROVIDER_DISPLAY_NAME = "SMTP Provider"
+    PROVIDER_DISPLAY_NAME = "SMTP"
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig 

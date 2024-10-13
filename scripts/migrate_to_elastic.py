@@ -92,9 +92,9 @@ if __name__ == "__main__":
     search_engine.search_alerts(preset.query)
     # get the number of alerts + noisy alerts for each preset
 
-    alerts = get_alerts_with_filters(TENANT_ID, time_delta=365)  # year ago
+    alerts = get_alerts_with_filters(TENANT_ID, time_delta=365, with_incidents=True)  # year ago
     print(f"Found {len(alerts)} alerts")
-    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts, with_incidents=True)
     print(f"Converted {len(alerts_dto)} alerts")
 
     # Format datetime fields
