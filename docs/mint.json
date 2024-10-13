@@ -81,6 +81,7 @@
         "deployment/kubernetes",
         "deployment/openshift",
         "deployment/ecs",
+        "deployment/gke",
         "deployment/stress-testing"
       ]
     },
