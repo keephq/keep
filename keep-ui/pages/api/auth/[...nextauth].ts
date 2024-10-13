@@ -1,6 +1,8 @@
 import NextAuth, { type AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import KeycloakProvider, { KeycloakProfile } from "next-auth/providers/keycloak";
+import KeycloakProvider, {
+  KeycloakProfile,
+} from "next-auth/providers/keycloak";
 import Auth0Provider from "next-auth/providers/auth0";
 import { getApiURL } from "utils/apiUrl";
 import {
@@ -79,11 +81,10 @@ const multiTenantAuthOptions = {
         const name = (profile as any).name as string;
         const nameParts = name.split(" ");
         // verify that the name is not empty (should not happen, but just in case)
-        if (nameParts.length > 0){
+        if (nameParts.length > 0) {
           token.name = nameParts[0];
         }
       }
-
 
       return token;
     },
@@ -182,36 +183,36 @@ async function refreshAccessToken(token: any) {
   const refreshTokenUrl = `${issuerUrl}/protocol/openid-connect/token`;
 
   const params = new URLSearchParams({
-      client_id: process.env.KEYCLOAK_ID!,  // Using non-null assertion (!) because it is required
-      client_secret: process.env.KEYCLOAK_SECRET!,  // Using non-null assertion (!)
-      grant_type: 'refresh_token',
-      refresh_token: token.refreshToken  // Assuming refreshToken is correctly stored and is a string
+    client_id: process.env.KEYCLOAK_ID!, // Using non-null assertion (!) because it is required
+    client_secret: process.env.KEYCLOAK_SECRET!, // Using non-null assertion (!)
+    grant_type: "refresh_token",
+    refresh_token: token.refreshToken, // Assuming refreshToken is correctly stored and is a string
   });
 
   const response = await fetch(refreshTokenUrl, {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params  // Directly using URLSearchParams instance
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params, // Directly using URLSearchParams instance
   });
 
   const refreshedTokens = await response.json();
 
   if (!response.ok) {
-      console.error('Failed to refresh token:', refreshedTokens);
-      throw new Error(`Refresh token failed: ${response.status} ${response.statusText}`);
+    console.error("Failed to refresh token:", refreshedTokens);
+    throw new Error(
+      `Refresh token failed: ${response.status} ${response.statusText}`
+    );
   }
 
   return {
-      ...token,
-      accessToken: refreshedTokens.access_token,
-      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
-      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,  // Using the new refresh token if available
+    ...token,
+    accessToken: refreshedTokens.access_token,
+    accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+    refreshToken: refreshedTokens.refresh_token ?? token.refreshToken, // Using the new refresh token if available
   };
 }
-
-
 
 // No authentication
 const noAuthOptions = {
@@ -254,8 +255,7 @@ const noAuthOptions = {
   },
 } as AuthOptions;
 
-
-const keycloakAuthOptions  = {
+const keycloakAuthOptions = {
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
@@ -263,7 +263,7 @@ const keycloakAuthOptions  = {
       issuer: process.env.KEYCLOAK_ISSUER,
       authorization: {
         params: { scope: "openid email profile roles" },
-      }
+      },
     }),
   ],
   pages: {
@@ -280,7 +280,8 @@ const keycloakAuthOptions  = {
         token.accessToken = account.access_token;
         token.id_token = account.id_token;
         token.refreshToken = account.refresh_token;
-        token.accessTokenExpires = Date.now() + (account.refresh_expires_in as number) * 1000;
+        token.accessTokenExpires =
+          Date.now() + (account.refresh_expires_in as number) * 1000;
         // token.tenantId = profile?.active_organization.id;
         token.keep_tenant_id = "keep";
       } else if (Date.now() < (token.accessTokenExpires as number)) {
@@ -288,7 +289,7 @@ const keycloakAuthOptions  = {
         return token;
       }
       // Access token has expired, try to update it
-      console.log("Refreshing access token")
+      console.log("Refreshing access token");
       return refreshAccessToken(token);
     },
     async session({ session, token }) {
@@ -300,28 +301,33 @@ const keycloakAuthOptions  = {
   events: {
     async signOut({ token }: { token: any }) {
       console.log("Signing out from Keycloak");
-      const issuerUrl = (authOptions.providers.find(p => p.id === "keycloak") as OAuthConfig<KeycloakProfile>).options!.issuer!
-      const logOutUrl = new URL(`${issuerUrl}/protocol/openid-connect/logout`)
+      const issuerUrl = (
+        authOptions.providers.find(
+          (p) => p.id === "keycloak"
+        ) as OAuthConfig<KeycloakProfile>
+      ).options!.issuer!;
+      const logOutUrl = new URL(`${issuerUrl}/protocol/openid-connect/logout`);
       logOutUrl.searchParams.set("id_token_hint", token.id_token);
       try {
         // Perform the logout request.
         const response = await fetch(logOutUrl.toString(), {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
         if (!response.ok) {
-            throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Logout failed: ${response.status} ${response.statusText}`
+          );
         }
-    } catch (error) {
+      } catch (error) {
         console.error("Error signing out from Keycloak:", error);
-    }
-    console.log("Logged out from Keycloak") // :)
+      }
+      console.log("Logged out from Keycloak"); // :)
     },
-  }
+  },
 } as AuthOptions;
-
 
 console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
@@ -331,7 +337,7 @@ export const authOptions =
     ? singleTenantAuthOptions
     : authType === AuthenticationType.KEYCLOAK
     ? keycloakAuthOptions
-    // oauth2proxy same configuration as noauth
-    : noAuthOptions;
+    : // oauth2proxy same configuration as noauth
+      noAuthOptions;
 
 export default NextAuth(authOptions);

@@ -5,7 +5,7 @@ import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
 import { SilencedDoorbellNotification } from "components/icons";
 import { IoChevronUp } from "react-icons/io5";
-import { AiOutlineGroup, AiOutlineSwap } from "react-icons/ai";
+import { AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
@@ -17,6 +17,7 @@ import Modal from "@/components/ui/Modal";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
+import {MdFlashOff} from "react-icons/md";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -54,6 +55,9 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const mainPreset = staticPresets.find((preset) => preset.name === "feed");
   const dismissedPreset = staticPresets.find(
     (preset) => preset.name === "dismissed"
+  );
+  const withoutIncidentPreset = staticPresets.find(
+    (preset) => preset.name === "without-incident"
   );
 
   const handleTagSelect = (
@@ -115,8 +119,19 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   href="/alerts/feed"
                   icon={AiOutlineSwap}
                   count={mainPreset?.alerts_count}
+                  testId="menu-alerts-feed"
                 >
                   <Subtitle>Feed</Subtitle>
+                </LinkWithIcon>
+              </li>
+              <li>
+                <LinkWithIcon
+                  href="/alerts/without-incident"
+                  icon={MdFlashOff}
+                  count={withoutIncidentPreset?.alerts_count}
+                  testId="menu-alerts-without-incident"
+                >
+                  <Subtitle>Without Incident</Subtitle>
                 </LinkWithIcon>
               </li>
               {session && (
@@ -130,6 +145,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   href="/alerts/dismissed"
                   icon={SilencedDoorbellNotification}
                   count={dismissedPreset?.alerts_count}
+                  testId="menu-alerts-dismissed"
                 >
                   <Subtitle>Dismissed</Subtitle>
                 </LinkWithIcon>
