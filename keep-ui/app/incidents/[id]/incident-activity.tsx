@@ -159,7 +159,7 @@ export default function IncidentActivity({
               : alerts?.items.find(
                   (a) => a.fingerprint === auditEvent.fingerprint
                 ),
-          text: auditEvent.description,
+          text: _type === "comment" ? auditEvent.description : "",
           timestamp: auditEvent.timestamp,
         } as IncidentActivity;
       }) || [];

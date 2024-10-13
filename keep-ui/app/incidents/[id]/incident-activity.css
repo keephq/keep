@@ -18,6 +18,10 @@
   outline: unset !important;
 }
 
+li[class^="VerticalItemWrapper-"] {
+  margin: unset !important;
+}
+
 [class^="TimelineTitleWrapper-"] {
   display: none !important;
 }
