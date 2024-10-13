@@ -15,7 +15,7 @@ import sys
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
 NON_DOCUMENTED_PROVIDERS = [
-    "smtp"
+    
 ] # known not documented providers https://github.com/keephq/keep/issues/2033
 
 
