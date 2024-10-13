@@ -135,9 +135,7 @@ export default function IncidentActivity({
     id: "newcomment",
     type: "newcomment",
     timestamp: new Date().toISOString(),
-    initiator:
-      users?.find((u) => u.email === session?.user.email)?.picture ||
-      session?.user.email,
+    initiator: session?.user.email,
   };
 
   const auditActivities =
@@ -157,8 +155,7 @@ export default function IncidentActivity({
           type: _type,
           initiator:
             _type === "comment"
-              ? users?.find((u) => u.email === auditEvent.user_id)?.picture ||
-                auditEvent.user_id
+              ? auditEvent.user_id
               : alerts?.items.find(
                   (a) => a.fingerprint === auditEvent.fingerprint
                 ),
