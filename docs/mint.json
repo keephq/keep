@@ -183,7 +183,19 @@
             "providers/documentation/webhook-provider",
             "providers/documentation/websocket-provider",
             "providers/documentation/zabbix-provider",
-            "providers/documentation/zenduty-provider"
+            "providers/documentation/zenduty-provider",
+            "providers/documentation/auth0-provider",
+"providers/documentation/bash-provider",
+"providers/documentation/bigquery-provider",
+"providers/documentation/dynatrace-provider",
+"providers/documentation/github-provider",
+"providers/documentation/gke-provider",
+"providers/documentation/kafka-provider",
+"providers/documentation/keep-provider",
+"providers/documentation/parseable-provider",
+"providers/documentation/prometheus-provider",
+"providers/documentation/python-provider",
+"providers/documentation/service-now-provider"
           ]
         }
       ]
