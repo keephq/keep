@@ -203,11 +203,12 @@ class SplunkProvider(BaseProvider):
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
-        self.logger.info("Setting up Splunk webhook on all Alerts")
-        creation_updation_kwargs = {
+        self.logger.info("Setting up Splunk webhook for all saved searches")
+        webhook_url = f"{keep_api_url}&api_key={api_key}"
+        webhook_kwargs = {
             "actions": "webhook",
             "action.webhook": "1",
-            "action.webhook.param.url": keep_api_url,
+            "action.webhook.param.url": webhook_url,
         }
         service = connect(
             token=self.authentication_config.api_key,
@@ -218,8 +219,21 @@ class SplunkProvider(BaseProvider):
             existing_webhook_url = saved_search["_state"]["content"].get(
                 "action.webhook.param.url", None
             )
-            if existing_webhook_url is None or existing_webhook_url != keep_api_url:
-                saved_search.update(**creation_updation_kwargs).refresh()
+            if existing_webhook_url and existing_webhook_url == webhook_url:
+                self.logger.info(
+                    f"Webhook already set for saved search {saved_search.name}",
+                    extra={
+                        "webhook_url": webhook_url,
+                    },
+                )
+                continue
+            self.logger.info(
+                f"Updating saved search with webhook {saved_search.name}",
+                extra={
+                    "webhook_url": webhook_url,
+                },
+            )
+            saved_search.update(**webhook_kwargs).refresh()
 
     @staticmethod
     def _format_alert(
