@@ -216,14 +216,12 @@ async function refreshAccessToken(token: any) {
 
 // No authentication
 const noAuthOptions = {
-  debug: true,
   providers: [
     CredentialsProvider({
       name: "NoAuth",
       credentials: {},
       async authorize(credentials, req) {
         // Return a static user object with a predefined token
-        console.log("NoAuth authorize");
         return {
           id: "keep-user-for-no-auth-purposes",
           name: "Keep",
