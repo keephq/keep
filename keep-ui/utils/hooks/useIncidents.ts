@@ -11,6 +11,7 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
+import { useAlerts } from "./useAlerts";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -132,6 +133,24 @@ export const useIncidentWorkflowExecutions = (
     (url) => fetcher(url, session?.accessToken),
     options
   );
+};
+
+export const usePollIncidentComments = (incidentId: string) => {
+  const { bind, unbind } = useWebsocket();
+  const { useAlertAudit } = useAlerts();
+  const { mutate: mutateIncidentActivity } = useAlertAudit(incidentId);
+  const handleIncoming = useCallback(
+    (data: IncidentUpdatePayload) => {
+      mutateIncidentActivity();
+    },
+    [mutateIncidentActivity]
+  );
+  useEffect(() => {
+    bind("incident-comment", handleIncoming);
+    return () => {
+      unbind("incident-comment", handleIncoming);
+    };
+  }, [bind, unbind, handleIncoming]);
 };
 
 export const usePollIncidentAlerts = (incidentId: string) => {

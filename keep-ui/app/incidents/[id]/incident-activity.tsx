@@ -8,7 +8,10 @@ import "./incident-activity.css";
 import AlertSeverity from "@/app/alerts/alert-severity";
 import TimeAgo from "react-timeago";
 import { Button, TextInput } from "@tremor/react";
-import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
+import {
+  useIncidentAlerts,
+  usePollIncidentComments,
+} from "@/utils/hooks/useIncidents";
 import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
 import Loading from "@/app/loading";
 import { useCallback, useState } from "react";
@@ -150,7 +153,9 @@ export default function IncidentActivity({
     isLoading: incidentEventsLoading,
     mutate: mutateIncidentActivity,
   } = useAlertAudit(incident.id);
+
   const { data: users, isLoading: usersLoading } = useUsers();
+  usePollIncidentComments(incident.id);
 
   if (
     usersLoading ||

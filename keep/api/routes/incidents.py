@@ -526,7 +526,9 @@ async def add_alerts_to_incident(
                 limit=len(alert_ids) + incident.alerts_count,
             )
 
-            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts, with_incidents=True)
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+                db_alerts, with_incidents=True
+            )
             logger.info(
                 "Fetched alerts from DB",
                 extra={
@@ -737,6 +739,7 @@ def add_comment(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
+    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> AlertAudit:
     extra = {
         "tenant_id": authenticated_entity.tenant_id,
@@ -752,5 +755,11 @@ def add_comment(
         AlertActionType.INCIDENT_COMMENT,
         change.comment,
     )
+
+    if pusher_client:
+        pusher_client.trigger(
+            f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
+        )
+
     logger.info("Added comment to incident", extra=extra)
     return comment
