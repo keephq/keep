@@ -71,7 +71,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
       updatePresets(
         presetsOrderRef.current,
         newPresets.filter(
-          (p) => !["feed", "deleted", "dismissed", "groups"].includes(p.name)
+          (p) => !["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
         )
       )
     );
@@ -79,7 +79,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
       updatePresets(
         staticPresetsOrderRef.current,
         newPresets.filter((p) =>
-          ["feed", "deleted", "dismissed", "groups"].includes(p.name)
+          ["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
         )
       )
     );
@@ -126,10 +126,10 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
           if (data) {
             const dynamicPresets = data.filter(
               (p) =>
-                !["feed", "deleted", "dismissed", "groups"].includes(p.name)
+                !["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
             );
             const staticPresets = data.filter((p) =>
-              ["feed", "deleted", "dismissed", "groups"].includes(p.name)
+              ["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
             );
 
             //if it is dashboard we don't need to merge with local storage.
@@ -193,7 +193,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     } = useFetchAllPresets(options);
     const filteredPresets = presets?.filter(
       (preset) =>
-        !["feed", "deleted", "dismissed", "groups"].includes(preset.name)
+        !["feed", "deleted", "dismissed", "groups", "without-incident"].includes(preset.name)
     );
     return {
       data: filteredPresets,

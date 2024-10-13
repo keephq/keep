@@ -12,9 +12,7 @@ from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
-    IncidentSorting,
     add_alerts_to_incident_by_incident_id,
-    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
@@ -31,6 +29,7 @@ from keep.api.core.db import (
     add_runbooks_to_incident_by_incident_id,
 )
 from keep.api.core.dependencies import get_pusher_client
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
     IncidentDto,
@@ -518,6 +517,30 @@ async def add_alerts_to_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
+    try:
+        logger.info("Pushing enriched alert to elasticsearch")
+        elastic_client = ElasticClient(tenant_id)
+        if elastic_client.enabled:
+            db_alerts, _ = get_incident_alerts_by_incident_id(
+                tenant_id=tenant_id,
+                incident_id=incident_id,
+                limit=len(alert_ids) + incident.alerts_count,
+            )
+
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts, with_incidents=True)
+            logger.info(
+                "Fetched alerts from DB",
+                extra={
+                    "tenant_id": tenant_id,
+                },
+            )
+            elastic_client.index_alerts(
+                alerts=enriched_alerts_dto,
+            )
+            logger.info("Pushed enriched alert to elasticsearch")
+    except Exception:
+        logger.exception("Failed to push alert to elasticsearch")
+        pass
     __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
 
     incident_dto = IncidentDto.from_db_incident(incident)

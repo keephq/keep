@@ -14,6 +14,7 @@ type LinkWithIconProps = {
   isDeletable?: boolean;
   onDelete?: () => void;
   className?: string;
+  testId?: string;
 } & LinkProps & AnchorHTMLAttributes<HTMLAnchorElement>;
 
 export const LinkWithIcon = ({
@@ -25,6 +26,7 @@ export const LinkWithIcon = ({
   isDeletable = false,
   onDelete,
   className,
+  testId,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -69,6 +71,7 @@ export const LinkWithIcon = ({
         {...restOfLinkProps}
         className="flex items-center space-x-2 flex-1"
         onClick={onClick}
+        data-testid={`${testId}-link`}
       >
         <Icon className={iconClasses} icon={icon} />
         <span className={textClasses}>{children}</span>
@@ -78,6 +81,7 @@ export const LinkWithIcon = ({
           <Badge
             size="xs"
             color="orange"
+            data-testid={`${testId}-badge`}
           >
             {count}
           </Badge>
