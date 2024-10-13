@@ -13,16 +13,16 @@ workflow:
     email_template: |
       <strong>Hi,<br>
       This {{ vars.alert_tier }} is triggered because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.<br>
-      Please visit monitoring.radius.ai for more!<br>
+      Please visit monitoring.keeohq.dev for more!<br>
       Regards,<br>
-      Radius AI Monitoring</strong>
+      KeepHQ dev Monitoring</strong>
 
     slack_message: |
       {{ vars.alert_tier }} Alert: SA Pipelines are down
 
       Hi,
       This {{ vars.alert_tier }} alert is triggered because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.
-      Please visit monitoring.radius.ai for more!
+      Please visit monitoring.keeohq.dev for more!
 
   actions:
     # Sendgrid Tier 0 Alert
