@@ -76,6 +76,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
         timeUnit: timeunit,
         groupedAttributes: selectedRule.grouping_criteria,
         requireApprove: selectedRule.require_approve,
+        resolveOn: selectedRule.resolve_on,
         query: queryInGroup,
         incidents: selectedRule.incidents,
       };

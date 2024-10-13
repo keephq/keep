@@ -1,6 +1,8 @@
 import logging
 import os
 
+from fastapi import Request
+from fastapi.datastructures import FormData
 from pusher import Pusher
 
 logger = logging.getLogger(__name__)
@@ -9,6 +11,28 @@ logger = logging.getLogger(__name__)
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
+
+
+async def extract_generic_body(request: Request) -> dict | bytes | FormData:
+    """
+    Extracts the body of the request based on the content type.
+
+    Args:
+        request (Request): The request object.
+
+    Returns:
+        dict | bytes | FormData: The body of the request.
+    """
+    content_type = request.headers.get("Content-Type")
+    if content_type == "application/x-www-form-urlencoded":
+        return await request.form()
+    else:
+        try:
+            body = await request.json()
+            return body
+        except Exception:
+            logger.debug("Failed to parse body as json, returning raw body")
+            return await request.body()
 
 
 def get_pusher_client() -> Pusher | None:

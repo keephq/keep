@@ -4,7 +4,9 @@ import {
   MultiSelectItem,
   NumberInput,
   Select,
-  SelectItem, Switch, Text,
+  SelectItem,
+  Switch,
+  Text,
   TextInput,
 } from "@tremor/react";
 import { Controller, get, useFormContext } from "react-hook-form";
@@ -37,7 +39,6 @@ export const CorrelationForm = ({
   return (
     <div className="flex flex-col gap-y-4 flex-1">
       <fieldset className="grid grid-cols-2">
-
         <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong">
           Correlation name
           <TextInput
@@ -45,7 +46,7 @@ export const CorrelationForm = ({
             placeholder="Choose name"
             className="mt-2"
             {...register("name", {
-              required: {message: "Name is required", value: true},
+              required: { message: "Name is required", value: true },
             })}
             error={!!get(errors, "name.message")}
             errorMessage={get(errors, "name.message")}
@@ -53,7 +54,6 @@ export const CorrelationForm = ({
         </label>
 
         <span className="grid grid-cols-2 gap-x-2">
-
           <legend className="text-tremor-default font-medium text-tremor-content-strong flex items-center col-span-2">
             Append to the same Incident if delay between alerts is below{" "}
             <Button
@@ -67,17 +67,16 @@ export const CorrelationForm = ({
             />
           </legend>
 
-
           <NumberInput
             defaultValue={5}
             min={1}
             className="mt-2"
-            {...register("timeAmount", {validate: (value) => value > 0})}
+            {...register("timeAmount", { validate: (value) => value > 0 })}
           />
           <Controller
             control={control}
             name="timeUnit"
-            render={({field: {value, onChange}}) => (
+            render={({ field: { value, onChange } }) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="seconds">Seconds</SelectItem>
                 <SelectItem value="minutes">Minutes</SelectItem>
@@ -88,45 +87,69 @@ export const CorrelationForm = ({
           />
         </span>
       </fieldset>
-      <div>
-        <label
-          className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
-          htmlFor="groupedAttributes"
-        >
-          Select attribute(s) to group by{" "}
-          {keys.length < 1 && (
-            <Button
-              className="cursor-default ml-2"
-              type="button"
-              tooltip="Keep will use these attributes to split between incidents. For example, with attribute host, Keep will correlate alert with hostX and alert with host hostY to different incidents. You cannot calculate attributes to group by without alerts"
-              icon={QuestionMarkCircleIcon}
-              size="xs"
-              variant="light"
-              color="slate"
-            />
-          )}
-        </label>
-        <Controller
-          control={control}
-          name="groupedAttributes"
-          render={({ field: { value, onChange } }) => (
-            <MultiSelect
-              className="mt-2"
-              value={value}
-              onValueChange={onChange}
-              disabled={isLoading || !keys.length}
-            >
-              {keys.map((alertKey) => (
-                <MultiSelectItem key={alertKey} value={alertKey}>
-                  {alertKey}
-                </MultiSelectItem>
-              ))}
-            </MultiSelect>
-          )}
-        />
-      </div>
-      <div className="flex items-center space-x-2">
+      <fieldset className="grid grid-cols-2">
+        <div className="mr-10">
+          <label
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
+            htmlFor="groupedAttributes"
+          >
+            Select attribute(s) to group by{" "}
+            {keys.length < 1 && (
+              <Button
+                className="cursor-default ml-2"
+                type="button"
+                tooltip="Keep will use these attributes to split between incidents. For example, with attribute host, Keep will correlate alert with hostX and alert with host hostY to different incidents. You cannot calculate attributes to group by without alerts"
+                icon={QuestionMarkCircleIcon}
+                size="xs"
+                variant="light"
+                color="slate"
+              />
+            )}
+          </label>
+          <Controller
+            control={control}
+            name="groupedAttributes"
+            render={({ field: { value, onChange } }) => (
+              <MultiSelect
+                className="mt-2"
+                value={value}
+                onValueChange={onChange}
+                disabled={isLoading || !keys.length}
+              >
+                {keys.map((alertKey) => (
+                  <MultiSelectItem key={alertKey} value={alertKey}>
+                    {alertKey}
+                  </MultiSelectItem>
+                ))}
+              </MultiSelect>
+            )}
+          />
+        </div>
 
+        <div>
+          <label
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
+            htmlFor="resolveOn"
+          >
+            Resolve on{" "}
+          </label>
+
+          <Controller
+            control={control}
+            name="resolveOn"
+            render={({ field: { value, onChange } }) => (
+              <Select value={value} onValueChange={onChange} className="mt-2">
+                <SelectItem value="never">No auto-resolution</SelectItem>
+                <SelectItem value="all">All alerts resolved</SelectItem>
+                <SelectItem value="first">First alert resolved</SelectItem>
+                <SelectItem value="last">Last alert resolved</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
+      </fieldset>
+
+      <div className="flex items-center space-x-2">
         <Controller
           control={control}
           name="requireApprove"

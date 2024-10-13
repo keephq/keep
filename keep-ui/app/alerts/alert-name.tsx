@@ -63,7 +63,7 @@ export default function AlertName({
 
   return (
     <div className="flex items-start justify-between">
-      <div className="truncate whitespace-pre-wrap" title={alert.name}>
+      <div className="line-clamp-3 whitespace-pre-wrap" title={alert.name}>
         {name}
       </div>
       <div className="flex-shrink-0">
@@ -139,15 +139,15 @@ export default function AlertName({
               relevantWorkflowExecution.workflow_status === "success"
                 ? "green"
                 : relevantWorkflowExecution.workflow_status === "error"
-                ? "red"
-                : "gray"
+                  ? "red"
+                  : "gray"
             }`}
             tooltip={`${
               relevantWorkflowExecution.workflow_status === "success"
                 ? "Last workflow executed successfully"
                 : relevantWorkflowExecution.workflow_status === "error"
-                ? "Last workflow execution failed"
-                : undefined
+                  ? "Last workflow execution failed"
+                  : undefined
             }`}
             onClick={() => handleWorkflowClick(relevantWorkflowExecution)}
             className="ml-1 cursor-pointer"

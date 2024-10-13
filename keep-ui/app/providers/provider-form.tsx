@@ -1,12 +1,6 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { Provider, ProviderAuthConfig } from "./providers";
 import { getApiURL } from "../../utils/apiUrl";
@@ -56,15 +50,14 @@ import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
 import { toast } from "react-toastify";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 type ProviderFormProps = {
   provider: Provider;
   onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
-  onAddProvider?: (provider: Provider) => void;
   isProviderNameDisabled?: boolean;
   installedProvidersMode: boolean;
-  onDelete?: (provider: Provider) => void;
   isLocalhost?: boolean;
 };
 
@@ -150,14 +143,13 @@ const providerNameFieldConfig: ProviderAuthConfig = {
 const ProviderForm = ({
   provider,
   onConnectChange,
-  onAddProvider,
   closeModal,
   isProviderNameDisabled,
   installedProvidersMode,
-  onDelete,
   isLocalhost,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
+  const { mutate } = useProviders();
   const searchParams = useSearchParams();
   const [formValues, setFormValues] = useState<ProviderFormData>(() => {
     const initialValues: ProviderFormData = {
@@ -246,7 +238,7 @@ const ProviderForm = ({
         response.json().then((newValidatedScopes) => {
           setProviderValidatedScopes(newValidatedScopes);
           provider.validatedScopes = newValidatedScopes;
-          onAddProvider?.(provider);
+          mutate();
           setRefreshLoading(false);
         });
       } else {
@@ -267,7 +259,7 @@ const ProviderForm = ({
         }
       );
       if (response.ok) {
-        onDelete!(provider);
+        mutate();
         closeModal();
       } else {
         toast.error(`Failed to delete ${provider.type} 😢`);
@@ -401,13 +393,14 @@ const ProviderForm = ({
   };
 
   const handleUpdateClick = (e: any) => {
+    if (provider.webhook_required) callInstallWebhook();
     e.preventDefault();
     if (validate()) {
       setIsLoading(true);
       submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
-          onAddProvider?.({ ...provider, ...data } as Provider);
+          mutate();
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
@@ -417,12 +410,12 @@ const ProviderForm = ({
     }
   };
 
-  const handleConnectClick = () => {
+  const handleConnectClick = async () => {
     if (validate()) {
       setIsLoading(true);
       onConnectChange?.(true, false);
       submit(`${getApiURL()}/providers/install`)
-        .then((data) => {
+        .then(async (data) => {
           console.log("Connect Result:", data);
           setIsLoading(false);
           onConnectChange?.(false, true);
@@ -432,9 +425,10 @@ const ProviderForm = ({
             accessToken &&
             !isLocalhost
           ) {
-            installWebhook(data as Provider, accessToken);
+            // mutate after webhook installation
+            await installWebhook(data as Provider, accessToken);
           }
-          onAddProvider?.({ ...provider, ...data } as Provider);
+          mutate();
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
@@ -633,7 +627,7 @@ const ProviderForm = ({
                       formValues["install_webhook"] &&
                       !isLocalhost
                     }
-                    disabled={isLocalhost}
+                    disabled={isLocalhost || provider.webhook_required}
                   />
                   <label
                     htmlFor="install_webhook"

@@ -11,15 +11,11 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 const ProvidersTiles = ({
   providers,
-  addProvider,
-  onDelete,
   installedProvidersMode = false,
   linkedProvidersMode = false,
   isLocalhost = false,
 }: {
   providers: Providers;
-  addProvider: (provider: Provider) => void;
-  onDelete: (provider: Provider) => void;
   installedProvidersMode?: boolean;
   linkedProvidersMode?: boolean;
   isLocalhost?: boolean;
@@ -126,11 +122,9 @@ const ProvidersTiles = ({
           <ProviderForm
             provider={selectedProvider}
             onConnectChange={handleConnecting}
-            onAddProvider={addProvider}
             closeModal={handleCloseModal}
             installedProvidersMode={installedProvidersMode}
             isProviderNameDisabled={installedProvidersMode}
-            onDelete={onDelete}
             isLocalhost={isLocalhost}
           />
         )}

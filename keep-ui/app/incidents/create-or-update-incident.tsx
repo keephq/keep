@@ -25,15 +25,25 @@ interface Props {
   exitCallback?: () => void;
 }
 
-export const updateIncidentRequest = async (
-  session: Session | null,
-  incidentId: string,
-  incidentName: string,
-  incidentUserSummary: string,
-  incidentAssignee: string
-) => {
+export const updateIncidentRequest = async ({
+  session,
+  incidentId,
+  incidentName,
+  incidentUserSummary,
+  incidentAssignee,
+  incidentSameIncidentInThePastId,
+  generatedByAi,
+}: {
+  session: Session | null;
+  incidentId: string;
+  incidentName: string;
+  incidentUserSummary: string;
+  incidentAssignee: string;
+  incidentSameIncidentInThePastId: string | null;
+  generatedByAi: boolean;
+}) => {
   const apiUrl = getApiURL();
-  const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
+  const response = await fetch(`${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${session?.accessToken}`,
@@ -43,6 +53,7 @@ export const updateIncidentRequest = async (
       user_generated_name: incidentName,
       user_summary: incidentUserSummary,
       assignee: incidentAssignee,
+      same_incident_in_the_past_id: incidentSameIncidentInThePastId,
     }),
   });
   return response;
@@ -116,13 +127,15 @@ export default function CreateOrUpdateIncident({
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backend.
   const updateIncident = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await updateIncidentRequest(
-      session,
-      incidentToEdit?.id!,
-      incidentName,
-      incidentUserSummary,
-      incidentAssignee
-    );
+    const response = await updateIncidentRequest({
+      session: session,
+      incidentId: incidentToEdit?.id!,
+      incidentName: incidentName,
+      incidentUserSummary: incidentUserSummary,
+      incidentAssignee: incidentAssignee,
+      incidentSameIncidentInThePastId: incidentToEdit?.same_incident_in_the_past_id!,
+      generatedByAi: false,
+    })
     if (response.ok) {
       exitEditMode();
       await mutate();

@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, Query
 from pusher import Pusher
 from pydantic.types import UUID
 
@@ -18,23 +18,30 @@ from keep.api.core.db import (
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
+    get_future_incidents_by_incident_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     get_last_incidents,
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
+    change_incident_status_by_id,
     update_incident_from_dto_by_id,
+    get_incidents_meta_for_tenant,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
-    EnrichAlertRequestBody,
     IncidentDto,
     IncidentDtoIn,
-    IncidentStatus,
     IncidentStatusChangeDto,
+    IncidentStatus,
+    EnrichAlertRequestBody,
+    IncidentSorting,
+    IncidentSeverity,
+    IncidentListFilterParamsDto,
 )
+
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -64,7 +71,7 @@ if ee_enabled:
 
 
 def __update_client_on_incident_change(
-    pusher_client: Pusher | None, tenant_id: str, incident_id: str | None = None
+    pusher_client: Pusher | None, tenant_id: str, incident_id: UUID | None = None
 ):
     """
     Update the client on incident change, making the client poll changes.
@@ -83,7 +90,7 @@ def __update_client_on_incident_change(
         pusher_client.trigger(
             f"private-{tenant_id}",
             "incident-change",
-            {"incident_id": incident_id},
+            {"incident_id": str(incident_id)},
         )
         logger.info(
             "Client notified on incident change",
@@ -140,6 +147,21 @@ def create_incident_endpoint(
 
 
 @router.get(
+    "/meta",
+    description="Get incidents' metadata for filtering",
+    response_model=IncidentListFilterParamsDto,
+)
+def get_incidents_meta(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> IncidentListFilterParamsDto:
+    tenant_id = authenticated_entity.tenant_id
+    meta = get_incidents_meta_for_tenant(tenant_id=tenant_id)
+    return IncidentListFilterParamsDto(**meta)
+
+
+@router.get(
     "",
     description="Get last incidents",
 )
@@ -148,23 +170,48 @@ def get_all_incidents(
     limit: int = 25,
     offset: int = 0,
     sorting: IncidentSorting = IncidentSorting.creation_time,
+    status: List[IncidentStatus] = Query(None),
+    severity: List[IncidentSeverity] = Query(None),
+    assignees: List[str] = Query(None),
+    sources: List[str] = Query(None),
+    affected_services: List[str] = Query(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
+
+    filters = {}
+    if status:
+        filters["status"] = [s.value for s in status]
+    if severity:
+        filters["severity"] = [s.order for s in severity]
+    if assignees:
+        filters["assignee"] = assignees
+    if sources:
+        filters["sources"] = sources
+    if affected_services:
+        filters["affected_services"] = affected_services
+
+
     logger.info(
         "Fetching incidents from DB",
         extra={
             "tenant_id": tenant_id,
+            "limit": limit,
+            "offset": offset,
+            "sorting": sorting,
+            "filters": filters,
         },
     )
+
     incidents, total_count = get_last_incidents(
         tenant_id=tenant_id,
         is_confirmed=confirmed,
         limit=limit,
         offset=offset,
         sorting=sorting,
+        filters=filters,
     )
 
     incidents_dto = []
@@ -175,6 +222,10 @@ def get_all_incidents(
         "Fetched incidents from DB",
         extra={
             "tenant_id": tenant_id,
+            "limit": limit,
+            "offset": offset,
+            "sorting": sorting,
+            "filters": filters,
         },
     )
 
@@ -188,7 +239,7 @@ def get_all_incidents(
     description="Get incident by id",
 )
 def get_incident(
-    incident_id: str,
+    incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
@@ -215,8 +266,13 @@ def get_incident(
     description="Update incident by id",
 )
 def update_incident(
-    incident_id: str,
+    incident_id: UUID,
     updated_incident_dto: IncidentDtoIn,
+    generated_by_ai: bool = Query(
+        default=False,
+        alias="generatedByAi",
+        description="Whether the incident update request was generated by AI",
+    ),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -229,9 +285,8 @@ def update_incident(
             "tenant_id": tenant_id,
         },
     )
-
     incident = update_incident_from_dto_by_id(
-        tenant_id, incident_id, updated_incident_dto
+        tenant_id, incident_id, updated_incident_dto, generated_by_ai
     )
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -255,7 +310,7 @@ def update_incident(
     description="Delete incident by incident id",
 )
 def delete_incident(
-    incident_id: str,
+    incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -298,7 +353,7 @@ def delete_incident(
     description="Get incident alerts by incident incident id",
 )
 def get_incident_alerts(
-    incident_id: str,
+    incident_id: UUID,
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -345,11 +400,61 @@ def get_incident_alerts(
 
 
 @router.get(
+    "/{incident_id}/future_incidents",
+    description="Get same incidents linked to this one",
+)
+def get_future_incidents_for_an_incident(
+    incident_id: str,
+    limit: int = 25,
+    offset: int = 0,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+    ),
+) -> IncidentsPaginatedResultsDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    logger.info(
+        "Fetching future incidents from",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    db_incidents, total_count = get_future_incidents_by_incident_id(
+        limit=limit,
+        offset=offset,
+        incident_id=incident_id,
+    )
+    future_incidents = [IncidentDto.from_db_incident(incident) for incident in db_incidents]
+    logger.info(
+        "Fetched future incidents from DB",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return IncidentsPaginatedResultsDto(
+        limit=limit, offset=offset, count=total_count, items=future_incidents
+    )
+
+
+@router.get(
     "/{incident_id}/workflows",
     description="Get incident workflows by incident id",
 )
 def get_incident_workflows(
-    incident_id: str,
+    incident_id: UUID,
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -386,7 +491,7 @@ def get_incident_workflows(
     response_model=List[AlertDto],
 )
 async def add_alerts_to_incident(
-    incident_id: str,
+    incident_id: UUID,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -453,7 +558,7 @@ async def add_alerts_to_incident(
     response_model=List[AlertDto],
 )
 def delete_alerts_from_incident(
-    incident_id: str,
+    incident_id: UUID,
     alert_ids: List[UUID],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -521,7 +626,7 @@ def mine(
     response_model=IncidentDto,
 )
 def confirm_incident(
-    incident_id: str,
+    incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -550,7 +655,7 @@ def confirm_incident(
     response_model=IncidentDto,
 )
 def change_incident_status(
-    incident_id: str,
+    incident_id: UUID,
     change: IncidentStatusChangeDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])

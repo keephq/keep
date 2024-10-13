@@ -11,12 +11,13 @@ import {
 } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
-import "./incident-chat.css";
 import Loading from "app/loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { updateIncidentRequest } from "../create-or-update-incident";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
+import "@copilotkit/react-ui/styles.css";
+import "./incident-chat.css";
 
 export default function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
@@ -75,13 +76,16 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
       },
     ],
     handler: async ({ name, summary }) => {
-      const response = await updateIncidentRequest(
-        session,
-        incident.id,
-        name,
-        summary,
-        incident.assignee
-      );
+      const response = await updateIncidentRequest({
+        session: session,
+        incidentId: incident.id,
+        incidentName: name,
+        incidentUserSummary: summary,
+        incidentAssignee: incident.assignee,
+        incidentSameIncidentInThePastId: incident.same_incident_in_the_past_id,
+        generatedByAi: true,
+      });
+
       if (response.ok) {
         mutate();
         mutateIncident();
@@ -109,6 +113,7 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
             "rgb(249 115 22 / var(--tw-bg-opacity))",
         } as CopilotKitCSSProperties
       }
+      className="max-w-3xl mx-auto"
     >
       <CopilotChat
         className="-mx-2"

@@ -4,7 +4,7 @@ import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { TopologyMap } from "./ui/map";
 import { ApplicationsList } from "./ui/applications/applications-list";
 import { useContext, useEffect, useState } from "react";
-import { ServiceSearchContext } from "./service-search-context";
+import { TopologySearchContext } from "./TopologySearchContext";
 import { TopologyApplication, TopologyService } from "./model";
 
 export function TopologyPageClient({
@@ -15,19 +15,19 @@ export function TopologyPageClient({
   topologyServices?: TopologyService[];
 }) {
   const [tabIndex, setTabIndex] = useState(0);
-  const { selectedServiceId } = useContext(ServiceSearchContext);
+  const { selectedObjectId } = useContext(TopologySearchContext);
 
   useEffect(() => {
-    if (!selectedServiceId) {
+    if (!selectedObjectId) {
       return;
     }
     setTabIndex(0);
-  }, [selectedServiceId]);
+  }, [selectedObjectId]);
 
   return (
     <TabGroup
       id="topology-tabs"
-      className="h-[calc(100%-7rem)] flex flex-col"
+      className="flex flex-col"
       index={tabIndex}
       onIndexChange={setTabIndex}
     >
@@ -36,8 +36,9 @@ export function TopologyPageClient({
         <Tab>Applications</Tab>
       </TabList>
       <TabPanels className="flex-1 flex flex-col">
-        <TabPanel className="flex-1">
+        <TabPanel className="h-[calc(100vh-10rem)]">
           <TopologyMap
+            standalone
             topologyApplications={applications}
             topologyServices={topologyServices}
             isVisible={tabIndex === 0}

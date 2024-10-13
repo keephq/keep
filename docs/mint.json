@@ -72,7 +72,8 @@
           "pages": [
             "deployment/provision/overview",
             "deployment/provision/provider",
-            "deployment/provision/workflow"
+            "deployment/provision/workflow",
+            "deployment/provision/dashboard"
           ]
         },
         "deployment/secret-manager",
@@ -140,6 +141,7 @@
             "providers/documentation/mock-provider",
             "providers/documentation/mongodb-provider",
             "providers/documentation/mysql-provider",
+            "providers/documentation/mailgun-provider",
             "providers/documentation/netdata-provider",
             "providers/documentation/new-relic-provider",
             "providers/documentation/ntfy-provider",
@@ -163,6 +165,7 @@
             "providers/documentation/site24x7-provider",
             "providers/documentation/slack-provider",
             "providers/documentation/snowflake-provider",
+            "providers/documentation/smtp-provider",
             "providers/documentation/splunk-provider",
             "providers/documentation/squadcast-provider",
             "providers/documentation/ssh-provider",
@@ -301,6 +304,7 @@
             "api-ref/alerts/webhook-challenge",
             "api-ref/alerts/receive-event",
             "api-ref/alerts/get-alert",
+            "api-ref/alerts/get-multiple-fingerprint-alert-audit",
             "api-ref/alerts/enrich-alert",
             "api-ref/alerts/unenrich-alert",
             "api-ref/alerts/search-alerts",
@@ -309,10 +313,30 @@
           ]
         },
         {
+          "group": "deduplications",
+          "pages": [
+            "api-ref/deduplications/create-deduplication-rule",
+            "api-ref/deduplications/delete-deduplication-rule",
+            "api-ref/deduplications/get-deduplication-fields",
+            "api-ref/deduplications/get-deduplications",
+            "api-ref/deduplications/update-deduplication-rule"
+          ]
+        },
+        {
+          "group": "maintenance",
+          "pages": [
+            "api-ref/maintenance/create-maintenance-rule",
+            "api-ref/maintenance/delete-maintenance-rule",
+            "api-ref/maintenance/get-maintenance-rules",
+            "api-ref/maintenance/update-maintenance-rule"
+          ]
+        },
+        {
           "group": "incidents",
           "pages": [
-            "api-ref/incidents/get-all-incidents",
+            "api-ref/incidents/change-incident-status",
             "api-ref/incidents/create-incident-endpoint",
+            "api-ref/incidents/get-all-incidents",
             "api-ref/incidents/get-incident",
             "api-ref/incidents/update-incident",
             "api-ref/incidents/delete-incident",

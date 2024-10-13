@@ -1,0 +1,75 @@
+---
+title: "Mailgun Provider"
+description: "Mailgun Provider allows sending alerts to Keep via email."
+---
+
+<Tip>
+  Mailgun currently supports receiving alerts via email. We will add querying
+  and notifying soon.
+</Tip>
+
+## Inputs
+
+Mailgun Provider does not currently support the `notify` function.
+
+## Outputs
+
+Mailgun Provider does not currently support the `query` function.
+
+## Authentication Parameters
+
+The Mailgun Provider uses API token authentication. You need to provide the following authentication parameters to connect to Mailgun:
+
+- **email** (optional): Email address to send alerts to. This will get populated automatically after installation.
+- **sender** (optional): Sender email address to validate. For example, `.*@keephq.dev`. Leave empty for any.
+- **extraction** (optional): Extraction Rules. Read more about extraction in Keep's Mailgun documentation.
+
+## Connecting with the Provider
+
+To connect to Mailgun, you do not need to perform any actions on the Mailgun side. We use our own Mailgun account and handle everything for you.
+
+## Post Installation Validation
+
+You can check that the Mailgun Provider works by sending a test email to the configured email address.
+
+1. Send a test email to the email address provided in the `authentication` section.
+2. Check Keep's platform to see if the alert is received.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/mailgun_email_address.png" />
+</Frame>
+
+## Default Alert Values
+
+When no extraction rules are set, the default values for every alert are as follows:
+
+- **name**: The subject of the email.
+- **source**: The sender of the email.
+- **message**: The stripped text content of the email.
+- **timestamp**: The timestamp of the email, converted to ISO format.
+- **severity**: "info"
+- **status**: "firing"
+
+## How Extraction Works
+
+Extraction rules allow you to extract specific information from the email content using regular expressions. This can be useful for parsing and structuring the alert data.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/mailgun_extraction.png" />
+</Frame>
+
+### Example Extraction Rule
+
+An extraction rule is defined as a dictionary with the following keys:
+
+- **key**: The key in the email event to apply the extraction rule to.
+- **value**: The regular expression to use for extraction.
+
+#### Example
+
+Extract the severity from the subject of the email.
+
+```
+Key: subject
+Value: (?P<severity>\w+):
+```
