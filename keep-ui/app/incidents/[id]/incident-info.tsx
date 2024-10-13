@@ -20,6 +20,9 @@ import { IoChevronDown } from "react-icons/io5";
 import IncidentChangeStatusModal from "@/app/incidents/incident-change-status-modal";
 import ChangeSameIncidentInThePast from "@/app/incidents/incident-change-same-in-the-past";
 import {STATUS_ICONS} from "@/app/incidents/statuses";
+import remarkRehype from "remark-rehype";
+import rehypeRaw from "rehype-raw";
+import Markdown from "react-markdown";
 
 interface Props {
   incident: IncidentDto;
@@ -45,6 +48,14 @@ function Summary({
   collapsable?: boolean;
   className?: string;
 }) {
+
+  const formatedSummary = <Markdown
+      remarkPlugins={[remarkRehype]}
+      rehypePlugins={[rehypeRaw]}
+    >
+      {summary}
+    </Markdown>
+
   if (collapsable) {
     return (
       <Disclosure as="div" className={classNames("space-y-1", className)}>
@@ -60,7 +71,7 @@ function Summary({
         </Disclosure.Button>
 
         <Disclosure.Panel as="div" className="space-y-2 relative">
-          {summary}
+          {formatedSummary}
         </Disclosure.Panel>
       </Disclosure>
     );
@@ -70,7 +81,7 @@ function Summary({
     <div className={className}>
       <h3 className="text-gray-500 text-sm">{title}</h3>
       {/*TODO: suggest generate summary if it's empty*/}
-      {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+      {summary ? <p>{formatedSummary}</p> : <p>No summary yet</p>}
     </div>
   );
 }
