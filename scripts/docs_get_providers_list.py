@@ -26,7 +26,7 @@ NON_DOCUMENTED_PROVIDERS = [
     "bash",
     "keep",
     "bigquery",
-    # "parseable",
+    "parseable",
 ] # known not documented providers https://github.com/keephq/keep/issues/2033
 
 
