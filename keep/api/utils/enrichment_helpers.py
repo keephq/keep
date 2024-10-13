@@ -76,12 +76,13 @@ def calculated_start_firing_time(
         return alert.lastReceived
 
 
-def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
+def convert_db_alerts_to_dto_alerts(alerts: list[Alert], with_incidents: bool = False) -> list[AlertDto]:
     """
     Enriches the alerts with the enrichment data.
 
     Args:
         alerts (list[Alert]): The alerts to enrich.
+        with_incidents (bool): enrich with incidents data
 
     Returns:
         list[AlertDto]: The enriched alerts.
@@ -92,6 +93,9 @@ def convert_db_alerts_to_dto_alerts(alerts: list[Alert]) -> list[AlertDto]:
         for alert in alerts:
             if alert.alert_enrichment:
                 alert.event.update(alert.alert_enrichment.enrichments)
+            if with_incidents:
+                if alert.incidents:
+                    alert.event["incident"] = ",".join(str(incident.id) for incident in alert.incidents)
             try:
                 alert_dto = AlertDto(**alert.event)
                 if alert.alert_enrichment:
