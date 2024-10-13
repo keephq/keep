@@ -1,39 +1,42 @@
 ---
 title: "Keep"
 sidebarTitle: "Keep Provider"
-description: "Keep provider acts as a placeholder for alerts without a specific provider."
+description: "Keep provider allows you to query and manage alerts in Keep."
 ---
 
 ## Inputs
 
-- `alert_message`: str: The message to display in the alert
-- `severity`: str (optional): The severity level of the alert (e.g., `low`, `medium`, `high`)
+- `query`: str : The query to retrieve alerts based on specific criteria.
+- `filter`: dict : Optional filters to narrow down the query results.
 
 ## Outputs
 
-_No outputs as this is a placeholder provider._
+- `alerts`: list : A list of alerts that match the query criteria.
 
 ## Authentication Parameters
 
-_None required for the Keep provider, as it acts as a placeholder for non-provider alerts._
+To use the Keep provider, you must authenticate with an API token associated with your Keep account. This token can be generated from your Keep dashboard.
 
 ## Connecting with the Provider
 
-The Keep provider does not connect to any external service. It serves as a placeholder for cases where alerts do not need a specific provider.
+1. Log in to your Keep account.
+2. Navigate to the API section of your account dashboard and generate an API token.
+3. Use this token to authenticate when querying alerts via the Keep provider.
 
 ## Example of usage
 
 ```yaml
 workflow:
-  id: keep-provider-example
-  description: Keep Provider example
+  id: keep-example
+  description: Keep example
   triggers:
     - type: manual
   actions:
-    - name: keep-alert
+    - name: keep-query
       provider:
         type: keep
-        config: "{{ providers.keep }}"
+        config: "{{ providers.keeptest }}"
         with:
-          alert_message: "This is a placeholder alert."
-          severity: "low"
+          query: "severity:critical"
+          filter:
+            status: "open"

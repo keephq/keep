@@ -1,34 +1,36 @@
 ---
 title: "Auth0"
 sidebarTitle: "Auth0 Provider"
-description: "Auth0 provider allows integration with Auth0 for user authentication and authorization."
+description: "Auth0 provider allows interaction with Auth0 APIs for authentication and user management."
 ---
 
 ## Inputs
 
-- `client_id`: str : The Auth0 Client ID.
-- `client_secret`: str : The Auth0 Client Secret.
-- `audience`: str : The audience (API identifier) for which the token is intended.
-- `grant_type`: str : The grant type for authentication (e.g., `client_credentials`).
+- `client_id`: str : The client ID for the Auth0 application.
+- `client_secret`: str : The client secret for the Auth0 application.
+- `audience`: str : The audience for the API authorization request.
+- `grant_type`: str : The type of authorization grant requested (e.g., `client_credentials`).
 
 ## Outputs
 
-- `access_token`: str : The access token received from Auth0.
-- `expires_in`: int : The token expiration time in seconds.
+- `access_token`: The access token issued by Auth0 for authenticated requests.
+- `expires_in`: The time in seconds before the access token expires.
+- `token_type`: The type of token, typically `Bearer`.
 
 ## Authentication Parameters
 
-- `domain`: The domain for your Auth0 tenant (e.g., `your-tenant.auth0.com`).
-- `client_id`: The Client ID for the application.
-- `client_secret`: The Client Secret associated with the application.
-- `audience`: API identifier for which the token is requested.
+To authenticate with Auth0, the following parameters are needed:
+- **client_id**: The unique identifier for your Auth0 application.
+- **client_secret**: A secret associated with your application, used for secure communication.
+- **audience**: Defines the API resources you're trying to access.
+
+These parameters can be retrieved from your Auth0 dashboard under the application's settings.
 
 ## Connecting with the Provider
 
-1. Create an application in your Auth0 dashboard.
-2. Go to the "Applications" section, select your application, and get the `client_id` and `client_secret`.
-3. Define the `audience` (API identifier) for which you want to request a token.
-4. Provide the `grant_type` (typically `client_credentials` for machine-to-machine applications).
+The Auth0 provider connects to both the **Authentication API** and the **Management API**, enabling functionality such as token-based authentication and user management. Depending on your needs, you can:
+- Use the **Authentication API** to obtain access tokens, manage user profiles, or handle multi-factor authentication.
+- Use the **Management API** to automate the configuration of your Auth0 environment, register applications, manage users, and more.
 
 ## Example of usage
 
@@ -42,11 +44,12 @@ workflow:
     - name: auth0
       provider:
         type: auth0
-        config: "{{ providers.auth0test }}"
+        config: "{{ providers.auth0config }}"
         with:
           client_id: "{{ secrets.auth0_client_id }}"
           client_secret: "{{ secrets.auth0_client_secret }}"
-          audience: "https://api.yourapp.com"
+          audience: "https://api.example.com"
           grant_type: "client_credentials"
+
 ##Usefull Links
 -[Auth0 API Documentation](https://auth0.com/docs/api)
