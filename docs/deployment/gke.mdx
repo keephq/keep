@@ -239,7 +239,12 @@ helm upgrade -n keep keep keephq/keep -f values.yaml
 
 ### Validate everything works
 
-First, you should be able to access Keep's UI with https now, using https://keep.yourcompany.com if that's working - you can skip the other validations ofc.
+First, you should be able to access Keep's UI with https now, using https://keep.yourcompany.com if that's working - you can skip the other validations.
+<Info>The "Not Secure" in the screenshot is due to self-signed certificate.</Info>
+
+<Frame>
+     <img src="/images/gke2.png" />
+</Frame>
 
 #### Validate ingress host
 
