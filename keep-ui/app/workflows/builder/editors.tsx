@@ -185,6 +185,65 @@ function KeepStepEditor({
           value={properties?.if || ("" as string)}
         />
       </div>
+      <div>
+        <Text>Vars</Text>
+        {Object.entries(properties?.vars || {}).map(([varKey, varValue]) => (
+          <div key={varKey} className="flex items-center mt-1">
+            <TextInput
+              placeholder={`Key ${varKey}`}
+              value={varKey}
+              onChange={(e) => {
+                const updatedVars = {
+                  ...(properties.vars as { [key: string]: string }),
+                };
+                delete updatedVars[varKey];
+                updatedVars[e.target.value] = varValue as string;
+                updateProperty("vars", updatedVars);
+              }}
+            />
+            <TextInput
+              placeholder={`Value ${varValue}`}
+              value={varValue as string}
+              onChange={(e) => {
+                const updatedVars = {
+                  ...(properties.vars as { [key: string]: string }),
+                };
+                updatedVars[varKey] = e.target.value;
+                updateProperty("vars", updatedVars);
+              }}
+            />
+            <Icon
+              icon={BackspaceIcon}
+              className="cursor-pointer"
+              color="red"
+              tooltip={`Remove ${varKey}`}
+              onClick={() => {
+                const updatedVars = {
+                  ...(properties.vars as { [key: string]: string }),
+                };
+                delete updatedVars[varKey];
+                updateProperty("vars", updatedVars);
+              }}
+            />
+          </div>
+        ))}
+        <Button
+          onClick={() => {
+            const updatedVars = {
+              ...(properties.vars as { [key: string]: string }),
+              "": "",
+            };
+            updateProperty("vars", updatedVars);
+          }}
+          size="xs"
+          className="ml-1 mt-1"
+          variant="light"
+          color="gray"
+          icon={PlusIcon}
+        >
+          Add Var
+        </Button>
+      </div>
       {uniqueParams
         ?.filter((key) => key !== "kwargs")
         .map((key, index) => {
@@ -280,6 +339,14 @@ function WorkflowEditorV2({
   selectedNode: string | null;
   saveRef: React.MutableRefObject<boolean>;
 }) {
+  const addNewConstant = () => {
+    const updatedConsts = {
+      ...(properties["consts"] as { [key: string]: string }),
+      [`newKey${Object.keys(properties["consts"] || {}).length}`]: "",
+    };
+    handleChange("consts", updatedConsts);
+  };
+
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
@@ -490,7 +557,7 @@ function WorkflowEditorV2({
                       ).map(([constKey, constValue]) => (
                         <div key={constKey} className="flex items-center mt-1">
                           <TextInput
-                            placeholder={`Key: ${constKey}`}
+                            placeholder={`Key ${constKey}`}
                             value={constKey}
                             onChange={(e) => {
                               const updatedConsts = {
@@ -534,16 +601,7 @@ function WorkflowEditorV2({
                         </div>
                       ))}
                       <Button
-                        onClick={() => {
-                          const newKey = prompt("Enter new constant key");
-                          if (newKey) {
-                            const updatedConsts = {
-                              ...(properties[key] as { [key: string]: string }),
-                              [newKey]: "",
-                            };
-                            handleChange(key, updatedConsts);
-                          }
-                        }}
+                        onClick={addNewConstant}
                         size="xs"
                         className="ml-1 mt-1"
                         variant="light"

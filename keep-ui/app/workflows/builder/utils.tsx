@@ -161,6 +161,7 @@ export function getActionOrStepObj(
       stepParams: provider?.query_params!,
       actionParams: provider?.notify_params!,
       if: actionOrStep.if,
+      vars: actionOrStep.vars,
     },
   };
 }
@@ -423,10 +424,14 @@ export function buildAlert(definition: Definition): Alert {
         config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
-      return {
+      const step: any = {
         name: s.name,
         provider: provider,
       };
+      if (s.properties.vars) {
+        step.vars = s.properties.vars;
+      }
+      return step;
     });
   // Actions
   let actions = alert.sequence
@@ -442,19 +447,18 @@ export function buildAlert(definition: Definition): Alert {
         config: `{{ providers.${providerName} }}`,
         with: withParams,
       };
+      const action: any = {
+        name: s.name,
+        provider: provider,
+      };
       // add 'if' only if it's not empty
       if (ifParam) {
-        return {
-          name: s.name,
-          provider: provider,
-          if: ifParam as string,
-        };
-      } else {
-        return {
-          name: s.name,
-          provider: provider,
-        };
+        action.if = ifParam as string;
       }
+      if (s.properties.vars) {
+        action.vars = s.properties.vars;
+      }
+      return action;
     });
   // Actions > Foreach
   alert.sequence
@@ -483,14 +487,18 @@ export function buildAlert(definition: Definition): Alert {
           config: `{{ providers.${providerName} }}`,
           with: withParams,
         };
-        foreachActions = [
-          {
-            name: stepOrAction.name || "",
-            provider: provider,
-            foreach: forEachValue,
-            if: ifParam as string,
-          },
-        ];
+        const foreachAction: any = {
+          name: stepOrAction.name || "",
+          provider: provider,
+          foreach: forEachValue,
+        };
+        if (ifParam) {
+          foreachAction.if = ifParam as string;
+        }
+        if (stepOrAction.properties.vars) {
+          foreachAction.vars = stepOrAction.properties.vars;
+        }
+        foreachActions = [foreachAction];
       }
       actions = [...actions, ...foreachActions];
     });
