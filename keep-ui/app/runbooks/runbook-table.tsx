@@ -21,7 +21,7 @@ import { GenericTable } from "@/components/table/GenericTable";
 import { useRunBookTriggers } from "utils/hooks/useRunbook";
 import { useForm } from "react-hook-form";
 import { getApiURL } from "@/utils/apiUrl";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
 import RunbookActions from "./runbook-actions";
@@ -91,7 +91,8 @@ const columnsv2 = [
   }),
 ] as DisplayColumnDef<RunbookV2>[];
 
-function SettingsPage() {
+function SettingsPage({handleRunbookMutation}:{
+  handleRunbookMutation: () => void}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { register, handleSubmit, reset, getValues, setValue, watch } =
     useForm();
@@ -139,7 +140,7 @@ function SettingsPage() {
   };
 
   const onSubmit = (data: any) => {
-    submitHandler(data);
+    submitHandler(data, handleRunbookMutation);
   };
 
   const handleProviderChange = (value: string) => {
@@ -246,6 +247,10 @@ function RunbookIncidentTable() {
     }
   );
 
+  const handleRunbookMutation = ()=>{
+    mutate(`${getApiURL()}/runbooks?limit=${limit}&offset=${0}`);
+  }
+
   const { total_count, runbooks } = runbooksData || {
     total_count: 0,
     runbooks: [],
@@ -272,7 +277,7 @@ function RunbookIncidentTable() {
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <Title>Runbook</Title>
-        <SettingsPage />
+        <SettingsPage handleRunbookMutation={handleRunbookMutation}/>
       </div>
       <Card className="flex-grow">
         {!isLoading && !error && (
