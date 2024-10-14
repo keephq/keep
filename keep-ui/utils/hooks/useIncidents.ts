@@ -49,8 +49,6 @@ export const useIncidents = (
     }
   });
 
-  console.log(filters);
-
   return useSWR<PaginatedIncidentsDto>(
     () =>
       session
