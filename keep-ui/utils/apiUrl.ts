@@ -12,17 +12,15 @@ export function getApiURL(): string {
     return process.env.API_URL!;
   } else {
     console.log("preview branch on vercel");
-    let branchNameSanitized = gitBranchName
-      .replace(/\//g, "-")
-      .substring(0, 63);
+    let branchNameSanitized = gitBranchName.replace(/\//g, "-");
+    const maxBranchNameLength = 40; // 63 - "keep-api-".length - "-3jg67kxyna-uc".length;
+    if (branchNameSanitized.length > maxBranchNameLength) {
+      branchNameSanitized = branchNameSanitized.substring(
+        0,
+        maxBranchNameLength
+      );
+    }
     let serviceName = `keep-api-${branchNameSanitized}`;
-    if (serviceName.length > 63) {
-      serviceName = serviceName.substring(0, 49);
-    }
-
-    if (serviceName.endsWith("-")) {
-      serviceName = serviceName.slice(0, -1);
-    }
     return process.env.API_URL!.replace("keep-api", serviceName);
   }
 }

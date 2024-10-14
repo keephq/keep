@@ -14,15 +14,16 @@ from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
-    IncidentSorting,
     add_alerts_to_incident_by_incident_id,
     change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
+    get_future_incidents_by_incident_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
+    get_incidents_meta_for_tenant,
     get_last_alerts,
     get_last_incidents,
     get_session,
@@ -31,11 +32,15 @@ from keep.api.core.db import (
     update_incident_from_dto_by_id,
 )
 from keep.api.core.dependencies import get_pusher_client
+from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
     IncidentDto,
     IncidentDtoIn,
+    IncidentListFilterParamsDto,
+    IncidentSeverity,
+    IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
 )
@@ -87,7 +92,7 @@ def __update_client_on_incident_change(
         pusher_client.trigger(
             f"private-{tenant_id}",
             "incident-change",
-            {"incident_id": incident_id},
+            {"incident_id": str(incident_id)},
         )
         logger.info(
             "Client notified on incident change",
@@ -144,6 +149,21 @@ def create_incident_endpoint(
 
 
 @router.get(
+    "/meta",
+    description="Get incidents' metadata for filtering",
+    response_model=IncidentListFilterParamsDto,
+)
+def get_incidents_meta(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> IncidentListFilterParamsDto:
+    tenant_id = authenticated_entity.tenant_id
+    meta = get_incidents_meta_for_tenant(tenant_id=tenant_id)
+    return IncidentListFilterParamsDto(**meta)
+
+
+@router.get(
     "",
     description="Get last incidents",
 )
@@ -152,23 +172,47 @@ def get_all_incidents(
     limit: int = 25,
     offset: int = 0,
     sorting: IncidentSorting = IncidentSorting.creation_time,
+    status: List[IncidentStatus] = Query(None),
+    severity: List[IncidentSeverity] = Query(None),
+    assignees: List[str] = Query(None),
+    sources: List[str] = Query(None),
+    affected_services: List[str] = Query(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
+
+    filters = {}
+    if status:
+        filters["status"] = [s.value for s in status]
+    if severity:
+        filters["severity"] = [s.order for s in severity]
+    if assignees:
+        filters["assignee"] = assignees
+    if sources:
+        filters["sources"] = sources
+    if affected_services:
+        filters["affected_services"] = affected_services
+
     logger.info(
         "Fetching incidents from DB",
         extra={
             "tenant_id": tenant_id,
+            "limit": limit,
+            "offset": offset,
+            "sorting": sorting,
+            "filters": filters,
         },
     )
+
     incidents, total_count = get_last_incidents(
         tenant_id=tenant_id,
         is_confirmed=confirmed,
         limit=limit,
         offset=offset,
         sorting=sorting,
+        filters=filters,
     )
 
     incidents_dto = []
@@ -179,6 +223,10 @@ def get_all_incidents(
         "Fetched incidents from DB",
         extra={
             "tenant_id": tenant_id,
+            "limit": limit,
+            "offset": offset,
+            "sorting": sorting,
+            "filters": filters,
         },
     )
 
@@ -353,6 +401,58 @@ def get_incident_alerts(
 
 
 @router.get(
+    "/{incident_id}/future_incidents",
+    description="Get same incidents linked to this one",
+)
+def get_future_incidents_for_an_incident(
+    incident_id: str,
+    limit: int = 25,
+    offset: int = 0,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+    ),
+) -> IncidentsPaginatedResultsDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    logger.info(
+        "Fetching future incidents from",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+    db_incidents, total_count = get_future_incidents_by_incident_id(
+        limit=limit,
+        offset=offset,
+        incident_id=incident_id,
+    )
+    future_incidents = [
+        IncidentDto.from_db_incident(incident) for incident in db_incidents
+    ]
+    logger.info(
+        "Fetched future incidents from DB",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    return IncidentsPaginatedResultsDto(
+        limit=limit, offset=offset, count=total_count, items=future_incidents
+    )
+
+
+@router.get(
     "/{incident_id}/workflows",
     description="Get incident workflows by incident id",
 )
@@ -414,6 +514,32 @@ async def add_alerts_to_incident(
         raise HTTPException(status_code=404, detail="Incident not found")
 
     add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
+    try:
+        logger.info("Pushing enriched alert to elasticsearch")
+        elastic_client = ElasticClient(tenant_id)
+        if elastic_client.enabled:
+            db_alerts, _ = get_incident_alerts_by_incident_id(
+                tenant_id=tenant_id,
+                incident_id=incident_id,
+                limit=len(alert_ids) + incident.alerts_count,
+            )
+
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+                db_alerts, with_incidents=True
+            )
+            logger.info(
+                "Fetched alerts from DB",
+                extra={
+                    "tenant_id": tenant_id,
+                },
+            )
+            elastic_client.index_alerts(
+                alerts=enriched_alerts_dto,
+            )
+            logger.info("Pushed enriched alert to elasticsearch")
+    except Exception:
+        logger.exception("Failed to push alert to elasticsearch")
+        pass
     __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
 
     incident_dto = IncidentDto.from_db_incident(incident)

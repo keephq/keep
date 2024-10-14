@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Optional
 
@@ -76,6 +77,10 @@ class AuthVerifierBase:
         self.impersonation_auto_provision = (
             config("KEEP_IMPERSONATION_AUTO_PROVISION", default="false") == "true"
         )
+        # hold a cache of the last time an API key was used
+        # the key is the f{tenant_id}:{reference_id} and the value is the last time it was updated
+        self.update_key_interval = config("KEEP_UPDATE_KEY_INTERVAL", default=60)
+        self.key_last_used_updates = {}
 
     def __call__(
         self,
@@ -282,9 +287,29 @@ class AuthVerifierBase:
 
         try:
             self.logger.debug("Updating API Key last used")
-            update_key_last_used(
-                tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
-            )
+            # if the key was updated in the last update_key_interval seconds, skip the update
+            if (
+                f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
+                in self.key_last_used_updates
+            ):
+                # if the key was updated in the last update_key_interval seconds, skip the update
+                if self.key_last_used_updates[
+                    f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
+                ] > (
+                    datetime.datetime.now()
+                    - datetime.timedelta(seconds=self.update_key_interval)
+                ):
+                    self.logger.debug(
+                        f"API Key last used updated in the last {self.update_key_interval} seconds"
+                    )
+            # else, update the key
+            else:
+                update_key_last_used(
+                    tenant_api_key.tenant_id, reference_id=tenant_api_key.reference_id
+                )
+                self.key_last_used_updates[
+                    f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
+                ] = datetime.datetime.now()
             self.logger.debug("Successfully updated API Key last used")
         except Exception:
             self.logger.exception("Failed to update API Key last used")

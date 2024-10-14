@@ -73,7 +73,11 @@ def test_insert_new_alert(browser):
         browser.goto(
             "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
         )
-        browser.goto("http://localhost:3000/providers")
+        browser.wait_for_url("http://localhost:3000/incidents")
+
+        feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
+        feed_count_before = int(feed_badge.text_content())
+
         browser.get_by_role("button", name="KE Keep").click()
         browser.get_by_role("menuitem", name="Settings").click()
         browser.get_by_role("tab", name="Webhook").click()
@@ -82,7 +86,13 @@ def test_insert_new_alert(browser):
         browser.wait_for_timeout(10000)
         # refresh the page
         browser.reload()
-        browser.get_by_text("1", exact=True).click()
+        feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
+        feed_count = int(feed_badge.text_content())
+        assert feed_count > feed_count_before
+
+        feed_link = browser.get_by_test_id("menu-alerts-feed-link")
+        feed_link.click()
+
     except Exception:
         # Current file + test name for unique html and png dump.
         current_test_name = (

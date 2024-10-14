@@ -1,10 +1,9 @@
 ---
 name: New provider request
 about: Suggest a new provider for keep
-title: ''
-labels: 'provider'
-assignees: ''
-
+title: "[🔌 Provider]: "
+labels: "Provider"
+assignees: ""
 ---
 
 **Describe the provider you want to add**

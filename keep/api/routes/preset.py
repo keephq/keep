@@ -218,6 +218,7 @@ def get_presets(
     # add static presets
     presets_dto.append(STATIC_PRESETS["feed"])
     presets_dto.append(STATIC_PRESETS["dismissed"])
+    presets_dto.append(STATIC_PRESETS["without-incident"])
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset

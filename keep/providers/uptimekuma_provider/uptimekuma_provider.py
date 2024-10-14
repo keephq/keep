@@ -139,7 +139,9 @@ class UptimekumaProvider(BaseProvider):
             raise Exception(f"Error getting alerts from UptimeKuma: {e}")
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
 
         alert = AlertDto(
             id=event["monitor"]["id"],

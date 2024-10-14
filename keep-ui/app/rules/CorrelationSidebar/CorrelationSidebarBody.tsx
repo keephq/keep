@@ -12,9 +12,9 @@ import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
-import {AlertsFoundBadge} from "./AlertsFoundBadge";
+import { AlertsFoundBadge } from "./AlertsFoundBadge";
 
-export const TIMEFRAME_UNITS_TO_SECONDS= {
+export const TIMEFRAME_UNITS_TO_SECONDS = {
   seconds: (amount: number) => amount,
   minutes: (amount: number) => 60 * amount,
   hours: (amount: number) => 3600 * amount,
@@ -36,9 +36,11 @@ export const CorrelationSidebarBody = ({
     defaultValues: defaultValue,
     mode: "onChange",
   });
-  const timeframeInSeconds = methods.watch("timeUnit") ? TIMEFRAME_UNITS_TO_SECONDS[methods.watch("timeUnit")](
-    +methods.watch("timeAmount")
-  ) : 0;
+  const timeframeInSeconds = methods.watch("timeUnit")
+    ? TIMEFRAME_UNITS_TO_SECONDS[methods.watch("timeUnit")](
+        +methods.watch("timeAmount")
+      )
+    : 0;
 
   const { mutate } = useRules();
   const { data: session } = useSession();
@@ -66,7 +68,9 @@ export const CorrelationSidebarBody = ({
       timeUnit,
       description,
       groupedAttributes,
-      requireApprove } = correlationFormData;
+      requireApprove,
+      resolveOn,
+    } = correlationFormData;
 
     if (session) {
       const response = await fetch(
@@ -85,7 +89,8 @@ export const CorrelationSidebarBody = ({
             timeframeInSeconds,
             timeUnit: timeUnit,
             groupingCriteria: alertsFound.length ? groupedAttributes : [],
-            requireApprove: requireApprove
+            requireApprove: requireApprove,
+            resolveOn: resolveOn,
           }),
         }
       );
@@ -131,13 +136,23 @@ export const CorrelationSidebarBody = ({
           <div className="grid grid-cols-3 gap-x-10 flex-1">
             <CorrelationGroups />
 
-            <div className="flex flex-col items-center justify-between gap-5 py-5" id="total-results">
+            <div
+              className="flex flex-col items-center justify-between gap-5 py-5"
+              id="total-results"
+            >
               <div className="grow justify-center flex">
                 {alertsFound.length > 0 && (
-                  <AlertsFoundBadge alertsFound={alertsFound} isLoading={false} vertical={true}/>
+                  <AlertsFoundBadge
+                    alertsFound={alertsFound}
+                    isLoading={false}
+                    vertical={true}
+                  />
                 )}
               </div>
-              <span className="text-xs">Rules will be applied only to new alerts. Historical data will be ignored</span>
+              <span className="text-xs">
+                Rules will be applied only to new alerts. Historical data will
+                be ignored
+              </span>
               <div className="flex justify-end w-full">
                 <CorrelationSubmission
                   toggle={toggle}
@@ -145,9 +160,7 @@ export const CorrelationSidebarBody = ({
                 />
               </div>
             </div>
-
           </div>
-
         </form>
       </FormProvider>
     </div>

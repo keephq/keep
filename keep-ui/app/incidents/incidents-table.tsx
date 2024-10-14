@@ -142,13 +142,11 @@ export default function IncidentsTable({
       id: "services",
       header: "Involved Services",
       cell: ({ row }) => (
-        <div className="text-wrap">
+        <div className="flex flex-wrap gap-1">
           {row.original.services
             .filter((service) => service !== "null")
             .map((service) => (
-              <Badge key={service} className="mr-1">
-                {service}
-              </Badge>
+              <Badge key={service}>{service}</Badge>
             ))}
         </div>
       ),
