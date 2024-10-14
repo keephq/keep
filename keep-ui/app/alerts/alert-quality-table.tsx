@@ -14,7 +14,7 @@ import { Provider, ProvidersResponse } from "app/providers/providers";
 import { TabGroup, TabList, Tab } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useSearchParams } from "next/navigation";
-import { AlertKnownKeys } from "../models";
+import { AlertKnownKeys } from "./models";
 
 const tabs = [
   { name: "All", value: "all" },

@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
 import { WidgetData } from "./types";
-import AlertQuality from "app/alerts/quality/alert-quality-table";
+import AlertQuality from "@/app/alerts/alert-quality-table";
 import { useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 
