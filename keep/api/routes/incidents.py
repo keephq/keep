@@ -356,6 +356,7 @@ def get_incident_alerts(
     incident_id: UUID,
     limit: int = 25,
     offset: int = 0,
+    include_unlinked: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incidents"])
     ),
@@ -384,6 +385,7 @@ def get_incident_alerts(
         incident_id=incident_id,
         limit=limit,
         offset=offset,
+        include_unlinked=include_unlinked,
     )
 
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts_and_links)
@@ -493,6 +495,7 @@ def get_incident_workflows(
 async def add_alerts_to_incident(
     incident_id: UUID,
     alert_ids: List[UUID],
+    is_created_by_ai: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -510,7 +513,7 @@ async def add_alerts_to_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
+    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids, is_created_by_ai)
     try:
         logger.info("Pushing enriched alert to elasticsearch")
         elastic_client = ElasticClient(tenant_id)

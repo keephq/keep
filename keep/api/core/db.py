@@ -2839,6 +2839,7 @@ def get_incident_alerts_and_links_by_incident_id(
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     session: Optional[Session] = None,
+    include_unlinked: bool = False,
 ) -> tuple[List[tuple[Alert, AlertToIncident]], int]:
     with existed_or_new_session(session) as session:
         query = (
@@ -2849,12 +2850,15 @@ def get_incident_alerts_and_links_by_incident_id(
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(
-                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
             .order_by(col(Alert.timestamp).desc())
         )
+        if not include_unlinked:
+            query = query.filter(
+                AlertToIncident.deleted_at.is_(None),
+            )
 
     total_count = query.count()
 
@@ -2950,6 +2954,7 @@ def add_alerts_to_incident_by_incident_id(
     tenant_id: str,
     incident_id: str | UUID,
     alert_ids: List[UUID],
+    is_created_by_ai: bool = False,
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
     with existed_or_new_session(session) as session:
@@ -2961,13 +2966,14 @@ def add_alerts_to_incident_by_incident_id(
 
         if not incident:
             return None
-        return add_alerts_to_incident(tenant_id, incident, alert_ids, session)
+        return add_alerts_to_incident(tenant_id, incident, alert_ids, is_created_by_ai, session)
 
 
 def add_alerts_to_incident(
     tenant_id: str,
     incident: Incident,
     alert_ids: List[UUID],
+    is_created_by_ai: bool = False,
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
     logger.info(
@@ -3008,7 +3014,7 @@ def add_alerts_to_incident(
 
             alert_to_incident_entries = [
                 AlertToIncident(
-                    alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id
+                    alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id, is_created_by_ai=is_created_by_ai
                 )
                 for alert_id in new_alert_ids
             ]
