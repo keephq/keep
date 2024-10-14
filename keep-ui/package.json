@@ -373,6 +373,7 @@
     "zod": "^3.22.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^14.2.15",
     "@tailwindcss/typography": "^0.5.12",
     "@types/d3-time-format": "^4.0.3",
     "@types/js-cookie": "^3.0.3",
