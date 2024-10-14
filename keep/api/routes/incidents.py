@@ -12,17 +12,15 @@ from pusher import Pusher
 from pydantic.types import UUID
 from sqlmodel import Session
 
-from keep.api.arq_pool import get_pool
+from keep.api.bl.ai_suggestion_bl import AISuggestionBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
-    add_alerts_to_incident_by_incident_id,
     change_incident_status_by_id,
     confirm_predicted_incident_by_id,
-    create_incident_from_dto,
     delete_incident_by_id,
     get_future_incidents_by_incident_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
-    get_incident_unique_fingerprint_count,
     get_incidents_meta_for_tenant,
     get_last_alerts,
     get_last_incidents,
@@ -32,7 +30,6 @@ from keep.api.core.db import (
     update_incident_from_dto_by_id,
 )
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
@@ -44,6 +41,7 @@ from keep.api.models.alert import (
     IncidentStatus,
     IncidentStatusChangeDto,
 )
+from keep.api.models.db.ai_suggestion import AISuggestionType
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -116,36 +114,11 @@ def create_incident_endpoint(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Creating incidents in DB",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    incident = create_incident_from_dto(tenant_id, incident_dto)
-    new_incident_dto = IncidentDto.from_db_incident(incident)
-    logger.info(
-        "New incident created in DB",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    __update_client_on_incident_change(pusher_client, tenant_id)
-
-    try:
-        workflow_manager = WorkflowManager.get_instance()
-        logger.info("Adding incident to the workflow manager queue")
-        workflow_manager.insert_incident(tenant_id, new_incident_dto, "created")
-        logger.info("Added incident to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on incident",
-            extra={"incident_id": new_incident_dto.id, "tenant_id": tenant_id},
-        )
-
-    return new_incident_dto
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    return incident_bl.create_incident(incident_dto)
 
 
 @router.get(
@@ -500,83 +473,11 @@ async def add_alerts_to_incident(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
-    )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
-    try:
-        logger.info("Pushing enriched alert to elasticsearch")
-        elastic_client = ElasticClient(tenant_id)
-        if elastic_client.enabled:
-            db_alerts, _ = get_incident_alerts_by_incident_id(
-                tenant_id=tenant_id,
-                incident_id=incident_id,
-                limit=len(alert_ids) + incident.alerts_count,
-            )
-
-            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
-                db_alerts, with_incidents=True
-            )
-            logger.info(
-                "Fetched alerts from DB",
-                extra={
-                    "tenant_id": tenant_id,
-                },
-            )
-            elastic_client.index_alerts(
-                alerts=enriched_alerts_dto,
-            )
-            logger.info("Pushed enriched alert to elasticsearch")
-    except Exception:
-        logger.exception("Failed to push alert to elasticsearch")
-        pass
-    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
-
-    incident_dto = IncidentDto.from_db_incident(incident)
-
-    try:
-        workflow_manager = WorkflowManager.get_instance()
-        logger.info("Adding incident to the workflow manager queue")
-        workflow_manager.insert_incident(tenant_id, incident_dto, "updated")
-        logger.info("Added incident to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on incident",
-            extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
-        )
-
-    fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
-
-    if (
-        ee_enabled
-        and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION
-        and not incident.user_summary
-    ):
-        pool = await get_pool()
-        job = await pool.enqueue_job(
-            "process_summary_generation",
-            tenant_id=tenant_id,
-            incident_id=incident_id,
-        )
-        logger.info(
-            f"Summary generation for incident {incident_id} scheduled, job: {job}",
-            extra={
-                "algorithm": ALGORITHM_VERBOSE_NAME,
-                "tenant_id": tenant_id,
-                "incident_id": incident_id,
-            },
-        )
-
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    incident_bl.add_alerts_to_incident(incident_id, alert_ids)
     return Response(status_code=202)
 
 
@@ -766,10 +667,22 @@ class IncidentClustering(BaseModel):
     incidents: List[Incident]
 
 
+class IncidentCommit(BaseModel):
+    accepted: bool
+    original_suggestion: dict
+    changes: dict = Field(default_factory=dict)
+    incident: IncidentDto
+
+
+class IncidentSuggestion(BaseModel):
+    incident_suggestion: list[IncidentDto]
+    suggestion_id: str
+
+
 @router.post(
-    "/create-with-ai",
+    "/ai/suggest",
     description="Create incident with AI",
-    response_model=List[IncidentDto],
+    response_model=IncidentSuggestion,
     status_code=202,
 )
 async def create_with_ai(
@@ -779,9 +692,29 @@ async def create_with_ai(
     ),
     session: Session = Depends(get_session),
     pusher_client: Pusher | None = Depends(get_pusher_client),
-) -> List[IncidentDto]:
+) -> IncidentSuggestion:
 
     tenant_id = authenticated_entity.tenant_id
+    suggestion_bl = AISuggestionBl(tenant_id, session)
+
+    # check if the user has already provided a similar suggestion
+    suggestion_input = {"alerts_fingerprints": alerts_fingerprints}
+    existing_suggestion = suggestion_bl.get_suggestion_by_input(suggestion_input)
+    if existing_suggestion:
+        logger.info("Retrieving existing suggestion from DB")
+        alerts = get_last_alerts(tenant_id, fingerprints=alerts_fingerprints)
+        alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+        incident_clustering = IncidentClustering.parse_obj(
+            existing_suggestion.suggestion_content
+        )
+        processed_incidents = process_incidents(
+            incident_clustering.incidents, alerts_dto
+        )
+        return IncidentSuggestion(
+            incident_suggestion=processed_incidents,
+            suggestion_id=str(existing_suggestion.id),
+        )
+
     if len(alerts_fingerprints) > 50:
         raise HTTPException(status_code=400, detail="Too many alerts to process")
 
@@ -921,16 +854,93 @@ async def create_with_ai(
             completion.choices[0].message.content
         )
 
+        # add the suggestion to the database
+        suggestion = suggestion_bl.add_suggestion(
+            user_id=authenticated_entity.email,
+            suggestion_input=suggestion_input,
+            suggestion_type=AISuggestionType.INCIDENT_SUGGESTION,
+            suggestion_content=incident_clustering.dict(),
+            model="gpt-4o-2024-08-06",
+        )
+
         # Process the incidents
         processed_incidents = process_incidents(
             incident_clustering.incidents, alerts_dto
         )
 
-        return processed_incidents
+        return IncidentSuggestion(
+            incident_suggestion=processed_incidents,
+            suggestion_id=str(suggestion.id),
+        )
 
     except Exception as e:
         logger.error(f"AI incident creation failed: {e}")
         raise HTTPException(status_code=500, detail="AI service is unavailable.")
+
+
+@router.post(
+    "/ai/{suggestion_id}/commit",
+    description="Commit incidents with AI and user feedback",
+    response_model=List[IncidentDto],
+    status_code=202,
+)
+async def commit_with_ai(
+    suggestion_id: UUID,
+    incidents_with_feedback: List[IncidentCommit],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> List[IncidentDto]:
+    tenant_id = authenticated_entity.tenant_id
+    ai_feedback_bl = AISuggestionBl(tenant_id, session)
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    committed_incidents = []
+
+    # Add feedback to the database
+    changes = {
+        incident_commit.incident.id: incident_commit.changes
+        for incident_commit in incidents_with_feedback
+    }
+    ai_feedback_bl.add_feedback(
+        suggestion_id=suggestion_id,
+        user_id=authenticated_entity.email,
+        feedback_content=changes,
+    )
+
+    for incident_with_feedback in incidents_with_feedback:
+        if not incident_with_feedback.accepted:
+            logger.info(
+                f"Incident {incident_with_feedback.incident.name} rejected by user, skipping creation"
+            )
+            continue
+
+        try:
+
+            # Create the incident
+            created_incident = incident_bl.create_incident(
+                incident_with_feedback.incident
+            )
+
+            # Add alerts to the created incident
+            alert_ids = [
+                uuid.UUID(alert.get("event_id"))
+                for alert in incident_with_feedback.incident.alerts
+            ]
+            incident_bl.add_alerts_to_incident(created_incident.id, alert_ids)
+
+            committed_incidents.append(created_incident)
+            logger.info(
+                f"Incident {incident_with_feedback.incident.name} created successfully"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to create incident {incident_with_feedback.incident.name}: {str(e)}"
+            )
+
+    return committed_incidents
 
 
 def process_incidents(

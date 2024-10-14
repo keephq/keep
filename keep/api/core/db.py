@@ -31,7 +31,12 @@ from sqlmodel import Session, col, or_, select, text
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus, IncidentDtoIn, IncidentSorting
+from keep.api.models.alert import (
+    AlertStatus,
+    IncidentDto,
+    IncidentDtoIn,
+    IncidentSorting,
+)
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -1162,6 +1167,7 @@ def get_last_alerts(
     upper_timestamp=None,
     lower_timestamp=None,
     with_incidents=False,
+    fingerprints=None,
 ) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
@@ -2070,6 +2076,23 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     return providers
 
 
+def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
+    with Session(engine) as session:
+        linked_provider = (
+            session.query(Alert.provider_id)
+            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.provider_type != "group",
+                Alert.provider_id == provider_id,
+                Provider.id == None,
+            )
+            .first()
+        )
+
+    return linked_provider is not None
+
+
 def get_provider_distribution(tenant_id: str) -> dict:
     """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
     with Session(engine) as session:
@@ -2745,9 +2768,28 @@ def get_incident_by_id(
 
 
 def create_incident_from_dto(
-    tenant_id: str, incident_dto: IncidentDtoIn
+    tenant_id: str, incident_dto: IncidentDtoIn | IncidentDto
 ) -> Optional[Incident]:
-    return create_incident_from_dict(tenant_id, incident_dto.dict())
+    # from AI
+    if isinstance(incident_dto, IncidentDto):
+        # get all the fields from the DTO
+
+        # NOTE: we do not use dto's alerts, alert count, start time etc
+        #       because we want to re-use the BL of creating incidents
+        #       where all of these are calculated inside add_alerts_to_incident
+        incident_dict = {
+            "user_summary": incident_dto.user_summary,
+            "generated_summary": incident_dto.description,
+            "user_generated_name": incident_dto.user_generated_name,
+            "ai_generated_name": incident_dto.dict().get("name"),
+            "assignee": incident_dto.assignee,
+            "is_predicted": False,  # its not a prediction, but an AI generation
+            "is_confirmed": True,  # confirmed by the user :)
+        }
+        return create_incident_from_dict(tenant_id, incident_dict)
+    # from user
+    else:
+        return create_incident_from_dict(tenant_id, incident_dto.dict())
 
 
 def create_incident_from_dict(
@@ -2996,7 +3038,7 @@ def add_alerts_to_incident(
                 return incident
 
             alerts_data_for_incident = get_alerts_data_for_incident(
-                new_alert_ids, session
+                tenant_id, new_alert_ids, session
             )
 
             incident.sources = list(

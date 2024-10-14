@@ -11,11 +11,22 @@ import { DragDropContext } from "react-beautiful-dnd";
 import IncidentCard from "./alert-create-incident-ai-card";
 // @ts-ignore
 import incidentsData from "./incidents.json";
+import { useIncidents } from "utils/hooks/useIncidents";
 
 interface CreateIncidentWithAIModalProps {
   isOpen: boolean;
   handleClose: () => void;
   alerts: Array<AlertDto>;
+}
+
+interface IncidentChange {
+  from: any;
+  to: any;
+}
+
+interface IncidentSuggestion {
+  incident_suggestion: IncidentDto[];
+  suggestion_id: string;
 }
 
 const CreateIncidentWithAIModal = ({
@@ -27,24 +38,57 @@ const CreateIncidentWithAIModal = ({
   const [incidentCandidates, setIncidentCandidates] = useState<IncidentDto[]>(
     []
   );
-  const [changes, setChanges] = useState<Record<string, Partial<IncidentDto>>>(
-    {}
-  );
+  const [changes, setChanges] = useState<
+    Record<string, Record<string, IncidentChange>>
+  >({});
   const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
+  const [originalSuggestions, setOriginalSuggestions] = useState<IncidentDto[]>(
+    []
+  );
+  const [suggestionId, setSuggestionId] = useState<string>("");
   const { data: session } = useSession();
   const { data: configData } = useConfig();
+  const apiUrl = configData?.API_URL!;
+  const { mutate: mutateIncidents } = useIncidents(
+    true,
+    20,
+    0,
+    { id: "creation_time", desc: true },
+    {}
+  );
 
   const createIncidentWithAI = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const newIncidentCandidates = incidentsData as unknown as IncidentDto[];
-      setIncidentCandidates(newIncidentCandidates);
-      setSelectedIncidents(
-        newIncidentCandidates.map((incident) => incident.id)
-      );
-      toast.success("AI has suggested incident groupings");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
+
+      try {
+        const response = await fetch(`${apiUrl}/incidents/ai/suggest`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: JSON.stringify(alerts.map((alert) => alert.fingerprint)),
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const data: IncidentSuggestion = await response.json();
+          setIncidentCandidates(data.incident_suggestion);
+          setOriginalSuggestions(data.incident_suggestion);
+          setSuggestionId(data.suggestion_id);
+
+          setSelectedIncidents(
+            data.incident_suggestion.map((incident) => incident.id)
+          );
+          toast.success("AI has suggested incident groupings");
+        } else {
+          toast.error("Failed to create incident suggestions with AI");
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (error) {
       console.error("Error creating incident with AI:", error);
       toast.error("An unexpected error occurred. Please try again.");
@@ -59,7 +103,10 @@ const CreateIncidentWithAIModal = ({
     const sourceIncidentIndex = parseInt(result.source.droppableId);
     const destIncidentIndex = parseInt(result.destination.droppableId);
 
-    const newIncidentCandidates = [...incidentCandidates];
+    const newIncidentCandidates = incidentCandidates.map((incident) => ({
+      ...incident,
+      alerts: [...incident.alerts],
+    }));
     const [movedAlert] = newIncidentCandidates[
       sourceIncidentIndex
     ].alerts.splice(result.source.index, 1);
@@ -71,16 +118,28 @@ const CreateIncidentWithAIModal = ({
 
     setIncidentCandidates(newIncidentCandidates);
 
-    // Track changes
-    setChanges((prevChanges) => ({
-      ...prevChanges,
-      [newIncidentCandidates[sourceIncidentIndex].id]: {
-        alerts: newIncidentCandidates[sourceIncidentIndex].alerts,
-      },
-      [newIncidentCandidates[destIncidentIndex].id]: {
-        alerts: newIncidentCandidates[destIncidentIndex].alerts,
-      },
-    }));
+    // Track changes for the alerts field
+    setChanges((prevChanges) => {
+      const sourceId = newIncidentCandidates[sourceIncidentIndex].id;
+      const destId = newIncidentCandidates[destIncidentIndex].id;
+      return {
+        ...prevChanges,
+        [sourceId]: {
+          ...prevChanges[sourceId],
+          alerts: {
+            from: incidentCandidates[sourceIncidentIndex].alerts,
+            to: newIncidentCandidates[sourceIncidentIndex].alerts,
+          },
+        },
+        [destId]: {
+          ...prevChanges[destId],
+          alerts: {
+            from: incidentCandidates[destIncidentIndex].alerts,
+            to: newIncidentCandidates[destIncidentIndex].alerts,
+          },
+        },
+      };
+    });
   };
 
   const handleIncidentChange = (updatedIncident: IncidentDto) => {
@@ -90,47 +149,72 @@ const CreateIncidentWithAIModal = ({
       )
     );
 
-    // Track changes
-    setChanges((prevChanges) => ({
-      ...prevChanges,
-      [updatedIncident.id]: {
-        ...prevChanges[updatedIncident.id],
-        ...updatedIncident,
-      },
-    }));
+    // Track changes for the fields that have actually changed
+    setChanges((prevChanges) => {
+      const existingChanges = prevChanges[updatedIncident.id] || {};
+      const newChanges: Record<string, IncidentChange> = {};
+
+      Object.keys(updatedIncident).forEach((key) => {
+        const originalIncident = incidentCandidates.find(
+          (inc) => inc.id === updatedIncident.id
+        );
+        if (
+          originalIncident &&
+          updatedIncident[key as keyof IncidentDto] !==
+            originalIncident[key as keyof IncidentDto]
+        ) {
+          newChanges[key] = {
+            from: originalIncident[key as keyof IncidentDto],
+            to: updatedIncident[key as keyof IncidentDto],
+          };
+        }
+      });
+
+      return {
+        ...prevChanges,
+        [updatedIncident.id]: {
+          ...existingChanges,
+          ...newChanges,
+        },
+      };
+    });
   };
 
   const handleCreateIncidents = async () => {
-    // Here you would send the updated incidents and changes to the server
-    console.log(
-      "Updated Incidents:",
-      incidentCandidates.filter((incident) =>
-        selectedIncidents.includes(incident.id)
-      )
-    );
-    console.log("Changes:", changes);
+    try {
+      const incidentsWithFeedback = incidentCandidates.map((incident) => ({
+        incident: incident,
+        accepted: selectedIncidents.includes(incident.id),
+        changes: changes[incident.id] || {},
+        original_suggestion: originalSuggestions.find(
+          (inc) => inc.id === incident.id
+        ),
+      }));
 
-    // Implement the API call to create incidents here
-    // For example:
-    // try {
-    //   const response = await fetch(`${configData?.API_URL}/incidents/create`, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //       Authorization: `Bearer ${session?.accessToken}`,
-    //     },
-    //     body: JSON.stringify({ incidents: incidentCandidates.filter(incident => selectedIncidents.includes(incident.id)), changes }),
-    //   });
-    //   if (response.ok) {
-    //     toast.success('Incidents created successfully');
-    //     handleClose();
-    //   } else {
-    //     toast.error('Failed to create incidents');
-    //   }
-    // } catch (error) {
-    //   console.error('Error creating incidents:', error);
-    //   toast.error('An error occurred while creating incidents');
-    // }
+      const response = await fetch(
+        `${configData?.API_URL}/incidents/ai/${suggestionId}/commit`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: JSON.stringify(incidentsWithFeedback),
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Incidents created successfully");
+        await mutateIncidents();
+        handleClose();
+      } else {
+        const errorData = await response.json();
+        toast.error(`Failed to create incidents: ${errorData.detail}`);
+      }
+    } catch (error) {
+      console.error("Error creating incidents:", error);
+      toast.error("An unexpected error occurred while creating incidents");
+    }
   };
 
   const toggleIncidentSelection = (incidentId: string) => {
@@ -191,8 +275,7 @@ const CreateIncidentWithAIModal = ({
                 color="orange"
                 onClick={handleCreateIncidents}
               >
-                Create {selectedIncidents.length} Incident
-                {selectedIncidents.length !== 1 ? "s" : ""}
+                Create Incidents
               </Button>
             </div>
           </DragDropContext>
