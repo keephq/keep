@@ -15,18 +15,7 @@ import sys
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
 NON_DOCUMENTED_PROVIDERS = [
-    "service now",
-    "python",
-    "prometheus",
-    "gke",
-    "github",
-    "dynatrace",
-    "kafka",
-    "auth0",
-    "bash",
-    "keep",
-    "bigquery",
-    "parseable",
+    
 ] # known not documented providers https://github.com/keephq/keep/issues/2033
 
 
