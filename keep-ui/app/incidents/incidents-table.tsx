@@ -22,6 +22,9 @@ import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
 import IncidentChangeStatusModal from "./incident-change-status-modal";
 import {STATUS_ICONS} from "@/app/incidents/statuses";
+import Markdown from "react-markdown";
+import remarkRehype from "remark-rehype";
+import rehypeRaw from "rehype-raw";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -96,7 +99,14 @@ export default function IncidentsTable({
       id: "user_summary",
       header: "Summary",
       cell: ({ row }) => (
-        <div className="text-pretty min-w-96">{row.original.user_summary}</div>
+        <div className="text-pretty min-w-96">
+          <Markdown
+            remarkPlugins={[remarkRehype]}
+            rehypePlugins={[rehypeRaw]}
+          >
+            {row.original.user_summary}
+          </Markdown>
+        </div>
       ),
     }),
     columnHelper.display({
