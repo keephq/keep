@@ -14,7 +14,7 @@ from pydantic import (
     Extra,
     PrivateAttr,
     root_validator,
-    validator
+    validator,
 )
 from sqlalchemy import desc
 from sqlmodel import col
@@ -399,6 +399,12 @@ class IncidentDto(IncidentDtoIn):
     same_incident_in_the_past_id: UUID | None
 
     _tenant_id: str = PrivateAttr()
+    _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if "alerts" in data:
+            self._alerts = data["alerts"]
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -421,6 +427,9 @@ class IncidentDto(IncidentDtoIn):
 
     @property
     def alerts(self) -> List["AlertDto"]:
+        if self._alerts is not None:
+            return self._alerts
+
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 

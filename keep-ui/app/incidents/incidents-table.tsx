@@ -21,7 +21,7 @@ import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
 import IncidentChangeStatusModal from "./incident-change-status-modal";
-import {STATUS_ICONS} from "@/app/incidents/statuses";
+import { STATUS_ICONS } from "@/app/incidents/statuses";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -96,7 +96,9 @@ export default function IncidentsTable({
       id: "user_summary",
       header: "Summary",
       cell: ({ row }) => (
-        <div className="text-pretty min-w-96">{row.original.user_summary}</div>
+        <div className="text-pretty min-w-96">
+          {row.original.user_summary || row.original.generated_summary}
+        </div>
       ),
     }),
     columnHelper.display({
