@@ -2,6 +2,7 @@
 import { Icon, Title } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useEffect, useState } from "react";
+// TODO: replace with custom component, package is not updated for last 4 years
 import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
@@ -151,7 +152,7 @@ const ProvidersTiles = ({
         isOpen={openPanel}
         size={panelSize}
         backdropClicked={handleCloseModal}
-        panelContainerClassName="bg-white z-[2000]"
+        panelContainerClassName="bg-white z-[100]"
       >
         {selectedProvider && (
           <ProviderForm
