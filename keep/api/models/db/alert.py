@@ -95,6 +95,13 @@ class Incident(SQLModel, table=True):
         sa_relationship_kwargs={
             "primaryjoin": "and_(AlertToIncident.incident_id == Incident.id, AlertToIncident.deleted_at.is_(None))",
             "uselist": True,
+            "overlaps": "alert,incident",
+        }
+    )
+    alert_to_incident_link: List[AlertToIncident] = Relationship(
+        back_populates="incident",
+        sa_relationship_kwargs={
+            "overlaps": "alerts,incidents"
         }
     )
 
@@ -135,10 +142,6 @@ class Incident(SQLModel, table=True):
         back_populates="same_incident_in_the_past",
     )
 
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="incident",
-    )
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if "alerts" not in kwargs:
@@ -167,9 +170,6 @@ class Alert(SQLModel, table=True):
     event: dict = Field(sa_column=Column(JSON))
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
 
-    incidents: List["Incident"] = Relationship(
-        back_populates="alerts", link_model=AlertToIncident
-    )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.
     #            alert can be different but have the same fingerprint (e.g. different "firing" and "resolved" will have the same fingerprint but not the same alert_hash)
@@ -182,8 +182,19 @@ class Alert(SQLModel, table=True):
             "uselist": False,
         }
     )
+
+    incidents: List["Incident"] = Relationship(
+        back_populates="alerts", 
+        link_model=AlertToIncident,
+        sa_relationship_kwargs={
+            "overlaps": "alert,incident",
+        }
+    )
     alert_to_incident_link: List[AlertToIncident] = Relationship(
         back_populates="alert",
+        sa_relationship_kwargs={
+            "overlaps": "alerts,incidents"
+        }
     )
 
     class Config:
