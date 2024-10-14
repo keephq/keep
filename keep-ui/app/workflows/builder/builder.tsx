@@ -26,7 +26,11 @@ import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
 import ReactFlowBuilder from "./ReactFlowBuilder";
 import { ReactFlowProvider } from "@xyflow/react";
-import useStore, { ReactFlowDefinition, V2Step, Definition as FlowDefinition } from "./builder-store";
+import useStore, {
+  ReactFlowDefinition,
+  V2Step,
+  Definition as FlowDefinition,
+} from "./builder-store";
 import { toast } from "react-toastify";
 
 interface Props {
@@ -58,7 +62,6 @@ function Builder({
   installedProviders,
   isPreview,
 }: Props) {
-
   const [definition, setDefinition] = useState(() =>
     wrapDefinitionV2({ sequence: [], properties: {}, isValid: false })
   );
@@ -82,18 +85,21 @@ function Builder({
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
     if (error && step) {
-      return setErrorNode(step.id)
+      return setErrorNode(step.id);
     }
     setErrorNode(null);
-  }
+  };
 
-  const setGlobalValidationErrorV2 = (id:string|null, error: string | null) => {
+  const setGlobalValidationErrorV2 = (
+    id: string | null,
+    error: string | null
+  ) => {
     setGlobalValidationError(error);
     if (error && id) {
-      return setErrorNode(id)
+      return setErrorNode(id);
     }
     setErrorNode(null);
-  }
+  };
 
   const updateWorkflow = () => {
     const apiUrl = getApiURL();
@@ -104,6 +110,7 @@ function Builder({
       Authorization: `Bearer ${accessToken}`,
     };
     const body = stringify(buildAlert(definition.value));
+    debugger;
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {
@@ -177,7 +184,12 @@ function Builder({
   useEffect(() => {
     setIsLoading(true);
     if (workflow) {
-      setDefinition(wrapDefinitionV2({...parseWorkflow(workflow, providers), isValid:true}));
+      setDefinition(
+        wrapDefinitionV2({
+          ...parseWorkflow(workflow, providers),
+          isValid: true,
+        })
+      );
     } else if (loadedAlertFile == null) {
       const alertUuid = uuidv4();
       const alertName = searchParams?.get("alertName");
@@ -187,10 +199,18 @@ function Builder({
         triggers = { alert: { source: alertSource, name: alertName } };
       }
       setDefinition(
-        wrapDefinitionV2({...generateWorkflow(alertUuid, "", "", false,[], [], triggers), isValid: true})
+        wrapDefinitionV2({
+          ...generateWorkflow(alertUuid, "", "", false, {}, [], [], triggers),
+          isValid: true,
+        })
       );
     } else {
-      setDefinition(wrapDefinitionV2({...parseWorkflow(loadedAlertFile!, providers), isValid:true}));
+      setDefinition(
+        wrapDefinitionV2({
+          ...parseWorkflow(loadedAlertFile!, providers),
+          isValid: true,
+        })
+      );
     }
     setIsLoading(false);
   }, [loadedAlertFile, workflow, searchParams]);
@@ -211,10 +231,11 @@ function Builder({
   }, [triggerRun]);
 
   useEffect(() => {
- 
     if (triggerSave) {
-      if(!synced) {
-        toast('Please save the previous step or wait while properties sync with the workflow.');
+      if (!synced) {
+        toast(
+          "Please save the previous step or wait while properties sync with the workflow."
+        );
         return;
       }
       if (workflowId) {
@@ -226,10 +247,12 @@ function Builder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerSave]);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (canDeploy && !errorNode && definition.isValid) {
-      if(!synced) {
-        toast('Please save the previous step or wait while properties sync with the workflow.');
+      if (!synced) {
+        toast(
+          "Please save the previous step or wait while properties sync with the workflow."
+        );
         return;
       }
       if (workflowId) {
@@ -238,14 +261,14 @@ function Builder({
         addWorkflow();
       }
     }
-  }, [canDeploy, errorNode, definition?.isValid])
+  }, [canDeploy, errorNode, definition?.isValid]);
 
   useEffect(() => {
     enableGenerate(
       (definition.isValid &&
         stepValidationError === null &&
         globalValidationError === null) ||
-      false
+        false
     );
   }, [
     stepValidationError,
@@ -262,17 +285,18 @@ function Builder({
     );
   }
 
-
   const ValidatorConfigurationV2: {
-    step: (step: V2Step,
+    step: (
+      step: V2Step,
       parent?: V2Step,
-      definition?: ReactFlowDefinition) => boolean;
+      definition?: ReactFlowDefinition
+    ) => boolean;
     root: (def: FlowDefinition) => boolean;
   } = {
     step: (step, parent, definition) =>
       stepValidatorV2(step, setStepValidationErrorV2, parent, definition),
     root: (def) => globalValidatorV2(def, setGlobalValidationErrorV2),
-  }
+  };
 
   function closeGenerateModal() {
     setGenerateModalIsOpen(false);
@@ -341,14 +365,11 @@ function Builder({
                   setDefinition({
                     value: {
                       sequence: def?.sequence || [],
-                      properties
-                        : def?.
-                          properties
-                        || {}
-                    }, isValid: def?.isValid || false
-                  })
-                }
-                }
+                      properties: def?.properties || {},
+                    },
+                    isValid: def?.isValid || false,
+                  });
+                }}
                 toolboxConfiguration={getToolboxConfiguration(providers)}
               />
             </ReactFlowProvider>

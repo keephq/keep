@@ -7,166 +7,175 @@ import { Filter, Workflow } from "app/workflows/models";
 import { Provider } from "app/providers/providers";
 
 interface ProvidersData {
-    providers: { [key: string]: { providers: Provider[] } };
-  }
-
+  providers: { [key: string]: { providers: Provider[] } };
+}
 
 export const useWorkflowRun = (workflow: Workflow) => {
+  const router = useRouter();
+  const [isRunning, setIsRunning] = useState(false);
+  const { data: session, status, update } = useSession();
+  const accessToken = session?.accessToken;
+  const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
+  let message = "";
+  const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
+  const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
 
-    const router = useRouter();
-    const [isRunning, setIsRunning] = useState(false);
-    const { data: session, status, update } = useSession();
-    const accessToken = session?.accessToken;
-    const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
-    let message = ""
-    const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
-    const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+  const { data: providersData = { providers: {} } as ProvidersData } =
+    useProviders();
+  const providers = providersData.providers;
 
-    const { data: providersData = { providers: {} } as ProvidersData } = useProviders();
-    const providers = providersData.providers;
+  const apiUrl = getApiURL();
 
+  if (!workflow) {
+    return {};
+  }
 
-    const apiUrl = getApiURL();
-
-    if (!workflow) {
-        return {};
-    }
-
-    const notInstalledProviders = workflow?.providers?.filter((workflowProvider) =>
-        !workflowProvider.installed && Object.values(providers || {}).some(provider =>
-            provider.type === workflowProvider.type && (provider.config && Object.keys(provider.config).length > 0)
+  const notInstalledProviders = workflow?.providers
+    ?.filter(
+      (workflowProvider) =>
+        !workflowProvider.installed &&
+        Object.values(providers || {}).some(
+          (provider) =>
+            provider.type === workflowProvider.type &&
+            provider.config &&
+            Object.keys(provider.config).length > 0
         )
-    ).map(provider => provider.type);
+    )
+    .map((provider) => provider.type);
 
-    const allProvidersInstalled = notInstalledProviders.length === 0;
+  const allProvidersInstalled = notInstalledProviders.length === 0;
 
-    // Check if there is a manual trigger
-    const hasManualTrigger = workflow?.triggers?.some(
-        (trigger) => trigger.type === "manual"
-    ); // Replace 'manual' with the actual value that represents a manual trigger in your data
+  // Check if there is a manual trigger
+  const hasManualTrigger = workflow?.triggers?.some(
+    (trigger) => trigger.type === "manual"
+  ); // Replace 'manual' with the actual value that represents a manual trigger in your data
 
-    const hasAlertTrigger = workflow?.triggers?.some(
-        (trigger) => trigger.type === "alert"
-    );
+  const hasAlertTrigger = workflow?.triggers?.some(
+    (trigger) => trigger.type === "alert"
+  );
 
-    const isWorkflowDisabled = !!workflow?.disabled
+  const isWorkflowDisabled = !!workflow?.disabled;
 
-    const getDisabledTooltip = () => {
-        if (!allProvidersInstalled) return `Not all providers are installed: ${notInstalledProviders.join(", ")}`;
-        if (!hasManualTrigger) return "No manual trigger available.";
-        if(isWorkflowDisabled) {
-            return "Workflow is Disabled";
-        }
-        return message;
-    };
-
-    const isRunButtonDisabled = isWorkflowDisabled || !allProvidersInstalled || (!hasManualTrigger && !hasAlertTrigger);
-
-    if (isRunButtonDisabled) {
-        message = getDisabledTooltip();
+  const getDisabledTooltip = () => {
+    if (!allProvidersInstalled)
+      return `Not all providers are installed: ${notInstalledProviders.join(
+        ", "
+      )}`;
+    if (!hasManualTrigger) return "No manual trigger available.";
+    if (isWorkflowDisabled) {
+      return "Workflow is Disabled";
     }
-    function extractAlertDependencies(workflowRaw: string): string[] {
-        const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
-        const dependencies = workflowRaw.match(dependencyRegex);
+    return message;
+  };
 
-        if (!dependencies) {
-            return [];
-        }
+  const isRunButtonDisabled =
+    isWorkflowDisabled ||
+    !allProvidersInstalled ||
+    (!hasManualTrigger && !hasAlertTrigger);
 
-        // Convert Set to Array
-        const uniqueDependencies = Array.from(new Set(dependencies)).reduce<
-            string[]
-        >((acc, dep) => {
-            // Ensure 'dep' is treated as a string
-            const match = dep.match(/alert\.([\w.]+)/);
-            if (match) {
-                acc.push(match[1]);
-            }
-            return acc;
-        }, []);
+  if (isRunButtonDisabled) {
+    message = getDisabledTooltip();
+  }
+  function extractAlertDependencies(workflowRaw: string): string[] {
+    const dependencyRegex = /(?<!if:.*?)(\{\{\s*alert\.[\w.]+\s*\}\})/g;
+    const dependencies = workflowRaw.match(dependencyRegex);
 
-        return uniqueDependencies;
+    if (!dependencies) {
+      return [];
     }
 
-    const runWorkflow = async (payload: object) => {
-        try {
-            if (!workflow) {
-                return;
-            }
-            setIsRunning(true);
-            const response = await fetch(`${apiUrl}/workflows/${workflow?.id}/run`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-            });
+    // Use a Set to handle duplicates
+    const uniqueDependencies = new Set<string>();
 
-            if (response.ok) {
-                // Workflow started successfully
-                const responseData = await response.json();
-                const { workflow_execution_id } = responseData;
-                router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
-            } else {
-                console.error("Failed to start workflow");
-            }
-        } catch (error) {
-            console.error("An error occurred while starting workflow", error);
-        } finally {
-            setIsRunning(false);
-        }
-        setIsRunning(false);
-    };
+    dependencies.forEach((dep) => {
+      const match = dep.match(/alert\.([\w.]+)/);
+      if (match) {
+        uniqueDependencies.add(match[1]);
+      }
+    });
 
-    const handleRunClick = async () => {
-        if (!workflow) {
-            return;
-        }
-        const dependencies = extractAlertDependencies(workflow?.workflow_raw);
-        const hasDependencies = dependencies.length > 0;
+    // Convert Set to Array
+    return Array.from(uniqueDependencies);
+  }
 
-        // if it has dependencies, open the modal
-        if (hasDependencies) {
-            setAlertDependencies(dependencies);
-            // extract the filters
-            // TODO: support more than one trigger
-            for (const trigger of workflow?.triggers || []) {
-                if (trigger.type === "alert") {
-                    const staticAlertFilters = trigger.filters || [];
-                    setAlertFilters(staticAlertFilters);
-                    break;
-                }
-            }
-            setIsAlertTriggerModalOpen(true);
-            return;
-        }
-        // else, no dependencies, just run it
-        else {
-            runWorkflow({});
-        }
-    };
+  const runWorkflow = async (payload: object) => {
+    try {
+      if (!workflow) {
+        return;
+      }
+      setIsRunning(true);
+      const response = await fetch(`${apiUrl}/workflows/${workflow?.id}/run`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    const handleAlertTriggerModalSubmit = (payload: any) => {
-        runWorkflow(payload); // Function to run the workflow with the payload
-    };
-
-
-    const getTriggerModalProps = () => {
-        return {
-            isOpen: isAlertTriggerModalOpen,
-            onClose: () => setIsAlertTriggerModalOpen(false),
-            onSubmit: handleAlertTriggerModalSubmit,
-            staticFields: alertFilters,
-            dependencies: alertDependencies
-        }
+      if (response.ok) {
+        // Workflow started successfully
+        const responseData = await response.json();
+        const { workflow_execution_id } = responseData;
+        router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
+      } else {
+        console.error("Failed to start workflow");
+      }
+    } catch (error) {
+      console.error("An error occurred while starting workflow", error);
+    } finally {
+      setIsRunning(false);
     }
+    setIsRunning(false);
+  };
 
+  const handleRunClick = async () => {
+    if (!workflow) {
+      return;
+    }
+    const dependencies = extractAlertDependencies(workflow?.workflow_raw);
+    const hasDependencies = dependencies.length > 0;
+
+    // if it has dependencies, open the modal
+    if (hasDependencies) {
+      setAlertDependencies(dependencies);
+      // extract the filters
+      // TODO: support more than one trigger
+      for (const trigger of workflow?.triggers || []) {
+        if (trigger.type === "alert") {
+          const staticAlertFilters = trigger.filters || [];
+          setAlertFilters(staticAlertFilters);
+          break;
+        }
+      }
+      setIsAlertTriggerModalOpen(true);
+      return;
+    }
+    // else, no dependencies, just run it
+    else {
+      runWorkflow({});
+    }
+  };
+
+  const handleAlertTriggerModalSubmit = (payload: any) => {
+    runWorkflow(payload); // Function to run the workflow with the payload
+  };
+
+  const getTriggerModalProps = () => {
     return {
-        handleRunClick,
-        isRunning,
-        getTriggerModalProps,
-        isRunButtonDisabled,
-        message
-    }
+      isOpen: isAlertTriggerModalOpen,
+      onClose: () => setIsAlertTriggerModalOpen(false),
+      onSubmit: handleAlertTriggerModalSubmit,
+      staticFields: alertFilters,
+      dependencies: alertDependencies,
+    };
+  };
+
+  return {
+    handleRunClick,
+    isRunning,
+    getTriggerModalProps,
+    isRunButtonDisabled,
+    message,
+  };
 };

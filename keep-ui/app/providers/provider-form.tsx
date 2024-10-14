@@ -213,7 +213,7 @@ const ProviderForm = ({
     let oauth2Url = provider.oauth2_url;
     const domain = searchParams?.get("domain");
     if (domain) {
-      // TODO: this is a hack for Datadog OAuth2 since it can be initated from different domains
+      // TODO: this is a hack for Datadog OAuth2 since it can be initiated from different domains
       oauth2Url = oauth2Url?.replace("datadoghq.com", domain);
     }
 

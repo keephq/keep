@@ -15,6 +15,7 @@ interface Props {
   alerts: AlertDto[];
   clearRowSelection: () => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
+  mutateAlerts?: () => void;
 }
 
 export default function AlertActions({
@@ -22,6 +23,7 @@ export default function AlertActions({
   alerts,
   clearRowSelection,
   setDismissModalAlert,
+  mutateAlerts
 }: Props) {
   const router = useRouter();
   const { useAllPresets } = usePresets();
@@ -88,6 +90,9 @@ export default function AlertActions({
   const handleSuccessfulAlertsAssociation = () => {
     hideIncidentSelector();
     clearRowSelection();
+    if (mutateAlerts) {
+      mutateAlerts();
+    }
   }
 
   return (
