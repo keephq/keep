@@ -1,0 +1,47 @@
+---
+title: "Bash"
+sidebarTitle: "Bash Provider"
+description: "Bash provider allows executing Bash commands in a workflow, with a limitation for cloud execution."
+---
+
+## Inputs
+
+- `script`: str : The Bash script or command to execute.
+
+## Outputs
+
+- `stdout`: The standard output from the executed Bash command.
+- `stderr`: The standard error output from the executed Bash command (if any).
+- `exit_code`: The exit code of the Bash command.
+
+## Authentication Parameters
+
+_None required for local execution of Bash scripts._
+
+## Connecting with the Provider
+
+The Bash provider allows you to run Bash commands or scripts in your workflow. You can pass in any valid Bash command, and it will be executed in a local environment. 
+
+### **Cloud Limitation**
+This provider is disabled for cloud environments and can only be used in local or self-hosted environments.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: bash-example
+  description: Bash example
+  triggers:
+    - type: manual
+  actions:
+    - name: bash
+      provider:
+        type: bash
+        config: "{{ providers.bashtest }}"
+        with:
+          script: |
+            echo "Hello, World!"
+            ls -l
+
+## Usefull Links
+-[Bash Documentation](https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html)

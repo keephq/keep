@@ -1,0 +1,58 @@
+---
+title: "Kafka"
+sidebarTitle: "Kafka Provider"
+description: "Kafka provider allows integration with Apache Kafka for producing and consuming messages."
+---
+
+## Inputs
+
+- `topic`: str : The Kafka topic to produce/consume messages from.
+- `message`: str (optional) : The message to send to the Kafka topic when producing (not required for consuming).
+- `action`: str : The action to perform (`produce` or `consume`).
+
+## Outputs
+
+- `result`: The result of the action. If consuming, this will return the message(s) from the Kafka topic.
+
+## Authentication Parameters
+
+- `kafka_broker`: The URL of the Kafka broker (e.g., `localhost:9092` or the broker's public URL).
+- `kafka_client_id`: The client ID to authenticate the Kafka producer/consumer.
+- `kafka_security_protocol`: (Optional) Security protocol for Kafka (e.g., `PLAINTEXT`, `SSL`, `SASL_SSL`).
+- `kafka_sasl_mechanism`: (Optional) SASL mechanism for authentication (e.g., `PLAIN`, `SCRAM-SHA-256`).
+- `kafka_username` & `kafka_password`: (Optional) Username and password for SASL authentication if required.
+
+## Connecting with the Provider
+
+1. Set up a Kafka broker (or use an existing one) and make sure it is accessible.
+2. Get the broker URL (e.g., `localhost:9092` or a remote Kafka service URL).
+3. (Optional) If using secure communication, provide the security protocol, SASL mechanism, username, and password.
+4. Configure the provider with these parameters.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: kafka-example
+  description: Kafka example
+  triggers:
+    - type: manual
+  actions:
+    - name: kafka-produce
+      provider:
+        type: kafka
+        config: "{{ providers.kafkatest }}"
+        with:
+          topic: "example-topic"
+          action: "produce"
+          message: "Hello, Kafka!"
+
+    - name: kafka-consume
+      provider:
+        type: kafka
+        config: "{{ providers.kafkatest }}"
+        with:
+          topic: "example-topic"
+          action: "consume"
+## Usefull Links
+-[Kafka Clients Documentation](https://kafka.apache.org/documentation/)
