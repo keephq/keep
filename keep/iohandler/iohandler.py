@@ -311,6 +311,12 @@ class IOHandler:
             )
             safe = False
 
+        # allow {{ const.<key> }} to be rendered
+        const_rendering = False
+        if key.startswith("{{ consts.") and key.endswith("}}"):
+            self.logger.debug("Rendering const key")
+            const_rendering = True
+
         context = self.context_manager.get_full_context()
         # TODO: protect from multithreaded where another thread will print to stderr, but thats a very rare case and we shouldn't care much
         original_stderr = sys.stderr
@@ -336,6 +342,9 @@ class IOHandler:
             raise RenderException(f"{err} in the context.")
         if not rendered:
             return default
+
+        if const_rendering:
+            return self._render(rendered, safe, default)
         return rendered
 
     def render_context(self, context_to_render: dict):
