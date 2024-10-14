@@ -1679,7 +1679,10 @@ def get_rule_distribution(tenant_id, minute=False):
             )
             .join(Incident, Rule.id == Incident.rule_id)
             .join(AlertToIncident, Incident.id == AlertToIncident.incident_id)
-            .filter(AlertToIncident.timestamp >= seven_days_ago)
+            .filter(
+                AlertToIncident.deleted_at.is_(None),
+                AlertToIncident.timestamp >= seven_days_ago
+            )
             .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
             .group_by(
                 "rule_id", "rule_name", "incident_id", "rule_fingerprint", "time"
@@ -2373,6 +2376,7 @@ def is_alert_assigned_to_incident(
             .where(AlertToIncident.alert_id == alert_id)
             .where(AlertToIncident.incident_id == incident_id)
             .where(AlertToIncident.tenant_id == tenant_id)
+            .where(AlertToIncident.deleted_at.is_(None))
         ).first()
     return assigned is not None
 
@@ -2830,6 +2834,7 @@ def get_incident_alerts_and_links_by_incident_id(
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
@@ -2961,6 +2966,7 @@ def add_alerts_to_incident(
             existing_alert_ids = set(
                 session.exec(
                     select(AlertToIncident.alert_id).where(
+                        AlertToIncident.deleted_at.is_(None),
                         AlertToIncident.tenant_id == tenant_id,
                         AlertToIncident.incident_id == incident.id,
                         col(AlertToIncident.alert_id).in_(alert_ids),
@@ -3008,6 +3014,7 @@ def add_alerts_to_incident(
                 select(func.min(Alert.timestamp), func.max(Alert.timestamp))
                 .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
                 .where(
+                    AlertToIncident.deleted_at.is_(None),
                     AlertToIncident.tenant_id == tenant_id,
                     AlertToIncident.incident_id == incident.id,
                 )
@@ -3030,6 +3037,7 @@ def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> i
             .select_from(AlertToIncident)
             .join(Alert, AlertToIncident.alert_id == Alert.id)
             .where(
+                AlertToIncident.deleted_at.is_(None),
                 Alert.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident_id,
             )
@@ -3047,6 +3055,7 @@ def get_last_alerts_for_incidents(
             )
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.incident_id.in_(incident_ids),
             )
             .order_by(Alert.timestamp.desc())
@@ -3079,11 +3088,13 @@ def remove_alerts_to_incident_by_incident_id(
         deleted = (
             session.query(AlertToIncident)
             .where(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident.id,
                 col(AlertToIncident.alert_id).in_(alert_ids),
-            )
-            .delete()
+            ).update({
+                "deleted_at": datetime.now(datetime.now().astimezone().tzinfo),
+            })
         )
         session.commit()
 
@@ -3098,6 +3109,7 @@ def remove_alerts_to_incident_by_incident_id(
             select(func.distinct(service_field))
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.incident_id == incident_id,
                 service_field.in_(alerts_data_for_incident["services"]),
             )
@@ -3110,6 +3122,7 @@ def remove_alerts_to_incident_by_incident_id(
             select(col(Alert.provider_type).distinct())
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.incident_id == incident_id,
                 col(Alert.provider_type).in_(alerts_data_for_incident["sources"]),
             )
@@ -3516,7 +3529,10 @@ def get_workflow_executions_for_incident_or_alert(
                 Alert, WorkflowToAlertExecution.alert_fingerprint == Alert.fingerprint
             )
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
-            .where(AlertToIncident.incident_id == incident_id)
+            .where(
+                AlertToIncident.deleted_at.is_(None),
+                AlertToIncident.incident_id == incident_id
+            )
         )
 
         # Combine both queries
@@ -3558,6 +3574,7 @@ def is_all_incident_alerts_resolved(incident: Incident, session: Optional[Sessio
             .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .where(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.incident_id == incident.id,
             )
             .group_by(Alert.fingerprint)
@@ -3614,6 +3631,7 @@ def is_edge_incident_alert_resolved(incident: Incident, direction: Callable, ses
             .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .where(
+                AlertToIncident.deleted_at.is_(None),
                 AlertToIncident.incident_id == incident.id
             )
             .group_by(Alert.fingerprint)

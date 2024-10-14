@@ -59,8 +59,15 @@ class AlertToIncident(SQLModel, table=True):
     alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
     incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
     
-    is_created_by_ai: bool = Field(default_factory=False)
-    deleted_at: datetime = Field(default_factory=None, nullable=True)
+    is_created_by_ai: bool = Field(default=False)
+    deleted_at: datetime = Field(
+        default_factory=None,
+        nullable=True, 
+        primary_key=True,
+    )
+    __table_args__ = (
+        UniqueConstraint("alert_id", "tenant_id", "deleted_at", name="uq_alert_to_incident"),
+    )
 
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -87,7 +94,11 @@ class Incident(SQLModel, table=True):
 
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        back_populates="incidents", link_model=AlertToIncident
+        back_populates="incidents", link_model=AlertToIncident,
+        sa_relationship_kwargs={
+            "primaryjoin": "and_(AlertToIncident.incident_id == Incident.id, AlertToIncident.deleted_at.is_(None))",
+            "uselist": True,
+        }
     )
 
     is_predicted: bool = Field(default=False)
