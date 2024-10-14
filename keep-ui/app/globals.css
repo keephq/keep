@@ -45,3 +45,7 @@
   }
 }
 
+.sliding-panel-container.active {
+  /* original value is ridiculous 15.000, overflowing toasts*/
+  @apply z-[1000] !important;
+}
