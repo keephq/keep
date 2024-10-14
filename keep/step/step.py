@@ -36,6 +36,7 @@ class Step:
         self.context_manager: ContextManager = context_manager
         self.io_handler = IOHandler(context_manager)
         self.conditions = self.config.get("condition", [])
+        self.vars = self.config.get("vars", {})
         self.conditions_results = {}
         self.logger = context_manager.get_logger()
         self.__retry = self.on_failure.get("retry", {})
@@ -122,6 +123,7 @@ class Step:
     def _run_single(self):
         # Initialize all conditions
         conditions = []
+        self.context_manager.set_step_vars(self.step_id, _vars=self.vars)
 
         for condition in self.conditions:
             condition_name = condition.get("name", None)
