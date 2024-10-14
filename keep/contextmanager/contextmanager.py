@@ -1,6 +1,5 @@
 # TODO - refactor context manager to support multitenancy in a more robust way
 import logging
-import os
 
 import click
 from pympler.asizeof import asizeof
@@ -26,6 +25,8 @@ class ContextManager:
         self.foreach_context = {
             "value": None,
         }
+        self.consts_context = {}
+        self.current_step_vars = {}
         # cli context
         try:
             self.click_context = click.get_current_context()
@@ -82,6 +83,9 @@ class ContextManager:
     def set_incident_context(self, incident):
         self.incident_context = incident
 
+    def set_consts_context(self, consts):
+        self.consts_context = consts
+
     def get_workflow_id(self):
         return self.workflow_id
 
@@ -109,13 +113,12 @@ class ContextManager:
             "last_workflow_results": self.last_workflow_execution_results,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
             "incident": self.incident_context,  # this is an alias so workflows will be able to use alert.source
+            "consts": self.consts_context,
+            "vars": self.current_step_vars,
         }
 
         if not exclude_providers:
             full_context["providers"] = self.providers_context
-
-        if not exclude_env:
-            full_context["env"] = os.environ
 
         full_context.update(self.aliases)
         return full_context
@@ -173,12 +176,20 @@ class ContextManager:
 
     def set_step_provider_paremeters(self, step_id, provider_parameters):
         if step_id not in self.steps_context:
-            self.steps_context[step_id] = {"provider_parameters": {}, "results": []}
+            self.steps_context[step_id] = {
+                "provider_parameters": {},
+                "results": [],
+                "vars": {},
+            }
         self.steps_context[step_id]["provider_parameters"] = provider_parameters
 
     def set_step_context(self, step_id, results, foreach=False):
         if step_id not in self.steps_context:
-            self.steps_context[step_id] = {"provider_parameters": {}, "results": []}
+            self.steps_context[step_id] = {
+                "provider_parameters": {},
+                "results": [],
+                "vars": {},
+            }
 
         # If this is a foreach step, we need to append the results to the list
         # so we can iterate over them
@@ -189,6 +200,17 @@ class ContextManager:
         # this is an alias to the current step output
         self.steps_context["this"] = self.steps_context[step_id]
         self.steps_context_size = asizeof(self.steps_context)
+
+    def set_step_vars(self, step_id, _vars):
+        if step_id not in self.steps_context:
+            self.steps_context[step_id] = {
+                "provider_parameters": {},
+                "results": [],
+                "vars": {},
+            }
+
+        self.current_step_vars = _vars
+        self.steps_context[step_id]["vars"] = _vars
 
     def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)

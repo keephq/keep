@@ -209,7 +209,9 @@ class DynatraceProvider(BaseProvider):
         return scopes
 
     @staticmethod
-    def _format_alert(event: dict) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
         # alert that comes from webhook
         if event.get("ProblemID"):
             tags = event.get("Tags", [])

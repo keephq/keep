@@ -15,6 +15,7 @@ import { Provider } from "app/providers/providers";
 import {
   BackspaceIcon,
   FunnelIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
 import useStore, { V2Properties } from "./builder-store";
@@ -24,9 +25,18 @@ function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
 }
 
-
-export function GlobalEditorV2({ synced, saveRef }: { synced: boolean, saveRef: React.MutableRefObject<boolean>; }) {
-  const { v2Properties: properties, updateV2Properties: setProperty, selectedNode } = useStore();
+export function GlobalEditorV2({
+  synced,
+  saveRef,
+}: {
+  synced: boolean;
+  saveRef: React.MutableRefObject<boolean>;
+}) {
+  const {
+    v2Properties: properties,
+    updateV2Properties: setProperty,
+    selectedNode,
+  } = useStore();
 
   return (
     <EditorLayout>
@@ -36,8 +46,10 @@ export function GlobalEditorV2({ synced, saveRef }: { synced: boolean, saveRef: 
         workflow YAML specifications.
       </Text>
       <Text className="mt-5">
-        Use the edge add button or an empty step (a step with a +) to insert steps, conditions, and actions into your workflow.
-        Then, click the Generate button to compile the workflow or the Deploy button to deploy it to Keep.
+        Use the edge add button or an empty step (a step with a +) to insert
+        steps, conditions, and actions into your workflow. Then, click the
+        Generate button to compile the workflow or the Deploy button to deploy
+        it to Keep.
       </Text>
       <div className="text-right">{synced ? "Synced" : "Not Synced"}</div>
       <WorkflowEditorV2
@@ -50,15 +62,14 @@ export function GlobalEditorV2({ synced, saveRef }: { synced: boolean, saveRef: 
   );
 }
 
-
 interface keepEditorProps {
   properties: V2Properties;
-  updateProperty: ((key: string, value: any) => void);
+  updateProperty: (key: string, value: any) => void;
   providers?: Provider[] | null | undefined;
   installedProviders?: Provider[] | null | undefined;
   providerType?: string;
   type?: string;
-  isV2?: boolean
+  isV2?: boolean;
 }
 
 function KeepStepEditor({
@@ -88,9 +99,11 @@ function KeepStepEditor({
   const installedProviderByType = installedProviders?.filter(
     (p) => p.type === providerType
   );
-  const isThisProviderNeedsInstallation = providers?.some(
-    (p) => p.type === providerType && p.config && Object.keys(p.config).length > 0
-  ) ?? false;
+  const isThisProviderNeedsInstallation =
+    providers?.some(
+      (p) =>
+        p.type === providerType && p.config && Object.keys(p.config).length > 0
+    ) ?? false;
 
   const DynamicIcon = (props: any) => (
     <svg
@@ -151,13 +164,15 @@ function KeepStepEditor({
             (p) => p.details?.name === providerConfig
           ) === undefined
         }
-        errorMessage={`${providerConfig && isThisProviderNeedsInstallation &&
-            installedProviderByType?.find(
-              (p) => p.details?.name === providerConfig
-            ) === undefined
+        errorMessage={`${
+          providerConfig &&
+          isThisProviderNeedsInstallation &&
+          installedProviderByType?.find(
+            (p) => p.details?.name === providerConfig
+          ) === undefined
             ? "Please note this provider is not installed and you'll need to install it before executing this workflow."
             : ""
-          }`}
+        }`}
       />
       <Text className="my-2.5">Provider Parameters</Text>
       <div>
@@ -167,8 +182,67 @@ function KeepStepEditor({
           placeholder="If Condition"
           onValueChange={(value) => updateProperty("if", value)}
           className="mb-2.5"
-          value={properties?.if || "" as string}
+          value={properties?.if || ("" as string)}
         />
+      </div>
+      <div>
+        <Text>Vars</Text>
+        {Object.entries(properties?.vars || {}).map(([varKey, varValue]) => (
+          <div key={varKey} className="flex items-center mt-1">
+            <TextInput
+              placeholder={`Key ${varKey}`}
+              value={varKey}
+              onChange={(e) => {
+                const updatedVars = {
+                  ...(properties.vars as { [key: string]: string }),
+                };
+                delete updatedVars[varKey];
+                updatedVars[e.target.value] = varValue as string;
+                updateProperty("vars", updatedVars);
+              }}
+            />
+            <TextInput
+              placeholder={`Value ${varValue}`}
+              value={varValue as string}
+              onChange={(e) => {
+                const updatedVars = {
+                  ...(properties.vars as { [key: string]: string }),
+                };
+                updatedVars[varKey] = e.target.value;
+                updateProperty("vars", updatedVars);
+              }}
+            />
+            <Icon
+              icon={BackspaceIcon}
+              className="cursor-pointer"
+              color="red"
+              tooltip={`Remove ${varKey}`}
+              onClick={() => {
+                const updatedVars = {
+                  ...(properties.vars as { [key: string]: string }),
+                };
+                delete updatedVars[varKey];
+                updateProperty("vars", updatedVars);
+              }}
+            />
+          </div>
+        ))}
+        <Button
+          onClick={() => {
+            const updatedVars = {
+              ...(properties.vars as { [key: string]: string }),
+              "": "",
+            };
+            updateProperty("vars", updatedVars);
+          }}
+          size="xs"
+          className="ml-1 mt-1"
+          variant="light"
+          color="gray"
+          icon={PlusIcon}
+        >
+          Add Var
+        </Button>
       </div>
       {uniqueParams
         ?.filter((key) => key !== "kwargs")
@@ -258,20 +332,27 @@ function WorkflowEditorV2({
   properties,
   setProperties,
   selectedNode,
-  saveRef
+  saveRef,
 }: {
   properties: V2Properties;
   setProperties: (updatedProperties: V2Properties) => void;
   selectedNode: string | null;
   saveRef: React.MutableRefObject<boolean>;
 }) {
+  const addNewConstant = () => {
+    const updatedConsts = {
+      ...(properties["consts"] as { [key: string]: string }),
+      [`newKey${Object.keys(properties["consts"] || {}).length}`]: "",
+    };
+    handleChange("consts", updatedConsts);
+  };
 
   const updateAlertFilter = (filter: string, value: string) => {
     const currentFilters = properties.alert || {};
     const updatedFilters = { ...currentFilters, [filter]: value };
     setProperties({ ...properties, alert: updatedFilters });
     if (saveRef.current) {
-      saveRef.current = false
+      saveRef.current = false;
     }
   };
 
@@ -287,19 +368,19 @@ function WorkflowEditorV2({
     delete currentFilters[filter];
     setProperties({ ...properties, alert: currentFilters });
     if (saveRef.current) {
-      saveRef.current = false
+      saveRef.current = false;
     }
   };
 
-  const handleChange = (key: string, value: string) => {
+  const handleChange = (key: string, value: string | Record<string, any>) => {
     setProperties({
       ...properties,
       [key]: value,
     });
     if (saveRef.current) {
-      saveRef.current = false
+      saveRef.current = false;
     }
-  }
+  };
 
   const propertyKeys = Object.keys(properties).filter(
     (k) => k !== "isLocked" && k !== "id"
@@ -309,12 +390,23 @@ function WorkflowEditorV2({
     <>
       <Title className="mt-2.5">Workflow Settings</Title>
       {propertyKeys.map((key, index) => {
-        const isTrigger = ["manual", "alert", 'interval', 'incident'].includes(key);
-        renderDivider = isTrigger && key ===  selectedNode ? !renderDivider : false;
+        const isTrigger = ["manual", "alert", "interval", "incident"].includes(
+          key
+        );
+
+        let isConst = key === "consts";
+        if (isConst && !properties[key]) {
+          properties[key] = {};
+        }
+
+        renderDivider =
+          isTrigger && key === selectedNode ? !renderDivider : false;
         return (
           <div key={key}>
             {renderDivider && <Divider />}
-            {((key === selectedNode) || (!isTrigger)) && <Text className="capitalize">{key}</Text>}
+            {(key === selectedNode || !isTrigger) && (
+              <Text className="capitalize">{key}</Text>
+            )}
 
             {(() => {
               switch (key) {
@@ -326,7 +418,10 @@ function WorkflowEditorV2({
                           type="checkbox"
                           checked={true}
                           onChange={(e) =>
-                            handleChange(key, e.target.checked ? "true" : "false")
+                            handleChange(
+                              key,
+                              e.target.checked ? "true" : "false"
+                            )
                           }
                           disabled={true}
                         />
@@ -355,14 +450,20 @@ function WorkflowEditorV2({
                             return (
                               <>
                                 <Subtitle className="mt-2.5">{filter}</Subtitle>
-                                <div className="flex items-center mt-1" key={filter}>
+                                <div
+                                  className="flex items-center mt-1"
+                                  key={filter}
+                                >
                                   <TextInput
                                     key={filter}
                                     placeholder={`Set alert ${filter}`}
                                     onChange={(e: any) =>
                                       updateAlertFilter(filter, e.target.value)
                                     }
-                                    value={(properties.alert as any)[filter] || "" as string}
+                                    value={
+                                      (properties.alert as any)[filter] ||
+                                      ("" as string)
+                                    }
                                   />
                                   <Icon
                                     icon={BackspaceIcon}
@@ -380,39 +481,58 @@ function WorkflowEditorV2({
                   );
 
                 case "incident":
-                  return selectedNode === 'incident' && <>
-                    <Subtitle className="mt-2.5">Incident events</Subtitle>
-                    {Array("created", "updated", "deleted").map((event) =>
-                      <div key={`incident-${event}`} className="flex">
-                        <Switch
-                          id={event}
-                          checked={properties.incident.events?.indexOf(event) > -1}
-                          onChange={() => {
-                            let events = properties.incident.events || [];
-                            if (events.indexOf(event) > -1) {
-                              events = (events as string[]).filter(e => e !== event)
-                              setProperties({ ...properties, [key]: {events: events } })
-                            } else {
-                              events.push(event);
-                              setProperties({ ...properties, [key]: {events: events} })
-                            }
-                          }}
-                          color={"orange"}
-                        />
-                        <label htmlFor={`incident-${event}`} className="text-sm text-gray-500">
-                          <Text>{event}</Text>
-                        </label>
-                      </div>
-                    )}
-                  </>;
+                  return (
+                    selectedNode === "incident" && (
+                      <>
+                        <Subtitle className="mt-2.5">Incident events</Subtitle>
+                        {Array("created", "updated", "deleted").map((event) => (
+                          <div key={`incident-${event}`} className="flex">
+                            <Switch
+                              id={event}
+                              checked={
+                                properties.incident.events?.indexOf(event) > -1
+                              }
+                              onChange={() => {
+                                let events = properties.incident.events || [];
+                                if (events.indexOf(event) > -1) {
+                                  events = (events as string[]).filter(
+                                    (e) => e !== event
+                                  );
+                                  setProperties({
+                                    ...properties,
+                                    [key]: { events: events },
+                                  });
+                                } else {
+                                  events.push(event);
+                                  setProperties({
+                                    ...properties,
+                                    [key]: { events: events },
+                                  });
+                                }
+                              }}
+                              color={"orange"}
+                            />
+                            <label
+                              htmlFor={`incident-${event}`}
+                              className="text-sm text-gray-500"
+                            >
+                              <Text>{event}</Text>
+                            </label>
+                          </div>
+                        ))}
+                      </>
+                    )
+                  );
                 case "interval":
-                  return selectedNode === "interval" && (<TextInput
-                    placeholder={`Set the ${key}`}
-                    onChange={(e: any) =>
-                      handleChange(key, e.target.value)
-                    }
-                    value={properties[key] || ""as string}
-                  />);
+                  return (
+                    selectedNode === "interval" && (
+                      <TextInput
+                        placeholder={`Set the ${key}`}
+                        onChange={(e: any) => handleChange(key, e.target.value)}
+                        value={properties[key] || ("" as string)}
+                      />
+                    )
+                  );
                 case "disabled":
                   return (
                     <div key={key}>
@@ -425,44 +545,107 @@ function WorkflowEditorV2({
                       />
                     </div>
                   );
+                case "consts":
+                  // if consts is empty, set it to an empty object
+                  if (!properties[key]) {
+                    return null;
+                  }
+                  return (
+                    <div key={key}>
+                      {Object.entries(
+                        properties[key] as { [key: string]: string }
+                      ).map(([constKey, constValue]) => (
+                        <div key={constKey} className="flex items-center mt-1">
+                          <TextInput
+                            placeholder={`Key ${constKey}`}
+                            value={constKey}
+                            onChange={(e) => {
+                              const updatedConsts = {
+                                ...(properties[key] as {
+                                  [key: string]: string;
+                                }),
+                              };
+                              delete updatedConsts[constKey];
+                              updatedConsts[e.target.value] = constValue;
+                              handleChange(key, updatedConsts);
+                            }}
+                          />
+                          <TextInput
+                            placeholder={`Value ${constValue}`}
+                            value={constValue}
+                            onChange={(e) => {
+                              const updatedConsts = {
+                                ...(properties[key] as {
+                                  [key: string]: string;
+                                }),
+                              };
+                              updatedConsts[constKey] = e.target.value;
+                              handleChange(key, updatedConsts);
+                            }}
+                          />
+                          <Icon
+                            icon={BackspaceIcon}
+                            className="cursor-pointer"
+                            color="red"
+                            tooltip={`Remove ${constKey}`}
+                            onClick={() => {
+                              const updatedConsts = {
+                                ...(properties[key] as {
+                                  [key: string]: string;
+                                }),
+                              };
+                              delete updatedConsts[constKey];
+                              handleChange(key, updatedConsts);
+                            }}
+                          />
+                        </div>
+                      ))}
+                      <Button
+                        onClick={addNewConstant}
+                        size="xs"
+                        className="ml-1 mt-1"
+                        variant="light"
+                        color="gray"
+                        icon={PlusIcon}
+                      >
+                        Add Constant
+                      </Button>
+                    </div>
+                  );
                 default:
                   return (
                     <TextInput
                       placeholder={`Set the ${key}`}
-                      onChange={(e: any) =>
-                        handleChange(key, e.target.value)
-                      }
-                      value={properties[key] || ""as string}
-                                  />
-                              );
-                      }
-                  })()}
-              </div>
-          );
+                      onChange={(e: any) => handleChange(key, e.target.value)}
+                      value={properties[key] || ("" as string)}
+                    />
+                  );
+              }
+            })()}
+          </div>
+        );
       })}
     </>
   );
 }
 
-
-
 export function StepEditorV2({
   providers,
   installedProviders,
   setSynced,
-  saveRef
+  saveRef,
 }: {
   providers: Provider[] | undefined | null;
   installedProviders?: Provider[] | undefined | null;
   setSynced: (sync: boolean) => void;
   saveRef: React.MutableRefObject<boolean>;
 }) {
-  const [formData, setFormData] = useState<{ name?: string; properties?: V2Properties, type?: string }>({});
-  const {
-    selectedNode,
-    updateSelectedNodeData,
-    getNodeById,
-  } = useStore();
+  const [formData, setFormData] = useState<{
+    name?: string;
+    properties?: V2Properties;
+    type?: string;
+  }>({});
+  const { selectedNode, updateSelectedNodeData, getNodeById } = useStore();
 
   const deployRef = useRef<HTMLInputElement>(null);
 
@@ -494,18 +677,19 @@ export function StepEditorV2({
     }
   };
 
-
   const handleSubmit = () => {
     // Finalize the changes before saving
-    updateSelectedNodeData('name', formData.name);
-    updateSelectedNodeData('properties', formData.properties);
+    updateSelectedNodeData("name", formData.name);
+    updateSelectedNodeData("properties", formData.properties);
     setSynced(false);
     if (saveRef && deployRef?.current?.checked) {
       saveRef.current = true;
     }
   };
 
-  const type = formData ? formData.type?.includes("step-") || formData.type?.includes("action-") : "";
+  const type = formData
+    ? formData.type?.includes("step-") || formData.type?.includes("action-")
+    : "";
 
   return (
     <EditorLayout>
@@ -515,7 +699,7 @@ export function StepEditorV2({
         className="mb-2.5"
         icon={KeyIcon}
         name="name"
-        value={formData.name || ''}
+        value={formData.name || ""}
         onChange={handleInputChange}
       />
       {type && formData.properties ? (
@@ -545,11 +729,7 @@ export function StepEditorV2({
       ) : null}
       <div>
         <Text className="capitalize">Deploy</Text>
-        <input
-          ref={deployRef}
-          type="checkbox"
-          defaultChecked
-        />
+        <input ref={deployRef} type="checkbox" defaultChecked />
       </div>
       <button
         className="sticky bottom-[-10px] mt-4 bg-orange-500 text-white p-2 rounded"

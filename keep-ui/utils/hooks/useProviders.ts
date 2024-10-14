@@ -5,7 +5,9 @@ import { ProvidersResponse } from "app/providers/providers";
 import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 
-export const useProviders = (options: SWRConfiguration = {}) => {
+export const useProviders = (
+  options: SWRConfiguration = { revalidateOnFocus: false }
+) => {
   const { data: session } = useSession();
   const apiUrl = getApiURL();
 

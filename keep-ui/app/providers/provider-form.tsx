@@ -41,7 +41,7 @@ import {
   GlobeAltIcon,
   DocumentTextIcon,
   PlusIcon,
-  TrashIcon
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { installWebhook } from "../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
@@ -50,6 +50,7 @@ import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
+import { useProviders } from "@/utils/hooks/useProviders";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -61,10 +62,8 @@ type ProviderFormProps = {
   ) => void;
   onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
-  onAddProvider?: (provider: Provider) => void;
   isProviderNameDisabled?: boolean;
   installedProvidersMode: boolean;
-  onDelete?: (provider: Provider) => void;
   isLocalhost?: boolean;
 };
 
@@ -114,13 +113,13 @@ const DictInput = ({ name, value, onChange, error }) => {
         <div key={index} className="flex items-center mb-2">
           <TextInput
             value={entry.key}
-            onChange={(e) => handleEntryChange(index, 'key', e.target.value)}
+            onChange={(e) => handleEntryChange(index, "key", e.target.value)}
             placeholder="Key"
             className="mr-2"
           />
           <TextInput
             value={entry.value}
-            onChange={(e) => handleEntryChange(index, 'value', e.target.value)}
+            onChange={(e) => handleEntryChange(index, "value", e.target.value)}
             placeholder="Value"
             className="mr-2"
           />
@@ -142,14 +141,13 @@ const ProviderForm = ({
   formData,
   onFormChange,
   onConnectChange,
-  onAddProvider,
   closeModal,
   isProviderNameDisabled,
   installedProvidersMode,
-  onDelete,
   isLocalhost,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
+  const { mutate } = useProviders();
   const searchParams = useSearchParams();
   const [activeTabsState, setActiveTabsState] = useState({});
   const initialData = {
@@ -169,7 +167,11 @@ const ProviderForm = ({
 
     // Set default values for select inputs
     Object.entries(provider.config).forEach(([configKey, method]) => {
-      if (method.type === 'select' && method.default && !initialValues[configKey]) {
+      if (
+        method.type === "select" &&
+        method.default &&
+        !initialValues[configKey]
+      ) {
         initialValues[configKey] = method.default;
       }
     });
@@ -200,8 +202,8 @@ const ProviderForm = ({
   const accessToken = session?.accessToken;
 
   const callInstallWebhook = async (e: Event) => {
-    await installWebhook(provider, accessToken!);
     e.preventDefault();
+    await installWebhook(provider, accessToken!);
   };
 
   async function handleOauth(e: MouseEvent) {
@@ -212,7 +214,7 @@ const ProviderForm = ({
 
     let oauth2Url = provider.oauth2_url;
     if (searchParams?.get("domain")) {
-      // TODO: this is a hack for Datadog OAuth2 since it can be initated from different domains
+      // TODO: this is a hack for Datadog OAuth2 since it can be initiated from different domains
       oauth2Url = oauth2Url?.replace(
         "datadoghq.com",
         searchParams.get("domain")
@@ -231,7 +233,7 @@ const ProviderForm = ({
   useEffect(() => {
     // Set initial active tabs for each main group
     const initialActiveTabsState = {};
-    Object.keys(groupedConfigs).forEach(mainGroup => {
+    Object.keys(groupedConfigs).forEach((mainGroup) => {
       const subGroups = getSubGroups(groupedConfigs[mainGroup]);
       if (subGroups.length > 0) {
         initialActiveTabsState[mainGroup] = subGroups[0];
@@ -253,7 +255,7 @@ const ProviderForm = ({
           response.json().then((newValidatedScopes) => {
             setProviderValidatedScopes(newValidatedScopes);
             provider.validatedScopes = newValidatedScopes;
-            onAddProvider(provider);
+            mutate();
             setRefreshLoading(false);
           });
         } else {
@@ -275,7 +277,7 @@ const ProviderForm = ({
         }
       );
       if (response.ok) {
-        onDelete!(provider);
+        mutate();
         closeModal();
       } else {
         toast.error(`Failed to delete ${provider.type} 😢`);
@@ -415,13 +417,14 @@ const ProviderForm = ({
   };
 
   const handleUpdateClick = (e: any) => {
+    if (provider.webhook_required) callInstallWebhook(e);
     e.preventDefault();
     if (validate()) {
       setIsLoading(true);
       submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
-          onAddProvider({ ...provider, ...data } as Provider);
+          mutate();
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
@@ -432,12 +435,12 @@ const ProviderForm = ({
     }
   };
 
-  const handleConnectClick = () => {
+  const handleConnectClick = async () => {
     if (validate()) {
       setIsLoading(true);
       onConnectChange(true, false);
       submit(`${getApiURL()}/providers/install`)
-        .then((data) => {
+        .then(async (data) => {
           console.log("Connect Result:", data);
           setIsLoading(false);
           onConnectChange(false, true);
@@ -446,9 +449,10 @@ const ProviderForm = ({
             provider.can_setup_webhook &&
             !isLocalhost
           ) {
-            installWebhook(data as Provider, accessToken);
+            // mutate after webhook installation
+            await installWebhook(data as Provider, accessToken);
           }
-          onAddProvider({ ...provider, ...data } as Provider);
+          mutate();
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
@@ -464,73 +468,71 @@ const ProviderForm = ({
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
+  const addEntry = (fieldName) => (e) => {
+    e.preventDefault();
+    setFormValues((prevValues) => {
+      const currentEntries = prevValues[fieldName] || [];
+      const updatedEntries = [...currentEntries, { key: "", value: "" }];
+      const updatedValues = { ...prevValues, [fieldName]: updatedEntries };
+      onFormChange(updatedValues, formErrors);
+      return updatedValues;
+    });
+  };
 
-    const addEntry = (fieldName) => (e) => {
-      e.preventDefault();
-      setFormValues((prevValues) => {
-        const currentEntries = prevValues[fieldName] || [];
-        const updatedEntries = [...currentEntries, { key: "", value: "" }];
-        const updatedValues = { ...prevValues, [fieldName]: updatedEntries };
-        onFormChange(updatedValues, formErrors);
-        return updatedValues;
-      });
-    };
+  const handleDictInputChange = (fieldName, newValue) => {
+    setFormValues((prevValues) => {
+      const updatedValues = { ...prevValues, [fieldName]: newValue };
+      onFormChange(updatedValues, formErrors);
+      return updatedValues;
+    });
+  };
 
-    const handleDictInputChange = (fieldName, newValue) => {
-      setFormValues((prevValues) => {
-        const updatedValues = { ...prevValues, [fieldName]: newValue };
-        onFormChange(updatedValues, formErrors);
-        return updatedValues;
-      });
-    };
+  const renderFormField = (configKey, method) => {
+    if (method.hidden) return null;
 
+    const renderFieldHeader = () => (
+      <label htmlFor={configKey} className="flex items-center mb-1">
+        <Text className="capitalize">
+          {method.description}
+          {method.required === true && <span className="text-red-400">*</span>}
+        </Text>
+        {method.hint && (
+          <Icon
+            icon={QuestionMarkCircleIcon}
+            variant="simple"
+            color="gray"
+            size="sm"
+            tooltip={`${method.hint}`}
+          />
+        )}
+      </label>
+    );
 
-
-
-    const renderFormField = (configKey, method) => {
-      if (method.hidden) return null;
-
-      const renderFieldHeader = () => (
-        <label htmlFor={configKey} className="flex items-center mb-1">
-          <Text className="capitalize">
-            {method.description}
-            {method.required === true && <span className="text-red-400">*</span>}
-          </Text>
-          {method.hint && (
-            <Icon
-              icon={QuestionMarkCircleIcon}
-              variant="simple"
-              color="gray"
-              size="sm"
-              tooltip={`${method.hint}`}
-            />
-          )}
-        </label>
-      );
-
-      switch (method.type) {
-        case "select":
-          return (
-            <>
-              {renderFieldHeader()}
-              <Select
-                id={configKey}
-                name={configKey}
-                value={formValues[configKey] || method.default}
-                onChange={(value) => handleInputChange({ target: { name: configKey, value } })}
-                placeholder={method.placeholder || `Select ${configKey}`}
-                error={Object.keys(inputErrors).includes(configKey)}
-                disabled={provider.provisioned}
-              >
-                {method.options.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </Select>
-            </>
-          );
-          case "form":
+    switch (method.type) {
+      case "select":
+        return (
+          <>
+            {renderFieldHeader()}
+            <Select
+              id={configKey}
+              name={configKey}
+              value={formValues[configKey] || method.default}
+              onChange={(value) =>
+                handleInputChange({ target: { name: configKey, value } })
+              }
+              placeholder={method.placeholder || `Select ${configKey}`}
+              error={Object.keys(inputErrors).includes(configKey)}
+              disabled={provider.provisioned}
+            >
+              {method.options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </Select>
+          </>
+        );
+      case "form":
         return (
           <div>
             <div className="flex items-center mb-2">
@@ -556,95 +558,103 @@ const ProviderForm = ({
             />
           </div>
         );
-        case "file":
-          return (
-            <>
-              {renderFieldHeader()}
-              <Button
-                color="orange"
-                size="md"
-                onClick={(e) => {
-                  e.preventDefault();
-                  inputFileRef.current.click();
-                }}
-                icon={ArrowDownOnSquareIcon}
-                disabled={provider.provisioned}
-              >
-                {selectedFile ? `File Chosen: ${selectedFile}` : `Upload a ${method.name}`}
-              </Button>
-              <input
-                ref={inputFileRef}
-                type="file"
-                id={configKey}
-                name={configKey}
-                accept={method.file_type}
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setSelectedFile(e.target.files[0].name);
-                  }
-                  handleInputChange(e);
-                }}
-                disabled={provider.provisioned}
-              />
-            </>
-          );
-        default:
-          return (
-            <>
-              {renderFieldHeader()}
-              <TextInput
-                type={method.sensitive ? "password" : method.type}
-                id={configKey}
-                name={configKey}
-                value={formValues[configKey] || ""}
-                onChange={handleInputChange}
-                autoComplete="off"
-                error={Object.keys(inputErrors).includes(configKey)}
-                placeholder={method.placeholder || `Enter ${configKey}`}
-                disabled={provider.provisioned}
-              />
-            </>
-          );
-      }
-    };
-
-
+      case "file":
+        return (
+          <>
+            {renderFieldHeader()}
+            <Button
+              color="orange"
+              size="md"
+              onClick={(e) => {
+                e.preventDefault();
+                inputFileRef.current.click();
+              }}
+              icon={ArrowDownOnSquareIcon}
+              disabled={provider.provisioned}
+            >
+              {selectedFile
+                ? `File Chosen: ${selectedFile}`
+                : `Upload a ${method.name}`}
+            </Button>
+            <input
+              ref={inputFileRef}
+              type="file"
+              id={configKey}
+              name={configKey}
+              accept={method.file_type}
+              style={{ display: "none" }}
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setSelectedFile(e.target.files[0].name);
+                }
+                handleInputChange(e);
+              }}
+              disabled={provider.provisioned}
+            />
+          </>
+        );
+      default:
+        return (
+          <>
+            {renderFieldHeader()}
+            <TextInput
+              type={method.sensitive ? "password" : method.type}
+              id={configKey}
+              name={configKey}
+              readOnly={method.readOnly}
+              value={formValues[configKey] || ""}
+              onChange={handleInputChange}
+              autoComplete="off"
+              error={Object.keys(inputErrors).includes(configKey)}
+              placeholder={method.placeholder || `Enter ${configKey}`}
+              disabled={provider.provisioned || method.readOnly}
+            />
+          </>
+        );
+    }
+  };
 
   const requiredConfigs = Object.entries(provider.config)
     .filter(([_, config]) => config.required && !config.config_main_group)
     .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
 
   const optionalConfigs = Object.entries(provider.config)
-    .filter(([_, config]) => !config.required && !config.hidden && !config.config_main_group)
+    .filter(
+      ([_, config]) =>
+        !config.required && !config.hidden && !config.config_main_group
+    )
     .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
 
-    const groupConfigsByMainGroup = (configs) => {
-      return Object.entries(configs).reduce((acc, [key, config]) => {
-        const mainGroup = config.config_main_group;
-        if (mainGroup) {
-          if (!acc[mainGroup]) {
-            acc[mainGroup] = {};
-          }
-          acc[mainGroup][key] = config;
+  const groupConfigsByMainGroup = (configs) => {
+    return Object.entries(configs).reduce((acc, [key, config]) => {
+      const mainGroup = config.config_main_group;
+      if (mainGroup) {
+        if (!acc[mainGroup]) {
+          acc[mainGroup] = {};
         }
-        return acc;
-      }, {});
-    };
+        acc[mainGroup][key] = config;
+      }
+      return acc;
+    }, {});
+  };
 
-    const groupConfigsBySubGroup = (configs) => {
-      return Object.entries(configs).reduce((acc, [key, config]) => {
-        const subGroup = config.config_sub_group || 'default';
-        if (!acc[subGroup]) {
-          acc[subGroup] = {};
-        }
-        acc[subGroup][key] = config;
-        return acc;
-      }, {});
-    };
+  const groupConfigsBySubGroup = (configs) => {
+    return Object.entries(configs).reduce((acc, [key, config]) => {
+      const subGroup = config.config_sub_group || "default";
+      if (!acc[subGroup]) {
+        acc[subGroup] = {};
+      }
+      acc[subGroup][key] = config;
+      return acc;
+    }, {});
+  };
 
-    const getSubGroups = (configs) => {
-    return [...new Set(Object.values(configs).map(config => config.config_sub_group))].filter(Boolean);
+  const getSubGroups = (configs) => {
+    return [
+      ...new Set(
+        Object.values(configs).map((config) => config.config_sub_group)
+      ),
+    ].filter(Boolean);
   };
 
   const renderGroupFields = (groupName, groupConfigs) => {
@@ -655,7 +665,9 @@ const ProviderForm = ({
       // If no subgroups, render fields directly
       return (
         <Card className="mt-4">
-          <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
+          <Title>
+            {groupName.charAt(0).toUpperCase() + groupName.slice(1)}
+          </Title>
           {Object.entries(groupConfigs).map(([configKey, config]) => (
             <div className="mt-2.5" key={configKey}>
               {renderFormField(configKey, config)}
@@ -670,21 +682,30 @@ const ProviderForm = ({
         <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
         <TabGroup
           className="mt-2"
-          onIndexChange={(index) => setActiveTabsState(prev => ({...prev, [groupName]: subGroupNames[index]}))}
+          onIndexChange={(index) =>
+            setActiveTabsState((prev) => ({
+              ...prev,
+              [groupName]: subGroupNames[index],
+            }))
+          }
         >
           <TabList>
             {subGroupNames.map((subGroup) => (
-              <Tab key={subGroup}>{subGroup.replace('_', ' ').toUpperCase()}</Tab>
+              <Tab key={subGroup}>
+                {subGroup.replace("_", " ").toUpperCase()}
+              </Tab>
             ))}
           </TabList>
           <TabPanels>
             {subGroupNames.map((subGroup) => (
               <TabPanel key={subGroup}>
-                {Object.entries(subGroups[subGroup] || {}).map(([configKey, config]) => (
-                  <div className="mt-2.5" key={configKey}>
-                    {renderFormField(configKey, config)}
-                  </div>
-                ))}
+                {Object.entries(subGroups[subGroup] || {}).map(
+                  ([configKey, config]) => (
+                    <div className="mt-2.5" key={configKey}>
+                      {renderFormField(configKey, config)}
+                    </div>
+                  )
+                )}
               </TabPanel>
             ))}
           </TabPanels>
@@ -721,7 +742,7 @@ const ProviderForm = ({
           </Link>
         </div>
 
-        {provider.provisioned &&
+        {provider.provisioned && (
           <div className="w-full mt-4">
             <Callout
               icon={ExclamationTriangleIcon}
@@ -733,7 +754,7 @@ const ProviderForm = ({
               </Text>
             </Callout>
           </div>
-        }
+        )}
 
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
@@ -838,19 +859,21 @@ const ProviderForm = ({
 
           {/* Render optional fields in a card */}
           {Object.keys(optionalConfigs).length > 0 && (
-          <Accordion className="mt-4" defaultOpen={true}>
-            <AccordionHeader>Provider Optional Settings</AccordionHeader>
-            <AccordionBody>
-              <Card>
-                {Object.entries(optionalConfigs).map(([configKey, config]) => (
-                  <div className="mt-2.5" key={configKey}>
-                    {renderFormField(configKey, config)}
-                  </div>
-                ))}
-              </Card>
-            </AccordionBody>
-          </Accordion>
-        )}
+            <Accordion className="mt-4" defaultOpen={true}>
+              <AccordionHeader>Provider Optional Settings</AccordionHeader>
+              <AccordionBody>
+                <Card>
+                  {Object.entries(optionalConfigs).map(
+                    ([configKey, config]) => (
+                      <div className="mt-2.5" key={configKey}>
+                        {renderFormField(configKey, config)}
+                      </div>
+                    )
+                  )}
+                </Card>
+              </AccordionBody>
+            </Accordion>
+          )}
           <div className="w-full mt-2" key="install_webhook">
             {provider.can_setup_webhook && !installedProvidersMode && (
               <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
@@ -864,7 +887,7 @@ const ProviderForm = ({
                     checked={
                       (formValues["install_webhook"] || false) && !isLocalhost
                     }
-                    disabled={isLocalhost}
+                    disabled={isLocalhost || provider.webhook_required}
                   />
                   <label
                     htmlFor="install_webhook"
@@ -955,7 +978,13 @@ const ProviderForm = ({
         </Button>
         {installedProvidersMode && Object.keys(provider.config).length > 0 && (
           <>
-            <Button onClick={deleteProvider} color="orange" className="mr-2.5" disabled={provider.provisioned} variant="secondary">
+            <Button
+              onClick={deleteProvider}
+              color="orange"
+              className="mr-2.5"
+              disabled={provider.provisioned}
+              variant="secondary"
+            >
               Delete
             </Button>
             <div className="relative">

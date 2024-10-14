@@ -2,6 +2,7 @@
 import { Icon, Title } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useEffect, useState } from "react";
+// TODO: replace with custom component, package is not updated for last 4 years
 import SlidingPanel from "react-sliding-side-panel";
 import ProviderForm from "./provider-form";
 import ProviderTile from "./provider-tile";
@@ -11,15 +12,11 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 const ProvidersTiles = ({
   providers,
-  addProvider,
-  onDelete,
   installedProvidersMode = false,
   linkedProvidersMode = false,
   isLocalhost = false,
 }: {
   providers: Providers;
-  addProvider: (provider: Provider) => void;
-  onDelete: (provider: Provider) => void;
   installedProvidersMode?: boolean;
   linkedProvidersMode?: boolean;
   isLocalhost?: boolean;
@@ -111,12 +108,17 @@ const ProvidersTiles = ({
   };
 
   const sortedProviders = providers
-    .filter(provider => Object.keys(provider.config || {}).length > 0 || (provider.tags && provider.tags.includes('alert')))
+    .filter(
+      (provider) =>
+        Object.keys(provider.config || {}).length > 0 ||
+        (provider.tags && provider.tags.includes("alert"))
+    )
     .sort(
       (a, b) =>
         Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
         Number(b.supports_webhook) - Number(a.supports_webhook) ||
-        Number(b.oauth2_url ? true : false) - Number(a.oauth2_url ? true : false)
+        Number(b.oauth2_url ? true : false) -
+          Number(a.oauth2_url ? true : false)
     );
 
   return (
@@ -150,7 +152,7 @@ const ProvidersTiles = ({
         isOpen={openPanel}
         size={panelSize}
         backdropClicked={handleCloseModal}
-        panelContainerClassName="bg-white z-[2000]"
+        panelContainerClassName="bg-white z-[100]"
       >
         {selectedProvider && (
           <ProviderForm
@@ -159,11 +161,9 @@ const ProvidersTiles = ({
             formErrorsData={formErrors}
             onFormChange={handleFormChange}
             onConnectChange={handleConnecting}
-            onAddProvider={addProvider}
             closeModal={handleCloseModal}
             installedProvidersMode={installedProvidersMode}
             isProviderNameDisabled={installedProvidersMode}
-            onDelete={onDelete}
             isLocalhost={isLocalhost}
           />
         )}

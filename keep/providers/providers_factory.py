@@ -266,6 +266,7 @@ class ProvidersFactory:
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("setup_webhook") is not None
                 )
+                webhook_required = provider_class.WEBHOOK_INSTALLATION_REQUIRED
                 supports_webhook = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("webhook_template") is not None
@@ -359,6 +360,7 @@ class ProvidersFactory:
                         notify_params=notify_params,
                         query_params=query_params,
                         can_setup_webhook=can_setup_webhook,
+                        webhook_required=webhook_required,
                         supports_webhook=supports_webhook,
                         provider_description=provider_description,
                         oauth2_url=oauth2_url,
@@ -450,6 +452,20 @@ class ProvidersFactory:
         return initialized_consumer_providers
 
     @staticmethod
+    def get_provider_config(
+        tenant_id: str,
+        provider_id: str,
+        provider_type: str,
+        context_manager: ContextManager | None = None,
+    ) -> dict:
+        context_manager = context_manager or ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        return secret_manager.read_secret(
+            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
+            is_json=True,
+        )
+
+    @staticmethod
     def get_installed_provider(
         tenant_id: str, provider_id: str, provider_type: str
     ) -> BaseProvider:
@@ -465,10 +481,11 @@ class ProvidersFactory:
             BaseProvider: The instantiated provider class.
         """
         context_manager = ContextManager(tenant_id=tenant_id)
-        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
-        provider_config = secret_manager.read_secret(
-            secret_name=f"{tenant_id}_{provider_type}_{provider_id}",
-            is_json=True,
+        provider_config = ProvidersFactory.get_provider_config(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+            context_manager=context_manager,
         )
         provider_class = ProvidersFactory.get_provider(
             context_manager=context_manager,
