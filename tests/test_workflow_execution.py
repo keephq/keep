@@ -44,6 +44,33 @@ actions:
 """
 
 
+workflow_definition_with_two_providers = """workflow:
+id: susu-and-sons
+description: Just to test the logs of 2 providers
+triggers:
+- type: alert
+  filters:
+  - key: name
+    value: "server-is-hamburger"
+steps:
+- name: keep_step
+  provider:
+    type: keep
+    with:
+      filters:
+        - key: status
+          value: open
+actions:
+- name: console_action
+  provider:
+    type: console
+    with:
+      message: |
+        "Tier 1 Alert: {{ alert.name }} - {{ alert.description }}
+        Alert details: {{ alert }}"
+"""
+
+
 @pytest.fixture(scope="module")
 def workflow_manager():
     """
@@ -72,6 +99,25 @@ def setup_workflow(db_session):
         created_by="test@keephq.dev",
         interval=0,
         workflow_raw=workflow_definition,
+    )
+    db_session.add(workflow)
+    db_session.commit()
+
+
+@pytest.fixture
+def setup_workflow_with_two_providers(db_session):
+    """
+    Fixture to set up a workflow in the database before each test.
+    It creates a Workflow object with the predefined workflow definition and adds it to the database.
+    """
+    workflow = Workflow(
+        id="susu-and-sons",
+        name="susu-and-sons",
+        tenant_id=SINGLE_TENANT_UUID,
+        description="some stuff for unit testing",
+        created_by="tal@keephq.dev",
+        interval=0,
+        workflow_raw=workflow_definition_with_two_providers,
     )
     db_session.add(workflow)
     db_session.commit()
@@ -807,7 +853,7 @@ def test_workflow_execution_logs(
     db_session,
     test_app,
     create_alert,
-    setup_workflow,
+    setup_workflow_with_two_providers,
     workflow_manager,
     test_case,
     alert_statuses,
@@ -828,7 +874,7 @@ def test_workflow_execution_logs(
     current_alert = AlertDto(
         id="grafana-1",
         source=["grafana"],
-        name="server-is-down",
+        name="server-is-hamburger",
         status=AlertStatus.FIRING,
         severity="critical",
         fingerprint="fp1",
@@ -843,7 +889,7 @@ def test_workflow_execution_logs(
     status = None
     while workflow_execution is None and count < 30 and status != "success":
         workflow_execution = get_last_workflow_execution_by_workflow_id(
-            SINGLE_TENANT_UUID, "alert-time-check"
+            SINGLE_TENANT_UUID, "susu-and-sons"
         )
         if workflow_execution is not None:
             status = workflow_execution.status
@@ -854,8 +900,10 @@ def test_workflow_execution_logs(
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
 
-    logs = db_session.query(WorkflowExecutionLog).filter(
-        WorkflowExecutionLog.workflow_execution_id == workflow_execution.id
-    ).all()
+    logs = (
+        db_session.query(WorkflowExecutionLog)
+        .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
+        .all()
+    )
 
-    assert len(logs) == 4
+    assert len(logs) == 15

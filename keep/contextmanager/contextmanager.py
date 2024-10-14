@@ -10,13 +10,13 @@ from keep.api.logging import WorkflowLoggerAdapter
 
 class ContextManager:
     def __init__(self, tenant_id, workflow_id=None, workflow_execution_id=None):
-
+        self.logger = logging.getLogger(__name__)
+        self.logger_adapter = WorkflowLoggerAdapter(
+            self.logger, self, tenant_id, workflow_id, workflow_execution_id
+        )
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
         self.tenant_id = tenant_id
-        self.logger = None
-        self.logger_adapter = None
-        self.set_logger(logging.getLogger(__name__))
         self.steps_context = {}
         self.steps_context_size = 0
         self.providers_context = {}
@@ -54,6 +54,7 @@ class ContextManager:
         self.dependencies = set()
         self.workflow_execution_id = None
         self._api_key = None
+        self.__loggers = []
 
     @property
     def api_key(self):
@@ -74,23 +75,23 @@ class ContextManager:
     def set_execution_context(self, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id
         self.logger_adapter.workflow_execution_id = workflow_execution_id
+        for logger in self.__loggers:
+            logger.workflow_execution_id = workflow_execution_id
 
-    def set_logger_by_name(self, logger_name):
-        logger = logging.getLogger(logger_name)
-        log_level_string = os.environ.get("KEEP_PROVIDER_{}_LOG_LEVEL".format(logger_name.upper()), None)
-        if log_level_string:
-            log_level = logging.getLevelName(log_level_string)
-            logger.setLevel(log_level)
-        self.set_logger(logger)
+    def get_logger(self, name=None):
+        if not name:
+            return self.logger_adapter
 
-    def set_logger(self, logger):
-        self.logger = logger
-        self.logger_adapter = WorkflowLoggerAdapter(
-            self.logger, self, self.tenant_id, self.workflow_id, self.workflow_execution_id
+        logger = logging.getLogger(name)
+        logger_adapter = WorkflowLoggerAdapter(
+            logger,
+            self,
+            self.tenant_id,
+            self.workflow_id,
+            self.workflow_execution_id,
         )
-
-    def get_logger(self):
-        return self.logger_adapter
+        self.__loggers.append(logger_adapter)
+        return logger_adapter
 
     def set_event_context(self, event):
         self.event_context = event
