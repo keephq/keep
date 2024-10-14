@@ -65,9 +65,6 @@ class AlertToIncident(SQLModel, table=True):
         nullable=True, 
         primary_key=True,
     )
-    __table_args__ = (
-        UniqueConstraint("alert_id", "tenant_id", "deleted_at", name="uq_alert_to_incident"),
-    )
 
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)

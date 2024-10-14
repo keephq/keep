@@ -260,7 +260,7 @@ export default function IncidentInformation({ incident }: Props) {
               <h3 className="text-gray-500 text-sm">Last seen at</h3>
               <p>{format(new Date(incident.last_seen_time), formatString)}</p>
             </div>
-          )}  
+          )}
         </div>
         <div>
           {!!incident.rule_fingerprint && (
