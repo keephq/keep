@@ -158,7 +158,7 @@
               "providers/documentation/openobserve-provider",
               "providers/documentation/openshift-provider",
               "providers/documentation/opsgenie-provider",
-             "providers/documentation/pagerduty-provider",
+              "providers/documentation/pagerduty-provider",
               "providers/documentation/pagertree-provider",
               "providers/documentation/parseable-provider",
               "providers/documentation/pingdom-provider",
