@@ -1,0 +1,50 @@
+---
+title: "GitHub"
+sidebarTitle: "GitHub Provider"
+description: "GitHub provider allows integration with GitHub for managing repositories, issues, pull requests, and more."
+---
+
+## Inputs
+
+- `repo`: str : The name of the repository (e.g., `user/repo-name`)
+- `action`: str : The action to perform (e.g., `create_issue`, `close_pr`)
+- `issue_title`: str (optional) : The title for a new issue (required for `create_issue` action)
+- `issue_body`: str (optional) : The body content for the issue (optional but recommended for `create_issue`)
+- `pr_number`: int (optional) : The pull request number (required for `close_pr` action)
+
+## Outputs
+
+- `result`: The result of the GitHub API call, returned as a dictionary.
+
+## Authentication Parameters
+
+- `github_token`: A personal access token (PAT) from GitHub to authenticate API requests.
+  - You can generate a token at [GitHub Tokens](https://github.com/settings/tokens).
+
+## Connecting with the Provider
+
+1. Go to your GitHub account and navigate to **Settings > Developer Settings > Personal Access Tokens**.
+2. Generate a token with the required permissions (e.g., `repo`, `workflow`, etc.).
+3. Copy the token and provide it as `github_token` in the provider configuration.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: github-example
+  description: GitHub example
+  triggers:
+    - type: manual
+  actions:
+    - name: github
+      provider:
+        type: github
+        config: "{{ providers.githubtest }}"
+        with:
+          repo: "user/repo-name"
+          action: "create_issue"
+          issue_title: "New Issue Title"
+          issue_body: "Description of the issue."
+
+## Useful Links
+-[GitHub REST API Documentation](https://docs.github.com/en/rest?apiVersion=2022-11-28)
