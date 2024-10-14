@@ -27,11 +27,12 @@ class Workflow:
         workflow_steps: typing.List[Step],
         workflow_actions: typing.List[Step],
         workflow_description: str = None,
-        workflow_disabled:bool = False,
+        workflow_disabled: bool = False,
         workflow_providers: typing.List[dict] = None,
         workflow_providers_type: typing.List[str] = [],
         workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,
         on_failure: Step = None,
+        workflow_consts: typing.Dict[str, str] = {},
     ):
         self.workflow_id = workflow_id
         self.workflow_owners = workflow_owners
@@ -45,8 +46,10 @@ class Workflow:
         self.workflow_providers = workflow_providers
         self.workflow_providers_type = workflow_providers_type
         self.workflow_strategy = workflow_strategy
+        self.workflow_consts = workflow_consts
         self.on_failure = on_failure
         self.context_manager = context_manager
+        self.context_manager.set_consts_context(workflow_consts)
         self.io_nandler = IOHandler(context_manager)
         self.logger = self.context_manager.get_logger()
 
@@ -113,22 +116,3 @@ class Workflow:
         for action in self.workflow_actions:
             action.run()
         self.logger.debug(f"Actions handled for workflow {self.workflow_id}")
-
-    def run_missing_steps(self, end_step=None):
-        """Runs steps without context (when the workflow is run by the API)"""
-        self.logger.debug(f"Running missing steps for workflow {self.workflow_id}")
-        steps_context = self.context_manager.get_full_context().get("steps")
-        for step in self.workflow_steps:
-            # if we reached the end step, stop
-            if end_step and step.step_id == end_step.step_id:
-                break
-            # If we don't have context for the step, run it
-            if step.step_id not in steps_context:
-                try:
-                    self.run_step(step)
-                except StepError as e:
-                    self.logger.error(f"Step {step.step_id} failed: {e}")
-                    raise
-        self.logger.debug(
-            f"Missing steps for workflow {self.workflow_id} ran successfully"
-        )
