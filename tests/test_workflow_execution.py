@@ -8,7 +8,7 @@ import pytz
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
-from keep.api.models.db.workflow import Workflow
+from keep.api.models.db.workflow import Workflow, WorkflowExecutionLog
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -794,3 +794,68 @@ def test_workflow_incident_triggers(
     assert workflow_execution_deleted.results["mock-action"] == [
         '"deleted incident: incident"\n'
     ]
+
+
+@pytest.mark.parametrize(
+    "test_app, test_case, alert_statuses, expected_tier, db_session",
+    [
+        ({"AUTH_TYPE": "NOAUTH"}, "No action", [[0, "firing"]], None, None),
+    ],
+    indirect=["test_app", "db_session"],
+)
+def test_workflow_execution_logs(
+    db_session,
+    test_app,
+    create_alert,
+    setup_workflow,
+    workflow_manager,
+    test_case,
+    alert_statuses,
+    expected_tier,
+):
+    base_time = datetime.now(tz=pytz.utc)
+
+    # Create alerts with specified statuses and timestamps
+    alert_statuses.reverse()
+    for time_diff, status in alert_statuses:
+        alert_status = (
+            AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+        )
+        create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
+
+    time.sleep(1)
+    # Create the current alert
+    current_alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-down",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp1",
+    )
+
+    # Insert the current alert into the workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for the workflow execution to complete
+    workflow_execution = None
+    count = 0
+    status = None
+    while workflow_execution is None and count < 30 and status != "success":
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "alert-time-check"
+        )
+        if workflow_execution is not None:
+            status = workflow_execution.status
+        time.sleep(1)
+        count += 1
+
+    # Check if the workflow execution was successful
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    logs = db_session.query(WorkflowExecutionLog).filter(
+        WorkflowExecutionLog.workflow_execution_id == workflow_execution.id
+    ).all()
+
+    assert len(logs) == 4
