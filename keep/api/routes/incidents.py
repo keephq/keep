@@ -17,6 +17,7 @@ from keep.api.core.db import (
     create_incident_from_dto,
     delete_incident_by_id,
     get_future_incidents_by_incident_id,
+    get_incident_alerts_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
