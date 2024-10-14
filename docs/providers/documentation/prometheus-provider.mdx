@@ -1,0 +1,47 @@
+---
+title: "Prometheus"
+sidebarTitle: "Prometheus Provider"
+description: "Prometheus provider allows integration with Prometheus for monitoring and alerting purposes."
+---
+
+## Inputs
+
+- `query`: str : The Prometheus query to execute
+- `time_range`: str (optional) : Time range for the query in Prometheus' duration format (e.g., `1h`, `30m`)
+
+## Outputs
+
+- `result`: The result of the Prometheus query, returned in a dictionary format containing the data.
+
+## Authentication Parameters
+
+- `prometheus_url`: URL of the Prometheus server where the queries will be executed.
+- `api_token`: API token for secure access to Prometheus server (optional if server is open).
+
+## Connecting with the Provider
+
+1. Set up a Prometheus server and make sure it's running.
+2. Get the `prometheus_url` where your Prometheus instance is accessible.
+3. (Optional) Obtain the API token from your Prometheus configuration if it's protected.
+4. Provide these values in the provider configuration.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: prometheus-example
+  description: Prometheus example
+  triggers:
+    - type: manual
+  actions:
+    - name: prometheus
+      provider:
+        type: prometheus
+        config: "{{ providers.prometheustest }}"
+        with:
+          query: "up"
+          time_range: "1h"
+
+## Useful Links
+-[Prometheus Querying API Documentation](https://prometheus.io/docs/prometheus/latest/querying/api/)
+-[Prometheus Official Documentation](https://prometheus.io/docs/introduction/overview/)
