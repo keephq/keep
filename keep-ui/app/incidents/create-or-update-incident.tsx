@@ -18,6 +18,9 @@ import { IncidentDto } from "./models";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { Session } from "next-auth";
 import { useUsers } from "utils/hooks/useUsers";
+const ReactQuill =
+  typeof window === "object" ? require("react-quill") : () => false;
+import "react-quill/dist/quill.snow.css";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -157,6 +160,32 @@ export default function CreateOrUpdateIncident({
     return !!incidentName;
   };
 
+  const formats = [
+    "header",
+    "bold",
+    "italic",
+    "underline",
+    "list",
+    "bullet",
+    "link",
+    "align",
+    "blockquote",
+    "code-block",
+    "color",
+  ];
+
+  const modules = {
+    toolbar: [
+      [{ header: "1" }, { header: "2" }],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["bold", "italic", "underline"],
+      ["link"],
+      [{ align: [] }],
+      ["blockquote", "code-block"], // Add quote and code block options to the toolbar
+      [{ color: [] }], // Add color option to the toolbar
+    ],
+  };
+
   return (
     <form className="py-2" onSubmit={editMode ? updateIncident : addIncident}>
       <Subtitle>Incident Metadata</Subtitle>
@@ -173,10 +202,14 @@ export default function CreateOrUpdateIncident({
       </div>
       <div className="mt-2.5">
         <Text className="mb-2">Summary</Text>
-        <Textarea
+        <ReactQuill
+          value={incidentUserSummary}
+          onChange={(value: string) => setIncidentUserSummary(value)}
+          theme="snow" // Use the Snow theme
+          modules={modules}
+          formats={formats} // Add formats
           placeholder="What happened?"
           required={false}
-          value={incidentUserSummary}
           onValueChange={setIncidentUserSummary}
         />
       </div>
