@@ -202,8 +202,8 @@ const ProviderForm = ({
   const accessToken = session?.accessToken;
 
   const callInstallWebhook = async (e: Event) => {
-    await installWebhook(provider, accessToken!);
     e.preventDefault();
+    await installWebhook(provider, accessToken!);
   };
 
   async function handleOauth(e: MouseEvent) {
@@ -214,7 +214,7 @@ const ProviderForm = ({
 
     let oauth2Url = provider.oauth2_url;
     if (searchParams?.get("domain")) {
-      // TODO: this is a hack for Datadog OAuth2 since it can be initated from different domains
+      // TODO: this is a hack for Datadog OAuth2 since it can be initiated from different domains
       oauth2Url = oauth2Url?.replace(
         "datadoghq.com",
         searchParams.get("domain")
