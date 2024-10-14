@@ -51,7 +51,7 @@ export function IncidentActivityChronoItem({ activity }: { activity: any }) {
         {subTitle} <TimeAgo date={activity.timestamp + "Z"} />
       </span>
       {activity.text && (
-        <div className="absolute top-14 font-light text-gray-400">
+        <div className="absolute top-14 font-light text-gray-800">
           {activity.text}
         </div>
       )}
@@ -122,7 +122,11 @@ export function IncidentActivityChronoItemComment({
 
   return (
     <div className="flex h-full w-full relative items-center">
-      <TextInput value={comment} onValueChange={setComment} />
+      <TextInput
+        value={comment}
+        onValueChange={setComment}
+        placeholder="Add a new comment..."
+      />
       <Button
         color="orange"
         variant="secondary"
@@ -130,7 +134,7 @@ export function IncidentActivityChronoItemComment({
         disabled={!comment}
         onClick={onSubmit}
       >
-        Submit
+        Comment
       </Button>
     </div>
   );
@@ -205,10 +209,10 @@ export default function IncidentActivity({
       <IncidentActivityChronoItemComment
         mutator={mutateIncidentActivity}
         incident={incident}
-        key={index}
+        key={activity.id}
       />
     ) : (
-      <IncidentActivityChronoItem key={index} activity={activity} />
+      <IncidentActivityChronoItem key={activity.id} activity={activity} />
     )
   );
   const chronoIcons = activities?.map((activity, index) => {
@@ -216,7 +220,7 @@ export default function IncidentActivity({
       const user = users?.find((user) => user.email === activity.initiator);
       return (
         <UserAvatar
-          key={`icon-${index}`}
+          key={`icon-${activity.id}`}
           image={user?.picture}
           name={user?.name ?? user?.email ?? (activity.initiator as string)}
         />
@@ -226,7 +230,7 @@ export default function IncidentActivity({
       const imagePath = `/icons/${source}-icon.png`;
       return (
         <Image
-          key={`icon-${index}`}
+          key={`icon-${activity.id}`}
           alt={source}
           height={24}
           width={24}
@@ -249,6 +253,7 @@ export default function IncidentActivity({
       mode="VERTICAL"
       cardWidth={600}
       cardHeight={100}
+      allowDynamicUpdate={true}
     >
       {chronoContent}
       <div className="chrono-icons">{chronoIcons}</div>
