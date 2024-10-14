@@ -77,13 +77,15 @@ def calculated_start_firing_time(
 
 
 def convert_db_alerts_to_dto_alerts(
-        alerts: list[Alert | tuple[Alert, AlertToIncident]]
+        alerts: list[Alert | tuple[Alert, AlertToIncident]],
+        with_incidents: bool = False
     ) -> list[AlertDto | AlertWithIncidentLinkMetadataDto]:
     """
     Enriches the alerts with the enrichment data.
 
     Args:
         alerts (list[Alert]): The alerts to enrich.
+        with_incidents (bool): enrich with incidents data
 
     Returns:
         list[AlertDto | AlertWithIncidentLinkMetadataDto]: The enriched alerts.
@@ -101,6 +103,9 @@ def convert_db_alerts_to_dto_alerts(
 
             if alert.alert_enrichment:
                 alert.event.update(alert.alert_enrichment.enrichments)
+            if with_incidents:
+                if alert.incidents:
+                    alert.event["incident"] = ",".join(str(incident.id) for incident in alert.incidents)
             try:
                 if alert_to_incident is not None:
                     alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(alert, alert_to_incident)

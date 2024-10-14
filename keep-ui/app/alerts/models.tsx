@@ -61,6 +61,7 @@ group?: boolean;
 note?: string;
 isNoisy?: boolean;
 enriched_fields: string[];
+incident?: string;
 
 // From AlertWithIncidentLinkMetadataDto
 is_created_by_ai?: boolean;
