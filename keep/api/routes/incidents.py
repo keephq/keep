@@ -47,7 +47,6 @@ from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
     AlertWithIncidentLinkMetadataPaginatedResultsDto,
-    AlertPaginatedResultsDto,
     IncidentsPaginatedResultsDto,
     WorkflowExecutionsPaginatedResultsDto,
 )
