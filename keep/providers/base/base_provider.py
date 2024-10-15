@@ -70,7 +70,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.logger.setLevel(
             os.environ.get(
                 "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
-                "INFO"
+                os.environ.get("LOG_LEVEL", "INFO"),
             )
         )
         self.validate_config()
