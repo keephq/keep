@@ -46,7 +46,7 @@ else:
 
 # We want to include the deleted_at field in the primary key,
 # but we also want to allow it to be nullable. MySQL doesn't allow nullable fields in primary keys, so:
-NULL_FOR_DELETED_AT: str = "1000-01-01 00:00:00"
+NULL_FOR_DELETED_AT = datetime(1000, 1, 1, 0, 0)
 
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")

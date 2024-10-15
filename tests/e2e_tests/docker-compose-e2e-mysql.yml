@@ -1,6 +1,6 @@
 
 services:
-  keep-database:
+  keep-database-mysql:
       image: mysql:latest
       environment:
         - MYSQL_ROOT_PASSWORD=keep
@@ -36,11 +36,11 @@ services:
       dockerfile: docker/Dockerfile.api
     environment:
       - AUTH_TYPE=NO_AUTH
-      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
+      - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database-mysql:3306/keep
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
     depends_on:
-      keep-database:
+      keep-database-mysql:
         condition: service_healthy
 
   keep-websocket-server:
