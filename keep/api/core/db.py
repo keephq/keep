@@ -2900,8 +2900,27 @@ def get_future_incidents_by_incident_id(
     return query.all(), total_count
 
 
+def get_all_same_alert_ids(
+    tenant_id: str,
+    alert_ids: List[str | UUID],
+    session: Optional[Session] = None
+):
+    with existed_or_new_session(session) as session:
+        fingerprints_subquery = session.query(Alert.fingerprint).where(
+            Alert.tenant_id == tenant_id,
+            col(Alert.id).in_(alert_ids)
+        ).subquery()
+        query = session.scalars(
+            select(Alert.id)
+            .where(
+            Alert.tenant_id == tenant_id,
+                col(Alert.fingerprint).in_(fingerprints_subquery)
+        ))
+        return query.all()
+
+
 def get_alerts_data_for_incident(
-    alert_ids: list[str | UUID], session: Optional[Session] = None
+    alert_ids: List[str | UUID], session: Optional[Session] = None
 ) -> dict:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
@@ -2983,7 +3002,11 @@ def add_alerts_to_incident(
     )
 
     with existed_or_new_session(session) as session:
+
+
         with session.no_autoflush:
+            all_alert_ids = get_all_same_alert_ids(tenant_id, alert_ids, session)
+
             # Use a set for faster membership checks
             existing_alert_ids = set(
                 session.exec(
@@ -2991,13 +3014,13 @@ def add_alerts_to_incident(
                         AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                         AlertToIncident.tenant_id == tenant_id,
                         AlertToIncident.incident_id == incident.id,
-                        col(AlertToIncident.alert_id).in_(alert_ids),
+                        col(AlertToIncident.alert_id).in_(all_alert_ids),
                     )
                 ).all()
             )
 
             new_alert_ids = [
-                alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids
+                alert_id for alert_id in all_alert_ids if alert_id not in existing_alert_ids
             ]
 
             if not new_alert_ids:
