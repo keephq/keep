@@ -263,12 +263,7 @@ export default function WorkflowDetailPage({
   if (status === "loading") return <Loading />;
 
   // Redirect if user is not authenticated
-  if (status === "unauthenticated") {
-    useEffect(() => {
-      router.push("/signin");
-    }, [router]);
-    return null;
-  }
+  if (status === "unauthenticated") router.push("/signin");
 
   // Handle error state for fetching workflow data
   if (isLoading) return <Loading />;
