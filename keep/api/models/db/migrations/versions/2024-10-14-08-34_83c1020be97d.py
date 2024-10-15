@@ -40,7 +40,7 @@ def upgrade() -> None:
         ))
         
         # In SQLite the PK has no name and could be overwritten, in PG and others we need to Drop it first
-        if not existing_primary_key['name'] is None:
+        if existing_primary_key['name'] is not None:
             batch_op.drop_constraint(existing_primary_key['name'], type_="primary")
 
         batch_op.create_primary_key(
@@ -61,7 +61,7 @@ def downgrade() -> None:
         batch_op.drop_column("deleted_at")
         batch_op.drop_column("is_created_by_ai")
 
-        if not existing_primary_key['name'] is None:
+        if existing_primary_key['name'] is not None:
             batch_op.drop_constraint(existing_primary_key['name'], type_="primary")
 
         batch_op.create_primary_key(
