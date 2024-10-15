@@ -11,13 +11,15 @@ import { downloadFileFromString } from "./utils";
 interface Props {
   closeModal: () => void;
   compiledAlert: Alert | string | null;
-  id?:string
+  id?: string;
+  hideClose?: boolean;
 }
 
 export default function BuilderModalContent({
   closeModal,
   compiledAlert,
   id,
+  hideClose,
 }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -26,10 +28,13 @@ export default function BuilderModalContent({
     setIsLoading(false);
   }, Math.floor(Math.random() * 2500 + 1000));
 
-  const alertYaml = typeof compiledAlert !== 'string' ? stringify(compiledAlert) : compiledAlert;
+  const alertYaml =
+    typeof compiledAlert !== "string"
+      ? stringify(compiledAlert)
+      : compiledAlert;
 
   function download() {
-    const fileName = typeof compiledAlert == 'string' ? id : compiledAlert!.id;
+    const fileName = typeof compiledAlert == "string" ? id : compiledAlert!.id;
     downloadFileFromString(alertYaml, `${fileName}.yaml`);
   }
 
@@ -52,15 +57,17 @@ export default function BuilderModalContent({
           <Subtitle>Keep alert specification ready to use</Subtitle>
         </div>
         <div>
-          <Button
-            color="orange"
-            className="w-36"
-            icon={XMarkIcon}
-            onClick={closeModal}
-            size="xs"
-          >
-            Close
-          </Button>
+          {!hideClose && (
+            <Button
+              color="orange"
+              className="w-36"
+              icon={XMarkIcon}
+              onClick={closeModal}
+              size="xs"
+            >
+              Close
+            </Button>
+          )}
         </div>
       </div>
       <Card className={`p-4 md:p-10 mx-auto max-w-7xl mt-6 h-full`}>
