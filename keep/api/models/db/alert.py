@@ -10,6 +10,7 @@ from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
 from sqlalchemy_utils import UUIDType
+from sqlalchemy.orm import column_property
 from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
@@ -44,6 +45,10 @@ else:
         datetime_column_type = DateTime
 
 
+# We want to include the deleted_at field in the primary key,
+# but we also want to allow it to be nullable. MySQL doesn't allow nullable fields in primary keys, so:
+NULL_FOR_DELETED_AT: str = "1000-01-01 00:00:00"
+
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -60,10 +65,12 @@ class AlertToIncident(SQLModel, table=True):
     incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
     
     is_created_by_ai: bool = Field(default=False)
+
     deleted_at: datetime = Field(
         default_factory=None,
         nullable=True, 
         primary_key=True,
+        default=NULL_FOR_DELETED_AT,
     )
 
 class Incident(SQLModel, table=True):
