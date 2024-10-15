@@ -907,3 +907,72 @@ def test_workflow_execution_logs(
     )
 
     assert len(logs) == 15
+
+
+@pytest.mark.parametrize(
+    "test_app, test_case, alert_statuses, expected_tier, db_session",
+    [
+        ({"AUTH_TYPE": "NOAUTH"}, "No action", [[0, "firing"]], None, None),
+    ],
+    indirect=["test_app", "db_session"],
+)
+def test_workflow_execution_logs_log_level_debug_console_provider(
+    db_session,
+    test_app,
+    create_alert,
+    setup_workflow_with_two_providers,
+    workflow_manager,
+    test_case,
+    alert_statuses,
+    expected_tier,
+    monkeypatch,
+):
+    base_time = datetime.now(tz=pytz.utc)
+    monkeypatch.setenv("KEEP_CONSOLE_PROVIDER_LOG_LEVEL", "DEBUG")
+
+    # Create alerts with specified statuses and timestamps
+    alert_statuses.reverse()
+    for time_diff, status in alert_statuses:
+        alert_status = (
+            AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
+        )
+        create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
+
+    time.sleep(1)
+    # Create the current alert
+    current_alert = AlertDto(
+        id="grafana-1",
+        source=["grafana"],
+        name="server-is-hamburger",
+        status=AlertStatus.FIRING,
+        severity="critical",
+        fingerprint="fp1",
+    )
+
+    # Insert the current alert into the workflow manager
+    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+
+    # Wait for the workflow execution to complete
+    workflow_execution = None
+    count = 0
+    status = None
+    while workflow_execution is None and count < 30 and status != "success":
+        workflow_execution = get_last_workflow_execution_by_workflow_id(
+            SINGLE_TENANT_UUID, "susu-and-sons"
+        )
+        if workflow_execution is not None:
+            status = workflow_execution.status
+        time.sleep(1)
+        count += 1
+
+    # Check if the workflow execution was successful
+    assert workflow_execution is not None
+    assert workflow_execution.status == "success"
+
+    logs = (
+        db_session.query(WorkflowExecutionLog)
+        .filter(WorkflowExecutionLog.workflow_execution_id == workflow_execution.id)
+        .all()
+    )
+
+    assert len(logs) == 17  # 15 + 2 debug logs from console provider
