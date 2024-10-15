@@ -75,10 +75,9 @@ Authentication configuration determines how Keep verifies user identities and ma
 | Env var | Purpose | Required | Default Value | Valid options |
 |:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
 | **AUTH_TYPE** | Specifies the authentication type | No | "noauth" | "auth0", "keycloak", "db", "noauth", "oauth2proxy" |
-| **JWT_SECRET** | Secret key for JWT token generation and validation | Yes | None | Any strong secret string |
-| **JWT_ALGORITHM** | Algorithm used for JWT | No | "HS256" | Any valid JWT algorithm |
-| **KEEP_DEFAULT_USERNAME** | Default username for the admin user | No | "keep" | Any valid username string |
-| **KEEP_DEFAULT_PASSWORD** | Default password for the admin user | No | "keep" | Any strong password string |
+| **KEEP_JWT_SECRET** | Secret key for JWT token generation and validation (DB auth only) | Yes | None | Any strong secret string |
+| **KEEP_DEFAULT_USERNAME** | Default username for the admin user (DB auth only) | No | "keep" | Any valid username string |
+| **KEEP_DEFAULT_PASSWORD** | Default password for the admin user (DB auth only)| No | "keep" | Any strong password string |
 | **KEEP_FORCE_RESET_DEFAULT_PASSWORD** | Forces reset of default user password | No | "false" | "true" or "false" |
 | **KEEP_DEFAULT_API_KEYS** | Comma-separated list of default API keys to provision | No | "" | Format: "name:role:secret,name:role:secret" |
 
