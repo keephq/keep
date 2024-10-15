@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 import pydantic
 import requests
 from fastapi import HTTPException
+from pydantic import AnyHttpUrl, conint
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -31,15 +32,21 @@ class KibanaProviderAuthConfig:
             "sensitive": True,
         }
     )
-    kibana_host: str = dataclasses.field(
+    kibana_host: AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Kibana Host (e.g. keep.kb.us-central1.gcp.cloud.es.io)",
+            "description": "Kibana Host",
+            "hint": "https://keep.kb.us-central1.gcp.cloud.es.io",
+            "validation": "any_http_url"
         }
     )
-    kibana_port: str = dataclasses.field(
-        metadata={"required": False, "description": "Kibana Port (defaults to 9243)"},
-        default="9243",
+    kibana_port: conint(ge=1, le=65_535) = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Kibana Port (defaults to 9243)",
+            "validation": "port"
+        },
+        default=9243,
     )
 
 
@@ -212,7 +219,7 @@ class KibanaProvider(BaseProvider):
         headers["Authorization"] = f"ApiKey {self.authentication_config.api_key}"
         headers["kbn-xsrf"] = "reporting"
         response: requests.Response = getattr(requests, method.lower())(
-            f"https://{self.authentication_config.kibana_host}:{self.authentication_config.kibana_port}/{uri}",
+            f"{self.authentication_config.kibana_host}:{self.authentication_config.kibana_port}/{uri}",
             headers=headers,
             **kwargs,
         )
@@ -434,6 +441,14 @@ class KibanaProvider(BaseProvider):
         self.logger.info("Done setting up webhooks")
 
     def validate_config(self):
+        # In order not to prepend the url scheme while making a request,
+        # we added proper url validation but, we also have to handle previously
+        # installed and provisioned providers to avoid validation errors.
+        if self.is_installed or self.is_provisioned:
+            host = self.config.authentication['kibana_host']
+            host = "https://" + host if not (host.starts_with("http://") or host.starts_with("https://")) else host
+            self.config.authentication['kibana_host'] = host
+
         self.authentication_config = KibanaProviderAuthConfig(
             **self.config.authentication
         )

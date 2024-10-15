@@ -15,9 +15,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
-from keep.providers.grafana_provider.grafana_alert_format_description import (
-    GrafanaAlertFormatDescription,
-)
+from keep.providers.grafana_provider.grafana_alert_format_description import \
+    GrafanaAlertFormatDescription
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -36,11 +35,12 @@ class GrafanaProviderAuthConfig:
             "sensitive": True,
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.HttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana host",
             "hint": "e.g. https://keephq.grafana.net",
+            "validation": "http_url"
         },
     )
 
