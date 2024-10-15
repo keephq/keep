@@ -1232,9 +1232,7 @@ def get_last_alerts(
             query = query.add_columns(AlertToIncident.incident_id.label("incident"))
             query = query.outerjoin(
                 AlertToIncident, 
-                AlertToIncident.alert_id == Alert.id,
-            ).filter(
-                AlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                and_(AlertToIncident.alert_id == Alert.id,  AlertToIncident.deleted_at == NULL_FOR_DELETED_AT),
             )
 
         if provider_id:
