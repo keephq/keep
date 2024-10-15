@@ -66,8 +66,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
-        self.logger = context_manager.get_logger(self.__class__.__name__)
-        self.logger.setLevel(os.environ.get("KEEP_CONSOLE_PROVIDER_LOG_LEVEL", "INFO"))
+        self.logger = context_manager.get_logger(self.provider_id)
+        self.logger.setLevel(
+            os.environ.get(
+                "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
+                "INFO"
+            )
+        )
         self.validate_config()
         self.logger.debug(
             "Base provider initalized", extra={"provider": self.__class__.__name__}
