@@ -1,75 +1,105 @@
 import Pusher from "pusher-js";
 import { useConfig } from "./useConfig";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 let PUSHER: Pusher | null = null;
 const POLLING_INTERVAL = 3000;
 
 export const useWebsocket = () => {
-  const apiUrl = getApiURL();
   const { data: configData } = useConfig();
   const { data: session } = useSession();
-  let channelName = `private-${session?.tenantId}`;
+  const [error, setError] = useState<string | null>(null);
 
-  if (
-    PUSHER === null &&
-    configData !== undefined &&
-    session !== undefined &&
-    configData.PUSHER_DISABLED === false
-  ) {
-    channelName = `private-${session?.tenantId}`;
-    PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
-      wsHost: configData.PUSHER_HOST,
-      wsPort: configData.PUSHER_PORT,
-      forceTLS: false,
-      disableStats: true,
-      enabledTransports: ["ws", "wss"],
-      cluster: configData.PUSHER_CLUSTER || "local",
-      channelAuthorization: {
-        transport: "ajax",
-        endpoint: `${apiUrl}/pusher/auth`,
-        headers: {
-          Authorization: `Bearer ${session?.accessToken!}`,
-        },
-      },
-    });
-    PUSHER.subscribe(channelName);
-  }
+  const channelName = useMemo(() => {
+    return session?.tenantId ? `private-${session.tenantId}` : null;
+  }, [session?.tenantId]);
+
+  useEffect(() => {
+    if (
+      PUSHER === null &&
+      configData &&
+      session &&
+      channelName &&
+      !configData.PUSHER_DISABLED
+    ) {
+      try {
+        PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
+          cluster: configData.PUSHER_CLUSTER || "local",
+          forceTLS: true,
+          authEndpoint: "/api/pusher/auth",
+          auth: {
+            headers: {
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+          },
+          wsHost: window.location.hostname,
+          wsPort: window.location.port
+            ? parseInt(window.location.port)
+            : window.location.protocol === "https:"
+            ? 443
+            : 80,
+          wssPort: window.location.port
+            ? parseInt(window.location.port)
+            : window.location.protocol === "https:"
+            ? 443
+            : 80,
+          enabledTransports: ["ws", "wss"],
+          disabledTransports: ["xhr_streaming", "xhr_polling", "sockjs"],
+        });
+        PUSHER.subscribe(channelName);
+      } catch (err) {
+        setError(`Failed to initialize Pusher: ${(err as Error).message}`);
+      }
+    }
+
+    return () => {
+      if (PUSHER && channelName) {
+        PUSHER.unsubscribe(channelName);
+        PUSHER.disconnect();
+        PUSHER = null;
+      }
+    };
+  }, [configData, session, channelName]);
 
   const subscribe = useCallback(() => {
-    return PUSHER?.subscribe(channelName);
+    if (PUSHER && channelName) {
+      return PUSHER.subscribe(channelName);
+    }
   }, [channelName]);
 
   const unsubscribe = useCallback(() => {
-    return PUSHER?.unsubscribe(channelName);
+    if (PUSHER && channelName) {
+      return PUSHER.unsubscribe(channelName);
+    }
   }, [channelName]);
 
   const bind = useCallback(
-    (event: any, callback: any) => {
-      return PUSHER?.channel(channelName)?.bind(event, callback);
+    (event: string, callback: (data: any) => void) => {
+      if (PUSHER && channelName) {
+        return PUSHER.channel(channelName)?.bind(event, callback);
+      }
     },
     [channelName]
   );
 
   const unbind = useCallback(
-    (event: any, callback: any) => {
-      return PUSHER?.channel(channelName)?.unbind(event, callback);
+    (event: string, callback: (data: any) => void) => {
+      if (PUSHER && channelName) {
+        return PUSHER.channel(channelName)?.unbind(event, callback);
+      }
     },
     [channelName]
   );
 
   const trigger = useCallback(
-    (event: any, data: any) => {
-      return PUSHER?.channel(channelName).trigger(event, data);
+    (event: string, data: any) => {
+      if (PUSHER && channelName) {
+        return PUSHER.channel(channelName)?.trigger(event, data);
+      }
     },
     [channelName]
   );
-
-  const channel = useCallback(() => {
-    return PUSHER?.channel(channelName);
-  }, [channelName]);
 
   return {
     subscribe,
@@ -77,22 +107,20 @@ export const useWebsocket = () => {
     bind,
     unbind,
     trigger,
-    channel,
+    error,
   };
 };
 
 export const useAlertPolling = () => {
-  const { bind, unbind } = useWebsocket();
+  const { bind, unbind, error } = useWebsocket();
   const [pollAlerts, setPollAlerts] = useState(0);
   const lastPollTimeRef = useRef(0);
 
-  const handleIncoming = useCallback((incoming: any) => {
+  const handleIncoming = useCallback(() => {
     const currentTime = Date.now();
     const timeSinceLastPoll = currentTime - lastPollTimeRef.current;
 
-    if (timeSinceLastPoll < POLLING_INTERVAL) {
-      setPollAlerts(0);
-    } else {
+    if (timeSinceLastPoll >= POLLING_INTERVAL) {
       lastPollTimeRef.current = currentTime;
       setPollAlerts(Math.floor(Math.random() * 10000));
     }
@@ -105,5 +133,5 @@ export const useAlertPolling = () => {
     };
   }, [bind, unbind, handleIncoming]);
 
-  return { data: pollAlerts };
+  return { data: pollAlerts, error };
 };
