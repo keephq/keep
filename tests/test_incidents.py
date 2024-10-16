@@ -53,6 +53,8 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
+    assert len(incident.alerts) == 100
+
     assert sorted(incident.affected_services) == sorted(
         ["service_{}".format(i) for i in range(10)]
     )

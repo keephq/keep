@@ -98,11 +98,17 @@ class Incident(SQLModel, table=True):
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
         back_populates="incidents", link_model=AlertToIncident,
+        # primaryjoin is used to filter out deleted links for various DB dialects
         sa_relationship_kwargs={
-            "primaryjoin": "and_(AlertToIncident.incident_id == Incident.id, AlertToIncident.deleted_at.is_(None))",
+            "primaryjoin": f"and_(AlertToIncident.incident_id == Incident.id,
+                or_(
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}')
+                )",
             "uselist": True,
             "overlaps": "alert,incident",
         }
+        
     )
     alert_to_incident_link: List[AlertToIncident] = Relationship(
         back_populates="incident",
@@ -193,6 +199,13 @@ class Alert(SQLModel, table=True):
         back_populates="alerts", 
         link_model=AlertToIncident,
         sa_relationship_kwargs={
+            # primaryjoin is used to filter out deleted links for various DB dialects
+            "primaryjoin": f"and_(AlertToIncident.alert_id == Alert.id,
+                or_(
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}')
+                )",
+            "uselist": True,
             "overlaps": "alert,incident",
         }
     )
