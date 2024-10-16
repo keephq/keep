@@ -103,8 +103,8 @@ class Incident(SQLModel, table=True):
             "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
                 or_(
                     AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}')
-                )""",
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
+                ))""",
             "uselist": True,
             "overlaps": "alert,incident",
         }
@@ -200,11 +200,11 @@ class Alert(SQLModel, table=True):
         link_model=AlertToIncident,
         sa_relationship_kwargs={
             # primaryjoin is used to filter out deleted links for various DB dialects
-            "primaryjoin": f"""and_(AlertToIncident.alert_id == Alert.id,
+            "primaryjoin": f"and_(AlertToIncident.alert_id == Alert.id,
                 or_(
                     AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}')
-                )""",
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
+                ))",
             "uselist": True,
             "overlaps": "alert,incident",
         }
