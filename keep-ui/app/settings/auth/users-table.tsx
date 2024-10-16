@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Table,
   TableBody,
@@ -13,8 +13,8 @@ import {
 import Image from "next/image";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { AuthenticationType } from "utils/authenticationType";
-import { getInitials } from "components/navbar/UserInfo";
 import { User } from "app/settings/models";
+import { getInitials } from "@/components/navbar/UserAvatar";
 
 interface UsersTableProps {
   users: User[];
@@ -33,7 +33,7 @@ export function UsersTable({
   onRowClick,
   onDeleteUser,
   isDisabled = false,
-  groupsAllowed = true
+  groupsAllowed = true,
 }: UsersTableProps) {
   return (
     <Table>
@@ -41,13 +41,16 @@ export function UsersTable({
         <TableRow>
           <TableHeaderCell className="w-1/24">{/** Image */}</TableHeaderCell>
           <TableHeaderCell className="w-3/12">
-            {authType === AuthenticationType.AUTH0 || authType === AuthenticationType.KEYCLOAK
+            {authType === AuthenticationType.AUTH0 ||
+            authType === AuthenticationType.KEYCLOAK
               ? "Email"
               : "Username"}
           </TableHeaderCell>
           <TableHeaderCell className="w-2/12">Name</TableHeaderCell>
           <TableHeaderCell className="w-1/12">Role</TableHeaderCell>
-          {groupsAllowed && <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>}
+          {groupsAllowed && (
+            <TableHeaderCell className="w-3/12">Groups</TableHeaderCell>
+          )}
           <TableHeaderCell className="w-2/12">Last Login</TableHeaderCell>
           <TableHeaderCell className="w-1/12"></TableHeaderCell>
         </TableRow>
@@ -84,9 +87,7 @@ export function UsersTable({
               <div className="flex items-center justify-between">
                 <Text className="truncate">{user.email}</Text>
                 <div className="ml-2">
-                  {user.ldap && (
-                    <Badge color="orange">LDAP</Badge>
-                  )}
+                  {user.ldap && <Badge color="orange">LDAP</Badge>}
                 </div>
               </div>
             </TableCell>
@@ -119,7 +120,11 @@ export function UsersTable({
               </TableCell>
             )}
             <TableCell className="w-2/12">
-              <Text>{user.last_login ? new Date(user.last_login).toLocaleString() : "Never"}</Text>
+              <Text>
+                {user.last_login
+                  ? new Date(user.last_login).toLocaleString()
+                  : "Never"}
+              </Text>
             </TableCell>
             <TableCell className="w-1/12">
               {!isDisabled && user.email !== currentUserEmail && !user.ldap && (

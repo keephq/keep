@@ -1,8 +1,7 @@
 import enum
 import logging
-from typing import Optional
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, UniqueConstraint
@@ -111,14 +110,14 @@ class Incident(SQLModel, table=True):
         ),
     )
 
-    same_incident_in_the_past: Optional['Incident'] = Relationship(
+    same_incident_in_the_past: Optional["Incident"] = Relationship(
         back_populates="same_incidents_in_the_future",
         sa_relationship_kwargs=dict(
-            remote_side='Incident.id',
-        )
+            remote_side="Incident.id",
+        ),
     )
 
-    same_incidents_in_the_future: list['Incident'] = Relationship(
+    same_incidents_in_the_future: list["Incident"] = Relationship(
         back_populates="same_incident_in_the_past",
     )
 
@@ -338,3 +337,4 @@ class AlertActionType(enum.Enum):
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
     MAINTENANCE = "Alert is in maintenance window"
+    INCIDENT_COMMENT = "A comment was added to the incident"

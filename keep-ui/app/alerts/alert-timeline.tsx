@@ -5,11 +5,7 @@ import Image from "next/image";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { AlertDto } from "./models";
 import { AuditEvent } from "utils/hooks/useAlerts";
-
-const getInitials = (name: string) =>
-  ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
-    .join("")
-    .toUpperCase();
+import { getInitials } from "@/components/navbar/UserAvatar";
 
 const formatTimestamp = (timestamp: Date | string) => {
   const date = new Date(timestamp);

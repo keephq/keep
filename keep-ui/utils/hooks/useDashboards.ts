@@ -15,7 +15,10 @@ export const useDashboards = () => {
 
   const { data, error, mutate } = useSWR<Dashboard[]>(
     session ? `${apiUrl}/dashboard` : null,
-    (url: string) => fetcher(url, session!.accessToken)
+    (url: string) => fetcher(url, session!.accessToken),
+    {
+      revalidateOnFocus: false,
+    }
   );
 
   return {
