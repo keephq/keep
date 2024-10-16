@@ -416,3 +416,12 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
     assert len(incident.alerts) == 2
+
+    remove_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].id]
+    )
+
+    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
+
+    assert len(incident.alerts) == 0
+

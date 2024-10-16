@@ -1231,7 +1231,7 @@ def get_last_alerts(
         if with_incidents:
             query = query.add_columns(AlertToIncident.incident_id.label("incident"))
             query = query.outerjoin(
-                AlertToIncident, 
+                AlertToIncident,
                 and_(AlertToIncident.alert_id == Alert.id,  AlertToIncident.deleted_at == NULL_FOR_DELETED_AT),
             )
 
@@ -3003,7 +3003,6 @@ def add_alerts_to_incident(
 
     with existed_or_new_session(session) as session:
 
-
         with session.no_autoflush:
             all_alert_ids = get_all_same_alert_ids(tenant_id, alert_ids, session)
 
@@ -3129,6 +3128,8 @@ def remove_alerts_to_incident_by_incident_id(
         if not incident:
             return None
 
+        all_alert_ids = get_all_same_alert_ids(tenant_id, alert_ids, session)
+
         # Removing alerts-to-incident relation for provided alerts_ids
         deleted = (
             session.query(AlertToIncident)
@@ -3136,7 +3137,7 @@ def remove_alerts_to_incident_by_incident_id(
                 AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                 AlertToIncident.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident.id,
-                col(AlertToIncident.alert_id).in_(alert_ids),
+                col(AlertToIncident.alert_id).in_(all_alert_ids),
             ).update({
                 "deleted_at": datetime.now(datetime.now().astimezone().tzinfo),
             })
@@ -3144,7 +3145,7 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         # Getting aggregated data for incidents for alerts which just was removed
-        alerts_data_for_incident = get_alerts_data_for_incident(alert_ids, session)
+        alerts_data_for_incident = get_alerts_data_for_incident(all_alert_ids, session)
 
         service_field = get_json_extract_field(session, Alert.event, "service")
 
