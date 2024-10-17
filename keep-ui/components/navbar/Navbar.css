@@ -1,3 +1,48 @@
 .scrollable-menu-shadow {
   box-shadow: inset 0 -10px 10px -10px rgba(0, 0, 0, 0.1);
+  max-height: calc(100vh - 60px); 
+  overflow-y: auto;
 }
+
+@media (max-width: 768px) {
+  .scrollable-menu-shadow {
+    padding: 0;
+    max-height: calc(100vh - 50px);
+  }
+
+  .menu-item {
+    font-size: 14px;
+  }
+
+  .user-info,
+  .search,
+  .submenu-links {
+    display: block;
+    width: 100%;
+  }
+
+  .minimize-menu-button {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    z-index: 1000;
+  }
+}
+
+.menu {
+  display: flex;
+  flex-direction: column; 
+  height: 100vh;
+}
+
+.menu > div {
+  flex: 1; 
+  overflow-y: auto;
+}
+
+.submenu-links {
+  position: relative;
+  z-index: 10;
+}
+
+
