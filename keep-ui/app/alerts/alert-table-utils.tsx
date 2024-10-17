@@ -139,7 +139,20 @@ export const useAlertTableCols = (
       header: colName,
       minSize: 100,
       cell: (context) => {
-        const alertValue = context.row.original[colName as keyof AlertDto];
+        const keys = colName.split(".");
+        let alertValue: any = context.row.original;
+        for (const key of keys) {
+          if (
+            alertValue &&
+            typeof alertValue === "object" &&
+            key in alertValue
+          ) {
+            alertValue = alertValue[key as keyof typeof alertValue];
+          } else {
+            alertValue = undefined;
+            break;
+          }
+        }
 
         if (typeof alertValue === "object" && alertValue !== null) {
           return (
