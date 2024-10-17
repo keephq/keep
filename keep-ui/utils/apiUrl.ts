@@ -1,3 +1,4 @@
+
 export function getApiURL(): string {
   // https://github.com/vercel/next.js/issues/5354#issuecomment-520305040
   // https://stackoverflow.com/questions/49411796/how-do-i-detect-whether-i-am-on-server-on-client-in-next-js

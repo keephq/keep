@@ -51,13 +51,9 @@ interface AlertDistritbuionData {
   number: number;
 }
 
-export type TProviderLabels =
-  | "alert"
-  | "topology"
-  | "messaging"
-  | "ticketing"
-  | "data"
-  | "queue";
+
+export type TProviderLabels = 'alert' | 'topology' | 'messaging' | 'ticketing' | 'data' | 'queue' | 'runbook';
+
 
 export interface Provider {
   // key value pair of auth method name and auth method config
