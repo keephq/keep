@@ -103,6 +103,20 @@ export default function IncidentAlerts({ incident }: Props) {
       minSize: 100,
       header: "Status",
     }),
+    columnHelper.accessor("is_created_by_ai", {
+      id: "is_created_by_ai",
+      header: "🔗",
+      minSize: 50,
+      cell: (context) => (
+        <>
+          {context.getValue() ? (
+            <div title="Correlated with AI">🤖</div>
+          ) : (
+            <div title="Correlated manually">👨‍💻</div>
+          )}
+        </>
+      ),
+    }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
       header: "Last Received",
