@@ -10,6 +10,7 @@ class SecretManagerTypes(enum.Enum):
     GCP = "gcp"
     K8S = "k8s"
     VAULT = "vault"
+    AWS = "aws"
 
 
 class SecretManagerFactory:
@@ -41,6 +42,10 @@ class SecretManagerFactory:
             from keep.secretmanager.vaultsecretmanager import VaultSecretManager
 
             return VaultSecretManager(context_manager, **kwargs)
+        elif secret_manager_type == SecretManagerTypes.AWS:
+            from keep.secretmanager.awssecretmanager import AwsSecretManager
+
+            return AwsSecretManager(context_manager, **kwargs)
 
         raise NotImplementedError(
             f"Secret manager type {str(secret_manager_type)} not implemented"
