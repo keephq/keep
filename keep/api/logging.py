@@ -3,7 +3,6 @@ import inspect
 import logging
 import logging.config
 import os
-
 # tb: small hack to avoid the InsecureRequestWarning logs
 import urllib3
 
