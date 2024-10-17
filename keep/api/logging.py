@@ -12,7 +12,6 @@ from keep.api.core.db import push_logs_to_db
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 class WorkflowDBHandler(logging.Handler):
     def __init__(self):
         super().__init__()
