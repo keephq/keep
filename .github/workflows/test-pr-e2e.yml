@@ -27,7 +27,7 @@ env:
 
 jobs:
   tests-e2e:
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-latest
     strategy:
       matrix:
         db_type: [mysql, postgres]
