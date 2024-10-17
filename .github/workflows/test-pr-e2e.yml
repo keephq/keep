@@ -27,7 +27,7 @@ env:
 
 jobs:
   tests-e2e:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-cached
     strategy:
       matrix:
         db_type: [mysql, postgres]

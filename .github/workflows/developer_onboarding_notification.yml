@@ -10,7 +10,7 @@ permissions:
 jobs:
   comment_on_merged_pull_request:
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-cached
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
