@@ -1,6 +1,6 @@
 import { toast } from "react-toastify";
 import { getApiURL } from "./apiUrl";
-import { Provider } from "../app/providers/providers";
+import { Provider } from "@/app/providers/providers";
 import moment from "moment";
 import { twMerge } from "tailwind-merge";
 import { clsx, type ClassValue } from "clsx";
