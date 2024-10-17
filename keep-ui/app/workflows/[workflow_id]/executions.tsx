@@ -259,11 +259,16 @@ export default function WorkflowDetailPage({
     (url: string) => fetcher(url, session?.accessToken)
   );
 
-  // Render loading state if session is loading
-  if (status === "loading") return <Loading />;
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/signin");
+    }
+  }, [status, router]);
 
-  // Redirect if user is not authenticated
-  if (status === "unauthenticated") router.push("/signin");
+  // Render loading state if session is loading
+  // If the user is unauthenticated, display a loading state until the side effect is processed; after that, it will automatically redirect.
+  if (status === "loading" || status === "unauthenticated") return <Loading />;
+
 
   // Handle error state for fetching workflow data
   if (isLoading) return <Loading />;
