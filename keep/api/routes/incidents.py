@@ -18,6 +18,7 @@ from keep.api.core.db import (
     delete_incident_by_id,
     get_future_incidents_by_incident_id,
     get_incident_alerts_by_incident_id,
+    get_incident_alerts_and_links_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     get_last_incidents,
@@ -46,7 +47,7 @@ from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
-    AlertPaginatedResultsDto,
+    AlertWithIncidentLinkMetadataPaginatedResultsDto,
     IncidentsPaginatedResultsDto,
     WorkflowExecutionsPaginatedResultsDto,
 )
@@ -362,10 +363,11 @@ def get_incident_alerts(
     incident_id: UUID,
     limit: int = 25,
     offset: int = 0,
+    include_unlinked: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:incidents"])
     ),
-) -> AlertPaginatedResultsDto:
+) -> AlertWithIncidentLinkMetadataPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching incident",
@@ -385,14 +387,15 @@ def get_incident_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts, total_count = get_incident_alerts_by_incident_id(
+    db_alerts_and_links, total_count = get_incident_alerts_and_links_by_incident_id(
         tenant_id=tenant_id,
         incident_id=incident_id,
         limit=limit,
         offset=offset,
+        include_unlinked=include_unlinked,
     )
 
-    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
+    enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts_and_links)
     logger.info(
         "Fetched alerts from DB",
         extra={
@@ -400,7 +403,7 @@ def get_incident_alerts(
         },
     )
 
-    return AlertPaginatedResultsDto(
+    return AlertWithIncidentLinkMetadataPaginatedResultsDto(
         limit=limit, offset=offset, count=total_count, items=enriched_alerts_dto
     )
 
@@ -499,6 +502,7 @@ def get_incident_workflows(
 async def add_alerts_to_incident(
     incident_id: UUID,
     alert_ids: List[UUID],
+    is_created_by_ai: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -516,7 +520,7 @@ async def add_alerts_to_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
+    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids, is_created_by_ai)
     try:
         logger.info("Pushing enriched alert to elasticsearch")
         elastic_client = ElasticClient(tenant_id)
