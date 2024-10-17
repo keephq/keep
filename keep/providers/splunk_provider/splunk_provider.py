@@ -2,11 +2,11 @@ import dataclasses
 import datetime
 import json
 import logging
+from xml.etree.ElementTree import ParseError
 
 import pydantic
-from splunklib.client import connect
 from splunklib.binding import AuthenticationError, HTTPError
-from xml.etree.ElementTree import ParseError
+from splunklib.client import connect
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
@@ -75,8 +75,8 @@ class SplunkProvider(BaseProvider):
 
     def __debug_fetch_users_response(self):
         try:
-            from splunklib.client import PATH_USERS
             import requests
+            from splunklib.client import PATH_USERS
 
             response = requests.get(
                 f"https://{self.authentication_config.host}:{self.authentication_config.port}/services/{PATH_USERS}",
@@ -277,6 +277,7 @@ class SplunkProvider(BaseProvider):
 
         severity = result.get("log_level", raw_dict.get("log_level", "INFO"))
         logger = event.get("logger", result.get("logger"))
+        host = result.get("host", result.get("hostname"))
         alert = AlertDto(
             id=event["sid"],
             name=name,
@@ -291,6 +292,7 @@ class SplunkProvider(BaseProvider):
             exception=exception,
             logger=logger,
             kubernetes=kubernetes,
+            host=host,
             **event,
         )
         alert.fingerprint = SplunkProvider.get_alert_fingerprint(
