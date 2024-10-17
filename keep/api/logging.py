@@ -3,7 +3,6 @@ import inspect
 import logging
 import logging.config
 import os
-
 # tb: small hack to avoid the InsecureRequestWarning logs
 import urllib3
 
@@ -11,7 +10,6 @@ from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.db import push_logs_to_db
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 class WorkflowDBHandler(logging.Handler):
     def __init__(self):
@@ -264,3 +262,4 @@ def setup_logging():
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger
+
