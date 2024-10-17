@@ -1,27 +1,25 @@
+import json
 import logging
 import os
-import json
 import uuid
 
 import celpy
-from openai import OpenAI
 import tiktoken
-
-
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from openai import OpenAI
 from pydantic import BaseModel
 
-from keep.api.core.db import create_rule as create_rule_db, get_rule_incidents_count_db
+from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import delete_rule as delete_rule_db
+from keep.api.core.db import get_last_alerts
 from keep.api.core.db import get_rule_distribution as get_rule_distribution_db
+from keep.api.core.db import get_rule_incidents_count_db
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import update_rule as update_rule_db
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.db.rule import ResolveOn
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-
-from keep.api.core.db import get_last_alerts
-from keep.api.core.dependencies import get_pusher_client
 
 # Add this import at the top of the file
 
@@ -233,13 +231,15 @@ async def update_rule(
 ALERT_PULL_LIMIT = 1000
 
 # Constants for token limits
-MAX_MODEL_TOKENS = 128 * 1000  # Maximum tokens the model can handle (adjust based on the model)
-RESERVED_TOKENS = 10 * 1000   # Tokens reserved for the response and other overhead
+MAX_MODEL_TOKENS = (
+    128 * 1000
+)  # Maximum tokens the model can handle (adjust based on the model)
+RESERVED_TOKENS = 10 * 1000  # Tokens reserved for the response and other overhead
 MAX_ALERT_TOKENS = MAX_MODEL_TOKENS - RESERVED_TOKENS
 
 SYSTEM_PROMPT = """
     * we are building a system called keep that gathers and manages alerts for other systems
-    * these alerts come in json form, here is an example: {"id": "KubePodNotReady", "pod": "cognos-app-cm-58747ffd5d-rf4pz", "url": null, "name": "KubePodNotReady", "note": null, "group": false, "endsAt": "0001-01-01T00:00:00Z", "labels": {"pod": "cognos-app-cm-58747ffd5d-rf4pz", "cluster": "zuse1-d003-b066-aks-t1-ppcp-b", "severity": "warning", "alertname": "KubePodNotReady", "namespace": "ppna-env28-t9"}, "pushed": true, "source": ["prometheus"], "status": "firing", "cluster": "zuse1-d003-b066-aks-t1-ppcp-b", "deleted": false, "isNoisy": false, "message": null, "payload": {"endsAt": "0001-01-01T00:00:00Z", "startsAt": "2024-07-27T12:14:09.941873734Z", "generatorURL": "https://thanos-query.wkgrcipm.cloud/graph?g0.expr=sum+by+%28namespace%2C+pod%2C+cluster%29+%28max+by+%28namespace%2C+pod%2C+cluster%29+%28kube_pod_status_phase%7Bjob%3D%22kube-state-metrics%22%2Cnamespace%3D~%22.%2A%22%2Cphase%3D~%22Pending%7CUnknown%7CFailed%22%7D%29+%2A+on+%28namespace%2C+pod%2C+cluster%29+group_left+%28owner_kind%29+topk+by+%28namespace%2C+pod%2C+cluster%29+%281%2C+max+by+%28namespace%2C+pod%2C+owner_kind%2C+cluster%29+%28kube_pod_owner%7Bowner_kind%21%3D%22Job%22%7D%29%29%29+%3E+0&g0.tab=1"}, "service": null, "assignee": null, "event_id": null, "severity": "warning", "startsAt": "2024-07-27T12:14:09.941873734Z", "alertname": "KubePodNotReady", "apiKeyRef": "webhook", "dismissed": false, "namespace": "ppna-env28-t9", "startedAt": null, "alert_hash": "32ca73ebf623f9662ac410de109dfe4aedbc639f572078b4f6a71d3151dba5dc", "providerId": null, "annotations": {"summary": "Pod has been in a non-ready state for more than 15 minutes.", "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready"}, "description": "Pod ppna-env28-t9/cognos-app-cm-58747ffd5d-rf4pz has been in a non-ready state for longer than 15 minutes.", "environment": "unknown", "fingerprint": "df1dff677e82ef90", "isDuplicate": false, "dismissUntil": null, "generatorURL": "https://thanos-query.wkgrcipm.cloud/graph?g0.expr=sum+by+%28namespace%2C+pod%2C+cluster%29+%28max+by+%28namespace%2C+pod%2C+cluster%29+%28kube_pod_status_phase%7Bjob%3D%22kube-state-metrics%22%2Cnamespace%3D~%22.%2A%22%2Cphase%3D~%22Pending%7CUnknown%7CFailed%22%7D%29+%2A+on+%28namespace%2C+pod%2C+cluster%29+group_left+%28owner_kind%29+topk+by+%28namespace%2C+pod%2C+cluster%29+%281%2C+max+by+%28namespace%2C+pod%2C+owner_kind%2C+cluster%29+%28kube_pod_owner%7Bowner_kind%21%3D%22Job%22%7D%29%29%29+%3E+0&g0.tab=1", "lastReceived": "2024-07-30T13:40:16.587Z", "providerType": null, "duplicateReason": null, "enriched_fields": []}
+    * these alerts come in json form, here is an example: {"id":"7767911383369149575","name":"Test Alert","status":"firing","severity":"critical","lastReceived":"2024-09-25T12:14:24.000Z","firingStartTime":"2024-09-25T12:14:24.000Z","environment":"production","isFullDuplicate":false,"isPartialDuplicate":true,"duplicateReason":null,"service":"tal-test","source":["datadog"],"apiKeyRef":null,"message":"%%%\nThis is a test alert from Datadog\n\n @webhook-tal_local_keep @webhook-keep-datadog-webhook-integration @webhook-keep-datadog-webhook-integration-e1faa321-35df-486b-8fa8-3601ee714011 @webhook-keep-datadog-webhook-integration-8bc04099-08ac-420a-8749-cae6ef262a41 @webhook-keep-datadog-webhook-integration-1874db29-2bbb-4107-8b5a-939af9d7f63b @webhook-keep-datadog-webhook-integration-29bd638c-f132-4a61-b424-b0f93f674f47 @webhook-keep-datadog-webhook-integration-78645c69-61e9-4921-8e90-b1ae382280e5 @webhook-keep-datadog-webhook-integration-keep\n\nMore than **0** log events matched in the last **5m** against the monitored query: **[`@usr.id:tal@keephq.dev`](/logs?query=%40usr.id%3Atal%40keephq.dev&agg_m=count&agg_t=count&index=%2A)**\n\nThe monitor was last triggered at Wed Sep 25 2024 12:12:54 UTC.\n\n- - -\n\n[[Monitor Status](/monitors/117493674?from_ts=1727265474000&to_ts=1727266674000&event_id=7767911383369149575&source=monitor_notif)] · [[Edit Monitor](/monitors/117493674/edit?source=monitor_notif)] · [[Related Logs](/logs?query=%40usr.id%3Atal%40keephq.dev&from_ts=1727266074000&to_ts=1727266374000&live=false&agg_m=count&agg_t=count&index=%2A&source=monitor_notif)]\n%%%","description":null,"pushed":true,"event_id":"12f62f40-f1b7-4a21-9d3b-be06519447ec","url":null,"labels":{},"fingerprint":"39f3a0d2cfe87885be0283c94ffd1cc35be1fd1bdd108c86ddf8e9db5d3bd7f0","deleted":false,"dismissUntil":null,"dismissed":false,"assignee":null,"providerId":"ee95f0f114cd4a03957901f7c39e7999","providerType":"datadog","note":null,"startedAt":"2024-10-06 11:19:09.785000","isNoisy":false,"enriched_fields":[],"incident":"2b7b950c-6330-4c07-90a2-312683d826d9","tags":{"source":"alert","service":"tal-test","environment":"production"},"groups":["*"],"monitor_id":117493674,"created_by":null,"alert_hash":"76cfc7b443e9d50d80b9faa64e37b6329ea5b304e785a7767d4e7fd6768c4b0b"}
     * alerts come from all sorts of sources and configurations, so they don't have to comply to the same form, even if they belong to the same project
     * some alerts are correlated, meaning they indicate the same underlining problem coming from the system, and would fire in the same timeframe
     * we created a format to describe rules to group correlated alerts based on the CEL language, group-by fields and timeframes in mins, meaning that alerts that pass the cel filter and are in the same timeframe and group-by fields will be grouped, you can create a rule that only has group-by and no cel filter, for example if the alerts have the same machine name or something
@@ -258,74 +258,80 @@ SYSTEM_PROMPT = """
 
 
 RESULT_CUSTOM_FUNCTION = [
-            {
-                "name": "analyze_results",
-                "description": "Analyze and return results based on the given criteria, including chain of thought and critical analysis of each rule",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "hasResults": {
-                            "type": "boolean",
-                            "description": "Indicates whether there are any meaningful results to return"
+    {
+        "name": "analyze_results",
+        "description": "Analyze and return results based on the given criteria, including chain of thought and critical analysis of each rule",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "hasResults": {
+                    "type": "boolean",
+                    "description": "Indicates whether there are any meaningful results to return",
+                },
+                "results": {
+                    "type": "array",
+                    "description": "An array of analysis results",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "CELRule": {
+                                "type": "string",
+                                "description": "Common Expression Language (CEL) rule describing the condition to match",
+                            },
+                            "Timeframe": {
+                                "type": "integer",
+                                "description": "The time window in minutes for analyzing the data",
+                            },
+                            "GroupBy": {
+                                "type": "array",
+                                "description": "An array of fields to group the results by, e.g., ['labels.host_name']",
+                                "items": {"type": "string"},
+                            },
+                            "ChainOfThought": {
+                                "type": "string",
+                                "description": "Detailed reasoning process for arriving at this rule and its parameters",
+                            },
+                            "WhyTooGeneral": {
+                                "type": "string",
+                                "description": "Devil's advocate argument for why this rule might be too general or broad",
+                            },
+                            "WhyTooSpecific": {
+                                "type": "string",
+                                "description": "Devil's advocate argument for why this rule might be too specific or narrow",
+                            },
+                            "ShortRuleName": {
+                                "type": "string",
+                                "description": "Short name for the rule, 20 characters or less",
+                            },
+                            "Score": {
+                                "type": "integer",
+                                "description": "A score from 1 to 100 indicating the severity or importance of the result",
+                                "minimum": 1,
+                                "maximum": 100,
+                            },
                         },
-                        "results": {
-                            "type": "array",
-                            "description": "An array of analysis results",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "CELRule": {
-                                        "type": "string",
-                                        "description": "Common Expression Language (CEL) rule describing the condition to match"
-                                    },
-                                    "Timeframe": {
-                                        "type": "integer",
-                                        "description": "The time window in minutes for analyzing the data"
-                                    },
-                                    "GroupBy": {
-                                        "type": "array",
-                                        "description": "An array of fields to group the results by, e.g., ['labels.host_name']",
-                                        "items": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "ChainOfThought": {
-                                        "type": "string",
-                                        "description": "Detailed reasoning process for arriving at this rule and its parameters"
-                                    },
-                                    "WhyTooGeneral": {
-                                        "type": "string",
-                                        "description": "Devil's advocate argument for why this rule might be too general or broad"
-                                    },
-                                    "WhyTooSpecific": {
-                                        "type": "string",
-                                        "description": "Devil's advocate argument for why this rule might be too specific or narrow"
-                                    },
-                                    "ShortRuleName": {
-                                        "type": "string",
-                                        "description": "Short name for the rule, 20 characters or less"
-                                    },
-                                    "Score": {
-                                        "type": "integer",
-                                        "description": "A score from 1 to 100 indicating the severity or importance of the result",
-                                        "minimum": 1,
-                                        "maximum": 100
-                                    }
-                                },
-                                "required": ["CELRule", "Timeframe", "GroupBy", "Score", "ChainOfThought", "WhyTooGeneral", "WhyTooSpecific"],
-                                "additionalProperties": False
-                            }
-                        },
-                        "summery": {
-                            "type": "string",
-                            "description": "One liner summery of the results, mention what you noticed in the data and how you created the rules"
-                        }
+                        "required": [
+                            "CELRule",
+                            "Timeframe",
+                            "GroupBy",
+                            "Score",
+                            "ChainOfThought",
+                            "WhyTooGeneral",
+                            "WhyTooSpecific",
+                        ],
+                        "additionalProperties": False,
                     },
-                    "required": ["hasResults", "reason", "results", "summery"],
-                    "additionalProperties": False
-                }
-            }
-        ]
+                },
+                "summery": {
+                    "type": "string",
+                    "description": "One liner summery of the results, mention what you noticed in the data and how you created the rules",
+                },
+            },
+            "required": ["hasResults", "reason", "results", "summery"],
+            "additionalProperties": False,
+        },
+    }
+]
 
 
 @router.get(
@@ -340,7 +346,7 @@ def gen_rules(
         IdentityManagerFactory.get_auth_verifier(["read:rules", "read:alerts"])
     ),
 ):
-    
+
     task_id = str(uuid.uuid4())
     background_tasks.add_task(ruleGen, task_id, authenticated_entity)
     return {"task_id": task_id}
@@ -357,71 +363,93 @@ def ruleGen(task_id, authenticated_entity):
             logger.error("OpenAI API key is not set. Can't auto gen rules.")
             return ""
 
-        openAI_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-
+        openAI_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
         existing_rules = get_rules(authenticated_entity)
-        existing_rules = [{'name': x['name'], 'cel_query': x['definition_cel'], 'group_by': x['grouping_criteria'], 'timeframe_mins' : x['timeframe']} for x in existing_rules]
-        existing_rules = 'here is a list of rules that already exist: ' + str(existing_rules)
+        existing_rules = [
+            {
+                "name": x["name"],
+                "cel_query": x["definition_cel"],
+                "group_by": x["grouping_criteria"],
+                "timeframe_mins": x["timeframe"],
+            }
+            for x in existing_rules
+        ]
+        existing_rules = "here is a list of rules that already exist: " + str(
+            existing_rules
+        )
 
         tenant_id = authenticated_entity.tenant_id
-        
+
         db_alerts = get_last_alerts(tenant_id=tenant_id, limit=ALERT_PULL_LIMIT)
-        db_alerts = [{'event' : x.event, 'timestamp' : x.timestamp.isoformat()} for x in db_alerts]
-        
-        selected_alerts = select_right_num_alerts(existing_rules, db_alerts, MAX_ALERT_TOKENS)
+        db_alerts = [
+            {"event": x.event, "timestamp": x.timestamp.isoformat()} for x in db_alerts
+        ]
+
+        selected_alerts = select_right_num_alerts(
+            existing_rules, db_alerts, MAX_ALERT_TOKENS
+        )
         selected_alerts = "alert examples:" + json.dumps(selected_alerts)
 
         response = openAI_client.chat.completions.create(
-            model = 'gpt-4o-mini',
-            messages = [{'role': 'system', 'content': SYSTEM_PROMPT}, 
-                        {'role': 'user', 'content': existing_rules},
-                        {'role': 'user', 'content': selected_alerts}],
-            functions = RESULT_CUSTOM_FUNCTION,
-            function_call = 'auto'
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": existing_rules},
+                {"role": "user", "content": selected_alerts},
+            ],
+            functions=RESULT_CUSTOM_FUNCTION,
+            function_call="auto",
         )
         result = json.loads(response.choices[0].message.function_call.arguments)
 
-        logger.info("Got {} rules back from the llm".format(len(result['results'])))
+        logger.info("Got {} rules back from the llm".format(len(result["results"])))
 
-        result['results'] = [rule for rule in result['results'] if check_cel_rule(rule['CELRule'])]
-    
+        result["results"] = [
+            rule for rule in result["results"] if check_cel_rule(rule["CELRule"])
+        ]
+
     except Exception as e:
         logger.info(f"Error generating rules: {e}")
-        result = {'error': "Error generating rules"}
-
+        result = {"error": "Error generating rules"}
 
     try:
         pusher_client = get_pusher_client()
         if pusher_client:
-            pusher_client.trigger("private-{}".format(tenant_id), "rules-aigen-created", result)
+            pusher_client.trigger(
+                "private-{}".format(tenant_id), "rules-aigen-created", result
+            )
     except Exception as e:
         logger.error(f"Error triggering Pusher event: {e}")
 
 
-
 def select_right_num_alerts(existing_rules, alerts, max_tokens):
     encoding = tiktoken.encoding_for_model("gpt-4")
-    
+
     # Count tokens for system prompt and result structure
     system_prompt_tokens = len(encoding.encode(SYSTEM_PROMPT))
     result_structure_tokens = len(encoding.encode(json.dumps(RESULT_CUSTOM_FUNCTION)))
     existing_rules_tokens = len(encoding.encode(existing_rules))
 
-    available_tokens = max_tokens - system_prompt_tokens - result_structure_tokens - existing_rules_tokens
-    
+    available_tokens = (
+        max_tokens
+        - system_prompt_tokens
+        - result_structure_tokens
+        - existing_rules_tokens
+    )
+
     selected_alerts = []
     current_tokens = 0
-    
+
     for alert in alerts:
         alert_tokens = len(encoding.encode(json.dumps(alert)))
-        
+
         if current_tokens + alert_tokens > available_tokens:
             break
-        
+
         selected_alerts.append(alert)
         current_tokens += alert_tokens
-    
+
     return selected_alerts
 
 

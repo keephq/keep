@@ -29,6 +29,7 @@
     "@heroicons/react": "^2.0.18",
     "@mui/material": "^5.15.18",
     "@radix-ui/react-icons": "^1.3.0",
+    "@radix-ui/react-tooltip": "^1.1.3",
     "@svgr/webpack": "^8.0.1",
     "@tanstack/react-table": "^8.11.0",
     "@tremor/react": "^3.18.3",

@@ -1,0 +1,50 @@
+---
+title: "Service Now"
+sidebarTitle: "Service Now Provider"
+description: "Service Now provider allows sending notifications, updates, and retrieving topology information from the ServiceNow CMDB."
+---
+
+## Inputs
+
+- `content`: str : Message text to send as a notification or update
+- `topology_query`: str (optional): A query to retrieve topology information from the ServiceNow CMDB.
+
+## Outputs
+
+- `result`: str : The result of the notification or update action.
+- `topology`: dict : The topology information retrieved from the CMDB, if a topology query is provided.
+
+## Authentication Parameters
+
+The `instance_url` and `api_token` are required for connecting to the ServiceNow instance and performing any actions.
+
+## Connecting with the Provider
+
+1. Ensure that the ServiceNow instance is accessible via API.
+2. Provide the necessary API credentials (`instance_url` and `api_token`) in the provider configuration.
+
+## Example of Usage
+
+```yaml
+workflow:
+  id: service-now-example
+  description: Service Now example
+  triggers:
+    - type: manual
+  actions:
+    - name: service-now
+      provider:
+        type: service-now
+        config: "{{ providers.servicenow }}"
+        with:
+          content: "Incident update: Issue resolved"
+    - name: service-now-topology
+      provider:
+        type: service-now
+        config: "{{ providers.servicenow }}"
+        with:
+          topology_query: "SELECT * FROM cmdb_ci_server WHERE status='Active'"
+
+
+## Useful Links
+- [Service Now API documentation](https://docs.servicenow.com/bundle/xanadu-api-reference/page/build/applications/concept/api-rest.html)

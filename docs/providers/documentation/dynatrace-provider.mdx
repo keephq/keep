@@ -1,0 +1,48 @@
+---
+title: "Dynatrace"
+sidebarTitle: "Dynatrace Provider"
+description: "Dynatrace provider allows integration with Dynatrace for monitoring, alerting, and collecting metrics."
+---
+
+## Inputs
+
+- `metric_key`: str : The key of the Dynatrace metric to query.
+- `time_range`: str (optional) : Time range for the query (e.g., `last30mins`, `last24hours`, etc.)
+- `filters`: dict (optional) : Filters to apply to the Dynatrace query (e.g., entityId, host).
+
+## Outputs
+
+- `result`: The result of the Dynatrace metric query, returned in a JSON format.
+
+## Authentication Parameters
+
+- `api_token`: Dynatrace API token required to authenticate requests.
+- `dynatrace_url`: URL of the Dynatrace environment (e.g., `https://<your-environment-id>.live.dynatrace.com`).
+
+## Connecting with the Provider
+
+1. Log in to your Dynatrace account and navigate to "Settings" → "Integration" → "Dynatrace API."
+2. Generate an API token with appropriate permissions (e.g., Read metrics).
+3. Get your environment's Dynatrace URL.
+4. Configure the Dynatrace provider using the API token and Dynatrace URL.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: dynatrace-example
+  description: Dynatrace example
+  triggers:
+    - type: manual
+  actions:
+    - name: dynatrace
+      provider:
+        type: dynatrace
+        config: "{{ providers.dynatracetest }}"
+        with:
+          metric_key: "builtin:host.cpu.usage"
+          time_range: "last24hours"
+          filters:
+            entityId: "HOST-12345"
+## Useful Links
+-[Dynatrace API Documentation](https://docs.dynatrace.com/docs/dynatrace-api)
