@@ -1,38 +1,42 @@
-FROM python:3.11.6-slim as base
+FROM python:3.11-slim as base
 
-ENV PYTHONFAULTHANDLER=1 \
-    PYTHONHASHSEED=random \
-    PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1
 
 RUN useradd --user-group --system --create-home --no-log-init keep
 WORKDIR /app
 
 FROM base as builder
 
-ENV PIP_DEFAULT_TIMEOUT=100 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1 \
-    POETRY_VERSION=1.3.2
+ENV PIP_NO_CACHE_DIR=1 \
+    POETRY_VERSION=1.3.2 \
+    PATH="/venv/bin:$PATH" \
+    VIRTUAL_ENV="/venv"
 
-RUN pip install "poetry==$POETRY_VERSION"
-RUN python -m venv /venv
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev \
+    && pip install "poetry==$POETRY_VERSION" \
+    && python -m venv /venv
+
 COPY pyproject.toml poetry.lock ./
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes && /venv/bin/python -m pip install --upgrade -r requirements.txt
+
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes \
+    && pip install --upgrade -r requirements.txt
+
 COPY keep keep
 COPY ee keep/ee
 COPY examples examples
 COPY README.md README.md
-RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
+
+RUN poetry build && pip install --use-deprecated=legacy-resolver dist/*.whl
 
 FROM base as final
-ENV PATH="/venv/bin:${PATH}"
-ENV VIRTUAL_ENV="/venv"
-ENV EE_PATH="ee"
+
 COPY --from=builder /venv /venv
 COPY --from=builder /app/examples /examples
-# as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
-RUN chgrp -R 0 /app && chmod -R g=u /app
-RUN chown -R keep:keep /app
-RUN chown -R keep:keep /venv
+
+RUN chgrp -R 0 /app && chmod -R g=u /app && chown -R keep:keep /app \
+    && chown -R keep:keep /venv
+
 USER keep
-ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
+
+ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
