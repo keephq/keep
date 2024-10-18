@@ -11,7 +11,7 @@ import {
 import {
   MdRemoveCircle,
   MdModeEdit,
-  MdKeyboardDoubleArrowRight,
+  MdKeyboardDoubleArrowRight, MdPlayArrow,
 } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { IncidentDto, PaginatedIncidentsDto } from "./models";
@@ -25,6 +25,8 @@ import {STATUS_ICONS} from "@/app/incidents/statuses";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
+import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
+import {AlertDto} from "@/app/alerts/models";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -53,12 +55,20 @@ export default function IncidentsTable({
   });
   const [changeStatusIncident, setChangeStatusIncident] =
     useState<IncidentDto | null>();
+  const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
+    useState<IncidentDto | null>();
 
   const handleChangeStatus = (e: React.MouseEvent, incident: IncidentDto) => {
     e.preventDefault();
     e.stopPropagation();
     setChangeStatusIncident(incident);
   };
+
+  const handleRunWorkflow = (e: React.MouseEvent, incident: IncidentDto) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setRunWorkflowModalIncident(incident);
+  }
 
   useEffect(() => {
     if (incidents.limit != pagination.pageSize) {
@@ -199,6 +209,14 @@ export default function IncidentsTable({
             onClick={(e) => handleChangeStatus(e, row.original!)}
           />
           <Button
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdPlayArrow}
+            tooltip="Run Workflow"
+            onClick={(e) => handleRunWorkflow(e, row.original!)}
+          />
+          <Button
             color="red"
             size="xs"
             variant="secondary"
@@ -247,6 +265,10 @@ export default function IncidentsTable({
         incident={changeStatusIncident}
         mutate={mutate}
         handleClose={() => setChangeStatusIncident(null)}
+      />
+      <ManualRunWorkflowModal
+        incident={runWorkflowModalIncident}
+        handleClose={() => setRunWorkflowModalIncident(null)}
       />
       <div className="mt-4 mb-8">
         <IncidentPagination table={table} isRefreshAllowed={true} />
