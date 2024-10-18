@@ -1,11 +1,11 @@
-import { FormEvent, Fragment, useRef } from "react";
+import { FormEvent, Fragment, useRef, useState } from "react";
 import { Table } from "@tanstack/table-core";
-import { Button } from "@tremor/react";
+import { Button, TextInput } from "@tremor/react";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { VisibilityState, ColumnOrderState } from "@tanstack/react-table";
 import { FloatingArrow, arrow, offset, useFloating } from "@floating-ui/react";
 import { Popover } from "@headlessui/react";
-import { FiSettings } from "react-icons/fi";
+import { FiSettings, FiSearch } from "react-icons/fi";
 import { DEFAULT_COLS, DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
 import { AlertDto } from "./models";
 
@@ -31,15 +31,18 @@ export default function ColumnSelection({
   });
   const tableColumns = table.getAllColumns();
 
-  const [, setColumnVisibility] = useLocalStorage<VisibilityState>(
-    `column-visibility-${presetName}`,
-    DEFAULT_COLS_VISIBILITY
-  );
+  const [columnVisibility, setColumnVisibility] =
+    useLocalStorage<VisibilityState>(
+      `column-visibility-${presetName}`,
+      DEFAULT_COLS_VISIBILITY
+    );
 
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     DEFAULT_COLS
   );
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   const columnsOptions = tableColumns
     .filter((col) => col.getIsPinned() === false)
@@ -49,6 +52,10 @@ export default function ColumnSelection({
     .filter((col) => col.getIsVisible() && col.getIsPinned() === false)
     .map((col) => col.id);
 
+  const filteredColumns = columnsOptions.filter((column) =>
+    column.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const onMultiSelectChange = (
     event: FormEvent<HTMLFormElement>,
     closePopover: VoidFunction
@@ -56,33 +63,31 @@ export default function ColumnSelection({
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const valueKeys = Object.keys(Object.fromEntries(formData.entries()));
-
-    const newColumnVisibility = columnsOptions.reduce<VisibilityState>(
-      (acc, key) => {
-        if (valueKeys.includes(key)) {
-          return { ...acc, [key]: true };
-        }
-
-        return { ...acc, [key]: false };
-      },
-      {}
+    const selectedColumnIds = Object.keys(
+      Object.fromEntries(formData.entries())
     );
 
-    const originalColsOrder = columnOrder.filter((columnId) =>
-      valueKeys.includes(columnId)
-    );
-    const newlyAddedCols = valueKeys.filter(
-      (columnId) => !columnOrder.includes(columnId)
-    );
+    // Update visibility only for the currently visible (filtered) columns.
+    const newColumnVisibility = { ...columnVisibility };
+    filteredColumns.forEach((column) => {
+      newColumnVisibility[column] = selectedColumnIds.includes(column);
+    });
 
-    const newColumnOrder = [...originalColsOrder, ...newlyAddedCols];
+    // Create a new order array with all existing columns and newly selected columns
+    const updatedOrder = [
+      ...columnOrder,
+      ...selectedColumnIds.filter((id) => !columnOrder.includes(id)),
+    ];
+
+    // Remove any columns that are no longer selected
+    const finalOrder = updatedOrder.filter(
+      (id) => selectedColumnIds.includes(id) || !filteredColumns.includes(id)
+    );
 
     setColumnVisibility(newColumnVisibility);
-    setColumnOrder(newColumnOrder);
+    setColumnOrder(finalOrder);
     closePopover();
   };
-
 
   return (
     <Popover as={Fragment}>
@@ -109,15 +114,22 @@ export default function ColumnSelection({
               context={context}
             />
             <span className="text-gray-400 text-sm">Set table fields</span>
+            <TextInput
+              icon={FiSearch}
+              placeholder="Search fields..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mt-2"
+            />
             <ul className="space-y-1 mt-3 max-h-96 overflow-auto">
-              {columnsOptions.map((column) => (
+              {filteredColumns.map((column) => (
                 <li key={column}>
                   <label className="cursor-pointer p-2">
                     <input
                       className="mr-2"
                       name={column}
                       type="checkbox"
-                      defaultChecked={selectedColumns.includes(column)}
+                      defaultChecked={columnVisibility[column]}
                     />
                     {column}
                   </label>
