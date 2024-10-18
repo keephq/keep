@@ -25,7 +25,7 @@ class GkeProviderAuthConfig:
             "sensitive": True,
             "type": "file",
             "name": "service_account_json",
-            "file_type": ".json",  # this is used to filter the file type in the UI
+            "file_type": "application/json",
         }
     )
     cluster_name: str = dataclasses.field(

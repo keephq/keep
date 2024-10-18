@@ -36,7 +36,8 @@ class SshProviderAuthConfig:
             "sensitive": True,
             "type": "file",
             "name": "pkey",
-            "file_type": "*",
+            "file_type": "text/plain, application/x-pem-file, application/x-putty-private-key, "+
+                        "application/x-ed25519-key, application/pkcs8, application/octet-stream",
             "config_sub_group": "private_key",
             "config_main_group": "authentication",
         },

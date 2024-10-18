@@ -51,6 +51,7 @@ import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
 import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
+import { z } from "zod";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -132,11 +133,141 @@ function getConfigGroup(type: "config_main_group" | "config_sub_group") {
 const getConfigByMainGroup = getConfigGroup("config_main_group");
 const getConfigBySubGroup = getConfigGroup("config_sub_group");
 
+function getInitialFormValues(provider: Provider) {
+  const initialValues: ProviderFormData = {
+    provider_id: provider.id,
+    install_webhook: provider.can_setup_webhook ?? false,
+  };
+  if (provider.installed)
+    Object.assign(initialValues, {
+      provider_name: provider.details.name,
+      ...provider.details.authentication,
+    });
+
+  // Set default values for select inputs
+  Object.entries(provider.config).forEach(([field, config]) => {
+    if (config.type === "select" && config.default && !initialValues[field]) {
+      initialValues[field] = config.default;
+    }
+  });
+
+  return initialValues;
+}
+
+function getZodSchema(fields: Provider["config"]) {
+  const required_error = "This field is required";
+  const emptyStringToNull = z
+    .string()
+    .transform((val) => (val.length === 0 ? null : val));
+  const kvPairs = Object.entries(fields).map(([field, config]) => {
+    if (config.type === "form") {
+      const baseFormSchema = z.record(z.string(), z.string()).array();
+      const formSchema = config.required
+        ? baseFormSchema.nonempty({
+            message: "At least one key-value entry should be provided.",
+          })
+        : baseFormSchema.optional();
+      return [field, formSchema];
+    }
+
+    if (config.type === "file") {
+      const baseFileSchema = z
+        .instanceof(File, { message: "Please upload a file here." })
+        .refine(
+          (file) => {
+            if (config.file_type == undefined) return true;
+            if (config.file_type.length <= 1) return true;
+            return config.file_type.includes(file.type);
+          },
+          {
+            message:
+              config.file_type && config.file_type?.split(",").length > 1
+                ? `File type should be one of ${config.file_type}.`
+                : `File should be of type ${config.file_type}.`,
+          }
+        );
+      const fileSchema = config.required
+        ? baseFileSchema
+        : baseFileSchema.optional();
+      return [field, fileSchema];
+    }
+
+    const urlSchema = z
+      .string({ required_error })
+      .url({ message: "Please provide a valid url, e.g https://example.com" });
+    const urlTldSchema = z.string().regex(new RegExp(/\.[a-z]{2,63}$/), {
+      message: "Url must contain a valid TLD e.g .com, .io, .dev, .co.uk",
+    });
+    const baseAnyHttpSchema = urlSchema.refine(
+      (url) => url.startsWith("http://") || url.startsWith("https://"),
+      { message: "A url with `http` or `https` protocol is reuquired." }
+    );
+    const baseHttpSchema = baseAnyHttpSchema.and(urlTldSchema);
+    const baseHttpsSchema = urlSchema
+      .refine((url) => url.startsWith("https://"), {
+        message: "A url with `https` protocol is required.",
+      })
+      .and(urlTldSchema);
+
+    if (config.validation === "any_http_url") {
+      const anyHttpSchema = config.required
+        ? baseAnyHttpSchema
+        : emptyStringToNull.pipe(baseAnyHttpSchema.nullish());
+      return [field, anyHttpSchema];
+    }
+
+    if (config.validation === "http_url") {
+      const httpSchema = config.required
+        ? baseHttpSchema
+        : emptyStringToNull.pipe(baseHttpSchema.nullish());
+      return [field, httpSchema];
+    }
+    if (config.validation === "https_url") {
+      const httpsSchema = config.required
+        ? baseHttpsSchema
+        : emptyStringToNull.pipe(baseHttpsSchema.nullish());
+      return [field, httpsSchema];
+    }
+    if (config.validation === "tld") {
+      const baseTldSchema = z
+        .string({ required_error })
+        .regex(new RegExp(/\.[a-z]{2,63}$/), {
+          message: "Please provide a valid TLD e.g .com, .io, .dev, .net",
+        });
+      const tldSchema = config.required
+        ? baseTldSchema
+        : baseTldSchema.optional();
+      return [field, tldSchema];
+    }
+    if (config.validation === "port") {
+      const basePortSchema = z
+        .number({ required_error })
+        .min(1, { message: "Invalid port number" })
+        .max(65_535, { message: "Invalid port number" });
+      const portSchema = config.required
+        ? basePortSchema
+        : basePortSchema.optional();
+      return [field, portSchema];
+    }
+    return [
+      field,
+      config.required
+        ? z.string({ required_error }).min(1, { message: required_error })
+        : z.string().optional(),
+    ];
+  });
+  return z.object({
+    provider_name: z
+      .string({ required_error })
+      .min(1, { message: required_error }),
+    ...Object.fromEntries(kvPairs),
+  });
+}
+
 const providerNameFieldConfig: ProviderAuthConfig = {
   required: true,
   description: "Provider Name",
   placeholder: "Enter provider name",
-  validation: "",
   default: null,
 };
 
@@ -151,31 +282,9 @@ const ProviderForm = ({
   console.log("Loading the ProviderForm component");
   const { mutate } = useProviders();
   const searchParams = useSearchParams();
-  const [formValues, setFormValues] = useState<ProviderFormData>(() => {
-    const initialValues: ProviderFormData = {
-      provider_id: provider.id,
-      install_webhook: provider.can_setup_webhook ?? false,
-    };
-    if (provider.installed)
-      Object.assign(initialValues, {
-        provider_name: provider.details.name,
-        ...provider.details.authentication,
-      });
-
-    // Set default values for select inputs
-    Object.entries(provider.config).forEach(([configKey, method]) => {
-      if (
-        method.type === "select" &&
-        method.default &&
-        !initialValues[configKey]
-      ) {
-        initialValues[configKey] = method.default;
-      }
-    });
-
-    return initialValues;
-  });
-
+  const [formValues, setFormValues] = useState<ProviderFormData>(() =>
+    getInitialFormValues(provider)
+  );
   const [formErrors, setFormErrors] = useState<string | null>(null);
   const [inputErrors, setInputErrors] = useState<InputErrors>({});
   // Related to scopes
@@ -197,6 +306,7 @@ const ProviderForm = ({
     () => getConfigByMainGroup(provider.config),
     [provider]
   );
+  const zodSchema = useMemo(() => getZodSchema(provider.config), [provider]);
 
   const { data: session } = useSession();
   const accessToken = session?.accessToken;
@@ -267,27 +377,6 @@ const ProviderForm = ({
     }
   }
 
-  const validateForm = (updatedFormValues: ProviderFormData) => {
-    const errors: InputErrors = {};
-    for (const [configKey, method] of Object.entries(provider.config)) {
-      if (!formValues[configKey] && method.required) {
-        errors[configKey] = "This field is required";
-      }
-      if (
-        "validation" in method &&
-        formValues[configKey]
-        // TODO:add form validation here
-      ) {
-        errors[configKey] = "";
-      }
-      if (!formValues.provider_name) {
-        errors["provider_name"] = "This field is required";
-      }
-    }
-    setInputErrors(errors);
-    return errors;
-  };
-
   function handleFormChange(key: string, value: ProviderFormValue) {
     setFormValues((prev) => {
       const prevValue = prev[key];
@@ -314,21 +403,18 @@ const ProviderForm = ({
     }));
   };
 
-  const validate = () => {
-    const errors = validateForm(formValues);
-    if (Object.keys(errors).length === 0) {
-      return true;
-    } else {
-      setFormErrors(
-        `Missing required fields: ${JSON.stringify(
-          Object.keys(errors),
-          null,
-          4
-        )}`
-      );
-      return false;
-    }
-  };
+  function validate() {
+    const validation = zodSchema.safeParse(formValues);
+    if (validation.success) return true;
+    const errors: InputErrors = {};
+    Object.entries(validation.error.format()).forEach(([field, err]) => {
+      err && typeof err === "object" && !Array.isArray(err)
+        ? (errors[field] = err._errors[0])
+        : null;
+    });
+    setInputErrors(errors);
+    return false;
+  }
 
   const submit = (
     requestUrl: string,
@@ -368,7 +454,9 @@ const ProviderForm = ({
           // If the response is not okay, throw the error message
           return response_json.then((errorData) => {
             if (response.status === 400) {
-              throw `${errorData.detail}`;
+              if ("detail" in errorData) throw `${errorData.detail}`;
+              if ("message" in errorData) throw `${errorData.messsage}`;
+              throw `${errorData}`;
             }
             if (response.status === 409) {
               throw `Provider with name ${formValues.provider_name} already exists`;
@@ -889,6 +977,7 @@ function FormField({
         <FileField
           id={id}
           config={config}
+          error={error}
           disabled={disabled}
           onChange={handleInputChange}
         />
@@ -986,11 +1075,13 @@ function FileField({
   id,
   config,
   disabled,
+  error,
   onChange,
 }: {
   id: string;
   config: ProviderAuthConfig;
   disabled: boolean;
+  error?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   const [selected, setSelected] = useState<string>();
@@ -1028,6 +1119,9 @@ function FileField({
         }}
         disabled={disabled}
       />
+      {error && error?.length > 0 && (
+        <p className="text-sm text-red-500 mt-1">{error}</p>
+      )}
     </>
   );
 }
@@ -1075,6 +1169,9 @@ function KVForm({
       </div>
       {Array.isArray(value) && (
         <KVInput name={id} data={value} onChange={onChange} error={error} />
+      )}
+      {error && error?.length > 0 && (
+        <p className="text-sm text-red-500 mt-1">{error}</p>
       )}
     </div>
   );

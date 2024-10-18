@@ -9,7 +9,7 @@ export interface ProviderAuthConfig {
   options?: Array<string | number>;
   sensitive?: boolean;
   hidden?: boolean;
-  type?: string;
+  type?: "select" | "form" | "file";
   file_type?: string;
   config_main_group?: string;
   config_sub_group?: string;
