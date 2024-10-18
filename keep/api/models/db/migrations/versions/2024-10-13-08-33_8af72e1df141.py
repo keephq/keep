@@ -1,7 +1,7 @@
 """add runbook schema
 
 Revision ID: 8af72e1df141
-Revises: bf756df80e9d
+Revises: 83c1020be97d
 Create Date: 2024-10-13 08:33:24.727292
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "8af72e1df141"
-down_revision = "bf756df80e9d"
+down_revision = "83c1020be97d"
 branch_labels = None
 depends_on = None
 
