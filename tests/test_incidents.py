@@ -2,7 +2,7 @@ from datetime import datetime
 from itertools import cycle
 
 import pytest
-from sqlalchemy import func
+from sqlalchemy import func, distinct
 from sqlalchemy.orm.exc import DetachedInstanceError
 
 from keep.api.core.db import (
@@ -23,24 +23,40 @@ from keep.api.models.alert import (
     IncidentSeverity,
     IncidentStatus,
 )
-from keep.api.models.db.alert import Alert
+from keep.api.models.db.alert import Alert, AlertToIncident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
 
 
+def test_get_alerts_data_for_incident(db_session, create_alert):
+    for i in range(100):
+        create_alert(
+            f"alert-test-{i % 10}",
+            AlertStatus.FIRING,
+            datetime.utcnow(),
+            {
+                "source": [f"source_{i % 10}"],
+                "service": f"service_{i % 10}",
+            }
+        )
 
-def test_get_alerts_data_for_incident(db_session, setup_stress_alerts_no_elastic):
-    alerts = setup_stress_alerts_no_elastic(100)
+    alerts = db_session.query(Alert).all()
+
+    unique_fingerprints = db_session.query(func.count(distinct(Alert.fingerprint))).scalar()
+
     assert 100 == db_session.query(func.count(Alert.id)).scalar()
+    assert 10 == unique_fingerprints
 
     data = get_alerts_data_for_incident([a.id for a in alerts])
-    assert data["sources"] == set(["source_{}".format(i) for i in range(10)])
-    assert data["services"] == set(["service_{}".format(i) for i in range(10)])
-    assert data["count"] == 100
+    assert data["sources"] == set([f"source_{i}" for i in range(10)])
+    assert data["services"] == set([f"service_{i}" for i in range(10)])
+    assert data["count"] == unique_fingerprints
 
 
 def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elastic):
     alerts = setup_stress_alerts_no_elastic(100)
+    # Adding 10 non-unique fingerprints
+    alerts.extend(setup_stress_alerts_no_elastic(10))
     incident = create_incident_from_dict(
         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
     )
@@ -53,7 +69,10 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 100
+    # 110 alerts
+    assert len(incident.alerts) == 110
+    # But 100 unique fingerprints
+    assert incident.alerts_count == 100
 
     assert sorted(incident.affected_services) == sorted(
         ["service_{}".format(i) for i in range(10)]
@@ -66,6 +85,18 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     service_0 = db_session.query(Alert.id).filter(service_field == "service_0").all()
 
+    # Testing unique fingerprints
+    more_alerts_with_same_fingerprints = setup_stress_alerts_no_elastic(10)
+
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [a.id for a in more_alerts_with_same_fingerprints]
+    )
+
+    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
+
+    assert incident.alerts_count == 100
+    assert db_session.query(func.count(AlertToIncident.alert_id)).scalar() == 120
+
     remove_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID,
         incident.id,
@@ -76,7 +107,8 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 99
+    # 117 because we removed multiple alerts with service_0
+    assert len(incident.alerts) == 117
     assert "service_0" in incident.affected_services
     assert len(incident.affected_services) == 10
     assert sorted(incident.affected_services) == sorted(
@@ -92,11 +124,12 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
         incident_id=incident.id,
         tenant_id=incident.tenant_id,
         include_unlinked=True
-    )[0]) == 100
+    )[0]) == 120
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 90
+    # 108 because we removed multiple alert with same fingerprints
+    assert len(incident.alerts) == 108
     assert "service_0" not in incident.affected_services
     assert len(incident.affected_services) == 9
     assert sorted(incident.affected_services) == sorted(
@@ -117,7 +150,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 89
+    assert len(incident.alerts) == 105
     assert "source_1" in incident.sources
     # source_0 was removed together with service_0
     assert len(incident.sources) == 9
@@ -135,6 +168,8 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert sorted(incident.sources) == sorted(
         ["source_{}".format(i) for i in range(2, 10)]
     )
+
+
 
 
 def test_get_last_incidents(db_session, create_alert):

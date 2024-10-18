@@ -524,7 +524,10 @@ def process_event(
             and isinstance(event, dict)
             or isinstance(event, FormData)
         ):
-            provider_class = ProvidersFactory.get_provider_class(provider_type)
+            try:
+                provider_class = ProvidersFactory.get_provider_class(provider_type)
+            except Exception:
+                provider_class = ProvidersFactory.get_provider_class("keep")
             event = provider_class.format_alert(
                 tenant_id=tenant_id,
                 event=event,
