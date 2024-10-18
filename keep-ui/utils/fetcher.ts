@@ -1,9 +1,8 @@
 import { KeepApiError } from '../app/error';
-
 export const fetcher = async (
   url: string,
   accessToken: string | undefined,
-  requestInit: RequestInit = {}
+  requestInit: RequestInit = {},
 ) => {
   const response = await fetch(url, {
     headers: {
