@@ -317,7 +317,7 @@ def __handle_formatted_events(
         for key, value in enriched_formatted_event.dict().items():
             if isinstance(value, dict):
                 for nested_key in value.keys():
-                    fields.append(f"{key}_{nested_key}")
+                    fields.append(f"{key}.{nested_key}")
             else:
                 fields.append(key)
 
@@ -326,7 +326,7 @@ def __handle_formatted_events(
             fields=fields,
             provider_id=enriched_formatted_event.providerId,
             provider_type=enriched_formatted_event.providerType,
-            session=session
+            session=session,
         )
 
         logger.debug(
@@ -386,7 +386,9 @@ def __handle_formatted_events(
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        incidents: List[IncidentDto] = rules_engine.run_rules(enriched_formatted_events, session=session)
+        incidents: List[IncidentDto] = rules_engine.run_rules(
+            enriched_formatted_events, session=session
+        )
 
         # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
         # if new grouped incidents were created, we need to push them to the client
