@@ -389,9 +389,11 @@ class OpenobserveProvider(BaseProvider):
 
         org_name = event.pop("org_name", "")
         # Our only way to distinguish between non aggregated alert and aggregated alerts is the alert_agg_value
-        if "alert_agg_value" in event and len(
-            event["alert_agg_value"].split(",")
-        ) == int(event.get("alert_count", -1)):
+        if "alert_agg_value" in event and (
+            len(event["alert_agg_value"].split(","))
+            == int(event.get("alert_count", -1))
+            or len(event["alert_agg_value"].split(",")) == 1
+        ):
             logger.info("Formatting openobserve aggregated alert")
             rows = event.pop("rows", "")
             if not rows:
@@ -404,6 +406,10 @@ class OpenobserveProvider(BaseProvider):
             number_of_rows = event.pop("alert_count", "")
             rows = rows.split("\n")
             agg_values = event.pop("alert_agg_value", "").split(",")
+            # if there is only one value, repeat it for all rows
+            if len(agg_values) == 1:
+                logger.info("Only one value found, repeating it for all rows")
+                agg_values = [agg_values[0]] * int(number_of_rows)
             # trim
             agg_values = [agg_value.strip() for agg_value in agg_values]
             for i in range(int(number_of_rows)):
