@@ -681,6 +681,18 @@ def test_escaped_quotes_inside_function_arguments(context_manager):
     ), "Expected one function to be extracted with escaped quotes inside arguments."
 
 
+def test_double_function_call(context_manager):
+    iohandler = IOHandler(context_manager)
+    template = """{ vars.alert_tier }} Alert: Pipelines are down
+      Hi,
+      This {{ vars.alert_tier }} alert is triggered keep.get_firing_time('{{ alert }}', 'minutes') because the pipelines for {{ alert.host }} are down for more than keep.get_firing_time('{{ alert }}', 'minutes') minutes.
+      Please visit monitoring.keeohq.dev for more!"""
+    extracted_functions = iohandler.extract_keep_functions(template)
+    assert (
+        len(extracted_functions) == 2
+    ), "Should handle nested function calls correctly."
+
+
 def test_if_else_in_template_existing(mocked_context_manager):
     mocked_context_manager.get_full_context.return_value = {
         "alert": {"notexist": "it actually exists", "name": "this is a test"}

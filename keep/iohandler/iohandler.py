@@ -80,7 +80,7 @@ class IOHandler:
                     escape_next = False
                     quote_char = ""
                     escapes = {}
-                    while i < len(text):
+                    while i < len(text) and (parent_count > 0 or in_string):
                         if text[i] == "\\" and in_string and not escape_next:
                             escape_next = True
                             i += 1
@@ -89,7 +89,14 @@ class IOHandler:
                             if not in_string:
                                 in_string = True
                                 quote_char = text[i]
-                            elif text[i] == quote_char and not escape_next:
+                            elif (
+                                text[i] == quote_char
+                                and not escape_next
+                                and (
+                                    str(text[i + 1]).isalnum() == False
+                                    and str(text[i + 1]) != " "
+                                )  # end of statement, arg, etc. if its alpha numeric or whitespace, we just need to escape it
+                            ):
                                 in_string = False
                                 quote_char = ""
                             elif text[i] == quote_char and not escape_next:
@@ -100,14 +107,12 @@ class IOHandler:
                             parent_count += 1
                         elif text[i] == ")" and not in_string:
                             parent_count -= 1
-                            if parent_count == 0:
-                                matches.append((text[start : i + 1], escapes))
-                                break
 
                         escape_next = False
                         i += 1
 
-                    i += 1  # Move past the closing parenthesis
+                    if parent_count == 0:
+                        matches.append((text[start:i], escapes))
                     continue  # Skip the increment at the end of the loop to continue from the current position
                 else:
                     # If no '(' found, increment i to move past "keep."
