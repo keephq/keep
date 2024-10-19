@@ -75,12 +75,12 @@ class IOHandler:
                 func_start = text.find("(", start)
                 if func_start > -1:  # Opening '(' found after "keep."
                     i = func_start + 1  # Move i to the character after '('
-                    parent_count = 1
+                    paren_count = 1
                     in_string = False
                     escape_next = False
                     quote_char = ""
                     escapes = {}
-                    while i < len(text) and (parent_count > 0 or in_string):
+                    while i < len(text):
                         if text[i] == "\\" and in_string and not escape_next:
                             escape_next = True
                             i += 1
@@ -89,14 +89,7 @@ class IOHandler:
                             if not in_string:
                                 in_string = True
                                 quote_char = text[i]
-                            elif (
-                                text[i] == quote_char
-                                and not escape_next
-                                and (
-                                    str(text[i + 1]).isalnum() == False
-                                    and str(text[i + 1]) != " "
-                                )  # end of statement, arg, etc. if its alpha numeric or whitespace, we just need to escape it
-                            ):
+                            elif text[i] == quote_char and not escape_next:
                                 in_string = False
                                 quote_char = ""
                             elif text[i] == quote_char and not escape_next:
@@ -104,15 +97,17 @@ class IOHandler:
                                     i
                                 ]  # Save the quote character where we need to escape for valid ast parsing
                         elif text[i] == "(" and not in_string:
-                            parent_count += 1
+                            paren_count += 1
                         elif text[i] == ")" and not in_string:
-                            parent_count -= 1
+                            paren_count -= 1
+                            if paren_count == 0:
+                                matches.append((text[start : i + 1], escapes))
+                                break
 
                         escape_next = False
                         i += 1
 
-                    if parent_count == 0:
-                        matches.append((text[start:i], escapes))
+                    i += 1  # Move past the closing parenthesis
                     continue  # Skip the increment at the end of the loop to continue from the current position
                 else:
                     # If no '(' found, increment i to move past "keep."
@@ -205,14 +200,20 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, val)
             return parsed_string
         # this basically for complex expressions with functions and operators
+        tokens_handled = set()
         for token in tokens:
             token, escapes = token
+            # imagine " keep.f(..) > 1 and keep.f(..) <2"
+            # so keep.f already handled, we don't want to handle it again
+            if token in tokens_handled:
+                continue
             token_to_replace = token
             try:
                 if escapes:
                     for escape in escapes:
                         token = token[:escape] + "\\" + token[escape:]
                 val = self._parse_token(token)
+
             except Exception as e:
                 trimmed_token = self._trim_token_error(token)
                 err_message = str(e).splitlines()[-1]
@@ -220,6 +221,7 @@ class IOHandler:
                     f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
             parsed_string = parsed_string.replace(token_to_replace, str(val))
+            tokens_handled.add(token_to_replace)
 
         return parsed_string
 
@@ -283,7 +285,17 @@ class IOHandler:
                 if "kwargs" in func_signature.parameters:
                     kwargs["tenant_id"] = self.context_manager.tenant_id
 
-                val = keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                try:
+                    val = (
+                        keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                    )
+                # try again but with replacing \n with \\n
+                # again - best effort see test_openobserve_rows_bug test
+                except ValueError:
+                    _args = [arg.replace("\n", "\\n") for arg in _args]
+                    val = (
+                        keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                    )
                 return val
 
         try:
@@ -296,9 +308,24 @@ class IOHandler:
                 # https://github.com/keephq/keep/issues/137
                 import html
 
-                tree = ast.parse(
-                    html.unescape(token.replace("\r\n", "").replace("\n", ""))
-                )
+                try:
+                    unescaped_token = html.unescape(
+                        token.replace("\r\n", "").replace("\n", "")
+                    )
+                    tree = ast.parse(unescaped_token)
+                # try best effort to parse the string
+                # this is some nasty bug. see test test_openobserve_rows_bug on test_iohandler
+                # and this ticket -
+                except Exception as e:
+                    # for strings such as "45%\n", we need to escape
+                    t = (
+                        html.unescape(token.replace("\r\n", "").replace("\n", ""))
+                        .replace("\\n", "\n")
+                        .replace("\\", "")
+                        .replace("\n", "\\n")
+                    )
+                    t = self._encode_single_quotes_in_double_quotes(t)
+                    tree = ast.parse(t)
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
@@ -346,6 +373,25 @@ class IOHandler:
         if const_rendering:
             return self._render(rendered, safe, default)
         return rendered
+
+    def _encode_single_quotes_in_double_quotes(self, s):
+        result = []
+        in_double_quotes = False
+        i = 0
+        while i < len(s):
+            if s[i] == '"':
+                in_double_quotes = not in_double_quotes
+            elif s[i] == "'" and in_double_quotes:
+                if i > 0 and s[i - 1] == "\\":
+                    # If the single quote is already escaped, don't add another backslash
+                    result.append(s[i])
+                else:
+                    result.append("\\" + s[i])
+                i += 1
+                continue
+            result.append(s[i])
+            i += 1
+        return "".join(result)
 
     def render_context(self, context_to_render: dict):
         """
