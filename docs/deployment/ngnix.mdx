@@ -1,0 +1,141 @@
+---
+title: "Deploying Keep with Nginx"
+sidebarTitle: "Nginx"
+---
+
+## Overview
+
+Nginx is a popular web server that can be used as a reverse proxy for Keep. This guide will walk you through the process of deploying Keep behind an Nginx reverse proxy.
+
+## Prerequisites
+
+- Keep installed and running (refer to the [Docker](/deployment/docker) or [Kubernetes](/deployment/kubernetes) deployment guides)
+- Nginx installed on your server
+- SSL certificate (recommended for production deployments)
+
+## Step 1: Configure Nginx
+
+Create a new Nginx configuration file for Keep. You can typically place this in  
+`/etc/nginx/sites-available/keep.conf`:
+
+```
+server {
+    listen 80;
+    server_name your_domain.com;
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name your_domain.com;
+    ssl_certificate /path/to/your/certificate.crt;
+    ssl_certificate_key /path/to/your/certificate.key;
+    
+    # SSL configuration (adjust as needed)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    
+    # Frontend proxy
+    location / {
+        proxy_pass http://localhost:3000;  
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API proxy
+    location /api {
+        proxy_pass http://localhost:8080; 
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # WebSocket proxy (if using)
+    location /socket.io {
+        proxy_pass http://localhost:6001;  
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+
+
+## Step 2: Enable the Nginx Configuration
+
+1. Create a symbolic link to enable the site:
+
+
+```
+udo ln -s /etc/nginx/sites-available/keep.conf /etc/nginx/sites-enabled/
+```
+
+2. Test the Nginx configuration:
+ ```
+sudo nginx -t
+```
+
+3. If the test is successful, restart Nginx:
+```
+sudo systemctl restart nginx
+```
+
+## Step 3: Configure Keep
+
+Ensure that your Keep configuration is set to work with the Nginx proxy.   
+Update your Keep environment variables:
+```
+KEEP_API_URL: https://your_domain.com/api
+NEXTAUTH_URL: https://your_domain.com
+```
+
+## Step 4: Firewall Configuration
+
+If you're using a firewall, make sure to allow traffic on ports `80` and `443`:
+
+```
+sudo ufw allow 80
+```
+```
+sudo ufw allow 443
+```
+## Step 5: SSL Certificate (Optional but Recommended)
+
+For production deployments, it's highly recommended to use an SSL certificate.  
+You can obtain a free certificate from Let's Encrypt using Certbot:
+
+1. Install Certbot:
+```
+sudo apt-get update
+```
+```
+sud apt-get install certbot python3-certbot-nginx
+```
+2. Obtain and install a certificate:
+```
+sudo certbot --nginx -d your_domain.com
+```
+
+Follow the prompts to complete the certificate installation and Nginx configuration update.
+
+## Troubleshooting
+
+- If you encounter 502 Bad Gateway errors, ensure that Keep services are running and accessible from Nginx.
+- Check Nginx error logs (`/var/log/nginx/error.log`) for any issues.
+- Verify that the ports in the Nginx configuration match your Keep service ports.
+
+## Conclusion
+
+You have now successfully deployed Keep behind an Nginx reverse proxy. This setup provides a secure and scalable way to expose your Keep instance to the internet. 
+
+For more advanced configurations or performance tuning, refer to the [Nginx documentation](https://nginx.org/en/docs/) and the [Keep configuration guide](/deployment/configuration).
