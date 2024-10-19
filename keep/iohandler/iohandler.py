@@ -75,7 +75,7 @@ class IOHandler:
                 func_start = text.find("(", start)
                 if func_start > -1:  # Opening '(' found after "keep."
                     i = func_start + 1  # Move i to the character after '('
-                    paren_count = 1
+                    parent_count = 1
                     in_string = False
                     escape_next = False
                     quote_char = ""
@@ -97,10 +97,10 @@ class IOHandler:
                                     i
                                 ]  # Save the quote character where we need to escape for valid ast parsing
                         elif text[i] == "(" and not in_string:
-                            paren_count += 1
+                            parent_count += 1
                         elif text[i] == ")" and not in_string:
-                            paren_count -= 1
-                            if paren_count == 0:
+                            parent_count -= 1
+                            if parent_count == 0:
                                 matches.append((text[start : i + 1], escapes))
                                 break
 
