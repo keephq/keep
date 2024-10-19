@@ -1,38 +1,57 @@
+# Base image with essential Python settings
 FROM python:3.11.6-slim as base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
     PYTHONUNBUFFERED=1
 
+# Create a non-root user
 RUN useradd --user-group --system --create-home --no-log-init keep
 WORKDIR /app
 
+# Builder stage for installing dependencies
 FROM base as builder
 
+# Set environment variables for pip and Poetry
 ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     POETRY_VERSION=1.3.2
 
+# Install Poetry and create a virtual environment
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
+
+# Copy necessary files and install dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes && /venv/bin/python -m pip install --upgrade -r requirements.txt
 COPY keep keep
 COPY ee keep/ee
 COPY examples examples
 COPY README.md README.md
+
+# Build the package and install it
 RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 
+# Final stage to create the runtime image
 FROM base as final
+
+# Set environment variables for the virtual environment
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 ENV EE_PATH="ee"
+
+# Copy the virtual environment and examples from the builder
 COPY --from=builder /venv /venv
 COPY --from=builder /app/examples /examples
-# as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
+
+# Set permissions according to OpenShift guidelines
 RUN chgrp -R 0 /app && chmod -R g=u /app
 RUN chown -R keep:keep /app
 RUN chown -R keep:keep /venv
+
+# Switch to non-root user for running the application
 USER keep
-ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
+
+# Start the application with gunicorn using Uvicorn worker
+ENTRYPOINT ["gunicorn", "keep.api.api:get_app", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
