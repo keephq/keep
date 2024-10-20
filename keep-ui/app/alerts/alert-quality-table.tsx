@@ -15,10 +15,12 @@ import { TabGroup, TabList, Tab } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useSearchParams } from "next/navigation";
 import { AlertKnownKeys } from "./models";
+import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
 
 const tabs = [
   { name: "All", value: "all" },
   { name: "Installed", value: "installed" },
+  { name: "Linked", value: "linked" },
 ];
 
 const ALERT_QUALITY_FILTERS = [
@@ -64,8 +66,8 @@ interface AlertMetricQuality {
   [key: string]: number;
 }
 
-type FinalAlertQuality = (Provider &
-  AlertMetricQuality & { provider_display_name: string })[];
+type FinalAlertQuality = Provider &
+  AlertMetricQuality & { provider_display_name: string };
 interface Pagination {
   limit: number;
   offset: number;
@@ -101,19 +103,24 @@ const QualityTable = ({
   };
   const searchParams = useSearchParams();
   const entries = searchParams ? Array.from(searchParams.entries()) : [];
-  const params = entries.reduce((acc, [key, value]) => {
-    if (key in acc) {
-      if (Array.isArray(acc[key])) {
-        acc[key] = [...acc[key], value];
+  const columnHelper = createColumnHelper<FinalAlertQuality>();
+
+  const params = entries.reduce(
+    (acc, [key, value]) => {
+      if (key in acc) {
+        if (Array.isArray(acc[key])) {
+          acc[key] = [...acc[key], value];
+          return acc;
+        } else {
+          acc[key] = [acc[key] as string, value];
+        }
         return acc;
-      } else {
-        acc[key] = [acc[key] as string, value];
       }
+      acc[key] = value;
       return acc;
-    }
-    acc[key] = value;
-    return acc;
-  }, {} as Record<string, string | string[]>);
+    },
+    {} as Record<string, string | string[]>
+  );
   function toArray(value: string | string[]) {
     if (!value) {
       return [];
@@ -128,7 +135,7 @@ const QualityTable = ({
   const fields = toArray(
     params?.["fields"] || (fieldsValue as string | string[]) || []
   ) as string[];
-  const [tab, setTab] = useState(1);
+  const [tab, setTab] = useState(0);
 
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setPagination({ limit: newLimit, offset: newOffset });
@@ -141,33 +148,53 @@ const QualityTable = ({
   // Construct columns based on the fields selected
   const columns = useMemo(() => {
     const baseColumns = [
-      {
+      columnHelper.display({
+        id: "provider_display_name",
         header: "Provider Name",
-        accessorKey: "provider_display_name",
-      },
-      {
+        cell: ({ row }) => {
+          const displayName = row.original.provider_display_name;
+          return (
+            <div className="flex flex-col gap-2">
+              <div>{displayName}</div>
+              <div>id: {row.original.id}</div>
+              <div>type: {row.original.type}</div>
+            </div>
+          );
+        },
+      }),
+      columnHelper.accessor("alertsReceived", {
+        id: "alertsReceived",
         header: "Alerts Received",
-        accessorKey: "alertsReceived",
-      },
-      {
+      }),
+      columnHelper.display({
+        id: "alertsCorrelatedToIncidentsPercentage",
         header: "% of Alerts Correlated to Incidents",
-        accessorKey: "alertsCorrelatedToIncidentsPercentage",
-        cell: (info: any) => `${info.getValue().toFixed(2)}%`,
-      },
-    ];
+        cell: ({ row }) => {
+          return `${row.original.alertsCorrelatedToIncidentsPercentage.toFixed(2)}%`;
+        },
+      }),
+    ] as DisplayColumnDef<FinalAlertQuality>[];
 
     // Add dynamic columns based on the fields
-    const dynamicColumns = fields.map((field: string) => ({
-      header: `% of Alerts Having ${
-        field.charAt(0).toUpperCase() + field.slice(1)
-      }`,
-      accessorKey: `alertsWith${
-        field.charAt(0).toUpperCase() + field.slice(1)
-      }Percentage`,
-      cell: (info: any) => `${info.getValue().toFixed(2)}%`,
-    }));
+    const dynamicColumns = fields.map((field: string) =>
+      columnHelper.accessor(
+        `alertsWith${field.charAt(0).toUpperCase() + field.slice(1)}Percentage`,
+        {
+          id: `alertsWith${
+            field.charAt(0).toUpperCase() + field.slice(1)
+          }Percentage`,
+          header: `% of Alerts Having ${
+            field.charAt(0).toUpperCase() + field.slice(1)
+          }`,
+          cell: (info: any) => `${info.getValue().toFixed(2)}%`,
+        }
+      )
+    ) as DisplayColumnDef<FinalAlertQuality>[];
 
-    return [...baseColumns, ...dynamicColumns];
+    return [
+      ...baseColumns,
+      ...dynamicColumns,
+    ] as DisplayColumnDef<FinalAlertQuality>[];
   }, [fields]);
 
   // Process data and include dynamic fields
@@ -180,13 +207,22 @@ const QualityTable = ({
 
     switch (tab) {
       case 0:
-        providers = providersMeta?.providers || providers;
+        providers = [
+          ...providersMeta?.installed_providers,
+          ...providersMeta?.linked_providers,
+        ];
         break;
       case 1:
-        providers = providersMeta?.installed_providers || providers;
+        providers = providersMeta?.installed_providers || [];
+        break;
+      case 2:
+        providers = providersMeta?.linked_providers || [];
         break;
       default:
-        providers = providersMeta?.providers || providers;
+        providers = [
+          ...providersMeta?.installed_providers,
+          ...providersMeta?.linked_providers,
+        ];
         break;
     }
 
@@ -194,41 +230,19 @@ const QualityTable = ({
       return null;
     }
 
-    const groupedMetrics: { [key: string]: any } = {};
-
-    if (tab === 0) {
-      // Iterate over each provider in the alertsMetrics object
-      for (const provider in alertsQualityMetrics) {
-        const metrics = alertsQualityMetrics[provider];
-        const providerType = metrics.provider_type;
-
-        // If the provider_type doesn't exist in the result, initialize it
-        if (!groupedMetrics[providerType]) {
-          groupedMetrics[providerType] = {
-            total_alerts: 0,
-            correlated_alerts: 0,
-          };
-        }
-
-        // Aggregate the values for total_alerts, correlated_alerts, etc.
-        groupedMetrics[providerType].total_alerts += metrics.total_alerts;
-        groupedMetrics[providerType].correlated_alerts +=
-          metrics.correlated_alerts;
-
-        fields.forEach((field) => {
-          const key = `${field}_count`;
-          groupedMetrics[providerType][key] =
-            groupedMetrics[providerType][key] || 0;
-          groupedMetrics[providerType][key] += metrics[key];
-        });
-      }
+    function getProviderDisplayName(provider: Provider) {
+      return (
+        (provider?.details?.name
+          ? `${provider.details.name} (${provider.display_name})`
+          : provider.display_name) || provider.type
+      );
     }
 
-    const innerData: FinalAlertQuality = providers.map((provider) => {
+    const innerData: FinalAlertQuality[] = providers.map((provider) => {
       const providerId = provider.id;
       const providerType = provider.type;
-      const key =`${providerId}_${providerType}`;
-      const alertQuality = tab ===0 ? groupedMetrics[providerType] :  alertsQualityMetrics[key];
+      const key = `${providerId}_${providerType}`;
+      const alertQuality = alertsQualityMetrics[key];
       const totalAlertsReceived = alertQuality?.total_alerts ?? 0;
       const correlated_alerts = alertQuality?.correlated_alerts ?? 0;
       const correltedPert =
@@ -240,17 +254,20 @@ const QualityTable = ({
         : 0;
 
       // Calculate percentages for dynamic fields
-      const dynamicFieldPercentages = fields.reduce((acc, field: string) => {
-        acc[
-          `alertsWith${
-            field.charAt(0).toUpperCase() + field.slice(1)
-          }Percentage`
-        ] = totalAlertsReceived
-          ? ((alertQuality?.[`${field}_count`] ?? 0) / totalAlertsReceived) *
-            100
-          : 0;
-        return acc;
-      }, {} as Record<string, number>);
+      const dynamicFieldPercentages = fields.reduce(
+        (acc, field: string) => {
+          acc[
+            `alertsWith${
+              field.charAt(0).toUpperCase() + field.slice(1)
+            }Percentage`
+          ] = totalAlertsReceived
+            ? ((alertQuality?.[`${field}_count`] ?? 0) / totalAlertsReceived) *
+              100
+            : 0;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
 
       return {
         ...provider,
@@ -258,9 +275,8 @@ const QualityTable = ({
         alertsCorrelatedToIncidentsPercentage: correltedPert,
         alertsWithSeverityPercentage: severityPert,
         ...dynamicFieldPercentages, // Add dynamic field percentages here
-        provider_display_name:
-          provider?.details?.name ? `${provider.details.name} (${provider.display_name})` : provider.display_name || "",
-      } as FinalAlertQuality[number];
+        provider_display_name: getProviderDisplayName(provider),
+      } as FinalAlertQuality;
     });
 
     return innerData;
@@ -276,9 +292,10 @@ const QualityTable = ({
             Alert Quality Dashboard
           </h1>
         )}
-        <div className="flex justify-end items-end mb-4">
-          {/* if we want to use tabs. we can enable it */}
-          {/* <FilterTabs tabs={tabs} setTab={setTab} tab={tab} /> */}
+        <div className="flex items-end mb-4">
+          <div className="flex-1">
+            <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
+          </div>
           <GenericFilters
             filters={
               isDashBoard
@@ -289,7 +306,7 @@ const QualityTable = ({
         </div>
       </div>
       {finalData && (
-        <GenericTable
+        <GenericTable<FinalAlertQuality>
           data={finalData}
           columns={columns}
           rowCount={finalData?.length}
@@ -314,7 +331,6 @@ const AlertQuality = ({ isDashBoard }: { isDashBoard?: boolean }) => {
   const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(
     isDashBoard ? (fieldsValue as string) : ""
   );
-
   return (
     <QualityTable
       providersMeta={providersMeta}
