@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Tuple, Union, Callable
 from uuid import uuid4
+from pydantic import ValidationError
 
 import numpy as np
 import validators
@@ -44,6 +45,7 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.runbook import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
@@ -3689,3 +3691,186 @@ def is_edge_incident_alert_resolved(incident: Incident, direction: Callable, ses
             enriched_status == AlertStatus.RESOLVED.value or
             (enriched_status is None and status == AlertStatus.RESOLVED.value)
         )
+
+def get_runbooks_data_for_incident(
+    runbook_ids: list[str | UUID], session: Optional[Session] = None
+) -> dict:
+    """
+    Function to prepare aggregated data for incidents from the given list of runbook_ids
+    Logic is wrapped to the inner function for better usability with an optional database session
+
+    Args:
+        runbook_ids (list[str | UUID]): list of runbook ids for aggregation
+        session (Optional[Session]): The database session or None
+
+    Returns: dict {sources: list[str], services: list[str], count: int}
+    """
+
+    with existed_or_new_session(session) as session:
+
+        runbooks_data = session.exec(
+            select(Runbook.provider_type).where(
+                col(Runbook.id).in_(runbook_ids),
+            )
+        ).all()
+
+        sources = []
+        services = []
+
+        for provider_type in runbooks_data:
+            if provider_type:
+                sources.append(provider_type)
+        
+        return {
+            "sources": set(sources),
+            "services": set(services),
+            "max_severity": None,
+            "count": len(runbooks_data),
+        }
+
+def add_runbooks_to_incident(
+    tenant_id: str,
+    incident: Incident,
+    runbook_ids: List[UUID],
+    session: Optional[Session] = None,
+) -> Optional[Incident]:
+    logger.info(
+        f"Adding runbooks to incident {incident.id} in database, total {len(runbook_ids)} runbooks",
+        extra={"tags": {"tenant_id": tenant_id, "incident_id": incident.id}},
+    )
+
+    with existed_or_new_session(session) as session:
+        with session.no_autoflush:
+            # Use a set for faster membership checks
+            existing_runbook_ids = set(
+                session.exec(
+                    select(RunbookToIncident.runbook_id).where(
+                        RunbookToIncident.tenant_id == tenant_id,
+                        RunbookToIncident.incident_id == incident.id,
+                        col(RunbookToIncident.runbook_id).in_(runbook_ids),
+                    )
+                ).all()
+            )
+
+            new_runbook_ids = [
+                runbook_id for runbook_id in runbook_ids if runbook_id not in existing_runbook_ids
+            ]
+
+            if not new_runbook_ids or not len(new_runbook_ids)== 0:
+                return incident
+
+            runbooks_data_for_incident = get_runbooks_data_for_incident(new_runbook_ids, session)
+
+            incident.sources = list(
+                set(incident.sources) | set(runbooks_data_for_incident["sources"])
+            )
+            incident.affected_services = list(
+                set(incident.affected_services) | set(runbooks_data_for_incident["services"])
+            )
+            incident.runbooks_count += runbooks_data_for_incident["count"]
+
+            runbook_to_incident_entries = [
+                RunbookToIncident(
+                    runbook_id=runbook_id, incident_id=incident.id, tenant_id=tenant_id
+                )
+                for runbook_id in new_runbook_ids
+            ]
+
+            for idx, entry in enumerate(runbook_to_incident_entries):
+                session.add(entry)
+                if (idx + 1) % 100 == 0:
+                    logger.info(
+                        f"Added {idx + 1}/{len(runbook_to_incident_entries)} runbooks to incident {incident.id} in database",
+                        extra={
+                            "tags": {"tenant_id": tenant_id, "incident_id": incident.id}
+                        },
+                    )
+                    session.flush()
+            session.commit()
+
+            started_at, last_seen_at = session.exec(
+                select(func.min(Runbook.timestamp), func.max(Runbook.timestamp))
+                .join(RunbookToIncident, RunbookToIncident.runbook_id == Runbook.id)
+                .where(
+                    RunbookToIncident.tenant_id == tenant_id,
+                    RunbookToIncident.incident_id == incident.id,
+                )
+            ).one()
+
+            max_severity = runbooks_data_for_incident["max_severity"].order if runbooks_data_for_incident["max_severity"] else 2
+            incident.start_time = started_at
+            incident.last_seen_time = last_seen_at
+            incident.severity = max_severity
+
+            session.add(incident)
+            session.commit()
+            session.refresh(incident)
+            logger.info(
+                f"Added runbooks to incident {incident.id} in database {incident}",
+            )
+            return incident
+
+
+def add_runbooks_to_incident_by_incident_id(
+    tenant_id: str,
+    incident_id: str | UUID,
+    runbook_ids: List[UUID],
+    session: Optional[Session] = None,
+) -> Optional[Incident]:
+    with existed_or_new_session(session) as session:
+        query = select(Incident).where(
+            Incident.tenant_id == tenant_id,
+            Incident.id == incident_id,
+        )
+        incident = session.exec(query).first()
+
+        if not incident:
+            return None
+        return add_runbooks_to_incident(tenant_id, incident, runbook_ids, session)
+    
+def create_runbook_in_db(session: Session, tenant_id: str, runbook_dto: dict):
+        try:
+            new_runbook = Runbook(
+                tenant_id=tenant_id,
+                title=runbook_dto["title"],
+                repo_id=runbook_dto["repo_id"],
+                relative_path=runbook_dto["relative_path"],
+                provider_type=runbook_dto["provider_type"],
+                provider_id=runbook_dto["provider_id"]
+            )
+
+            session.add(new_runbook)
+            session.flush()
+            contents = runbook_dto["contents"] if runbook_dto["contents"] else []
+
+            new_contents = [
+                RunbookContent(
+                    runbook_id=new_runbook.id,
+                    content=content["content"],
+                    link=content["link"],
+                    encoding=content["encoding"],
+                    file_name=content["file_name"]
+                )
+                for content in contents
+            ]
+
+            session.add_all(new_contents)
+            session.commit()
+            session.expire(new_runbook, ["contents"])
+            session.refresh(new_runbook)  # Refresh the runbook instance
+            result = RunbookDtoOut.from_orm(new_runbook)
+            return result
+        except ValidationError as e:
+            logger.exception(f"Failed to create runbook {e}")            
+            
+def get_all_runbooks_from_db(session: Session, tenant_id: str, limit=25, offset=0) -> dict:
+        query = session.query(Runbook).filter(
+            Runbook.tenant_id == tenant_id,
+        )
+
+        total_count = query.count()
+        runbooks = query.options(selectinload(Runbook.contents)).limit(limit).offset(offset).all()
+        result = [RunbookDtoOut.from_orm(runbook) for runbook in runbooks]
+
+        return {"total_count": total_count, "runbooks": result}            
+            
