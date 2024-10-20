@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Image from "next/image";
 import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "./models";
 import { Button, Title, Card, Badge } from "@tremor/react";
@@ -83,10 +84,11 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                       <strong>Severity:</strong> {alert.severity}
                     </p>
                     <p>
-                      <strong>Source:</strong>{" "}
-                      <img
+                      <Image
                         src={`/icons/${alert.source![0]}-icon.png`}
                         alt={alert.source![0]}
+                        width={24}
+                        height={24}
                         className="inline-block w-6 h-6"
                       />
                     </p>

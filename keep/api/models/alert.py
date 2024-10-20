@@ -331,6 +331,17 @@ class AlertDto(BaseModel):
         }
 
 
+class AlertWithIncidentLinkMetadataDto(AlertDto):
+    is_created_by_ai: bool = False
+
+    @classmethod
+    def from_db_instance(cls, db_alert, db_alert_to_incident):
+        return cls(
+            is_created_by_ai=db_alert_to_incident.is_created_by_ai,
+            **db_alert.event,
+        )
+
+
 class DeleteRequestBody(BaseModel):
     fingerprint: str
     lastReceived: str

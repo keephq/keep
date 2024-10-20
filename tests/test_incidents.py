@@ -13,6 +13,7 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
+    get_incident_alerts_by_incident_id
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -52,6 +53,8 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
+    assert len(incident.alerts) == 100
+
     assert sorted(incident.affected_services) == sorted(
         ["service_{}".format(i) for i in range(10)]
     )
@@ -83,6 +86,13 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     remove_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident.id, [a.id for a in service_0]
     )
+
+    # Removing shouldn't impact links between alert and incident if include_unlinked=True
+    assert len(get_incident_alerts_by_incident_id(
+        incident_id=incident.id,
+        tenant_id=incident.tenant_id,
+        include_unlinked=True
+    )[0]) == 100
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
@@ -362,3 +372,56 @@ def test_incident_metadata(db_session, client, test_app, setup_stress_alerts_no_
     assert data["services"] == ["keep", "keep-test", "keep-test-2"]
     assert "sources" in data
     assert data["sources"] == ["keep", "keep-test", "keep-test-2"]
+
+
+def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
+    create_alert(
+        "fp1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        f"fp1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        f"fp2",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+
+    db_alerts = db_session.query(Alert).all()
+
+    fp1_alerts = [alert for alert in db_alerts if alert.fingerprint == "fp1"]
+    fp2_alerts = [alert for alert in db_alerts if alert.fingerprint == "fp2"]
+
+    assert len(db_alerts) == 3
+    assert len(fp1_alerts) == 2
+    assert len(fp2_alerts) == 1
+
+    incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+    )
+
+    assert len(incident.alerts) == 0
+
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].id]
+    )
+
+    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
+
+    assert len(incident.alerts) == 2
+
+    remove_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].id]
+    )
+
+    incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
+
+    assert len(incident.alerts) == 0
+
