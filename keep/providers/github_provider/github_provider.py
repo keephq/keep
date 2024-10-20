@@ -123,9 +123,9 @@ class GithubStarsProvider(GithubProvider):
 
         # Save last stargazer name so we can use it next iteration
         last_stargazer = (
-            stargazers_with_dates[-1].user.login
-            if len(stargazers_with_dates) > 1
-            else ""
+            new_stargazers[-1]["username"]
+            if len(new_stargazers) >= 1
+            else last_stargazer
         )
 
         return {
