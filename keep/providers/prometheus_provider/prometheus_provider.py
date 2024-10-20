@@ -18,7 +18,7 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class PrometheusProviderAuthConfig:
-    url: str = dataclasses.field(
+    url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Prometheus server URL",

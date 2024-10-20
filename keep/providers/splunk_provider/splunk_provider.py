@@ -2,17 +2,18 @@ import dataclasses
 import datetime
 import json
 import logging
+from xml.etree.ElementTree import ParseError
 
 import pydantic
-from splunklib.client import connect
 from splunklib.binding import AuthenticationError, HTTPError
-from xml.etree.ElementTree import ParseError
+from splunklib.client import connect
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -31,9 +32,10 @@ class SplunkProviderAuthConfig:
         },
         default="localhost",
     )
-    port: int = dataclasses.field(
+    port: UrlPort = dataclasses.field(
         metadata={
             "description": "Splunk Port (default is 8089)",
+            "validation": "port"
         },
         default=8089,
     )
@@ -75,8 +77,8 @@ class SplunkProvider(BaseProvider):
 
     def __debug_fetch_users_response(self):
         try:
-            from splunklib.client import PATH_USERS
             import requests
+            from splunklib.client import PATH_USERS
 
             response = requests.get(
                 f"https://{self.authentication_config.host}:{self.authentication_config.port}/services/{PATH_USERS}",

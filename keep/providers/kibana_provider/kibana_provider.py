@@ -12,13 +12,14 @@ from urllib.parse import urlparse
 import pydantic
 import requests
 from fastapi import HTTPException
-from pydantic import AnyHttpUrl, conint
+from pydantic import AnyHttpUrl
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -40,7 +41,7 @@ class KibanaProviderAuthConfig:
             "validation": "any_http_url"
         }
     )
-    kibana_port: conint(ge=1, le=65_535) = dataclasses.field(
+    kibana_port: UrlPort = dataclasses.field(
         metadata={
             "required": False,
             "description": "Kibana Port (defaults to 9243)",
@@ -441,9 +442,6 @@ class KibanaProvider(BaseProvider):
         self.logger.info("Done setting up webhooks")
 
     def validate_config(self):
-        # In order not to prepend the url scheme while making a request,
-        # we added proper url validation but, we also have to handle previously
-        # installed and provisioned providers to avoid validation errors.
         if self.is_installed or self.is_provisioned:
             host = self.config.authentication['kibana_host']
             host = "https://" + host if not (host.starts_with("http://") or host.starts_with("https://")) else host

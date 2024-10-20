@@ -156,6 +156,7 @@ function getInitialFormValues(provider: Provider) {
 
 function getZodSchema(fields: Provider["config"]) {
   const required_error = "This field is required";
+  const portError = "Invalid port number";
   const emptyStringToNull = z
     .string()
     .transform((val) => (val.length === 0 ? null : val));
@@ -196,7 +197,7 @@ function getZodSchema(fields: Provider["config"]) {
       .string({ required_error })
       .url({ message: "Please provide a valid url, e.g https://example.com" });
     const urlTldSchema = z.string().regex(new RegExp(/\.[a-z]{2,63}$/), {
-      message: "Url must contain a valid TLD e.g .com, .io, .dev, .co.uk",
+      message: "Url must contain a valid TLD e.g .com, .io, .dev, .net",
     });
     const baseAnyHttpSchema = urlSchema.refine(
       (url) => url.startsWith("http://") || url.startsWith("https://"),
@@ -240,25 +241,29 @@ function getZodSchema(fields: Provider["config"]) {
       return [field, tldSchema];
     }
     if (config.validation === "port") {
-      const basePortSchema = z
-        .number({ required_error })
-        .min(1, { message: "Invalid port number" })
-        .max(65_535, { message: "Invalid port number" });
+      const basePortSchema = z.coerce
+        .number({ required_error, invalid_type_error: portError })
+        .min(1, { message: portError })
+        .max(65_535, { message: portError });
       const portSchema = config.required
         ? basePortSchema
-        : basePortSchema.optional();
+        : emptyStringToNull.pipe(basePortSchema.nullish());
       return [field, portSchema];
     }
     return [
       field,
       config.required
-        ? z.string({ required_error }).min(1, { message: required_error })
+        ? z
+            .string({ required_error })
+            .trim()
+            .min(1, { message: required_error })
         : z.string().optional(),
     ];
   });
   return z.object({
     provider_name: z
       .string({ required_error })
+      .trim()
       .min(1, { message: required_error }),
     ...Object.fromEntries(kvPairs),
   });
@@ -416,10 +421,7 @@ const ProviderForm = ({
     return false;
   }
 
-  const submit = (
-    requestUrl: string,
-    method: string = "POST"
-  ): Promise<any> => {
+  async function submit(requestUrl: string, method: string = "POST") {
     let headers = {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
@@ -447,85 +449,65 @@ const ProviderForm = ({
       method: method,
       headers: headers,
       body: body,
-    })
-      .then((response) => {
-        const response_json = response.json();
-        if (!response.ok) {
-          // If the response is not okay, throw the error message
-          return response_json.then((errorData) => {
-            if (response.status === 400) {
-              if ("detail" in errorData) throw `${errorData.detail}`;
-              if ("message" in errorData) throw `${errorData.messsage}`;
-              throw `${errorData}`;
-            }
-            if (response.status === 409) {
-              throw `Provider with name ${formValues.provider_name} already exists`;
-            }
-            const errorDetail = errorData.detail;
-            if (response.status === 412) {
-              setProviderValidatedScopes(errorDetail);
-            }
-            throw `${provider.type} scopes are invalid: ${JSON.stringify(
-              errorDetail,
-              null,
-              4
-            )}`;
-          });
-        }
-        return response_json;
-      })
-      .then((data) => {
-        setFormErrors("");
-        return data;
-      });
-  };
+    });
+  }
 
-  const handleUpdateClick = (e: any) => {
+  async function handleSubmitError(response: Response) {
+    const status = response.status;
+    const data = await response.json();
+    const error =
+      "detail" in data ? data.detail : "message" in data ? data.message : data;
+    if (status === 400) setFormErrors(error);
+    if (response.status === 409)
+      setFormErrors(
+        `Provider with name ${formValues.provider_name} already exists`
+      );
+    if (response.status === 412) setProviderValidatedScopes(error);
+  }
+
+  async function handleUpdateClick() {
     if (provider.webhook_required) callInstallWebhook();
-    e.preventDefault();
-    if (validate()) {
-      setIsLoading(true);
-      submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
-        .then((data) => {
-          setIsLoading(false);
-          mutate();
-        })
-        .catch((error) => {
-          const updatedFormErrors = error.toString();
-          setFormErrors(updatedFormErrors);
-          setIsLoading(false);
-        });
+    if (!validate()) return;
+    setIsLoading(true);
+    const response = await submit(
+      `${getApiURL()}/providers/${provider.id}`,
+      "PUT"
+    );
+    if (response.ok) {
+      setIsLoading(false);
+      mutate();
+    } else {
+      handleSubmitError(response);
+      setIsLoading(false);
     }
-  };
+  }
 
-  const handleConnectClick = async () => {
-    if (validate()) {
-      setIsLoading(true);
-      onConnectChange?.(true, false);
-      submit(`${getApiURL()}/providers/install`)
-        .then(async (data) => {
-          console.log("Connect Result:", data);
-          setIsLoading(false);
-          onConnectChange?.(false, true);
-          if (
-            formValues.install_webhook &&
-            provider.can_setup_webhook &&
-            accessToken &&
-            !isLocalhost
-          ) {
-            // mutate after webhook installation
-            await installWebhook(data as Provider, accessToken);
-          }
-          mutate();
-        })
-        .catch((error) => {
-          const updatedFormErrors = error.toString();
-          setFormErrors(updatedFormErrors);
-          setIsLoading(false);
-          onConnectChange?.(false, false);
-        });
+  async function handleConnectClick() {
+    if (!validate()) return;
+    setIsLoading(true);
+    onConnectChange?.(true, false);
+    const response = await submit(`${getApiURL()}/providers/install`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Connect Result:", data);
+      setIsLoading(false);
+      onConnectChange?.(false, true);
+      if (
+        formValues.install_webhook &&
+        provider.can_setup_webhook &&
+        accessToken &&
+        !isLocalhost
+      ) {
+        // mutate after webhook installation
+        await installWebhook(data as Provider, accessToken);
+      }
+      mutate();
+    } else {
+      handleSubmitError(response);
+      setIsLoading(false);
+      onConnectChange?.(false, false);
     }
-  };
+  }
 
   const installOrUpdateWebhookEnabled = provider.scopes
     ?.filter((scope) => scope.mandatory_for_webhook)

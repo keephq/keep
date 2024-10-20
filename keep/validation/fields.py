@@ -1,4 +1,4 @@
-from pydantic import HttpUrl
+from pydantic import HttpUrl, conint
 
 
 class HttpsUrl(HttpUrl):
@@ -8,3 +8,4 @@ class HttpsUrl(HttpUrl):
     def get_default_parts(parts):
         return {'port': '443'}
 
+UrlPort = conint(ge=1, le=65_535)
