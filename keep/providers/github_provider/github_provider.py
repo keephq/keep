@@ -99,7 +99,12 @@ class GithubStarsProvider(GithubProvider):
                 ),
                 -1,
             )
-            stargazers_with_dates = stargazers_with_dates[last_stargazer_index:]
+            if last_stargazer_index == -1:
+                stargazers_with_dates = []
+            else:
+                stargazers_with_dates = stargazers_with_dates[
+                    last_stargazer_index + 1 :
+                ]
         # If we dont, use the previous stars count as an index
         elif previous_stars_count and int(previous_stars_count) > 0:
             stargazers_with_dates = list(repo.get_stargazers_with_dates())[
