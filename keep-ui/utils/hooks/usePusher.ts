@@ -21,8 +21,14 @@ export const useWebsocket = () => {
   ) {
     channelName = `private-${session?.tenantId}`;
     PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
-      wsHost: configData.PUSHER_HOST || window.location.hostname,
-      wsPort: configData.PUSHER_PORT
+      wsHost: configData.PUSHER_INGRESS
+        ? window.location.hostname
+        : configData.PUSHER_HOST || window.location.hostname,
+      wsPort: configData.PUSHER_INGRESS
+        ? window.location.protocol === "https:"
+          ? 443
+          : 80
+        : configData.PUSHER_PORT
         ? configData.PUSHER_PORT
         : window.location.protocol === "https:"
         ? 443
@@ -31,7 +37,6 @@ export const useWebsocket = () => {
       disableStats: true,
       enabledTransports: ["ws", "wss"],
       cluster: configData.PUSHER_CLUSTER || "local",
-      ...(configData.PUSHER_PREFIX && { wsPath: configData.PUSHER_PREFIX }),
       channelAuthorization: {
         transport: "ajax",
         endpoint: `${apiUrl}/pusher/auth`,

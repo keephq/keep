@@ -5,7 +5,7 @@ export interface InternalConfig {
   PUSHER_PORT?: number;
   PUSHER_APP_KEY: string;
   PUSHER_CLUSTER?: string;
-  PUSHER_PREFIX?: string; // e.g. /websocket for kubernetes/helmchart
+  PUSHER_INGRESS: boolean; // e.g. for kubernetes/helmchart where the websocket endpoint is through the ingress
   POSTHOG_KEY: string;
   POSTHOG_HOST: string;
   POSTHOG_DISABLED: string;

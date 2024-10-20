@@ -28,7 +28,7 @@ export default async function handler(
     PUSHER_PORT: process.env.PUSHER_HOST
       ? parseInt(process.env.PUSHER_PORT!)
       : undefined,
-    PUSHER_PREFIX: process.env.PUSHER_PREFIX,
+    PUSHER_INGRESS: process.env.PUSHER_INGRESS === "true",
     PUSHER_APP_KEY: process.env.PUSHER_APP_KEY,
     PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
     API_URL: process.env.API_URL,
