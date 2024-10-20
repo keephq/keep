@@ -99,7 +99,6 @@ class GithubStarsProvider(GithubProvider):
                 ),
                 -1,
             )
-
             if last_stargazer_index == -1:
                 stargazers_with_dates = []
             else:
