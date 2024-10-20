@@ -3,7 +3,7 @@ import { IncidentDto } from "../models";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import React, { useState } from "react";
-import { MdBlock, MdDone, MdModeEdit } from "react-icons/md";
+import {MdBlock, MdDone, MdModeEdit, MdPlayArrow} from "react-icons/md";
 import { useIncident, useIncidentFutureIncidents } from "@/utils/hooks/useIncidents";
 
 import {
@@ -20,6 +20,10 @@ import { IoChevronDown } from "react-icons/io5";
 import IncidentChangeStatusModal from "@/app/incidents/incident-change-status-modal";
 import ChangeSameIncidentInThePast from "@/app/incidents/incident-change-same-in-the-past";
 import {STATUS_ICONS} from "@/app/incidents/statuses";
+import remarkRehype from "remark-rehype";
+import rehypeRaw from "rehype-raw";
+import Markdown from "react-markdown";
+import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 
 interface Props {
   incident: IncidentDto;
@@ -45,6 +49,14 @@ function Summary({
   collapsable?: boolean;
   className?: string;
 }) {
+
+  const formatedSummary = <Markdown
+      remarkPlugins={[remarkRehype]}
+      rehypePlugins={[rehypeRaw]}
+    >
+      {summary}
+    </Markdown>
+
   if (collapsable) {
     return (
       <Disclosure as="div" className={classNames("space-y-1", className)}>
@@ -60,7 +72,7 @@ function Summary({
         </Disclosure.Button>
 
         <Disclosure.Panel as="div" className="space-y-2 relative">
-          {summary}
+          {formatedSummary}
         </Disclosure.Panel>
       </Disclosure>
     );
@@ -70,7 +82,7 @@ function Summary({
     <div className={className}>
       <h3 className="text-gray-500 text-sm">{title}</h3>
       {/*TODO: suggest generate summary if it's empty*/}
-      {summary ? <p>{summary}</p> : <p>No summary yet</p>}
+      {summary ? <p>{formatedSummary}</p> : <p>No summary yet</p>}
     </div>
   );
 }
@@ -80,6 +92,9 @@ export default function IncidentInformation({ incident }: Props) {
   const { data: session } = useSession();
   const { mutate } = useIncident(incident.id);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+
+  const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
+    useState<IncidentDto | null>();
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -91,6 +106,10 @@ export default function IncidentInformation({ incident }: Props) {
 
   const handleFinishEdit = () => {
     setIsFormOpen(false);
+    mutate();
+  };
+  const handleRunWorkflow = () => {
+    setRunWorkflowModalIncident(incident);
     mutate();
   };
 
@@ -130,12 +149,26 @@ export default function IncidentInformation({ incident }: Props) {
           <Title className="flex-grow items-center">
             {incident.is_confirmed ? "⚔️ " : "Possible "}Incident
           </Title>
+          <Button
+              color="orange"
+              size="xs"
+              variant="secondary"
+              icon={MdPlayArrow}
+              tooltip="Run Workflow"
+              onClick={(e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleRunWorkflow();
+              }}
+            />
           {incident.is_confirmed && (
+
             <Button
               color="orange"
               size="xs"
               variant="secondary"
               icon={MdModeEdit}
+              tooltip="Edit Incident"
               onClick={(e: React.MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -300,6 +333,10 @@ export default function IncidentInformation({ incident }: Props) {
         incident={changeStatusIncident}
         mutate={mutate}
         handleClose={() => setChangeStatusIncident(null)}
+      />
+      <ManualRunWorkflowModal
+        incident={runWorkflowModalIncident}
+        handleClose={() => setRunWorkflowModalIncident(null)}
       />
     </div>
   );

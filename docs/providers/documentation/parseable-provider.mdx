@@ -1,0 +1,46 @@
+---
+title: "Parseable"
+sidebarTitle: "Parseable Provider"
+description: "Parseable provider allows integration with Parseable, a tool for collecting and querying logs."
+---
+
+## Inputs
+
+- log_message: str: The log message to send to Parseable
+- log_level: str (optional): The log level (e.g., `info`, `error`, `warning`)
+
+## Outputs
+
+_No information yet, feel free to contribute it using the "Edit this page" link at the bottom of the page._
+
+## Authentication Parameters
+
+- `api_key`: API key for authenticating with Parseable.
+- `parseable_url`: The URL of the Parseable instance where logs will be sent.
+
+## Connecting with the Provider
+
+1. Obtain an API key from your Parseable instance.
+2. Configure your provider using the `api_key` and `parseable_url`.
+
+## Example of usage
+
+```yaml
+workflow:
+  id: parseable-example
+  description: Parseable example
+  triggers:
+    - type: manual
+  actions:
+    - name: parseable
+      provider:
+        type: parseable
+        config: "{{ providers.parseabletest }}"
+        with:
+          log_message: "This is a test log message"
+          log_level: "info"
+
+
+
+## Usefull Links
+-[Parseable API Documentation](https://www.parseable.com/docs/api)

@@ -15,6 +15,7 @@ class ContextManager:
             self.logger, self, tenant_id, workflow_id, workflow_execution_id
         )
         self.workflow_id = workflow_id
+        self.workflow_execution_id = workflow_execution_id
         self.tenant_id = tenant_id
         self.steps_context = {}
         self.steps_context_size = 0
@@ -53,6 +54,7 @@ class ContextManager:
         self.dependencies = set()
         self.workflow_execution_id = None
         self._api_key = None
+        self.__loggers = {}
 
     @property
     def api_key(self):
@@ -73,9 +75,26 @@ class ContextManager:
     def set_execution_context(self, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id
         self.logger_adapter.workflow_execution_id = workflow_execution_id
+        for logger in self.__loggers.values():
+            logger.workflow_execution_id = workflow_execution_id
 
-    def get_logger(self):
-        return self.logger_adapter
+    def get_logger(self, name=None):
+        if not name:
+            return self.logger_adapter
+
+        if name in self.__loggers:
+            return self.__loggers[name]
+
+        logger = logging.getLogger(name)
+        logger_adapter = WorkflowLoggerAdapter(
+            logger,
+            self,
+            self.tenant_id,
+            self.workflow_id,
+            self.workflow_execution_id,
+        )
+        self.__loggers[name] = logger_adapter
+        return logger_adapter
 
     def set_event_context(self, event):
         self.event_context = event
