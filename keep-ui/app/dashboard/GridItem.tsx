@@ -1,19 +1,51 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
 import { WidgetData } from "./types";
 import AlertQuality from "@/app/alerts/alert-quality-table";
 import { useSearchParams } from "next/navigation";
-import { format, parseISO } from "date-fns";
 
 interface GridItemProps {
   item: WidgetData;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, updateData?: WidgetData) => void;
   onDelete: (id: string) => void;
+  onSave: (updateItem: WidgetData) => void;
 }
 
-const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
+function GenericMetrics({
+  item,
+  filters,
+  setFilters,
+}: {
+  item: WidgetData;
+  filters: any;
+  setFilters: any;
+}) {
+  switch (item?.genericMetrics?.key) {
+    case "alert_quality":
+      return (
+        <AlertQuality
+          isDashBoard={true}
+          filters={filters}
+          setFilters={setFilters}
+        />
+      );
+
+    default:
+      return null;
+  }
+}
+
+const GridItem: React.FC<GridItemProps> = ({
+  item,
+  onEdit,
+  onDelete,
+  onSave,
+}) => {
   const searchParams = useSearchParams();
+  const [filters, setFilters] = useState({
+    ...(item?.genericMetrics?.meta?.defaultFilters || {}),
+  });
   let timeStampParams = searchParams?.get("time_stamp") ?? "{}";
   let timeStamp: { start?: string; end?: string } = {};
   try {
@@ -32,15 +64,20 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
     return color;
   };
 
-  function getGenericMterics(item: WidgetData) {
-    switch (item.genericMetrics) {
-      case "alert_quality":
-        return <AlertQuality isDashBoard={true} />;
-
-      default:
-        return null;
+  function getUpdateItem() {
+    let newUpdateItem = item.genericMetrics;
+    if (newUpdateItem && newUpdateItem.meta) {
+      newUpdateItem.meta = {
+        ...newUpdateItem.meta,
+        defaultFilters: filters || {},
+      };
+      return { ...item };
     }
+    return item;
   }
+  const handleEdit = () => {
+    onEdit(item.i, getUpdateItem());
+  };
 
   return (
     <Card className="relative w-full h-full p-4">
@@ -59,8 +96,11 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
             {item.name}
           </span>
           <MenuButton
-            onEdit={() => onEdit(item.i)}
+            onEdit={handleEdit}
             onDelete={() => onDelete(item.i)}
+            onSave={() => {
+              onSave(getUpdateItem());
+            }}
           />
         </div>
         {item.preset && (
@@ -71,7 +111,13 @@ const GridItem: React.FC<GridItemProps> = ({ item, onEdit, onDelete }) => {
             </div>
           </div>
         )}
-        <div className="w-full h-[90%]">{getGenericMterics(item)}</div>
+        <div className="w-full h-[90%]">
+          <GenericMetrics
+            item={item}
+            filters={filters}
+            setFilters={setFilters}
+          />
+        </div>
       </div>
     </Card>
   );

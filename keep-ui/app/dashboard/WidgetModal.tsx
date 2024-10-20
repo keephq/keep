@@ -2,11 +2,9 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput, Select, SelectItem, Icon } from "@tremor/react";
 import { Trashcan } from "components/icons";
-import { Threshold, WidgetData } from "./types";
+import { Threshold, WidgetData, GenericsMertics } from "./types";
 import { Preset } from "app/alerts/models";
 import { useForm, Controller, get } from "react-hook-form";
-import { Dashboard } from '../../utils/hooks/useDashboards';
-import { on } from "events";
 
 interface WidgetForm {
   widgetName: string;
@@ -19,7 +17,13 @@ interface WidgetForm {
 interface WidgetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddWidget: (preset: Preset|null, thresholds: Threshold[], name: string, widgetType?: string, genericMetrics?: string) => void;
+  onAddWidget: (
+    preset: Preset | null,
+    thresholds: Threshold[],
+    name: string,
+    widgetType?: string,
+    genericMetrics?: GenericsMertics | null,
+  ) => void;
   onEditWidget: (updatedWidget: WidgetData) => void;
   presets: Preset[];
   editingItem?: WidgetData | null;
@@ -27,10 +31,14 @@ interface WidgetModalProps {
 
 const GENERIC_METRICS = [
   {
-    'key': 'alert_quality',
-    'name': 'Alert Quality'
-  }
-]
+    key: "alert_quality",
+    label: "Alert Quality",
+    widgetType: "table",
+    meta: {
+      defaultFilters: {"fields":"severity"},
+    },
+  },
+] as GenericsMertics[];
 
 const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget, onEditWidget, presets, editingItem }) => {
   const [thresholds, setThresholds] = useState<Threshold[]>([
@@ -52,17 +60,17 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
 
   useEffect(() => {
     if (editingItem) {
-      setValue('widgetName', editingItem.name);
-      setValue('selectedPreset', editingItem?.preset?.id ?? "");
-      setValue('selectedWidgetType', editingItem?.widgetType ?? "");
-      setValue('selectedGenericMetrics', editingItem?.genericMetrics ?? "");
+      setValue("widgetName", editingItem.name);
+      setValue("selectedPreset", editingItem?.preset?.id ?? "");
+      setValue("selectedWidgetType", editingItem?.widgetType ?? "");
+      setValue("selectedGenericMetrics", editingItem?.genericMetrics?.key ?? "");
       setThresholds(editingItem.thresholds);
     } else {
       reset({
         widgetName: '',
         selectedPreset: '',
         thresholds: thresholds,
-        selectedWidgetType: '',
+        selectedWidgetType: "",
       });
     }
   }, [editingItem, setValue, reset]);
@@ -93,6 +101,17 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
     setThresholds(thresholds.filter((_, i) => i !== index));
   };
 
+  const deepClone = (obj: GenericsMertics|undefined) => {
+    if(!obj){
+      return null;
+    }
+    try{
+    return JSON.parse(JSON.stringify(obj)) as GenericsMertics;
+    }catch(e){
+      return null;
+    }
+  };
+
   const onSubmit = (data: WidgetForm) => {
     const preset = presets.find(p => p.id === data.selectedPreset) ?? null;
     if (preset || data.selectedGenericMetrics) {
@@ -105,14 +124,20 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
         let updatedWidget: WidgetData = {
           ...editingItem,
           name: data.widgetName,
-          widgetType: data.selectedWidgetType || 'preset',//backwards compatibility
+          widgetType: data.selectedWidgetType || "preset", //backwards compatibility
           preset,
           thresholds: formattedThresholds,
-          genericMetrics: data.selectedGenericMetrics || ''
+          genericMetrics: editingItem.genericMetrics || null,
         };
         onEditWidget(updatedWidget);
       } else {
-        onAddWidget(preset, formattedThresholds, data.widgetName, data.selectedWidgetType, data.selectedGenericMetrics);
+        onAddWidget(
+          preset,
+          formattedThresholds,
+          data.widgetName,
+          data.selectedWidgetType,
+          deepClone(GENERIC_METRICS.find((g) => g.key === data.selectedGenericMetrics))
+        );
         // cleanup form
         setThresholds([
           { value: 0, color: '#22c55e' }, // Green
@@ -249,7 +274,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
               >
                 {GENERIC_METRICS.map(metrics => (
                   <SelectItem key={metrics.key} value={metrics.key}>
-                    {metrics.name}
+                    {metrics.label}
                   </SelectItem>
                 ))}
               </Select>

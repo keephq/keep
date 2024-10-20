@@ -14,6 +14,7 @@ interface GridLayoutProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   presets: Preset[];
+  onSave: (updateItem: WidgetData) => void;
 }
 
 const GridLayout: React.FC<GridLayoutProps> = ({
@@ -22,6 +23,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   data,
   onEdit,
   onDelete,
+  onSave,
   presets,
 }) => {
   const layouts = { lg: layout };
@@ -66,6 +68,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
                 item={item}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onSave={onSave}
               />
             </div>
           );        })}
