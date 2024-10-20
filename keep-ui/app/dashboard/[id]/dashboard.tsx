@@ -5,7 +5,7 @@ import GridLayout from '../GridLayout';
 import { usePresets } from "utils/hooks/usePresets";
 import WidgetModal from '../WidgetModal';
 import { Button, Card, TextInput, Subtitle, Icon } from '@tremor/react';
-import { LayoutItem, WidgetData, Threshold } from '../types';
+import { LayoutItem, WidgetData, Threshold, GenericsMertics } from '../types';
 import { Preset } from 'app/alerts/models';
 import { FiSave, FiEdit2 } from 'react-icons/fi';
 import { useSession } from 'next-auth/react';
@@ -54,7 +54,7 @@ const DashboardPage = () => {
   };
   const closeModal = () => setIsModalOpen(false);
 
-  const handleAddWidget = (preset: Preset|null, thresholds: Threshold[], name: string, widgetType?: string, genericMetrics?: string) => {
+  const handleAddWidget = (preset: Preset|null, thresholds: Threshold[], name: string, widgetType?: string, genericMetrics?: GenericsMertics|null) => {
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
@@ -72,16 +72,21 @@ const DashboardPage = () => {
       preset,
       name,
       widgetType: widgetType || 'preset',
-      genericMetrics: genericMetrics || '',
+      genericMetrics: genericMetrics || null,
     };
     setLayout((prevLayout) => [...prevLayout, newItem]);
     setWidgetData((prevData) => [...prevData, newWidget]);
   };
 
-  const handleEditWidget = (id: string) => {
-    const itemToEdit = widgetData.find(d => d.i === id) || null;
-    setEditingItem(itemToEdit);
+  const handleEditWidget = (id: string, update?: WidgetData) => {
+    let itemToEdit = widgetData.find(d => d.i === id) || null;
+    if(itemToEdit && update){
+      setEditingItem({...itemToEdit, ...update});
+    }else {
+      setEditingItem(itemToEdit);
+    }
     setIsModalOpen(true);
+  
   };
 
   const handleSaveEdit = (updatedItem: WidgetData) => {
@@ -204,6 +209,7 @@ const DashboardPage = () => {
             data={widgetData}
             onEdit={handleEditWidget}
             onDelete={handleDeleteWidget}
+            onSave={handleSaveEdit}
             presets={allPresets}
           />
         </Card>

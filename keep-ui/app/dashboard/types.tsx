@@ -10,12 +10,23 @@ export interface LayoutItem {
     static: boolean;
   }
 
+ export interface GenericsMertics {
+    key: string;
+    label: string;
+    widgetType: "table" | "chart";
+    meta: {
+      defaultFilters: {
+        [key: string]: string|string[];
+      },
+    }
+  }
+
   export interface WidgetData extends LayoutItem {
     thresholds: Threshold[];
     preset: Preset | null;
     name: string;
     widgetType?:string;
-    genericMetrics?: string;
+    genericMetrics?: GenericsMertics| null;
   }
 
   export interface Threshold {

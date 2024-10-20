@@ -323,20 +323,36 @@ const QualityTable = ({
   );
 };
 
-const AlertQuality = ({ isDashBoard }: { isDashBoard?: boolean }) => {
-  const [fieldsValue, setFieldsValue] = useState<
-    string | string[] | Record<string, string>
-  >("severity");
+const AlertQuality = ({
+  isDashBoard,
+  filters,
+  setFilters,
+}: {
+  isDashBoard?: boolean;
+  filters: {
+    [x: string]: string | string[];
+  };
+  setFilters: any;
+}) => {
+  const fieldsValue = filters?.fields || "";
   const { data: providersMeta } = useProviders();
   const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(
-    isDashBoard ? (fieldsValue as string) : ""
+    isDashBoard ? (fieldsValue as string | string[]) : ""
   );
+
   return (
     <QualityTable
       providersMeta={providersMeta}
       alertsQualityMetrics={alertsQualityMetrics}
       isDashBoard={isDashBoard}
-      setFields={setFieldsValue}
+      setFields={(field) => {
+        setFilters((filters: any) => {
+          return {
+            ...filters,
+            fields: field,
+          };
+        });
+      }}
       fieldsValue={fieldsValue}
     />
   );
