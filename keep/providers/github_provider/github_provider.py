@@ -88,6 +88,7 @@ class GithubStarsProvider(GithubProvider):
         self.logger.debug(f"New stargazers: {stars_count - int(previous_stars_count)}")
 
         stargazers_with_dates = []
+        # If we have the last stargazer login name, use it as index
         if last_stargazer:
             stargazers_with_dates = list(repo.get_stargazers_with_dates())
             last_stargazer_index = next(
@@ -99,11 +100,13 @@ class GithubStarsProvider(GithubProvider):
                 -1,
             )
             stargazers_with_dates = stargazers_with_dates[last_stargazer_index:]
+        # If we dont, use the previous stars count as an index
         elif previous_stars_count and int(previous_stars_count) > 0:
             stargazers_with_dates = list(repo.get_stargazers_with_dates())[
                 int(previous_stars_count) :
             ]
 
+        # Iterate new stargazers if there are any
         for stargazer in stargazers_with_dates:
             new_stargazers.append(
                 {
@@ -113,6 +116,7 @@ class GithubStarsProvider(GithubProvider):
             )
             self.logger.debug(f"New stargazer: {stargazer.user.login}")
 
+        # Save last stargazer name so we can use it next iteration
         last_stargazer = (
             stargazers_with_dates[-1].user.login
             if len(stargazers_with_dates) > 1
