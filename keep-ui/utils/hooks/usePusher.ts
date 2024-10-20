@@ -23,16 +23,12 @@ export const useWebsocket = () => {
     PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
       wsHost: configData.PUSHER_INGRESS
         ? window.location.hostname
-        : configData.PUSHER_HOST || window.location.hostname,
+        : configData.PUSHER_HOST,
       wsPort: configData.PUSHER_INGRESS
         ? window.location.protocol === "https:"
           ? 443
           : 80
-        : configData.PUSHER_PORT
-        ? configData.PUSHER_PORT
-        : window.location.protocol === "https:"
-        ? 443
-        : 80,
+        : configData.PUSHER_PORT,
       forceTLS: window.location.protocol === "https:",
       disableStats: true,
       enabledTransports: ["ws", "wss"],
