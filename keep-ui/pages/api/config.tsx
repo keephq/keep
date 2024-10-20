@@ -1,5 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { AuthenticationType, MULTI_TENANT, SINGLE_TENANT, NO_AUTH } from "utils/authenticationType";
+import {
+  AuthenticationType,
+  MULTI_TENANT,
+  SINGLE_TENANT,
+  NO_AUTH,
+} from "utils/authenticationType";
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,6 +28,7 @@ export default async function handler(
     PUSHER_PORT: process.env.PUSHER_HOST
       ? parseInt(process.env.PUSHER_PORT!)
       : undefined,
+    PUSHER_PREFIX: process.env.PUSHER_PREFIX,
     PUSHER_APP_KEY: process.env.PUSHER_APP_KEY,
     PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
     API_URL: process.env.API_URL,
