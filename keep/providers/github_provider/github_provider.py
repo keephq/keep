@@ -26,21 +26,6 @@ class GithubProviderAuthConfig:
         }
     )
 
-    repository: str = dataclasses.field(
-        metadata={
-            "description": "GitHub Repository Name",
-            "sensitive": False,
-        },
-        default=None,
-    )
-    md_path: str = dataclasses.field(
-        metadata={
-            "description": "Path to .md files in the repository",
-            "sensitive": False,
-        },
-        default=None,
-    )
-
 class GithubProvider(BaseRunBookProvider):
     """
     Enrich alerts with data from GitHub.

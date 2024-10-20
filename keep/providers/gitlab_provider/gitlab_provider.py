@@ -35,20 +35,6 @@ class GitlabProviderAuthConfig:
             "documentation_url": "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
         }
     )
-    repository: str = dataclasses.field(
-        metadata={
-            "description": "GitHub Repository Id",
-            "sensitive": False,
-        },
-        default=None,
-    )
-    md_path: str = dataclasses.field(
-        metadata={
-            "description": "Path to .md files in the repository",
-            "sensitive": False,
-        },
-        default=None,
-    )
 
 
 class GitlabProvider(BaseRunBookProvider):
