@@ -1,58 +1,109 @@
-import React, { useState } from 'react';
-import { CiUser } from 'react-icons/ci';
-import { FaSitemap } from 'react-icons/fa';
-import { AiOutlineSwap } from 'react-icons/ai';
-import { Workflow } from '../models';
+import React, { useEffect } from "react";
+import { CiUser } from "react-icons/ci";
+import { FaSitemap } from "react-icons/fa";
+import { AiOutlineSwap } from "react-icons/ai";
+import { Workflow } from "../models";
 import { Text } from "@tremor/react";
-import { DisclosureSection } from '@/components/ui/discolsure-section';
-import { useWorkflowRun } from 'utils/hooks/useWorkflowRun';
-import Modal from 'react-modal';
-import BuilderWorkflowTestRunModalContent from '../builder/builder-workflow-testrun-modal';
-import BuilderModalContent from '../builder/builder-modal';
+import { DisclosureSection } from "@/components/ui/discolsure-section";
+import { useRouter, useSearchParams } from "next/navigation";
+import router from "next/router";
 
-export default function SideNavBar({ workflow }: { workflow: Workflow }) {
-    const [viewYaml, setviewYaml] = useState(false);
+export default function SideNavBar({
+  workflow,
+  handleLink,
+  navLink,
+}: {
+  navLink: string;
+  workflow: Partial<Workflow>;
+  handleLink: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-    const analyseLinks = [
-        { href: `/workflows/${workflow.id}`, icon: AiOutlineSwap, label: 'Overview', isLink: true },
-    ];
+  const analyseLinks = [
+    {
+      href: "#overview",
+      icon: AiOutlineSwap,
+      label: "Overview",
+      key: "overview",
+      isLink: false,
+      handleClick: () => {
+        handleLink("overview");
+      },
+    },
+  ];
 
-    const manageLinks = [
-        { href: `/workflows/builder/${workflow.id}`, icon: FaSitemap, label: 'Workflow Builder', isLink: true },
-        { href: `/workflows/builder/${workflow.id}`, icon: CiUser, label: 'Workflow YAML definition', isLink: false, handleClick: () => { setviewYaml(true) } },
-    ];
+  const manageLinks = [
+    {
+      href: `#builder`,
+      icon: FaSitemap,
+      label: "Workflow Builder",
+      key: "builder",
+      isLink: false,
+      handleClick: () => {
+        handleLink("builder");
+      },
+    },
+    {
+      href: `#view_yaml`,
+      icon: CiUser,
+      label: "Workflow YAML definition",
+      key: "view_yaml",
+      isLink: false,
+      handleClick: () => {
+        handleLink("view_yaml");
+      },
+    },
+  ];
 
-    const learnLinks = [
-        { href: `https://www.youtube.com/@keepalerting`, icon: FaSitemap, label: 'Tutorials', isLink: true , newTab:true},
-        { href: `https://docs.keephq.dev`, icon: CiUser, label: 'Documentation', isLink: true, newTab: true },
-    ];
+  const learnLinks = [
+    {
+      href: `https://www.youtube.com/@keepalerting`,
+      icon: FaSitemap,
+      label: "Tutorials",
+      isLink: true,
+      newTab: true,
+      key: "tutorials",
+    },
+    {
+      href: `https://docs.keephq.dev`,
+      icon: CiUser,
+      label: "Documentation",
+      isLink: true,
+      newTab: true,
+      key: "documentation",
+    },
+  ];
 
-    return (
-        <div className="flex flex-col gap-10 pt-6 top-20 p-1 max-w-[270px]">
-            <div className="h-36">
-                <h1 className="text-2xl line-clamp-2 font-extrabold">{workflow.name}</h1>
-                {workflow.description && (
-                    <Text className="line-clamp-5">
-                        <span>{workflow.description}</span>
-                    </Text>
-                )}
-            </div>
-            <div className="space-y-8">
-                <DisclosureSection title="Analyse" links={analyseLinks} />
-                <DisclosureSection title="Manage" links={manageLinks} />
-                <DisclosureSection title="Learn" links={learnLinks} />
-            </div>
-            <Modal
-                isOpen={viewYaml}
-                onRequestClose={() => { setviewYaml(false); }}
-                className="bg-gray-50 p-4 md:p-10 mx-auto max-w-7xl mt-20 border border-orange-600/50 rounded-md"
-            >
-                <BuilderModalContent
-                    closeModal={() => { setviewYaml(false) }}
-                    compiledAlert={workflow.workflow_raw!}
-                    id={workflow.id}
-                />
-            </Modal>
-        </div>
-    );
+  return (
+    <div className="flex flex-col gap-10 pt-6 top-20 p-1">
+      <div className="h-36">
+        <h1 className="text-2xl line-clamp-2 font-extrabold">
+          {workflow.name}
+        </h1>
+        {workflow.description && (
+          <Text className="line-clamp-5">
+            <span>{workflow.description}</span>
+          </Text>
+        )}
+      </div>
+      <div className="space-y-8">
+        <DisclosureSection
+          title="Analyse"
+          links={analyseLinks}
+          activeLink={navLink}
+        />
+        <DisclosureSection
+          title="Manage"
+          links={manageLinks}
+          activeLink={navLink}
+        />
+        <DisclosureSection
+          title="Learn"
+          links={learnLinks}
+          activeLink={navLink}
+        />
+      </div>
+    </div>
+  );
 }
