@@ -2,12 +2,12 @@ import {
   IncidentDto,
   IncidentsMetaDto,
   PaginatedIncidentAlertsDto,
-  PaginatedIncidentsDto
+  PaginatedIncidentsDto,
 } from "../../app/incidents/models";
 import { PaginatedWorkflowExecutionDto } from "app/workflows/builder/types";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
@@ -17,11 +17,11 @@ interface IncidentUpdatePayload {
 }
 
 interface Filters {
-  status: string[],
-  severity: string[],
-  assignees: string[]
-  sources: string[],
-  affected_services: string[],
+  status: string[];
+  severity: string[];
+  assignees: string[];
+  sources: string[];
+  affected_services: string[];
 }
 
 export const useIncidents = (
@@ -32,9 +32,9 @@ export const useIncidents = (
   filters: Filters | {} = {},
   options: SWRConfiguration = {
     revalidateOnFocus: false,
-  },
+  }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   const filtersParams = new URLSearchParams();
@@ -44,7 +44,7 @@ export const useIncidents = (
       filtersParams.delete(key as string);
     } else {
       value.forEach((s: string) => {
-        filtersParams.append(key, s)
+        filtersParams.append(key, s);
       });
     }
   });
@@ -69,7 +69,7 @@ export const useIncidentAlerts = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   return useSWR<PaginatedIncidentAlertsDto>(
     () =>
@@ -87,11 +87,12 @@ export const useIncidentFutureIncidents = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<PaginatedIncidentsDto>(
-    () => (session ? `${apiUrl}/incidents/${incidentId}/future_incidents` : null),
+    () =>
+      session ? `${apiUrl}/incidents/${incidentId}/future_incidents` : null,
     (url) => fetcher(url, session?.accessToken),
     options
   );
@@ -103,7 +104,7 @@ export const useIncident = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
@@ -121,7 +122,7 @@ export const useIncidentWorkflowExecutions = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   return useSWR<PaginatedWorkflowExecutionDto>(
     () =>
@@ -167,13 +168,12 @@ export const usePollIncidents = (mutateIncidents: any) => {
   }, [bind, unbind, handleIncoming]);
 };
 
-
 export const useIncidentsMeta = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<IncidentsMetaDto>(

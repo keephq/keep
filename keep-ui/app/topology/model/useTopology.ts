@@ -1,13 +1,13 @@
 import { TopologyService } from "@/app/topology/model/models";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
-import { getApiURL } from "@/utils/apiUrl";
 import { fetcher } from "@/utils/fetcher";
 import { useEffect } from "react";
 import { buildTopologyUrl } from "@/app/topology/api";
 import { useTopologyPollingContext } from "@/app/topology/model/TopologyPollingContext";
+import { useApiUrl } from "utils/hooks/useConfig";
 
-export const topologyBaseKey = `${getApiURL()}/topology`;
+export const useTopologyBaseKey = () => `${useApiUrl()}/topology`;
 
 type UseTopologyOptions = {
   providerIds?: string[];
@@ -24,11 +24,12 @@ export const useTopology = ({
   initialData: fallbackData,
 }: UseTopologyOptions = {}) => {
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
   const pollTopology = useTopologyPollingContext();
 
   const url = !session
     ? null
-    : buildTopologyUrl({ providerIds, services, environment });
+    : buildTopologyUrl(apiUrl!, { providerIds, services, environment });
 
   const { data, error, mutate } = useSWR<TopologyService[]>(
     url,

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput, Switch, Text } from "@tremor/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useSession } from "next-auth/react";
 import { usePresets } from "utils/hooks/usePresets";
@@ -36,7 +36,7 @@ export default function AlertPresets({
   presetPrivate = false,
   presetNoisy = false,
 }: Props) {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
@@ -157,7 +157,9 @@ export default function AlertPresets({
     setSelectedTags((prevTags) => [...prevTags, newTag]);
   };
 
-  const handleChange = (newValue: MultiValue<{ value: string; label: string }>) => {
+  const handleChange = (
+    newValue: MultiValue<{ value: string; label: string }>
+  ) => {
     setSelectedTags(
       newValue.map((tag) => ({
         id: tags.find((t) => t.name === tag.value)?.id,
@@ -175,9 +177,7 @@ export default function AlertPresets({
       >
         <div className="space-y-2">
           <div className="text-lg font-semibold">
-            <p>
-              {presetName ? "Update preset" : "Enter new preset name"}
-            </p>
+            <p>{presetName ? "Update preset" : "Enter new preset name"}</p>
           </div>
 
           <div className="space-y-2">

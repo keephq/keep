@@ -9,4 +9,5 @@ export interface InternalConfig {
   POSTHOG_KEY: string;
   POSTHOG_HOST: string;
   POSTHOG_DISABLED: string;
+  API_URL: string;
 }

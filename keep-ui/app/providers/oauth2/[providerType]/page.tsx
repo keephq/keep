@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "pages/api/auth/[...nextauth]";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
@@ -12,7 +12,7 @@ export default async function InstallFromOAuth({
   searchParams: { [key: string]: string };
 }) {
   const accessToken = await getServerSession(authOptions);
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const cookieStore = cookies();
   const verifier = cookieStore.get("verifier");
 

@@ -11,7 +11,7 @@ import {
 import { useSession } from "next-auth/react";
 import { fetcher } from "../../utils/fetcher";
 import { Workflow, MockWorkflow } from "./models";
-import { getApiURL } from "../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "../loading";
 import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
@@ -23,7 +23,7 @@ import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
 
 export default function WorkflowsPage() {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const router = useRouter();
   const { data: session, status, update } = useSession();
   const [fileError, setFileError] = useState<string | null>(null);

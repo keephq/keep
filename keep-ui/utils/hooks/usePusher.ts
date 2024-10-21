@@ -1,14 +1,14 @@
 import Pusher from "pusher-js";
 import { useConfig } from "./useConfig";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 let PUSHER: Pusher | null = null;
 const POLLING_INTERVAL = 3000;
 
 export const useWebsocket = () => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: configData } = useConfig();
   const { data: session } = useSession();
   let channelName = `private-${session?.tenantId}`;
@@ -25,11 +25,14 @@ export const useWebsocket = () => {
     channelName = `private-${session?.tenantId}`;
     console.log("useWebsocket: Creating new Pusher instance");
     try {
+      const isRelativeHost =
+        configData.PUSHER_HOST && !configData.PUSHER_HOST.includes("://");
+      console.log("useWebsocket: isRelativeHost:", isRelativeHost);
       PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
-        wsHost: configData.PUSHER_INGRESS
-          ? window.location.hostname
+        wsHost: isRelativeHost
+          ? window.location.hostname + configData.PUSHER_HOST
           : configData.PUSHER_HOST,
-        wsPort: configData.PUSHER_INGRESS
+        wsPort: isRelativeHost
           ? window.location.protocol === "https:"
             ? 443
             : 80
