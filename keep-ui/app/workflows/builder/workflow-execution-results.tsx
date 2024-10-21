@@ -8,7 +8,7 @@ import {
   Title,
 } from "@tremor/react";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "../../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "../../loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import {
@@ -36,7 +36,7 @@ export default function WorkflowExecutionResults({
   workflow_id,
   workflow_execution_id,
 }: WorkflowResultsProps) {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session, status, update } = useSession();
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(1);

@@ -16,7 +16,7 @@ import {
 import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { ExtractionRule } from "./model";
 import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
@@ -41,6 +41,7 @@ export default function CreateOrUpdateExtractionRule({
   const [regex, setRegex] = useState<string>("");
   const [extractedAttributes, setExtractedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
+  const apiUrl = useApiUrl();
   const editMode = extractionToEdit !== null;
 
   useEffect(() => {
@@ -75,7 +76,6 @@ export default function CreateOrUpdateExtractionRule({
 
   const addExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/extraction`, {
       method: "POST",
       headers: {
@@ -106,7 +106,6 @@ export default function CreateOrUpdateExtractionRule({
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(
       `${apiUrl}/extraction/${extractionToEdit?.id}`,
       {

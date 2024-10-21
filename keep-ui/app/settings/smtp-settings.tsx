@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, Button, Title, Subtitle, TextInput } from "@tremor/react";
 import useSWR from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { fetcher } from "utils/fetcher";
 import Loading from "app/loading";
 
@@ -56,6 +56,7 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
   const [shouldFetch, setShouldFetch] = useState(true);
   const [smtpInstalled, setSmtpInstalled] = useState(false);
   const [deleteSuccessful, setDeleteSuccessful] = useState(false);
+  const apiUrl = useApiUrl();
 
   const validateSaveFields = () => {
     const newErrors: SMTPSettingsErrors = {};
@@ -76,7 +77,6 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
     return validSave && settings.to_email;
   };
 
-  const apiUrl = getApiURL();
   const shouldFetchUrl =
     shouldFetch && selectedTab === "smtp" ? `${apiUrl}/settings/smtp` : null;
 

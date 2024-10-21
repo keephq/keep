@@ -13,7 +13,7 @@ import {
 import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { MaintenanceRule } from "./model";
 import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
 import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
@@ -42,7 +42,7 @@ export default function CreateOrUpdateMaintenanceRule({
   const [suppress, setSuppress] = useState<boolean>(false);
   const editMode = maintenanceToEdit !== null;
   const router = useRouter();
-
+  const apiUrl = useApiUrl();
   useEffect(() => {
     if (maintenanceToEdit) {
       setMaintenanceName(maintenanceToEdit.name);
@@ -89,7 +89,6 @@ export default function CreateOrUpdateMaintenanceRule({
 
   const addMaintenanceRule = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/maintenance`, {
       method: "POST",
       headers: {
@@ -118,7 +117,6 @@ export default function CreateOrUpdateMaintenanceRule({
 
   const updateMaintenanceRule = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(
       `${apiUrl}/maintenance/${maintenanceToEdit?.id}`,
       {

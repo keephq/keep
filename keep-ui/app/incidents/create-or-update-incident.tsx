@@ -13,7 +13,7 @@ import {
 import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { IncidentDto } from "./models";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { Session } from "next-auth";
@@ -36,6 +36,7 @@ export const updateIncidentRequest = async ({
   incidentAssignee,
   incidentSameIncidentInThePastId,
   generatedByAi,
+  apiUrl,
 }: {
   session: Session | null;
   incidentId: string;
@@ -44,21 +45,24 @@ export const updateIncidentRequest = async ({
   incidentAssignee: string;
   incidentSameIncidentInThePastId: string | null;
   generatedByAi: boolean;
+  apiUrl: string;
 }) => {
-  const apiUrl = getApiURL();
-  const response = await fetch(`${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${session?.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_generated_name: incidentName,
-      user_summary: incidentUserSummary,
-      assignee: incidentAssignee,
-      same_incident_in_the_past_id: incidentSameIncidentInThePastId,
-    }),
-  });
+  const response = await fetch(
+    `${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_generated_name: incidentName,
+        user_summary: incidentUserSummary,
+        assignee: incidentAssignee,
+        same_incident_in_the_past_id: incidentSameIncidentInThePastId,
+      }),
+    }
+  );
   return response;
 };
 
@@ -73,6 +77,7 @@ export default function CreateOrUpdateIncident({
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const { data: users = [] } = useUsers();
+  const apiUrl = useApiUrl();
   const editMode = incidentToEdit !== null;
 
   // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
@@ -100,7 +105,6 @@ export default function CreateOrUpdateIncident({
 
   const addIncident = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/incidents`, {
       method: "POST",
       headers: {
@@ -136,9 +140,11 @@ export default function CreateOrUpdateIncident({
       incidentName: incidentName,
       incidentUserSummary: incidentUserSummary,
       incidentAssignee: incidentAssignee,
-      incidentSameIncidentInThePastId: incidentToEdit?.same_incident_in_the_past_id!,
+      incidentSameIncidentInThePastId:
+        incidentToEdit?.same_incident_in_the_past_id!,
       generatedByAi: false,
-    })
+      apiUrl: apiUrl!,
+    });
     if (response.ok) {
       exitEditMode();
       await mutate();

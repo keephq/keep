@@ -11,7 +11,8 @@ import {
 import {
   MdRemoveCircle,
   MdModeEdit,
-  MdKeyboardDoubleArrowRight, MdPlayArrow,
+  MdKeyboardDoubleArrowRight,
+  MdPlayArrow,
 } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { IncidentDto, PaginatedIncidentsDto } from "./models";
@@ -21,12 +22,12 @@ import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
 import IncidentChangeStatusModal from "./incident-change-status-modal";
-import {STATUS_ICONS} from "@/app/incidents/statuses";
+import { STATUS_ICONS } from "@/app/incidents/statuses";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
-import {AlertDto} from "@/app/alerts/models";
+import { useApiUrl } from "@/utils/hooks/useConfig";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -47,6 +48,7 @@ export default function IncidentsTable({
   setSorting,
   editCallback,
 }: Props) {
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setTablePagination] = useState({
@@ -68,7 +70,7 @@ export default function IncidentsTable({
     e.preventDefault();
     e.stopPropagation();
     setRunWorkflowModalIncident(incident);
-  }
+  };
 
   useEffect(() => {
     if (incidents.limit != pagination.pageSize) {
@@ -110,10 +112,7 @@ export default function IncidentsTable({
       header: "Summary",
       cell: ({ row }) => (
         <div className="text-pretty min-w-96">
-          <Markdown
-            remarkPlugins={[remarkRehype]}
-            rehypePlugins={[rehypeRaw]}
-          >
+          <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
             {row.original.user_summary}
           </Markdown>
         </div>
@@ -229,6 +228,7 @@ export default function IncidentsTable({
                 incidentId: row.original.id!,
                 mutate,
                 session,
+                apiUrl: apiUrl!,
               });
             }}
           />

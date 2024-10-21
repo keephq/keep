@@ -9,6 +9,7 @@ export default async function PageWithId({
   params: { workflowId: string };
 }) {
   const accessToken = await getServerSession(authOptions);
+  // server so we can use getApiUrl
   const apiUrl = getApiURL();
   const response = await fetch(`${apiUrl}/workflows/${params.workflowId}/raw`, {
     headers: {

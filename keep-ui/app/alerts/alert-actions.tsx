@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
@@ -23,14 +23,16 @@ export default function AlertActions({
   alerts,
   clearRowSelection,
   setDismissModalAlert,
-  mutateAlerts
+  mutateAlerts,
 }: Props) {
   const router = useRouter();
   const { useAllPresets } = usePresets();
+  const apiUrl = useApiUrl();
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
   });
-  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] = useState<boolean>(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
 
   const selectedAlerts = alerts.filter((_alert, index) =>
     selectedRowIds.includes(index.toString())
@@ -54,7 +56,6 @@ export default function AlertActions({
       );
       const options = [{ value: formattedCel, label: "CEL" }];
       const session = await getSession();
-      const apiUrl = getApiURL();
       const response = await fetch(`${apiUrl}/preset`, {
         method: "POST",
         headers: {
@@ -82,10 +83,10 @@ export default function AlertActions({
 
   const showIncidentSelector = () => {
     setIsIncidentSelectorOpen(true);
-  }
+  };
   const hideIncidentSelector = () => {
     setIsIncidentSelectorOpen(false);
-  }
+  };
 
   const handleSuccessfulAlertsAssociation = () => {
     hideIncidentSelector();
@@ -93,7 +94,7 @@ export default function AlertActions({
     if (mutateAlerts) {
       mutateAlerts();
     }
-  }
+  };
 
   return (
     <div className="w-full flex justify-end items-center">
@@ -130,10 +131,11 @@ export default function AlertActions({
         Associate with incident
       </Button>
       <AlertAssociateIncidentModal
-          isOpen={isIncidentSelectorOpen}
-          alerts={selectedAlerts}
-          handleSuccess={handleSuccessfulAlertsAssociation}
-          handleClose={hideIncidentSelector}/>
+        isOpen={isIncidentSelectorOpen}
+        alerts={selectedAlerts}
+        handleSuccess={handleSuccessfulAlertsAssociation}
+        handleClose={hideIncidentSelector}
+      />
     </div>
   );
 }

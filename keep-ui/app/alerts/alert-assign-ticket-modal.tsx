@@ -5,7 +5,7 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "./../providers/providers";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 
@@ -45,6 +45,7 @@ const AlertAssignTicketModal = ({
   } = useForm<FormData>();
   // get the token
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
 
   // if this modal should not be open, do nothing
   if (!alert) return null;
@@ -61,7 +62,7 @@ const AlertAssignTicketModal = ({
         fingerprint: alert.fingerprint,
       };
 
-      const response = await fetch(`${getApiURL()}/alerts/enrich`, {
+      const response = await fetch(`${apiUrl}/alerts/enrich`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -225,18 +226,14 @@ const AlertAssignTicketModal = ({
             </div>
             <div className="mt-6 flex gap-2">
               <Button color="orange" type="submit">
-                <Text>
-                  Assign Ticket
-                </Text>
+                <Text>Assign Ticket</Text>
               </Button>
               <Button
                 onClick={handleClose}
                 variant="secondary"
                 className="border border-orange-500 text-orange-500"
               >
-                <Text>
-                  Cancel
-                </Text>
+                <Text>Cancel</Text>
               </Button>
             </div>
           </form>

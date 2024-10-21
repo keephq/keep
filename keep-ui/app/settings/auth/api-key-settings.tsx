@@ -15,7 +15,7 @@ import {
 import Loading from "app/loading";
 import { CopyBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { KeyIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { fetcher } from "utils/fetcher";
 import { useState } from "react";
@@ -49,7 +49,7 @@ interface Config {
 }
 
 export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(
     selectedTab === "api-key" ? `${apiUrl}/settings/apikeys` : null,
     async (url) => {
@@ -83,7 +83,10 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
   const authType = configData?.AUTH_TYPE as AuthenticationType;
   const createApiKeyEnabled = authType !== AuthenticationType.NOAUTH;
 
-  const handleRegenerate = async (apiKeyId: string, event: React.MouseEvent) => {
+  const handleRegenerate = async (
+    apiKeyId: string,
+    event: React.MouseEvent
+  ) => {
     event.stopPropagation();
     const confirmed = confirm(
       "This action cannot be undone. This will revoke the key and generate a new one. Any further requests made with this key will fail. Make sure to update any applications that use this key."
@@ -160,11 +163,19 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
             <TableHead>
               <TableRow>
                 <TableHeaderCell className="text-left">Name</TableHeaderCell>
-                <TableHeaderCell className="text-left w-1/4">Key</TableHeaderCell>
+                <TableHeaderCell className="text-left w-1/4">
+                  Key
+                </TableHeaderCell>
                 <TableHeaderCell className="text-left">Role</TableHeaderCell>
-                <TableHeaderCell className="text-left">Created By</TableHeaderCell>
-                <TableHeaderCell className="text-left">Created At</TableHeaderCell>
-                <TableHeaderCell className="text-left">Last Used</TableHeaderCell>
+                <TableHeaderCell className="text-left">
+                  Created By
+                </TableHeaderCell>
+                <TableHeaderCell className="text-left">
+                  Created At
+                </TableHeaderCell>
+                <TableHeaderCell className="text-left">
+                  Last Used
+                </TableHeaderCell>
                 <TableHeaderCell className="w-1/12"></TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -221,7 +232,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
         onClose={() => setApiKeyModalOpen(false)}
         accessToken={accessToken}
         setApiKeys={setApiKeys}
-        apiUrl={apiUrl}
+        apiUrl={apiUrl!}
         roles={roles}
       />
     </div>

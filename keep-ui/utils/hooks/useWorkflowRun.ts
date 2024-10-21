@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "app/workflows/models";
@@ -19,12 +19,11 @@ export const useWorkflowRun = (workflow: Workflow) => {
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
+  const apiUrl = useApiUrl();
 
   const { data: providersData = { providers: {} } as ProvidersData } =
     useProviders();
   const providers = providersData.providers;
-
-  const apiUrl = getApiURL();
 
   if (!workflow) {
     return {};

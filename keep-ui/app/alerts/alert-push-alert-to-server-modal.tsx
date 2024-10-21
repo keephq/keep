@@ -9,7 +9,7 @@ import {
 } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useProviders } from "utils/hooks/useProviders";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -45,6 +45,7 @@ const PushAlertToServerModal = ({
 
   const { data: session } = useSession();
   const { data: providersData } = useProviders();
+  const apiUrl = useApiUrl();
   const providers = providersData?.providers || [];
 
   useEffect(() => {
@@ -82,7 +83,7 @@ const PushAlertToServerModal = ({
 
     try {
       const response = await fetch(
-        `${getApiURL()}/alerts/event/${selectedSource.type}`,
+        `${apiUrl}/alerts/event/${selectedSource.type}`,
         {
           method: "POST",
           headers: {

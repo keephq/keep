@@ -1,5 +1,5 @@
 import { useSession } from "next-auth/react";
-import { getApiURL } from "../apiUrl";
+import { useApiUrl } from "./useConfig";
 import { SWRConfiguration } from "swr";
 import { ProvidersResponse } from "app/providers/providers";
 import { fetcher } from "../fetcher";
@@ -9,7 +9,7 @@ export const useProviders = (
   options: SWRConfiguration = { revalidateOnFocus: false }
 ) => {
   const { data: session } = useSession();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   return useSWRImmutable<ProvidersResponse>(
     () => (session ? `${apiUrl}/providers` : null),

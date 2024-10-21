@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import Loading from "app/loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { updateIncidentRequest } from "../create-or-update-incident";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import "@copilotkit/react-ui/styles.css";
@@ -21,6 +22,7 @@ import "./incident-chat.css";
 
 export default function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
+  const apiUrl = useApiUrl();
   const { mutate } = useIncidents(true, 20);
   const { mutate: mutateIncident } = useIncident(incident.id);
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
@@ -84,6 +86,7 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
         incidentAssignee: incident.assignee,
         incidentSameIncidentInThePastId: incident.same_incident_in_the_past_id,
         generatedByAi: true,
+        apiUrl: apiUrl!,
       });
 
       if (response.ok) {

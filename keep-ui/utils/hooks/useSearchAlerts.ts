@@ -1,7 +1,7 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { AlertDto } from "app/alerts/models";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { RuleGroupType, formatQuery } from "react-querybuilder";
@@ -10,7 +10,7 @@ export const useSearchAlerts = (
   args: { query: RuleGroupType; timeframe: number },
   options?: SWRConfiguration
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   const [debouncedArgs] = useDebouncedValue(args, 2000);
@@ -30,7 +30,7 @@ export const useSearchAlerts = (
         body: JSON.stringify({
           query: {
             cel_query: formatQuery(debouncedRules, "cel"),
-            sql_query: formatQuery(debouncedRules, "parameterized_named")
+            sql_query: formatQuery(debouncedRules, "parameterized_named"),
           },
           timeframe: debouncedTimeframe,
         }),

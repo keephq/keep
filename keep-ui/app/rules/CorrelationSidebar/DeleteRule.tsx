@@ -2,7 +2,7 @@ import { TrashIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { MouseEvent } from "react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useRules } from "utils/hooks/useRules";
 
 type DeleteRuleCellProps = {
@@ -10,7 +10,7 @@ type DeleteRuleCellProps = {
 };
 
 export const DeleteRuleCell = ({ ruleId }: DeleteRuleCellProps) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const { mutate } = useRules();
 

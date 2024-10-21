@@ -3,7 +3,7 @@ import { Icon } from "@tremor/react";
 import { AlertDto } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   alert: AlertDto;
 }
 export default function IncidentAlertMenu({ incidentId, alert }: Props) {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const { mutate } = useIncidentAlerts(incidentId);
 

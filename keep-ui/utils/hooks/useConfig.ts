@@ -10,3 +10,8 @@ export const useConfig = () => {
     fetcher("/api/config", session?.accessToken)
   );
 };
+
+export const useApiUrl = () => {
+  const { data: config } = useConfig();
+  return config?.API_URL;
+};

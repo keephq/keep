@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getApiURL } from "../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
 import { AlertDto } from "./models";
@@ -34,10 +34,10 @@ const AlertAssociateIncidentModal = ({
   >();
   // get the token
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
   const router = useRouter();
 
   const associateAlertsHandler = async (incidentId: string) => {
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/incidents/${incidentId}/alerts`, {
       method: "POST",
       headers: {

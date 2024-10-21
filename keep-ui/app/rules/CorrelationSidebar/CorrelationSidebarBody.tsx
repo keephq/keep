@@ -1,5 +1,5 @@
 import { Button, Callout, Icon } from "@tremor/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
@@ -30,7 +30,7 @@ export const CorrelationSidebarBody = ({
   toggle,
   defaultValue,
 }: CorrelationSidebarBodyProps) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const methods = useForm<CorrelationFormType>({
     defaultValues: defaultValue,

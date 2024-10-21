@@ -1,9 +1,14 @@
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  SubmitHandler,
+  FieldValues,
+} from "react-hook-form";
 import { Text, Button, TextInput, Callout, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { Role } from "app/settings/models";
 
 interface RoleSidebarProps {
@@ -23,26 +28,40 @@ const RoleSidebar = ({
   resources,
   mutateRoles,
 }: RoleSidebarProps) => {
-  const { control, handleSubmit, setValue, reset, setError, formState: { errors }, clearErrors } = useForm({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    reset,
+    setError,
+    formState: { errors },
+    clearErrors,
+  } = useForm({
     defaultValues: {
       name: selectedRole?.name || "",
       description: selectedRole?.description || "",
     },
   });
 
-  const [newRoleScopes, setNewRoleScopes] = useState<{ [key: string]: any }>({});
+  const [newRoleScopes, setNewRoleScopes] = useState<{ [key: string]: any }>(
+    {}
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const apiUrl = useApiUrl();
 
   useEffect(() => {
     if (isOpen && selectedRole) {
       setValue("name", selectedRole.name);
       setValue("description", selectedRole.description);
-      const roleScopes = selectedRole.scopes.reduce((acc: any, scope: string) => {
-        const [action, resource] = scope.split(":");
-        if (!acc[resource]) acc[resource] = {};
-        acc[resource][action] = true;
-        return acc;
-      }, {});
+      const roleScopes = selectedRole.scopes.reduce(
+        (acc: any, scope: string) => {
+          const [action, resource] = scope.split(":");
+          if (!acc[resource]) acc[resource] = {};
+          acc[resource][action] = true;
+          return acc;
+        },
+        {}
+      );
       setNewRoleScopes(roleScopes);
     }
   }, [selectedRole, setValue, isOpen]);
@@ -72,7 +91,9 @@ const RoleSidebar = ({
           <div
             key={action}
             className={`flex items-center justify-center cursor-pointer ${
-              newRoleScopes[resource]?.[action] ? "text-green-500" : "text-gray-300"
+              newRoleScopes[resource]?.[action]
+                ? "text-green-500"
+                : "text-gray-300"
             }`}
             onClick={() => {
               if (!selectedRole || !selectedRole.predefined) {
@@ -87,12 +108,34 @@ const RoleSidebar = ({
             }}
           >
             {newRoleScopes[resource]?.[action] ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             )}
           </div>
@@ -115,9 +158,10 @@ const RoleSidebar = ({
               .map(([action, _]) => `${action}:${resource}`)
           ),
       };
-      const apiUrl = getApiURL();
       // url includes the role id if it is an edit operation
-      const url = selectedRole ? `${apiUrl}/auth/roles/${selectedRole.id}` : `${apiUrl}/auth/roles`;
+      const url = selectedRole
+        ? `${apiUrl}/auth/roles/${selectedRole.id}`
+        : `${apiUrl}/auth/roles`;
       // add id to the body if it is an edit operation
       const response = await fetch(url, {
         method: selectedRole ? "PUT" : "POST",
@@ -135,10 +179,16 @@ const RoleSidebar = ({
         await mutateRoles();
       } else {
         const errorData = await response.json();
-        setError("root.serverError", { type: "manual", message: errorData.message || "Failed to save role" });
+        setError("root.serverError", {
+          type: "manual",
+          message: errorData.message || "Failed to save role",
+        });
       }
     } catch (error) {
-      setError("root.serverError", { type: "manual", message: "An unexpected error occurred" });
+      setError("root.serverError", {
+        type: "manual",
+        message: "An unexpected error occurred",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -171,16 +221,23 @@ const RoleSidebar = ({
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
                 {selectedRole ? "Edit Role" : "Add Role"}
-                <Badge className="ml-4" color="orange">Beta</Badge>
+                <Badge className="ml-4" color="orange">
+                  Beta
+                </Badge>
                 {selectedRole && selectedRole.predefined && (
-                  <Badge className="ml-2" color="orange">Predefined Role</Badge>
+                  <Badge className="ml-2" color="orange">
+                    Predefined Role
+                  </Badge>
                 )}
               </Dialog.Title>
               <Button onClick={toggle} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
               </Button>
             </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col h-full">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="mt-4 flex flex-col h-full"
+            >
               <div className="flex-grow">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
@@ -197,7 +254,9 @@ const RoleSidebar = ({
                         errorMessage={errors.name?.message}
                         disabled={!!(selectedRole && selectedRole.predefined)}
                         className={`${
-                          selectedRole && selectedRole.predefined ? "bg-gray-200" : ""
+                          selectedRole && selectedRole.predefined
+                            ? "bg-gray-200"
+                            : ""
                         }`}
                       />
                     )}
@@ -218,7 +277,9 @@ const RoleSidebar = ({
                         errorMessage={errors.description?.message}
                         disabled={!!(selectedRole && selectedRole.predefined)}
                         className={`${
-                          selectedRole && selectedRole.predefined ? "bg-gray-200" : ""
+                          selectedRole && selectedRole.predefined
+                            ? "bg-gray-200"
+                            : ""
                         }`}
                       />
                     )}
@@ -235,11 +296,16 @@ const RoleSidebar = ({
                     {prepopulateScopes()}
                   </div>
                 </div>
-                {errors.root?.serverError && typeof errors.root.serverError.message === "string" && (
-                  <Callout className="mt-4" title="Error while adding role" color="rose">
-                    {errors.root.serverError.message}
-                  </Callout>
-                )}
+                {errors.root?.serverError &&
+                  typeof errors.root.serverError.message === "string" && (
+                    <Callout
+                      className="mt-4"
+                      title="Error while adding role"
+                      color="rose"
+                    >
+                      {errors.root.serverError.message}
+                    </Callout>
+                  )}
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <Button
@@ -258,8 +324,17 @@ const RoleSidebar = ({
                   <Button
                     color="orange"
                     type="submit"
-                    disabled={isSubmitting || !Object.values(newRoleScopes).some(scope => Object.values(scope).some(Boolean))}
-                    title={!newRoleScopes ? "At least one scope must be selected" : ""}
+                    disabled={
+                      isSubmitting ||
+                      !Object.values(newRoleScopes).some((scope) =>
+                        Object.values(scope).some(Boolean)
+                      )
+                    }
+                    title={
+                      !newRoleScopes
+                        ? "At least one scope must be selected"
+                        : ""
+                    }
                   >
                     {isSubmitting ? "Saving..." : "Save Role"}
                   </Button>

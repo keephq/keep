@@ -6,7 +6,7 @@ import {
   ProviderMethodParam,
 } from "app/providers/providers";
 import { getSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import Loading from "app/loading";
 import {
@@ -32,6 +32,7 @@ interface AlertMethodModalProps {
 export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const apiUrl = useApiUrl();
 
   const alertFingerprint = searchParams?.get("alertFingerprint");
   const providerId = searchParams?.get("providerId");
@@ -162,7 +163,6 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
     userParams: { [key: string]: string }
   ) => {
     const session = await getSession();
-    const apiUrl = getApiURL();
 
     try {
       const response = await fetch(

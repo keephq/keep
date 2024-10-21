@@ -1,5 +1,4 @@
 import { toast } from "react-toastify";
-import { getApiURL } from "./apiUrl";
 import { Provider } from "../app/providers/providers";
 import moment from "moment";
 import { twMerge } from "tailwind-merge";
@@ -39,12 +38,14 @@ export function toDateObjectWithFallback(date: string | Date) {
   return new Date();
 }
 
-export async function installWebhook(provider: Provider, accessToken: string) {
+export async function installWebhook(
+  provider: Provider,
+  accessToken: string,
+  apiUrl: string
+) {
   return toast.promise(
     fetch(
-      `${getApiURL()}/providers/install/webhook/${provider.type}/${
-        provider.id
-      }`,
+      `${apiUrl}/providers/install/webhook/${provider.type}/${provider.id}`,
       {
         method: "POST",
         headers: {
