@@ -1,6 +1,7 @@
 """
 Auth0 provider.
 """
+
 import dataclasses
 import datetime
 import os
@@ -10,6 +11,7 @@ import requests
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import HttpsUrl
 
 
 @dataclasses.dataclass
@@ -26,12 +28,13 @@ class Auth0ProviderAuthConfig:
             "hint": "https://manage.auth0.com/dashboard/us/YOUR_ACCOUNT/apis/management/explorer",
         },
     )
-    domain: str = dataclasses.field(
+    domain: HttpsUrl = dataclasses.field(
         default=None,
         metadata={
             "required": True,
             "description": "Auth0 Domain",
             "hint": "tenantname.us.auth0.com",
+            "validation": "https_url",
         },
     )
 
@@ -52,10 +55,12 @@ class Auth0Provider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Auth0 provider.
-
         """
-        if self.config.authentication is None:
-            self.config.authentication = {}
+        if self.is_installed or self.is_provisioned:
+            host = self.config.authentication["domain"]
+            host = "https://" + host if not (host.starts_with("https://")) else host
+            self.config.authentication["domain"] = host
+
         self.authentication_config = Auth0ProviderAuthConfig(
             **self.config.authentication
         )
@@ -74,7 +79,7 @@ class Auth0Provider(BaseProvider):
         Returns:
             _type_: _description_
         """
-        url = f"https://{self.authentication_config.domain}/api/v2/logs"
+        url = f"{self.authentication_config.domain}/api/v2/logs"
         headers = {
             "content-type": "application/json",
             "Authorization": f"Bearer {self.authentication_config.token}",

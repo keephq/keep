@@ -1,6 +1,7 @@
 """
 Elasticsearch provider.
 """
+
 import dataclasses
 import json
 
@@ -8,7 +9,6 @@ import pydantic
 from elasticsearch import Elasticsearch
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_connection_failed import ProviderConnectionFailed
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -26,8 +26,13 @@ class ElasticProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "Elasticsearch host"}
+    host: pydantic.HttpUrl = dataclasses.field(
+        default="",
+        metadata={
+            "required": False,
+            "description": "Elasticsearch host",
+            "validation": "http_url",
+        },
     )
     cloud_id: str = dataclasses.field(
         default="",
@@ -37,8 +42,8 @@ class ElasticProviderAuthConfig:
     @pydantic.root_validator
     def check_host_or_cloud_id(cls, values):
         host, cloud_id = values.get("host"), values.get("cloud_id")
-        if host == "" and cloud_id == "":
-            raise ValueError("either host or cloud_id must be provided")
+        if host is None and cloud_id is None:
+            raise ValueError("Missing host or cloud_id in provider config")
         return values
 
 
@@ -63,9 +68,9 @@ class ElasticProvider(BaseProvider):
         """
         Initialize the ElasticSearch client for the provider.
         """
-        api_key = self.config.authentication.get("api_key")
-        host = self.config.authentication.get("host")
-        cloud_id = self.config.authentication.get("cloud_id")
+        api_key = self.authentication_config.api_key
+        host = self.authentication_config.host
+        cloud_id = self.authentication_config.cloud_id
 
         # Elastic.co requires you to connect with cloud_id
         if cloud_id:
@@ -84,17 +89,9 @@ class ElasticProvider(BaseProvider):
         """
         Validate the provider config.
         """
-        if not self.config.authentication.get(
-            "host"
-        ) and not self.config.authentication.get("cloud_id"):
-            raise ProviderConfigException(
-                "Missing host or cloud_id in provider config",
-                provider_id=self.provider_id,
-            )
-        if "api_key" not in self.config.authentication:
-            raise ProviderConfigException(
-                "Missing api_key in provider config", provider_id=self.provider_id
-            )
+        self.authentication_config = ElasticProviderAuthConfig(
+            **self.config.authentication
+        )
 
     @staticmethod
     def get_neccessary_config_keys():

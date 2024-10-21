@@ -12,6 +12,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import UrlPort
 
 
 class ResourceAlreadyExists(Exception):
@@ -33,11 +34,12 @@ class VictoriametricsProviderAuthConfig:
         },
     )
 
-    VMAlertPort: int = dataclasses.field(
+    VMAlertPort: UrlPort = dataclasses.field(
         metadata={
             "required": True,
             "description": "The port number on which VMAlert is listening. This should match the port configured in your VMAlert setup.",
             "hint": "Example: 8880 (if VMAlert is set to listen on port 8880)",
+            "validation": "port"
         },
     )
 
