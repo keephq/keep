@@ -13,7 +13,9 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    get_incident_alerts_by_incident_id
+    get_incident_alerts_by_incident_id,
+    merge_incidents_to_id,
+    create_alert,
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -22,11 +24,11 @@ from keep.api.models.alert import (
     AlertStatus,
     IncidentSeverity,
     IncidentStatus,
+    IncidentDto,
 )
 from keep.api.models.db.alert import Alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
-
 
 
 def test_get_alerts_data_for_incident(db_session, setup_stress_alerts_no_elastic):
@@ -425,3 +427,134 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
 
     assert len(incident.alerts) == 0
 
+def test_merge_incidents(db_session, setup_stress_alerts_no_elastic):
+    incident_1 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "destination",
+            "user_summary": "destination",
+        },
+    )
+    alerts_1 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
+    )
+    incident_2 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "test-2",
+            "user_summary": "test-2",
+        },
+    )
+    alerts_2 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
+    )
+    incident_3 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "test-3",
+            "user_summary": "test-3",
+        },
+    )
+    alerts_3 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
+    )
+
+    merge_incidents_to_id(
+        SINGLE_TENANT_UUID,
+        [incident_2.id, incident_3.id],
+        incident_1.id,
+        "test-user-email",
+    )
+
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    assert len(incident_1.alerts) == 150
+
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    assert len(incident_2.alerts) == 0
+    assert incident_2.status == IncidentStatus.MERGED.value
+    assert incident_2.merged_into_incident_id == incident_1.id
+    assert incident_2.merged_at is not None
+    assert incident_2.merged_by == "test-user-email"
+
+    incident_3 = get_incident_by_id(SINGLE_TENANT_UUID, incident_3.id, with_alerts=True)
+    assert len(incident_3.alerts) == 0
+    assert incident_3.status == IncidentStatus.MERGED.value
+    assert incident_3.merged_into_incident_id == incident_1.id
+    assert incident_3.merged_at is not None
+    assert incident_3.merged_by == "test-user-email"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_merge_incidents_app(
+        db_session, client, test_app, setup_stress_alerts_no_elastic, create_alert
+):
+    incident_1 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "destination", "user_summary": "destination"},
+    )
+    alerts_1 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
+    )
+    incident_2 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "test-2", "user_summary": "test-2"},
+    )
+    for i in range(50):
+        create_alert(
+            f"alert-{i}",
+            AlertStatus.FIRING,
+            datetime.utcnow(),
+            {"severity": AlertSeverity.CRITICAL.value, "service": "second-service"},
+        )
+    alerts_2 = (
+        db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-")).all()
+    )
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
+    )
+    incident_3 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "test-3", "user_summary": "test-3"},
+    )
+    alerts_3 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
+    )
+
+    incident_1_before_via_api = client.get(
+        f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
+    ).json()
+    assert incident_1_before_via_api["alerts_count"] == 50
+    assert "second-service" not in incident_1_before_via_api["services"]
+
+    response = client.post(
+        "/incidents/merge",
+        headers={"x-api-key": "some-key"},
+        json={
+            "source_incident_ids": [str(incident_2.id), str(incident_3.id)],
+            "destination_incident_id": str(incident_1.id),
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["id"] == str(incident_1.id)
+    assert result["alerts_count"] == 150
+    assert "second-service" in result["services"]
+
+    incident_2_via_api = client.get(
+        f"/incidents/{incident_2.id}", headers={"x-api-key": "some-key"}
+    ).json()
+    assert incident_2_via_api["status"] == IncidentStatus.MERGED.value
+    assert incident_2_via_api["merged_into_incident_id"] == str(incident_1.id)
+
+    incident_3_via_api = client.get(
+        f"/incidents/{incident_3.id}",
+        headers={"x-api-key": "some-key"},
+    ).json()
+    assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
+    assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
