@@ -1,0 +1,53 @@
+.using-icon {
+  width: unset !important;
+  height: unset !important;
+  background: none !important;
+}
+
+.rc-card {
+  filter: unset !important;
+}
+
+.active {
+  color: unset !important;
+  background: unset !important;
+  border: unset !important;
+}
+
+:focus {
+  outline: unset !important;
+}
+
+li[class^="VerticalItemWrapper-"] {
+  margin: unset !important;
+}
+
+[class^="TimelineTitleWrapper-"] {
+  display: none !important;
+}
+
+[class^="TimelinePointWrapper-"] {
+  width: 5% !important;
+}
+
+[class^="TimelineVerticalWrapper-"]
+  li
+  [class^="TimelinePointWrapper-"]::before {
+  background: lightgray !important;
+  width: 0.5px;
+}
+
+[class^="TimelineVerticalWrapper-"] li [class^="TimelinePointWrapper-"]::after {
+  background: lightgray !important;
+  width: 0.5px;
+}
+
+[class^="TimelineVerticalWrapper-"]
+  li:nth-of-type(1)
+  [class^="TimelinePointWrapper-"]::before {
+  display: none;
+}
+
+.vertical-item-row {
+  justify-content: unset !important;
+}

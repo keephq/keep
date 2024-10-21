@@ -90,7 +90,10 @@ export const useAlerts = () => {
 
   const useMultipleFingerprintsAlertAudit = (
     fingerprints: string[] | undefined,
-    options: SWRConfiguration = { revalidateOnFocus: true }
+    options: SWRConfiguration = {
+      revalidateOnFocus: true,
+      revalidateOnMount: false,
+    }
   ) => {
     return useSWR<AuditEvent[]>(
       () =>
@@ -112,7 +115,9 @@ export const useAlerts = () => {
 
   const useAlertAudit = (
     fingerprint: string,
-    options: SWRConfiguration = { revalidateOnFocus: false }
+    options: SWRConfiguration = {
+      revalidateOnFocus: false,
+    }
   ) => {
     return useSWR<AuditEvent[]>(
       () =>

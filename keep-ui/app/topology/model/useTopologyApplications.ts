@@ -1,6 +1,6 @@
 import { TopologyApplication } from "./models";
 import { getApiURL } from "@/utils/apiUrl";
-import useSWR from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
 import { useCallback, useMemo } from "react";
@@ -9,11 +9,16 @@ import { useRevalidateMultiple } from "@/utils/state";
 
 type UseTopologyApplicationsOptions = {
   initialData?: TopologyApplication[];
+  options?: SWRConfiguration;
 };
 
-export function useTopologyApplications({
-  initialData,
-}: UseTopologyApplicationsOptions = {}) {
+export function useTopologyApplications(
+  { initialData, options }: UseTopologyApplicationsOptions = {
+    options: {
+      revalidateOnFocus: false,
+    },
+  }
+) {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
   const revalidateMultiple = useRevalidateMultiple();
@@ -24,6 +29,7 @@ export function useTopologyApplications({
     (url: string) => fetcher(url, session!.accessToken),
     {
       fallbackData: initialData,
+      ...options,
     }
   );
 
