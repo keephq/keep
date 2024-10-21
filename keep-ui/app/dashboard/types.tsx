@@ -1,22 +1,31 @@
-import { Preset } from "app/alerts/models";
+import {Preset} from "app/alerts/models";
+import {MetricsWidget} from "@/utils/hooks/useDashboardMetricWidgets";
+
 export interface LayoutItem {
-    i: string;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    minW?: number;
-    minH?: number;
-    static: boolean;
-  }
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+  static: boolean;
+}
 
-  export interface WidgetData extends LayoutItem {
-    thresholds: Threshold[];
-    preset: Preset;
-    name: string;
-  }
+export enum WidgetType {
+  PRESET = 'PRESET',
+  METRIC = 'METRIC'
+}
 
-  export interface Threshold {
-    value: number;
-    color: string;
-  }
+export interface WidgetData extends LayoutItem {
+  widgetType: WidgetType;
+  thresholds?: Threshold[];
+  preset?: Preset;
+  metric?: MetricsWidget;
+  name: string;
+}
+
+export interface Threshold {
+  value: number;
+  color: string;
+}

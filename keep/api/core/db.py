@@ -1504,7 +1504,7 @@ def create_rule(
     grouping_criteria=None,
     group_description=None,
     require_approve=False,
-    resolve_on=ResolveOn.NEVER.value
+    resolve_on=ResolveOn.NEVER.value,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -2067,12 +2067,16 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
     return providers
 
 
-def get_provider_distribution(tenant_id: str) -> dict:
-    """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
+def get_provider_distribution(tenant_id: str, aggregate_all: bool = False) -> dict:
+    """
+    Returns hits per hour and the last alert timestamp for each provider in the past 24 hours.
+    If aggregate_all is True, returns combined distribution across all providers.
+    """
     with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
 
+        # Database-specific timestamp formatting
         if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
         elif session.bind.dialect.name == "postgresql":
@@ -2082,62 +2086,235 @@ def get_provider_distribution(tenant_id: str) -> dict:
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
-        # Adjusted query to include max timestamp
+        if aggregate_all:
+            # Query for combined alert distribution across all providers
+            query = (
+                session.query(
+                    timestamp_format.label("time"),
+                    func.count().label("hits"),
+                    func.max(Alert.timestamp).label("last_alert_timestamp"),
+                )
+                .filter(
+                    Alert.tenant_id == tenant_id,
+                    Alert.timestamp >= twenty_four_hours_ago,
+                )
+                .group_by("time")
+                .order_by("time")
+            )
+
+            results = query.all()
+
+            combined_distribution = {
+                "alert_per_hour": [{"hour": i, "number": 0} for i in range(24)],
+                "last_alert_received": None,
+            }
+
+            for time, hits, last_alert_timestamp in results:
+                last_alert_timestamp = (
+                    datetime.fromisoformat(last_alert_timestamp)
+                    if isinstance(last_alert_timestamp, str)
+                    else last_alert_timestamp
+                )
+
+                if (
+                    combined_distribution["last_alert_received"] is None
+                    or last_alert_timestamp
+                    > combined_distribution["last_alert_received"]
+                ):
+                    combined_distribution["last_alert_received"] = last_alert_timestamp
+
+                time = datetime.strptime(time, time_format)
+                index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+
+                if 0 <= index < 24:
+                    combined_distribution["alert_per_hour"][index]["number"] += hits
+
+            return combined_distribution
+
+        else:
+            # Query for alert distribution grouped by provider
+            query = (
+                session.query(
+                    Alert.provider_id,
+                    Alert.provider_type,
+                    timestamp_format.label("time"),
+                    func.count().label("hits"),
+                    func.max(Alert.timestamp).label("last_alert_timestamp"),
+                )
+                .filter(
+                    Alert.tenant_id == tenant_id,
+                    Alert.timestamp >= twenty_four_hours_ago,
+                )
+                .group_by(Alert.provider_id, Alert.provider_type, "time")
+                .order_by(Alert.provider_id, Alert.provider_type, "time")
+            )
+
+            results = query.all()
+
+            provider_distribution = {}
+
+            for provider_id, provider_type, time, hits, last_alert_timestamp in results:
+                provider_key = f"{provider_id}_{provider_type}"
+                last_alert_timestamp = (
+                    datetime.fromisoformat(last_alert_timestamp)
+                    if isinstance(last_alert_timestamp, str)
+                    else last_alert_timestamp
+                )
+
+                if provider_key not in provider_distribution:
+                    provider_distribution[provider_key] = {
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                        "alert_last_24_hours": [
+                            {"hour": i, "number": 0} for i in range(24)
+                        ],
+                        "last_alert_received": last_alert_timestamp,
+                    }
+                else:
+                    provider_distribution[provider_key]["last_alert_received"] = max(
+                        provider_distribution[provider_key]["last_alert_received"],
+                        last_alert_timestamp,
+                    )
+
+                time = datetime.strptime(time, time_format)
+                index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+
+                if 0 <= index < 24:
+                    provider_distribution[provider_key]["alert_last_24_hours"][index][
+                        "number"
+                    ] += hits
+
+            return provider_distribution
+
+
+def get_combined_workflow_execution_distribution(tenant_id: str):
+    """
+    Returns counts of WorkflowExecutions started in the past 24 hours, combined across all workflows.
+    """
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        # Database-specific timestamp formatting
+        if session.bind.dialect.name == "mysql":
+            timestamp_format = func.date_format(WorkflowExecution.started, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(WorkflowExecution.started, "YYYY-MM-DD HH")
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, WorkflowExecution.started)
+
+        # Query for combined execution count across all workflows
         query = (
             session.query(
-                Alert.provider_id,
-                Alert.provider_type,
                 timestamp_format.label("time"),
-                func.count().label("hits"),
-                func.max(Alert.timestamp).label(
-                    "last_alert_timestamp"
-                ),  # Include max timestamp
+                func.count().label("executions"),
             )
             .filter(
-                Alert.tenant_id == tenant_id,
-                Alert.timestamp >= twenty_four_hours_ago,
+                WorkflowExecution.tenant_id == tenant_id,
+                WorkflowExecution.started >= twenty_four_hours_ago,
             )
-            .group_by(Alert.provider_id, Alert.provider_type, "time")
-            .order_by(Alert.provider_id, Alert.provider_type, "time")
+            .group_by("time")
+            .order_by("time")
         )
 
         results = query.all()
 
-        provider_distribution = {}
+        executions_per_hour = [{"hour": i, "number": 0} for i in range(24)]
 
-        for provider_id, provider_type, time, hits, last_alert_timestamp in results:
-            provider_key = f"{provider_id}_{provider_type}"
-            last_alert_timestamp = (
-                datetime.fromisoformat(last_alert_timestamp)
-                if isinstance(last_alert_timestamp, str)
-                else last_alert_timestamp
-            )
-
-            if provider_key not in provider_distribution:
-                provider_distribution[provider_key] = {
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                    "alert_last_24_hours": [
-                        {"hour": i, "number": 0} for i in range(24)
-                    ],
-                    "last_alert_received": last_alert_timestamp,  # Initialize with the first seen timestamp
-                }
-            else:
-                # Update the last alert timestamp if the current one is more recent
-                provider_distribution[provider_key]["last_alert_received"] = max(
-                    provider_distribution[provider_key]["last_alert_received"],
-                    last_alert_timestamp,
-                )
-
+        for time, executions in results:
             time = datetime.strptime(time, time_format)
             index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
 
             if 0 <= index < 24:
-                provider_distribution[provider_key]["alert_last_24_hours"][index][
-                    "number"
-                ] += hits
+                executions_per_hour[index]["number"] += executions
 
-    return provider_distribution
+        return executions_per_hour
+
+
+def get_incidents_created_distribution(tenant_id):
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        # Database-specific timestamp formatting
+        if session.bind.dialect.name == "mysql":
+            timestamp_format = func.date_format(Incident.creation_time, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(Incident.creation_time, "YYYY-MM-DD HH")
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, Incident.creation_time)
+
+        query = (
+            session.query(
+                timestamp_format.label("time"), func.count().label("incidents")
+            )
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.creation_time >= twenty_four_hours_ago,
+            )
+            .group_by("time")
+            .order_by("time")
+        )
+
+        results = query.all()
+        incidents_per_hour = [{"hour": i, "number": 0} for i in range(24)]
+
+        for time, incidents in results:
+            time = datetime.strptime(time, time_format)
+            index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+
+            if 0 <= index < 24:
+                incidents_per_hour[index]["number"] += incidents
+
+        return incidents_per_hour
+
+
+def calc_incidents_mttr(tenant_id: str):
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        # Database-specific timestamp formatting
+        if session.bind.dialect.name == "mysql":
+            timestamp_format = func.date_format(Incident.creation_time, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(Incident.creation_time, "YYYY-MM-DD HH")
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, Incident.creation_time)
+
+        query = (
+            session.query(
+                timestamp_format.label("time"),
+                Incident.start_time,
+                Incident.end_time,
+                func.count().label("incidents"),
+            )
+            .filter(
+                Incident.tenant_id == tenant_id,
+                Incident.creation_time >= twenty_four_hours_ago,
+                Incident.status == IncidentStatus.RESOLVED.value,
+            )
+            .group_by("time", Incident.start_time, Incident.end_time)
+            .order_by("time")
+        )
+
+        results = query.all()
+        mttr = [{"hour": i, "number": 0, "mttr": 0} for i in range(24)]
+
+        for time, start_time, end_time, incidents in results:
+            time = datetime.strptime(time, time_format)
+            index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+            if start_time and end_time:
+                resolution_time = int(
+                    (end_time - start_time).total_seconds() / 3600
+                )  # MTTR in hours
+                mttr[index]["number"] += incidents
+                mttr[index]["mttr"] += resolution_time * incidents
+
+        for hour_data in mttr:
+            if hour_data["number"] > 0:
+                hour_data["mttr"] /= hour_data["number"]  # Average MTTR for the hour
+        return mttr
 
 
 def get_presets(
@@ -2370,13 +2547,12 @@ def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Pres
 
 
 def assign_alert_to_incident(
-        alert_id: UUID | str,
-        incident: Incident,
-        tenant_id: str,
-        session: Optional[Session]=None):
-    return add_alerts_to_incident(
-        tenant_id, incident, [alert_id], session=session
-    )
+    alert_id: UUID | str,
+    incident: Incident,
+    tenant_id: str,
+    session: Optional[Session] = None,
+):
+    return add_alerts_to_incident(tenant_id, incident, [alert_id], session=session)
 
 
 def is_alert_assigned_to_incident(
@@ -2806,13 +2982,16 @@ def add_alerts_to_incident(
             if not new_alert_ids:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, session)
+            alerts_data_for_incident = get_alerts_data_for_incident(
+                new_alert_ids, session
+            )
 
             incident.sources = list(
                 set(incident.sources) | set(alerts_data_for_incident["sources"])
             )
             incident.affected_services = list(
-                set(incident.affected_services) | set(alerts_data_for_incident["services"])
+                set(incident.affected_services)
+                | set(alerts_data_for_incident["services"])
             )
             incident.alerts_count += alerts_data_for_incident["count"]
 
@@ -2893,7 +3072,7 @@ def get_last_alerts_for_incidents(
 
 
 def remove_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id:  str | UUID, alert_ids: List[UUID]
+    tenant_id: str, incident_id: str | UUID, alert_ids: List[UUID]
 ) -> Optional[int]:
     with Session(engine) as session:
         incident = session.exec(
@@ -3296,7 +3475,10 @@ def change_incident_status_by_id(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
-            .values(status=status.value)
+            .values(
+                status=status.value,
+                end_time=(None, datetime.utcnow())[status == IncidentStatus.RESOLVED],
+            )
         )
         updated = session.execute(stmt)
         session.commit()
@@ -3370,14 +3552,18 @@ def get_workflow_executions_for_incident_or_alert(
         return results, total_count
 
 
-def is_all_incident_alerts_resolved(incident: Incident, session: Optional[Session] = None) -> bool:
+def is_all_incident_alerts_resolved(
+    incident: Incident, session: Optional[Session] = None
+) -> bool:
 
     if incident.alerts_count == 0:
         return False
 
     with existed_or_new_session(session) as session:
 
-        enriched_status_field = get_json_extract_field(session, AlertEnrichment.enrichments, "status")
+        enriched_status_field = get_json_extract_field(
+            session, AlertEnrichment.enrichments, "status"
+        )
         status_field = get_json_extract_field(session, Alert.event, "status")
 
         subquery = (
@@ -3386,7 +3572,9 @@ def is_all_incident_alerts_resolved(incident: Incident, session: Optional[Sessio
                 status_field.label("status"),
             )
             .select_from(Alert)
-            .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
+            .outerjoin(
+                AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
+            )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .where(
                 AlertToIncident.incident_id == incident.id,
@@ -3407,8 +3595,8 @@ def is_all_incident_alerts_resolved(incident: Incident, session: Optional[Sessio
                         subquery.c.enriched_status != AlertStatus.RESOLVED.value,
                         and_(
                             subquery.c.enriched_status.is_(None),
-                            subquery.c.status != AlertStatus.RESOLVED.value
-                        )
+                            subquery.c.status != AlertStatus.RESOLVED.value,
+                        ),
                     )
                 )
             )
@@ -3417,42 +3605,45 @@ def is_all_incident_alerts_resolved(incident: Incident, session: Optional[Sessio
         return not not_resolved_exists
 
 
-def is_last_incident_alert_resolved(incident: Incident, session: Optional[Session] = None) -> bool:
+def is_last_incident_alert_resolved(
+    incident: Incident, session: Optional[Session] = None
+) -> bool:
     return is_edge_incident_alert_resolved(incident, func.max, session)
 
 
-def is_first_incident_alert_resolved(incident: Incident, session: Optional[Session] = None) -> bool:
+def is_first_incident_alert_resolved(
+    incident: Incident, session: Optional[Session] = None
+) -> bool:
     return is_edge_incident_alert_resolved(incident, func.min, session)
 
 
-def is_edge_incident_alert_resolved(incident: Incident, direction: Callable, session: Optional[Session] = None) -> bool:
+def is_edge_incident_alert_resolved(
+    incident: Incident, direction: Callable, session: Optional[Session] = None
+) -> bool:
 
     if incident.alerts_count == 0:
         return False
 
     with existed_or_new_session(session) as session:
 
-        enriched_status_field = get_json_extract_field(session, AlertEnrichment.enrichments, "status")
+        enriched_status_field = get_json_extract_field(
+            session, AlertEnrichment.enrichments, "status"
+        )
         status_field = get_json_extract_field(session, Alert.event, "status")
 
         finerprint, enriched_status, status = session.exec(
-            select(
-                Alert.fingerprint,
-                enriched_status_field,
-                status_field
-            )
+            select(Alert.fingerprint, enriched_status_field, status_field)
             .select_from(Alert)
-            .outerjoin(AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint)
-            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
-            .where(
-                AlertToIncident.incident_id == incident.id
+            .outerjoin(
+                AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
             )
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .where(AlertToIncident.incident_id == incident.id)
             .group_by(Alert.fingerprint)
             .having(func.max(Alert.timestamp))
             .order_by(direction(Alert.timestamp))
         ).first()
 
-        return (
-            enriched_status == AlertStatus.RESOLVED.value or
-            (enriched_status is None and status == AlertStatus.RESOLVED.value)
+        return enriched_status == AlertStatus.RESOLVED.value or (
+            enriched_status is None and status == AlertStatus.RESOLVED.value
         )

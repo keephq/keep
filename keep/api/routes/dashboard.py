@@ -7,7 +7,13 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from keep.api.core.db import create_dashboard as create_dashboard_db
+from keep.api.core.db import (
+    create_dashboard as create_dashboard_db,
+    get_provider_distribution,
+    get_combined_workflow_execution_distribution,
+    get_incidents_created_distribution,
+    calc_incidents_mttr,
+)
 from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.db import update_dashboard as update_dashboard_db
@@ -31,6 +37,11 @@ class DashboardResponseDTO(BaseModel):
     dashboard_config: Dict
     created_at: datetime
     updated_at: datetime
+
+
+class MetricWidgets(BaseModel):
+    id: str
+    name: str
 
 
 router = APIRouter()
@@ -136,3 +147,54 @@ def delete_dashboard(
     if not dashboard:
         raise HTTPException(status_code=404, detail="Dashboard not found")
     return {"ok": True}
+
+
+@router.get("/metric-widgets")
+def get_metric_widgets(
+    mttr: bool = True,
+    apd: bool = True,
+    ipd: bool = True,
+    wpd: bool = True,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:dashboards"])
+    ),
+):
+    data = {}
+    x = [
+        {"hour": 0, "count": 0},
+        {"hour": 1, "count": 0},
+        {"hour": 2, "count": 0},
+        {"hour": 3, "count": 0},
+        {"hour": 4, "count": 0},
+        {"hour": 5, "count": 0},
+        {"hour": 6, "count": 0},
+        {"hour": 7, "count": 0},
+        {"hour": 8, "count": 0},
+        {"hour": 9, "count": 0},
+        {"hour": 10, "count": 0},
+        {"hour": 11, "count": 0},
+        {"hour": 12, "count": 0},
+        {"hour": 13, "count": 0},
+        {"hour": 14, "count": 0},
+        {"hour": 15, "count": 0},
+        {"hour": 16, "count": 0},
+        {"hour": 17, "count": 0},
+        {"hour": 18, "count": 0},
+        {"hour": 19, "count": 0},
+        {"hour": 20, "count": 0},
+        {"hour": 21, "count": 0},
+        {"hour": 22, "count": 0},
+        {"hour": 23, "count": 0},
+    ]
+    tenant_id = authenticated_entity.tenant_id
+    if apd:
+        data["apd"] = get_provider_distribution(
+            tenant_id=tenant_id, aggregate_all=True
+        )["alert_per_hour"]
+    if ipd:
+        data["ipd"] = get_incidents_created_distribution(tenant_id=tenant_id)
+    if wpd:
+        data["wpd"] = get_combined_workflow_execution_distribution(tenant_id=tenant_id)
+    if mttr:
+        data["mttr"] = calc_incidents_mttr(tenant_id=tenant_id)
+    return data
