@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from uuid import UUID
 
 import pytz
@@ -18,6 +18,9 @@ from pydantic import (
 )
 from sqlalchemy import desc
 from sqlmodel import col
+
+if TYPE_CHECKING:
+    from keep.api.models.db.alert import Incident
 
 logger = logging.getLogger(__name__)
 
