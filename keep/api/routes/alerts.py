@@ -4,7 +4,7 @@ import hmac
 import json
 import logging
 import os
-from typing import Optional
+from typing import Optional, List
 
 import celpy
 from arq import ArqRedis
@@ -25,7 +25,7 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
-from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts
+from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts, get_alerts_metrics_by_provider
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
@@ -44,6 +44,8 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
+from keep.api.utils.time_stamp_helpers import get_time_stamp_filter
+from keep.api.models.time_stamp import TimeStampFilter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -756,3 +758,29 @@ def get_alert_audit(
 
     grouped_events = AlertAuditDto.from_orm_list(alert_audit)
     return grouped_events
+
+
+@router.get("/quality/metrics", description="Get alert quality")
+def get_alert_quality(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+    time_stamp: TimeStampFilter = Depends(get_time_stamp_filter),
+    fields: Optional[List[str]] = Query([]),
+):
+    logger.info(
+        "Fetching alert quality metrics per provider",
+        extra={
+            "tenant_id": authenticated_entity.tenant_id,
+            "fields": fields
+        },
+        
+    )
+    start_date = time_stamp.lower_timestamp if time_stamp else None
+    end_date = time_stamp.upper_timestamp if time_stamp else None
+    db_alerts_quality = get_alerts_metrics_by_provider(
+        tenant_id=authenticated_entity.tenant_id, start_date=start_date, end_date=end_date,
+        fields=fields
+    )
+    
+    return db_alerts_quality
