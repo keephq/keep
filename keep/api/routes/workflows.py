@@ -27,7 +27,7 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
@@ -181,25 +181,33 @@ def run_workflow(
 
     # Finally, run it
     try:
+
+        if body.get("type", "alert") == "alert":
+            event_class = AlertDto
+        else:
+            event_class = IncidentDto
+
+        event_body = body.get("body", {})
+
         # if its event that was triggered by the UI with the Modal
-        if "test-workflow" in body.get("fingerprint", "") or not body:
+        if "test-workflow" in event_body.get("fingerprint", "") or not body:
             # some random
-            body["id"] = body.get("fingerprint", "manual-run")
-            body["name"] = body.get("fingerprint", "manual-run")
-            body["lastReceived"] = datetime.datetime.now(
+            event_body["id"] = event_body.get("fingerprint", "manual-run")
+            event_body["name"] = event_body.get("fingerprint", "manual-run")
+            event_body["lastReceived"] = datetime.datetime.now(
                 tz=datetime.timezone.utc
             ).isoformat()
-            if "source" in body and not isinstance(body["source"], list):
-                body["source"] = [body["source"]]
+            if "source" in event_body and not isinstance(event_body["source"], list):
+                event_body["source"] = [event_body["source"]]
         try:
-            alert = AlertDto(**body)
+            event = event_class(**event_body)
         except TypeError:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid alert format",
+                detail="Invalid event format",
             )
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, alert
+            workflow_id, tenant_id, created_by, event
         )
     except Exception as e:
         logger.exception(

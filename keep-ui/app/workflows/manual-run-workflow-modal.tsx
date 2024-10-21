@@ -1,5 +1,5 @@
-import { Button, Select, SelectItem } from "@tremor/react";
-import { AlertDto } from "./models";
+import {Button, Select, SelectItem, Title} from "@tremor/react";
+
 import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
@@ -7,13 +7,16 @@ import { useSession } from "next-auth/react";
 import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { IncidentDto } from "@/app/incidents/models";
+import { AlertDto } from "@/app/alerts/models";
 
 interface Props {
-  alert: AlertDto | null | undefined;
+  alert?: AlertDto | null | undefined;
+  incident?: IncidentDto | null | undefined;
   handleClose: () => void;
 }
 
-export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
+export default function ManualRunWorkflowModal({ alert, incident, handleClose }: Props) {
   /**
    *
    */
@@ -25,7 +28,7 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
   const router = useRouter();
   const apiUrl = getApiURL();
 
-  const isOpen = !!alert;
+  const isOpen = !!alert || !!incident;
 
   const clearAndClose = () => {
     setSelectedWorkflowId(undefined);
@@ -41,7 +44,7 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
           Authorization: `Bearer ${session?.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(alert),
+        body: JSON.stringify({"type": alert ? "alert" : "incident", "body": alert ? alert : incident}),
       }
     );
 
@@ -61,6 +64,7 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
 
   return (
     <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
+      <Title className="mb-1">Select Workflow to run</Title>
       {workflows && (
         <Select
           value={selectedWorkflowId}
