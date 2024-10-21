@@ -108,6 +108,8 @@ class IncidentStatus(Enum):
     RESOLVED = "resolved"
     # Incident has been acknowledged but not resolved
     ACKNOWLEDGED = "acknowledged"
+    # Incident was merged with another incident
+    MERGED = "merged"
 
 
 class IncidentSeverity(SeverityBaseInterface):
@@ -488,6 +490,11 @@ class IncidentDto(IncidentDtoIn):
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
         return dto
+
+
+class MergeIncidentsCommandDto(BaseModel):
+    source_incident_ids: list[UUID]
+    destination_incident_id: UUID
 
 
 class DeduplicationRuleDto(BaseModel):
