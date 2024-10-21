@@ -232,7 +232,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
         onClose={() => setApiKeyModalOpen(false)}
         accessToken={accessToken}
         setApiKeys={setApiKeys}
-        apiUrl={apiUrl}
+        apiUrl={apiUrl!}
         roles={roles}
       />
     </div>
