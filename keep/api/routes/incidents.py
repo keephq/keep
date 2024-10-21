@@ -27,6 +27,8 @@ from keep.api.core.db import (
     change_incident_status_by_id,
     update_incident_from_dto_by_id,
     get_incidents_meta_for_tenant,
+    merge_incidents_to_id,
+    DestinationIncidentNotFound,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -40,6 +42,7 @@ from keep.api.models.alert import (
     IncidentSorting,
     IncidentSeverity,
     IncidentListFilterParamsDto,
+    MergeIncidentsCommandDto,
 )
 
 from keep.api.routes.alerts import _enrich_alert
@@ -346,6 +349,36 @@ def delete_incident(
             extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
         )
     return Response(status_code=202)
+
+
+@router.post("/merge", description="Merge incidents", response_model=IncidentDto)
+def merge_incidents(
+    command: MergeIncidentsCommandDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+) -> Response:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Merging incidents",
+        extra={
+            "source_incident_ids": command.source_incident_ids,
+            "destination_incident_id": command.destination_incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        updated_incident = merge_incidents_to_id(
+            tenant_id,
+            command.source_incident_ids,
+            command.destination_incident_id,
+            authenticated_entity.email,
+        )
+        updated_incident_dto = IncidentDto.from_db_incident(updated_incident)
+        return updated_incident_dto
+    except DestinationIncidentNotFound as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get(
