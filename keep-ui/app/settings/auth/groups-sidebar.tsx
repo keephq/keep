@@ -82,8 +82,8 @@ const GroupsSidebar = ({
 
     const method = isNewGroup ? "POST" : "PUT";
     const url = isNewGroup
-      ? `${apiUrl()}/auth/groups`
-      : `${apiUrl()}/auth/groups/${group.id}`;
+      ? `${apiUrl}/auth/groups`
+      : `${apiUrl}/auth/groups/${group.id}`;
     try {
       const response = await fetch(url, {
         method: method,
