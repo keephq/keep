@@ -14,7 +14,7 @@ import {
 } from "@/utils/hooks/useIncidents";
 import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
 import Loading from "@/app/loading";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { getApiURL } from "@/utils/apiUrl";
 import { useSession } from "next-auth/react";
 import { KeyedMutator } from "swr";
@@ -59,7 +59,6 @@ export function IncidentActivityChronoItem({ activity }: { activity: any }) {
   );
 }
 
-import { useEffect } from "react";
 
 export function IncidentActivityChronoItemComment({
   incident,
@@ -244,6 +243,7 @@ export default function IncidentActivity({
   return (
     <Chrono
       items={activities?.map((activity) => ({
+        id: activity.id,
         title: activity.timestamp,
       }))}
       hideControls
@@ -254,6 +254,7 @@ export default function IncidentActivity({
       cardWidth={600}
       cardHeight={100}
       allowDynamicUpdate={true}
+      disableAutoScrollOnClick={true}
     >
       {chronoContent}
       <div className="chrono-icons">{chronoIcons}</div>
