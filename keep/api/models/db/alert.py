@@ -1,8 +1,7 @@
 import enum
 import logging
-from typing import Optional
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, UniqueConstraint
@@ -415,3 +414,4 @@ class AlertActionType(enum.Enum):
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
     MAINTENANCE = "Alert is in maintenance window"
+    INCIDENT_COMMENT = "A comment was added to the incident"
