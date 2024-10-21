@@ -2,7 +2,7 @@ import {
   IncidentDto,
   IncidentsMetaDto,
   PaginatedIncidentAlertsDto,
-  PaginatedIncidentsDto
+  PaginatedIncidentsDto,
 } from "../../app/incidents/models";
 import { PaginatedWorkflowExecutionDto } from "app/workflows/builder/types";
 import { useSession } from "next-auth/react";
@@ -11,17 +11,18 @@ import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
+import { useAlerts } from "./useAlerts";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
 }
 
 interface Filters {
-  status: string[],
-  severity: string[],
-  assignees: string[]
-  sources: string[],
-  affected_services: string[],
+  status: string[];
+  severity: string[];
+  assignees: string[];
+  sources: string[];
+  affected_services: string[];
 }
 
 export const useIncidents = (
@@ -32,7 +33,7 @@ export const useIncidents = (
   filters: Filters | {} = {},
   options: SWRConfiguration = {
     revalidateOnFocus: false,
-  },
+  }
 ) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
@@ -44,7 +45,7 @@ export const useIncidents = (
       filtersParams.delete(key as string);
     } else {
       value.forEach((s: string) => {
-        filtersParams.append(key, s)
+        filtersParams.append(key, s);
       });
     }
   });
@@ -91,7 +92,8 @@ export const useIncidentFutureIncidents = (
   const { data: session } = useSession();
 
   return useSWR<PaginatedIncidentsDto>(
-    () => (session ? `${apiUrl}/incidents/${incidentId}/future_incidents` : null),
+    () =>
+      session ? `${apiUrl}/incidents/${incidentId}/future_incidents` : null,
     (url) => fetcher(url, session?.accessToken),
     options
   );
@@ -133,6 +135,24 @@ export const useIncidentWorkflowExecutions = (
   );
 };
 
+export const usePollIncidentComments = (incidentId: string) => {
+  const { bind, unbind } = useWebsocket();
+  const { useAlertAudit } = useAlerts();
+  const { mutate: mutateIncidentActivity } = useAlertAudit(incidentId);
+  const handleIncoming = useCallback(
+    (data: IncidentUpdatePayload) => {
+      mutateIncidentActivity();
+    },
+    [mutateIncidentActivity]
+  );
+  useEffect(() => {
+    bind("incident-comment", handleIncoming);
+    return () => {
+      unbind("incident-comment", handleIncoming);
+    };
+  }, [bind, unbind, handleIncoming]);
+};
+
 export const usePollIncidentAlerts = (incidentId: string) => {
   const { bind, unbind } = useWebsocket();
   const { mutate } = useIncidentAlerts(incidentId);
@@ -166,7 +186,6 @@ export const usePollIncidents = (mutateIncidents: any) => {
     };
   }, [bind, unbind, handleIncoming]);
 };
-
 
 export const useIncidentsMeta = (
   options: SWRConfiguration = {
