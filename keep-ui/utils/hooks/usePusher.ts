@@ -30,8 +30,9 @@ export const useWebsocket = () => {
       console.log("useWebsocket: isRelativeHost:", isRelativeHost);
       PUSHER = new Pusher(configData.PUSHER_APP_KEY, {
         wsHost: isRelativeHost
-          ? window.location.hostname + configData.PUSHER_HOST
+          ? window.location.hostname
           : configData.PUSHER_HOST,
+        wsPath: isRelativeHost ? configData.PUSHER_HOST : "",
         wsPort: isRelativeHost
           ? window.location.protocol === "https:"
             ? 443
