@@ -36,6 +36,7 @@ export const updateIncidentRequest = async ({
   incidentAssignee,
   incidentSameIncidentInThePastId,
   generatedByAi,
+  apiUrl,
 }: {
   session: Session | null;
   incidentId: string;
@@ -44,8 +45,8 @@ export const updateIncidentRequest = async ({
   incidentAssignee: string;
   incidentSameIncidentInThePastId: string | null;
   generatedByAi: boolean;
+  apiUrl: string;
 }) => {
-  const apiUrl = useApiUrl();
   const response = await fetch(
     `${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`,
     {
@@ -142,6 +143,7 @@ export default function CreateOrUpdateIncident({
       incidentSameIncidentInThePastId:
         incidentToEdit?.same_incident_in_the_past_id!,
       generatedByAi: false,
+      apiUrl: apiUrl!,
     });
     if (response.ok) {
       exitEditMode();
