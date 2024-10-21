@@ -22,7 +22,7 @@ def upgrade() -> None:
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
-                "merged_into_id",
+                "merged_into_incident_id",
                 sqlalchemy_utils.types.uuid.UUIDType(binary=False),
                 nullable=True,
             )
@@ -32,13 +32,19 @@ def upgrade() -> None:
             sa.Column("merged_by", sqlmodel.sql.sqltypes.AutoString(), nullable=True)
         )
         batch_op.create_foreign_key(
-            None, "incident", ["merged_into_id"], ["id"], ondelete="SET NULL"
+            "fk_incident_merged_into_incident_id",
+            "incident",
+            ["merged_into_incident_id"],
+            ["id"],
+            ondelete="SET NULL",
         )
 
 
 def downgrade() -> None:
     with op.batch_alter_table("incident", schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_="foreignkey")
+        batch_op.drop_constraint(
+            "fk_incident_merged_into_incident_id", type_="foreignkey"
+        )
         batch_op.drop_column("merged_by")
         batch_op.drop_column("merged_at")
-        batch_op.drop_column("merged_into_id")
+        batch_op.drop_column("merged_into_incident_id")

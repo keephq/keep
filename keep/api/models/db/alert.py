@@ -157,7 +157,7 @@ class Incident(SQLModel, table=True):
         ),
     )
 
-    merged_into_id: UUID | None = Field(
+    merged_into_incident_id: UUID | None = Field(
         sa_column=Column(
             UUIDType(binary=False),
             ForeignKey("incident.id", ondelete="SET NULL"),
@@ -170,13 +170,13 @@ class Incident(SQLModel, table=True):
         back_populates="merged_incidents",
         sa_relationship_kwargs=dict(
             remote_side="Incident.id",
-            foreign_keys="[Incident.merged_into_id]",
+            foreign_keys="[Incident.merged_into_incident_id]",
         ),
     )
     merged_incidents: List["Incident"] = Relationship(
         back_populates="merged_into",
         sa_relationship_kwargs=dict(
-            foreign_keys="[Incident.merged_into_id]",
+            foreign_keys="[Incident.merged_into_incident_id]",
         ),
     )
 
