@@ -5,7 +5,7 @@ import GridLayout from "../GridLayout";
 import { usePresets } from "utils/hooks/usePresets";
 import WidgetModal from "../WidgetModal";
 import { Button, Card, TextInput, Subtitle, Icon } from "@tremor/react";
-import { LayoutItem, WidgetData, Threshold } from "../types";
+import { LayoutItem, WidgetData, Threshold, GenericsMertics } from "../types";
 import { Preset } from "app/alerts/models";
 import { FiSave, FiEdit2 } from "react-icons/fi";
 import { useSession } from "next-auth/react";
@@ -58,19 +58,21 @@ const DashboardPage = () => {
   const closeModal = () => setIsModalOpen(false);
 
   const handleAddWidget = (
-    preset: Preset,
+    preset: Preset | null,
     thresholds: Threshold[],
-    name: string
+    name: string,
+    widgetType?: string,
+    genericMetrics?: GenericsMertics | null
   ) => {
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
       x: (layout.length % 12) * 2,
       y: Math.floor(layout.length / 12) * 2,
-      w: 3,
-      h: 3,
-      minW: 2,
-      minH: 2,
+      w: genericMetrics ? 12 : 3,
+      h: genericMetrics ? 20 : 3,
+      minW: genericMetrics ? 10 : 2,
+      minH: genericMetrics ? 15 : 2,
       static: false,
     };
     const newWidget: WidgetData = {
@@ -78,14 +80,20 @@ const DashboardPage = () => {
       thresholds,
       preset,
       name,
+      widgetType: widgetType || "preset",
+      genericMetrics: genericMetrics || null,
     };
     setLayout((prevLayout) => [...prevLayout, newItem]);
     setWidgetData((prevData) => [...prevData, newWidget]);
   };
 
-  const handleEditWidget = (id: string) => {
-    const itemToEdit = widgetData.find((d) => d.i === id) || null;
-    setEditingItem(itemToEdit);
+  const handleEditWidget = (id: string, update?: WidgetData) => {
+    let itemToEdit = widgetData.find((d) => d.i === id) || null;
+    if (itemToEdit && update) {
+      setEditingItem({ ...itemToEdit, ...update });
+    } else {
+      setEditingItem(itemToEdit);
+    }
     setIsModalOpen(true);
   };
 
@@ -216,6 +224,7 @@ const DashboardPage = () => {
             data={widgetData}
             onEdit={handleEditWidget}
             onDelete={handleDeleteWidget}
+            onSave={handleSaveEdit}
             presets={allPresets}
           />
         </Card>
