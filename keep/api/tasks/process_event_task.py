@@ -79,6 +79,9 @@ def __save_to_db(
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
         if KEEP_STORE_RAW_ALERTS:
+            if isinstance(raw_events, dict):
+                raw_events = [raw_events]
+
             for raw_event in raw_events:
                 alert = AlertRaw(
                     tenant_id=tenant_id,
