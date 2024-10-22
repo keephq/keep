@@ -5,6 +5,8 @@ import { getApiURL } from "utils/apiUrl";
 export default withAuth(
   function middleware(req) {
     const { pathname, searchParams } = new URL(req.url);
+    //  Shahar: This is just for backward compatibility
+    //          **should be removed**
     // Redirect /backend/ to the API
     if (pathname.startsWith("/backend/")) {
       let apiUrl = getApiURL();

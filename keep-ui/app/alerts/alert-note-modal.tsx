@@ -6,7 +6,7 @@ const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@tremor/react";
-import { getApiURL } from "../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
@@ -26,6 +26,7 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
   }, [alert]);
   // get the session
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
 
   // if this modal should not be open, do nothing
   if (!alert) return null;
@@ -65,7 +66,7 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
         },
         fingerprint: alert.fingerprint,
       };
-      const response = await fetch(`${getApiURL()}/alerts/enrich`, {
+      const response = await fetch(`${apiUrl}/alerts/enrich`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

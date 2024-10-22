@@ -1,7 +1,7 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { Session } from "next-auth";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { usePresets } from "utils/hooks/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,7 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Preset } from "app/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
 // Using dynamic import to avoid hydration issues with react-player
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
@@ -60,12 +60,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
   };
 
   return (
-    <li
-      key={preset.id}
-      ref={setNodeRef}
-      style={dragStyle}
-      {...listeners}
-    >
+    <li key={preset.id} ref={setNodeRef} style={dragStyle} {...listeners}>
       <LinkWithIcon
         href={href}
         icon={getIcon()}
@@ -102,9 +97,10 @@ export const CustomPresetAlertLinks = ({
   session,
   selectedTags,
 }: CustomPresetAlertLinksProps) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
-  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } = usePresets();
+  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } =
+    usePresets();
   const { data: presets = [], mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -126,16 +122,26 @@ export const CustomPresetAlertLinks = ({
 
   useEffect(() => {
     const filteredLS = presetsOrderFromLS.filter(
-      (preset) => !["feed", "deleted", "dismissed", "without-incident", "groups"].includes(preset.name)
+      (preset) =>
+        ![
+          "feed",
+          "deleted",
+          "dismissed",
+          "without-incident",
+          "groups",
+        ].includes(preset.name)
     );
 
     // Combine live presets and local storage order
-    const combinedOrder = presets.reduce<Preset[]>((acc, preset: Preset) => {
-      if (!acc.find((p) => p.id === preset.id)) {
-        acc.push(preset);
-      }
-      return acc.filter((preset) => checkValidPreset(preset));
-    }, [...filteredLS]);
+    const combinedOrder = presets.reduce<Preset[]>(
+      (acc, preset: Preset) => {
+        if (!acc.find((p) => p.id === preset.id)) {
+          acc.push(preset);
+        }
+        return acc.filter((preset) => checkValidPreset(preset));
+      },
+      [...filteredLS]
+    );
 
     // Only update state if there's an actual change to prevent infinite loops
     if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
@@ -143,11 +149,12 @@ export const CustomPresetAlertLinks = ({
     }
   }, [presets, presetsOrderFromLS]);
   // Filter presets based on tags, or return all if no tags are selected
-  const filteredOrderedPresets = selectedTags.length === 0
-    ? presetsOrder
-    : presetsOrder.filter((preset) =>
-        preset.tags.some((tag) => selectedTags.includes(tag.name))
-      );
+  const filteredOrderedPresets =
+    selectedTags.length === 0
+      ? presetsOrder
+      : presetsOrder.filter((preset) =>
+          preset.tags.some((tag) => selectedTags.includes(tag.name))
+        );
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
