@@ -1,26 +1,28 @@
-import os
-import pydantic
 import dataclasses
+import os
+
+import pydantic
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class GoogleChatProviderAuthConfig:
     """Google Chat authentication configuration."""
 
-    webhook_url: str = dataclasses.field(
+    webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "name": "webhook_url",
             "description": "Google Chat Webhook Url",
             "required": True,
             "sensitive": True,
+            "validation": "https_url",
         },
-        default="",
     )
 
 
@@ -31,7 +33,7 @@ class GoogleChatProvider(BaseProvider):
     PROVIDER_TAGS = ["messaging"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -39,9 +41,6 @@ class GoogleChatProvider(BaseProvider):
         self.authentication_config = GoogleChatProviderAuthConfig(
             **self.config.authentication
         )
-
-        if not self.authentication_config.webhook_url:
-            raise ProviderException("Google Chat webhook URL is required")
 
     def dispose(self):
         """

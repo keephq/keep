@@ -1,6 +1,7 @@
 """
 Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
+
 import dataclasses
 import random
 from typing import Literal
@@ -27,11 +28,12 @@ class GrafanaOncallProviderAuthConfig:
             "hint": "Grafana OnCall API Token",
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana OnCall Host",
             "hint": "E.g. https://keephq.grafana.net",
+            "validation": "any_http_url",
         },
     )
 

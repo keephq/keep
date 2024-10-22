@@ -26,6 +26,7 @@ import {
   AccordionHeader,
   AccordionBody,
   Badge,
+  Switch,
 } from "@tremor/react";
 import {
   ExclamationCircleIcon,
@@ -144,9 +145,14 @@ function getInitialFormValues(provider: Provider) {
       ...provider.details.authentication,
     });
 
-  // Set default values for select inputs
+  // Set default values for select & switch inputs
   Object.entries(provider.config).forEach(([field, config]) => {
-    if (config.type === "select" && config.default && !initialValues[field]) {
+    if (
+      config.type &&
+      ["select", "switch"].includes(config.type) &&
+      config.default !== null &&
+      !initialValues[field]
+    ) {
       initialValues[field] = config.default;
     }
   });
@@ -159,7 +165,8 @@ function getZodSchema(fields: Provider["config"]) {
   const portError = "Invalid port number";
   const emptyStringToNull = z
     .string()
-    .transform((val) => (val.length === 0 ? null : val));
+    .optional()
+    .transform((val) => (val?.length === 0 ? null : val));
   const kvPairs = Object.entries(fields).map(([field, config]) => {
     if (config.type === "form") {
       const baseFormSchema = z.record(z.string(), z.string()).array();
@@ -191,6 +198,13 @@ function getZodSchema(fields: Provider["config"]) {
         ? baseFileSchema
         : baseFileSchema.optional();
       return [field, fileSchema];
+    }
+
+    if (config.type === "switch") {
+      const switchSchema = config.required
+        ? z.boolean()
+        : z.boolean().optional();
+      return [field, switchSchema];
     }
 
     const urlSchema = z
@@ -964,6 +978,16 @@ function FormField({
           onChange={handleInputChange}
         />
       );
+    case "switch":
+      return (
+        <SwitchInput
+          id={id}
+          config={config}
+          value={value}
+          disabled={disabled}
+          onChange={(value) => onChange(id, value)}
+        />
+      );
     default:
       return (
         <TextField
@@ -1211,6 +1235,29 @@ const KVInput = ({
     </div>
   );
 };
+
+function SwitchInput({
+  id,
+  config,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  config: ProviderAuthConfig;
+  value: ProviderFormValue;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  if (typeof value !== "boolean") return null;
+
+  return (
+    <div className="flex justify-between">
+      <FieldLabel id={id} config={config} />
+      <Switch checked={value} disabled={disabled} onChange={onChange} />
+    </div>
+  );
+}
 
 function FieldLabel({
   id,

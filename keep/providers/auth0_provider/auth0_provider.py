@@ -20,21 +20,21 @@ class Auth0ProviderAuthConfig:
     Auth0 authentication configuration.
     """
 
+    domain: HttpsUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Auth0 Domain",
+            "hint": "https://tenantname.us.auth0.com",
+            "validation": "https_url",
+        },
+    )
+
     token: str = dataclasses.field(
         default=None,
         metadata={
             "required": True,
             "description": "Auth0 API Token",
             "hint": "https://manage.auth0.com/dashboard/us/YOUR_ACCOUNT/apis/management/explorer",
-        },
-    )
-    domain: HttpsUrl = dataclasses.field(
-        default=None,
-        metadata={
-            "required": True,
-            "description": "Auth0 Domain",
-            "hint": "tenantname.us.auth0.com",
-            "validation": "https_url",
         },
     )
 
@@ -58,7 +58,7 @@ class Auth0Provider(BaseProvider):
         """
         if self.is_installed or self.is_provisioned:
             host = self.config.authentication["domain"]
-            host = "https://" + host if not (host.starts_with("https://")) else host
+            host = "https://" + host if not host.startswith("https://") else host
             self.config.authentication["domain"] = host
 
         self.authentication_config = Auth0ProviderAuthConfig(

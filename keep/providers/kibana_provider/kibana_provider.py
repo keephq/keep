@@ -12,7 +12,6 @@ from urllib.parse import urlparse
 import pydantic
 import requests
 from fastapi import HTTPException
-from pydantic import AnyHttpUrl
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -33,7 +32,7 @@ class KibanaProviderAuthConfig:
             "sensitive": True,
         }
     )
-    kibana_host: AnyHttpUrl = dataclasses.field(
+    kibana_host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Kibana Host",
@@ -444,7 +443,7 @@ class KibanaProvider(BaseProvider):
     def validate_config(self):
         if self.is_installed or self.is_provisioned:
             host = self.config.authentication['kibana_host']
-            host = "https://" + host if not (host.starts_with("http://") or host.starts_with("https://")) else host
+            host = "https://" + host if not (host.startswith("http://") or host.startswith("https://")) else host
             self.config.authentication['kibana_host'] = host
 
         self.authentication_config = KibanaProviderAuthConfig(

@@ -1,13 +1,13 @@
-import pydantic
 import dataclasses
+import datetime
 
+import pydantic
 from kubernetes import client
 from kubernetes.client.rest import ApiException
-import datetime
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderScope, ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
@@ -36,9 +36,10 @@ class KubernetesProviderAuthConfig:
         default=True,
         metadata={
             "name": "insecure",
-            "description": "Whether to skip tls verification (default: True)",
+            "description": "Skip TLS verification",
             "required": False,
             "sensitive": False,
+            "type": "switch"
         },
     )
 

@@ -4,6 +4,7 @@ Elasticsearch provider.
 
 import dataclasses
 import json
+import typing
 
 import pydantic
 from elasticsearch import Elasticsearch
@@ -26,16 +27,16 @@ class ElasticProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: pydantic.HttpUrl = dataclasses.field(
-        default="",
+    host: typing.Optional[pydantic.HttpUrl] = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
             "description": "Elasticsearch host",
             "validation": "http_url",
         },
     )
-    cloud_id: str = dataclasses.field(
-        default="",
+    cloud_id: typing.Optional[str] = dataclasses.field(
+        default=None,
         metadata={"required": False, "description": "Elasticsearch cloud id"},
     )
 
