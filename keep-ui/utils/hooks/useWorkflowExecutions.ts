@@ -6,7 +6,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 
 export const useWorkflowExecutions = (
@@ -14,7 +14,7 @@ export const useWorkflowExecutions = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<AlertToWorkflowExecution[]>(
@@ -30,7 +30,7 @@ export const useWorkflowExecutionsV2 = (
   limit: number = 25,
   offset: number = 0
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   limit = searchParams?.get("limit")
@@ -61,7 +61,7 @@ export const useWorkflowExecution = (
   workflowId: string,
   workflowExecutionId: string
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<WorkflowExecution>(
