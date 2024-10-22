@@ -66,6 +66,7 @@ class PresetSearchQuery(BaseModel):
     cel_query: constr(min_length=1)
     sql_query: Dict[str, Any]
     limit: conint(ge=0) = 1000
+    offset: conint(ge=0) = 0
     timeframe: conint(ge=0) = 0
 
     class Config:
