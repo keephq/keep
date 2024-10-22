@@ -1157,7 +1157,8 @@ def query_alerts(
 def get_last_alerts(
     tenant_id,
     provider_id=None,
-    limit=1000,
+    limit=25,
+    offset=0,
     timeframe=None,
     upper_timestamp=None,
     lower_timestamp=None,
@@ -1170,6 +1171,7 @@ def get_last_alerts(
         tenant_id (_type_): The tenant_id to filter the alerts by.
         provider_id (_type_, optional): The provider id to filter by. Defaults to None.
         limit (_type_, optional): The maximum number of alerts to return. Defaults to 1000.
+        offset (_type_, optional): The offset to start from. Defaults to 0.
         timeframe (_type_, optional): The number of days to look back for alerts. Defaults to None.
         upper_timestamp (_type_, optional): The upper timestamp to filter by. Defaults to None.
         lower_timestamp (_type_, optional): The lower timestamp to filter by. Defaults to None.
@@ -1258,7 +1260,7 @@ def get_last_alerts(
             )
 
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(desc(Alert.timestamp)).limit(limit)
+        query = query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)
         # Execute the query
         alerts_with_start = query.all()
         # Convert result to list of Alert objects and include "startedAt" information if needed
