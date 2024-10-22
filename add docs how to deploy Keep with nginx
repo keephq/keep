@@ -1,0 +1,36 @@
+To deploy Keep using Nginx, you can follow these general steps:
+
+1. Install Nginx on your server using package managers like apt for Ubuntu:
+
+---------command------------- 
+sudo apt update && sudo apt install nginx
+
+2. Configure Nginx: Create a new configuration file in /etc/nginx/sites-available/keep:
+
+----------config---------------
+server {
+   listen 80;
+   server_name your-domain.com;
+
+   location / {
+      proxy_pass http://localhost:3000;  # Replace with Keep's port
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+   }
+}
+
+3.Enable the Configuration: Link the config to the sites-enabled folder and restart Nginx:
+
+-----------config--------------
+sudo ln -s /etc/nginx/sites-available/keep /etc/nginx/sites-enabled/
+sudo nginx -t  # Test configuration
+sudo systemctl restart nginx
+
+SSL Setup (Optional but recommended): Use Let's Encrypt with Certbot to enable SSL:
+------------setup--------------
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+
+This will set up Nginx as a reverse proxy to serve Keep on your server.
