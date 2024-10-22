@@ -512,7 +512,7 @@ def test_merge_incidents(db_session, setup_stress_alerts_no_elastic):
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_merge_incidents_app(
-        db_session, client, test_app, setup_stress_alerts_no_elastic, create_alert
+    db_session, client, test_app, setup_stress_alerts_no_elastic, create_alert
 ):
     incident_1 = create_incident_from_dict(
         SINGLE_TENANT_UUID,

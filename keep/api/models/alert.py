@@ -502,9 +502,17 @@ class IncidentDto(IncidentDtoIn):
         return dto
 
 
-class MergeIncidentsCommandDto(BaseModel):
+class MergeIncidentsRequestDto(BaseModel):
     source_incident_ids: list[UUID]
     destination_incident_id: UUID
+
+
+class MergeIncidentsResponseDto(BaseModel):
+    merged_incident_ids: list[UUID]
+    skipped_incident_ids: list[UUID]
+    failed_incident_ids: list[UUID]
+    destination_incident_id: UUID
+    message: str
 
 
 class DeduplicationRuleDto(BaseModel):

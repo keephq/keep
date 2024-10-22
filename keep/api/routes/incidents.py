@@ -40,11 +40,12 @@ from keep.api.models.alert import (
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
-    MergeIncidentsCommandDto,
+    MergeIncidentsRequestDto,
     IncidentSeverity,
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
+    MergeIncidentsResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
@@ -352,13 +353,15 @@ def delete_incident(
     return Response(status_code=202)
 
 
-@router.post("/merge", description="Merge incidents", response_model=IncidentDto)
+@router.post(
+    "/merge", description="Merge incidents", response_model=MergeIncidentsResponseDto
+)
 def merge_incidents(
-    command: MergeIncidentsCommandDto,
+    command: MergeIncidentsRequestDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
-) -> Response:
+) -> MergeIncidentsResponseDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Merging incidents",
@@ -370,14 +373,29 @@ def merge_incidents(
     )
 
     try:
-        updated_incident = merge_incidents_to_id(
+        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
             tenant_id,
             command.source_incident_ids,
             command.destination_incident_id,
             authenticated_entity.email,
         )
-        updated_incident_dto = IncidentDto.from_db_incident(updated_incident)
-        return updated_incident_dto
+
+        message = f"{len(merged_ids)} incidents merged into {command.destination_incident_id} successfully"
+        if not merged_ids:
+            message = f"No incidents merged"
+        if skipped_ids:
+            # TODO: plural
+            message += f", {len(skipped_ids)} incidents were skipped"
+        if failed_ids:
+            message += f", {len(failed_ids)} incidents failed to merge"
+
+        return MergeIncidentsResponseDto(
+            merged_incident_ids=merged_ids,
+            skipped_incident_ids=skipped_ids,
+            failed_incident_ids=failed_ids,
+            destination_incident_id=command.destination_incident_id,
+            message=message,
+        )
     except DestinationIncidentNotFound as e:
         raise HTTPException(status_code=400, detail=str(e))
 

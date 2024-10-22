@@ -3255,9 +3255,10 @@ class DestinationIncidentNotFound(Exception):
 def merge_incidents_to_id(
     tenant_id: str,
     source_incident_ids: List[UUID],
+    # Maybe to add optional destionation_incident_dto to merge to
     destination_incident_id: UUID,
     merged_by: str | None = None,
-) -> Optional[Incident]:
+) -> (List[UUID], List[UUID], List[UUID]):
     with Session(engine) as session:
         destination_incident = session.exec(
             select(Incident)
@@ -3268,7 +3269,6 @@ def merge_incidents_to_id(
         ).first()
 
         if not destination_incident:
-            # TODO: maybe allow to create a new incident if the destination incident does not exist
             raise DestinationIncidentNotFound(
                 f"Destination incident with id {destination_incident_id} not found"
             )
@@ -3280,15 +3280,20 @@ def merge_incidents_to_id(
             )
         ).all()
 
-        alerts_to_add_ids = []
+        merged_incident_ids = []
+        skipped_incident_ids = []
+        failed_incident_ids = []
         for source_incident in source_incidents:
-            alerts_to_add_ids.extend([alert.id for alert in source_incident.alerts])
+            source_incident_alerts_ids = [alert.id for alert in source_incident.alerts]
+            if not source_incident_alerts_ids:
+                logger.info(f"Source incident {source_incident.id} doesn't have alerts")
+                skipped_incident_ids.append(source_incident.id)
+                continue
             source_incident.merged_into_incident_id = destination_incident.id
             source_incident.merged_at = datetime.now(tz=timezone.utc)
             source_incident.status = IncidentStatus.MERGED.value
             source_incident.merged_by = merged_by
             try:
-                # TODO: optimize, process in bulk
                 remove_alerts_to_incident_by_incident_id(
                     tenant_id,
                     source_incident.id,
@@ -3298,19 +3303,23 @@ def merge_incidents_to_id(
                 logger.error(
                     f"Error removing alerts to incident {source_incident.id}: {e}"
                 )
-
-        try:
-            add_alerts_to_incident(
-                tenant_id, destination_incident, alerts_to_add_ids, session=session
-            )
-        except OperationalError as e:
-            logger.error(
-                f"Error adding alerts to incident {destination_incident.id}: {e}"
-            )
+            try:
+                add_alerts_to_incident(
+                    tenant_id,
+                    destination_incident,
+                    source_incident_alerts_ids,
+                    session=session,
+                )
+                merged_incident_ids.append(source_incident.id)
+            except OperationalError as e:
+                logger.error(
+                    f"Error adding alerts to incident {destination_incident.id} from {source_incident.id}: {e}"
+                )
+                failed_incident_ids.append(source_incident.id)
 
         session.commit()
         session.refresh(destination_incident)
-        return destination_incident
+        return merged_incident_ids, skipped_incident_ids, failed_incident_ids
 
 
 def get_alerts_count(
