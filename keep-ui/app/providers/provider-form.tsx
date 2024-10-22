@@ -51,6 +51,8 @@ import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
 import { useProviders } from "@/utils/hooks/useProviders";
+import TimeAgo from "react-timeago";
+import { toast } from "react-toastify";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -156,6 +158,9 @@ const ProviderForm = ({
   };
   if (provider.can_setup_webhook) {
     initialData["install_webhook"] = provider.can_setup_webhook;
+    if (provider.pulling_enabled) {
+      initialData["pulling_enabled"] = true;
+    }
   }
   const [formValues, setFormValues] = useState<{
     [key: string]: string | boolean;
@@ -178,6 +183,9 @@ const ProviderForm = ({
 
     if (provider.can_setup_webhook) {
       initialValues["install_webhook"] = provider.can_setup_webhook;
+      if (provider.pulling_enabled) {
+        initialValues["pulling_enabled"] = provider.pulling_enabled;
+      }
     }
     return initialValues;
   });
@@ -342,6 +350,16 @@ const ProviderForm = ({
     }));
   };
 
+  const handlePullingEnabledChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const checked = event.target.checked;
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      pulling_enabled: checked,
+    }));
+  };
+
   const validate = () => {
     const errors = validateForm(formValues);
     if (Object.keys(errors).length === 0) {
@@ -424,9 +442,13 @@ const ProviderForm = ({
       submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
+          toast.success("Updated provider successfully", {
+            position: "top-left",
+          });
           mutate();
         })
         .catch((error) => {
+          toast.error("Failed to update provider", { position: "top-left" });
           const updatedFormErrors = error.toString();
           setFormErrors(updatedFormErrors);
           onFormChange(formValues, updatedFormErrors);
@@ -741,7 +763,12 @@ const ProviderForm = ({
             />
           </Link>
         </div>
-
+        {installedProvidersMode && provider.last_pull_time && (
+          <Subtitle>
+            Provider last pull time:{" "}
+            <TimeAgo date={provider.last_pull_time + "Z"} />
+          </Subtitle>
+        )}
         {provider.provisioned && (
           <div className="w-full mt-4">
             <Callout
@@ -902,6 +929,30 @@ const ProviderForm = ({
                       tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
                     />
                   </label>
+                  {
+                    // This is here because pulling is only enabled for providers we can get alerts from (e.g., support webhook)
+                  }
+                  <input
+                    type="checkbox"
+                    id="pulling_enabled"
+                    name="pulling_enabled"
+                    className="mr-2.5"
+                    onChange={handlePullingEnabledChange}
+                    checked={formValues["pulling_enabled"] || false}
+                  />
+                  <label
+                    htmlFor="pulling_enabled"
+                    className="flex items-center"
+                  >
+                    <Text className="capitalize">Pulling Enabled</Text>
+                    <Icon
+                      icon={QuestionMarkCircleIcon}
+                      variant="simple"
+                      color="gray"
+                      size="sm"
+                      tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                    />
+                  </label>
                 </div>
                 {isLocalhost && (
                   <span className="text-sm">
@@ -929,21 +980,45 @@ const ProviderForm = ({
           </div>
 
           {provider.can_setup_webhook && installedProvidersMode && (
-            <Button
-              icon={GlobeAltIcon}
-              onClick={callInstallWebhook}
-              variant="secondary"
-              color="orange"
-              className="mt-2.5"
-              disabled={!installOrUpdateWebhookEnabled || provider.provisioned}
-              tooltip={
-                !installOrUpdateWebhookEnabled
-                  ? "Fix required webhook scopes and refresh scopes to enable"
-                  : "This uses server saved credentials. If needed, please use the `Update` button first"
-              }
-            >
-              Install/Update Webhook
-            </Button>
+            <>
+              <div className="flex">
+                <input
+                  type="checkbox"
+                  id="pulling_enabled"
+                  name="pulling_enabled"
+                  className="mr-2.5"
+                  onChange={handlePullingEnabledChange}
+                  checked={formValues["pulling_enabled"] || false}
+                />
+                <label htmlFor="pulling_enabled" className="flex items-center">
+                  <Text className="capitalize">Pulling Enabled</Text>
+                  <Icon
+                    icon={QuestionMarkCircleIcon}
+                    variant="simple"
+                    color="gray"
+                    size="sm"
+                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                  />
+                </label>
+              </div>
+              <Button
+                icon={GlobeAltIcon}
+                onClick={callInstallWebhook}
+                variant="secondary"
+                color="orange"
+                className="mt-2.5"
+                disabled={
+                  !installOrUpdateWebhookEnabled || provider.provisioned
+                }
+                tooltip={
+                  !installOrUpdateWebhookEnabled
+                    ? "Fix required webhook scopes and refresh scopes to enable"
+                    : "This uses server saved credentials. If needed, please use the `Update` button first"
+                }
+              >
+                Install/Update Webhook
+              </Button>
+            </>
           )}
           {provider.supports_webhook && (
             <ProviderSemiAutomated

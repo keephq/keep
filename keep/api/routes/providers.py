@@ -490,6 +490,7 @@ async def install_provider(
         provider_id = provider_info.pop("provider_id")
         provider_name = provider_info.pop("provider_name")
         provider_type = provider_info.pop("provider_type", None) or provider_id
+        pulling_enabled = provider_info.pop("pulling_enabled", True)
     except KeyError as e:
         raise HTTPException(
             status_code=400, detail=f"Missing required field: {e.args[0]}"
@@ -507,6 +508,7 @@ async def install_provider(
             provider_name,
             provider_type,
             provider_info,
+            pulling_enabled=pulling_enabled,
         )
         return JSONResponse(status_code=200, content=result)
     except HTTPException as e:
