@@ -107,7 +107,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
         onMouseEnter={() => setShowDetails(true)}
         onMouseLeave={() => setShowDetails(false)}
       >
-        <strong className="text-lg">{data.display_name ?? data.service}</strong>
+        <strong className="text-lg">{data.display_name || data.service}</strong>
         {alertCount > 0 && (
           <span
             className={`absolute top-[-20px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-xs font-bold rounded-full ${badgeColor} hover:cursor-pointer`}

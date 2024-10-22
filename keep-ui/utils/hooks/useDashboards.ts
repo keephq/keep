@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 
 export interface Dashboard {
@@ -11,11 +11,14 @@ export interface Dashboard {
 
 export const useDashboards = () => {
   const { data: session } = useSession();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const { data, error, mutate } = useSWR<Dashboard[]>(
     session ? `${apiUrl}/dashboard` : null,
-    (url: string) => fetcher(url, session!.accessToken)
+    (url: string) => fetcher(url, session!.accessToken),
+    {
+      revalidateOnFocus: false,
+    }
   );
 
   return {

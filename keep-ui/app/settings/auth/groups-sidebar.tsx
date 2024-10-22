@@ -1,11 +1,24 @@
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { Text, Subtitle, Button, TextInput, MultiSelect, MultiSelectItem, Callout } from "@tremor/react";
+import {
+  Text,
+  Subtitle,
+  Button,
+  TextInput,
+  MultiSelect,
+  MultiSelectItem,
+  Callout,
+} from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import { useForm, Controller, SubmitHandler, FieldValues } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  SubmitHandler,
+  FieldValues,
+} from "react-hook-form";
 import { useRoles } from "utils/hooks/useRoles";
 import { useUsers } from "utils/hooks/useUsers";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import "./multiselect.css";
 
 interface GroupSidebarProps {
@@ -17,8 +30,23 @@ interface GroupSidebarProps {
   accessToken: string;
 }
 
-const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, accessToken }: GroupSidebarProps) => {
-  const { control, handleSubmit, setValue, reset, formState: { errors, isDirty }, clearErrors, setError } = useForm({
+const GroupsSidebar = ({
+  isOpen,
+  toggle,
+  group,
+  isNewGroup,
+  mutateGroups,
+  accessToken,
+}: GroupSidebarProps) => {
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors, isDirty },
+    clearErrors,
+    setError,
+  } = useForm({
     defaultValues: {
       name: "",
       members: [],
@@ -29,6 +57,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
   const { data: roles = [] } = useRoles();
   const { data: users = [], mutate: mutateUsers } = useUsers();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const apiUrl = useApiUrl();
 
   useEffect(() => {
     if (isOpen) {
@@ -52,7 +81,9 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
     clearErrors(); // Clear all errors
 
     const method = isNewGroup ? "POST" : "PUT";
-    const url = isNewGroup ? `${getApiURL()}/auth/groups` : `${getApiURL()}/auth/groups/${group.id}`;
+    const url = isNewGroup
+      ? `${apiUrl}/auth/groups`
+      : `${apiUrl}/auth/groups/${group.id}`;
     try {
       const response = await fetch(url, {
         method: method,
@@ -70,7 +101,8 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
       } else {
         const errorData = await response.json();
         setError("root.serverError", {
-          message: errorData.detail || errorData.message || "Failed to save group"
+          message:
+            errorData.detail || errorData.message || "Failed to save group",
         });
       }
     } catch (error) {
@@ -127,7 +159,10 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                 <IoMdClose className="h-6 w-6 text-gray-500" />
               </Button>
             </div>
-            <form onSubmit={handleSubmitClick} className="mt-4 flex flex-col h-full">
+            <form
+              onSubmit={handleSubmitClick}
+              className="mt-4 flex flex-col h-full"
+            >
               <div className="flex-grow">
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700">
@@ -143,9 +178,7 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                         error={!!errors.name}
                         errorMessage={errors.name?.message}
                         disabled={!isNewGroup}
-                        className={`${
-                            isNewGroup ? "" : "bg-gray-200"
-                        }`}
+                        className={`${isNewGroup ? "" : "bg-gray-200"}`}
                       />
                     )}
                   />
@@ -198,7 +231,11 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                 </div>
               </div>
               {errors.root?.serverError && (
-                <Callout className="mt-4" title="Error while saving group" color="rose">
+                <Callout
+                  className="mt-4"
+                  title="Error while saving group"
+                  color="rose"
+                >
                   {errors.root.serverError.message}
                 </Callout>
               )}
@@ -219,7 +256,11 @@ const GroupsSidebar = ({ isOpen, toggle, group, isNewGroup, mutateGroups, access
                   type="submit"
                   disabled={isSubmitting || (isNewGroup ? false : !isDirty)}
                 >
-                  {isSubmitting ? "Saving..." : isNewGroup ? "Create Group" : "Save"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : isNewGroup
+                    ? "Create Group"
+                    : "Save"}
                 </Button>
               </div>
             </form>

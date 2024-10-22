@@ -71,7 +71,11 @@ class GithubStarsProvider(GithubProvider):
         super().__init__(context_manager, provider_id, config)
 
     def _query(
-        self, repository: str, previous_stars_count: int = 0, **kwargs: dict
+        self,
+        repository: str,
+        previous_stars_count: int = 0,
+        last_stargazer: str = "",
+        **kwargs: dict,
     ) -> dict:
         repo = self.client.get_repo(repository)
         stars_count = repo.stargazers_count
@@ -82,22 +86,53 @@ class GithubStarsProvider(GithubProvider):
 
         self.logger.debug(f"Previous stargazers: {previous_stars_count}")
         self.logger.debug(f"New stargazers: {stars_count - int(previous_stars_count)}")
-        if previous_stars_count and int(previous_stars_count) > 0:
+
+        stargazers_with_dates = []
+        # If we have the last stargazer login name, use it as index
+        if last_stargazer:
+            stargazers_with_dates = list(repo.get_stargazers_with_dates())
+            last_stargazer_index = next(
+                (
+                    i
+                    for i, item in enumerate(stargazers_with_dates)
+                    if item.user.login == last_stargazer
+                ),
+                -1,
+            )
+            if last_stargazer_index == -1:
+                stargazers_with_dates = []
+            else:
+                stargazers_with_dates = stargazers_with_dates[
+                    last_stargazer_index + 1 :
+                ]
+        # If we dont, use the previous stars count as an index
+        elif previous_stars_count and int(previous_stars_count) > 0:
             stargazers_with_dates = list(repo.get_stargazers_with_dates())[
                 int(previous_stars_count) :
             ]
-            for stargazer in stargazers_with_dates:
-                new_stargazers.append(
-                    {
-                        "username": stargazer.user.login,
-                        "starred_at": str(stargazer.starred_at),
-                    }
-                )
-                self.logger.debug(f"New stargazer: {stargazer.user.login}")
+
+        # Iterate new stargazers if there are any
+        for stargazer in stargazers_with_dates:
+            new_stargazers.append(
+                {
+                    "username": stargazer.user.login,
+                    "starred_at": str(stargazer.starred_at),
+                }
+            )
+            self.logger.debug(f"New stargazer: {stargazer.user.login}")
+
+        # Save last stargazer name so we can use it next iteration
+        last_stargazer = (
+            new_stargazers[-1]["username"]
+            if len(new_stargazers) >= 1
+            else last_stargazer
+        )
+
         return {
             "stars": stars_count,
             "new_stargazers": new_stargazers,
             "new_stargazers_count": len(new_stargazers),
+            "last_stargazer": last_stargazer,
         }
 
 

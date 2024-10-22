@@ -1,19 +1,18 @@
 import { AILogs, AIStats } from "app/ai/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
-
 
 export const useAIStats = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<AIStats>(
