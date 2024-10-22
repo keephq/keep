@@ -1,7 +1,4 @@
-import {
-  Button,
-  Badge
-} from "@tremor/react";
+import { Button, Badge } from "@tremor/react";
 import {
   DisplayColumnDef,
   ExpandedState,
@@ -9,13 +6,17 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { MdDone, MdBlock} from "react-icons/md";
+import { MdDone, MdBlock } from "react-icons/md";
 import { useSession } from "next-auth/react";
-import {IncidentDto, PaginatedIncidentsDto} from "./models";
+import { IncidentDto, PaginatedIncidentsDto } from "./models";
 import React, { useState } from "react";
 import Image from "next/image";
 import { IncidentTableComponent } from "./incident-table-component";
-import {deleteIncident, handleConfirmPredictedIncident} from "./incident-candidate-actions";
+import {
+  deleteIncident,
+  handleConfirmPredictedIncident,
+} from "./incident-candidate-actions";
+import { useApiUrl } from "utils/hooks/useConfig";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -31,18 +32,23 @@ export default function PredictedIncidentsTable({
   editCallback,
 }: Props) {
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
     columnHelper.display({
       id: "ai_generated_name",
       header: "Name",
-      cell: ({ row }) => <div className="text-wrap">{row.original.ai_generated_name}</div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">{row.original.ai_generated_name}</div>
+      ),
     }),
     columnHelper.display({
       id: "user_summary",
       header: "Summary",
-      cell: ({ row }) => <div className="text-wrap">{row.original.generated_summary}</div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">{row.original.generated_summary}</div>
+      ),
     }),
     columnHelper.display({
       id: "alerts_count",
@@ -53,7 +59,7 @@ export default function PredictedIncidentsTable({
       id: "alert_sources",
       header: "Alert Sources",
       cell: (context) =>
-        (context.row.original.alert_sources.map((alert_sources, index) => (
+        context.row.original.alert_sources.map((alert_sources, index) => (
           <Image
             className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
             key={alert_sources}
@@ -63,15 +69,20 @@ export default function PredictedIncidentsTable({
             title={alert_sources}
             src={`/icons/${alert_sources}-icon.png`}
           />
-        ))
-    )}),
+        )),
+    }),
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: ({row}) => <div className="text-wrap">{row.original.services.map((service) =>
-          <Badge key={service} className="mr-1">{service}</Badge>
-        )}
-      </div>,
+      cell: ({ row }) => (
+        <div className="text-wrap">
+          {row.original.services.map((service) => (
+            <Badge key={service} className="mr-1">
+              {service}
+            </Badge>
+          ))}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "delete",
@@ -88,7 +99,12 @@ export default function PredictedIncidentsTable({
             onClick={async (e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              await handleConfirmPredictedIncident({incidentId: context.row.original.id!, mutate, session});
+              await handleConfirmPredictedIncident({
+                incidentId: context.row.original.id!,
+                mutate,
+                session,
+                apiUrl: apiUrl!,
+              });
             }}
           />
           <Button
@@ -100,7 +116,12 @@ export default function PredictedIncidentsTable({
             onClick={async (e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              await deleteIncident({incidentId: context.row.original.id!, mutate, session});
+              await deleteIncident({
+                incidentId: context.row.original.id!,
+                mutate,
+                session,
+                apiUrl: apiUrl!,
+              });
             }}
           />
         </div>
@@ -115,8 +136,6 @@ export default function PredictedIncidentsTable({
     getCoreRowModel: getCoreRowModel(),
     onExpandedChange: setExpanded,
   });
-
-
 
   return <IncidentTableComponent table={table} />;
 }

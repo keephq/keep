@@ -6,13 +6,15 @@ import sys
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pusher import Pusher
 from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    add_audit,
+    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
@@ -21,27 +23,26 @@ from keep.api.core.db import (
     get_incident_alerts_and_links_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
+    get_incidents_meta_for_tenant,
     get_last_incidents,
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
-    change_incident_status_by_id,
     update_incident_from_dto_by_id,
-    get_incidents_meta_for_tenant,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
+    EnrichAlertRequestBody,
     IncidentDto,
     IncidentDtoIn,
-    IncidentStatusChangeDto,
-    IncidentStatus,
-    EnrichAlertRequestBody,
-    IncidentSorting,
-    IncidentSeverity,
     IncidentListFilterParamsDto,
+    IncidentSeverity,
+    IncidentSorting,
+    IncidentStatus,
+    IncidentStatusChangeDto,
 )
-
+from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -192,7 +193,6 @@ def get_all_incidents(
         filters["sources"] = sources
     if affected_services:
         filters["affected_services"] = affected_services
-
 
     logger.info(
         "Fetching incidents from DB",
@@ -437,7 +437,9 @@ def get_future_incidents_for_an_incident(
         offset=offset,
         incident_id=incident_id,
     )
-    future_incidents = [IncidentDto.from_db_incident(incident) for incident in db_incidents]
+    future_incidents = [
+        IncidentDto.from_db_incident(incident) for incident in db_incidents
+    ]
     logger.info(
         "Fetched future incidents from DB",
         extra={
@@ -524,7 +526,9 @@ async def add_alerts_to_incident(
                 limit=len(alert_ids) + incident.alerts_count,
             )
 
-            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts, with_incidents=True)
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+                db_alerts, with_incidents=True
+            )
             logger.info(
                 "Fetched alerts from DB",
                 extra={
@@ -726,3 +730,36 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post("/{incident_id}/comment", description="Add incident audit activity")
+def add_comment(
+    incident_id: UUID,
+    change: IncidentStatusChangeDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
+) -> AlertAudit:
+    extra = {
+        "tenant_id": authenticated_entity.tenant_id,
+        "commenter": authenticated_entity.email,
+        "comment": change.comment,
+        "incident_id": str(incident_id),
+    }
+    logger.info("Adding comment to incident", extra=extra)
+    comment = add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        AlertActionType.INCIDENT_COMMENT,
+        change.comment,
+    )
+
+    if pusher_client:
+        pusher_client.trigger(
+            f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
+        )
+
+    logger.info("Added comment to incident", extra=extra)
+    return comment

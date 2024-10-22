@@ -2,11 +2,11 @@ import { DeduplicationRule } from "app/deduplication/models";
 import { useSession } from "next-auth/react";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 
 export const useDeduplicationRules = (options: SWRConfiguration = {}) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWRImmutable<DeduplicationRule[]>(
@@ -17,7 +17,7 @@ export const useDeduplicationRules = (options: SWRConfiguration = {}) => {
 };
 
 export const useDeduplicationFields = (options: SWRConfiguration = {}) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWRImmutable<Record<string, string[]>>(
