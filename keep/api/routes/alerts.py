@@ -40,6 +40,7 @@ from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.api.utils.pagination import AlertPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
@@ -56,11 +57,12 @@ REDIS = os.environ.get("REDIS", "false") == "true"
     description="Get last alerts occurrence",
 )
 def get_all_alerts(
+    limit: int = 25,
+    offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
-    limit: int = 1000,
-) -> list[AlertDto]:
+) -> AlertPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alerts from DB",
@@ -68,7 +70,7 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
+    db_alerts, total_count = get_last_alerts(tenant_id=tenant_id, limit=limit)
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
@@ -77,7 +79,12 @@ def get_all_alerts(
         },
     )
 
-    return enriched_alerts_dto
+    return AlertPaginatedResultsDto(
+        limit=limit,
+        offset=offset,
+        count=total_count,
+        items=enriched_alerts_dto,
+    )
 
 
 @router.get("/{fingerprint}/history", description="Get alert history")
