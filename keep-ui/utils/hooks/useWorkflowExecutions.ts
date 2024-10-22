@@ -9,7 +9,11 @@ import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
 import { fetcher } from "utils/fetcher";
 
-export const useWorkflowExecutions = (options?: SWRConfiguration) => {
+export const useWorkflowExecutions = (
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
   const apiUrl = getApiURL();
   const { data: session } = useSession();
 

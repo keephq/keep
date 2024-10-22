@@ -14,11 +14,7 @@ import { VscDebugDisconnect } from "react-icons/vsc";
 import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
 import { Icon, Subtitle } from "@tremor/react";
-
-export const getInitials = (name: string) =>
-  ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
-    .join("")
-    .toUpperCase();
+import UserAvatar from "./UserAvatar";
 
 type UserDropdownProps = {
   session: Session;
@@ -38,21 +34,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
     <Menu as="li" ref={refs.setReference}>
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
-          {image ? (
-            <Image
-              className="rounded-full w-7 h-7 inline"
-              src={image}
-              alt="user avatar"
-              width={28}
-              height={28}
-            />
-          ) : (
-            <span className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600">
-              <span className="font-medium text-white text-xs">
-                {getInitials(name ?? email)}
-              </span>
-            </span>
-          )}{" "}
+          <UserAvatar image={image} name={name ?? email} />{" "}
           <Subtitle className="truncate">{name ?? email}</Subtitle>
         </span>
 
