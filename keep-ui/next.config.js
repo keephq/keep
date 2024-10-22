@@ -27,7 +27,9 @@ const nextConfig = {
   },
   compiler: {
     removeConsole:
-      process.env.NODE_ENV === "production"
+      process.env.ENABLE_CONSOLE_LOGS === "true"
+        ? false
+        : process.env.NODE_ENV === "production"
         ? {
             exclude: ["error"],
           }
