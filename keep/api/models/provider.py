@@ -39,6 +39,7 @@ class Provider(BaseModel):
     methods: list[ProviderMethod] = []
     installed_by: str | None = None
     installation_time: datetime | None = None
+    pulling_enabled: bool = True
     last_pull_time: datetime | None = None
     docs: str | None = None
     tags: list[

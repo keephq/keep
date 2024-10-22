@@ -91,6 +91,8 @@ export interface Provider {
   validatedScopes: { [scopeName: string]: boolean | string };
   methods?: ProviderMethod[];
   tags: TProviderLabels[];
+  last_pull_time?: Date;
+  pulling_enabled: boolean;
   alertsDistribution?: AlertDistritbuionData[];
   alertExample?: { [key: string]: string };
   provisioned?: boolean;
@@ -111,4 +113,5 @@ export const defaultProvider: Provider = {
   type: "",
   tags: [],
   validatedScopes: {},
+  pulling_enabled: true,
 };
