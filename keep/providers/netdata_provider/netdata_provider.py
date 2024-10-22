@@ -72,10 +72,10 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
             ),
             status=(
                 NetdataProvider.STATUS_MAP.get(
-                    event["status"]["text"], AlertStatus.INFO
+                    event["status"]["text"], AlertStatus.FIRING
                 )
                 if "status" in event
-                else AlertStatus.INFO
+                else AlertStatus.FIRING
             ),
             alert=event["alert"] if "alert" in event else None,
             url=(
