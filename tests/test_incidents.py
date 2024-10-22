@@ -145,30 +145,36 @@ def test_get_last_incidents(db_session, create_alert):
     status_cycle = cycle([s.value for s in IncidentStatus])
     services_cycle = cycle(["keep", None])
 
-    for i in range(50):
+    for i in range(60):
         severity = next(severity_cycle)
         status = next(status_cycle)
-        incident = create_incident_from_dict(SINGLE_TENANT_UUID, {
-            "user_generated_name": f"test-{i}",
-            "user_summary": f"test-{i}",
-            "is_confirmed": True,
-            "severity": severity,
-            "status": status,
-        })
-        create_alert(
-            f"alert-test-{i}",
-            AlertStatus(status),
-            datetime.utcnow(),
+        service = next(services_cycle)
+        incident = create_incident_from_dict(
+            SINGLE_TENANT_UUID,
             {
-                "severity": AlertSeverity.from_number(severity),
-                "service": next(services_cycle),
-            }
+                "user_generated_name": f"test-{i}",
+                "user_summary": f"test-{i}",
+                "is_confirmed": True,
+                "severity": severity,
+                "status": status,
+            },
         )
-        alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+        # Merged incidents don't have alerts
+        if status != IncidentStatus.MERGED.value:
+            create_alert(
+                f"alert-test-{i}",
+                AlertStatus(status),
+                datetime.utcnow(),
+                {
+                    "severity": AlertSeverity.from_number(severity),
+                    "service": service,
+                },
+            )
+            alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
-        add_alerts_to_incident_by_incident_id(
-            SINGLE_TENANT_UUID, incident.id, [alert.id]
-        )
+            add_alerts_to_incident_by_incident_id(
+                SINGLE_TENANT_UUID, incident.id, [alert.id]
+            )
 
     incidents_default, incidents_default_count = get_last_incidents(SINGLE_TENANT_UUID)
     assert len(incidents_default) == 0
@@ -178,7 +184,7 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True
     )
     assert len(incidents_confirmed) == 25
-    assert incidents_confirmed_count == 50
+    assert incidents_confirmed_count == 60
     for i in range(25):
         assert incidents_confirmed[i].user_generated_name == f"test-{i}"
 
@@ -186,7 +192,7 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True, limit=5
     )
     assert len(incidents_limit_5) == 5
-    assert incidents_count_limit_5 == 50
+    assert incidents_count_limit_5 == 60
     for i in range(5):
         assert incidents_limit_5[i].user_generated_name == f"test-{i}"
 
@@ -195,7 +201,7 @@ def test_get_last_incidents(db_session, create_alert):
     )
 
     assert len(incidents_limit_5_page_2) == 5
-    assert incidents_count_limit_5_page_2 == 50
+    assert incidents_count_limit_5_page_2 == 60
     for i, j in enumerate(range(5, 10)):
         assert incidents_limit_5_page_2[i].user_generated_name == f"test-{j}"
 
@@ -208,7 +214,10 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True, with_alerts=True
     )
     for i in range(25):
-        assert len(incidents_with_alerts[i].alerts) == 1
+        if incidents_with_alerts[i].status == IncidentStatus.MERGED.value:
+            assert len(incidents_with_alerts[i].alerts) == 0
+        else:
+            assert len(incidents_with_alerts[i].alerts) == 1
 
     # Test sorting
 
@@ -222,26 +231,40 @@ def test_get_last_incidents(db_session, create_alert):
     # Test filters
 
     filters_1 = {"severity": [1]}
-    incidents_with_filters_1, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100)
-    assert len(incidents_with_filters_1) == 10
+    incidents_with_filters_1, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100
+    )
+    assert len(incidents_with_filters_1) == 12
     assert all([i.severity == 1 for i in incidents_with_filters_1])
 
     filters_2 = {"status": ["firing", "acknowledged"]}
-    incidents_with_filters_2, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100)
-    assert len(incidents_with_filters_2) == 17 + 16
-    assert all([i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2])
+    incidents_with_filters_2, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100
+    )
+    assert (
+        len(incidents_with_filters_2) == 15 + 15
+    )  # 15 confirmed, 15 acknowledged because 60 incidents with cycled status
+    assert all(
+        [i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2]
+    )
 
     filters_3 = {"sources": ["keep"]}
-    incidents_with_filters_3, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100)
-    assert len(incidents_with_filters_3) == 50
+    incidents_with_filters_3, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100
+    )
+    assert len(incidents_with_filters_3) == 45  # 60 minus 15 merged with no alerts
     assert all(["keep" in i.sources for i in incidents_with_filters_3])
 
     filters_4 = {"sources": ["grafana"]}
-    incidents_with_filters_4, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100)
+    incidents_with_filters_4, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100
+    )
     assert len(incidents_with_filters_4) == 0
     filters_5 = {"affected_services": "keep"}
-    incidents_with_filters_5, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100)
-    assert len(incidents_with_filters_5) == 25
+    incidents_with_filters_5, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100
+    )
+    assert len(incidents_with_filters_5) == 30  # half of incidents
     assert all(["keep" in i.affected_services for i in incidents_with_filters_5])
 
 

@@ -3283,7 +3283,7 @@ def merge_incidents_to_id(
         alerts_to_add_ids = []
         for source_incident in source_incidents:
             alerts_to_add_ids.extend([alert.id for alert in source_incident.alerts])
-            source_incident.merged_into_id = destination_incident.id
+            source_incident.merged_into_incident_id = destination_incident.id
             source_incident.merged_at = datetime.now(tz=timezone.utc)
             source_incident.status = IncidentStatus.MERGED.value
             source_incident.merged_by = merged_by
