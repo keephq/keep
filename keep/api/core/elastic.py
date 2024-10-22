@@ -10,6 +10,7 @@ from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
+from keep.api.utils.pagination import AlertPaginatedResultsDto
 
 
 class ElasticClient:
@@ -152,9 +153,16 @@ class ElasticClient:
             )
             raise Exception(f"Failed to run query in Elastic: {e}")
 
-    def search_alerts(self, query: str, limit: int) -> list[AlertDto]:
+    def search_alerts(
+        self,
+        query: str,
+        limit: int,
+        offset: int = 0,
+    ) -> AlertPaginatedResultsDto:
         if not self.enabled:
-            return []
+            return AlertPaginatedResultsDto(
+                limit=limit, offset=offset, count=0, items=[]
+            )
 
         try:
             # Shahar: due to limitation in Elasticsearch array fields, we translate the SQL to DSL
@@ -166,8 +174,13 @@ class ElasticClient:
             # TODO - https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html#_array_type_of_fields
             # preprocess severity
             query = preprocess_cel_expression(query)
+
+            # As elasticsearch does not support the offset parameter in the SQL query,
+            # we need to set size to limit + offset and then slice the results
+            # Reference: https://stackoverflow.com/questions/13041276/elasticsearch-offset-and-limit-facets
+
             dsl_query = self._client.sql.translate(
-                body={"query": query, "fetch_size": limit}
+                body={"query": query, "fetch_size": limit + offset}
             )
             # get all fields
             dsl_query = dict(dsl_query)
@@ -177,12 +190,20 @@ class ElasticClient:
             raw_alerts = self._client.search(index=self.alerts_index, body=dsl_query)
             alerts_dtos = self._construct_alert_dto_from_results(raw_alerts)
 
-            return alerts_dtos
+            # Ignore the alerts before the offset
+            return AlertPaginatedResultsDto(
+                limit=limit,
+                offset=offset,
+                count=len(alerts_dtos),
+                items=alerts_dtos[offset : offset + limit],
+            )
         except BadRequestError as e:
             # means no index. if no alert was indexed, the index is not exist
             if "Unknown index" in str(e):
                 self.logger.warning("Index does not exist yet.")
-                return []
+                return AlertPaginatedResultsDto(
+                    limit=limit, offset=offset, count=0, items=[]
+                )
             else:
                 self.logger.error(f"Failed to run query in Elastic: {e}")
                 raise Exception(f"Failed to run query in Elastic: {e}")
