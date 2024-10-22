@@ -3744,7 +3744,10 @@ def get_alerts_fields(tenant_id: str) -> List[AlertField]:
 
 
 def change_incident_status_by_id(
-    tenant_id: str, incident_id: UUID | str, status: IncidentStatus
+    tenant_id: str,
+    incident_id: UUID | str,
+    status: IncidentStatus,
+    end_time: datetime | None = None,
 ) -> bool:
     with Session(engine) as session:
         stmt = (
@@ -3753,7 +3756,10 @@ def change_incident_status_by_id(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
-            .values(status=status.value)
+            .values(
+                status=status.value,
+                end_time=end_time,
+            )
         )
         updated = session.execute(stmt)
         session.commit()
