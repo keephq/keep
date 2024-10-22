@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AlertDto } from "app/alerts/models";
+import { AlertDto, PaginatedAlertsDto } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { getApiURL } from "utils/apiUrl";
@@ -41,7 +41,7 @@ export const useAlerts = () => {
     presetName: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    return useSWR<AlertDto[]>(
+    return useSWR<PaginatedAlertsDto>(
       () =>
         session && presetName ? `${apiUrl}/preset/${presetName}/alerts` : null,
       (url) => fetcher(url, session?.accessToken),
@@ -58,15 +58,20 @@ export const useAlerts = () => {
     );
 
     const {
-      data: alertsFromEndpoint = [],
+      data: alertsFromEndpoint = {
+        limit: 0,
+        offset: 0,
+        count: 0,
+        items: [],
+      },
       mutate,
       isLoading,
     } = useAllAlerts(presetName, options);
 
     useEffect(() => {
-      if (alertsFromEndpoint.length) {
+      if (alertsFromEndpoint.items.length) {
         const newAlertsMap = new Map<string, AlertDto>(
-          alertsFromEndpoint.map((alertFromEndpoint) => [
+          alertsFromEndpoint.items.map((alertFromEndpoint) => [
             alertFromEndpoint.fingerprint,
             {
               ...alertFromEndpoint,

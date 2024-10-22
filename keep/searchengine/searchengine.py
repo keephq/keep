@@ -149,7 +149,11 @@ class SearchEngine:
         )
 
     def _search_alerts_by_sql(
-        self, sql_query: dict, limit=1000, offset=0, timeframe: int = 0
+        self,
+        sql_query: dict,
+        limit=1000,
+        offset=0,
+        timeframe: int = 0,
     ) -> AlertPaginatedResultsDto:
         """Search for alerts based on a SQL query
 
@@ -206,6 +210,7 @@ class SearchEngine:
                 limit=query.limit,
                 offset=query.offset,
                 timeframe=query.timeframe,
+                sorting=query.sorting,
             )
         else:
             self.logger.error("Invalid search mode")

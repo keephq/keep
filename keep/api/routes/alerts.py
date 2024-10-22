@@ -70,7 +70,11 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts, total_count = get_last_alerts(tenant_id=tenant_id, limit=limit)
+    db_alerts, total_count = get_last_alerts(
+        tenant_id=tenant_id,
+        limit=limit,
+        offset=offset,
+    )
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
