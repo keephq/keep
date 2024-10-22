@@ -30,6 +30,7 @@ interface GenericTableProps<T> {
     onRowClick?: (row: T) => void;
     getActions?: (table: Table<T>, selectedRowIds: string[])=>React.JSX.Element;
     isRowSelectable?:boolean
+    dataFetchedAtOneGO?: boolean
 }
 
 interface Props extends HTMLProps<HTMLInputElement> {
@@ -75,6 +76,7 @@ export function GenericTable<T>({
     onRowClick,
     getActions,
     isRowSelectable = false,
+    dataFetchedAtOneGO,
 }: GenericTableProps<T>) {
     const [expanded, setExpanded] = useState<ExpandedState>({});
     const [pagination, setPagination] = useState({
@@ -119,9 +121,11 @@ export function GenericTable<T>({
             ),
           }, ...columns]
     }
+    const finalData = (dataFetchedAtOneGO ? data.slice(pagination.pageSize * pagination.pageIndex, pagination.pageSize * (pagination.pageIndex + 1)) : data) as T[]
+
     const table = useReactTable({
         columns,
-        data,
+        data: finalData,
         state: { expanded, pagination },
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,

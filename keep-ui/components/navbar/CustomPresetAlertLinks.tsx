@@ -189,7 +189,7 @@ export const CustomPresetAlertLinks = ({
           oldOrder.filter((p) => p.id !== presetId)
         );
 
-        router.push("/alerts/feed");
+        router.push("/alerts/feed"); // Redirect to feed
       }
     }
   };
