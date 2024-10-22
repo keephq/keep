@@ -382,7 +382,7 @@ def merge_incidents(
 
         message = f"{len(merged_ids)} incidents merged into {command.destination_incident_id} successfully"
         if not merged_ids:
-            message = f"No incidents merged"
+            message = "No incidents merged"
         if skipped_ids:
             # TODO: plural
             message += f", {len(skipped_ids)} incidents were skipped"
