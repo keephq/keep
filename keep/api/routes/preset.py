@@ -1,16 +1,18 @@
+import json
 import logging
 import os
 import uuid
 from datetime import datetime
 from typing import Optional
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
     HTTPException,
+    Query,
     Request,
     Response,
-    Query
 )
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -24,7 +26,6 @@ from keep.api.core.db import (
     update_provider_last_pull_time,
 )
 from keep.api.models.alert import AlertDto
-from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.models.db.preset import (
     Preset,
     PresetDto,
@@ -33,6 +34,7 @@ from keep.api.models.db.preset import (
     Tag,
     TagDto,
 )
+from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
@@ -41,7 +43,6 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
-import json
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -85,6 +86,10 @@ def pull_data_from_providers(
             "tenant_id": tenant_id,
             "trace_id": trace_id,
         }
+
+        if not provider.pulling_enabled:
+            logger.debug("Pulling is disabled for this provider", extra=extra)
+            continue
 
         if provider.last_pull_time is not None:
             now = datetime.now()
@@ -173,9 +178,7 @@ def pull_data_from_providers(
 
 
 # Function to handle the time_stamp query parameter and parse it
-def _get_time_stamp_filter(
-    time_stamp: Optional[str] = Query(None)
-) -> TimeStampFilter:
+def _get_time_stamp_filter(time_stamp: Optional[str] = Query(None)) -> TimeStampFilter:
     if time_stamp:
         try:
             # Parse the JSON string
@@ -186,6 +189,7 @@ def _get_time_stamp_filter(
             raise HTTPException(status_code=400, detail="Invalid time_stamp format")
     return TimeStampFilter()
 
+
 @router.get(
     "",
     description="Get all presets for tenant",
@@ -195,7 +199,7 @@ def get_presets(
         IdentityManagerFactory.get_auth_verifier(["read:preset"])
     ),
     session: Session = Depends(get_session),
-    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter)
+    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter),
 ) -> list[PresetDto]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Getting all presets {time_stamp}")
@@ -224,7 +228,9 @@ def get_presets(
     # get the number of alerts + noisy alerts for each preset
     search_engine = SearchEngine(tenant_id=tenant_id)
     # get the preset metatada
-    presets_dto = search_engine.search_preset_alerts(presets=presets_dto, time_stamp=time_stamp)
+    presets_dto = search_engine.search_preset_alerts(
+        presets=presets_dto, time_stamp=time_stamp
+    )
 
     return presets_dto
 

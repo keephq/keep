@@ -14,8 +14,6 @@ import Image from "next/image";
 import {
   CheckCircleIcon,
   EllipsisHorizontalIcon,
-  EyeIcon,
-  WrenchIcon,
   XCircleIcon,
 } from "@heroicons/react/20/solid";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
