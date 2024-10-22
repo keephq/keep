@@ -547,6 +547,9 @@ def test_merge_incidents_app(
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
     )
+    empty_incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test-4", "user_summary": "test-4"}
+    )
 
     incident_1_before_via_api = client.get(
         f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
@@ -558,16 +561,28 @@ def test_merge_incidents_app(
         "/incidents/merge",
         headers={"x-api-key": "some-key"},
         json={
-            "source_incident_ids": [str(incident_2.id), str(incident_3.id)],
+            "source_incident_ids": [
+                str(incident_2.id),
+                str(incident_3.id),
+                str(empty_incident.id),
+            ],
             "destination_incident_id": str(incident_1.id),
         },
     )
 
     assert response.status_code == 200
     result = response.json()
-    assert result["id"] == str(incident_1.id)
-    assert result["alerts_count"] == 150
-    assert "second-service" in result["services"]
+    assert result["merged_incident_ids"] == [str(incident_2.id), str(incident_3.id)]
+    assert result["skipped_incident_ids"] == [str(empty_incident.id)]
+    assert result["failed_incident_ids"] == []
+
+    incident_1_via_api = client.get(
+        f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
+    ).json()
+
+    assert incident_1_via_api["id"] == str(incident_1.id)
+    assert incident_1_via_api["alerts_count"] == 150
+    assert "second-service" in incident_1_via_api["services"]
 
     incident_2_via_api = client.get(
         f"/incidents/{incident_2.id}", headers={"x-api-key": "some-key"}
