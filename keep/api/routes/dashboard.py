@@ -7,7 +7,13 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from keep.api.core.db import create_dashboard as create_dashboard_db
+from keep.api.core.db import (
+    create_dashboard as create_dashboard_db,
+    get_provider_distribution,
+    get_incidents_created_distribution,
+    get_combined_workflow_execution_distribution,
+    calc_incidents_mttr,
+)
 from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.db import update_dashboard as update_dashboard_db
@@ -136,3 +142,28 @@ def delete_dashboard(
     if not dashboard:
         raise HTTPException(status_code=404, detail="Dashboard not found")
     return {"ok": True}
+
+
+@router.get("/metric-widgets")
+def get_metric_widgets(
+    mttr: bool = True,
+    apd: bool = True,
+    ipd: bool = True,
+    wpd: bool = True,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:dashboards"])
+    ),
+):
+    data = {}
+    tenant_id = authenticated_entity.tenant_id
+    if apd:
+        data["apd"] = get_provider_distribution(
+            tenant_id=tenant_id, aggregate_all=True
+        )["alert_per_hour"]
+    if ipd:
+        data["ipd"] = get_incidents_created_distribution(tenant_id=tenant_id)
+    if wpd:
+        data["wpd"] = get_combined_workflow_execution_distribution(tenant_id=tenant_id)
+    if mttr:
+        data["mttr"] = calc_incidents_mttr(tenant_id=tenant_id)
+    return data
