@@ -306,14 +306,14 @@ export default function IncidentInformation({ incident }: Props) {
               ) : (
                 <p>
                   No linked incidents. Link same incident from the past to help
-                  the AI classifier. 🤔(
+                  the AI classifier. 🤔 (
                   <a
                     onClick={(e) =>
                       handleChangeSameIncidentInThePast(e, incident)
                     }
                     className="cursor-pointer text-orange-500"
                   >
-                    link
+                    click to link
                   </a>
                   )
                 </p>
