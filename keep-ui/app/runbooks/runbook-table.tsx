@@ -64,33 +64,34 @@ const columnsv2 = [
     id: "title",
     header: "Runbook Title",
     cell: ({ row }) => {
-      return <div>{row.original.title}</div>;
+      const fileName = row.original.file_name;
+      const runbookTitle = row.original.title;
+      const displayTitle = fileName ? fileName : runbookTitle;
+      return <div>{displayTitle}</div>
     },
   }),
   columnHelperv2.display({
-    id: "contents",
-    header: "Contents",
-    cell: ({ row }) => {
-      const contents = row.original.contents || [];
-      const isMoreContentAvailable = contents.length > 4;
-      return (
-        <div>
-          {contents.slice(0, 4)?.map((content: Content) => (
-            <Badge key={content.id} color="green" className="mr-2 mb-1">
-              {content.file_name}
-            </Badge>
-          ))}
-          {isMoreContentAvailable && (
-            <Badge color="green" className="mr-2 mb-1">{`${
-              contents.length - 4
-            } more...`}</Badge>
-          )}
-        </div>
-      );
-    },
+    id: "content",
+    header: "File Name",
+    cell: ({ row }) => (
+      <Badge key={row.original.id} color="green" className="mr-2 mb-1">
+      {console.log("from inside row", row)}
+        {
+        row.original.file_name}
+      </Badge>
+    ),
   }),
 ] as DisplayColumnDef<RunbookV2>[];
 
+const flattenRunbookData = (runbooks: RunbookV2[]) => {
+  return runbooks.flatMap((runbook) =>
+    runbook.contents.map((content) => ({
+      ...runbook,
+      file_name: content.file_name,
+      content_id: content.id,
+    }))
+  );
+};
 function SettingsPage({handleRunbookMutation}:{
   handleRunbookMutation: () => void}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -245,7 +246,6 @@ function RunbookIncidentTable() {
       return fetcher(url, session?.accessToken!);
     }
   );
-
   const handleRunbookMutation = ()=>{
     mutate(`${getApiURL()}/runbooks?limit=${limit}&offset=${0}`);
   }
@@ -254,7 +254,7 @@ function RunbookIncidentTable() {
     total_count: 0,
     runbooks: [],
   };
-
+  const flattenedData = flattenRunbookData(runbooks || []);
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setLimit(newLimit);
     setOffset(newOffset);
@@ -279,7 +279,7 @@ function RunbookIncidentTable() {
       <Card className="flex-grow">
         {!isLoading && !error && (
           <GenericTable<RunbookDto>
-            data={runbooks}
+          data={flattenedData}
             columns={columnsv2}
             rowCount={total_count}
             offset={offset}
