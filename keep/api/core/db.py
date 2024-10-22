@@ -1163,7 +1163,7 @@ def get_last_alerts(
     upper_timestamp=None,
     lower_timestamp=None,
     with_incidents=False,
-) -> list[Alert]:
+) -> Tuple[List[Alert], int]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
 
@@ -1259,6 +1259,8 @@ def get_last_alerts(
                 >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
             )
 
+        total_count = query.count()
+
         # Order by timestamp in descending order and limit the results
         query = query.order_by(desc(Alert.timestamp)).limit(limit).offset(offset)
         # Execute the query
@@ -1275,7 +1277,7 @@ def get_last_alerts(
                 alert.event["incident"] = str(incident_id) if incident_id else None
             alerts.append(alert)
 
-    return alerts
+    return alerts, total_count
 
 
 def get_alerts_by_fingerprint(
