@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Preset } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
@@ -14,7 +14,7 @@ import moment from "moment";
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();
   const { data: configData } = useConfig();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   //ideally, we can use pathname. but hardcoding it for now.
   const isDashBoard = type === "dashboard";
   const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>(
@@ -54,8 +54,8 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
             ...currentPreset,
             alerts_count: currentPreset.alerts_count + newPreset.alerts_count,
             created_by: newPreset.created_by,
-            is_private: newPreset.is_private
-          }); 
+            is_private: newPreset.is_private,
+          });
         } else {
           // If the preset is not in the current presets, add it
           updatedPresets.set(newPresetId, {
@@ -71,7 +71,14 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
       updatePresets(
         presetsOrderRef.current,
         newPresets.filter(
-          (p) => !["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
+          (p) =>
+            ![
+              "feed",
+              "deleted",
+              "dismissed",
+              "without-incident",
+              "groups",
+            ].includes(p.name)
         )
       )
     );
@@ -79,7 +86,13 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
       updatePresets(
         staticPresetsOrderRef.current,
         newPresets.filter((p) =>
-          ["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
+          [
+            "feed",
+            "deleted",
+            "dismissed",
+            "without-incident",
+            "groups",
+          ].includes(p.name)
         )
       )
     );
@@ -126,10 +139,22 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
           if (data) {
             const dynamicPresets = data.filter(
               (p) =>
-                !["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
+                ![
+                  "feed",
+                  "deleted",
+                  "dismissed",
+                  "without-incident",
+                  "groups",
+                ].includes(p.name)
             );
             const staticPresets = data.filter((p) =>
-              ["feed", "deleted", "dismissed", "without-incident", "groups"].includes(p.name)
+              [
+                "feed",
+                "deleted",
+                "dismissed",
+                "without-incident",
+                "groups",
+              ].includes(p.name)
             );
 
             //if it is dashboard we don't need to merge with local storage.
@@ -193,7 +218,13 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     } = useFetchAllPresets(options);
     const filteredPresets = presets?.filter(
       (preset) =>
-        !["feed", "deleted", "dismissed", "groups", "without-incident"].includes(preset.name)
+        ![
+          "feed",
+          "deleted",
+          "dismissed",
+          "groups",
+          "without-incident",
+        ].includes(preset.name)
     );
     return {
       data: filteredPresets,

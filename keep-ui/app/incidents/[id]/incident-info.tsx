@@ -15,6 +15,7 @@ import {
 } from "../incident-candidate-actions";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { format } from "date-fns";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { Disclosure } from "@headlessui/react";
@@ -95,6 +96,7 @@ export default function IncidentInformation({ incident }: Props) {
   const { data: session } = useSession();
   const { mutate } = useIncident(incident.id);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const apiUrl = useApiUrl();
 
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
@@ -198,6 +200,7 @@ export default function IncidentInformation({ incident }: Props) {
                   e.preventDefault();
                   e.stopPropagation();
                   handleConfirmPredictedIncident({
+                    apiUrl: apiUrl!,
                     incidentId: incident.id!,
                     mutate,
                     session,
@@ -216,6 +219,7 @@ export default function IncidentInformation({ incident }: Props) {
                   e.preventDefault();
                   e.stopPropagation();
                   const success = await deleteIncident({
+                    apiUrl: apiUrl!,
                     incidentId: incident.id!,
                     mutate,
                     session,

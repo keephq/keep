@@ -19,7 +19,7 @@ import {
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { useState } from "react";
@@ -34,6 +34,7 @@ interface Props {
 export default function RulesTable({ mappings, editCallback }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
+  const apiUrl = useApiUrl();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
@@ -114,7 +115,6 @@ export default function RulesTable({ mappings, editCallback }: Props) {
   });
 
   const deleteRule = (ruleId: number) => {
-    const apiUrl = getApiURL();
     if (confirm("Are you sure you want to delete this rule?")) {
       fetch(`${apiUrl}/mapping/${ruleId}`, {
         method: "DELETE",

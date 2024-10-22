@@ -18,8 +18,8 @@ import {
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
 import { toast } from "react-toastify";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { MaintenanceRule } from "./model";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
@@ -32,8 +32,13 @@ interface Props {
   editCallback: (rule: MaintenanceRule) => void;
 }
 
-export default function MaintenanceRulesTable({ maintenanceRules, editCallback }: Props) {
+export default function MaintenanceRulesTable({
+  maintenanceRules,
+  editCallback,
+}: Props) {
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
+
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
@@ -118,7 +123,6 @@ export default function MaintenanceRulesTable({ maintenanceRules, editCallback }
   });
 
   const deleteMaintenanceRule = (maintenanceRuleId: number) => {
-    const apiUrl = getApiURL();
     if (confirm("Are you sure you want to delete this maintenance rule?")) {
       fetch(`${apiUrl}/maintenance/${maintenanceRuleId}`, {
         method: "DELETE",

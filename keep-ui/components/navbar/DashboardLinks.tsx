@@ -15,7 +15,7 @@ import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import classNames from "classnames";
 import { useDashboards } from "utils/hooks/useDashboards";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 
 import { Session } from "next-auth";
 import { PlusIcon } from "@radix-ui/react-icons";
@@ -28,6 +28,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
   const pathname = usePathname();
   const router = useRouter();
+  const apiUrl = useApiUrl();
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor));
 
@@ -51,7 +52,6 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
     );
     if (isDeleteConfirmed) {
       try {
-        const apiUrl = getApiURL();
         await fetch(`${apiUrl}/dashboard/${id}`, {
           method: "DELETE",
           headers: {

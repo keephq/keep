@@ -1,13 +1,13 @@
 import useSWR from "swr";
 import { Provider } from "./providers";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { fetcher } from "utils/fetcher";
 import { Subtitle, Title, Text, Icon } from "@tremor/react";
 import { CopyBlock, a11yLight, railscast } from "react-code-blocks";
 import Image from "next/image";
 import { ArrowLongRightIcon } from "@heroicons/react/24/outline";
 import Markdown from "react-markdown";
-import remarkGfm from 'remark-gfm'
+import remarkGfm from "remark-gfm";
 
 interface WebhookSettings {
   webhookDescription: string;
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data, error, isLoading } = useSWR<WebhookSettings>(
     `${apiUrl}/providers/${provider.type}/webhook`,
     (url: string) => fetcher(url, accessToken)
@@ -43,15 +43,16 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
     codeBlock: true,
   };
 
-  const isMultiline = data!.webhookDescription.includes('\n');
-  const descriptionLines = data!.webhookDescription.split('\n');
+  const isMultiline = data!.webhookDescription.includes("\n");
+  const descriptionLines = data!.webhookDescription.split("\n");
   const settingsNotEmpty = settings.text.trim().length > 0;
   const webhookMarkdown = data!.webhookMarkdown;
   return (
     <div className="my-2.5">
       <Title>
         Push alerts from{" "}
-        {provider.type.charAt(0).toLocaleUpperCase() + provider.display_name.slice(1)}
+        {provider.type.charAt(0).toLocaleUpperCase() +
+          provider.display_name.slice(1)}
       </Title>
       <div className="flex">
         <Image
@@ -71,25 +72,24 @@ export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
         />
       </div>
       <Subtitle>
-        Seamlessly push alerts without actively connecting {provider.display_name}
+        Seamlessly push alerts without actively connecting{" "}
+        {provider.display_name}
       </Subtitle>
       {isMultiline ? (
-      descriptionLines.map((line, index) => (
-        <Text key={index} className="my-2.5 whitespace-pre-wrap">
-          {line}
-        </Text>
-      ))
-    ) : (
-      <Text className="my-2.5">{data!.webhookDescription}</Text>
-    )}
-     {settingsNotEmpty && <CopyBlock {...settings} />}
-     {webhookMarkdown && (
-      <div className="prose whitespace-nowrap">
-        <Markdown remarkPlugins={[remarkGfm]}>
-          {webhookMarkdown}
-        </Markdown>
-      </div>
-     )}
+        descriptionLines.map((line, index) => (
+          <Text key={index} className="my-2.5 whitespace-pre-wrap">
+            {line}
+          </Text>
+        ))
+      ) : (
+        <Text className="my-2.5">{data!.webhookDescription}</Text>
+      )}
+      {settingsNotEmpty && <CopyBlock {...settings} />}
+      {webhookMarkdown && (
+        <div className="prose whitespace-nowrap">
+          <Markdown remarkPlugins={[remarkGfm]}>{webhookMarkdown}</Markdown>
+        </div>
+      )}
     </div>
   );
 };

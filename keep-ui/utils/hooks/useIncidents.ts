@@ -7,7 +7,7 @@ import {
 import { PaginatedWorkflowExecutionDto } from "app/workflows/builder/types";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
@@ -35,7 +35,7 @@ export const useIncidents = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   const filtersParams = new URLSearchParams();
@@ -70,7 +70,7 @@ export const useIncidentAlerts = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   return useSWR<PaginatedIncidentAlertsDto>(
     () =>
@@ -88,7 +88,7 @@ export const useIncidentFutureIncidents = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<PaginatedIncidentsDto>(
@@ -105,7 +105,7 @@ export const useIncident = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
@@ -123,7 +123,7 @@ export const useIncidentWorkflowExecutions = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   return useSWR<PaginatedWorkflowExecutionDto>(
     () =>
@@ -192,7 +192,7 @@ export const useIncidentsMeta = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<IncidentsMetaDto>(
