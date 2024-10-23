@@ -100,6 +100,7 @@ export default function IncidentsTable({
           checked={context.table.getIsAllRowsSelected()}
           indeterminate={context.table.getIsSomeRowsSelected()}
           onChange={context.table.getToggleAllRowsSelectedHandler()}
+          onClick={(e) => e.stopPropagation()}
         />
       ),
       cell: (context) => (
@@ -107,6 +108,7 @@ export default function IncidentsTable({
           checked={context.row.getIsSelected()}
           indeterminate={context.row.getIsSomeSelected()}
           onChange={context.row.getToggleSelectedHandler()}
+          onClick={(e) => e.stopPropagation()}
         />
       ),
     }),
@@ -264,7 +266,16 @@ export default function IncidentsTable({
   const table = useReactTable({
     columns,
     data: incidents.items,
-    state: { expanded, pagination, sorting },
+    state: {
+      expanded,
+      pagination,
+      sorting,
+      columnPinning: {
+        left: ["selected"],
+        right: ["actions"],
+      },
+    },
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     rowCount: incidents.count,

@@ -49,3 +49,21 @@
   /* original value is ridiculous 15.000, overflowing toasts*/
   @apply z-[1000] !important;
 }
+
+@keyframes scroll-shadow-left {
+  0% {
+    filter: none
+  }
+  25%, 99% {
+    filter: drop-shadow(rgba(0, 0, 0, 0.07) -2px 9px 5px)
+  }
+}
+
+@keyframes scroll-shadow-right {
+  0%, 75% {
+    filter: drop-shadow(rgba(0, 0, 0, 0.07) 2px 9px 5px)
+  }
+  99% {
+    filter: none
+  }
+}

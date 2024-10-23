@@ -7,11 +7,49 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import { flexRender, Header, Table as ReactTable } from "@tanstack/react-table";
-import React, { ReactNode } from "react";
+import {
+  Column,
+  flexRender,
+  Header,
+  Table as ReactTable,
+} from "@tanstack/react-table";
+import React, { CSSProperties, ReactNode } from "react";
 import { IncidentDto } from "./models";
 import { useRouter } from "next/navigation";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
+import clsx from "clsx";
+
+// Styles to make sticky column pinning work!
+const getCommonPinningStylesAndClassNames = (
+  column: Column<any>
+): { style: CSSProperties; className: string } => {
+  const isPinned = column.getIsPinned();
+  const isLastLeftPinnedColumn =
+    isPinned === "left" && column.getIsLastColumn("left");
+  const isFirstRightPinnedColumn =
+    isPinned === "right" && column.getIsFirstColumn("right");
+
+  return {
+    style: {
+      left: isPinned === "left" ? `${column.getStart("left")}px` : undefined,
+      right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
+      width: column.getSize(),
+      animationTimeline: "scroll(inline)",
+    },
+    className: clsx(
+      "bg-tremor-background",
+      column.getIsPinned() === false && "hover:bg-slate-100",
+      isPinned ? "sticky" : "relative",
+      isLastLeftPinnedColumn
+        ? "animate-scroll-shadow-left"
+        : isFirstRightPinnedColumn
+          ? "animate-scroll-shadow-right"
+          : undefined,
+      isPinned ? "z-[1]" : "z-0"
+    ),
+  };
+};
+
 interface Props {
   table: ReactTable<IncidentDto>;
 }
@@ -23,13 +61,12 @@ interface SortableHeaderCellProps {
 
 const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
   const { column } = header;
+  const { style, className } = getCommonPinningStylesAndClassNames(column);
 
   return (
     <TableHeaderCell
-      // className="text-tremor-content-strong dark:text-dark-tremor-content-strong"
-      className={`relative ${
-        column.getIsPinned() === false ? "hover:bg-slate-100" : ""
-      } group`}
+      className={clsx("relative bg-tremor-background group", className)}
+      style={style}
     >
       <div className="flex items-center">
         {children} {/* Column name or text */}
@@ -76,7 +113,7 @@ export const IncidentTableComponent = (props: Props) => {
   const router = useRouter();
 
   return (
-    <Table className="mt-4">
+    <Table>
       <TableHead>
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow
@@ -100,14 +137,17 @@ export const IncidentTableComponent = (props: Props) => {
         {table.getRowModel().rows.map((row) => (
           <>
             <TableRow
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
               key={row.id}
+              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
               onClick={() => {
                 router.push(`/incidents/${row.original.id}`);
               }}
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
+                <TableCell
+                  key={cell.id}
+                  {...getCommonPinningStylesAndClassNames(cell.column)}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

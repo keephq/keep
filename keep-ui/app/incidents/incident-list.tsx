@@ -94,11 +94,19 @@ export default function IncidentList() {
 
   function renderIncidents() {
     if (incidentsError) {
-      return <IncidentListError />;
+      return (
+        <Card className="flex-grow">
+          <IncidentListError />
+        </Card>
+      );
     }
 
     if (isLoading) {
-      return <Loading />;
+      return (
+        <Card className="flex-grow">
+          <Loading />
+        </Card>
+      );
     }
 
     if (incidents && incidents.items.length > 0) {
@@ -115,7 +123,11 @@ export default function IncidentList() {
     }
 
     // This is shown on the cold page load. FIXME
-    return <IncidentListPlaceholder setIsFormOpen={setIsFormOpen} />;
+    return (
+      <Card className="flex-grow">
+        <IncidentListPlaceholder setIsFormOpen={setIsFormOpen} />
+      </Card>
+    );
   }
 
   return (
@@ -166,7 +178,7 @@ export default function IncidentList() {
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         className="w-[600px]"
-        title="Add IncidentList"
+        title="Add Incident"
       >
         <CreateOrUpdateIncident
           incidentToEdit={incidentToEdit}
