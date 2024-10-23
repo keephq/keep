@@ -1,11 +1,10 @@
-import Incident from "./incident";
+import IncidentList from "./incident-list";
 
 export default function Page() {
-  return <Incident />;
+  return <IncidentList />;
 }
 
 export const metadata = {
   title: "Keep - Incidents",
-  description:
-    "List of incidents",
+  description: "List of incidents",
 };

@@ -1,4 +1,4 @@
-import { Button, Badge } from "@tremor/react";
+import { Badge, Card } from "@tremor/react";
 import {
   ExpandedState,
   createColumnHelper,
@@ -27,6 +27,9 @@ import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
+import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
+import { IncidentTableFilters } from "@/app/incidents/incident-table-filters";
+import { Button } from "@/components/ui";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 
 const columnHelper = createColumnHelper<IncidentDto>();
@@ -86,9 +89,27 @@ export default function IncidentsTable({
         offset: currentOffset,
       });
     }
-  }, [pagination]);
+  }, [incidents.limit, incidents.offset, pagination, setPagination]);
 
   const columns = [
+    columnHelper.display({
+      id: "selected",
+      size: 10,
+      header: (context) => (
+        <AlertTableCheckbox
+          checked={context.table.getIsAllRowsSelected()}
+          indeterminate={context.table.getIsSomeRowsSelected()}
+          onChange={context.table.getToggleAllRowsSelectedHandler()}
+        />
+      ),
+      cell: (context) => (
+        <AlertTableCheckbox
+          checked={context.row.getIsSelected()}
+          indeterminate={context.row.getIsSomeSelected()}
+          onChange={context.row.getToggleSelectedHandler()}
+        />
+      ),
+    }),
     columnHelper.display({
       id: "status",
       header: "Status",
@@ -112,7 +133,10 @@ export default function IncidentsTable({
       header: "Summary",
       cell: ({ row }) => (
         <div className="text-pretty min-w-96">
-          <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
+          <Markdown
+            remarkPlugins={[remarkRehype]}
+            rehypePlugins={[rehypeRaw]}
+          >
             {row.original.user_summary}
           </Markdown>
         </div>
@@ -182,7 +206,7 @@ export default function IncidentsTable({
         new Date(row.original.creation_time + "Z").toLocaleString(),
     }),
     columnHelper.display({
-      id: "delete",
+      id: "actions",
       header: "",
       cell: ({ row }) => (
         <div className={"space-x-1 flex flex-row items-center justify-center"}>
@@ -258,9 +282,33 @@ export default function IncidentsTable({
     debugTable: true,
   });
 
+  const selectedRowIds = Object.entries(
+    table.getSelectedRowModel().rowsById
+  ).reduce<string[]>((acc, [alertId]) => {
+    return acc.concat(alertId);
+  }, []);
+
   return (
-    <div>
-      <IncidentTableComponent table={table} />
+    <>
+      <div className="flex gap-2">
+        <Button
+          color="orange"
+          variant="primary"
+          disabled={selectedRowIds.length < 2}
+        >
+          Merge
+        </Button>
+        <Button variant="destructive" disabled={!selectedRowIds.length}>
+          Remove
+        </Button>
+      </div>
+      <IncidentTableFilters />
+      <Card className="flex-grow">
+        <IncidentTableComponent table={table} />
+      </Card>
+      <div className="mt-4 mb-8">
+        <IncidentPagination table={table} isRefreshAllowed={true} />
+      </div>
       <IncidentChangeStatusModal
         incident={changeStatusIncident}
         mutate={mutate}
@@ -270,9 +318,6 @@ export default function IncidentsTable({
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}
       />
-      <div className="mt-4 mb-8">
-        <IncidentPagination table={table} isRefreshAllowed={true} />
-      </div>
-    </div>
+    </>
   );
 }
