@@ -19,7 +19,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { LuWorkflow } from "react-icons/lu";
-import { AiOutlineAlert } from "react-icons/ai";
+import { AiOutlineAlert, AiOutlineGroup } from "react-icons/ai";
 import { MdOutlineEngineering, MdOutlineSearchOff } from "react-icons/md";
 import KeepPng from "../../keep.png";
 
@@ -35,6 +35,12 @@ const NAVIGATION_OPTIONS = [
     label: "Go to alert console",
     shortcut: ["g"],
     navigate: "/alerts/feed",
+  },
+  {
+    icon: AiOutlineGroup,
+    label: "Go to alert quality",
+    shortcut: ["q"],
+    navigate: "/alerts/quality",
   },
   {
     icon: MdOutlineEngineering,

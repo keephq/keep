@@ -1,10 +1,13 @@
-import {Badge, Button, Icon, Title} from "@tremor/react";
+import { Badge, Button, Icon, Title } from "@tremor/react";
 import { IncidentDto } from "../models";
 import CreateOrUpdateIncident from "../create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import React, { useState } from "react";
-import {MdBlock, MdDone, MdModeEdit, MdPlayArrow} from "react-icons/md";
-import { useIncident, useIncidentFutureIncidents } from "@/utils/hooks/useIncidents";
+import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
+import {
+  useIncident,
+  useIncidentFutureIncidents,
+} from "@/utils/hooks/useIncidents";
 
 import {
   deleteIncident,
@@ -12,6 +15,7 @@ import {
 } from "../incident-candidate-actions";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { format } from "date-fns";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { Disclosure } from "@headlessui/react";
@@ -19,7 +23,7 @@ import classNames from "classnames";
 import { IoChevronDown } from "react-icons/io5";
 import IncidentChangeStatusModal from "@/app/incidents/incident-change-status-modal";
 import ChangeSameIncidentInThePast from "@/app/incidents/incident-change-same-in-the-past";
-import {STATUS_ICONS} from "@/app/incidents/statuses";
+import { STATUS_ICONS } from "@/app/incidents/statuses";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
@@ -29,11 +33,13 @@ interface Props {
   incident: IncidentDto;
 }
 
-function FollowingIncident({incidentId}: {incidentId: string}) {
+function FollowingIncident({ incidentId }: { incidentId: string }) {
   const { data: incident } = useIncident(incidentId);
   return (
     <div>
-      <a className="text-orange-500" href={'/incidents/' + incidentId}>{incident?.user_generated_name || incident?.ai_generated_name}</a>
+      <a className="text-orange-500" href={"/incidents/" + incidentId}>
+        {incident?.user_generated_name || incident?.ai_generated_name}
+      </a>
     </div>
   );
 }
@@ -49,13 +55,11 @@ function Summary({
   collapsable?: boolean;
   className?: string;
 }) {
-
-  const formatedSummary = <Markdown
-      remarkPlugins={[remarkRehype]}
-      rehypePlugins={[rehypeRaw]}
-    >
+  const formatedSummary = (
+    <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
       {summary}
     </Markdown>
+  );
 
   if (collapsable) {
     return (
@@ -92,6 +96,7 @@ export default function IncidentInformation({ incident }: Props) {
   const { data: session } = useSession();
   const { mutate } = useIncident(incident.id);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const apiUrl = useApiUrl();
 
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
@@ -125,7 +130,10 @@ export default function IncidentInformation({ incident }: Props) {
     setChangeStatusIncident(incident);
   };
 
-  const handleChangeSameIncidentInThePast = (e: React.MouseEvent, incident: IncidentDto) => {
+  const handleChangeSameIncidentInThePast = (
+    e: React.MouseEvent,
+    incident: IncidentDto
+  ) => {
     e.preventDefault();
     e.stopPropagation();
     setChangeSameIncidentInThePast(incident);
@@ -133,8 +141,12 @@ export default function IncidentInformation({ incident }: Props) {
 
   const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
   const summary = incident.user_summary || incident.generated_summary;
-  const { data: same_incident_in_the_past } = useIncident(incident.same_incident_in_the_past_id);
-  const { data: same_incidents_in_the_future } = useIncidentFutureIncidents(incident.id);
+  const { data: same_incident_in_the_past } = useIncident(
+    incident.same_incident_in_the_past_id
+  );
+  const { data: same_incidents_in_the_future } = useIncidentFutureIncidents(
+    incident.id
+  );
 
   const severity = incident.severity;
   let severityColor;
@@ -150,19 +162,18 @@ export default function IncidentInformation({ incident }: Props) {
             {incident.is_confirmed ? "⚔️ " : "Possible "}Incident
           </Title>
           <Button
-              color="orange"
-              size="xs"
-              variant="secondary"
-              icon={MdPlayArrow}
-              tooltip="Run Workflow"
-              onClick={(e: React.MouseEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleRunWorkflow();
-              }}
-            />
+            color="orange"
+            size="xs"
+            variant="secondary"
+            icon={MdPlayArrow}
+            tooltip="Run Workflow"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleRunWorkflow();
+            }}
+          />
           {incident.is_confirmed && (
-
             <Button
               color="orange"
               size="xs"
@@ -189,6 +200,7 @@ export default function IncidentInformation({ incident }: Props) {
                   e.preventDefault();
                   e.stopPropagation();
                   handleConfirmPredictedIncident({
+                    apiUrl: apiUrl!,
                     incidentId: incident.id!,
                     mutate,
                     session,
@@ -207,6 +219,7 @@ export default function IncidentInformation({ incident }: Props) {
                   e.preventDefault();
                   e.stopPropagation();
                   const success = await deleteIncident({
+                    apiUrl: apiUrl!,
                     incidentId: incident.id!,
                     mutate,
                     session,
@@ -227,7 +240,9 @@ export default function IncidentInformation({ incident }: Props) {
           />
         </div>
         <div className="prose-2xl flex gap-2 items-center">
-          <Badge color={severityColor} className="capitalize">{incident.severity}</Badge>
+          <Badge color={severityColor} className="capitalize">
+            {incident.severity}
+          </Badge>
           <span>
             {incident.user_generated_name || incident.ai_generated_name}
           </span>
@@ -235,7 +250,10 @@ export default function IncidentInformation({ incident }: Props) {
         <div>
           <h3 className="text-gray-500 text-sm">Status</h3>
           <div>
-            <div onClick={(e) => handleChangeStatus(e, incident)} className="capitalize flex-grow-0 inline-flex items-center cursor-pointer">
+            <div
+              onClick={(e) => handleChangeStatus(e, incident)}
+              className="capitalize flex-grow-0 inline-flex items-center cursor-pointer"
+            >
               {STATUS_ICONS[incident.status]} {incident.status}
             </div>
           </div>
@@ -252,37 +270,75 @@ export default function IncidentInformation({ incident }: Props) {
         </div>
         <div>
           <h3 className="text-gray-500 text-sm">Assignee</h3>
-          {incident.assignee ? <p>{incident.assignee}</p> : <p>No assignee yet</p>}
+          {incident.assignee ? (
+            <p>{incident.assignee}</p>
+          ) : (
+            <p>No assignee yet</p>
+          )}
         </div>
         <div>
-            <div className="flex flex-row gap-4">
-              <div>          
-                <h3 className="text-gray-500 text-sm">Same incident in the past</h3>
-                  {same_incident_in_the_past ? 
-                  <p><a className="text-orange-500" href={'/incidents/' + same_incident_in_the_past.id}>{same_incident_in_the_past.user_generated_name || same_incident_in_the_past.ai_generated_name}</a> (<a href="#" onClick={(e) => handleChangeSameIncidentInThePast(e, incident)} className="cursor-pointer text-orange-500">edit</a>)</p> : 
-                  <p>No linked incidents. Link same incident from the past to help the AI classifier. 🤔(<a onClick={(e) => handleChangeSameIncidentInThePast(e, incident)} className="cursor-pointer text-orange-500">link</a>)</p>}
-              </div>
-              <div>
-
-              </div>
+          <div className="flex flex-row gap-4">
+            <div>
+              <h3 className="text-gray-500 text-sm">
+                Same incident in the past
+              </h3>
+              {same_incident_in_the_past ? (
+                <p>
+                  <a
+                    className="text-orange-500"
+                    href={"/incidents/" + same_incident_in_the_past.id}
+                  >
+                    {same_incident_in_the_past.user_generated_name ||
+                      same_incident_in_the_past.ai_generated_name}
+                  </a>{" "}
+                  (
+                  <a
+                    href="#"
+                    onClick={(e) =>
+                      handleChangeSameIncidentInThePast(e, incident)
+                    }
+                    className="cursor-pointer text-orange-500"
+                  >
+                    edit
+                  </a>
+                  )
+                </p>
+              ) : (
+                <p>
+                  No linked incidents. Link same incident from the past to help
+                  the AI classifier. 🤔 (
+                  <a
+                    onClick={(e) =>
+                      handleChangeSameIncidentInThePast(e, incident)
+                    }
+                    className="cursor-pointer text-orange-500"
+                  >
+                    click to link
+                  </a>
+                  )
+                </p>
+              )}
             </div>
-              {same_incidents_in_the_future && same_incidents_in_the_future.items.length > 0 && (
-                <div>
-                  <h3 className="text-gray-500 text-sm">Following Incidents</h3>
-                  <ul>
-                    {same_incidents_in_the_future.items.map((item) => (
+            <div></div>
+          </div>
+          {same_incidents_in_the_future &&
+            same_incidents_in_the_future.items.length > 0 && (
+              <div>
+                <h3 className="text-gray-500 text-sm">Following Incidents</h3>
+                <ul>
+                  {same_incidents_in_the_future.items.map((item) => (
                     <li key={item.id}>
                       <FollowingIncident incidentId={item.id} />
                     </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                  ))}
+                </ul>
+              </div>
+            )}
         </div>
         <div className="flex gap-4">
           {!!incident.start_time && (
             <div>
-              <h3 className="text-gray-500 text-sm">Started at</h3> 
+              <h3 className="text-gray-500 text-sm">Started at</h3>
               <p className="">
                 {format(new Date(incident.start_time), formatString)}
               </p>
@@ -316,18 +372,20 @@ export default function IncidentInformation({ incident }: Props) {
         />
       </Modal>
 
-      {changeSameIncidentInThePast ? <Modal
-        isOpen={changeSameIncidentInThePast !== null}
-        onClose={() => setChangeSameIncidentInThePast(null)}
-        title="Link to the same incident in the past"
-        className="w-[600px]"
-      >
-        <ChangeSameIncidentInThePast
-          incident={changeSameIncidentInThePast}
-          mutate={mutate}
-          handleClose={() => setChangeSameIncidentInThePast(null)}
-        />
-        </Modal> : null}
+      {changeSameIncidentInThePast ? (
+        <Modal
+          isOpen={changeSameIncidentInThePast !== null}
+          onClose={() => setChangeSameIncidentInThePast(null)}
+          title="Link to the same incident in the past"
+          className="w-[600px]"
+        >
+          <ChangeSameIncidentInThePast
+            incident={changeSameIncidentInThePast}
+            mutate={mutate}
+            handleClose={() => setChangeSameIncidentInThePast(null)}
+          />
+        </Modal>
+      ) : null}
 
       <IncidentChangeStatusModal
         incident={changeStatusIncident}

@@ -8,7 +8,7 @@ import Select, {
 } from "react-select";
 import { useState } from "react";
 import { IncidentDto, Status } from "./models";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import {
@@ -71,6 +71,7 @@ export default function IncidentChangeStatusModal({
   const { data: session } = useSession();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const [comment, setComment] = useState<string>("");
+  const apiUrl = useApiUrl();
 
   if (!incident) return null;
 
@@ -98,17 +99,20 @@ export default function IncidentChangeStatusModal({
     }
 
     try {
-      const response = await fetch(`${getApiURL()}/incidents/${incident.id}/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
+      const response = await fetch(
+        `${apiUrl}/incidents/${incident.id}/status`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          body: JSON.stringify({
             status: selectedStatus,
             comment: comment,
-        }),
-      });
+          }),
+        }
+      );
 
       if (response.ok) {
         toast.success("Incident status changed successfully!");
@@ -126,7 +130,8 @@ export default function IncidentChangeStatusModal({
     <Modal onClose={handleClose} isOpen={!!incident}>
       <Title>Change Incident Status</Title>
       <Subtitle className="flex items-center">
-        Change status from <strong className="mx-2">{incident.status}</strong> to:
+        Change status from <strong className="mx-2">{incident.status}</strong>{" "}
+        to:
         <div className="flex-1">
           <Select
             options={statusOptions}
