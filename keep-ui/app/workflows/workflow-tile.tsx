@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Workflow, Filter } from "./models";
-import { getApiURL } from "../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -265,7 +265,7 @@ export const ProvidersCarousel = ({
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
@@ -720,7 +720,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 
 export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
   // Create a set to keep track of unique providers
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
