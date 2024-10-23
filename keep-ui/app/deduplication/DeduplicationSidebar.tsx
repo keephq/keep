@@ -535,6 +535,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   color="orange"
                   variant="secondary"
                   onClick={handleToggle}
+                  type="button"
                   className="border border-orange-500 text-orange-500"
                 >
                   Cancel
