@@ -4,21 +4,25 @@ sidebarTitle: "Architecture"
 ---
 
 
-### High Level Architecture
+## High Level Architecture
 Keep architecture composes of two main components:
 
-1. **Keep API** (aka keep backend) - a pythonic server (FastAPI) which serves as Keep's backend
-2. **Keep Frontend** - (aka keep ui) - a nextjs server which serves as Keep's frontend
+1. **Keep API** - A FastAPI-based backend server that handles business logic and API endpoints.
+2. **Keep Frontend** -  A Next.js-based frontend interface for user interaction.
+3. **Websocket Server** - A Soketi server for real-time updates without page refreshes.
+4. **Database Server** - A database used to store and manage persistent data. Supported databases include SQLite, PostgreSQL, MySQL, and SQL Server.
 
-Keep is also using the following (optional) components:
+## Kubernetes Architecture
 
-3. **Websocket Server** - a soketi server serves as the websocket server to allow real time updates from the server to the browser without refreshing the page
-4. **Database Server** - a database which Keep reads/writes for persistency. Keep currently supports sqlite, postgres, mysql and sql server (enterprise)
+Keep uses a single unified NGINX ingress controller to route traffic to all components (frontend, backend, and websocket). The ingress handles path-based routing:
 
-### Kubernetes Architecture
-Keep's Kubernetes architecture is composed of several components, each with its own set of Kubernetes resources. Here's a detailed breakdown of each component and its associated resources:
+By default:
+- `/` routed to **Frontend** (configurable via `global.ingress.frontendPrefix`)
+- `/apinew` routed to **Backend** (configurable via `global.ingress.backendPrefix`)
+- `/websocket` routed to **WebSocket** (configurable via `global.ingress.websocketPrefix`)
 
-#### General Components
+### General Components
+
 <Tip>Keep uses kubernetes secret manager to store secrets such as integrations credentials.</Tip>
 
 | Kubernetes Resource | Purpose | Required/Optional | Source |
@@ -28,16 +32,19 @@ Keep's Kubernetes architecture is composed of several components, each with its 
 | RoleBinding | Associates the Role with the ServiceAccount | Required | [role-binding-secret-manager.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/role-binding-secret-manager.yaml) |
 | Secret Deletion Job | Cleans up Keep-related secrets when the Helm release is deleted | Required | [delete-secret-job.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/delete-secret-job.yaml) |
 
-#### Frontend Components
+### Ingress Component
+| Kubernetes Resource | Purpose | Required/Optional | Source |
+|:-------------------:|:-------:|:-----------------:|:------:|
+| Shared NGINX Ingress | Routes all external traffic via one entry point | Optional | [nginx-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/nginx-ingress.yaml) |
+
+### Frontend Components
 
 | Kubernetes Resource | Purpose | Required/Optional | Source |
 |:-------------------:|:-------:|:-----------------:|:------:|
 | Frontend Deployment | Manages the frontend application containers | Required | [frontend.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend.yaml) |
 | Frontend Service | Exposes the frontend deployment within the cluster | Required | [frontend-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-service.yaml) |
-| Frontend Ingress | Exposes the frontend service to external traffic | Optional | [frontend-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-ingress.yaml) |
 | Frontend Route (OpenShift) | Exposes the frontend service to external traffic on OpenShift | Optional | [frontend-route.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-route.yaml) |
 | Frontend HorizontalPodAutoscaler | Automatically scales the number of frontend pods | Optional | [frontend-hpa.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/frontend-hpa.yaml) |
-| Frontend BackendConfig (GKE) | Configures health checks for Google Cloud Load Balancing | Optional (GKE only) | [backendconfig.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/gke/frontend-gke-healthcheck-config.yaml) |
 
 #### Backend Components
 
@@ -45,10 +52,8 @@ Keep's Kubernetes architecture is composed of several components, each with its 
 |:-------------------:|:-------:|:-----------------:|:------:|
 | Backend Deployment | Manages the backend application containers | Required (if backend enabled) | [backend.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend.yaml) |
 | Backend Service | Exposes the backend deployment within the cluster | Required (if backend enabled) | [backend-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-service.yaml) |
-| Backend Ingress | Exposes the backend service to external traffic | Optional | [backend-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-ingress.yaml) |
 | Backend Route (OpenShift) | Exposes the backend service to external traffic on OpenShift | Optional | [backend-route.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-route.yaml) |
 | Backend HorizontalPodAutoscaler | Automatically scales the number of backend pods | Optional | [backend-hpa.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/backend-hpa.yaml) |
-| BackendConfig (GKE) | Configures health checks for Google Cloud Load Balancing | Optional (GKE only) | [backendconfig.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/gke/backend-gke-healthcheck-config.yaml) |
 
 #### Database Components
 <Tip>Database components are optional. You can spin up Keep with your own database.</Tip>
@@ -67,12 +72,10 @@ Keep's Kubernetes architecture is composed of several components, each with its 
 |:-------------------:|:-------:|:-----------------:|:------:|
 | WebSocket Deployment | Manages the WebSocket server containers (Soketi) | Optional | [websocket-server.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server.yaml) |
 | WebSocket Service | Exposes the WebSocket deployment within the cluster | Required (if WebSocket enabled) | [websocket-server-service.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-service.yaml) |
-| WebSocket Ingress | Exposes the WebSocket service to external traffic | Optional | [websocket-server-ingress.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-ingress.yaml) |
 | WebSocket Route (OpenShift) | Exposes the WebSocket service to external traffic on OpenShift | Optional | [websocket-server-route.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-route.yaml) |
 | WebSocket HorizontalPodAutoscaler | Automatically scales the number of WebSocket server pods | Optional | [websocket-server-hpa.yaml](https://github.com/keephq/helm-charts/blob/main/charts/keep/templates/websocket-server-hpa.yaml) |
 
 These tables provide a comprehensive overview of the Kubernetes resources used in the Keep architecture, organized by component type. Each table describes the purpose of each resource, indicates whether it's required or optional, and provides a direct link to the source template in the Keep Helm charts GitHub repository.
-
 
 ### Kubernetes Configuration
 <Tip>This sections covers only kubernetes-specific configuration. To learn about Keep-specific configuration, controlled by environment variables, see [Keep Configuration](/deployment/configuration)</Tip>
@@ -100,18 +103,6 @@ frontend:
   service:
     type: ClusterIP              # Service type (ClusterIP, NodePort, LoadBalancer).
     port: 3000                  # Port on which the frontend service is exposed.
-  # Enable or disable frontend ingress.
-  ingress:
-    enabled: true
-    hosts:
-    - host: keep.yourcompany.com
-      paths:
-      - path: /
-        pathType: Prefix
-    tls:
-    - hosts:
-      - keep.yourcompany.com
-        secretName: frontend-tls  # Secret for TLS certificates.
 ```
 
 #### 2. Backend Configuration
@@ -131,12 +122,6 @@ backend:
   service:
     type: ClusterIP      # Service type (ClusterIP, NodePort, LoadBalancer).
     port: 8080           # Port on which the backend API is exposed.
-  ingress:
-    enabled: true         # Enable or disable backend ingress.
-    hosts:
-     - paths:
-      - path: /
-           pathType: Prefix
 ```
 
 #### 3. WebSocket Server Configuration

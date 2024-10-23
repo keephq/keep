@@ -123,45 +123,39 @@ Keep is available at http://localhost:3000 :)
 1. Domain Name: Example - keep.yourcompany.com
 2. TLS Certificate: Private key (tls.key) and certificate (tls.crt)
 
-### Create a TLS Secret
+### Create the TLS Secret
+
+Assuming:
+- `tls.crt` contains the certificate.
+- `tls.key` contains the private key.
+
 ```bash
+# create the secret with kubectl
 kubectl create secret tls keep-tls --cert=./tls.crt --key=./tls.key -n keep
 ```
 
 ### Update Helm Values for TLS
 ```bash
 helm upgrade -n keep keep keephq/keep \
-  --set "global.ingress.hosts[0]=gkefrontend.keephq.dev" \
-  --set "global.ingress.tls[0].hosts[0]=gkefrontend.keephq.dev" \
+  --set "global.ingress.hosts[0]=keep.example.com" \
+  --set "global.ingress.tls[0].hosts[0]=keep.example.com" \
   --set "global.ingress.tls[0].secretName=keep-tls"
 ```
 
 
 
-On your `values.yaml`:
+Alternatively, update your `values.yaml`:
 ```bash
 ...
-frontend:
+global:
   ingress:
-    enabled: true
     hosts:
-      # update your host
-      - host: keep.yourcompany.com
-        paths:
-          - path: /
-            pathType: Prefix
+      - host: keep.example.com
     tls:
-      # update your host
       - hosts:
-          - keep.yourcompany.com
+          - keep.example.com
         secretName: keep-tls
-  env:
-    - name: NEXTAUTH_URL
-      value: https://keep.yourcompany.com
-backend:
-  env:
-    - name: KEEP_API_URL
-      value: https://keep.yourcompany.com/backend
+...
 ```
 
 
