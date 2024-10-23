@@ -16,7 +16,13 @@ import {
 } from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { IncidentDto, PaginatedIncidentsDto } from "./models";
-import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
+import React, {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import Image from "next/image";
 import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
@@ -31,6 +37,45 @@ import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { IncidentTableFilters } from "@/app/incidents/incident-table-filters";
 import { Button } from "@/components/ui";
 import { useApiUrl } from "@/utils/hooks/useConfig";
+import IncidentMergeModal from "@/app/incidents/incident-merge-modal";
+
+function SelectedRowActions({
+  selectedRowIds,
+  onMergeInitiated,
+  onDelete,
+}: {
+  selectedRowIds: string[];
+  onMergeInitiated: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex gap-2 items-center justify-end">
+      {selectedRowIds.length ? (
+        <span className="accent-dark-tremor-content text-sm px-2">
+          {selectedRowIds.length} selected
+        </span>
+      ) : null}
+      <Button
+        color="orange"
+        variant="primary"
+        size="md"
+        disabled={selectedRowIds.length < 2}
+        onClick={onMergeInitiated}
+      >
+        Merge
+      </Button>
+      <Button
+        color="red"
+        variant="primary"
+        size="md"
+        disabled={!selectedRowIds.length}
+        onClick={onDelete}
+      >
+        Remove
+      </Button>
+    </div>
+  );
+}
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -135,10 +180,7 @@ export default function IncidentsTable({
       header: "Summary",
       cell: ({ row }) => (
         <div className="text-pretty min-w-96">
-          <Markdown
-            remarkPlugins={[remarkRehype]}
-            rehypePlugins={[rehypeRaw]}
-          >
+          <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
             {row.original.user_summary}
           </Markdown>
         </div>
@@ -299,22 +341,58 @@ export default function IncidentsTable({
     return acc.concat(alertId);
   }, []);
 
+  type MergeOptions = {
+    sourceIncidents: IncidentDto[];
+    destinationIncident: IncidentDto;
+  };
+
+  const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null);
+  const handleMergeInitiated = useCallback(() => {
+    const selectedIncidents = selectedRowIds.map(
+      (incidentId) =>
+        incidents.items.find((incident) => incident.id === incidentId)!
+    );
+
+    setMergeOptions({
+      sourceIncidents: selectedIncidents.slice(1),
+      destinationIncident: selectedIncidents[0],
+    });
+  }, [incidents.items, selectedRowIds]);
+
+  const handleDeleteMultiple = useCallback(() => {
+    if (selectedRowIds.length === 0) {
+      return;
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to delete ${selectedRowIds.length} incidents? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    for (let i = 0; i < selectedRowIds.length; i++) {
+      const incidentId = selectedRowIds[i];
+      deleteIncident({
+        incidentId,
+        mutate,
+        session,
+        apiUrl: apiUrl!,
+        skipConfirmation: true,
+      });
+    }
+  }, [apiUrl, mutate, selectedRowIds, session]);
+
   return (
     <>
-      <div className="flex gap-2">
-        <Button
-          color="orange"
-          variant="primary"
-          disabled={selectedRowIds.length < 2}
-        >
-          Merge
-        </Button>
-        <Button variant="destructive" disabled={!selectedRowIds.length}>
-          Remove
-        </Button>
-      </div>
       <IncidentTableFilters />
-      <Card className="flex-grow">
+      <SelectedRowActions
+        selectedRowIds={selectedRowIds}
+        onMergeInitiated={handleMergeInitiated}
+        onDelete={handleDeleteMultiple}
+      />
+      <Card className="p-0 overflow-hidden">
         <IncidentTableComponent table={table} />
       </Card>
       <div className="mt-4 mb-8">
@@ -329,6 +407,14 @@ export default function IncidentsTable({
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}
       />
+      {mergeOptions && (
+        <IncidentMergeModal
+          sourceIncidents={mergeOptions.sourceIncidents}
+          destinationIncident={mergeOptions.destinationIncident}
+          mutate={mutate}
+          handleClose={() => setMergeOptions(null)}
+        />
+      )}
     </>
   );
 }
