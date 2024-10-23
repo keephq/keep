@@ -1,13 +1,13 @@
 import { Workflow } from "app/workflows/models";
 import { useSession } from "next-auth/react";
 import { SWRConfiguration } from "swr";
-import { getApiURL } from "../apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 
 export const useWorkflows = (options: SWRConfiguration = {}) => {
   const { data: session } = useSession();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   return useSWRImmutable<Workflow[]>(
     () => (session ? `${apiUrl}/workflows` : null),

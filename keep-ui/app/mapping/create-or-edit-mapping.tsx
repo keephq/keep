@@ -28,7 +28,7 @@ import {
 } from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
@@ -54,6 +54,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [priority, setPriority] = useState<number>(0);
   const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
+  const apiUrl = useApiUrl();
 
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
   useEffect(() => {
@@ -133,7 +134,6 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
 
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/mapping`, {
       method: "POST",
       headers: {
@@ -164,7 +164,6 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/mapping/${editRule?.id}`, {
       method: "PUT",
       headers: {
