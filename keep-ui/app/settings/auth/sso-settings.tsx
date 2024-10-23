@@ -1,10 +1,21 @@
-import React from 'react';
-import useSWR from 'swr';
-import { Card, Title, Subtitle, Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow, Button, Icon } from '@tremor/react';
-import { fetcher } from 'utils/fetcher';
-import { getApiURL } from 'utils/apiUrl';
-import Loading from 'app/loading';
-import Image from "next/image";
+import React from "react";
+import useSWR from "swr";
+import {
+  Card,
+  Title,
+  Subtitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  Button,
+  Icon,
+} from "@tremor/react";
+import { fetcher } from "utils/fetcher";
+import { useApiUrl } from "utils/hooks/useConfig";
+import Loading from "app/loading";
 
 interface SSOProvider {
   id: string;
@@ -18,11 +29,12 @@ interface Props {
 }
 
 const SSOSettings: React.FC<Props> = ({ accessToken }) => {
-  const apiUrl = getApiURL();
-  const { data, error } = useSWR<{ sso: boolean, providers: SSOProvider[], wizardUrl: string }>(
-    `${apiUrl}/settings/sso`,
-    (url: string) => fetcher(url, accessToken)
-  );
+  const apiUrl = useApiUrl();
+  const { data, error } = useSWR<{
+    sso: boolean;
+    providers: SSOProvider[];
+    wizardUrl: string;
+  }>(`${apiUrl}/settings/sso`, (url: string) => fetcher(url, accessToken));
 
   if (!data) return <Loading />;
   if (error) return <div>Error loading SSO settings: {error.message}</div>;
@@ -43,15 +55,27 @@ const SSOSettings: React.FC<Props> = ({ accessToken }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {providers.map(provider => (
+              {providers.map((provider) => (
                 <TableRow key={provider.id}>
                   <TableCell>{provider.name}</TableCell>
-                  <TableCell>{provider.connected ? "Connected" : "Not connected"}</TableCell>
                   <TableCell>
-                    <Button style={{ marginRight: "10px" }} onClick={() => {/* Connect logic here */}}>
+                    {provider.connected ? "Connected" : "Not connected"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      style={{ marginRight: "10px" }}
+                      onClick={() => {
+                        /* Connect logic here */
+                      }}
+                    >
                       Connect
                     </Button>
-                    <Button color="orange" onClick={() => {/* Disconnect logic here */}}>
+                    <Button
+                      color="orange"
+                      onClick={() => {
+                        /* Disconnect logic here */
+                      }}
+                    >
                       Disconnect
                     </Button>
                   </TableCell>

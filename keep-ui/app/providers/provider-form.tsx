@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Provider } from "./providers";
-import { getApiURL } from "../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import Image from "next/image";
 import {
   Title,
@@ -205,13 +205,15 @@ const ProviderForm = ({
   const inputFileRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const apiUrl = useApiUrl();
+
   const { data: session } = useSession();
 
   const accessToken = session?.accessToken;
 
   const callInstallWebhook = async (e: Event) => {
     e.preventDefault();
-    await installWebhook(provider, accessToken!);
+    await installWebhook(provider, accessToken!, apiUrl);
   };
 
   async function handleOauth(e: MouseEvent) {
@@ -253,7 +255,7 @@ const ProviderForm = ({
   useEffect(() => {
     if (triggerRevalidateScope !== 0) {
       setRefreshLoading(true);
-      fetch(`${getApiURL()}/providers/${provider.id}/scopes`, {
+      fetch(`${apiUrl}/providers/${provider.id}/scopes`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -276,7 +278,7 @@ const ProviderForm = ({
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
       const response = await fetch(
-        `${getApiURL()}/providers/${provider.type}/${provider.id}`,
+        `${apiUrl}/providers/${provider.type}/${provider.id}`,
         {
           method: "DELETE",
           headers: {
@@ -439,7 +441,7 @@ const ProviderForm = ({
     e.preventDefault();
     if (validate()) {
       setIsLoading(true);
-      submit(`${getApiURL()}/providers/${provider.id}`, "PUT")
+      submit(`${apiUrl}/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
           toast.success("Updated provider successfully", {
@@ -461,7 +463,7 @@ const ProviderForm = ({
     if (validate()) {
       setIsLoading(true);
       onConnectChange(true, false);
-      submit(`${getApiURL()}/providers/install`)
+      submit(`${apiUrl}/providers/install`)
         .then(async (data) => {
           console.log("Connect Result:", data);
           setIsLoading(false);
@@ -472,7 +474,7 @@ const ProviderForm = ({
             !isLocalhost
           ) {
             // mutate after webhook installation
-            await installWebhook(data as Provider, accessToken);
+            await installWebhook(data as Provider, accessToken, apiUrl);
           }
           mutate();
         })

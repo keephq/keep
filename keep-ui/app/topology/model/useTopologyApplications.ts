@@ -1,10 +1,10 @@
 import { TopologyApplication } from "./models";
-import { getApiURL } from "@/utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useSession } from "next-auth/react";
 import { useCallback, useMemo } from "react";
-import { topologyBaseKey, useTopology } from "./useTopology";
+import { useTopologyBaseKey, useTopology } from "./useTopology";
 import { useRevalidateMultiple } from "@/utils/state";
 
 type UseTopologyApplicationsOptions = {
@@ -19,8 +19,9 @@ export function useTopologyApplications(
     },
   }
 ) {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
+  const topologyBaseKey = useTopologyBaseKey();
   const revalidateMultiple = useRevalidateMultiple();
   const { topologyData, mutate: mutateTopology } = useTopology();
   const topologyApplicationsKey = `${apiUrl}/topology/applications`;
@@ -37,7 +38,7 @@ export function useTopologyApplications(
 
   const addApplication = useCallback(
     async (application: Omit<TopologyApplication, "id">) => {
-      const response = await fetch(`${getApiURL()}/topology/applications`, {
+      const response = await fetch(`${apiUrl}/topology/applications`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +87,7 @@ export function useTopologyApplications(
         );
       }
       const response = await fetch(
-        `${getApiURL()}/topology/applications/${application.id}`,
+        `${apiUrl}/topology/applications/${application.id}`,
         {
           method: "PUT",
           headers: {
@@ -142,7 +143,7 @@ export function useTopologyApplications(
         );
       }
       const response = await fetch(
-        `${getApiURL()}/topology/applications/${applicationId}`,
+        `${apiUrl}/topology/applications/${applicationId}`,
         {
           method: "DELETE",
           headers: {

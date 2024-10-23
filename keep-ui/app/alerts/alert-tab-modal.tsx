@@ -3,23 +3,27 @@ import Modal from "@/components/ui/Modal";
 import { Button, TextInput } from "@tremor/react";
 import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 
 interface AlertTabModalProps {
   presetId: string;
   isOpen: boolean;
   onClose: () => void;
   onAddTab: (name: string, filter: string) => void;
-
 }
 
-const AlertTabModal = ({ presetId, isOpen, onClose, onAddTab }: AlertTabModalProps) => {
+const AlertTabModal = ({
+  presetId,
+  isOpen,
+  onClose,
+  onAddTab,
+}: AlertTabModalProps) => {
   const [newTabName, setNewTabName] = useState("");
   const [newTabFilter, setNewTabFilter] = useState<string>("");
   const [errors, setErrors] = useState({ name: false, filter: false });
   const [backendError, setBackendError] = useState<string | null>(null);
   const { data: session } = useSession();
-
+  const apiUrl = useApiUrl();
   const handleAddTab = async () => {
     if (!newTabName || !newTabFilter) {
       setErrors({
@@ -31,18 +35,22 @@ const AlertTabModal = ({ presetId, isOpen, onClose, onAddTab }: AlertTabModalPro
 
     try {
       // Send the new tab data to the backend
-      const apiUrl = getApiURL();
       const response = await fetch(`${apiUrl}/preset/${presetId}/tab`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({ name: newTabName, filter: newTabFilter }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add the new tab: ' + response.status + ' ' + response.statusText);
+        throw new Error(
+          "Failed to add the new tab: " +
+            response.status +
+            " " +
+            response.statusText
+        );
       }
 
       onAddTab(newTabName, newTabFilter);
@@ -51,10 +59,9 @@ const AlertTabModal = ({ presetId, isOpen, onClose, onAddTab }: AlertTabModalPro
       setBackendError(null); // Clear any previous backend errors
       onClose();
     } catch (error) {
-      if(error instanceof Error) {
+      if (error instanceof Error) {
         setBackendError(error.message);
-      }
-      else{
+      } else {
         setBackendError("An error occurred while adding the tab");
       }
     }
@@ -97,17 +104,21 @@ const AlertTabModal = ({ presetId, isOpen, onClose, onAddTab }: AlertTabModalPro
         {errors.filter && (
           <p className="text-red-500 text-sm">Filter is required</p>
         )}
-        {backendError && (
-          <p className="text-red-500 text-sm">{backendError}</p>
-        )}
+        {backendError && <p className="text-red-500 text-sm">{backendError}</p>}
         <Button
-            disabled={!newTabName || !newTabFilter}
-            color="orange"
-            onClick={handleAddTab}
-            className="mt-16"
-            tooltip={!newTabName ? "Tab name is required" : !newTabFilter ? "Tab filter is required (notice you need to click 'enter' to apply the filter)" : ""}
-            >
-            Add Tab
+          disabled={!newTabName || !newTabFilter}
+          color="orange"
+          onClick={handleAddTab}
+          className="mt-16"
+          tooltip={
+            !newTabName
+              ? "Tab name is required"
+              : !newTabFilter
+              ? "Tab filter is required (notice you need to click 'enter' to apply the filter)"
+              : ""
+          }
+        >
+          Add Tab
         </Button>
       </div>
     </Modal>
