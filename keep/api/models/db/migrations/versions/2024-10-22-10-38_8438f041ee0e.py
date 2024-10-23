@@ -39,16 +39,23 @@ def upgrade() -> None:
         with op.batch_alter_table("provider", schema=None) as batch_op:
             batch_op.alter_column("pulling_enabled", nullable=False)
     else:
-        # Implementation for other databases
-        with op.batch_alter_table("provider", schema=None) as batch_op:
-            batch_op.add_column(
-                sa.Column(
-                    "pulling_enabled",
-                    sa.Boolean(),
-                    nullable=False,
-                    server_default=sa.true(),
-                )
-            )
+        # PostgreSQL and other databases implementation
+        # 1. Add the column as nullable
+        op.add_column(
+            "provider", sa.Column("pulling_enabled", sa.Boolean(), nullable=True)
+        )
+        # 2. Set default value for existing rows
+        op.execute(
+            "UPDATE provider SET pulling_enabled = true WHERE pulling_enabled IS NULL"
+        )
+        # 3. Make it non-nullable with default
+        op.alter_column(
+            "provider",
+            "pulling_enabled",
+            existing_type=sa.Boolean(),
+            nullable=False,
+            server_default=sa.true(),
+        )
 
 
 def downgrade() -> None:
