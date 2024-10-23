@@ -13,7 +13,9 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_last_incidents,
     remove_alerts_to_incident_by_incident_id,
-    get_incident_alerts_by_incident_id
+    get_incident_alerts_by_incident_id,
+    merge_incidents_to_id,
+    create_alert,
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -22,11 +24,11 @@ from keep.api.models.alert import (
     AlertStatus,
     IncidentSeverity,
     IncidentStatus,
+    IncidentDto,
 )
 from keep.api.models.db.alert import Alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
-
 
 
 def test_get_alerts_data_for_incident(db_session, setup_stress_alerts_no_elastic):
@@ -143,30 +145,36 @@ def test_get_last_incidents(db_session, create_alert):
     status_cycle = cycle([s.value for s in IncidentStatus])
     services_cycle = cycle(["keep", None])
 
-    for i in range(50):
+    for i in range(60):
         severity = next(severity_cycle)
         status = next(status_cycle)
-        incident = create_incident_from_dict(SINGLE_TENANT_UUID, {
-            "user_generated_name": f"test-{i}",
-            "user_summary": f"test-{i}",
-            "is_confirmed": True,
-            "severity": severity,
-            "status": status,
-        })
-        create_alert(
-            f"alert-test-{i}",
-            AlertStatus(status),
-            datetime.utcnow(),
+        service = next(services_cycle)
+        incident = create_incident_from_dict(
+            SINGLE_TENANT_UUID,
             {
-                "severity": AlertSeverity.from_number(severity),
-                "service": next(services_cycle),
-            }
+                "user_generated_name": f"test-{i}",
+                "user_summary": f"test-{i}",
+                "is_confirmed": True,
+                "severity": severity,
+                "status": status,
+            },
         )
-        alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+        # Merged incidents don't have alerts
+        if status != IncidentStatus.MERGED.value:
+            create_alert(
+                f"alert-test-{i}",
+                AlertStatus(status),
+                datetime.utcnow(),
+                {
+                    "severity": AlertSeverity.from_number(severity),
+                    "service": service,
+                },
+            )
+            alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
-        add_alerts_to_incident_by_incident_id(
-            SINGLE_TENANT_UUID, incident.id, [alert.id]
-        )
+            add_alerts_to_incident_by_incident_id(
+                SINGLE_TENANT_UUID, incident.id, [alert.id]
+            )
 
     incidents_default, incidents_default_count = get_last_incidents(SINGLE_TENANT_UUID)
     assert len(incidents_default) == 0
@@ -176,7 +184,7 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True
     )
     assert len(incidents_confirmed) == 25
-    assert incidents_confirmed_count == 50
+    assert incidents_confirmed_count == 60
     for i in range(25):
         assert incidents_confirmed[i].user_generated_name == f"test-{i}"
 
@@ -184,7 +192,7 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True, limit=5
     )
     assert len(incidents_limit_5) == 5
-    assert incidents_count_limit_5 == 50
+    assert incidents_count_limit_5 == 60
     for i in range(5):
         assert incidents_limit_5[i].user_generated_name == f"test-{i}"
 
@@ -193,7 +201,7 @@ def test_get_last_incidents(db_session, create_alert):
     )
 
     assert len(incidents_limit_5_page_2) == 5
-    assert incidents_count_limit_5_page_2 == 50
+    assert incidents_count_limit_5_page_2 == 60
     for i, j in enumerate(range(5, 10)):
         assert incidents_limit_5_page_2[i].user_generated_name == f"test-{j}"
 
@@ -206,7 +214,10 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True, with_alerts=True
     )
     for i in range(25):
-        assert len(incidents_with_alerts[i].alerts) == 1
+        if incidents_with_alerts[i].status == IncidentStatus.MERGED.value:
+            assert len(incidents_with_alerts[i].alerts) == 0
+        else:
+            assert len(incidents_with_alerts[i].alerts) == 1
 
     # Test sorting
 
@@ -220,26 +231,40 @@ def test_get_last_incidents(db_session, create_alert):
     # Test filters
 
     filters_1 = {"severity": [1]}
-    incidents_with_filters_1, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100)
-    assert len(incidents_with_filters_1) == 10
+    incidents_with_filters_1, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_1, limit=100
+    )
+    assert len(incidents_with_filters_1) == 12
     assert all([i.severity == 1 for i in incidents_with_filters_1])
 
     filters_2 = {"status": ["firing", "acknowledged"]}
-    incidents_with_filters_2, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100)
-    assert len(incidents_with_filters_2) == 17 + 16
-    assert all([i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2])
+    incidents_with_filters_2, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100
+    )
+    assert (
+        len(incidents_with_filters_2) == 15 + 15
+    )  # 15 confirmed, 15 acknowledged because 60 incidents with cycled status
+    assert all(
+        [i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2]
+    )
 
     filters_3 = {"sources": ["keep"]}
-    incidents_with_filters_3, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100)
-    assert len(incidents_with_filters_3) == 50
+    incidents_with_filters_3, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100
+    )
+    assert len(incidents_with_filters_3) == 45  # 60 minus 15 merged with no alerts
     assert all(["keep" in i.sources for i in incidents_with_filters_3])
 
     filters_4 = {"sources": ["grafana"]}
-    incidents_with_filters_4, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100)
+    incidents_with_filters_4, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_4, limit=100
+    )
     assert len(incidents_with_filters_4) == 0
     filters_5 = {"affected_services": "keep"}
-    incidents_with_filters_5, _ = get_last_incidents(SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100)
-    assert len(incidents_with_filters_5) == 25
+    incidents_with_filters_5, _ = get_last_incidents(
+        SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_5, limit=100
+    )
+    assert len(incidents_with_filters_5) == 30  # half of incidents
     assert all(["keep" in i.affected_services for i in incidents_with_filters_5])
 
 
@@ -425,3 +450,149 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
 
     assert len(incident.alerts) == 0
 
+def test_merge_incidents(db_session, setup_stress_alerts_no_elastic):
+    incident_1 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "destination",
+            "user_summary": "destination",
+        },
+    )
+    alerts_1 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
+    )
+    incident_2 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "test-2",
+            "user_summary": "test-2",
+        },
+    )
+    alerts_2 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
+    )
+    incident_3 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {
+            "user_generated_name": "test-3",
+            "user_summary": "test-3",
+        },
+    )
+    alerts_3 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
+    )
+
+    merge_incidents_to_id(
+        SINGLE_TENANT_UUID,
+        [incident_2.id, incident_3.id],
+        incident_1.id,
+        "test-user-email",
+    )
+
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    assert len(incident_1.alerts) == 150
+
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    assert len(incident_2.alerts) == 0
+    assert incident_2.status == IncidentStatus.MERGED.value
+    assert incident_2.merged_into_incident_id == incident_1.id
+    assert incident_2.merged_at is not None
+    assert incident_2.merged_by == "test-user-email"
+
+    incident_3 = get_incident_by_id(SINGLE_TENANT_UUID, incident_3.id, with_alerts=True)
+    assert len(incident_3.alerts) == 0
+    assert incident_3.status == IncidentStatus.MERGED.value
+    assert incident_3.merged_into_incident_id == incident_1.id
+    assert incident_3.merged_at is not None
+    assert incident_3.merged_by == "test-user-email"
+
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_merge_incidents_app(
+    db_session, client, test_app, setup_stress_alerts_no_elastic, create_alert
+):
+    incident_1 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "destination", "user_summary": "destination"},
+    )
+    alerts_1 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
+    )
+    incident_2 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "test-2", "user_summary": "test-2"},
+    )
+    for i in range(50):
+        create_alert(
+            f"alert-{i}",
+            AlertStatus.FIRING,
+            datetime.utcnow(),
+            {"severity": AlertSeverity.CRITICAL.value, "service": "second-service"},
+        )
+    alerts_2 = (
+        db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-")).all()
+    )
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
+    )
+    incident_3 = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "test-3", "user_summary": "test-3"},
+    )
+    alerts_3 = setup_stress_alerts_no_elastic(50)
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
+    )
+    empty_incident = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test-4", "user_summary": "test-4"}
+    )
+
+    incident_1_before_via_api = client.get(
+        f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
+    ).json()
+    assert incident_1_before_via_api["alerts_count"] == 50
+    assert "second-service" not in incident_1_before_via_api["services"]
+
+    response = client.post(
+        "/incidents/merge",
+        headers={"x-api-key": "some-key"},
+        json={
+            "source_incident_ids": [
+                str(incident_2.id),
+                str(incident_3.id),
+                str(empty_incident.id),
+            ],
+            "destination_incident_id": str(incident_1.id),
+        },
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["merged_incident_ids"] == [str(incident_2.id), str(incident_3.id)]
+    assert result["skipped_incident_ids"] == [str(empty_incident.id)]
+    assert result["failed_incident_ids"] == []
+
+    incident_1_via_api = client.get(
+        f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
+    ).json()
+
+    assert incident_1_via_api["id"] == str(incident_1.id)
+    assert incident_1_via_api["alerts_count"] == 150
+    assert "second-service" in incident_1_via_api["services"]
+
+    incident_2_via_api = client.get(
+        f"/incidents/{incident_2.id}", headers={"x-api-key": "some-key"}
+    ).json()
+    assert incident_2_via_api["status"] == IncidentStatus.MERGED.value
+    assert incident_2_via_api["merged_into_incident_id"] == str(incident_1.id)
+
+    incident_3_via_api = client.get(
+        f"/incidents/{incident_3.id}",
+        headers={"x-api-key": "some-key"},
+    ).json()
+    assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
+    assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)

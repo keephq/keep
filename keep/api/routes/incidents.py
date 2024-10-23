@@ -28,6 +28,9 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
+    get_incidents_meta_for_tenant,
+    merge_incidents_to_id,
+    DestinationIncidentNotFound,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -37,10 +40,12 @@ from keep.api.models.alert import (
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
+    MergeIncidentsRequestDto,
     IncidentSeverity,
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
+    MergeIncidentsResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
@@ -346,6 +351,53 @@ def delete_incident(
             extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
         )
     return Response(status_code=202)
+
+
+@router.post(
+    "/merge", description="Merge incidents", response_model=MergeIncidentsResponseDto
+)
+def merge_incidents(
+    command: MergeIncidentsRequestDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+) -> MergeIncidentsResponseDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Merging incidents",
+        extra={
+            "source_incident_ids": command.source_incident_ids,
+            "destination_incident_id": command.destination_incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
+            tenant_id,
+            command.source_incident_ids,
+            command.destination_incident_id,
+            authenticated_entity.email,
+        )
+
+        message = f"{len(merged_ids)} incidents merged into {command.destination_incident_id} successfully"
+        if not merged_ids:
+            message = "No incidents merged"
+        if skipped_ids:
+            # TODO: plural
+            message += f", {len(skipped_ids)} incidents were skipped"
+        if failed_ids:
+            message += f", {len(failed_ids)} incidents failed to merge"
+
+        return MergeIncidentsResponseDto(
+            merged_incident_ids=merged_ids,
+            skipped_incident_ids=skipped_ids,
+            failed_incident_ids=failed_ids,
+            destination_incident_id=command.destination_incident_id,
+            message=message,
+        )
+    except DestinationIncidentNotFound as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get(
