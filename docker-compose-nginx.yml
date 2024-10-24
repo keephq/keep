@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  keep-frontend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-frontend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-ui
+    environment:
+      - AUTH_TYPE=NO_AUTH
+      - API_URL=http://keep-backend:8080
+    volumes:
+      - ./state:/state
+    depends_on:
+      - keep-backend
+
+  keep-backend:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-backend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+    volumes:
+      - ./state:/state
+
+  keep-websocket-server:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - keep-frontend
+      - keep-backend
+      - keep-websocket-server
+
+volumes:
+  postgres_data:
+
+networks:
+  keep-network:
+    driver: bridge
