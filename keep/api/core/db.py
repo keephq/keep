@@ -3928,36 +3928,36 @@ def add_runbooks_to_incident_by_incident_id(
     
 def create_runbook_in_db(session: Session, tenant_id: str, runbook_dto: dict):
         try:
-            new_runbook = Runbook(
-                tenant_id=tenant_id,
-                title=runbook_dto["title"],
-                repo_id=runbook_dto["repo_id"],
-                relative_path=runbook_dto["relative_path"],
-                provider_type=runbook_dto["provider_type"],
-                provider_id=runbook_dto["provider_id"]
-            )
-
-            session.add(new_runbook)
-            session.flush()
+            
             contents = runbook_dto["contents"] if runbook_dto["contents"] else []
-
-            new_contents = [
-                RunbookContent(
+            new_runbooks = []
+            new_contents = []    
+            for content in contents:
+                new_runbook = Runbook(
+                    tenant_id=tenant_id,
+                    title=runbook_dto["title"],
+                    repo_id=runbook_dto["repo_id"],
+                    relative_path=runbook_dto["relative_path"],
+                    provider_type=runbook_dto["provider_type"],
+                    provider_id=runbook_dto["provider_id"]
+                )
+                new_runbooks.append(new_runbook)
+                new_content =  RunbookContent(
                     runbook_id=new_runbook.id,
                     content=content["content"],
                     link=content["link"],
                     encoding=content["encoding"],
-                    file_name=content["file_name"]
+                    file_name=content["file_name"],
+                    title=content["title"]
                 )
-                for content in contents
-            ]
-
+                new_contents.append(new_content)
+                
+            session.add_all(new_runbooks)
+            session.flush()
+            
             session.add_all(new_contents)
             session.commit()
-            session.expire(new_runbook, ["contents"])
-            session.refresh(new_runbook)  # Refresh the runbook instance
-            result = RunbookDtoOut.from_orm(new_runbook)
-            return result
+            return True
         except ValidationError as e:
             logger.exception(f"Failed to create runbook {e}")            
             

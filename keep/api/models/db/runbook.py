@@ -57,11 +57,12 @@ class RunbookContent(SQLModel, table=True):
     runbook_id: UUID = Field(
         sa_column=Column(ForeignKey("runbook.id", ondelete="CASCADE"))  # Foreign key with CASCADE delete
     )
-    runbook: Optional["Runbook"] = Relationship(back_populates="contents")
+    runbook: "Runbook" = Relationship(back_populates="contents")
     content: str = Field(sa_column=Column(Text), nullable=False)  # Using SQLAlchemy's Text type
     link: str = Field(sa_column=Column(Text), nullable=False)  # Using SQLAlchemy's Text type
     encoding: Optional[str] = None
     file_name: str
+    title: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)  # Timestamp for creation
 
     class Config:
@@ -106,6 +107,7 @@ class RunbookContentDto(BaseModel, extra="ignore"):
     link: str
     file_name: str
     encoding: Optional[str] = None
+    title: Optional[str] = ""
 
     @classmethod
     def from_orm(cls, content: "RunbookContent") -> "RunbookContentDto":
@@ -114,7 +116,8 @@ class RunbookContentDto(BaseModel, extra="ignore"):
             content=content.content,
             link=content.link,
             encoding=content.encoding,
-            file_name=content.file_name
+            file_name=content.file_name,
+            title=content.title
         )
 
 class RunbookDtoOut(RunbookDto):
