@@ -14,7 +14,7 @@ const EditGridItemModal: React.FC<EditGridItemModalProps> = ({ isOpen, onClose, 
   const [thresholds, setThresholds] = useState<Threshold[]>([]);
 
   useEffect(() => {
-    if (item) {
+    if (item?.thresholds) {
       setThresholds(item.thresholds);
     }
   }, [item]);
