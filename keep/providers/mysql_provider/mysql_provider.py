@@ -21,8 +21,12 @@ class MysqlProviderAuthConfig:
     password: str = dataclasses.field(
         metadata={"required": True, "description": "MySQL password", "sensitive": True}
     )
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "MySQL hostname"}
+    host: pydantic.AnyUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "MySQL hostname",
+            "validation": "any_url",
+        }
     )
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "MySQL database name"}, default=None

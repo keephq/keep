@@ -10,17 +10,19 @@ import pydantic
 from pymongo import MongoClient
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
 @pydantic.dataclasses.dataclass
 class MongodbProviderAuthConfig:
-    host: str = dataclasses.field(
+    host: pydantic.AnyUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Mongo host_uri",
-            "hint": "any valid mongo host_uri like host:port, user:paassword@host:port?authSource",
+            "hint": "any valid mongo host_uri like mongodb://host:port, user:paassword@host:port?authSource",
+            "validation": "any_url",
         }
     )
     username: str = dataclasses.field(
@@ -77,7 +79,9 @@ class MongodbProvider(BaseProvider):
         """
         try:
             client = self.__generate_client()
-            client.admin.command('ping') # will raise an exception if the server is not available
+            client.admin.command(
+                "ping"
+            )  # will raise an exception if the server is not available
             client.close()
             scopes = {
                 "connect_to_server": True,
@@ -118,7 +122,9 @@ class MongodbProvider(BaseProvider):
             and k != "additional_options"  # additional_options will go seperately
             and k != "database"
         }  # database is not a valid mongo option
-        client = MongoClient(**client_conf, **additional_options, serverSelectionTimeoutMS=10000) # 10 seconds timeout
+        client = MongoClient(
+            **client_conf, **additional_options, serverSelectionTimeoutMS=10000
+        )  # 10 seconds timeout
         return client
 
     def dispose(self):
@@ -131,6 +137,15 @@ class MongodbProvider(BaseProvider):
         """
         Validates required configuration for MongoDB's provider.
         """
+        host = self.config.authentication["host"]
+        if host is None:
+            raise ProviderConfigException("Please provide a value for `host`")
+        host = (
+            "mongodb://" + host
+            if not (host.startswith("mongodb://") or host.startwith("mongodb+srv://"))
+            else host
+        )
+
         self.authentication_config = MongodbProviderAuthConfig(
             **self.config.authentication
         )

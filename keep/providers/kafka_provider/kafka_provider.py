@@ -6,7 +6,6 @@ import inspect
 import logging
 
 import pydantic
-
 # from confluent_kafka import Consumer, KafkaError, KafkaException
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError, NoBrokersAvailable
@@ -167,7 +166,6 @@ class KafkaProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Kafka provider.
-
         """
         self.authentication_config = KafkaProviderAuthConfig(
             **self.config.authentication

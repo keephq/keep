@@ -1,8 +1,9 @@
-import pydantic
-import openshift_client as oc
-from openshift_client import OpenShiftPythonException, Context
 import dataclasses
 import traceback
+
+import openshift_client as oc
+import pydantic
+from openshift_client import Context, OpenShiftPythonException
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -13,17 +14,16 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class OpenshiftProviderAuthConfig:
     """Openshift authentication configuration."""
 
-    api_server: str = dataclasses.field(
-        default=None,
+    api_server: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "name": "api_server",
             "description": "The openshift api server url",
             "required": True,
             "sensitive": False,
+            "validation": "any_http_url"
         },
     )
     token: str = dataclasses.field(
-        default=None,
         metadata={
             "name": "token",
             "description": "The openshift token",
@@ -35,9 +35,10 @@ class OpenshiftProviderAuthConfig:
         default=False,
         metadata={
             "name": "insecure",
-            "description": "Whether to skip tls verification",
+            "description": "Skip TLS verification",
             "required": False,
             "sensitive": False,
+            "type": "switch"
         },
     )
 
