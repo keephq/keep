@@ -14,8 +14,10 @@ import {
     getCoreRowModel,
     useReactTable,
     flexRender,
+    Table,
+    ColumnDef,
 } from "@tanstack/react-table";
-import React, { useEffect, useState } from "react";
+import React, { HTMLProps, useEffect, useRef, useState } from "react";
 import Pagination from "./Pagination";
 
 interface GenericTableProps<T> {
@@ -26,8 +28,43 @@ interface GenericTableProps<T> {
     limit: number;
     onPaginationChange: ( limit: number, offset: number ) => void;
     onRowClick?: (row: T) => void;
+    getActions?: (table: Table<T>, selectedRowIds: string[])=>React.JSX.Element;
+    isRowSelectable?:boolean
     dataFetchedAtOneGO?: boolean
 }
+
+interface Props extends HTMLProps<HTMLInputElement> {
+    indeterminate?: boolean;
+    disabled?: boolean;
+  }
+
+function TableCheckbox({
+    indeterminate,
+    className = "",
+    disabled = false,
+    ...rest
+  }: Props) {
+    const ref = useRef<HTMLInputElement>(null!);
+  
+    useEffect(() => {
+      if (typeof indeterminate === "boolean") {
+        ref.current.indeterminate = !rest.checked && indeterminate;
+      }
+    }, [indeterminate, rest.checked]);
+  
+    return (
+      <input
+        type="checkbox"
+        ref={ref}
+        disabled={disabled}
+        className={
+          className + `${disabled ? "cursor-not-allowed" : "cursor-pointer"}`
+        }
+        {...rest}
+      />
+    );
+  }
+  
 
 export function GenericTable<T>({
     data,
@@ -37,6 +74,8 @@ export function GenericTable<T>({
     limit,
     onPaginationChange,
     onRowClick,
+    getActions,
+    isRowSelectable = false,
     dataFetchedAtOneGO,
 }: GenericTableProps<T>) {
     const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -62,6 +101,26 @@ export function GenericTable<T>({
         }
     }, [pagination]);
 
+    if(isRowSelectable && !!data.length) {
+        columns = [{
+            id: 'select-col',
+            header: ({ table }) => (
+           
+            <TableCheckbox
+                    checked={table.getIsAllRowsSelected()}
+                    indeterminate={table.getIsSomeRowsSelected()}
+                    onChange={table.getToggleAllRowsSelectedHandler()}
+                  />
+            ),
+            cell: ({ row }) => (
+              <TableCheckbox
+                checked={row.getIsSelected()}
+                disabled={!row.getCanSelect()}
+                onChange={row.getToggleSelectedHandler()}
+              />
+            ),
+          }, ...columns]
+    }
     const finalData = (dataFetchedAtOneGO ? data.slice(pagination.pageSize * pagination.pageIndex, pagination.pageSize * (pagination.pageIndex + 1)) : data) as T[]
 
     const table = useReactTable({
@@ -76,11 +135,20 @@ export function GenericTable<T>({
             setPagination(nextPagination);
         },
         onExpandedChange: setExpanded,
+        enableRowSelection: !!data.length && true,
+        enableMultiRowSelection: true,
     });
+
+    const selectedRowIds = Object.entries(
+        table.getSelectedRowModel().rowsById
+      ).reduce<string[]>((acc, [id]) => {
+        return acc.concat(id);
+      }, []);
 
     return (
         <div className="flex flex-col w-full h-full max-h-full">
             <div className="overflow-auto h-[85%]">
+            {!!selectedRowIds.length  && getActions && <div className="mb-2">{getActions(table, selectedRowIds)}</div>}
                 <TremorTable className="w-full rounded border border-tremor-border dark:border-dark-tremor-border">
                     <TableHead>
                         {table.getHeaderGroups().map((headerGroup) => (

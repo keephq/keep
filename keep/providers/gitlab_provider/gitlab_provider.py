@@ -1,5 +1,5 @@
 """
-GitlabProvider is a class that implements the BaseProvider interface for GitLab updates.
+GitlabProvider is a class that implements the BaseRunBookProvider interface for GitLab updates.
 """
 
 import dataclasses
@@ -10,7 +10,7 @@ import requests
 from requests import HTTPError
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseRunBookProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 
@@ -37,7 +37,7 @@ class GitlabProviderAuthConfig:
     )
 
 
-class GitlabProvider(BaseProvider):
+class GitlabProvider(BaseRunBookProvider):
     """Enrich alerts with GitLab tickets."""
 
     PROVIDER_SCOPES = [
@@ -48,7 +48,7 @@ class GitlabProvider(BaseProvider):
             alias="GitLab PAT with api scope",
         ),
     ]
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS = ["ticketing", "runbook"]
     PROVIDER_DISPLAY_NAME = "GitLab"
 
     def __init__(
@@ -143,6 +143,144 @@ class GitlabProvider(BaseProvider):
                 params[param] = kwargs[param]
         return params
 
+    def get_gitlab_user_id(self):
+        """
+        Retrieve the user ID from the access token in GitLab.
+        """
+        url = f"{self.gitlab_host}/api/v4/user"
+        headers = self.__get_auth_header()
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            user_data = response.json()
+            print(user_data)
+            return user_data['id']  # The user ID
+        else:
+            raise Exception(f"Failed to retrieve user info: {response.status_code}, {response.text}")
+        
+    def _format_repos(self, repos, project_id=None):
+       """
+       Format the repository data into a list of dictionaries.
+       """
+       if project_id is not None:
+           if repos is not None:
+               return {
+                   "id": repos.get("id"),
+                   "name": repos.get("name"),
+                   "full_name": repos.get("full_name"),
+                   "url": repos.get("web_url"),
+                   "description": repos.get("description"),
+                   "private": repos.get("visibility"),
+                   "option_value": repos.get("id"),
+                   "display_name": repos.get("path_with_namespace"),
+                   "default_branch": repos.get("default_branch"),
+               }
+           return {}
+
+       formatted_repos = []
+       for repo in repos:
+           formatted_repos.append(
+               {
+                   "id": repo.get("id"),
+                   "name": repo.get("name"),
+                   "full_name": repo.get("full_name"),
+                   "url": repo.get("web_url"),
+                   "description": repo.get("description"),
+                   "private": repo.get("visibility"),
+                   "option_value": repo.get("id"),
+                   "display_name": repo.get("path_with_namespace"),
+                   "default_branch": repo.get("default_branch"),
+               }
+           )
+
+       return formatted_repos
+
+    def pull_repositories(self, project_id=None):
+       """Get user repositories."""
+       if self.authentication_config.personal_access_token:
+           user_id = self.get_gitlab_user_id()
+           url = f"{self.gitlab_host}/api/v4/projects/{project_id}" if project_id else f"{self.gitlab_host}/api/v4/users/{user_id}/projects"
+           resp = requests.get(
+               url,
+               headers=self.__get_auth_header()
+           )
+           try:
+               resp.raise_for_status()
+           except HTTPError as e:
+               raise Exception(f"Failed to query repositories: {e}")
+
+           repos = resp.json()
+           return self._format_repos(repos, project_id)
+
+       raise Exception("Failed to get repositories: personal_access_token not set")
+
+    def _format_content(self, runbookContent, repo):
+        """
+        Format the content data into a dictionary.
+        """
+        return {
+            "content": runbookContent.get("content"),
+            "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbookContent.get('file_path')}/raw",
+            "encoding": runbookContent.get("encoding"),
+            "file_name": runbookContent.get("file_name"),
+        }
+
+
+    def _format_runbook(self, runbook, repo, title, md_path):
+        """
+        Format the runbook data into a dictionary.
+        """
+        if runbook is None:
+            raise Exception("Got empty runbook. Please check the runbook path and try again.")
+
+        # Check if runbook is a list, if not convert to list
+        if isinstance(runbook, list):
+            runbook_contents = runbook      
+        else:
+            runbook_contents = [runbook] 
+
+        filtered_runbook_contents = [runbookContent for runbookContent in runbook_contents]
+
+        # Format the contents using a helper function
+        contents = [self._format_content(runbookContent, repo) for runbookContent in filtered_runbook_contents]
+
+        # Return formatted runbook data as dictionary
+        return {
+            "relative_path": md_path,
+            "repo_id": repo.get("id"),
+            "repo_name": repo.get("name"),
+            "repo_display_name": repo.get("display_name"),
+            "provider_type": "gitlab",
+            "provider_id": self.provider_id,
+            "contents": contents,
+            "title": title,
+        }
+     
+
+    def pull_runbook(self, repo=None, branch=None, md_path=None, title=None):
+        """Retrieve markdown files from the GitLab repository."""
+        repo = repo if repo else self.authentication_config.repository
+        branch = branch if branch else "main"
+        md_path = md_path if md_path else self.authentication_config.md_path
+
+        repo_meta = self.pull_repositories(project_id=repo)
+        repo_id = repo_meta.get("id")
+        if repo_id and branch and md_path:
+            resp = requests.get(
+                f"{self.gitlab_host}/api/v4/projects/{repo_id}/repository/files/{md_path}?ref={branch}",
+                headers=self.__get_auth_header()
+            )
+
+            try:
+                resp.raise_for_status()
+            except HTTPError as e:
+                raise Exception(f"Failed to get runbook: {e}")
+
+            return self._format_runbook(resp.json(), repo_meta, title, md_path)
+
+        raise Exception("Failed to get runbook: repository or md_path not set")       
+
+
     def _notify(self, id: str, title: str, description: str = "", labels: str = "", issue_type: str = "issue",
                 **kwargs: dict):
         id = urllib.parse.quote(id, safe='')
@@ -180,6 +318,8 @@ if __name__ == "__main__":
         authentication={
             "personal_access_token": gitlab_pat,
             "host": gitlab_host,
+            "repository": os.environ.get("GITHUB_REPOSITORY"),
+            "md_path": os.environ.get("MARKDOWN_PATH")
         },
     )
     provider = GitlabProvider(context_manager, provider_id="gitlab", config=config)
@@ -191,3 +331,7 @@ if __name__ == "__main__":
         summary="Test Alert",
         description="Test Alert Description",
     )
+
+    result = provider.pull_runbook(title="test")
+    result = provider.pull_repositories()
+    print(result)
