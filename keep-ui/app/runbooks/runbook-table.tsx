@@ -235,7 +235,6 @@ function RunbookIncidentTable() {
     total_count: 0,
     runbooks: [],
   };
-  // const flattenedData = flattenRunbookData(runbooks || []);
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setLimit(newLimit);
     setOffset(newOffset);
