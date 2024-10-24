@@ -58,39 +58,64 @@ interface RunbookV2 {
 }
 
 const columnHelperv2 = createColumnHelper<RunbookV2>();
+const extractMetadataFromMarkdown = (markdown) => {
+  const charactersBetweenGroupedHyphens = /^---([\s\S]*?)---/;
+  const metadataMatched = markdown.match(charactersBetweenGroupedHyphens);
+  const metadata = metadataMatched[1];
+
+  if (!metadata) {
+    return {};
+  }
+
+  const metadataLines = metadata.split("\n");
+  const metadataObject = metadataLines.reduce((accumulator, line) => {
+    const [key, ...value] = line.split(":").map((part) => part.trim());
+
+    if (key)
+      accumulator[key] = value[1] ? value.join(":") : value.join("");
+    return accumulator;
+  }, {});
+
+  return metadataObject;
+};
 
 const columnsv2 = [
   columnHelperv2.display({
     id: "title",
     header: "Runbook Title",
     cell: ({ row }) => {
-      return <div>{row.original.title}</div>;
+      const titles = row.original.contents.map(content => {
+        let decodedContent = Buffer.from(content.content, "base64").toString("utf-8");
+        console.log(decodedContent);
+        // const decodedContent = content.decode("utf8");
+        // const metadata = extractMetadataFromMarkdown(decodedContent);
+        // return metadata.title || row.original.title; 
+      });
+      return <div></div>; 
     },
   }),
   columnHelperv2.display({
-    id: "contents",
-    header: "Contents",
-    cell: ({ row }) => {
-      const contents = row.original.contents || [];
-      const isMoreContentAvailable = contents.length > 4;
-      return (
-        <div>
-          {contents.slice(0, 4)?.map((content: Content) => (
-            <Badge key={content.id} color="green" className="mr-2 mb-1">
-              {content.file_name}
-            </Badge>
-          ))}
-          {isMoreContentAvailable && (
-            <Badge color="green" className="mr-2 mb-1">{`${
-              contents.length - 4
-            } more...`}</Badge>
-          )}
-        </div>
-      );
-    },
+    id: "content",
+    header: "File Name",
+    cell: ({ row }) => (
+      <Badge key={row.original.id} color="green" className="mr-2 mb-1">
+      {console.log("from inside row", row)}
+        {
+        row.original.file_name}
+      </Badge>
+    ),
   }),
 ] as DisplayColumnDef<RunbookV2>[];
 
+const flattenRunbookData = (runbooks: RunbookV2[]) => {
+  return runbooks.flatMap((runbook) =>
+    runbook.contents.map((content) => ({
+      ...runbook,
+      file_name: content.file_name,
+      content_id: content.id,
+    }))
+  );
+};
 function SettingsPage({handleRunbookMutation}:{
   handleRunbookMutation: () => void}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -245,7 +270,6 @@ function RunbookIncidentTable() {
       return fetcher(url, session?.accessToken!);
     }
   );
-
   const handleRunbookMutation = ()=>{
     mutate(`${getApiURL()}/runbooks?limit=${limit}&offset=${0}`);
   }
@@ -254,7 +278,7 @@ function RunbookIncidentTable() {
     total_count: 0,
     runbooks: [],
   };
-
+  const flattenedData = flattenRunbookData(runbooks || []);
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setLimit(newLimit);
     setOffset(newOffset);
@@ -279,7 +303,7 @@ function RunbookIncidentTable() {
       <Card className="flex-grow">
         {!isLoading && !error && (
           <GenericTable<RunbookDto>
-            data={runbooks}
+          data={flattenedData}
             columns={columnsv2}
             rowCount={total_count}
             offset={offset}
