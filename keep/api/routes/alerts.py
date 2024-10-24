@@ -465,7 +465,6 @@ def enrich_alert(
 
 def _enrich_alert(
     enrich_data: EnrichAlertRequestBody,
-    pusher_client: Pusher | None = get_pusher_client(),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
@@ -479,7 +478,6 @@ def _enrich_alert(
             "tenant_id": tenant_id,
         },
     )
-
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         # Shahar: TODO, change to the specific action type, good enough for now
@@ -540,6 +538,7 @@ def _enrich_alert(
             logger.exception("Failed to push alert to elasticsearch")
             pass
         # use pusher to push the enriched alert to the client
+        pusher_client = get_pusher_client()
         if pusher_client:
             logger.info("Telling client to poll alerts")
             try:
