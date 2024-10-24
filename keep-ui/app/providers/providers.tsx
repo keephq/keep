@@ -2,7 +2,13 @@ export interface ProviderAuthConfig {
   description: string;
   hint?: string;
   placeholder?: string;
-  validation?: "any_http_url" | "http_url" | "https_url" | "port" | "tld";
+  validation?:
+    | "any_url"
+    | "any_http_url"
+    | "http_url"
+    | "https_url"
+    | "port"
+    | "tld";
   required?: boolean;
   value?: string;
   default: string | number | boolean | null;

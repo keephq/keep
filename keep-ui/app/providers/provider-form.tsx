@@ -146,16 +146,13 @@ function getInitialFormValues(provider: Provider) {
     });
 
   // Set default values for select & switch inputs
-  Object.entries(provider.config).forEach(([field, config]) => {
-    if (
-      config.type &&
-      ["select", "switch"].includes(config.type) &&
-      config.default !== null &&
-      !initialValues[field]
-    ) {
+  for (const [field, config] of Object.entries(provider.config)) {
+    if (field in initialValues) continue;
+    if (config.default === null) continue;
+    if (config.type && ["select", "switch"].includes(config.type)) {
       initialValues[field] = config.default;
     }
-  });
+  }
 
   return initialValues;
 }
@@ -207,9 +204,10 @@ function getZodSchema(fields: Provider["config"]) {
       return [field, switchSchema];
     }
 
-    const urlSchema = z
-      .string({ required_error })
-      .url({ message: "Please provide a valid url, e.g https://example.com" });
+    const urlSchema = z.string({ required_error }).url({
+      message:
+        "Please provide a valid url, with a scheme & hostname as required.",
+    });
     const urlTldSchema = z.string().regex(new RegExp(/\.[a-z]{2,63}$/), {
       message: "Url must contain a valid TLD e.g .com, .io, .dev, .net",
     });
@@ -223,6 +221,13 @@ function getZodSchema(fields: Provider["config"]) {
         message: "A url with `https` protocol is required.",
       })
       .and(urlTldSchema);
+
+    if (config.validation === "any_url") {
+      const anyUrlSchema = config.required
+        ? urlSchema
+        : emptyStringToNull.pipe(urlSchema.nullish());
+      return [field, anyUrlSchema];
+    }
 
     if (config.validation === "any_http_url") {
       const anyHttpSchema = config.required
