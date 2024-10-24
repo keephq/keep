@@ -126,7 +126,7 @@ class Incident(SQLModel, table=True):
     rule_id: UUID | None = Field(
         sa_column=Column(
             UUIDType(binary=False),
-            ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"),
+            ForeignKey("rule.id", ondelete="CASCADE"),
             nullable=True,
         ),
     )
@@ -137,7 +137,7 @@ class Incident(SQLModel, table=True):
     same_incident_in_the_past_id: UUID | None = Field(
         sa_column=Column(
             UUIDType(binary=False),
-            ForeignKey("incident.id", use_alter=False, ondelete="SET NULL"),
+            ForeignKey("incident.id", ondelete="SET NULL"),
             nullable=True,
         ),
     )
@@ -146,11 +146,38 @@ class Incident(SQLModel, table=True):
         back_populates="same_incidents_in_the_future",
         sa_relationship_kwargs=dict(
             remote_side="Incident.id",
+            foreign_keys="[Incident.same_incident_in_the_past_id]",
         ),
     )
 
-    same_incidents_in_the_future: list["Incident"] = Relationship(
+    same_incidents_in_the_future: List["Incident"] = Relationship(
         back_populates="same_incident_in_the_past",
+        sa_relationship_kwargs=dict(
+            foreign_keys="[Incident.same_incident_in_the_past_id]",
+        ),
+    )
+
+    merged_into_incident_id: UUID | None = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
+    merged_at: datetime | None = Field(default=None)
+    merged_by: str | None = Field(default=None)
+    merged_into: Optional["Incident"] = Relationship(
+        back_populates="merged_incidents",
+        sa_relationship_kwargs=dict(
+            remote_side="Incident.id",
+            foreign_keys="[Incident.merged_into_incident_id]",
+        ),
+    )
+    merged_incidents: List["Incident"] = Relationship(
+        back_populates="merged_into",
+        sa_relationship_kwargs=dict(
+            foreign_keys="[Incident.merged_into_incident_id]",
+        ),
     )
 
     def __init__(self, **kwargs):
