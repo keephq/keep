@@ -4,7 +4,7 @@ description: "At Keep, we view alerts as workflows, which consist of a series of
 ---
 ## Full Example
 ```yaml title=examples/raw_sql_query_datetime.yml
-# Notify if a result queried from the DB is above a certain thershold.
+# Notify if a result queried from the DB is above a certain threshold.
 workflow:
   id: raw-sql-query
   description: Monitor that time difference is no more than 1 hour
@@ -52,7 +52,7 @@ workflow:
 - Metadata (id, description. owners and tags will be added soon)
 - `steps` - list of steps
 - `actions` - list of actions
-- `on-failure` - a conditionless action used in case of an alert failure
+- `on-failure` - an unconditional action used in case of an alert failure
 
 ### Provider
 ```yaml
@@ -126,5 +126,5 @@ on-failure:
       config: " {{ providers.slack-demo }} "
 ```
 
-On-failure is actually a condtionless `Action` used to notify in case the alert failed with an exception.
+On-failure is actually an unconditional `Action` used to notify in case the alert failed with an exception.
 The provider is passed a `message` (string) to it's `notify` function.
