@@ -17,7 +17,7 @@ import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
@@ -81,6 +81,7 @@ function Builder({
 
   const searchParams = useSearchParams();
   const { errorNode, setErrorNode, canDeploy, synced } = useStore();
+  const apiUrl = useApiUrl();
 
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
@@ -102,7 +103,6 @@ function Builder({
   };
 
   const updateWorkflow = () => {
-    const apiUrl = getApiURL();
     const url = `${apiUrl}/workflows/${workflowId}`;
     const method = "PUT";
     const headers = {
@@ -125,7 +125,6 @@ function Builder({
   };
 
   const testRunWorkflow = () => {
-    const apiUrl = getApiURL();
     const url = `${apiUrl}/workflows/test`;
     const method = "POST";
     const headers = {
@@ -158,7 +157,6 @@ function Builder({
   };
 
   const addWorkflow = () => {
-    const apiUrl = getApiURL();
     const url = `${apiUrl}/workflows/json`;
     const method = "POST";
     const headers = {

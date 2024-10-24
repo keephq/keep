@@ -5,7 +5,7 @@ import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
 import { getSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { User } from "../models";
 import { User as AuthUser } from "next-auth";
 import { mutate } from "swr";
@@ -18,6 +18,7 @@ interface Props {
 
 export default function UsersMenu({ user, currentUser }: Props) {
   const { refs, x, y } = useFloating();
+  const apiUrl = useApiUrl();
 
   const onDelete = async () => {
     const confirmed = confirm(
@@ -25,7 +26,7 @@ export default function UsersMenu({ user, currentUser }: Props) {
     );
     if (confirmed) {
       const session = await getSession();
-      const apiUrl = getApiURL();
+
       const res = await fetch(`${apiUrl}/users/${user.email}`, {
         method: "DELETE",
         headers: {

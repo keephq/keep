@@ -1,19 +1,19 @@
-'use client';
-import {useParams} from 'next/navigation';
-import {ChangeEvent, useEffect, useState} from 'react';
-import GridLayout from '../GridLayout';
-import WidgetModal from '../WidgetModal';
-import {Button, Card, Icon, Subtitle, TextInput} from '@tremor/react';
-import {GenericsMetrics, LayoutItem, Threshold, WidgetData, WidgetType} from '../types';
-import {Preset} from 'app/alerts/models';
-import {FiEdit2, FiSave} from 'react-icons/fi';
-import {useSession} from 'next-auth/react';
-import {useDashboards} from 'utils/hooks/useDashboards';
-import {getApiURL} from 'utils/apiUrl';
-import './../styles.css';
-import {toast} from 'react-toastify';
-import {GenericFilters} from '@/components/filters/GenericFilters';
-import {useDashboardPreset} from 'utils/hooks/useDashboardPresets';
+"use client";
+import {useParams} from "next/navigation";
+import {ChangeEvent, useEffect, useState} from "react";
+import GridLayout from "../GridLayout";
+import WidgetModal from "../WidgetModal";
+import {Button, Card, Icon, Subtitle, TextInput} from "@tremor/react";
+import {GenericsMetrics, LayoutItem, Threshold, WidgetData, WidgetType} from "../types";
+import {Preset} from "app/alerts/models";
+import {FiEdit2, FiSave} from "react-icons/fi";
+import {useSession} from "next-auth/react";
+import {useDashboards} from "utils/hooks/useDashboards";
+import {useApiUrl} from "utils/hooks/useConfig";
+import "./../styles.css";
+import {toast} from "react-toastify";
+import {GenericFilters} from "@/components/filters/GenericFilters";
+import {useDashboardPreset} from "utils/hooks/useDashboardPresets";
 import {MetricsWidget, useDashboardMetricWidgets} from '@/utils/hooks/useDashboardMetricWidgets';
 
 const DASHBOARD_FILTERS = [
@@ -22,8 +22,8 @@ const DASHBOARD_FILTERS = [
     key: "time_stamp",
     value: "",
     name: "Last received",
-  }
-]
+  },
+];
 
 const DashboardPage = () => {
   const allPresets = useDashboardPreset();
@@ -37,10 +37,13 @@ const DashboardPage = () => {
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
   const [dashboardName, setDashboardName] = useState(decodeURIComponent(id));
   const [isEditingName, setIsEditingName] = useState(false);
+  const apiUrl = useApiUrl();
 
   useEffect(() => {
     if (!isLoading) {
-      const dashboard = dashboards?.find(d => d.dashboard_name === decodeURIComponent(id));
+      const dashboard = dashboards?.find(
+        (d) => d.dashboard_name === decodeURIComponent(id)
+      );
       if (dashboard) {
         setLayout(dashboard.dashboard_config.layout);
         setWidgetData(dashboard.dashboard_config.widget_data);
@@ -55,7 +58,12 @@ const DashboardPage = () => {
   };
   const closeModal = () => setIsModalOpen(false);
 
-  const handleAddWidget = (name: string, widgetType: WidgetType, preset?: Preset, thresholds?: Threshold[], metric?: MetricsWidget, genericMetrics?: GenericsMetrics) => {
+  const handleAddWidget = (
+    name: string, widgetType: WidgetType, preset?: Preset ,
+    thresholds?: Threshold[],
+    metric?: MetricsWidget,
+    genericMetrics?: GenericsMetrics
+  ) => {
     const uniqueId = `w-${Date.now()}`;
     const newItem: LayoutItem = {
       i: uniqueId,
@@ -65,7 +73,7 @@ const DashboardPage = () => {
       h: widgetType === WidgetType.GENERICS_METRICS ? 20 : widgetType === WidgetType.METRIC ? 8 : 3,
       minW: widgetType === WidgetType.GENERICS_METRICS ? 10 : 2,
       minH: widgetType === WidgetType.GENERICS_METRICS ? 15 : widgetType === WidgetType.METRIC ? 7 : 3,
-      static: false
+      static: false,
     };
     const newWidget: WidgetData = {
       ...newItem,
@@ -81,11 +89,11 @@ const DashboardPage = () => {
   };
 
   const handleEditWidget = (id: string, update?: WidgetData) => {
-    let itemToEdit = widgetData.find(d => d.i === id) || null;
+    let itemToEdit = widgetData.find((d) => d.i === id) || null;
     console.log(itemToEdit, update)
-    if(itemToEdit && update){
-      setEditingItem({...itemToEdit, ...update});
-    }else {
+    if (itemToEdit && update) {
+      setEditingItem({ ...itemToEdit, ...update });
+    } else {
       setEditingItem(itemToEdit);
     }
     setIsModalOpen(true);
@@ -99,8 +107,8 @@ const DashboardPage = () => {
   };
 
   const handleDeleteWidget = (id: string) => {
-    setLayout(layout.filter(item => item.i !== id));
-    setWidgetData(widgetData.filter(item => item.i !== id));
+    setLayout(layout.filter((item) => item.i !== id));
+    setWidgetData(widgetData.filter((item) => item.i !== id));
   };
 
   const handleLayoutChange = (newLayout: LayoutItem[]) => {
@@ -115,24 +123,27 @@ const DashboardPage = () => {
 
   const handleSaveDashboard = async () => {
     try {
-      const apiUrl = getApiURL();
-      let dashboard = dashboards?.find(d => d.dashboard_name === decodeURIComponent(id));
-      const method = dashboard ? 'PUT' : 'POST';
-      const endpoint = `${apiUrl}/dashboard${dashboard ? `/${encodeURIComponent(dashboard.id)}` : ''}`;
+      let dashboard = dashboards?.find(
+        (d) => d.dashboard_name === decodeURIComponent(id)
+      );
+      const method = dashboard ? "PUT" : "POST";
+      const endpoint = `${apiUrl}/dashboard${
+        dashboard ? `/${encodeURIComponent(dashboard.id)}` : ""
+      }`;
 
       const response = await fetch(endpoint, {
         method,
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session!.accessToken}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session!.accessToken}`,
         },
         body: JSON.stringify({
           dashboard_name: dashboardName,
           dashboard_config: {
             layout,
             widget_data: widgetData,
-          }
-        })
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -169,7 +180,9 @@ const DashboardPage = () => {
               className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
             />
           ) : (
-            <Subtitle color="orange" className="mr-2">{dashboardName}</Subtitle>
+            <Subtitle color="orange" className="mr-2">
+              {dashboardName}
+            </Subtitle>
           )}
           <Icon
             size="xs"
@@ -180,17 +193,19 @@ const DashboardPage = () => {
           />
         </div>
         <div className="flex gap-1 items-end">
-        <GenericFilters filters={DASHBOARD_FILTERS} />
-        <div className="flex">
-          <Button
-            icon={FiSave}
-            color="orange"
-            size="sm"
-            onClick={handleSaveDashboard}
-            tooltip="Save current dashboard"
-          />
-          <Button color="orange" onClick={openModal} className="ml-2">Add Widget</Button>
-        </div>
+          <GenericFilters filters={DASHBOARD_FILTERS} />
+          <div className="flex">
+            <Button
+              icon={FiSave}
+              color="orange"
+              size="sm"
+              onClick={handleSaveDashboard}
+              tooltip="Save current dashboard"
+            />
+            <Button color="orange" onClick={openModal} className="ml-2">
+              Add Widget
+            </Button>
+          </div>
         </div>
       </div>
       {layout.length === 0 ? (

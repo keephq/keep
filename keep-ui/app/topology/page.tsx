@@ -5,6 +5,7 @@ import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import { getApplications, getTopology } from "./api";
 import { TopologyPageClient } from "./topology-client";
 import { Subtitle, Title } from "@tremor/react";
+import { getApiURL } from "@/utils/apiUrl";
 
 export const metadata = {
   title: "Keep - Service Topology",
@@ -21,9 +22,10 @@ type PageProps = {
 
 export default async function Page({ searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
+  const apiUrl = getApiURL();
 
-  const applications = await getApplications(session);
-  const topologyServices = await getTopology(session, {
+  const applications = await getApplications(apiUrl, session);
+  const topologyServices = await getTopology(apiUrl, session, {
     providerIds: searchParams.providerIds,
     services: searchParams.services,
     environment: searchParams.environment,

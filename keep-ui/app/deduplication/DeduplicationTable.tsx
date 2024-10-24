@@ -24,7 +24,7 @@ import { DeduplicationRule } from "app/deduplication/models";
 import DeduplicationSidebar from "app/deduplication/DeduplicationSidebar";
 import { TrashIcon, PauseIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
@@ -43,6 +43,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   const router = useRouter();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const apiUrl = useApiUrl();
 
   let selectedId = searchParams ? searchParams.get("id") : null;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -72,7 +73,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       window.confirm("Are you sure you want to delete this deduplication rule?")
     ) {
       try {
-        const url = `${getApiURL()}/deduplications/${rule.id}`;
+        const url = `${apiUrl}/deduplications/${rule.id}`;
         const response = await fetch(url, {
           method: "DELETE",
           headers: {
