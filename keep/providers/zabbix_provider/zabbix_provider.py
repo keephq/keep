@@ -594,6 +594,8 @@ class ZabbixProvider(BaseProvider):
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("ZABBIX.URL", None)
+        hostname = event.get("HOST.NAME")
+        ip_address = event.get("HOST.IP")
 
         if zabbix_url == "{$ZABBIX.URL}":
             # This means user did not configure $ZABBIX.URL in Zabbix probably
@@ -638,6 +640,9 @@ class ZabbixProvider(BaseProvider):
             url=url,
             lastReceived=last_received,
             tags=tags,
+            hostname=hostname,
+            service=hostname,
+            ip_address=ip_address,
         )
 
 
