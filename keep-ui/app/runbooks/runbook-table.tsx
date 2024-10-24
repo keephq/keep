@@ -58,16 +58,40 @@ interface RunbookV2 {
 }
 
 const columnHelperv2 = createColumnHelper<RunbookV2>();
+const extractMetadataFromMarkdown = (markdown) => {
+  const charactersBetweenGroupedHyphens = /^---([\s\S]*?)---/;
+  const metadataMatched = markdown.match(charactersBetweenGroupedHyphens);
+  const metadata = metadataMatched[1];
+
+  if (!metadata) {
+    return {};
+  }
+
+  const metadataLines = metadata.split("\n");
+  const metadataObject = metadataLines.reduce((accumulator, line) => {
+    const [key, ...value] = line.split(":").map((part) => part.trim());
+
+    if (key)
+      accumulator[key] = value[1] ? value.join(":") : value.join("");
+    return accumulator;
+  }, {});
+
+  return metadataObject;
+};
 
 const columnsv2 = [
   columnHelperv2.display({
     id: "title",
     header: "Runbook Title",
     cell: ({ row }) => {
-      const fileName = row.original.file_name;
-      const runbookTitle = row.original.title;
-      const displayTitle = fileName ? fileName : runbookTitle;
-      return <div>{displayTitle}</div>
+      const titles = row.original.contents.map(content => {
+        let decodedContent = Buffer.from(content.content, "base64").toString("utf-8");
+        console.log(decodedContent);
+        // const decodedContent = content.decode("utf8");
+        // const metadata = extractMetadataFromMarkdown(decodedContent);
+        // return metadata.title || row.original.title; 
+      });
+      return <div></div>; 
     },
   }),
   columnHelperv2.display({
