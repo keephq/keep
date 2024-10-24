@@ -447,8 +447,12 @@ def enrich_alert(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
+    dispose_on_new_alert: Optional[bool] = Query(False, description="Dispose on new alert"),
 ) -> dict[str, str]:
-    return _enrich_alert(enrich_data, authenticated_entity=authenticated_entity)
+    return _enrich_alert(enrich_data, 
+                         authenticated_entity=authenticated_entity, 
+                         dispose_on_new_alert=dispose_on_new_alert,
+    )
 
 
 def _enrich_alert(
@@ -457,9 +461,7 @@ def _enrich_alert(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    dispose_on_new_alert: Optional[bool] = Query(
-        False, description="Dispose on new alert"
-    ),
+    dispose_on_new_alert: Optional[bool] = False,
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
