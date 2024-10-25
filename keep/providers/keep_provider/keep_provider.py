@@ -3,6 +3,7 @@ Keep Provider is a class that allows to ingest/digest data from Keep.
 """
 
 import logging
+from datetime import datetime, timezone
 
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
@@ -28,6 +29,31 @@ class KeepProvider(BaseProvider):
         """
         pass
 
+    def _calculate_time_delta(self, timerange=None, default_time_range=1):
+        """Calculate time delta in days from timerange dict."""
+        if not timerange or "from" not in timerange:
+            return default_time_range  # default value
+
+        from_time_str = timerange["from"]
+        to_time_str = timerange.get("to", "now")
+
+        # Parse from_time and ensure it's timezone-aware
+        from_time = datetime.fromisoformat(from_time_str.replace("Z", "+00:00"))
+        if from_time.tzinfo is None:
+            from_time = from_time.replace(tzinfo=timezone.utc)
+
+        # Handle 'to' time
+        if to_time_str == "now":
+            to_time = datetime.now(timezone.utc)
+        else:
+            to_time = datetime.fromisoformat(to_time_str.replace("Z", "+00:00"))
+            if to_time.tzinfo is None:
+                to_time = to_time.replace(tzinfo=timezone.utc)
+
+        # Calculate difference in days
+        delta = (to_time - from_time).total_seconds() / (24 * 3600)  # convert to days
+        return delta
+
     def _query(self, filters=None, version=1, distinct=True, time_delta=1, **kwargs):
         """
         Query Keep for alerts.
@@ -40,6 +66,11 @@ class KeepProvider(BaseProvider):
                 "time_delta": time_delta,
             },
         )
+        # if timerange is provided, calculate time delta
+        if kwargs.get("timerange"):
+            time_delta = self._calculate_time_delta(
+                timerange=kwargs.get("timerange"), default_time_range=time_delta
+            )
         if version == 1:
             # filters are mandatory for version 1
             if not filters:
