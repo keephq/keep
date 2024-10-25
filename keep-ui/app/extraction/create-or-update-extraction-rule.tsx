@@ -16,7 +16,7 @@ import {
 import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { ExtractionRule } from "./model";
 import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
@@ -41,6 +41,7 @@ export default function CreateOrUpdateExtractionRule({
   const [regex, setRegex] = useState<string>("");
   const [extractedAttributes, setExtractedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
+  const apiUrl = useApiUrl();
   const editMode = extractionToEdit !== null;
 
   useEffect(() => {
@@ -75,7 +76,6 @@ export default function CreateOrUpdateExtractionRule({
 
   const addExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/extraction`, {
       method: "POST",
       headers: {
@@ -106,7 +106,6 @@ export default function CreateOrUpdateExtractionRule({
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = getApiURL();
     const response = await fetch(
       `${apiUrl}/extraction/${extractionToEdit?.id}`,
       {
@@ -129,15 +128,14 @@ export default function CreateOrUpdateExtractionRule({
     if (response.ok) {
       exitEditMode();
       mutate();
-      toast.success("Mapping updated successfully");
+      toast.success("Extraction updated successfully");
     } else {
       toast.error(
-        "Failed to update mapping, please contact us if this issue persists."
+        "Failed to update extraction, please contact us if this issue persists."
       );
     }
   };
 
-  // If the mapping is successfully updated or the user cancels the update we exit the editMode and set the editRule in the mapping.tsx to null.
   const exitEditMode = async () => {
     editCallback(null);
     clearForm();
@@ -280,6 +278,8 @@ export default function CreateOrUpdateExtractionRule({
             updateOutputCEL={setCondition}
             showSave={false}
             showSqlImport={false}
+            showToast={true}
+            shouldSetQueryParam={false}
           />
         </div>
       </div>

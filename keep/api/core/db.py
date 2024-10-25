@@ -19,7 +19,7 @@ import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, case, desc, literal, null, union, update
+from sqlalchemy import and_, case, desc, func, literal, null, union, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -814,6 +814,27 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         )
 
         return execution_with_logs
+
+
+def add_audit(
+    tenant_id: str,
+    fingerprint: str,
+    user_id: str,
+    action: AlertActionType,
+    description: str,
+) -> AlertAudit:
+    with Session(engine) as session:
+        audit = AlertAudit(
+            tenant_id=tenant_id,
+            fingerprint=fingerprint,
+            user_id=user_id,
+            action=action.value,
+            description=description,
+        )
+        session.add(audit)
+        session.commit()
+        session.refresh(audit)
+    return audit
 
 
 def _enrich_alert(
@@ -3774,3 +3795,64 @@ def is_edge_incident_alert_resolved(
         return enriched_status == AlertStatus.RESOLVED.value or (
             enriched_status is None and status == AlertStatus.RESOLVED.value
         )
+
+
+def get_alerts_metrics_by_provider(
+    tenant_id: str,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    fields: Optional[List[str]] = [],
+) -> Dict[str, Dict[str, Any]]:
+
+    dynamic_field_sums = [
+        func.sum(
+            case(
+                [
+                    (
+                        func.json_extract(Alert.event, f"$.{field}").isnot(None)
+                        & (func.json_extract(Alert.event, f"$.{field}") != False),
+                        1,
+                    )
+                ],
+                else_=0,
+            )
+        ).label(f"{field}_count")
+        for field in fields
+    ]
+
+    with Session(engine) as session:
+        query = (
+            session.query(
+                Alert.provider_type,
+                Alert.provider_id,
+                func.count(Alert.id).label("total_alerts"),
+                func.sum(
+                    case([(AlertToIncident.alert_id.isnot(None), 1)], else_=0)
+                ).label("correlated_alerts"),
+                *dynamic_field_sums,
+            )
+            .outerjoin(AlertToIncident, Alert.id == AlertToIncident.alert_id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+            )
+        )
+
+        # Add timestamp filter only if both start_date and end_date are provided
+        if start_date and end_date:
+            query = query.filter(
+                Alert.timestamp >= start_date, Alert.timestamp <= end_date
+            )
+
+        results = query.group_by(Alert.provider_id, Alert.provider_type).all()
+
+    return {
+        f"{row.provider_id}_{row.provider_type}": {
+            "total_alerts": row.total_alerts,
+            "correlated_alerts": row.correlated_alerts,
+            "provider_type": row.provider_type,
+            **{
+                f"{field}_count": getattr(row, f"{field}_count") for field in fields
+            },  # Add field-specific counts
+        }
+        for row in results
+    }

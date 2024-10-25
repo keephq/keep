@@ -8,6 +8,7 @@ import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
 import { updateIncidentRequest } from "./create-or-update-incident";
 import { IncidentDto } from "./models";
+import { useApiUrl } from "../../utils/hooks/useConfig";
 
 interface ChangeSameIncidentInThePast {
   incident: IncidentDto;
@@ -28,6 +29,7 @@ const ChangeSameIncidentInThePast = ({
   >();
   const { data: session } = useSession();
   const router = useRouter();
+  const apiUrl = useApiUrl();
 
   const associateIncidentHandler = async (
     selectedIncidentId: string | null
@@ -40,6 +42,7 @@ const ChangeSameIncidentInThePast = ({
       incidentUserSummary: incident.user_summary,
       incidentAssignee: incident.assignee,
       generatedByAi: false,
+      apiUrl: apiUrl!,
     });
     if (response.ok) {
       mutate();

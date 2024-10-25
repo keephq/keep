@@ -23,7 +23,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { KeyedMutator } from "swr";
 
@@ -75,6 +75,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   } = useProviders();
   const { data: deduplicationFields = {} } = useDeduplicationFields();
   const { data: session } = useSession();
+  const apiUrl = useApiUrl();
 
   const alertProviders = useMemo(
     () =>
@@ -150,7 +151,6 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     setIsSubmitting(true);
     clearErrors();
     try {
-      const apiUrl = getApiURL();
       let url = `${apiUrl}/deduplications`;
 
       if (selectedDeduplicationRule && selectedDeduplicationRule.id) {
@@ -535,6 +535,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   color="orange"
                   variant="secondary"
                   onClick={handleToggle}
+                  type="button"
                   className="border border-orange-500 text-orange-500"
                 >
                   Cancel

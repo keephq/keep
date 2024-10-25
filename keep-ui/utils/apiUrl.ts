@@ -1,11 +1,6 @@
+// server only!
 export function getApiURL(): string {
-  const componentType = typeof window === "undefined" ? "server" : "client";
-
-  if (componentType === "client") {
-    return "/backend";
-  }
-
-  // SERVER ONLY FROM HERE ON
+  // we need to check if we are on vercel or not
   const gitBranchName = process.env.VERCEL_GIT_COMMIT_REF || "notvercel";
 
   if (gitBranchName === "main" || gitBranchName === "notvercel") {

@@ -15,6 +15,7 @@ from sqlmodel import Session
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
+    add_audit,
     change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     delete_incident_by_id,
@@ -42,6 +43,7 @@ from keep.api.models.alert import (
     IncidentStatusChangeDto,
 )
 from keep.api.models.db.ai_suggestion import AISuggestionType
+from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -632,6 +634,39 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post("/{incident_id}/comment", description="Add incident audit activity")
+def add_comment(
+    incident_id: UUID,
+    change: IncidentStatusChangeDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
+) -> AlertAudit:
+    extra = {
+        "tenant_id": authenticated_entity.tenant_id,
+        "commenter": authenticated_entity.email,
+        "comment": change.comment,
+        "incident_id": str(incident_id),
+    }
+    logger.info("Adding comment to incident", extra=extra)
+    comment = add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        AlertActionType.INCIDENT_COMMENT,
+        change.comment,
+    )
+
+    if pusher_client:
+        pusher_client.trigger(
+            f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
+        )
+
+    logger.info("Added comment to incident", extra=extra)
+    return comment
 
 
 import json  # noqa

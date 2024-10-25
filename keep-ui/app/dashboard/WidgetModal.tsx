@@ -2,7 +2,7 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput, Select, SelectItem, Icon } from "@tremor/react";
 import { Trashcan } from "components/icons";
-import { Threshold, WidgetData } from "./types";
+import { Threshold, WidgetData, GenericsMertics } from "./types";
 import { Preset } from "app/alerts/models";
 import { useForm, Controller, get } from "react-hook-form";
 
@@ -10,16 +10,35 @@ interface WidgetForm {
   widgetName: string;
   selectedPreset: string;
   thresholds: Threshold[];
+  selectedWidgetType: string;
+  selectedGenericMetrics: string;
 }
 
 interface WidgetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddWidget: (preset: Preset, thresholds: Threshold[], name: string) => void;
+  onAddWidget: (
+    preset: Preset | null,
+    thresholds: Threshold[],
+    name: string,
+    widgetType?: string,
+    genericMetrics?: GenericsMertics | null,
+  ) => void;
   onEditWidget: (updatedWidget: WidgetData) => void;
   presets: Preset[];
   editingItem?: WidgetData | null;
 }
+
+const GENERIC_METRICS = [
+  {
+    key: "alert_quality",
+    label: "Alert Quality",
+    widgetType: "table",
+    meta: {
+      defaultFilters: {"fields":"severity"},
+    },
+  },
+] as GenericsMertics[];
 
 const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget, onEditWidget, presets, editingItem }) => {
   const [thresholds, setThresholds] = useState<Threshold[]>([
@@ -32,19 +51,26 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
       widgetName: '',
       selectedPreset: '',
       thresholds: thresholds,
+      selectedWidgetType: '',
+      selectedGenericMetrics: ''
     }
   });
 
+  const [currentWidgetType, setCurrentWidgetType] = useState('');
+
   useEffect(() => {
     if (editingItem) {
-      setValue('widgetName', editingItem.name);
-      setValue('selectedPreset', editingItem.preset.id);
+      setValue("widgetName", editingItem.name);
+      setValue("selectedPreset", editingItem?.preset?.id ?? "");
+      setValue("selectedWidgetType", editingItem?.widgetType ?? "");
+      setValue("selectedGenericMetrics", editingItem?.genericMetrics?.key ?? "");
       setThresholds(editingItem.thresholds);
     } else {
       reset({
         widgetName: '',
         selectedPreset: '',
         thresholds: thresholds,
+        selectedWidgetType: "",
       });
     }
   }, [editingItem, setValue, reset]);
@@ -75,24 +101,43 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
     setThresholds(thresholds.filter((_, i) => i !== index));
   };
 
+  const deepClone = (obj: GenericsMertics|undefined) => {
+    if(!obj){
+      return null;
+    }
+    try{
+    return JSON.parse(JSON.stringify(obj)) as GenericsMertics;
+    }catch(e){
+      return null;
+    }
+  };
+
   const onSubmit = (data: WidgetForm) => {
-    const preset = presets.find(p => p.id === data.selectedPreset);
-    if (preset) {
+    const preset = presets.find(p => p.id === data.selectedPreset) ?? null;
+    if (preset || data.selectedGenericMetrics) {
       const formattedThresholds = thresholds.map(t => ({
         ...t,
         value: parseInt(t.value.toString(), 10) || 0
       }));
 
       if (editingItem) {
-        const updatedWidget: WidgetData = {
+        let updatedWidget: WidgetData = {
           ...editingItem,
           name: data.widgetName,
+          widgetType: data.selectedWidgetType || "preset", //backwards compatibility
           preset,
           thresholds: formattedThresholds,
+          genericMetrics: editingItem.genericMetrics || null,
         };
         onEditWidget(updatedWidget);
       } else {
-        onAddWidget(preset, formattedThresholds, data.widgetName);
+        onAddWidget(
+          preset,
+          formattedThresholds,
+          data.widgetName,
+          data.selectedWidgetType,
+          deepClone(GENERIC_METRICS.find((g) => g.key === data.selectedGenericMetrics))
+        );
         // cleanup form
         setThresholds([
           { value: 0, color: '#22c55e' }, // Green
@@ -102,6 +147,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
           widgetName: '',
           selectedPreset: '',
           thresholds: thresholds,
+          selectedGenericMetrics: '',
+          selectedWidgetType: '',
         });
       }
       onClose();
@@ -128,6 +175,34 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
           />
         </div>
         <div className="mb-4 mt-2">
+          <Subtitle>Widget Type</Subtitle>
+          <Controller
+              name="selectedWidgetType"
+              control={control}
+              rules={{ required: { value: true, message: "Preset selection is required" } }}
+              render={({ field }) => {
+                setCurrentWidgetType(field.value);
+                return <Select
+                  {...field}
+                  placeholder="Select a Widget Type"
+                  error={!!get(errors, "selectedWidgetType.message")}
+                  errorMessage={get(errors, "selectedWidgetType.message")}
+                >
+                  {[
+                    { key: 'preset', value: 'Preset' },
+                    { key: 'generic_metrics', value: 'Generic Metrics' },
+                  ].map(({ key, value }) => (
+                    <SelectItem key={key} value={key}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </Select>
+              }}
+          />                    
+        </div>
+        {currentWidgetType === 'preset' ? (
+          <>
+           <div className="mb-4 mt-2">
           <Subtitle>Preset</Subtitle>
           <Controller
             name="selectedPreset"
@@ -182,6 +257,31 @@ const WidgetModal: React.FC<WidgetModalProps> = ({ isOpen, onClose, onAddWidget,
             ))}
           </div>
         </div>
+          </>
+        ): currentWidgetType === 'generic_metrics' && <>
+          <div className="mb-4 mt-2">
+          <Subtitle>Generic Metrics</Subtitle>
+          <Controller
+            name="selectedGenericMetrics"
+            control={control}
+            rules={{ required: { value: true, message: "Preset selection is required" } }}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select a Generic Metrics"
+                error={!!get(errors, "selectedGenericMetrics.message")}
+                errorMessage={get(errors, "selectedGenericMetrics.message")}
+              >
+                {GENERIC_METRICS.map(metrics => (
+                  <SelectItem key={metrics.key} value={metrics.key}>
+                    {metrics.label}
+                  </SelectItem>
+                ))}
+              </Select>
+            )}
+          />
+          </div>
+        </>}       
         <Button color="orange" type="submit">{editingItem ? "Update Widget" : "Add Widget"}</Button>
       </form>
     </Modal>

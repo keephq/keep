@@ -47,6 +47,7 @@ class ProvidersService:
         provider_config: Dict[str, Any],
         provisioned: bool = False,
         validate_scopes: bool = True,
+        pulling_enabled: bool = True,
     ) -> Dict[str, Any]:
         provider_unique_id = uuid.uuid4().hex
         logger.info(
@@ -95,6 +96,7 @@ class ProvidersService:
                 validatedScopes=validated_scopes,
                 consumer=provider.is_consumer,
                 provisioned=provisioned,
+                pulling_enabled=pulling_enabled,
             )
             try:
                 session.add(provider_model)
@@ -148,6 +150,8 @@ class ProvidersService:
         if provider.provisioned:
             raise HTTPException(403, detail="Cannot update a provisioned provider")
 
+        pulling_enabled = provider_info.pop("pulling_enabled", True)
+
         provider_config = {
             "authentication": provider_info,
             "name": provider.name,
@@ -171,6 +175,7 @@ class ProvidersService:
 
         provider.installed_by = updated_by
         provider.validatedScopes = validated_scopes
+        provider.pulling_enabled = pulling_enabled
         session.commit()
 
         return {

@@ -2,7 +2,7 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { getApiURL } from "../../../utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import Loader from "./loader";
 import { Provider } from "../../providers/providers";
 import { KeepApiError } from "../../error";
@@ -23,7 +23,7 @@ interface Props {
   triggerRun: number;
   workflow?: string;
   workflowId?: string;
-  isPreview?:boolean;
+  isPreview?: boolean;
 }
 
 export function BuilderCard({
@@ -37,13 +37,13 @@ export function BuilderCard({
   triggerSave,
   workflow,
   workflowId,
-  isPreview
+  isPreview,
 }: Props) {
   const [providers, setProviders] = useState<Provider[] | null>(null);
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
   >(null);
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const { data, error, isLoading } = useProviders();
 
@@ -51,7 +51,7 @@ export function BuilderCard({
     throw new KeepApiError(
       "The builder has failed to load providers",
       `${apiUrl}/providers`,
-        `Failed to query ${apiUrl}/providers, is Keep API up?`
+      `Failed to query ${apiUrl}/providers, is Keep API up?`
     );
   }
 

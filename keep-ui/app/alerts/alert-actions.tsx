@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
@@ -28,6 +28,7 @@ export default function AlertActions({
 }: Props) {
   const router = useRouter();
   const { useAllPresets } = usePresets();
+  const apiUrl = useApiUrl();
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
   });
@@ -58,7 +59,6 @@ export default function AlertActions({
       );
       const options = [{ value: formattedCel, label: "CEL" }];
       const session = await getSession();
-      const apiUrl = getApiURL();
       const response = await fetch(`${apiUrl}/preset`, {
         method: "POST",
         headers: {

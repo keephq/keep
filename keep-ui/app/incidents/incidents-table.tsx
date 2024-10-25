@@ -27,6 +27,7 @@ import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
+import { useApiUrl } from "@/utils/hooks/useConfig";
 import { AlertDto } from "@/app/alerts/models";
 
 const columnHelper = createColumnHelper<IncidentDto>();
@@ -48,6 +49,7 @@ export default function IncidentsTable({
   setSorting,
   editCallback,
 }: Props) {
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setTablePagination] = useState({
@@ -227,6 +229,7 @@ export default function IncidentsTable({
                 incidentId: row.original.id!,
                 mutate,
                 session,
+                apiUrl: apiUrl!,
               });
             }}
           />
