@@ -3,7 +3,9 @@ GithubProvider is a provider that interacts with GitHub.
 """
 
 import dataclasses
-
+import base64
+import re
+import yaml
 import pydantic
 from github import Github, GithubException
 
@@ -108,15 +110,42 @@ class GithubProvider(BaseRunBookProvider):
         return repos_list
 
 
+    def _getContentTitle(self, runbookContent):
+        """
+        Get the content title
+        """
+        try:
+            if runbookContent.content is not None:
+                decoded_content  = base64.b64decode(runbookContent.content).decode()
+
+                front_matter_regex = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+                match = front_matter_regex.search(decoded_content)
+                
+                if match:
+                    # Extract front-matter and body content
+                    front_matter = match.group(1)                    
+                    # Parse the front-matter using PyYAML
+                    metadata = yaml.safe_load(front_matter)
+                    return metadata.get("title", "")
+        except Exception as e:
+            self.logger.error("Failed to get content title: %s", e)
+            return ""
+        
+    
+
     def _format_content(self, runbookContent, repo):
         """
         Format the content data into a dictionary.
         """
+        
+        title = self._getContentTitle(runbookContent)
+        
         return {
             "content": runbookContent.content,
             "link": f"https://api.github.com/{repo.get('full_name')}/blob/{repo.get('default_branch')}/{runbookContent.path}",
             "encoding": runbookContent.encoding,
-            "file_name": runbookContent.name
+            "file_name": runbookContent.name,
+            "title":  title if title else "",
         }    
 
     def _format_runbook(self, runbook, repo, title, md_path):

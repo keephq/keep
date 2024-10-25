@@ -8,6 +8,9 @@ import urllib.parse
 import pydantic
 import requests
 from requests import HTTPError
+import base64
+import re
+import yaml
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseRunBookProvider
@@ -213,16 +216,41 @@ class GitlabProvider(BaseRunBookProvider):
            return self._format_repos(repos, project_id)
 
        raise Exception("Failed to get repositories: personal_access_token not set")
+    
+    def _getContentTitle(self, runbookContent):
+        """
+        Get the content title
+        """
+        try:
+            if runbookContent.get("content") is not None:
+                decoded_content  = base64.b64decode(runbookContent.get("content")).decode()
+
+                front_matter_regex = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+                match = front_matter_regex.search(decoded_content)
+                
+                if match:
+                    # Extract front-matter and body content
+                    front_matter = match.group(1)
+                    
+                    # Parse the front-matter using PyYAML
+                    metadata = yaml.safe_load(front_matter)
+                    return metadata.get("title", "")
+        except Exception as e:
+            self.logger.error("Failed to get content title: %s", e)
+            return ""
 
     def _format_content(self, runbookContent, repo):
         """
         Format the content data into a dictionary.
         """
+        
+        title = self._getContentTitle(runbookContent)
         return {
             "content": runbookContent.get("content"),
             "link": f"{self.gitlab_host}/api/v4/projects/{repo.get('id')}/repository/files/{runbookContent.get('file_path')}/raw",
             "encoding": runbookContent.get("encoding"),
             "file_name": runbookContent.get("file_name"),
+            "title":  title if title else "",
         }
 
 

@@ -4,6 +4,7 @@ export interface ContentDto {
   link: string;
   encoding: string | null;
   file_name: string;
+  title: string | null;
 }
 export interface RunbookDto {
   id: number;

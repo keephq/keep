@@ -27,6 +27,8 @@ import { useSession } from "next-auth/react";
 import RunbookActions from "./runbook-actions";
 import { RunbookDto, RunbookResponse } from "./models";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
+import Loading from "../loading";
+import { useRouter } from "next/navigation";
 
 const customStyles = {
   content: {
@@ -40,58 +42,14 @@ const customStyles = {
   },
 };
 
-interface Content {
-  id: string;
-  content: string;
-  link: string;
-  encoding: string | null;
-  file_name: string;
-}
-interface RunbookV2 {
-  id: number;
-  title: string;
-  contents: Content[];
-  provider_type: string;
-  provider_id: string;
-  repo_id: string;
-  file_path: string;
-}
-
-const columnHelperv2 = createColumnHelper<RunbookV2>();
-const extractMetadataFromMarkdown = (markdown) => {
-  const charactersBetweenGroupedHyphens = /^---([\s\S]*?)---/;
-  const metadataMatched = markdown.match(charactersBetweenGroupedHyphens);
-  const metadata = metadataMatched[1];
-
-  if (!metadata) {
-    return {};
-  }
-
-  const metadataLines = metadata.split("\n");
-  const metadataObject = metadataLines.reduce((accumulator, line) => {
-    const [key, ...value] = line.split(":").map((part) => part.trim());
-
-    if (key)
-      accumulator[key] = value[1] ? value.join(":") : value.join("");
-    return accumulator;
-  }, {});
-
-  return metadataObject;
-};
-
+const columnHelperv2 = createColumnHelper<RunbookDto>();
 const columnsv2 = [
   columnHelperv2.display({
     id: "title",
     header: "Runbook Title",
     cell: ({ row }) => {
-      const titles = row.original.contents.map(content => {
-        let decodedContent = Buffer.from(content.content, "base64").toString("utf-8");
-        console.log(decodedContent);
-        // const decodedContent = content.decode("utf8");
-        // const metadata = extractMetadataFromMarkdown(decodedContent);
-        // return metadata.title || row.original.title; 
-      });
-      return <div></div>; 
+      const title = row.original.contents?.[0]?.title || row.original.title;
+      return <div>{title}</div>; 
     },
   }),
   columnHelperv2.display({
@@ -99,23 +57,12 @@ const columnsv2 = [
     header: "File Name",
     cell: ({ row }) => (
       <Badge key={row.original.id} color="green" className="mr-2 mb-1">
-      {console.log("from inside row", row)}
-        {
-        row.original.file_name}
+        {row.original.contents?.[0]?.file_name}
       </Badge>
     ),
   }),
-] as DisplayColumnDef<RunbookV2>[];
+] as DisplayColumnDef<RunbookDto>[];
 
-const flattenRunbookData = (runbooks: RunbookV2[]) => {
-  return runbooks.flatMap((runbook) =>
-    runbook.contents.map((content) => ({
-      ...runbook,
-      file_name: content.file_name,
-      content_id: content.id,
-    }))
-  );
-};
 function SettingsPage({handleRunbookMutation}:{
   handleRunbookMutation: () => void}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -259,26 +206,35 @@ function RunbookIncidentTable() {
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(10);
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   let shouldFetch = session?.accessToken ? true : false;
-
+  let url = getApiURL();
   const { data: runbooksData, error, isLoading } = useSWR<RunbookResponse>(
     shouldFetch
-      ? `${getApiURL()}/runbooks?limit=${limit}&offset=${offset}`
+      ? `${url}/runbooks?limit=${limit}&offset=${offset}`
       : null,
     (url: string) => {
       return fetcher(url, session?.accessToken!);
     }
   );
+
+  useEffect(() => {
+      if(status === "unauthenticated"){
+        router.push("/signin");
+      }
+  }, [status])
+
   const handleRunbookMutation = ()=>{
     mutate(`${getApiURL()}/runbooks?limit=${limit}&offset=${0}`);
   }
 
+
+  if (status === "loading" || isLoading || status === "unauthenticated") return <Loading />;
   const { total_count, runbooks } = runbooksData || {
     total_count: 0,
     runbooks: [],
   };
-  const flattenedData = flattenRunbookData(runbooks || []);
   const handlePaginationChange = (newLimit: number, newOffset: number) => {
     setLimit(newLimit);
     setOffset(newOffset);
@@ -303,7 +259,7 @@ function RunbookIncidentTable() {
       <Card className="flex-grow">
         {!isLoading && !error && (
           <GenericTable<RunbookDto>
-          data={flattenedData}
+          data={runbooks}
             columns={columnsv2}
             rowCount={total_count}
             offset={offset}
