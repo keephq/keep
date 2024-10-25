@@ -454,7 +454,10 @@ def get_incident_workflows(
     )
     workflow_execution_dtos, total_count = (
         get_workflow_executions_for_incident_or_alert(
-            tenant_id=tenant_id, incident_id=incident_id, limit=limit, offset=offset
+            tenant_id=tenant_id,
+            incident_id=str(incident_id),
+            limit=limit,
+            offset=offset,
         )
     )
 
