@@ -13,6 +13,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -26,8 +27,8 @@ class SshProviderAuthConfig:
     user: str = dataclasses.field(
         metadata={"required": True, "description": "SSH user"}
     )
-    port: int = dataclasses.field(
-        default=22, metadata={"required": False, "description": "SSH port"}
+    port: UrlPort = dataclasses.field(
+        default=22, metadata={"required": False, "description": "SSH port", "validation": "port"}
     )
     pkey: typing.Optional[str] = dataclasses.field(
         default=None,

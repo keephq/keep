@@ -14,18 +14,20 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class ServicenowProviderAuthConfig:
     """ServiceNow authentication configuration."""
 
-    service_now_base_url: str = dataclasses.field(
+    service_now_base_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "The base URL of the ServiceNow instance",
             "sensitive": False,
             "hint": "https://dev12345.service-now.com",
+            "validation": "https_url"
         }
     )
 
@@ -65,13 +67,6 @@ class ServicenowProvider(BaseTopologyProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
-
-    @property
-    def service_now_base_url(self):
-        # if not starts with http:
-        if not self.authentication_config.service_now_base_url.startswith("http"):
-            return f"https://{self.authentication_config.service_now_base_url}"
-        return self.authentication_config.service_now_base_url
 
     def validate_scopes(self):
         """

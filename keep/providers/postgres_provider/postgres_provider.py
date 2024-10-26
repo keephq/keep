@@ -11,6 +11,7 @@ import pydantic
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -32,8 +33,13 @@ class PostgresProviderAuthConfig:
         metadata={"required": False, "description": "Postgres database name"},
         default=None,
     )
-    port: str | None = dataclasses.field(
-        default="5432", metadata={"required": False, "description": "Postgres port"}
+    port: UrlPort | None = dataclasses.field(
+        default=5432,
+        metadata={
+            "required": False,
+            "description": "Postgres port",
+            "validation": "port",
+        },
     )
 
 
@@ -104,11 +110,7 @@ class PostgresProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(
-            self,
-            query: str,
-            **kwargs: dict
-            ) -> list | tuple:
+    def _query(self, query: str, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the Postgres database.
 
@@ -135,11 +137,7 @@ class PostgresProvider(BaseProvider):
             # Close the database connection
             conn.close()
 
-    def _notify(
-            self,
-            query: str,
-            **kwargs
-            ):
+    def _notify(self, query: str, **kwargs):
         """
         Notifies the Postgres database.
         """

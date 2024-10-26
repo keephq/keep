@@ -4,15 +4,16 @@ SMTP Provider is a class that provides the functionality to send emails using SM
 
 import dataclasses
 import typing
-
-import pydantic
-from smtplib import SMTP, SMTP_SSL
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from smtplib import SMTP, SMTP_SSL
+
+import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -42,11 +43,12 @@ class SmtpProviderAuthConfig:
         }
     )
 
-    smtp_port: int = dataclasses.field(
+    smtp_port: UrlPort = dataclasses.field(
         metadata={
             "required": True,
             "description": "SMTP port",
             "config_main_group": "authentication",
+            "validation": "port"
         }
     )
 
