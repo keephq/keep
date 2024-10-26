@@ -52,7 +52,7 @@ workflow:
 - Metadata (id, description. owners and tags will be added soon)
 - `steps` - list of steps
 - `actions` - list of actions
-- `on-failure` - an unconditional action used in case of an alert failure
+- `on-failure` - an action with no condition used in case of an alert failure
 
 ### Provider
 ```yaml
@@ -126,5 +126,5 @@ on-failure:
       config: " {{ providers.slack-demo }} "
 ```
 
-On-failure is actually an unconditional `Action` used to notify in case the alert failed with an exception.
+On-failure is actually an `Action` with no condition used to notify in case the alert failed with an exception.
 The provider is passed a `message` (string) to it's `notify` function.
