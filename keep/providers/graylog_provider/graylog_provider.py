@@ -2,19 +2,15 @@
 Graylog Provider is a class that allows to install webhooks in Graylog.
 """
 
-import ast
 import dataclasses
-import json
 import math
 import uuid
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 from typing import List
 from urllib.parse import urlencode, urljoin, urlparse
 
 import pydantic
 import requests
-from requests import HTTPError
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -130,7 +126,7 @@ class GraylogProvider(BaseProvider):
             self._host = f"http://{self.authentication_config.deploymentUrl}"
         except Exception as e:
             self.logger.error(
-                f"Failed to determine Graylog host", extra={"exception": str(e)}
+                "Failed to determine Graylog host", extra={"exception": str(e)}
             )
             self._host = self.authentication_config.deploymentUrl.rstrip("/")
 
@@ -192,7 +188,7 @@ class GraylogProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error(
-                f"Error while validating user scopes", extra={"exception": str(e)}
+                "Error while validating user scopes", extra={"exception": str(e)}
             )
             authenticated = str(e)
             authorized = False
@@ -217,7 +213,7 @@ class GraylogProvider(BaseProvider):
             return whitelist_response.json()
         except Exception as e:
             self.logger.error(
-                f"Error while fetching URL whitelist", extra={"exception": str(e)}
+                "Error while fetching URL whitelist", extra={"exception": str(e)}
             )
             raise e
 
@@ -235,7 +231,7 @@ class GraylogProvider(BaseProvider):
             self.logger.info("Successfully updated URL whitelist")
         except Exception as e:
             self.logger.error(
-                f"Error while updating URL whitelist", extra={"exception": str(e)}
+                "Error while updating URL whitelist", extra={"exception": str(e)}
             )
             raise e
 
@@ -260,7 +256,7 @@ class GraylogProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error(
-                f"Error while fetching events", extra={"exception": str(e)}
+                "Error while fetching events", extra={"exception": str(e)}
             )
             raise e
 
@@ -472,7 +468,7 @@ class GraylogProvider(BaseProvider):
             self.logger.info("Webhook setup completed successfully")
         except Exception as e:
             self.logger.error(
-                f"Error while setting up webhook", extra={"exception": str(e)}
+                "Error while setting up webhook", extra={"exception": str(e)}
             )
             raise e
 
@@ -570,7 +566,7 @@ class GraylogProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error(
-                f"Error while fetching alerts", extra={"exception": str(e)}
+                "Error while fetching alerts", extra={"exception": str(e)}
             )
             raise e
 
