@@ -46,8 +46,11 @@ To read about more installation options, see [ingress-nginx installation docs](h
 </Info>
 ```bash
 # simplest way to install
+# we set snippet-annotations to true to allow rewrites
+#   see https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#allow-snippet-annotations
 helm upgrade --install ingress-nginx ingress-nginx \
   --repo https://kubernetes.github.io/ingress-nginx \
+  --set controller.config.allow-snippet-annotations=true \
   --namespace ingress-nginx --create-namespace
 ```
 
