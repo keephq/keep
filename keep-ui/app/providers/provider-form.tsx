@@ -402,15 +402,25 @@ const ProviderForm = ({
   }
 
   function handleFormChange(key: string, value: ProviderFormValue) {
-    setFormValues((prev) => {
-      const prevValue = prev[key];
-      const updatedValues = {
-        ...prev,
-        [key]:
-          Array.isArray(value) && Array.isArray(prevValue) ? [...value] : value,
-      };
-      return updatedValues;
-    });
+    if (typeof value === "string" && value.trim().length === 0) {
+      setFormValues((prev) => {
+        const updated = structuredClone(prev);
+        delete updated[key];
+        return updated;
+      });
+    } else {
+      setFormValues((prev) => {
+        const prevValue = prev[key];
+        const updatedValues = {
+          ...prev,
+          [key]:
+            Array.isArray(value) && Array.isArray(prevValue)
+              ? [...value]
+              : value,
+        };
+        return updatedValues;
+      });
+    }
 
     if (Object.keys(inputErrors).includes(key) && value !== "") {
       const updatedInputErrors = { ...inputErrors };
@@ -1032,7 +1042,7 @@ function TextField({
         type={config.sensitive ? "password" : "text"}
         id={id}
         name={id}
-        value={value?.toString()}
+        value={value?.toString() ?? ""}
         onChange={onChange}
         autoComplete="off"
         error={Boolean(error)}
