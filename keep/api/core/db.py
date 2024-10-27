@@ -3258,7 +3258,7 @@ def merge_incidents_to_id(
     # Maybe to add optional destionation_incident_dto to merge to
     destination_incident_id: UUID,
     merged_by: str | None = None,
-) -> (List[UUID], List[UUID], List[UUID]):
+) -> Tuple[List[UUID], List[UUID], List[UUID]]:
     with Session(engine) as session:
         destination_incident = session.exec(
             select(Incident)
