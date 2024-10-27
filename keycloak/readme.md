@@ -3,15 +3,15 @@
 ```
 docker-compose -f keycloak/docker-compose.yaml up
 ```
-Check http://localhost:8181/auth/ (keep_kc:keep_kc)
+Keycloak: http://localhost:8181/auth/ (keep_kc:keep_kc)
 
-Keep login page: http://localhost:8181/auth/admin/keep/console/
+Keep login page: http://localhost:3000/
 
 ## For Azure:
 Instruction: https://rahulroyz.medium.com/using-keycloak-as-idp-for-azure-ad-sso-authentication-role-authorization-0b309c15eadc
 
 Set email, first name & last name for keep_admin user: http://localhost:8181/auth/admin/master/console/#/keep/users
-Assign admin role to keep_admin at 
+Also please assign admin role for keep_admin. 
 
 # Development
 
