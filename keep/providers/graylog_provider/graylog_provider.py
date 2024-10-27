@@ -56,6 +56,30 @@ class GraylogProviderAuthConfig:
 class GraylogProvider(BaseProvider):
     """Install Webhooks and receive alerts from Graylog."""
 
+    webhook_description = ""
+    webhook_template = ""
+    webhook_markdown = """
+💡 For more details on how to configure Graylog to send alerts to Keep, see the [Keep documentation](https://docs.keephq.dev/providers/documentation/graylog-provider). 💡
+
+To send alerts from Graylog to Keep, Use the following webhook url to configure Graylog send alerts to Keep:
+
+1. In Graylog, from the Topbar, go to `Alerts` > `Notifications`.
+2. Click "Create Notification".
+3. In the New Notification form, configure:
+
+- **Display Name**: keep-graylog-webhook-integration
+- **Title**: keep-graylog-webhook-integration
+- **Notification Type**: Custom HTTP Notification
+- **URL**: {keep_webhook_api_url}  # Whitelist this URL
+- **Headers**: X-API-KEY:{api_key}
+4. Erase the Body Template.
+5. Click on "Create Notification".
+6. Go the the `Event Definitions` tab, and select the Event Definition that will trigger the alert you want to send to Keep and click on More > Edit.
+7. Go to "Notifications" tab.
+8. Click on "Add Notification" and select the "keep-graylog-webhook-integration" that you created in step 3.
+9. Click on "Add Notification".
+10. Click `Next` > `Update` event definition
+"""
     PROVIDER_DISPLAY_NAME = "Graylog"
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -73,6 +97,8 @@ class GraylogProvider(BaseProvider):
             alias="Rules Reader",
         ),
     ]
+
+    FINGERPRINT_FIELDS = ["event_definition_id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -435,7 +461,7 @@ class GraylogProvider(BaseProvider):
             self.logger.info("Creating new notification")
             notification_body = {
                 "title": notification_name,
-                "description": "Hello, this Notification is created by **KeepHQ**, please do not change the title.",
+                "description": "Hello, this Notification is created by KeepHQ, please do not change the title.",
                 "config": {
                     "type": "http-notification-v2",
                     "basic_auth": None,
@@ -474,23 +500,30 @@ class GraylogProvider(BaseProvider):
 
     @staticmethod
     def __map_event_to_alert(event: dict) -> AlertDto:
-        return AlertDto(
+        alert = AlertDto(
             id=event["event"]["id"],
             name=event.get("event_definition_title", event["event"]["message"]),
             severity=[AlertSeverity.LOW, AlertSeverity.WARNING, AlertSeverity.HIGH][
                 int(event["event"]["priority"]) - 1
             ],
             description=event.get("event_definition_description", None),
-            fingerprint=event["event"]["event_definition_id"],
+            event_definition_id=event["event"]["event_definition_id"],
+            origin_context=event["event"].get("origin_context", None),
             status=AlertStatus.FIRING,
             lastReceived=datetime.fromisoformat(
                 event["event"]["timestamp"].replace("z", "")
             )
             .replace(tzinfo=timezone.utc)
             .isoformat(),
-            message=event["event"]["message"],
+            message=event["event"].get("message", None),
             source=["graylog"],
         )
+
+        alert.fingerprint = GraylogProvider.get_alert_fingerprint(
+            alert, GraylogProvider.FINGERPRINT_FIELDS
+        )
+
+        return alert
 
     @staticmethod
     def _format_alert(event: dict, provider_instance: BaseProvider) -> AlertDto:
