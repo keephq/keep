@@ -44,6 +44,7 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.algorithm_metadata import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
@@ -3689,3 +3690,19 @@ def is_edge_incident_alert_resolved(incident: Incident, direction: Callable, ses
             enriched_status == AlertStatus.RESOLVED.value or
             (enriched_status is None and status == AlertStatus.RESOLVED.value)
         )
+    
+
+def get_or_create_ai_settings(tenant_id: str) -> List[AIConfigAndMetadata]:
+    with Session(engine) as session:
+        algorithms = session.exec(
+            select(AIConfigAndMetadata).where(AIConfigAndMetadata.tenant_id == tenant_id)
+        ).all()
+        if len(algorithms) == 0:
+            algorithm = AIConfigAndMetadata.from_external_ai(
+                tenant_id=tenant_id,
+                algorithm=TransformersAlgorithm
+            )
+            session.add(algorithm)
+            session.commit()
+            algorithms = [algorithm]
+    return algorithms
