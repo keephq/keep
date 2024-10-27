@@ -41,8 +41,14 @@ export default function IncidentList() {
     { id: "creation_time", desc: true },
   ]);
 
-  const { statuses, severities, assignees, services, sources } =
-    useIncidentFilterContext();
+  const {
+    statuses,
+    severities,
+    assignees,
+    services,
+    sources,
+    areFiltersApplied,
+  } = useIncidentFilterContext();
 
   const filters: Filters = {
     status: statuses,
@@ -92,6 +98,11 @@ export default function IncidentList() {
     setIsFormOpen(false);
   };
 
+  console.log({
+    incidents,
+    filters,
+  });
+
   function renderIncidents() {
     if (incidentsError) {
       return (
@@ -102,6 +113,7 @@ export default function IncidentList() {
     }
 
     if (isLoading) {
+      // TODO: only show this on the initial load
       return (
         <Card className="flex-grow">
           <Loading />
@@ -109,7 +121,7 @@ export default function IncidentList() {
       );
     }
 
-    if (incidents && incidents.items.length > 0) {
+    if (incidents && (incidents.items.length > 0 || areFiltersApplied)) {
       return (
         <IncidentsTable
           incidents={incidents}
@@ -171,6 +183,8 @@ export default function IncidentList() {
               </Button>
             </div>
           </div>
+          {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
+          <IncidentTableFilters />
           {renderIncidents()}
         </div>
       </div>

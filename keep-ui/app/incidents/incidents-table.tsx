@@ -1,4 +1,4 @@
-import { Badge, Card } from "@tremor/react";
+import { Badge, Card, Subtitle, Title } from "@tremor/react";
 import {
   ExpandedState,
   createColumnHelper,
@@ -27,17 +27,12 @@ import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
 import IncidentChangeStatusModal from "./incident-change-status-modal";
-import {
-  STATUS_COLORS,
-  STATUS_ICONS,
-  StatusIcon,
-} from "@/app/incidents/statuses";
+import { STATUS_COLORS, StatusIcon } from "@/app/incidents/statuses";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
-import { IncidentTableFilters } from "@/app/incidents/incident-table-filters";
 import { Button, Link } from "@/components/ui";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 import IncidentMergeModal from "@/app/incidents/incident-merge-modal";
@@ -403,15 +398,27 @@ export default function IncidentsTable({
 
   return (
     <>
-      <IncidentTableFilters />
       <SelectedRowActions
         selectedRowIds={selectedRowIds}
         onMergeInitiated={handleMergeInitiated}
         onDelete={handleDeleteMultiple}
       />
-      <Card className="p-0 overflow-hidden">
-        <IncidentTableComponent table={table} />
-      </Card>
+      {incidents.items.length > 0 ? (
+        <Card className="p-0 overflow-hidden">
+          <IncidentTableComponent table={table} />
+        </Card>
+      ) : (
+        <Card className="flex-grow">
+          <div className="flex flex-col items-center justify-center gap-y-8 h-full">
+            <div className="text-center space-y-3">
+              <Title className="text-2xl">No Incidents Matching Filters</Title>
+              <Subtitle className="text-gray-400">
+                Try changing the filters
+              </Subtitle>
+            </div>
+          </div>
+        </Card>
+      )}
       <div className="mt-4 mb-8">
         <IncidentPagination table={table} isRefreshAllowed={true} />
       </div>
