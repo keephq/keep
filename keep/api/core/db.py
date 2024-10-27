@@ -3239,6 +3239,7 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
+        incident.severity = alerts_data_for_incident["max_severity"].order
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
