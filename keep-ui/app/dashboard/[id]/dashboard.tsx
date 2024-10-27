@@ -33,7 +33,7 @@ const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
   const [widgetData, setWidgetData] = useState<WidgetData[]>([]);
-  const {widgets: allMetricWidgets} = useDashboardMetricWidgets();
+  const {widgets: allMetricWidgets} = useDashboardMetricWidgets(true);
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
   const [dashboardName, setDashboardName] = useState(decodeURIComponent(id));
   const [isEditingName, setIsEditingName] = useState(false);

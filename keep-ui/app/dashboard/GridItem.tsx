@@ -118,11 +118,11 @@ const GridItem: React.FC<GridItemProps> = ({
         { item.metric && (
             <div
                 className={'h-56 w-full "flex-1 flex items-center justify-center grid-item__widget'}>
-              <div className={"w-[90%]"}>
+              <div className={"w-[100%]"}>
                 <AreaChart
                     className="h-56"
                     data={item.metric?.data}
-                    index="hour"
+                    index="timestamp"
                     categories={[item.metric?.id === "mttr" ? "mttr" : "number"]}
                     valueFormatter={(number: number) =>
                         `${Intl.NumberFormat().format(number).toString()}`
@@ -131,7 +131,7 @@ const GridItem: React.FC<GridItemProps> = ({
                     connectNulls
                     showLegend={false}
                     showTooltip={true}
-                    xAxisLabel="24H Activity Data"
+                    xAxisLabel="Timestamp"
                 />
               </div>
             </div>

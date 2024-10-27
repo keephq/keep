@@ -1,7 +1,8 @@
-import {useSession} from "next-auth/react";
-import {getApiURL} from "@/utils/apiUrl";
+  import {useSession} from "next-auth/react";
+  import { useApiUrl } from "./useConfig";
 import useSWR from "swr";
 import {fetcher} from "@/utils/fetcher";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export interface MetricsWidget {
   id: string;
@@ -22,19 +23,20 @@ interface DashboardDistributionData {
 
 }
 
-export const useDashboardMetricWidgets = () => {
+export const useDashboardMetricWidgets = (useFilters?: boolean) => {
   const {data: session} = useSession();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
+  const searchParams = useSearchParams();
+  const filters = searchParams?.toString();
+
   const {data, error, mutate} = useSWR<DashboardDistributionData>(
-      session ? `${apiUrl}/dashboard/metric-widgets` : null,
+      session ? `${apiUrl}/dashboard/metric-widgets${
+        useFilters && filters ? `?${filters}` : ""
+      }` : null,
       (url: string) => fetcher(url, session!.accessToken)
   )
+  console.log(filters)
 
-  const useGetData = () => {
-    return useSWR<DashboardDistributionData>(
-        session ? `${apiUrl}/dashboard/metric-widgets` : null,
-        (url: string) => fetcher(url, session!.accessToken))
-  }
   let widgets: MetricsWidget[] = []
   if (data) {
       widgets = [
@@ -60,5 +62,5 @@ export const useDashboardMetricWidgets = () => {
       }
     ];
   }
-  return {widgets, useGetData};
+  return {widgets};
 }
