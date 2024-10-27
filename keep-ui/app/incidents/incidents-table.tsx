@@ -342,8 +342,7 @@ export default function IncidentsTable({
   }, []);
 
   type MergeOptions = {
-    sourceIncidents: IncidentDto[];
-    destinationIncident: IncidentDto;
+    incidents: IncidentDto[];
   };
 
   const [mergeOptions, setMergeOptions] = useState<MergeOptions | null>(null);
@@ -354,8 +353,7 @@ export default function IncidentsTable({
     );
 
     setMergeOptions({
-      sourceIncidents: selectedIncidents.slice(1),
-      destinationIncident: selectedIncidents[0],
+      incidents: selectedIncidents,
     });
   }, [incidents.items, selectedRowIds]);
 
@@ -409,10 +407,10 @@ export default function IncidentsTable({
       />
       {mergeOptions && (
         <IncidentMergeModal
-          sourceIncidents={mergeOptions.sourceIncidents}
-          destinationIncident={mergeOptions.destinationIncident}
+          incidents={mergeOptions.incidents}
           mutate={mutate}
           handleClose={() => setMergeOptions(null)}
+          onSuccess={() => table.resetRowSelection()}
         />
       )}
     </>
