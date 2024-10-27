@@ -1,7 +1,6 @@
 "use client";
-import Loading from "app/loading";
-import { useIncident } from "utils/hooks/useIncidents";
-import IncidentOverview from "./incident-overview";
+import { useState } from "react";
+import { FiActivity } from "react-icons/fi";
 import {
   Badge,
   Card,
@@ -12,19 +11,20 @@ import {
   TabPanels,
   Title,
 } from "@tremor/react";
-import IncidentAlerts from "./incident-alerts";
-import IncidentTimeline from "./incident-timeline";
 import { CiBellOn, CiChat2, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
-import IncidentChat from "./incident-chat";
 import { Workflows } from "components/icons";
-import IncidentWorkflowTable from "./incident-workflow-table";
+import { useIncident } from "utils/hooks/useIncidents";
 import { TopologyMap } from "@/app/topology/ui/map";
 import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
-import { useState } from "react";
-import { FiActivity } from "react-icons/fi";
+import Loading from "app/loading";
+import IncidentWorkflowTable from "./incident-workflow-table";
+import IncidentOverview from "./incident-overview";
+import IncidentAlerts from "./incident-alerts";
+import IncidentTimeline from "./incident-timeline";
+import IncidentChat from "./incident-chat";
 import IncidentActivity from "./incident-activity";
-import { IncidentHeader } from "@/app/incidents/[id]/incident-header";
+import { IncidentHeader } from "./incident-header";
 
 interface Props {
   incidentId: string;
