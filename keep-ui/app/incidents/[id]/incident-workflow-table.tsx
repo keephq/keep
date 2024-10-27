@@ -187,18 +187,17 @@ export default function IncidentWorkflowTable({ incident }: Props) {
 
   return (
     <>
-      {!isLoading && (workflows?.items ?? []).length === 0 && (
-        <Callout
-          className="w-full mb-2"
-          title="No Workflows"
-          icon={ExclamationTriangleIcon}
-          color="orange"
-        >
-          No workflows have been executed for this incident yet.
-        </Callout>
-      )}
-
-      <Card>
+      <Card className="p-0 overflow-hidden">
+        {!isLoading && (workflows?.items ?? []).length === 0 && (
+          <Callout
+            className="m-4"
+            title="No Workflows"
+            icon={ExclamationTriangleIcon}
+            color="orange"
+          >
+            No workflows have been executed for this incident yet.
+          </Callout>
+        )}
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (

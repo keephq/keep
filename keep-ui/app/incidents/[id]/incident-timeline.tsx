@@ -10,6 +10,7 @@ import Image from "next/image";
 import AlertSeverity from "app/alerts/alert-severity";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
+import { Card } from "@tremor/react";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -359,7 +360,7 @@ export default function IncidentTimeline({
   );
 
   return (
-    <div className="p-4">
+    <Card className="py-2 px-0">
       <div className="overflow-x-auto">
         <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
           {/* Time labels */}
@@ -431,6 +432,6 @@ export default function IncidentTimeline({
           />
         </div>
       )}
-    </div>
+    </Card>
   );
 }

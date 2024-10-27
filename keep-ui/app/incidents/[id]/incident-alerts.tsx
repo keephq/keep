@@ -177,18 +177,17 @@ export default function IncidentAlerts({ incident }: Props) {
   });
   return (
     <>
-      {!isLoading && (alerts?.items ?? []).length === 0 && (
-        <Callout
-          className="mt-4 w-full"
-          title="Missing Alerts"
-          icon={ExclamationTriangleIcon}
-          color={"orange"}
-        >
-          Alerts will show up here as they are correlated into this incident.
-        </Callout>
-      )}
-
       <Card className="p-0 overflow-hidden">
+        {!isLoading && (alerts?.items ?? []).length === 0 && (
+          <Callout
+            className="m-4"
+            title="Missing Alerts"
+            icon={ExclamationTriangleIcon}
+            color={"orange"}
+          >
+            Alerts will show up here as they are correlated into this incident.
+          </Callout>
+        )}
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (

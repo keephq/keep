@@ -81,9 +81,7 @@ export default function IncidentView({ incidentId }: Props) {
             </Card>
           </TabPanel>
           <TabPanel>
-            <Card>
-              <IncidentTimeline incident={incident} />
-            </Card>
+            <IncidentTimeline incident={incident} />
           </TabPanel>
           <TabPanel className="pt-3 h-[calc(100vh-12rem)]">
             <TopologySearchProvider>
@@ -97,9 +95,7 @@ export default function IncidentView({ incidentId }: Props) {
             <IncidentWorkflowTable incident={incident} />
           </TabPanel>
           <TabPanel>
-            <Card>
-              <IncidentChat incident={incident} />
-            </Card>
+            <IncidentChat incident={incident} />
           </TabPanel>
         </TabPanels>
       </TabGroup>
