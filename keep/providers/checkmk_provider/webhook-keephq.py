@@ -139,7 +139,7 @@ def StartKeepHQWorkflow(WebHookURL, data):
         response = requests.post(WebHookURL, headers=headers, json=data)
 
         if response.status_code == 200:
-            print(f"KeepHQ-plugin: Workflow started successfully.")
+            print("KeepHQ-plugin: Workflow started successfully.")
         else:
             print(
                 f"KeepHQ-plugin: Failed to start the workflow. Status code: {response.status_code}")
