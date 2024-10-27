@@ -1,16 +1,13 @@
-import json
 import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
     HTTPException,
-    Query,
     Request,
     Response,
 )
@@ -34,7 +31,7 @@ from keep.api.models.db.preset import (
     Tag,
     TagDto,
 )
-from keep.api.models.time_stamp import TimeStampFilter
+from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
@@ -175,19 +172,6 @@ def pull_data_from_providers(
             "providers_len": len(providers),
         },
     )
-
-
-# Function to handle the time_stamp query parameter and parse it
-def _get_time_stamp_filter(time_stamp: Optional[str] = Query(None)) -> TimeStampFilter:
-    if time_stamp:
-        try:
-            # Parse the JSON string
-            time_stamp_dict = json.loads(time_stamp)
-            # Return the TimeStampFilter object, Pydantic will map 'from' -> lower_timestamp and 'to' -> upper_timestamp
-            return TimeStampFilter(**time_stamp_dict)
-        except (json.JSONDecodeError, TypeError):
-            raise HTTPException(status_code=400, detail="Invalid time_stamp format")
-    return TimeStampFilter()
 
 
 @router.get(

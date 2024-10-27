@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +17,7 @@ from keep.api.core.db import (
 from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.db import update_dashboard as update_dashboard_db
+from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -146,6 +147,7 @@ def delete_dashboard(
 
 @router.get("/metric-widgets")
 def get_metric_widgets(
+    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter),
     mttr: bool = True,
     apd: bool = True,
     ipd: bool = True,
@@ -156,14 +158,25 @@ def get_metric_widgets(
 ):
     data = {}
     tenant_id = authenticated_entity.tenant_id
+    if not time_stamp.lower_timestamp or not time_stamp.upper_timestamp:
+        time_stamp = TimeStampFilter(
+            upper_timestamp=datetime.utcnow(),
+            lower_timestamp=datetime.utcnow() - timedelta(hours=24),
+        )
     if apd:
         data["apd"] = get_provider_distribution(
-            tenant_id=tenant_id, aggregate_all=True
-        )["alert_per_hour"]
+            tenant_id=tenant_id, aggregate_all=True, timestamp_filter=time_stamp
+        )
     if ipd:
-        data["ipd"] = get_incidents_created_distribution(tenant_id=tenant_id)
+        data["ipd"] = get_incidents_created_distribution(
+            tenant_id=tenant_id, timestamp_filter=time_stamp
+        )
     if wpd:
-        data["wpd"] = get_combined_workflow_execution_distribution(tenant_id=tenant_id)
+        data["wpd"] = get_combined_workflow_execution_distribution(
+            tenant_id=tenant_id, timestamp_filter=time_stamp
+        )
     if mttr:
-        data["mttr"] = calc_incidents_mttr(tenant_id=tenant_id)
+        data["mttr"] = calc_incidents_mttr(
+            tenant_id=tenant_id, timestamp_filter=time_stamp
+        )
     return data
