@@ -28,7 +28,7 @@ fi
 
 # Start Keycloak in the background
 echo "Starting Keycloak"
-/opt/keycloak/bin/kc.sh start-dev --features=preview --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTIN &
+/opt/keycloak/bin/kc.sh start-dev --log-level=DEBUG --features=preview --import-realm -Dkeycloak.profile.feature.scripts=enabled -Dkeycloak.migration.strategy=OVERWRITE_EXISTIN &
 echo "Keycloak started"
 # Try to connect to Keycloak - wait until Keycloak is ready or timeout
 echo "Waiting for Keycloak to be ready"
