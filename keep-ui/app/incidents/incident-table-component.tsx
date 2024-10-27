@@ -7,47 +7,12 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@tremor/react";
-import {
-  Column,
-  flexRender,
-  Header,
-  Table as ReactTable,
-} from "@tanstack/react-table";
-import React, { CSSProperties, ReactNode } from "react";
+import { flexRender, Header, Table as ReactTable } from "@tanstack/react-table";
+import React, { ReactNode } from "react";
 import { IncidentDto } from "./models";
-import { useRouter } from "next/navigation";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
 import clsx from "clsx";
-
-// Styles to make sticky column pinning work!
-const getCommonPinningStylesAndClassNames = (
-  column: Column<any>
-): { style: CSSProperties; className: string } => {
-  const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === "left" && column.getIsLastColumn("left");
-  const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
-
-  return {
-    style: {
-      left: isPinned === "left" ? `${column.getStart("left")}px` : undefined,
-      right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
-      width: column.getSize(),
-      animationTimeline: "scroll(inline)",
-    },
-    className: clsx(
-      "bg-tremor-background",
-      isPinned ? "sticky" : "relative",
-      isLastLeftPinnedColumn
-        ? "animate-scroll-shadow-left"
-        : isFirstRightPinnedColumn
-          ? "animate-scroll-shadow-right"
-          : undefined,
-      isPinned ? "z-[1]" : "z-0"
-    ),
-  };
-};
+import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
 
 interface Props {
   table: ReactTable<IncidentDto>;
@@ -108,8 +73,6 @@ const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
 
 export const IncidentTableComponent = (props: Props) => {
   const { table } = props;
-
-  const router = useRouter();
 
   return (
     <Table>

@@ -1,7 +1,7 @@
 "use client";
 import Loading from "app/loading";
 import { useIncident } from "utils/hooks/useIncidents";
-import IncidentInformation from "./incident-info";
+import IncidentOverview from "./incident-overview";
 import {
   Badge,
   Card,
@@ -24,6 +24,7 @@ import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
 import { useState } from "react";
 import { FiActivity } from "react-icons/fi";
 import IncidentActivity from "./incident-activity";
+import { IncidentHeader } from "@/app/incidents/[id]/incident-header";
 
 interface Props {
   incidentId: string;
@@ -31,80 +32,77 @@ interface Props {
 
 // TODO: generate metadata with incident name
 export default function IncidentView({ incidentId }: Props) {
-  const { data: incident, isLoading, error } = useIncident(incidentId);
+  const { data: incident, mutate, isLoading, error } = useIncident(incidentId);
   const [index, setIndex] = useState(0);
 
   if (isLoading || !incident) return <Loading />;
   if (error) return <Title>Incident does not exist.</Title>;
 
   return (
-    <>
-      <div className="flex justify-between items-center">
-        <IncidentInformation incident={incident} />
-      </div>
-      <Card className="flex flex-col items-center justify-center gap-y-8 mt-10 p-4 relative mx-auto">
-        <TabGroup
-          id="incidentTabs"
-          index={index}
-          defaultIndex={0}
-          onIndexChange={setIndex}
+    <div className="flex flex-col gap-2">
+      <IncidentHeader incident={incident} mutate={mutate} />
+      <TabGroup
+        id="incidentTabs"
+        index={index}
+        defaultIndex={0}
+        onIndexChange={setIndex}
+      >
+        {/* Compensating for page-container padding, TODO: more robust solution  */}
+        <TabList
+          variant="line"
+          color="orange"
+          className="sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10"
         >
-          {/* Compensating for page-container padding, TODO: more robust solution  */}
-          <TabList
-            variant="line"
-            color="orange"
-            className="sticky xl:-top-10 -top-4 bg-white z-10"
-          >
-            <Tab icon={FiActivity}>
-              Activity
-              <Badge
-                color="green"
-                className="ml-1.5 text-xs px-1 py-0.5 -my-0.5 pointer-events-none"
-              >
-                New
-              </Badge>
-            </Tab>
-            <Tab icon={CiBellOn}>Alerts</Tab>
-            <Tab icon={CiViewTimeline}>Timeline</Tab>
-            <Tab icon={IoIosGitNetwork}>Topology</Tab>
-            <Tab icon={Workflows}>Workflows</Tab>
-            <Tab icon={CiChat2}>
-              Chat
-              <Badge
-                color="green"
-                className="ml-1.5 text-xs px-1 py-0.5 -my-0.5 pointer-events-none"
-              >
-                New
-              </Badge>
-            </Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel className="pt-3 max-h-[calc(100vh-37rem)] overflow-y-scroll">
+          <Tab icon={CiBellOn}>Overview and Alerts</Tab>
+          <Tab icon={FiActivity}>
+            Activity
+            <Badge
+              color="green"
+              className="ml-1.5 text-xs px-1 py-0.5 -my-0.5 pointer-events-none"
+            >
+              New
+            </Badge>
+          </Tab>
+          <Tab icon={CiViewTimeline}>Timeline</Tab>
+          <Tab icon={IoIosGitNetwork}>Topology</Tab>
+          <Tab icon={Workflows}>Workflows</Tab>
+          <Tab icon={CiChat2}>Chat</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <Card className="mb-4">
+              <IncidentOverview incident={incident} />
+            </Card>
+            <IncidentAlerts incident={incident} />
+          </TabPanel>
+          <TabPanel>
+            <Card>
               <IncidentActivity incident={incident} />
-            </TabPanel>
-            <TabPanel>
-              <IncidentAlerts incident={incident} />
-            </TabPanel>
-            <TabPanel>
+            </Card>
+          </TabPanel>
+          <TabPanel>
+            <Card>
               <IncidentTimeline incident={incident} />
-            </TabPanel>
-            <TabPanel className="pt-3 h-[calc(100vh-37rem)]">
-              <TopologySearchProvider>
-                <TopologyMap
-                  services={incident.services}
-                  isVisible={index === 2}
-                />
-              </TopologySearchProvider>
-            </TabPanel>
-            <TabPanel>
-              <IncidentWorkflowTable incident={incident} />
-            </TabPanel>
-            <TabPanel>
+            </Card>
+          </TabPanel>
+          <TabPanel className="pt-3 h-[calc(100vh-12rem)]">
+            <TopologySearchProvider>
+              <TopologyMap
+                services={incident.services}
+                isVisible={index === 2}
+              />
+            </TopologySearchProvider>
+          </TabPanel>
+          <TabPanel>
+            <IncidentWorkflowTable incident={incident} />
+          </TabPanel>
+          <TabPanel>
+            <Card>
               <IncidentChat incident={incident} />
-            </TabPanel>
-          </TabPanels>
-        </TabGroup>
-      </Card>
-    </>
+            </Card>
+          </TabPanel>
+        </TabPanels>
+      </TabGroup>
+    </div>
   );
 }

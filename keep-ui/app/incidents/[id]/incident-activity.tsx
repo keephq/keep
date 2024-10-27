@@ -40,12 +40,13 @@ export function IncidentActivityChronoItem({ activity }: { activity: any }) {
         ". ";
   return (
     <div className="relative h-full w-full flex items-center">
-      {activity.type === "alert" && (
-        <AlertSeverity
-          severity={(activity.initiator as AlertDto).severity}
-          marginLeft={false}
-        />
-      )}
+      {activity.type === "alert" &&
+        (activity.initiator as AlertDto)?.severity && (
+          <AlertSeverity
+            severity={(activity.initiator as AlertDto).severity}
+            marginLeft={false}
+          />
+        )}
       <span className="font-semibold mr-2.5">{title}</span>
       <span className="text-gray-300">
         {subTitle} <TimeAgo date={activity.timestamp + "Z"} />
@@ -58,7 +59,6 @@ export function IncidentActivityChronoItem({ activity }: { activity: any }) {
     </div>
   );
 }
-
 
 export function IncidentActivityChronoItemComment({
   incident,
@@ -215,6 +215,7 @@ export default function IncidentActivity({
     )
   );
   const chronoIcons = activities?.map((activity, index) => {
+    console.log("activity", activity);
     if (activity.type === "comment" || activity.type === "newcomment") {
       const user = users?.find((user) => user.email === activity.initiator);
       return (
@@ -225,7 +226,7 @@ export default function IncidentActivity({
         />
       );
     } else {
-      const source = (activity.initiator as AlertDto).source[0];
+      const source = (activity.initiator as AlertDto)?.source?.[0];
       const imagePath = `/icons/${source}-icon.png`;
       return (
         <Image

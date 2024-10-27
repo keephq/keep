@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-table";
 import {
   Callout,
+  Card,
   Table,
   TableBody,
   TableCell,
@@ -29,6 +30,7 @@ import IncidentAlertMenu from "./incident-alert-menu";
 import IncidentPagination from "../incident-pagination";
 import React, { useEffect, useState } from "react";
 import { IncidentDto } from "../models";
+import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
 
 interface Props {
   incident: IncidentDto;
@@ -85,8 +87,12 @@ export default function IncidentAlerts({ incident }: Props) {
     columnHelper.display({
       id: "name",
       header: "Name",
-      minSize: 330,
-      cell: (context) => <AlertName alert={context.row.original} />,
+      minSize: 100,
+      cell: (context) => (
+        <div className="max-w-[300px]">
+          <AlertName alert={context.row.original} />
+        </div>
+      ),
     }),
     columnHelper.accessor("description", {
       id: "description",
@@ -158,7 +164,12 @@ export default function IncidentAlerts({ incident }: Props) {
   const table = useReactTable({
     columns: columns,
     manualPagination: true,
-    state: { pagination },
+    state: {
+      pagination,
+      columnPinning: {
+        right: ["remove"],
+      },
+    },
     rowCount: alerts ? alerts.count : 0,
     onPaginationChange: setTablePagination,
     data: alerts?.items ?? [],
@@ -177,58 +188,77 @@ export default function IncidentAlerts({ incident }: Props) {
         </Callout>
       )}
 
-      <Table>
-        <TableHead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header, index) => {
-                return (
-                  <TableHeaderCell key={`header-${header.id}-${index}`}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </TableHeaderCell>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHead>
-        {alerts && alerts?.items?.length > 0 && (
-          <TableBody>
-            {table.getRowModel().rows.map((row, index) => (
-              <TableRow
-                key={`row-${row.id}-${index}`}
-                className="hover:bg-slate-100"
-              >
-                {row.getVisibleCells().map((cell, index) => (
-                  <TableCell key={`cell-${cell.id}-${index}`}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+      <Card className="p-0 overflow-hidden">
+        <Table>
+          <TableHead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header, index) => {
+                  const { style, className } =
+                    getCommonPinningStylesAndClassNames(header.column);
+                  return (
+                    <TableHeaderCell
+                      key={`header-${header.id}-${index}`}
+                      style={style}
+                      className={className}
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                    </TableHeaderCell>
+                  );
+                })}
               </TableRow>
             ))}
-          </TableBody>
-        )}
-        {
-          // Skeleton
-          (isLoading || (alerts?.items ?? []).length === 0) && (
+          </TableHead>
+          {alerts && alerts?.items?.length > 0 && (
             <TableBody>
-              {Array(pagination.pageSize)
-                .fill("")
-                .map((index, rowIndex) => (
-                  <TableRow key={`row-${index}-${rowIndex}`}>
-                    {columns.map((c, cellIndex) => (
-                      <TableCell key={`cell-${c.id}-${cellIndex}`}>
-                        <Skeleton />
+              {table.getRowModel().rows.map((row, index) => (
+                <TableRow
+                  key={`row-${row.id}-${index}`}
+                  className="hover:bg-slate-100"
+                >
+                  {row.getVisibleCells().map((cell, index) => {
+                    const { style, className } =
+                      getCommonPinningStylesAndClassNames(cell.column);
+                    return (
+                      <TableCell
+                        key={`cell-${cell.id}-${index}`}
+                        style={style}
+                        className={className}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                    );
+                  })}
+                </TableRow>
+              ))}
             </TableBody>
-          )
-        }
-      </Table>
+          )}
+          {
+            // Skeleton
+            (isLoading || (alerts?.items ?? []).length === 0) && (
+              <TableBody>
+                {Array(pagination.pageSize)
+                  .fill("")
+                  .map((index, rowIndex) => (
+                    <TableRow key={`row-${index}-${rowIndex}`}>
+                      {columns.map((c, cellIndex) => (
+                        <TableCell key={`cell-${c.id}-${cellIndex}`}>
+                          <Skeleton />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+              </TableBody>
+            )
+          }
+        </Table>
+      </Card>
 
       <div className="mt-4 mb-8">
         <IncidentPagination table={table} isRefreshAllowed={true} />
