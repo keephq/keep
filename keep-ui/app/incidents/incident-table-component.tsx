@@ -38,7 +38,6 @@ const getCommonPinningStylesAndClassNames = (
     },
     className: clsx(
       "bg-tremor-background",
-      column.getIsPinned() === false && "hover:bg-slate-100",
       isPinned ? "sticky" : "relative",
       isLastLeftPinnedColumn
         ? "animate-scroll-shadow-left"
@@ -138,10 +137,7 @@ export const IncidentTableComponent = (props: Props) => {
           <>
             <TableRow
               key={row.id}
-              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted hover:bg-slate-100 cursor-pointer"
-              onClick={() => {
-                router.push(`/incidents/${row.original.id}`);
-              }}
+              className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted"
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell

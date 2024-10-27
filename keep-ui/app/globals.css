@@ -54,7 +54,7 @@
   0% {
     filter: none
   }
-  25%, 99% {
+  25%, 100% {
     filter: drop-shadow(rgba(0, 0, 0, 0.07) -2px 9px 5px)
   }
 }
@@ -65,5 +65,29 @@
   }
   99% {
     filter: none
+  }
+}
+
+.pagination-button {
+  @apply shadow-tremor-input border-tremor-border bg-tremor-background ;
+
+  &:not(:first-child) {
+    @apply -ml-px;
+  }
+
+  &:first-child:not(:last-child) {
+    @apply rounded-r-none;
+  }
+
+  &:last-child:not(:first-child) {
+    @apply rounded-l-none;
+  }
+
+  &:not(:first-child):not(:last-child) {
+    @apply rounded-l-none rounded-r-none;
+  }
+
+  &:not(:disabled):hover {
+    @apply bg-slate-100;
   }
 }

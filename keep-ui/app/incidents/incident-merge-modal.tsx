@@ -8,6 +8,7 @@ import { STATUS_ICONS } from "@/app/incidents/statuses";
 import { useMemo, useState } from "react";
 import Select, { GroupBase, StylesConfig } from "react-select";
 import { clsx } from "clsx";
+import "./vertical-rounded-list.css";
 
 function IncidentRow({
   incident,
