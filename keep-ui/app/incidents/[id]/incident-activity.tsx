@@ -15,7 +15,7 @@ import {
 import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
 import Loading from "@/app/loading";
 import { useCallback, useState, useEffect } from "react";
-import { getApiURL } from "@/utils/apiUrl";
+import { useApiUrl } from "@/utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { KeyedMutator } from "swr";
 import { toast } from "react-toastify";
@@ -68,7 +68,7 @@ export function IncidentActivityChronoItemComment({
   mutator: KeyedMutator<AuditEvent[]>;
 }) {
   const [comment, setComment] = useState("");
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   const onSubmit = useCallback(async () => {

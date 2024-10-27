@@ -35,6 +35,7 @@ class ContextManager:
             self.click_context = {}
         # last workflow context
         self.last_workflow_execution_results = {}
+        self.last_workflow_run_time = None
         if self.workflow_id:
             try:
                 last_workflow_execution = get_last_workflow_execution_by_workflow_id(
@@ -44,6 +45,7 @@ class ContextManager:
                     self.last_workflow_execution_results = (
                         last_workflow_execution.results
                     )
+                    self.last_workflow_run_time = last_workflow_execution.started
             except Exception:
                 self.logger.exception("Failed to get last workflow execution")
                 pass
@@ -130,6 +132,7 @@ class ContextManager:
             "foreach": self.foreach_context,
             "event": self.event_context,
             "last_workflow_results": self.last_workflow_execution_results,
+            "last_workflow_run_time": self.last_workflow_run_time,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
             "incident": self.incident_context,  # this is an alias so workflows will be able to use alert.source
             "consts": self.consts_context,
