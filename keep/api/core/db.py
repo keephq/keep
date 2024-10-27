@@ -3065,6 +3065,8 @@ def add_alerts_to_incident(
             incident.affected_services = list(
                 set(incident.affected_services if incident.affected_services else []) | set(alerts_data_for_incident["services"])
             )
+            # If incident has alerts already, use the max severity between existing and new alerts, otherwise use the new alerts max severity
+            incident.severity = max(incident.severity, alerts_data_for_incident["max_severity"].order) if incident.alerts_count else alerts_data_for_incident["max_severity"].order
             incident.alerts_count += alerts_data_for_incident["count"]
 
             alert_to_incident_entries = [
@@ -3098,7 +3100,6 @@ def add_alerts_to_incident(
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
-            incident.severity = alerts_data_for_incident["max_severity"].order
 
             session.add(incident)
             session.commit()

@@ -450,40 +450,102 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
 
     assert len(incident.alerts) == 0
 
-def test_merge_incidents(db_session, setup_stress_alerts_no_elastic):
+def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elastic):
     incident_1 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
         {
-            "user_generated_name": "destination",
-            "user_summary": "destination",
+            "user_generated_name": "Incident with info severity (destination)",
+            "user_summary": "Incident with info severity (destination)",
         },
     )
-    alerts_1 = setup_stress_alerts_no_elastic(50)
+    create_alert(
+        "fp1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.INFO.value},
+    )
+    create_alert(
+        f"fp1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.INFO.value},
+    )
+    create_alert(
+        f"fp2",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.INFO.value},
+    )
+    alerts_1 = db_session.query(Alert).all()
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
     )
     incident_2 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
         {
-            "user_generated_name": "test-2",
-            "user_summary": "test-2",
+            "user_generated_name": "Incident with critical severity",
+            "user_summary": "Incident with critical severity",
         },
     )
-    alerts_2 = setup_stress_alerts_no_elastic(50)
+    create_alert(
+        "fp20",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        f"fp20",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        f"fp20",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    alerts_2 = db_session.query(Alert).filter(Alert.fingerprint.startswith("fp20")).all()
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
     )
     incident_3 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
         {
-            "user_generated_name": "test-3",
-            "user_summary": "test-3",
+            "user_generated_name": "Incident with warning severity",
+            "user_summary": "Incident with warning severity",
         },
     )
-    alerts_3 = setup_stress_alerts_no_elastic(50)
+    create_alert(
+        "fp30",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.WARNING.value},
+    )
+    create_alert(
+        f"fp30",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.WARNING.value},
+    )
+    create_alert(
+        f"fp30",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.INFO.value},
+    )
+    alerts_3 = db_session.query(Alert).filter(Alert.fingerprint.startswith("fp30")).all()
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
     )
+
+    # before merge
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id)
+    assert incident_1.severity == IncidentSeverity.INFO.order
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id)
+    assert incident_2.severity == IncidentSeverity.CRITICAL.order
+    incident_3 = get_incident_by_id(SINGLE_TENANT_UUID, incident_3.id)
+    assert incident_3.severity == IncidentSeverity.WARNING.order
 
     merge_incidents_to_id(
         SINGLE_TENANT_UUID,
@@ -493,7 +555,8 @@ def test_merge_incidents(db_session, setup_stress_alerts_no_elastic):
     )
 
     incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
-    assert len(incident_1.alerts) == 150
+    assert len(incident_1.alerts) == 9
+    assert incident_1.severity == IncidentSeverity.CRITICAL.order
 
     incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
     assert len(incident_2.alerts) == 0
@@ -516,25 +579,32 @@ def test_merge_incidents_app(
 ):
     incident_1 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
-        {"user_generated_name": "destination", "user_summary": "destination"},
+        {"user_generated_name": "Incident with info severity (destination)", "user_summary": "Incident with info severity (destination)"},
     )
-    alerts_1 = setup_stress_alerts_no_elastic(50)
+    for i in range(50):
+        create_alert(
+            f"alert-1-{i}",
+            AlertStatus.FIRING,
+            datetime.utcnow(),
+            {"severity": AlertSeverity.INFO.value},
+        )
+    alerts_1 = db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-1-")).all()
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
     )
     incident_2 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
-        {"user_generated_name": "test-2", "user_summary": "test-2"},
+        {"user_generated_name": "Incident with critical severity", "user_summary": "Incident with critical severity"},
     )
     for i in range(50):
         create_alert(
-            f"alert-{i}",
+            f"alert-2-{i}",
             AlertStatus.FIRING,
             datetime.utcnow(),
             {"severity": AlertSeverity.CRITICAL.value, "service": "second-service"},
         )
     alerts_2 = (
-        db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-")).all()
+        db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-2-")).all()
     )
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
@@ -554,6 +624,7 @@ def test_merge_incidents_app(
     incident_1_before_via_api = client.get(
         f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
     ).json()
+    assert incident_1_before_via_api["severity"] == IncidentSeverity.INFO.value
     assert incident_1_before_via_api["alerts_count"] == 50
     assert "second-service" not in incident_1_before_via_api["services"]
 
@@ -572,7 +643,7 @@ def test_merge_incidents_app(
 
     assert response.status_code == 200
     result = response.json()
-    assert result["merged_incident_ids"] == [str(incident_2.id), str(incident_3.id)]
+    assert set(result["merged_incident_ids"]) == {str(incident_2.id), str(incident_3.id)}
     assert result["skipped_incident_ids"] == [str(empty_incident.id)]
     assert result["failed_incident_ids"] == []
 
@@ -581,6 +652,7 @@ def test_merge_incidents_app(
     ).json()
 
     assert incident_1_via_api["id"] == str(incident_1.id)
+    assert incident_1_via_api["severity"] == IncidentSeverity.CRITICAL.value
     assert incident_1_via_api["alerts_count"] == 150
     assert "second-service" in incident_1_via_api["services"]
 
