@@ -184,7 +184,7 @@ async function refreshAccessToken(token: any) {
 
   const params = new URLSearchParams({
     client_id: process.env.KEYCLOAK_ID!, // Using non-null assertion (!) because it is required
-    client_secret: process.env.KEYCLOAK_CLIENT_SECRET!, // Using non-null assertion (!)
+    client_secret: process.env.KEYCLOAK_SECRET!, // Using non-null assertion (!)
     grant_type: "refresh_token",
     refresh_token: token.refreshToken, // Assuming refreshToken is correctly stored and is a string
   });
@@ -259,7 +259,7 @@ const keycloakAuthOptions = {
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
+      clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER,
       authorization: {
         params: { scope: "openid email profile roles" },
