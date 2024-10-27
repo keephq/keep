@@ -29,14 +29,14 @@ class GraylogProviderAuthConfig:
     Graylog authentication configuration.
     """
 
-    graylogUserName: str = dataclasses.field(
+    graylog_user_name: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Username",
             "hint": "Your Username associated with the Access Token",
         },
     )
-    graylogAccessToken: str = dataclasses.field(
+    graylog_access_token: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Graylog Access Token",
@@ -44,7 +44,7 @@ class GraylogProviderAuthConfig:
             "sensitive": True,
         },
     )
-    deploymentUrl: str = dataclasses.field(
+    deployment_url: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Deployment Url",
@@ -103,32 +103,32 @@ class GraylogProvider(BaseProvider):
             return self._host
 
         # Handle host determination logic with logging
-        if self.authentication_config.deploymentUrl.startswith(
+        if self.authentication_config.deployment_url.startswith(
             "http://"
-        ) or self.authentication_config.deploymentUrl.startswith("https://"):
+        ) or self.authentication_config.deployment_url.startswith("https://"):
             self.logger.info("Using supplied Graylog host with protocol")
-            self._host = self.authentication_config.deploymentUrl
+            self._host = self.authentication_config.deployment_url
             return self._host
 
         # Otherwise, attempt to use https
         try:
             self.logger.debug(
-                f"Trying HTTPS for {self.authentication_config.deploymentUrl}"
+                f"Trying HTTPS for {self.authentication_config.deployment_url}"
             )
             requests.get(
-                f"https://{self.authentication_config.deploymentUrl}",
+                f"https://{self.authentication_config.deployment_url}",
                 verify=False,
             )
             self.logger.info("HTTPS protocol confirmed")
-            self._host = f"https://{self.authentication_config.deploymentUrl}"
+            self._host = f"https://{self.authentication_config.deployment_url}"
         except requests.exceptions.SSLError:
             self.logger.warning("SSL error encountered, falling back to HTTP")
-            self._host = f"http://{self.authentication_config.deploymentUrl}"
+            self._host = f"http://{self.authentication_config.deployment_url}"
         except Exception as e:
             self.logger.error(
                 "Failed to determine Graylog host", extra={"exception": str(e)}
             )
-            self._host = self.authentication_config.deploymentUrl.rstrip("/")
+            self._host = self.authentication_config.deployment_url.rstrip("/")
 
         return self._host
 
@@ -141,7 +141,7 @@ class GraylogProvider(BaseProvider):
 
     @property
     def _auth(self):
-        return self.authentication_config.graylogAccessToken, "token"
+        return self.authentication_config.graylog_access_token, "token"
 
     def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
         """
@@ -168,7 +168,7 @@ class GraylogProvider(BaseProvider):
         try:
             user_response = requests.get(
                 url=self.__get_url(
-                    paths=["users", self.authentication_config.graylogUserName]
+                    paths=["users", self.authentication_config.graylog_user_name]
                 ),
                 headers=self._headers,
                 auth=self._auth,
@@ -481,7 +481,7 @@ class GraylogProvider(BaseProvider):
                 int(event["event"]["priority"]) - 1
             ],
             description=event.get("event_definition_description", None),
-            fingerprint=event["event"]["id"],
+            fingerprint=event["event"]["event_definition_id"],
             status=AlertStatus.FIRING,
             lastReceived=datetime.fromisoformat(
                 event["event"]["timestamp"].replace("z", "")
@@ -489,7 +489,7 @@ class GraylogProvider(BaseProvider):
             .replace(tzinfo=timezone.utc)
             .isoformat(),
             message=event["event"]["message"],
-            source=["Graylog"],
+            source=["graylog"],
         )
 
     @staticmethod
@@ -531,6 +531,13 @@ class GraylogProvider(BaseProvider):
         # Generate a random ID of specified length
         random_id = "".join(random.choice(chars) for _ in range(25))
         simulated_alert["id"] = random_id
+
+        simulated_alert["event_definition_id"] = alert_data["event_definition_id"] = (
+            "".join(
+                random.choice(string.ascii_lowercase + string.digits) for _ in range(24)
+            )
+        )
+
         # Set the current timestamp
         simulated_alert["timestamp"] = datetime.now().isoformat()
 
