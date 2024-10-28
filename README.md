@@ -1,3 +1,4 @@
+<a name="top"></a>
 <div align="center">
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
@@ -281,3 +282,5 @@ Thank you for contributing and continuously making <b>Keep</b> better, <b>you're
 <a href="https://github.com/keephq/keep/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=keephq/keep" />
 </a>
+
+[Back to top🚀](#top)
