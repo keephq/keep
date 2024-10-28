@@ -8,11 +8,6 @@ import {
   getSortedRowModel,
   ColumnDef,
 } from "@tanstack/react-table";
-import {
-  MdModeEdit,
-  MdKeyboardDoubleArrowRight,
-  MdPlayArrow,
-} from "react-icons/md";
 import { useSession } from "next-auth/react";
 import { IncidentDto, PaginatedIncidentsDto } from "./models";
 import React, {
@@ -26,8 +21,6 @@ import Image from "next/image";
 import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import { deleteIncident } from "./incident-candidate-actions";
-import IncidentChangeStatusModal from "./incident-change-status-modal";
-import { STATUS_COLORS, StatusIcon } from "@/app/incidents/statuses";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
@@ -36,8 +29,10 @@ import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 import IncidentMergeModal from "@/app/incidents/incident-merge-modal";
-import { TrashIcon } from "@heroicons/react/24/outline";
 import { capitalize } from "@/utils/helpers";
+import { IncidentDropdownMenu } from "./incident-dropdown-menu";
+import clsx from "clsx";
+import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -71,7 +66,7 @@ function SelectedRowActions({
         disabled={!selectedRowIds.length}
         onClick={onDelete}
       >
-        Remove
+        Delete
       </Button>
     </div>
   );
@@ -103,22 +98,17 @@ export default function IncidentsTable({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
     pageSize: incidents.limit,
   });
-  const [changeStatusIncident, setChangeStatusIncident] =
-    useState<IncidentDto | null>();
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
 
-  const handleChangeStatus = (e: React.MouseEvent, incident: IncidentDto) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setChangeStatusIncident(incident);
-  };
-
-  const handleRunWorkflow = (e: React.MouseEvent, incident: IncidentDto) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setRunWorkflowModalIncident(incident);
-  };
+  const handleDelete = useCallback((incident: IncidentDto) => {
+    deleteIncident({
+      incidentId: incident.id,
+      mutate,
+      session,
+      apiUrl: apiUrl!,
+    });
+  }, []);
 
   useEffect(() => {
     if (incidents.limit != pagination.pageSize) {
@@ -161,29 +151,16 @@ export default function IncidentsTable({
       id: "status",
       header: "Status",
       cell: ({ row }) => (
-        <button
-          onClick={(e) => handleChangeStatus(e, row.original!)}
-          className="cursor-pointer"
-        >
-          <Badge
-            size="sm"
-            color={STATUS_COLORS[row.original.status]}
-            className="pointer-events-none"
-          >
-            <div className="flex items-center justify-center gap-1">
-              <StatusIcon
-                status={row.original.status}
-                className="size-4 [&>svg]:size-4"
-              />
-              {capitalize(row.original.status)}
-            </div>
-          </Badge>
-        </button>
+        <IncidentChangeStatusSelect
+          incidentId={row.original.id}
+          value={row.original.status}
+          onChange={() => mutate()}
+        />
       ),
     }),
     columnHelper.display({
       id: "name",
-      header: "Name & Summary",
+      header: "Incident",
       cell: ({ row }) => (
         <div className="min-w-64">
           <Link href={`/incidents/${row.original.id}`} className="text-pretty">
@@ -200,12 +177,9 @@ export default function IncidentsTable({
         </div>
       ),
     }),
-    columnHelper.display({
-      id: "rule_fingerprint",
-      header: "Group by value",
-      cell: ({ row }) => (
-        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
-      ),
+    columnHelper.accessor("alerts_count", {
+      id: "alerts_count",
+      header: "Alerts",
     }),
     columnHelper.accessor("severity", {
       id: "severity",
@@ -216,26 +190,34 @@ export default function IncidentsTable({
         if (severity === "critical") color = "red";
         else if (severity === "info") color = "blue";
         else if (severity === "warning") color = "yellow";
-        return <Badge color={color}>{severity}</Badge>;
+        return <Badge color={color}>{capitalize(severity)}</Badge>;
       },
     }),
-    columnHelper.accessor("alerts_count", {
-      id: "alerts_count",
-      header: "Number of Alerts",
+    columnHelper.display({
+      id: "rule_fingerprint",
+      header: "Group by value",
+      cell: ({ row }) => (
+        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
+      ),
     }),
     columnHelper.display({
       id: "alert_sources",
-      header: "Alert Sources",
+      header: "Sources",
       cell: ({ row }) =>
-        row.original.alert_sources.map((alert_sources, index) => (
+        row.original.alert_sources.map((alert_source, index) => (
           <Image
-            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-            key={alert_sources}
-            alt={alert_sources}
+            key={alert_source}
+            className={clsx(
+              "inline-block",
+              index == 0
+                ? ""
+                : "-ml-2 bg-white border-white border-2 rounded-full"
+            )}
+            alt={alert_source}
             height={24}
             width={24}
-            title={alert_sources}
-            src={`/icons/${alert_sources}-icon.png`}
+            title={alert_source}
+            src={`/icons/${alert_source}-icon.png`}
           />
         )),
     }),
@@ -265,54 +247,14 @@ export default function IncidentsTable({
     }),
     columnHelper.display({
       id: "actions",
-      header: "Actions",
+      header: "",
       cell: ({ row }) => (
-        <div className={"space-x-1 flex flex-row items-center justify-center"}>
-          {/*If user wants to edit the mapping. We use the callback to set the data in mapping.tsx which is then passed to the create-new-mapping.tsx form*/}
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            tooltip="Edit"
-            icon={MdModeEdit}
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              editCallback(row.original!);
-            }}
-          />
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdKeyboardDoubleArrowRight}
-            tooltip="Change status"
-            onClick={(e) => handleChangeStatus(e, row.original!)}
-          />
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            icon={MdPlayArrow}
-            tooltip="Run Workflow"
-            onClick={(e) => handleRunWorkflow(e, row.original!)}
-          />
-          <Button
-            color="red"
-            size="xs"
-            variant="secondary"
-            tooltip="Remove"
-            icon={TrashIcon}
-            onClick={async (e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              await deleteIncident({
-                incidentId: row.original.id!,
-                mutate,
-                session,
-                apiUrl: apiUrl!,
-              });
-            }}
+        <div className="flex justify-end">
+          <IncidentDropdownMenu
+            incident={row.original}
+            handleEdit={editCallback}
+            handleRunWorkflow={() => setRunWorkflowModalIncident(row.original)}
+            handleDelete={() => handleDelete(row.original)}
           />
         </div>
       ),
@@ -422,11 +364,6 @@ export default function IncidentsTable({
       <div className="mt-4 mb-8">
         <IncidentPagination table={table} isRefreshAllowed={true} />
       </div>
-      <IncidentChangeStatusModal
-        incident={changeStatusIncident}
-        mutate={mutate}
-        handleClose={() => setChangeStatusIncident(null)}
-      />
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}

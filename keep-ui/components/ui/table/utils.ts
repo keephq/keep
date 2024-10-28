@@ -27,7 +27,7 @@ export const getCommonPinningStylesAndClassNames = (
         : isFirstRightPinnedColumn
           ? "animate-scroll-shadow-right"
           : undefined,
-      isPinned ? "z-[1]" : "z-0"
+      isPinned ? "z-[2]" : ""
     ),
   };
 };

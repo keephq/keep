@@ -102,14 +102,22 @@ export const IncidentTableComponent = (props: Props) => {
               key={row.id}
               className="even:bg-tremor-background-muted even:dark:bg-dark-tremor-background-muted"
             >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  {...getCommonPinningStylesAndClassNames(cell.column)}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
+              {row.getVisibleCells().map((cell) => {
+                const { style, className } =
+                  getCommonPinningStylesAndClassNames(cell.column);
+                return (
+                  <TableCell
+                    key={cell.id}
+                    style={style}
+                    className={clsx(
+                      className,
+                      cell.column.id === "actions" ? "p-1" : ""
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           </>
         ))}

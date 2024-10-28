@@ -9,14 +9,13 @@ import { format } from "date-fns";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { IoChevronDown } from "react-icons/io5";
-import IncidentChangeStatusModal from "@/app/incidents/incident-change-status-modal";
 import ChangeSameIncidentInThePast from "@/app/incidents/incident-change-same-in-the-past";
-import { STATUS_ICONS } from "@/app/incidents/statuses";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
 import { Callout } from "@tremor/react";
 import { Link } from "@/components/ui";
+import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 
 interface Props {
   incident: IncidentDto;
@@ -107,17 +106,8 @@ function MergedCallout({
 export default function IncidentOverview({ incident }: Props) {
   const { mutate } = useIncident(incident.id);
 
-  const [changeStatusIncident, setChangeStatusIncident] =
-    useState<IncidentDto | null>();
-
   const [changeSameIncidentInThePast, setChangeSameIncidentInThePast] =
     useState<IncidentDto | null>();
-
-  const handleChangeStatus = (e: React.MouseEvent, incident: IncidentDto) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setChangeStatusIncident(incident);
-  };
 
   const handleChangeSameIncidentInThePast = (
     e: React.MouseEvent,
@@ -149,12 +139,13 @@ export default function IncidentOverview({ incident }: Props) {
         <div>
           <h3 className="text-gray-500 text-sm">Status</h3>
           <div>
-            <div
-              onClick={(e) => handleChangeStatus(e, incident)}
-              className="capitalize flex-grow-0 inline-flex items-center cursor-pointer"
-            >
-              {STATUS_ICONS[incident.status]} {incident.status}
-            </div>
+            <IncidentChangeStatusSelect
+              incidentId={incident.id}
+              value={incident.status}
+              onChange={(status) => {
+                mutate();
+              }}
+            />
           </div>
         </div>
         <div className="flex flex-col gap-2 max-w-3xl">
@@ -273,12 +264,6 @@ export default function IncidentOverview({ incident }: Props) {
           />
         </Modal>
       ) : null}
-
-      <IncidentChangeStatusModal
-        incident={changeStatusIncident}
-        mutate={mutate}
-        handleClose={() => setChangeStatusIncident(null)}
-      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { Card, Title, Subtitle, Button, Badge, Callout } from "@tremor/react";
+import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "app/loading";
 import React, { useState } from "react";
 import { IncidentDto } from "./models";
@@ -8,10 +8,7 @@ import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
-import {
-  ExclamationCircleIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/24/outline";
+import { PlusCircleIcon } from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "./predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentTableFilters } from "./incident-table-filters";
