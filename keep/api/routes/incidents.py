@@ -710,7 +710,7 @@ def change_incident_status(
 
     # We need to do something only if status really changed
     if not change.status == incident.status:
-        end_time = (None, datetime.utcnow())[change.status == IncidentStatus.RESOLVED]
+        end_time = datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
         result = change_incident_status_by_id(
             tenant_id, incident_id, change.status, end_time
         )
