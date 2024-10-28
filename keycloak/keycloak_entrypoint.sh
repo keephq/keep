@@ -62,7 +62,7 @@ echo "Event listener 'last_login' configured"
 # Configure Content-Security-Policy and X-Frame-Options
 # So that the SSO connect works with the Keep UI
 echo "Configuring Content-Security-Policy and X-Frame-Options"
-/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.contentSecurityPolicy="frame-src '\''self'\'' '\'''${KEEP_URL}''\''; frame-ancestors '\''self'\'' '\'''${KEEP_URL}''\''; object-src '\''none'\'';"'
+/opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.contentSecurityPolicy="frame-src '\''self'\'' '${KEEP_URL}'; frame-ancestors '\''self'\'' '${KEEP_URL}'; object-src '\''none'\'';"'
 /opt/keycloak/bin/kcadm.sh update realms/${KEEP_REALM} -s 'browserSecurityHeaders.xFrameOptions="ALLOW"'
 echo "Content-Security-Policy and X-Frame-Options configured"
 

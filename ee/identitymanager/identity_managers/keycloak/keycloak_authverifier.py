@@ -55,8 +55,6 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         email = payload.get("preferred_username")
         org_id = payload.get("active_organization", {}).get("id")
         org_realm = payload.get("active_organization", {}).get("name")
-        if org_realm is None:
-            org_realm = self.keycloak_client.realm_name
         role = (
             payload.get("resource_access", {})
             .get(self.keycloak_client_id, {})
