@@ -36,7 +36,7 @@ export const useIncidents = (
   }
 ) => {
   const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   const filtersParams = new URLSearchParams();
 
@@ -50,7 +50,7 @@ export const useIncidents = (
     }
   });
 
-  return useSWR<PaginatedIncidentsDto>(
+  const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>
       session
         ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
@@ -60,6 +60,11 @@ export const useIncidents = (
     (url) => fetcher(url, session?.accessToken),
     options
   );
+
+  return {
+    ...swrValue,
+    isLoading: swrValue.isLoading || sessionStatus === "loading",
+  };
 };
 
 export const useIncidentAlerts = (

@@ -1,7 +1,7 @@
 """Merge Incidents
 
 Revision ID: 89b4d3905d26
-Revises: 83c1020be97d
+Revises: 8438f041ee0e
 Create Date: 2024-10-21 20:48:40.151171
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "89b4d3905d26"
-down_revision = "83c1020be97d"
+down_revision = "8438f041ee0e"
 branch_labels = None
 depends_on = None
 

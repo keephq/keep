@@ -11,17 +11,7 @@ import { IncidentDto, Status } from "./models";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
-import {
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  PauseIcon,
-} from "@heroicons/react/24/outline";
-
-const statusIcons = {
-  [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
-  [Status.Resolved]: <CheckCircleIcon className="w-4 h-4 mr-2" />,
-  [Status.Acknowledged]: <PauseIcon className="w-4 h-4 mr-2" />,
-};
+import { STATUS_ICONS } from "@/app/incidents/statuses";
 
 const customSelectStyles = {
   control: (
@@ -81,7 +71,7 @@ export default function IncidentChangeStatusModal({
       value: status,
       label: (
         <div className="flex items-center">
-          {statusIcons[status]}
+          {STATUS_ICONS[status]}
           <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
         </div>
       ),

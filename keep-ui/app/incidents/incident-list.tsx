@@ -1,18 +1,22 @@
 "use client";
-import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
+import { Card, Title, Subtitle, Button, Badge, Callout } from "@tremor/react";
 import Loading from "app/loading";
-import { useState } from "react";
+import React, { useState } from "react";
 import { IncidentDto } from "./models";
 import CreateOrUpdateIncident from "./create-or-update-incident";
 import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
-import { IncidentPlaceholder } from "./IncidentPlaceholder";
+import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import {
+  ExclamationCircleIcon,
+  PlusCircleIcon,
+} from "@heroicons/react/24/outline";
 import PredictedIncidentsTable from "./predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentTableFilters } from "./incident-table-filters";
 import { useIncidentFilterContext } from "./incident-table-filters-context";
+import { IncidentListError } from "@/app/incidents/incident-list-error";
 
 interface Pagination {
   limit: number;
@@ -27,7 +31,7 @@ interface Filters {
   affected_services: string[];
 }
 
-export default function Incident() {
+export default function IncidentList() {
   const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
@@ -37,8 +41,14 @@ export default function Incident() {
     { id: "creation_time", desc: true },
   ]);
 
-  const { statuses, severities, assignees, services, sources } =
-    useIncidentFilterContext();
+  const {
+    statuses,
+    severities,
+    assignees,
+    services,
+    sources,
+    areFiltersApplied,
+  } = useIncidentFilterContext();
 
   const filters: Filters = {
     status: statuses,
@@ -52,6 +62,7 @@ export default function Incident() {
     data: incidents,
     isLoading,
     mutate: mutateIncidents,
+    error: incidentsError,
   } = useIncidents(
     true,
     incidentsPagination.limit,
@@ -74,6 +85,7 @@ export default function Incident() {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
+    setIncidentToEdit(null);
   };
 
   const handleStartEdit = (incident: IncidentDto) => {
@@ -85,6 +97,50 @@ export default function Incident() {
     setIncidentToEdit(null);
     setIsFormOpen(false);
   };
+
+  console.log({
+    incidents,
+    filters,
+  });
+
+  function renderIncidents() {
+    if (incidentsError) {
+      return (
+        <Card className="flex-grow">
+          <IncidentListError />
+        </Card>
+      );
+    }
+
+    if (isLoading) {
+      // TODO: only show this on the initial load
+      return (
+        <Card className="flex-grow">
+          <Loading />
+        </Card>
+      );
+    }
+
+    if (incidents && (incidents.items.length > 0 || areFiltersApplied)) {
+      return (
+        <IncidentsTable
+          incidents={incidents}
+          mutate={mutateIncidents}
+          setPagination={setIncidentsPagination}
+          sorting={incidentsSorting}
+          setSorting={setIncidentsSorting}
+          editCallback={handleStartEdit}
+        />
+      );
+    }
+
+    // This is shown on the cold page load. FIXME
+    return (
+      <Card className="flex-grow">
+        <IncidentListPlaceholder setIsFormOpen={setIsFormOpen} />
+      </Card>
+    );
+  }
 
   return (
     <div className="flex h-full w-full">
@@ -127,23 +183,9 @@ export default function Incident() {
               </Button>
             </div>
           </div>
+          {/* Filters are placed here so the table could be in loading/not-found state without affecting the controls */}
           <IncidentTableFilters />
-          <Card className="flex-grow">
-            {isLoading ? (
-              <Loading />
-            ) : incidents && incidents.items.length > 0 ? (
-              <IncidentsTable
-                incidents={incidents}
-                mutate={mutateIncidents}
-                setPagination={setIncidentsPagination}
-                sorting={incidentsSorting}
-                setSorting={setIncidentsSorting}
-                editCallback={handleStartEdit}
-              />
-            ) : (
-              <IncidentPlaceholder setIsFormOpen={setIsFormOpen} />
-            )}
-          </Card>
+          {renderIncidents()}
         </div>
       </div>
       <Modal

@@ -1,11 +1,10 @@
 import {
-  ArrowPathIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   TableCellsIcon,
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/16/solid";
 import { Button, Text } from "@tremor/react";
 import {
   StylesConfig,
@@ -32,7 +31,8 @@ interface OptionType {
 const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
   control: (provided, state) => ({
     ...provided,
-    borderColor: state.isFocused ? "orange" : provided.borderColor,
+    borderColor: state.isFocused ? "orange" : "rgb(229 231 235)",
+    borderRadius: "0.5rem",
     "&:hover": { borderColor: "orange" },
     boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
   }),
@@ -93,35 +93,39 @@ export default function IncidentPagination({ table, isRefreshAllowed }: Props) {
         />
         <div className="flex">
           <Button
+            className="pagination-button"
             icon={ChevronDoubleLeftIcon}
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
             size="xs"
-            color="orange"
+            color="gray"
             variant="secondary"
           />
           <Button
+            className="pagination-button"
             icon={ChevronLeftIcon}
             onClick={table.previousPage}
             disabled={!table.getCanPreviousPage()}
             size="xs"
-            color="orange"
+            color="gray"
             variant="secondary"
           />
           <Button
+            className="pagination-button"
             icon={ChevronRightIcon}
             onClick={table.nextPage}
             disabled={!table.getCanNextPage()}
             size="xs"
-            color="orange"
+            color="gray"
             variant="secondary"
           />
           <Button
+            className="pagination-button"
             icon={ChevronDoubleRightIcon}
             onClick={() => table.setPageIndex(pageCount - 1)}
             disabled={!table.getCanNextPage()}
             size="xs"
-            color="orange"
+            color="gray"
             variant="secondary"
           />
         </div>

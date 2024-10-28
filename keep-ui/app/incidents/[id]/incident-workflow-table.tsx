@@ -15,6 +15,7 @@ import {
   TableRow,
   Button,
   Badge,
+  Card,
 } from "@tremor/react";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import Skeleton from "react-loading-skeleton";
@@ -186,65 +187,69 @@ export default function IncidentWorkflowTable({ incident }: Props) {
 
   return (
     <>
-      {!isLoading && (workflows?.items ?? []).length === 0 && (
-        <Callout
-          className="mt-4 w-full"
-          title="No Workflows"
-          icon={ExclamationTriangleIcon}
-          color="orange"
-        >
-          No workflows have been executed for this incident yet.
-        </Callout>
-      )}
-
-      <Table>
-        <TableHead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHeaderCell key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHeaderCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableHead>
-        {workflows && workflows.items.length > 0 && (
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className="hover:bg-slate-100 cursor-pointer"
-                onClick={() => handleRowClick(row.original)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+      <Card className="p-0 overflow-hidden">
+        {!isLoading && (workflows?.items ?? []).length === 0 && (
+          <Callout
+            className="m-4"
+            title="No Workflows"
+            icon={ExclamationTriangleIcon}
+            color="orange"
+          >
+            No workflows have been executed for this incident yet.
+          </Callout>
+        )}
+        <Table>
+          <TableHead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHeaderCell key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                  </TableHeaderCell>
                 ))}
               </TableRow>
             ))}
-          </TableBody>
-        )}
-        {(isLoading || (workflows?.items ?? []).length === 0) && (
-          <TableBody>
-            {Array(pagination.pageSize)
-              .fill("")
-              .map((_, index) => (
-                <TableRow key={`skeleton-${index}`}>
-                  {columns.map((_, cellIndex) => (
-                    <TableCell key={`cell-${cellIndex}`}>
-                      <Skeleton />
+          </TableHead>
+          {workflows && workflows.items.length > 0 && (
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="hover:bg-slate-100 cursor-pointer"
+                  onClick={() => handleRowClick(row.original)}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))}
-          </TableBody>
-        )}
-      </Table>
+            </TableBody>
+          )}
+          {(isLoading || (workflows?.items ?? []).length === 0) && (
+            <TableBody>
+              {Array(pagination.pageSize)
+                .fill("")
+                .map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    {columns.map((_, cellIndex) => (
+                      <TableCell key={`cell-${cellIndex}`}>
+                        <Skeleton />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+            </TableBody>
+          )}
+        </Table>
+      </Card>
 
       <div className="mt-4 mb-8">
         <IncidentPagination table={table} isRefreshAllowed={true} />
