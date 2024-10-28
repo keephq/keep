@@ -59,7 +59,7 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         org_id = payload.get("active_organization", {}).get("id")
         org_realm = payload.get("active_organization", {}).get("name")
         if org_id is None or org_realm is None:
-            logger.error(
+            logger.warning(
                 "Invalid Keycloak configuration - no org information for user. Check organization mapper: https://github.com/keephq/keep/blob/main/keycloak/keep-realm.json#L93"
             )
         role = (
