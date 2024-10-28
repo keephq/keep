@@ -4,7 +4,7 @@ import hmac
 import json
 import logging
 import os
-from typing import Optional, List
+from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
@@ -25,7 +25,12 @@ from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
 from keep.api.core.db import get_alert_audit as get_alert_audit_db
-from keep.api.core.db import get_alerts_by_fingerprint, get_enrichment, get_last_alerts, get_alerts_metrics_by_provider
+from keep.api.core.db import (
+    get_alerts_by_fingerprint,
+    get_alerts_metrics_by_provider,
+    get_enrichment,
+    get_last_alerts,
+)
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
@@ -37,15 +42,15 @@ from keep.api.models.alert import (
 from keep.api.models.alert_audit import AlertAuditDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.search_alert import SearchAlertsRequest
+from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.email_utils import EmailTemplates, send_email
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.api.utils.time_stamp_helpers import get_time_stamp_filter
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
-from keep.api.utils.time_stamp_helpers import get_time_stamp_filter
-from keep.api.models.time_stamp import TimeStampFilter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -447,19 +452,23 @@ def enrich_alert(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
+    dispose_on_new_alert: Optional[bool] = Query(
+        False, description="Dispose on new alert"
+    ),
 ) -> dict[str, str]:
-    return _enrich_alert(enrich_data, authenticated_entity=authenticated_entity)
+    return _enrich_alert(
+        enrich_data,
+        authenticated_entity=authenticated_entity,
+        dispose_on_new_alert=dispose_on_new_alert,
+    )
 
 
 def _enrich_alert(
     enrich_data: EnrichAlertRequestBody,
-    pusher_client: Pusher = Depends(get_pusher_client),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    dispose_on_new_alert: Optional[bool] = Query(
-        False, description="Dispose on new alert"
-    ),
+    dispose_on_new_alert: Optional[bool] = False,
 ) -> dict[str, str]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
@@ -469,7 +478,6 @@ def _enrich_alert(
             "tenant_id": tenant_id,
         },
     )
-
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         # Shahar: TODO, change to the specific action type, good enough for now
@@ -530,6 +538,7 @@ def _enrich_alert(
             logger.exception("Failed to push alert to elasticsearch")
             pass
         # use pusher to push the enriched alert to the client
+        pusher_client = get_pusher_client()
         if pusher_client:
             logger.info("Telling client to poll alerts")
             try:
@@ -770,17 +779,15 @@ def get_alert_quality(
 ):
     logger.info(
         "Fetching alert quality metrics per provider",
-        extra={
-            "tenant_id": authenticated_entity.tenant_id,
-            "fields": fields
-        },
-        
+        extra={"tenant_id": authenticated_entity.tenant_id, "fields": fields},
     )
     start_date = time_stamp.lower_timestamp if time_stamp else None
     end_date = time_stamp.upper_timestamp if time_stamp else None
     db_alerts_quality = get_alerts_metrics_by_provider(
-        tenant_id=authenticated_entity.tenant_id, start_date=start_date, end_date=end_date,
-        fields=fields
+        tenant_id=authenticated_entity.tenant_id,
+        start_date=start_date,
+        end_date=end_date,
+        fields=fields,
     )
-    
+
     return db_alerts_quality
