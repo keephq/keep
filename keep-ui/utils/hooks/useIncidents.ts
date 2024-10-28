@@ -63,7 +63,9 @@ export const useIncidents = (
 
   return {
     ...swrValue,
-    isLoading: swrValue.isLoading || sessionStatus === "loading",
+    isLoading:
+      swrValue.isLoading ||
+      (!options.fallbackData && sessionStatus === "loading"),
   };
 };
 

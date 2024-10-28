@@ -2,7 +2,7 @@
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "app/loading";
 import React, { useState } from "react";
-import { IncidentDto } from "./models";
+import { IncidentDto, PaginatedIncidentsDto } from "@/app/incidents/models";
 import CreateOrUpdateIncident from "./create-or-update-incident";
 import IncidentsTable from "./incidents-table";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
@@ -28,7 +28,11 @@ interface Filters {
   affected_services: string[];
 }
 
-export default function IncidentList() {
+export default function IncidentList({
+  initialData,
+}: {
+  initialData?: PaginatedIncidentsDto;
+}) {
   const [incidentsPagination, setIncidentsPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
@@ -65,7 +69,12 @@ export default function IncidentList() {
     incidentsPagination.limit,
     incidentsPagination.offset,
     incidentsSorting[0],
-    filters
+    filters,
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount: !initialData,
+      fallbackData: initialData,
+    }
   );
   const {
     data: predictedIncidents,
@@ -94,11 +103,6 @@ export default function IncidentList() {
     setIncidentToEdit(null);
     setIsFormOpen(false);
   };
-
-  console.log({
-    incidents,
-    filters,
-  });
 
   function renderIncidents() {
     if (incidentsError) {
