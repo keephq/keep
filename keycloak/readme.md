@@ -8,7 +8,9 @@ Keycloak: http://localhost:8181/auth/ (keep_kc:keep_kc)
 Keep login page: http://localhost:3000/
 
 ## For Azure:
-Instruction: https://rahulroyz.medium.com/using-keycloak-as-idp-for-azure-ad-sso-authentication-role-authorization-0b309c15eadc
+Instructions: 
+1. https://rahulroyz.medium.com/using-keycloak-as-idp-for-azure-ad-sso-authentication-role-authorization-0b309c15eadc
+2. https://rahulroyz.medium.com/using-keycloak-as-idp-for-azure-ad-role-authorization-part-2-map-ad-groups-to-keycloak-roles-9850d4acd536
 
 Set email, first name & last name for keep_admin user: http://localhost:8181/auth/admin/master/console/#/keep/users
 Also please assign admin role for keep_admin. 
