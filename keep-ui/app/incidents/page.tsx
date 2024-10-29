@@ -17,7 +17,7 @@ const defaultIncidentsParams: GetIncidentsParams = {
 };
 
 export default async function Page() {
-  let incidents: PaginatedIncidentsDto | null;
+  let incidents: PaginatedIncidentsDto | null = null;
   try {
     const session = await getServerSession(authOptions);
     const apiUrl = getApiURL();
