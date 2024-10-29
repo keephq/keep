@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import Loader from "./loader";
 import { Provider } from "../../providers/providers";
-import { KeepApiError } from "../../error";
+import { KeepApiError } from "@/shared/lib/KeepApiError";
 import { useProviders } from "utils/hooks/useProviders";
 
 const Builder = dynamic(() => import("./builder"), {

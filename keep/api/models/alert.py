@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from uuid import UUID
 
 import pytz
@@ -18,6 +18,9 @@ from pydantic import (
 )
 from sqlalchemy import desc
 from sqlmodel import col
+
+if TYPE_CHECKING:
+    from keep.api.models.db.alert import Incident
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +111,8 @@ class IncidentStatus(Enum):
     RESOLVED = "resolved"
     # Incident has been acknowledged but not resolved
     ACKNOWLEDGED = "acknowledged"
+    # Incident was merged with another incident
+    MERGED = "merged"
 
 
 class IncidentSeverity(SeverityBaseInterface):
@@ -409,6 +414,10 @@ class IncidentDto(IncidentDtoIn):
 
     same_incident_in_the_past_id: UUID | None
 
+    merged_into_incident_id: UUID | None
+    merged_by: str | None
+    merged_at: datetime.datetime | None
+
     _tenant_id: str = PrivateAttr()
 
     def __str__(self) -> str:
@@ -455,7 +464,7 @@ class IncidentDto(IncidentDtoIn):
         return values
 
     @classmethod
-    def from_db_incident(cls, db_incident):
+    def from_db_incident(cls, db_incident: "Incident"):
 
         severity = (
             IncidentSeverity.from_number(db_incident.severity)
@@ -483,11 +492,27 @@ class IncidentDto(IncidentDtoIn):
             services=db_incident.affected_services or [],
             rule_fingerprint=db_incident.rule_fingerprint,
             same_incident_in_the_past_id=db_incident.same_incident_in_the_past_id,
+            merged_into_incident_id=db_incident.merged_into_incident_id,
+            merged_by=db_incident.merged_by,
+            merged_at=db_incident.merged_at,
         )
 
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
         return dto
+
+
+class MergeIncidentsRequestDto(BaseModel):
+    source_incident_ids: list[UUID]
+    destination_incident_id: UUID
+
+
+class MergeIncidentsResponseDto(BaseModel):
+    merged_incident_ids: list[UUID]
+    skipped_incident_ids: list[UUID]
+    failed_incident_ids: list[UUID]
+    destination_incident_id: UUID
+    message: str
 
 
 class DeduplicationRuleDto(BaseModel):

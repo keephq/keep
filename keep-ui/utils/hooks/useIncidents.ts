@@ -36,7 +36,7 @@ export const useIncidents = (
   }
 ) => {
   const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   const filtersParams = new URLSearchParams();
 
@@ -50,16 +50,23 @@ export const useIncidents = (
     }
   });
 
-  return useSWR<PaginatedIncidentsDto>(
+  const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>
       session
-        ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
+        ? `/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
             sorting.desc ? "-" : ""
           }${sorting.id}&${filtersParams.toString()}`
         : null,
-    (url) => fetcher(url, session?.accessToken),
+    (url) => fetcher(apiUrl + url, session?.accessToken),
     options
   );
+
+  return {
+    ...swrValue,
+    isLoading:
+      swrValue.isLoading ||
+      (!options.fallbackData && sessionStatus === "loading"),
+  };
 };
 
 export const useIncidentAlerts = (
@@ -109,8 +116,8 @@ export const useIncident = (
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
-    () => (session && incidentId ? `${apiUrl}/incidents/${incidentId}` : null),
-    (url) => fetcher(url, session?.accessToken),
+    () => (session && incidentId ? `/incidents/${incidentId}` : null),
+    (url) => fetcher(apiUrl + url, session?.accessToken),
     options
   );
 };

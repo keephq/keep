@@ -37,22 +37,29 @@ export const deleteIncident = async ({
   mutate,
   session,
   apiUrl,
-}: Props) => {
-  if (confirm("Are you sure you want to delete this incident?")) {
-    const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-    });
+  skipConfirmation = false,
+}: Props & {
+  skipConfirmation?: boolean;
+}) => {
+  if (
+    !skipConfirmation &&
+    !confirm("Are you sure you want to delete this incident?")
+  ) {
+    return;
+  }
+  const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+    },
+  });
 
-    if (response.ok) {
-      await mutate();
-      toast.success("Incident deleted successfully");
-      return true;
-    } else {
-      toast.error("Failed to delete incident, contact us if this persists");
-      return false;
-    }
+  if (response.ok) {
+    await mutate();
+    toast.success("Incident deleted successfully");
+    return true;
+  } else {
+    toast.error("Failed to delete incident, contact us if this persists");
+    return false;
   }
 };
