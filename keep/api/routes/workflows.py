@@ -187,7 +187,7 @@ def run_workflow(
         else:
             event_class = IncidentDto
 
-        event_body = body.get("body", {})
+        event_body = body.get("body", {}) or body
 
         # if its event that was triggered by the UI with the Modal
         if "test-workflow" in event_body.get("fingerprint", "") or not body:
