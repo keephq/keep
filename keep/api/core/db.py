@@ -2895,6 +2895,7 @@ def get_incident_alerts_and_links_by_incident_id(
                 Incident.id == incident_id,
             )
             .order_by(col(Alert.timestamp).desc())
+            .options(joinedload(Alert.alert_enrichment))
         )
         if not include_unlinked:
             query = query.filter(
@@ -2903,7 +2904,7 @@ def get_incident_alerts_and_links_by_incident_id(
 
     total_count = query.count()
 
-    if limit and offset:
+    if limit is not None and offset is not None:
         query = query.limit(limit).offset(offset)
 
     return query.all(), total_count
