@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   mysql:
@@ -20,7 +20,7 @@ services:
       - keycloak-and-mysql-network
 
   keycloak:
-    image: quay.io/phasetwo/phasetwo-keycloak:latest
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak
     ports:
       - 8181:8080
     restart: unless-stopped
