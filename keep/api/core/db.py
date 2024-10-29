@@ -2109,8 +2109,23 @@ def get_provider_distribution(
     | dict[str, dict[str, datetime | list[dict[str, int]] | Any]]
 ):
     """
-    Returns hits per hour and the last alert timestamp for each provider in the past 24 hours.
-    If aggregate_all is True, returns combined distribution across all providers.
+    Calculate the distribution of incidents created over time for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose incidents are being queried.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly distribution of incidents.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'number' (int): Number of incidents created in that hour.
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
     """
     with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
@@ -2223,7 +2238,23 @@ def get_combined_workflow_execution_distribution(
     tenant_id: str, timestamp_filter: TimeStampFilter = None
 ):
     """
-    Returns counts of WorkflowExecutions started in the past 24 hours, combined across all workflows.
+    Calculate the distribution of WorkflowExecutions started over time, combined across all workflows for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose workflow executions are being analyzed.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly distribution of workflow executions.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'number' (int): Number of workflow executions started in that hour.
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
     """
     with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
@@ -2284,6 +2315,25 @@ def get_combined_workflow_execution_distribution(
 def get_incidents_created_distribution(
     tenant_id: str, timestamp_filter: TimeStampFilter = None
 ):
+    """
+    Calculate the distribution of incidents created over time for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose incidents are being queried.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly distribution of incidents.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'number' (int): Number of incidents created in that hour.
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
+    """
     with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
@@ -2339,6 +2389,26 @@ def get_incidents_created_distribution(
 
 
 def calc_incidents_mttr(tenant_id: str, timestamp_filter: TimeStampFilter = None):
+    """
+    Calculate the Mean Time to Resolve (MTTR) for incidents over time for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose incidents are being analyzed.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly MTTR of incidents.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'mttr' (float): Mean Time to Resolve incidents in that hour (in hours).
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Only includes resolved incidents.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
+    """
     with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
