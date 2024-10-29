@@ -1,5 +1,6 @@
 import ast
 import copy
+import html
 
 # TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
@@ -311,8 +312,6 @@ class IOHandler:
                 # this is happens when libraries such as datadog api client
                 # HTML escapes the string and then ast.parse fails ()
                 # https://github.com/keephq/keep/issues/137
-                import html
-
                 try:
                     unescaped_token = html.unescape(
                         token.replace("\r\n", "").replace("\n", "")
@@ -376,6 +375,8 @@ class IOHandler:
             return default
 
         if const_rendering:
+            # https://github.com/keephq/keep/issues/2326
+            rendered = html.unescape(rendered)
             return self._render(rendered, safe, default)
         return rendered
 
