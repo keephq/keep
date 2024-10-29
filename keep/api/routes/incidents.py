@@ -56,6 +56,7 @@ from keep.api.utils.pagination import (
     IncidentsPaginatedResultsDto,
     WorkflowExecutionsPaginatedResultsDto,
 )
+from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -380,14 +381,15 @@ def merge_incidents(
             authenticated_entity.email,
         )
 
-        message = f"{len(merged_ids)} incidents merged into {command.destination_incident_id} successfully"
         if not merged_ids:
             message = "No incidents merged"
+        else:
+            message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
+        
         if skipped_ids:
-            # TODO: plural
-            message += f", {len(skipped_ids)} incidents were skipped"
+            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
         if failed_ids:
-            message += f", {len(failed_ids)} incidents failed to merge"
+            message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,
