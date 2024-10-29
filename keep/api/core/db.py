@@ -2938,7 +2938,7 @@ def get_incident_alerts_and_links_by_incident_id(
         )
         if not include_unlinked:
             query = query.filter(
-                AlertToIncident.deleted_at == str(NULL_FOR_DELETED_AT),
+                AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
             )
 
     total_count = query.count()

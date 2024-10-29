@@ -16,7 +16,8 @@ import {
   Textarea,
 } from "@tremor/react";
 import { Droppable, Draggable } from "react-beautiful-dnd";
-import { IncidentDto, AlertDto } from "./models";
+import { AlertDto } from "./models";
+import { IncidentDto } from "../incidents/models";
 
 interface IncidentCardProps {
   incident: IncidentDto;
