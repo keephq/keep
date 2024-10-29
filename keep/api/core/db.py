@@ -2999,7 +2999,10 @@ def get_all_same_alert_ids(
 
 
 def get_alerts_data_for_incident(
-    tenant_id: str, alert_ids: list[str | UUID], session: Optional[Session] = None
+    tenant_id: str,
+    alert_ids: List[str | UUID],
+    existed_fingerprints: Optional[List[str]] = None,
+    session: Optional[Session] = None,
 ) -> dict:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
@@ -3012,12 +3015,14 @@ def get_alerts_data_for_incident(
 
     Returns: dict {sources: list[str], services: list[str], count: int}
     """
+    existed_fingerprints = existed_fingerprints or []
 
     with existed_or_new_session(session) as session:
 
         fields = (
             get_json_extract_field(session, Alert.event, "service"),
             Alert.provider_type,
+            Alert.fingerprint,
             get_json_extract_field(session, Alert.event, "severity"),
         )
 
@@ -3031,8 +3036,9 @@ def get_alerts_data_for_incident(
         sources = []
         services = []
         severities = []
+        fingerprints = set()
 
-        for service, source, severity in alerts_data:
+        for service, source, fingerprint, severity in alerts_data:
             if source:
                 sources.append(source)
             if service:
@@ -3042,12 +3048,14 @@ def get_alerts_data_for_incident(
                     severities.append(IncidentSeverity.from_number(severity))
                 else:
                     severities.append(IncidentSeverity(severity))
+            if fingerprint and fingerprint not in existed_fingerprints:
+                fingerprints.add(fingerprint)
 
         return {
             "sources": set(sources),
             "services": set(services),
-            "max_severity": max(severities) if severities else None,
-            "count": len(alerts_data),
+            "max_severity": max(severities),
+            "count": len(fingerprints),
         }
 
 
@@ -3100,6 +3108,17 @@ def add_alerts_to_incident(
                     )
                 ).all()
             )
+            existing_fingerprints = set(
+                session.exec(
+                    select(Alert.fingerprint)
+                    .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+                    .where(
+                        AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                        AlertToIncident.tenant_id == tenant_id,
+                        AlertToIncident.incident_id == incident.id,
+                    )
+                ).all()
+            )
 
             new_alert_ids = [
                 alert_id
@@ -3111,7 +3130,7 @@ def add_alerts_to_incident(
                 return incident
 
             alerts_data_for_incident = get_alerts_data_for_incident(
-                tenant_id, new_alert_ids, session
+                tenant_id, new_alert_ids, existing_fingerprints, session
             )
 
             incident.sources = list(
@@ -3240,7 +3259,9 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         # Getting aggregated data for incidents for alerts which just was removed
-        alerts_data_for_incident = get_alerts_data_for_incident(all_alert_ids, session)
+        alerts_data_for_incident = get_alerts_data_for_incident(
+            tenant_id, all_alert_ids, session=session
+        )
 
         service_field = get_json_extract_field(session, Alert.event, "service")
 

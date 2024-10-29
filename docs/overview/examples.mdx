@@ -6,10 +6,10 @@ title: "Examples"
 
 
 ## Create an incident only if the customer is on Enterprise tier
-In this example we will utilze:
+In this example we will utilize:
 
 1. Datadog for monitoring
-2. OpsGenie for incident managment
+2. OpsGenie for incident management
 3. A postgres database that stores the customer tier.
 
 This example consists of two steps:
@@ -45,7 +45,7 @@ alert:
         type: opsgenie
         config: " {{ providers.opsgenie-prod }} "
         with:
-          message: "A new alert on enteprise customer ( {{ steps.check-if-customer-is-enterprise.results[1] }} )"
+          message: "A new alert on enterprise customer ( {{ steps.check-if-customer-is-enterprise.results[1] }} )"
 ```
 
 ## Send a slack message for every Cloudwatch alarm

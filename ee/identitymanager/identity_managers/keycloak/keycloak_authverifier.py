@@ -1,4 +1,5 @@
 import os
+import logging
 
 from fastapi import Depends, HTTPException
 
@@ -7,6 +8,8 @@ from keep.identitymanager.authverifierbase import AuthVerifierBase, oauth2_schem
 from keycloak import KeycloakOpenID, KeycloakOpenIDConnection
 from keycloak.keycloak_uma import KeycloakUMA
 from keycloak.uma_permissions import UMAPermission
+
+logger = logging.getLogger(__name__)
 
 
 class KeycloakAuthVerifier(AuthVerifierBase):
@@ -55,6 +58,10 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         email = payload.get("preferred_username")
         org_id = payload.get("active_organization", {}).get("id")
         org_realm = payload.get("active_organization", {}).get("name")
+        if org_id is None or org_realm is None:
+            logger.warning(
+                "Invalid Keycloak configuration - no org information for user. Check organization mapper: https://github.com/keephq/keep/blob/main/keycloak/keep-realm.json#L93"
+            )
         role = (
             payload.get("resource_access", {})
             .get(self.keycloak_client_id, {})
