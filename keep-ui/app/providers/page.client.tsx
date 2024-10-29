@@ -1,7 +1,7 @@
 "use client";
 import { defaultProvider, Provider } from "./providers";
 import { useSession } from "next-auth/react";
-import { KeepApiError } from "../error";
+import { KeepApiError } from "@/shared/lib/KeepApiError";
 import { useApiUrl } from "utils/hooks/useConfig";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";

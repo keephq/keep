@@ -1,9 +1,15 @@
-import {Dispatch, SetStateAction, useCallback, useContext, useEffect} from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useContext,
+  useEffect,
+} from "react";
 
 import { createContext, useState, FC, PropsWithChildren } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import {useIncidentsMeta} from "../../utils/hooks/useIncidents";
-import {IncidentsMetaDto} from "./models";
+import { useIncidentsMeta } from "../../utils/hooks/useIncidents";
+import { IncidentsMetaDto } from "./models";
 
 interface IIncidentFilterContext {
   meta: IncidentsMetaDto | undefined;
@@ -19,34 +25,50 @@ interface IIncidentFilterContext {
   setAssignees: (value: string[]) => void;
   setServices: (value: string[]) => void;
   setSources: (value: string[]) => void;
+
+  areFiltersApplied: boolean;
 }
 
-const IncidentFilterContext = createContext<IIncidentFilterContext | null>(null);
+const IncidentFilterContext = createContext<IIncidentFilterContext | null>(
+  null
+);
 
-export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({ children }) => {
+export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
+  children,
+}) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const {data: incidentsMeta, isLoading} = useIncidentsMeta();
+  const { data: incidentsMeta, isLoading } = useIncidentsMeta();
 
   const setFilterValue = (filterName: string) => {
     return () => {
-     if (incidentsMeta === undefined) return [];
+      if (incidentsMeta === undefined) return [];
 
       const values = searchParams?.get(filterName);
-      const valuesArray = values?.split(',').filter(
-        value => incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
-      );
+      const valuesArray = values
+        ?.split(",")
+        .filter((value) =>
+          incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
+        );
 
       return (valuesArray || []) as string[];
-    }
-  }
+    };
+  };
 
-  const [statuses, setStatuses] = useState<string[]>(setFilterValue("statuses"));
-  const [severities, setSeverities] = useState<string[]>(setFilterValue("severities"));
-  const [assignees, setAssignees] = useState<string[]>(setFilterValue("assignees"));
-  const [services, setServices] = useState<string[]>(setFilterValue("services"));
+  const [statuses, setStatuses] = useState<string[]>(
+    setFilterValue("statuses")
+  );
+  const [severities, setSeverities] = useState<string[]>(
+    setFilterValue("severities")
+  );
+  const [assignees, setAssignees] = useState<string[]>(
+    setFilterValue("assignees")
+  );
+  const [services, setServices] = useState<string[]>(
+    setFilterValue("services")
+  );
   const [sources, setSources] = useState<string[]>(setFilterValue("sources"));
 
   useEffect(() => {
@@ -57,29 +79,31 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({ children 
       setServices(setFilterValue("services"));
       setSources(setFilterValue("sources"));
     }
-  }, [isLoading])
+  }, [isLoading]);
 
   const createQueryString = useCallback(
     (name: string, value: string[]) => {
-      const params = new URLSearchParams(searchParams?.toString())
+      const params = new URLSearchParams(searchParams?.toString());
       if (value.length == 0) {
         params.delete(name);
       } else {
         params.set(name, value.join(","));
       }
 
-
       return params.toString();
     },
     [searchParams]
-  )
+  );
 
-  const filterSetter = (filterName: string, stateSetter: Dispatch<SetStateAction<string[]>>) => {
+  const filterSetter = (
+    filterName: string,
+    stateSetter: Dispatch<SetStateAction<string[]>>
+  ) => {
     return (value: string[]) => {
-      router.push(pathname + '?' + createQueryString(filterName, value));
+      router.push(pathname + "?" + createQueryString(filterName, value));
       stateSetter(value);
-    }
-  }
+    };
+  };
 
   const contextValue: IIncidentFilterContext = {
     meta: incidentsMeta,
@@ -94,17 +118,30 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({ children 
     setAssignees: filterSetter("assignees", setAssignees),
     setServices: filterSetter("services", setServices),
     setSources: filterSetter("sources", setSources),
-  }
 
-  return <IncidentFilterContext.Provider value={contextValue}>{children}</IncidentFilterContext.Provider>
-}
+    areFiltersApplied:
+      statuses.length > 0 ||
+      severities.length > 0 ||
+      assignees.length > 0 ||
+      services.length > 0 ||
+      sources.length > 0,
+  };
+
+  return (
+    <IncidentFilterContext.Provider value={contextValue}>
+      {children}
+    </IncidentFilterContext.Provider>
+  );
+};
 
 export const useIncidentFilterContext = (): IIncidentFilterContext => {
-  const filterContext  = useContext(IncidentFilterContext);
+  const filterContext = useContext(IncidentFilterContext);
 
   if (!filterContext) {
-    throw new ReferenceError('Usage of useIncidentFilterContext outside of IncidentFilterContext provider is forbidden');
+    throw new ReferenceError(
+      "Usage of useIncidentFilterContext outside of IncidentFilterContext provider is forbidden"
+    );
   }
 
   return filterContext;
-}
+};
