@@ -218,6 +218,7 @@ class Alert(SQLModel, table=True):
         sa_relationship_kwargs={
             "primaryjoin": "and_(Alert.fingerprint == foreign(AlertEnrichment.alert_fingerprint), Alert.tenant_id == AlertEnrichment.tenant_id)",
             "uselist": False,
+            "lazy": "select",
         }
     )
 
@@ -233,12 +234,14 @@ class Alert(SQLModel, table=True):
                 ))""",
             "uselist": True,
             "overlaps": "alert,incident",
+            "lazy": "select",
         }
     )
     alert_to_incident_link: List[AlertToIncident] = Relationship(
         back_populates="alert",
         sa_relationship_kwargs={
             "overlaps": "alerts,incidents"
+            "lazy": "select",
         }
     )
 
