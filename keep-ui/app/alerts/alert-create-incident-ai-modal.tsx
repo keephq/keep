@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import Modal from "@/components/ui/Modal";
 import { Callout, Button, Title } from "@tremor/react";
 import { useSession } from "next-auth/react";
@@ -6,11 +6,9 @@ import { toast } from "react-toastify";
 import Loading from "../loading";
 import { AlertDto } from "./models";
 import { IncidentDto } from "../incidents/models";
-import { useConfig } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { DragDropContext } from "react-beautiful-dnd";
 import IncidentCard from "./alert-create-incident-ai-card";
-// @ts-ignore
-import incidentsData from "./incidents.json";
 import { useIncidents } from "utils/hooks/useIncidents";
 
 interface CreateIncidentWithAIModalProps {
@@ -48,7 +46,7 @@ const CreateIncidentWithAIModal = ({
   const [suggestionId, setSuggestionId] = useState<string>("");
   const { data: session } = useSession();
   const { data: configData } = useConfig();
-  const apiUrl = configData?.API_URL!;
+  const apiUrl = useApiUrl();
   const { mutate: mutateIncidents } = useIncidents(
     true,
     20,
