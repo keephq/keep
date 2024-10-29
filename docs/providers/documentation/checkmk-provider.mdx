@@ -17,7 +17,7 @@ To connect Checkmk to Keep, you need to configure it as a webhook from Checkmk. 
 2. You can download the Keep webhook script using the following command:
 
 ```bash
-wget -O webhook-keephq.py https://github.com/keephq/keep/blob/main/keep/providers/checkmk_provider/webhook-keephq.py?raw=true
+wget -O webhook-keep.py https://github.com/keephq/keep/blob/main/keep/providers/checkmk_provider/webhook-keep.py?raw=true
 ```
 
 3. Copy the downloaded script to the following path on the Checkmk server:
@@ -25,21 +25,21 @@ wget -O webhook-keephq.py https://github.com/keephq/keep/blob/main/keep/provider
 If you are using Checkmk Docker container, then copy it to the following path according to your docker volume mapping:
 
 ```bash
-cp webhook-keephq.py /omd/sites/<site_name>/local/share/check_mk/notifications/webhook-keephq.py
+cp webhook-keep.py /omd/sites/<site_name>/local/share/check_mk/notifications/webhook-keep.py
 cd /omd/sites/<site_name>/local/share/check_mk/notifications
 ```
 
 If you are using Checkmk installed on the server, then copy it to the following path:
 
 ```bash
-cp webhook-keephq.py ~/local/share/check_mk/notifications/webhook-keephq.py
+cp webhook-keep.py ~/local/share/check_mk/notifications/webhook-keep.py
 cd ~/local/share/check_mk/notifications
 ```
 
 4. Make the script executable:
 
 ```bash
-chmod +x webhook-keephq.py
+chmod +x webhook-keep.py
 ```
 
 5. Now go to the Checkmk web interface and navigate to Setup
@@ -66,7 +66,7 @@ chmod +x webhook-keephq.py
     <img height="10" src="/images/checkmk-provider_3.png" />
 </Frame>
 
-7. In the Notifications method method, select "Webhook - KeepHQ" as the notification method.
+7. In the Notifications method method, select "webhook-keep" as the notification method.
 
 <Frame
     width="100"

@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-# Webhook - KeepHQ
+# webhook-keep
+
+"""
+This script needs to be copied to the Checkmk server to send notifications to keep.
+For more details on how to configure Checkmk to send alerts to Keep, see https://docs.keephq.dev/providers/documentation/checkmk-provider.
+"""
 
 import os
 import sys
 import requests
 
 
-# Get KeepHQ Webhook URL and API Key from environment variables
+# Get keep Webhook URL and API Key from environment variables
 def GetPluginParams():
     env_vars = os.environ
 
@@ -15,7 +20,7 @@ def GetPluginParams():
 
     # "None", if not in the environment variables
     if (WebHookURL == "None" or API_KEY == "None"):
-        print("KeepHQ-plugin: Missing Webhook URL or API Key")
+        print("keep-plugin: Missing Webhook URL or API Key")
         return 2, ""    # https://docs.checkmk.com/latest/en/notifications.html#_traceable_notifications
 
     return 0, WebHookURL
@@ -123,8 +128,8 @@ def GetNotificationDetails():
     return notify
 
 
-# Start KeepHQ workflow
-def StartKeepHQWorkflow(WebHookURL, data):
+# Start Keep workflow
+def StartKeepWorkflow(WebHookURL, data):
     return_code = 0
 
     API_KEY = str(os.environ.get("NOTIFY_PARAMETER_2"))
@@ -139,32 +144,32 @@ def StartKeepHQWorkflow(WebHookURL, data):
         response = requests.post(WebHookURL, headers=headers, json=data)
 
         if response.status_code == 200:
-            print("KeepHQ-plugin: Workflow started successfully.")
+            print("keep-plugin: Workflow started successfully.")
         else:
             print(
-                f"KeepHQ-plugin: Failed to start the workflow. Status code: {response.status_code}")
+                f"keep-plugin: Failed to start the workflow. Status code: {response.status_code}")
             print(response.text)
             return_code = 2
     except Exception as e:
-        print(f"KeepHQ-plugin: An error occurred: {e}")
+        print(f"keep-plugin: An error occurred: {e}")
         return_code = 2
 
     return return_code
 
 
 def main():
-    print("KeepHQ-plugin: Starting...")
+    print("keep-plugin: Starting...")
     return_code, WebHookURL = GetPluginParams()
 
     if return_code != 0:
         return return_code   # Abort, if parameter for the webhook is missing
 
-    print("KeepHQ-plugin: Getting notification details...")
+    print("keep-plugin: Getting notification details...")
     data = GetNotificationDetails()
 
-    print("KeepHQ-plugin: Starting KeepHQ workflow...")
-    return_code = StartKeepHQWorkflow(WebHookURL, data)
-    print("KeepHQ-plugin: Finished.")
+    print("keep-plugin: Starting Keep workflow...")
+    return_code = StartKeepWorkflow(WebHookURL, data)
+    print("keep-plugin: Finished.")
     return return_code
 
 

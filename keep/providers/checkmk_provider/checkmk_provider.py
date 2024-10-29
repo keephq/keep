@@ -41,6 +41,8 @@ class CheckmkProvider(BaseProvider):
 
   PROVIDER_DISPLAY_NAME = "Checkmk"
   PROVIDER_TAGS = ["alert"]
+
+  FINGERPRINT_FIELDS = ["id"]
   
   def __init__(
       self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -55,12 +57,17 @@ class CheckmkProvider(BaseProvider):
 
   @staticmethod
   def _format_alert(event: dict, provider_instance: BaseProvider = None) -> AlertDto | list[AlertDto]:
+    """
+    Service alerts and Host alerts have different fields, so we are mapping the fields based on the event type.
+    """
     def _check_values(value):
-      if value not in event or event[value] == '':
+      if value not in event or event.get(value) == '':
         return None
-      return event[value]
+      return event.get(value)
     
-    # based on the status of the event, set the severity
+    """
+    Service alerts don't have a status field, so we are mapping the status based on the severity.
+    """
     def _set_severity(status):
       if status == "UP":
         return AlertSeverity.INFO
