@@ -140,6 +140,7 @@
             "providers/documentation/grafana-provider",
             "providers/documentation/grafana_incident-provider",
             "providers/documentation/grafana_oncall-provider",
+            "providers/documentation/graylog-provider",
             "providers/documentation/http-provider",
             "providers/documentation/ilert-provider",
             "providers/documentation/incidentio-provider",
