@@ -162,7 +162,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     def _headers(self):
         return {
             "Accept": "application/json",
-            "X-Requested-By": "KeepHQ",
+            "X-Requested-By": "Keep",
         }
 
     @property
@@ -426,7 +426,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             parsed_url = urlparse(keep_api_url)
             query_params = parsed_url.query
             provider_id = query_params.split("provider_id=")[-1]
-            notification_name = f"KeepHQ-{provider_id}"
+            notification_name = f"Keep-{provider_id}"
 
             # Whitelist URL
             url_whitelist = self.__get_url_whitelist()
@@ -461,7 +461,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.info("Creating new notification")
             notification_body = {
                 "title": notification_name,
-                "description": "Hello, this Notification is created by KeepHQ, please do not change the title.",
+                "description": "Hello, this Notification is created by Keep, please do not change the title.",
                 "config": {
                     "type": "http-notification-v2",
                     "basic_auth": None,
