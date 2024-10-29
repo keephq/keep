@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.27.6"
+version = "0.27.7"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -41,7 +41,7 @@ google-cloud-secret-manager = "^2.16.1"
 python-jose = "^3.3.0"
 jwcrypto = "^1.5.6"
 sqlalchemy = "1.4.41"
-snowflake-connector-python = "3.12.1"
+snowflake-connector-python = "3.12.3"
 openai = "1.37.1"
 opentelemetry-sdk = ">=1.20.0,<1.22"
 opentelemetry-instrumentation-fastapi = "^0.41b0"
