@@ -4,32 +4,23 @@ import {
   useCopilotChatSuggestions,
 } from "@copilotkit/react-ui";
 import { IncidentDto } from "../models";
-import {
-  useIncident,
-  useIncidentAlerts,
-  useIncidents,
-} from "utils/hooks/useIncidents";
+import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import Loading from "app/loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
-import { updateIncidentRequest } from "../create-or-update-incident";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
-import { toast } from "react-toastify";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
 import { Card } from "@tremor/react";
+import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 export default function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
-  const apiUrl = useApiUrl();
-  const { mutate } = useIncidents(true, 20);
-  const { mutate: mutateIncident } = useIncident(incident.id);
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id
   );
-  const { data: session } = useSession();
+
+  const { updateIncident } = useIncidentActions();
 
   useCopilotReadable({
     description: "incidentDetails",
@@ -79,22 +70,16 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
       },
     ],
     handler: async ({ name, summary }) => {
-      const response = await updateIncidentRequest({
-        session: session,
-        incidentId: incident.id,
-        incidentName: name,
-        incidentUserSummary: summary,
-        incidentAssignee: incident.assignee,
-        incidentSameIncidentInThePastId: incident.same_incident_in_the_past_id,
-        generatedByAi: true,
-        apiUrl: apiUrl!,
-      });
-
-      if (response.ok) {
-        mutate();
-        mutateIncident();
-        toast.success("Incident updated successfully");
-      }
+      await updateIncident(
+        incident.id,
+        {
+          user_generated_name: name,
+          user_summary: summary,
+          assignee: incident.assignee,
+          same_incident_in_the_past_id: incident.same_incident_in_the_past_id,
+        },
+        true
+      );
     },
   });
 

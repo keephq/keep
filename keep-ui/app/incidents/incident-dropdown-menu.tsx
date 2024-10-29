@@ -1,5 +1,4 @@
 import {
-  ChevronDoubleRightIcon,
   EllipsisHorizontalIcon,
   PencilIcon,
   PlayIcon,
@@ -7,20 +6,21 @@ import {
 } from "@heroicons/react/24/outline";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { IncidentDto } from "./models";
+import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 interface Props {
   incident: IncidentDto;
   handleEdit: (incident: IncidentDto) => void;
   handleRunWorkflow: (incident: IncidentDto) => void;
-  handleDelete: (incident: IncidentDto) => void;
 }
 
 export function IncidentDropdownMenu({
   incident,
   handleEdit,
   handleRunWorkflow,
-  handleDelete,
 }: Props) {
+  const { deleteIncident } = useIncidentActions();
+
   return (
     <>
       <DropdownMenu.Menu icon={EllipsisHorizontalIcon} label="">
@@ -49,7 +49,7 @@ export function IncidentDropdownMenu({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            handleDelete(incident);
+            deleteIncident(incident.id);
           }}
         />
       </DropdownMenu.Menu>
