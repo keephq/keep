@@ -1,4 +1,4 @@
-import { KeepApiError } from '../app/error';
+import { KeepApiError } from "@/shared/lib/KeepApiError";
 
 export const fetcher = async (
   url: string,
@@ -17,7 +17,7 @@ export const fetcher = async (
     // if the response has detail field, throw the detail field
     if (response.headers.get("content-type")?.includes("application/json")) {
       const data = await response.json();
-      if(response.status === 401) {
+      if (response.status === 401) {
         throw new KeepApiError(
           `${data.message || data.detail}`,
           url,

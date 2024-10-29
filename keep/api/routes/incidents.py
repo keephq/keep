@@ -15,6 +15,7 @@ from sqlmodel import Session
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
+    DestinationIncidentNotFound,
     add_audit,
     change_incident_status_by_id,
     confirm_predicted_incident_by_id,
@@ -27,6 +28,7 @@ from keep.api.core.db import (
     get_last_incidents,
     get_session,
     get_workflow_executions_for_incident_or_alert,
+    merge_incidents_to_id,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
 )
@@ -41,6 +43,8 @@ from keep.api.models.alert import (
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
+    MergeIncidentsRequestDto,
+    MergeIncidentsResponseDto,
 )
 from keep.api.models.db.ai_suggestion import AISuggestionType
 from keep.api.models.db.alert import AlertActionType, AlertAudit
@@ -52,6 +56,7 @@ from keep.api.utils.pagination import (
     IncidentsPaginatedResultsDto,
     WorkflowExecutionsPaginatedResultsDto,
 )
+from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -322,6 +327,54 @@ def delete_incident(
             extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
         )
     return Response(status_code=202)
+
+
+@router.post(
+    "/merge", description="Merge incidents", response_model=MergeIncidentsResponseDto
+)
+def merge_incidents(
+    command: MergeIncidentsRequestDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+) -> MergeIncidentsResponseDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Merging incidents",
+        extra={
+            "source_incident_ids": command.source_incident_ids,
+            "destination_incident_id": command.destination_incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
+            tenant_id,
+            command.source_incident_ids,
+            command.destination_incident_id,
+            authenticated_entity.email,
+        )
+
+        if not merged_ids:
+            message = "No incidents merged"
+        else:
+            message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
+
+        if skipped_ids:
+            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
+        if failed_ids:
+            message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
+
+        return MergeIncidentsResponseDto(
+            merged_incident_ids=merged_ids,
+            skipped_incident_ids=skipped_ids,
+            failed_incident_ids=failed_ids,
+            destination_incident_id=command.destination_incident_id,
+            message=message,
+        )
+    except DestinationIncidentNotFound as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get(
