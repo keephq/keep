@@ -2950,7 +2950,9 @@ def get_all_same_alert_ids(
 
 
 def get_alerts_data_for_incident(
-    alert_ids: List[str | UUID], session: Optional[Session] = None
+    alert_ids: List[str | UUID],
+    existed_fingerprints: Optional[List[str]] = None,
+    session: Optional[Session] = None
 ) -> dict:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
@@ -2962,12 +2964,14 @@ def get_alerts_data_for_incident(
 
     Returns: dict {sources: list[str], services: list[str], count: int}
     """
+    existed_fingerprints = existed_fingerprints or []
 
     with existed_or_new_session(session) as session:
 
         fields = (
             get_json_extract_field(session, Alert.event, "service"),
             Alert.provider_type,
+            Alert.fingerprint,
             get_json_extract_field(session, Alert.event, "severity"),
         )
 
@@ -2980,8 +2984,9 @@ def get_alerts_data_for_incident(
         sources = []
         services = []
         severities = []
+        fingerprints = set()
 
-        for service, source, severity in alerts_data:
+        for service, source, fingerprint, severity in alerts_data:
             if source:
                 sources.append(source)
             if service:
@@ -2991,12 +2996,14 @@ def get_alerts_data_for_incident(
                     severities.append(IncidentSeverity.from_number(severity))
                 else:
                     severities.append(IncidentSeverity(severity))
+            if fingerprint and fingerprint not in existed_fingerprints:
+                fingerprints.add(fingerprint)
 
         return {
             "sources": set(sources),
             "services": set(services),
             "max_severity": max(severities),
-            "count": len(alerts_data),
+            "count": len(fingerprints),
         }
 
 
@@ -3047,6 +3054,17 @@ def add_alerts_to_incident(
                     )
                 ).all()
             )
+            existing_fingerprints = set(
+                session.exec(
+                    select(Alert.fingerprint)
+                    .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+                    .where(
+                        AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                        AlertToIncident.tenant_id == tenant_id,
+                        AlertToIncident.incident_id == incident.id,
+                    )
+                ).all()
+            )
 
             new_alert_ids = [
                 alert_id for alert_id in all_alert_ids if alert_id not in existing_alert_ids
@@ -3055,9 +3073,7 @@ def add_alerts_to_incident(
             if not new_alert_ids:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(
-                new_alert_ids, session
-            )
+            alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, existing_fingerprints, session)
 
             incident.sources = list(
                 set(incident.sources if incident.sources else []) | set(alerts_data_for_incident["sources"])
@@ -3065,6 +3081,8 @@ def add_alerts_to_incident(
             incident.affected_services = list(
                 set(incident.affected_services if incident.affected_services else []) | set(alerts_data_for_incident["services"])
             )
+            # If incident has alerts already, use the max severity between existing and new alerts, otherwise use the new alerts max severity
+            incident.severity = max(incident.severity, alerts_data_for_incident["max_severity"].order) if incident.alerts_count else alerts_data_for_incident["max_severity"].order
             incident.alerts_count += alerts_data_for_incident["count"]
 
             alert_to_incident_entries = [
@@ -3098,7 +3116,6 @@ def add_alerts_to_incident(
 
             incident.start_time = started_at
             incident.last_seen_time = last_seen_at
-            incident.severity = alerts_data_for_incident["max_severity"].order
 
             session.add(incident)
             session.commit()
@@ -3177,7 +3194,7 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         # Getting aggregated data for incidents for alerts which just was removed
-        alerts_data_for_incident = get_alerts_data_for_incident(all_alert_ids, session)
+        alerts_data_for_incident = get_alerts_data_for_incident(all_alert_ids, session=session)
 
         service_field = get_json_extract_field(session, Alert.event, "service")
 
@@ -3239,6 +3256,7 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
+        incident.severity = alerts_data_for_incident["max_severity"].order
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
@@ -3246,6 +3264,80 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         return deleted
+
+
+class DestinationIncidentNotFound(Exception):
+    pass
+
+
+def merge_incidents_to_id(
+    tenant_id: str,
+    source_incident_ids: List[UUID],
+    # Maybe to add optional destionation_incident_dto to merge to
+    destination_incident_id: UUID,
+    merged_by: str | None = None,
+) -> Tuple[List[UUID], List[UUID], List[UUID]]:
+    with Session(engine) as session:
+        destination_incident = session.exec(
+            select(Incident)
+            .where(
+                Incident.tenant_id == tenant_id, Incident.id == destination_incident_id
+            )
+            .options(joinedload(Incident.alerts))
+        ).first()
+
+        if not destination_incident:
+            raise DestinationIncidentNotFound(
+                f"Destination incident with id {destination_incident_id} not found"
+            )
+
+        source_incidents = session.exec(
+            select(Incident).filter(
+                Incident.tenant_id == tenant_id,
+                Incident.id.in_(source_incident_ids),
+            )
+        ).all()
+
+        merged_incident_ids = []
+        skipped_incident_ids = []
+        failed_incident_ids = []
+        for source_incident in source_incidents:
+            source_incident_alerts_ids = [alert.id for alert in source_incident.alerts]
+            if not source_incident_alerts_ids:
+                logger.info(f"Source incident {source_incident.id} doesn't have alerts")
+                skipped_incident_ids.append(source_incident.id)
+                continue
+            source_incident.merged_into_incident_id = destination_incident.id
+            source_incident.merged_at = datetime.now(tz=timezone.utc)
+            source_incident.status = IncidentStatus.MERGED.value
+            source_incident.merged_by = merged_by
+            try:
+                remove_alerts_to_incident_by_incident_id(
+                    tenant_id,
+                    source_incident.id,
+                    [alert.id for alert in source_incident.alerts],
+                )
+            except OperationalError as e:
+                logger.error(
+                    f"Error removing alerts to incident {source_incident.id}: {e}"
+                )
+            try:
+                add_alerts_to_incident(
+                    tenant_id,
+                    destination_incident,
+                    source_incident_alerts_ids,
+                    session=session,
+                )
+                merged_incident_ids.append(source_incident.id)
+            except OperationalError as e:
+                logger.error(
+                    f"Error adding alerts to incident {destination_incident.id} from {source_incident.id}: {e}"
+                )
+                failed_incident_ids.append(source_incident.id)
+
+        session.commit()
+        session.refresh(destination_incident)
+        return merged_incident_ids, skipped_incident_ids, failed_incident_ids
 
 
 def get_alerts_count(

@@ -1,8 +1,8 @@
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable } from "@dnd-kit/sortable";
 import { Subtitle } from "@tremor/react";
 import { FiLayout } from "react-icons/fi";
 import { LinkWithIcon } from "components/LinkWithIcon"; // Ensure you import this correctly
-import classNames from 'classnames';
+import { clsx } from "clsx";
 
 interface Dashboard {
   id: string;
@@ -14,31 +14,40 @@ type DashboardLinkProps = {
   dashboard: Dashboard;
   pathname: string | null;
   deleteDashboard: (id: string) => void;
+  titleClassName?: string;
 };
 
-export const DashboardLink = ({ dashboard, pathname, deleteDashboard }: DashboardLinkProps) => {
+export const DashboardLink = ({
+  dashboard,
+  pathname,
+  deleteDashboard,
+  titleClassName,
+}: DashboardLinkProps) => {
   const href = `/dashboard/${dashboard.dashboard_name}`;
-  const isActive = decodeURIComponent(pathname|| "") === href;
+  const isActive = decodeURIComponent(pathname || "") === href;
 
-  const { isDragging } =
-    useSortable({
-      id: dashboard.id,
-    });
-
+  const { isDragging } = useSortable({
+    id: dashboard.id,
+  });
 
   return (
     <LinkWithIcon
-          href={href}
-          icon={FiLayout}
-          isDeletable={true}
-          onDelete={() => deleteDashboard(dashboard.id)}
-        >
-          <Subtitle className={classNames({
-              "text-orange-400": isActive,
-              "pointer-events-none cursor-auto": isDragging,
-            })}>
-            {dashboard.dashboard_name}
-          </Subtitle>
-        </LinkWithIcon>
+      href={href}
+      icon={FiLayout}
+      isDeletable={true}
+      onDelete={() => deleteDashboard(dashboard.id)}
+    >
+      <Subtitle
+        className={clsx(
+          {
+            "text-orange-400": isActive,
+            "pointer-events-none cursor-auto": isDragging,
+          },
+          titleClassName
+        )}
+      >
+        {dashboard.dashboard_name}
+      </Subtitle>
+    </LinkWithIcon>
   );
 };

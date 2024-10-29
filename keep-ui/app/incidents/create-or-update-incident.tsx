@@ -21,6 +21,7 @@ import { useUsers } from "utils/hooks/useUsers";
 const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "react-quill/dist/quill.snow.css";
+import "./react-quill-override.css";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -215,6 +216,7 @@ export default function CreateOrUpdateIncident({
           modules={modules}
           formats={formats} // Add formats
           placeholder="What happened?"
+          className="border border-tremor-border rounded-tremor-default shadow-tremor-input"
           required={false}
           onValueChange={setIncidentUserSummary}
         />

@@ -26,6 +26,8 @@
       "@/app/*": ["./app/*"],
       "@/pages/*": ["./pages/*"],
       "@/utils/*": ["./utils/*"],
+      "@/entities/*": ["./entities/*"],
+      "@/features/*": ["./features/*"]
     }
   },
   "include": [

@@ -3,6 +3,8 @@ module.exports = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
+    "./entities/**/*.{js,ts,jsx,tsx}",
+    "./features/**/*.{js,ts,jsx,tsx}",
     "./node_modules/@tremor/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: "class",
@@ -101,6 +103,12 @@ module.exports = {
         "tremor-default": ["0.875rem", { lineHeight: "1.25rem" }],
         "tremor-title": ["1.125rem", { lineHeight: "1.75rem" }],
         "tremor-metric": ["1.875rem", { lineHeight: "2.25rem" }],
+      },
+      animation: {
+        "scroll-shadow-left":
+          "auto linear 0s 1 normal none running scroll-shadow-left",
+        "scroll-shadow-right":
+          "auto linear 0s 1 normal none running scroll-shadow-right",
       },
     },
   },
