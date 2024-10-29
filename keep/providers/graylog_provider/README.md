@@ -4,7 +4,7 @@
 
 ### Installation
 
-1. Spin up Graylog
+1. Spin up Graylog, [docs](https://go2docs.graylog.org/6-0/downloading_and_installing_graylog/docker_installation.htm)
     ```bash
     cd keep/providers/graylog_provider
     docker compose up
@@ -26,7 +26,7 @@ import requests
 auth = ("YOUR_ACCESS_TOKEN", "token")  # from the previous step
 headers = {
     "Accept": "application/json",
-    "X-Requested-By": "KeepHQ",
+    "X-Requested-By": "Keep",
     "Content-Type": "application/json",
 }
 
@@ -49,7 +49,7 @@ input_data = {
         'override_source': None,
         'charset_name': 'UTF-8',
     },
-    'title': 'KeepHQ-Input',
+    'title': 'Keep-Input',
     'global': True,
 }
 
@@ -63,8 +63,8 @@ input_response = requests.post(
 print(input_response.text)
 
 event_data = {
-    'title': 'KeepHQ-Event',
-    'description': 'This is an event for KeepHQ',
+    'title': 'Keep-Event',
+    'description': 'This is an event for Keep',
     'priority': 3,
     'config': {
         'query': 'source:*',
@@ -107,7 +107,7 @@ print(event_response.text)
    echo 'First log message' | nc localhost 5555
    ```
 
-## Setup KeepHQ to receive from Graylog
+## Setup Keep to receive from Graylog
 
 ---
 
