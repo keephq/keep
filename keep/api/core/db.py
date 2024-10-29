@@ -19,7 +19,7 @@ import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, case, desc, literal, null, union, update, func, case
+from sqlalchemy import and_, case, desc, func, literal, null, union, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -1016,7 +1016,11 @@ def get_enrichment_with_session(session, tenant_id, fingerprint, refresh=False):
 
 
 def get_alerts_with_filters(
-    tenant_id, provider_id=None, filters=None, time_delta=1, with_incidents=False,
+    tenant_id,
+    provider_id=None,
+    filters=None,
+    time_delta=1,
+    with_incidents=False,
 ) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
@@ -1190,7 +1194,7 @@ def get_last_alerts(
     Returns:
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
-    with (Session(engine) as session):
+    with Session(engine) as session:
         # Subquery that selects the max and min timestamp for each fingerprint.
         subquery = (
             session.query(
@@ -1254,7 +1258,10 @@ def get_last_alerts(
             query = query.add_columns(AlertToIncident.incident_id.label("incident"))
             query = query.outerjoin(
                 AlertToIncident,
-                and_(AlertToIncident.alert_id == Alert.id,  AlertToIncident.deleted_at == NULL_FOR_DELETED_AT),
+                and_(
+                    AlertToIncident.alert_id == Alert.id,
+                    AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                ),
             )
 
         if provider_id:
@@ -1718,7 +1725,7 @@ def get_rule_distribution(tenant_id, minute=False):
             .join(AlertToIncident, Incident.id == AlertToIncident.incident_id)
             .filter(
                 AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                AlertToIncident.timestamp >= seven_days_ago
+                AlertToIncident.timestamp >= seven_days_ago,
             )
             .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
             .group_by(
@@ -2901,11 +2908,14 @@ def get_incident_alerts_and_links_by_incident_id(
 
     return query.all(), total_count
 
+
 def get_incident_alerts_by_incident_id(*args, **kwargs) -> tuple[List[Alert], int]:
     """
     Unpacking (List[(Alert, AlertToIncident)], int) to (List[Alert], int).
     """
-    alerts_and_links, total_alerts = get_incident_alerts_and_links_by_incident_id(*args, **kwargs)
+    alerts_and_links, total_alerts = get_incident_alerts_and_links_by_incident_id(
+        *args, **kwargs
+    )
     alerts = [alert_and_link[0] for alert_and_link in alerts_and_links]
     return alerts, total_alerts
 
@@ -2931,28 +2941,27 @@ def get_future_incidents_by_incident_id(
 
 
 def get_all_same_alert_ids(
-    tenant_id: str,
-    alert_ids: List[str | UUID],
-    session: Optional[Session] = None
+    tenant_id: str, alert_ids: List[str | UUID], session: Optional[Session] = None
 ):
     with existed_or_new_session(session) as session:
-        fingerprints_subquery = session.query(Alert.fingerprint).where(
-            Alert.tenant_id == tenant_id,
-            col(Alert.id).in_(alert_ids)
-        ).subquery()
+        fingerprints_subquery = (
+            session.query(Alert.fingerprint)
+            .where(Alert.tenant_id == tenant_id, col(Alert.id).in_(alert_ids))
+            .subquery()
+        )
         query = session.scalars(
-            select(Alert.id)
-            .where(
-            Alert.tenant_id == tenant_id,
-                col(Alert.fingerprint).in_(fingerprints_subquery)
-        ))
+            select(Alert.id).where(
+                Alert.tenant_id == tenant_id,
+                col(Alert.fingerprint).in_(fingerprints_subquery),
+            )
+        )
         return query.all()
 
 
 def get_alerts_data_for_incident(
     alert_ids: List[str | UUID],
     existed_fingerprints: Optional[List[str]] = None,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ) -> dict:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
@@ -3023,7 +3032,9 @@ def add_alerts_to_incident_by_incident_id(
 
         if not incident:
             return None
-        return add_alerts_to_incident(tenant_id, incident, alert_ids, is_created_by_ai, session)
+        return add_alerts_to_incident(
+            tenant_id, incident, alert_ids, is_created_by_ai, session
+        )
 
 
 def add_alerts_to_incident(
@@ -3067,27 +3078,38 @@ def add_alerts_to_incident(
             )
 
             new_alert_ids = [
-                alert_id for alert_id in all_alert_ids if alert_id not in existing_alert_ids
+                alert_id for alert_id in alert_ids if alert_id not in existing_alert_ids
             ]
 
             if not new_alert_ids:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, existing_fingerprints, session)
+            alerts_data_for_incident = get_alerts_data_for_incident(
+                new_alert_ids, existing_fingerprints, session
+            )
 
             incident.sources = list(
-                set(incident.sources if incident.sources else []) | set(alerts_data_for_incident["sources"])
+                set(incident.sources if incident.sources else [])
+                | set(alerts_data_for_incident["sources"])
             )
             incident.affected_services = list(
-                set(incident.affected_services if incident.affected_services else []) | set(alerts_data_for_incident["services"])
+                set(incident.affected_services if incident.affected_services else [])
+                | set(alerts_data_for_incident["services"])
             )
             # If incident has alerts already, use the max severity between existing and new alerts, otherwise use the new alerts max severity
-            incident.severity = max(incident.severity, alerts_data_for_incident["max_severity"].order) if incident.alerts_count else alerts_data_for_incident["max_severity"].order
+            incident.severity = (
+                max(incident.severity, alerts_data_for_incident["max_severity"].order)
+                if incident.alerts_count
+                else alerts_data_for_incident["max_severity"].order
+            )
             incident.alerts_count += alerts_data_for_incident["count"]
 
             alert_to_incident_entries = [
                 AlertToIncident(
-                    alert_id=alert_id, incident_id=incident.id, tenant_id=tenant_id, is_created_by_ai=is_created_by_ai
+                    alert_id=alert_id,
+                    incident_id=incident.id,
+                    tenant_id=tenant_id,
+                    is_created_by_ai=is_created_by_ai,
                 )
                 for alert_id in new_alert_ids
             ]
@@ -3187,14 +3209,19 @@ def remove_alerts_to_incident_by_incident_id(
                 AlertToIncident.tenant_id == tenant_id,
                 AlertToIncident.incident_id == incident.id,
                 col(AlertToIncident.alert_id).in_(all_alert_ids),
-            ).update({
-                "deleted_at": datetime.now(datetime.now().astimezone().tzinfo),
-            })
+            )
+            .update(
+                {
+                    "deleted_at": datetime.now(datetime.now().astimezone().tzinfo),
+                }
+            )
         )
         session.commit()
 
         # Getting aggregated data for incidents for alerts which just was removed
-        alerts_data_for_incident = get_alerts_data_for_incident(all_alert_ids, session=session)
+        alerts_data_for_incident = get_alerts_data_for_incident(
+            all_alert_ids, session=session
+        )
 
         service_field = get_json_extract_field(session, Alert.event, "service")
 
@@ -3701,7 +3728,7 @@ def get_workflow_executions_for_incident_or_alert(
             .join(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .where(
                 AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                AlertToIncident.incident_id == incident_id
+                AlertToIncident.incident_id == incident_id,
             )
         )
 
@@ -3811,37 +3838,35 @@ def is_edge_incident_alert_resolved(
                 AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
             )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
-            .where(
-                AlertToIncident.incident_id == incident.id
-            )
+            .where(AlertToIncident.incident_id == incident.id)
             .group_by(Alert.fingerprint)
             .having(func.max(Alert.timestamp))
             .order_by(direction(Alert.timestamp))
         ).first()
-        
-        return (
-            enriched_status == AlertStatus.RESOLVED.value or
-            (enriched_status is None and status == AlertStatus.RESOLVED.value)
+
+        return enriched_status == AlertStatus.RESOLVED.value or (
+            enriched_status is None and status == AlertStatus.RESOLVED.value
         )
+
 
 def get_alerts_metrics_by_provider(
     tenant_id: str,
-    start_date: Optional[datetime] = None, 
+    start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    fields: Optional[List[str]] = []
+    fields: Optional[List[str]] = [],
 ) -> Dict[str, Dict[str, Any]]:
-    
+
     dynamic_field_sums = [
         func.sum(
             case(
                 [
                     (
-                        func.json_extract(Alert.event, f'$.{field}').isnot(None) & 
-                        (func.json_extract(Alert.event, f'$.{field}') != False), 
-                        1
+                        func.json_extract(Alert.event, f"$.{field}").isnot(None)
+                        & (func.json_extract(Alert.event, f"$.{field}") != False),
+                        1,
                     )
-                ], 
-                else_=0
+                ],
+                else_=0,
             )
         ).label(f"{field}_count")
         for field in fields
@@ -3853,8 +3878,10 @@ def get_alerts_metrics_by_provider(
                 Alert.provider_type,
                 Alert.provider_id,
                 func.count(Alert.id).label("total_alerts"),
-                func.sum(case([(AlertToIncident.alert_id.isnot(None), 1)], else_=0)).label("correlated_alerts"),
-                *dynamic_field_sums
+                func.sum(
+                    case([(AlertToIncident.alert_id.isnot(None), 1)], else_=0)
+                ).label("correlated_alerts"),
+                *dynamic_field_sums,
             )
             .outerjoin(AlertToIncident, Alert.id == AlertToIncident.alert_id)
             .filter(
@@ -3865,18 +3892,19 @@ def get_alerts_metrics_by_provider(
         # Add timestamp filter only if both start_date and end_date are provided
         if start_date and end_date:
             query = query.filter(
-                Alert.timestamp >= start_date,
-                Alert.timestamp <= end_date
+                Alert.timestamp >= start_date, Alert.timestamp <= end_date
             )
 
         results = query.group_by(Alert.provider_id, Alert.provider_type).all()
-        
+
     return {
         f"{row.provider_id}_{row.provider_type}": {
             "total_alerts": row.total_alerts,
             "correlated_alerts": row.correlated_alerts,
             "provider_type": row.provider_type,
-            **{f"{field}_count": getattr(row, f"{field}_count") for field in fields}  # Add field-specific counts
+            **{
+                f"{field}_count": getattr(row, f"{field}_count") for field in fields
+            },  # Add field-specific counts
         }
         for row in results
     }

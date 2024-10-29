@@ -12,6 +12,7 @@ from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
+    DestinationIncidentNotFound,
     add_alerts_to_incident_by_incident_id,
     add_audit,
     change_incident_status_by_id,
@@ -19,18 +20,16 @@ from keep.api.core.db import (
     create_incident_from_dto,
     delete_incident_by_id,
     get_future_incidents_by_incident_id,
-    get_incident_alerts_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
+    get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     get_incidents_meta_for_tenant,
     get_last_incidents,
     get_workflow_executions_for_incident_or_alert,
+    merge_incidents_to_id,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
-    get_incidents_meta_for_tenant,
-    merge_incidents_to_id,
-    DestinationIncidentNotFound,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -40,11 +39,11 @@ from keep.api.models.alert import (
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
-    MergeIncidentsRequestDto,
     IncidentSeverity,
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
+    MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
@@ -385,7 +384,7 @@ def merge_incidents(
             message = "No incidents merged"
         else:
             message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
-        
+
         if skipped_ids:
             message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
         if failed_ids:
@@ -569,7 +568,9 @@ async def add_alerts_to_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids, is_created_by_ai)
+    add_alerts_to_incident_by_incident_id(
+        tenant_id, incident_id, alert_ids, is_created_by_ai
+    )
     try:
         logger.info("Pushing enriched alert to elasticsearch")
         elastic_client = ElasticClient(tenant_id)
@@ -596,7 +597,11 @@ async def add_alerts_to_incident(
     except Exception:
         logger.exception("Failed to push alert to elasticsearch")
         pass
-    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+
+    try:
+        __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
+    except Exception:
+        logger.exception("Failed to push incident to pusher")
 
     incident_dto = IncidentDto.from_db_incident(incident)
 

@@ -47,6 +47,7 @@ else:
 # but we also want to allow it to be nullable. MySQL doesn't allow nullable fields in primary keys, so:
 NULL_FOR_DELETED_AT = datetime(1000, 1, 1, 0, 0)
 
+
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -59,17 +60,22 @@ class AlertToIncident(SQLModel, table=True):
             primary_key=True,
         )
     )
-    alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
-    incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
-    
+    # alert: "Alert" = Relationship(
+    #     back_populates="alert_to_incident_link",
+    # )
+    # incident: "Incident" = Relationship(
+    #     back_populates="alert_to_incident_link",
+    # )
+
     is_created_by_ai: bool = Field(default=False)
 
     deleted_at: datetime = Field(
         default_factory=None,
-        nullable=True, 
+        nullable=True,
         primary_key=True,
         default=NULL_FOR_DELETED_AT,
     )
+
 
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -96,25 +102,23 @@ class Incident(SQLModel, table=True):
 
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        back_populates="incidents", link_model=AlertToIncident,
+        back_populates="incidents",
+        link_model=AlertToIncident,
         # primaryjoin is used to filter out deleted links for various DB dialects
-        sa_relationship_kwargs={
-            "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
-                or_(
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
-                ))""",
-            "uselist": True,
-            "overlaps": "alert,incident",
-        }
-        
+        # sa_relationship_kwargs={
+        #     "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
+        #         or_(
+        #             AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
+        #             AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
+        #         ))""",
+        #     "uselist": True,
+        #     "overlaps": "alert,incident",
+        # },
     )
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="incident",
-        sa_relationship_kwargs={
-            "overlaps": "alerts,incidents"
-        }
-    )
+    # alert_to_incident_link: List[AlertToIncident] = Relationship(
+    #     back_populates="incident",
+    #     sa_relationship_kwargs={"overlaps": "alerts,incidents"},
+    # )
 
     is_predicted: bool = Field(default=False)
     is_confirmed: bool = Field(default=False)
@@ -222,25 +226,22 @@ class Alert(SQLModel, table=True):
     )
 
     incidents: List["Incident"] = Relationship(
-        back_populates="alerts", 
+        back_populates="alerts",
         link_model=AlertToIncident,
-        sa_relationship_kwargs={
-            # primaryjoin is used to filter out deleted links for various DB dialects
-            "primaryjoin": f"""and_(AlertToIncident.alert_id == Alert.id,
-                or_(
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
-                ))""",
-            "uselist": True,
-            "overlaps": "alert,incident",
-        }
+        # sa_relationship_kwargs={
+        #     # primaryjoin is used to filter out deleted links for various DB dialects
+        #     "primaryjoin": f"""and_(AlertToIncident.alert_id == Alert.id,
+        #         or_(
+        #             AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
+        #             AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
+        #         ))""",
+        #     "uselist": True,
+        #     "overlaps": "alert,incident",
+        # },
     )
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="alert",
-        sa_relationship_kwargs={
-            "overlaps": "alerts,incidents"
-        }
-    )
+    # alert_to_incident_link: List[AlertToIncident] = Relationship(
+    #     back_populates="alert", sa_relationship_kwargs={"overlaps": "alerts,incidents"}
+    # )
 
     class Config:
         arbitrary_types_allowed = True
