@@ -8,7 +8,6 @@ import {
   getSortedRowModel,
   ColumnDef,
 } from "@tanstack/react-table";
-import { useSession } from "next-auth/react";
 import { IncidentDto, PaginatedIncidentsDto } from "./models";
 import React, {
   Dispatch,
@@ -20,19 +19,18 @@ import React, {
 import Image from "next/image";
 import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
-import { deleteIncident } from "./incident-candidate-actions";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import IncidentMergeModal from "@/app/incidents/incident-merge-modal";
 import { capitalize } from "@/utils/helpers";
 import { IncidentDropdownMenu } from "./incident-dropdown-menu";
 import clsx from "clsx";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
+import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -76,7 +74,6 @@ const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
   incidents: PaginatedIncidentsDto;
-  mutate: () => void;
   sorting: SortingState;
   setSorting: Dispatch<SetStateAction<any>>;
   setPagination: Dispatch<SetStateAction<any>>;
@@ -85,14 +82,12 @@ interface Props {
 
 export default function IncidentsTable({
   incidents: incidents,
-  mutate,
   setPagination,
   sorting,
   setSorting,
   editCallback,
 }: Props) {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const { deleteIncident } = useIncidentActions();
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [pagination, setTablePagination] = useState({
     pageIndex: Math.ceil(incidents.offset / incidents.limit),
@@ -100,15 +95,6 @@ export default function IncidentsTable({
   });
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
-
-  const handleDelete = useCallback((incident: IncidentDto) => {
-    deleteIncident({
-      incidentId: incident.id,
-      mutate,
-      session,
-      apiUrl: apiUrl!,
-    });
-  }, []);
 
   useEffect(() => {
     if (incidents.limit != pagination.pageSize) {
@@ -154,7 +140,6 @@ export default function IncidentsTable({
         <IncidentChangeStatusSelect
           incidentId={row.original.id}
           value={row.original.status}
-          onChange={() => mutate()}
         />
       ),
     }),
@@ -254,7 +239,6 @@ export default function IncidentsTable({
             incident={row.original}
             handleEdit={editCallback}
             handleRunWorkflow={() => setRunWorkflowModalIncident(row.original)}
-            handleDelete={() => handleDelete(row.original)}
           />
         </div>
       ),
@@ -328,15 +312,9 @@ export default function IncidentsTable({
 
     for (let i = 0; i < selectedRowIds.length; i++) {
       const incidentId = selectedRowIds[i];
-      deleteIncident({
-        incidentId,
-        mutate,
-        session,
-        apiUrl: apiUrl!,
-        skipConfirmation: true,
-      });
+      deleteIncident(incidentId, true);
     }
-  }, [apiUrl, mutate, selectedRowIds, session]);
+  }, [selectedRowIds]);
 
   return (
     <>
@@ -371,7 +349,6 @@ export default function IncidentsTable({
       {mergeOptions && (
         <IncidentMergeModal
           incidents={mergeOptions.incidents}
-          mutate={mutate}
           handleClose={() => setMergeOptions(null)}
           onSuccess={() => table.resetRowSelection()}
         />

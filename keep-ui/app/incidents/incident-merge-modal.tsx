@@ -1,14 +1,12 @@
 import { Button, Title, Subtitle } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { IncidentDto, Status } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
-import { toast } from "react-toastify";
 import { STATUS_ICONS } from "@/app/incidents/statuses";
 import { useMemo, useState } from "react";
 import Select, { GroupBase, StylesConfig } from "react-select";
 import { clsx } from "clsx";
 import "./vertical-rounded-list.css";
+import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 function IncidentRow({
   incident,
@@ -35,7 +33,6 @@ function IncidentRow({
 
 interface Props {
   incidents: IncidentDto[];
-  mutate: () => void;
   handleClose: () => void;
   onSuccess?: () => void;
 }
@@ -77,13 +74,9 @@ const customSelectStyles: StylesConfig<
 
 export default function IncidentMergeModal({
   incidents,
-  mutate,
   handleClose,
   onSuccess,
 }: Props) {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
-
   const [destinationIncidentId, setDestinationIncidentId] = useState<string>(
     incidents[0].id
   );
@@ -116,36 +109,11 @@ export default function IncidentMergeModal({
     return errorDict;
   }, [sourceIncidents]);
 
-  const handleMerge = async () => {
-    if (!sourceIncidents.length || !destinationIncident) {
-      toast.error("Please select incidents to merge.");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/incidents/merge`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
-          source_incident_ids: sourceIncidents.map((incident) => incident.id),
-          destination_incident_id: destinationIncident.id,
-        }),
-      });
-
-      if (response.ok) {
-        toast.success("Incidents merged successfully!");
-        onSuccess?.();
-        mutate();
-        handleClose();
-      } else {
-        toast.error("Failed to merge incidents.");
-      }
-    } catch (error) {
-      toast.error("An error occurred while merging incidents.");
-    }
+  const { mergeIncidents } = useIncidentActions();
+  const handleMerge = () => {
+    mergeIncidents(sourceIncidents, destinationIncident!);
+    handleClose();
+    onSuccess?.();
   };
 
   return (

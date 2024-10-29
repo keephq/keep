@@ -53,11 +53,11 @@ export const useIncidents = (
   const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>
       session
-        ? `${apiUrl}/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
+        ? `/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
             sorting.desc ? "-" : ""
           }${sorting.id}&${filtersParams.toString()}`
         : null,
-    (url) => fetcher(url, session?.accessToken),
+    (url) => fetcher(apiUrl + url, session?.accessToken),
     options
   );
 
@@ -114,8 +114,8 @@ export const useIncident = (
   const { data: session } = useSession();
 
   return useSWR<IncidentDto>(
-    () => (session && incidentId ? `${apiUrl}/incidents/${incidentId}` : null),
-    (url) => fetcher(url, session?.accessToken),
+    () => (session && incidentId ? `/incidents/${incidentId}` : null),
+    (url) => fetcher(apiUrl + url, session?.accessToken),
     options
   );
 };

@@ -95,11 +95,6 @@ export default function IncidentList() {
     setIsFormOpen(false);
   };
 
-  console.log({
-    incidents,
-    filters,
-  });
-
   function renderIncidents() {
     if (incidentsError) {
       return (
@@ -122,7 +117,6 @@ export default function IncidentList() {
       return (
         <IncidentsTable
           incidents={incidents}
-          mutate={mutateIncidents}
           setPagination={setIncidentsPagination}
           sorting={incidentsSorting}
           setSorting={setIncidentsSorting}
