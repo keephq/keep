@@ -1,0 +1,19 @@
+.vertical-rounded-list {
+    & > * {
+        &:not(:first-child) {
+            @apply -mt-px;
+        }
+
+        &:first-child:not(:last-child) {
+            @apply rounded-b-none;
+        }
+
+        &:last-child:not(:first-child) {
+            @apply rounded-t-none;
+        }
+
+        &:not(:first-child):not(:last-child) {
+            @apply rounded-t-none rounded-b-none;
+        }
+    }
+}

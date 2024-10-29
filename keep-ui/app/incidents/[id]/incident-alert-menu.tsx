@@ -1,10 +1,10 @@
-import { TrashIcon } from "@radix-ui/react-icons";
 import { Icon } from "@tremor/react";
 import { AlertDto } from "app/alerts/models";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
+import { LinkSlashIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   incidentId: string;
@@ -45,9 +45,9 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
   return (
     <div className="flex flex-col">
       <Icon
-        icon={TrashIcon}
+        icon={LinkSlashIcon}
         color="red"
-        tooltip="Remove"
+        tooltip="Remove correlation"
         className="cursor-pointer"
         onClick={onRemove}
       />

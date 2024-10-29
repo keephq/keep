@@ -331,7 +331,8 @@
             "api-ref/alerts/unenrich-alert",
             "api-ref/alerts/search-alerts",
             "api-ref/alerts/get-alert-audit",
-            "api-ref/alerts/get-alerts"
+            "api-ref/alerts/get-alerts",
+            "api-ref/alerts/get-alert-quality"
           ]
         },
         {
@@ -366,7 +367,12 @@
             "api-ref/incidents/get-incident-alerts",
             "api-ref/incidents/add-alerts-to-incident",
             "api-ref/incidents/delete-alerts-from-incident",
-            "api-ref/incidents/confirm-incident"
+            "api-ref/incidents/confirm-incident",
+            "api-ref/incidents/add-comment",
+            "api-ref/incidents/get-future-incidents-for-an-incident",
+            "api-ref/incidents/get-incident-workflows",
+            "api-ref/incidents/get-incidents-meta",
+            "api-ref/incidents/merge-incidents"
           ]
         },
         {

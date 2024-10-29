@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
+import { Card } from "@tremor/react";
 
 export default function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
@@ -109,32 +110,34 @@ export default function IncidentChat({ incident }: { incident: IncidentDto }) {
     );
 
   return (
-    <div
-      style={
-        {
-          "--copilot-kit-primary-color":
-            "rgb(249 115 22 / var(--tw-bg-opacity))",
-        } as CopilotKitCSSProperties
-      }
-      className="max-w-3xl mx-auto"
-    >
-      <CopilotChat
-        className="-mx-2"
-        instructions={`You now act as an expert incident responder.
+    <Card>
+      <div
+        style={
+          {
+            "--copilot-kit-primary-color":
+              "rgb(249 115 22 / var(--tw-bg-opacity))",
+          } as CopilotKitCSSProperties
+        }
+        className="max-w-3xl mx-auto"
+      >
+        <CopilotChat
+          className="-mx-2"
+          instructions={`You now act as an expert incident responder.
       You are responsible for resolving incidents and helping the incident responding team.
       The information you are provided with is a JSON representing all the data about the incident and a list of alerts that are related to the incident.
       Your job is to help the incident responder team to resolve the incident as soon as possible by providing insights and recommendations.
 
       Use the incident details and alerts context to give good, meaningful answers.
       If you do not know the answer or lack context, share that with the end user and ask for more context.`}
-        labels={{
-          title: "Incident Assitant",
-          initial:
-            "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
-          placeholder:
-            "For example: What do you think the root cause of this incident might be?",
-        }}
-      />
-    </div>
+          labels={{
+            title: "Incident Assitant",
+            initial:
+              "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
+            placeholder:
+              "For example: What do you think the root cause of this incident might be?",
+          }}
+        />
+      </div>
+    </Card>
   );
 }
