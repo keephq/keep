@@ -7,8 +7,8 @@ import pydantic
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseTopologyProvider
-from keep.providers.cilium_provider.observer_pb2 import FlowFilter, GetFlowsRequest
-from keep.providers.cilium_provider.observer_pb2_grpc import ObserverStub
+from keep.providers.cilium_provider.grpc.observer_pb2 import FlowFilter, GetFlowsRequest
+from keep.providers.cilium_provider.grpc.observer_pb2_grpc import ObserverStub
 from keep.providers.models.provider_config import ProviderConfig
 
 
@@ -68,8 +68,13 @@ class CiliumProvider(BaseTopologyProvider):
         # 3. try to get from pod name
         service = endpoint.pod_name
         parts = service.split("-")
-        if len(parts) >= 2:
+        if len(parts) > 2:
             return "-".join(parts[:-2])
+        elif len(parts) == 2:
+            return parts[0]
+
+        if not service:
+            return "unknown"
         return service
 
     def pull_topology(self) -> list[TopologyServiceInDto]:
