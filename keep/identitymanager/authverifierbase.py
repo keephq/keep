@@ -125,44 +125,17 @@ class AuthVerifierBase:
     ) -> AuthenticatedEntity:
         """
         Authenticate the request using either token, API key, or HTTP basic auth.
-
-        Args:
-            request (Request): The incoming request.
-            api_key (Optional[str]): The API key from the header.
-            authorization (Optional[HTTPAuthorizationCredentials]): The HTTP basic auth credentials.
-            token (Optional[str]): The OAuth2 token.
-
-        Returns:
-            AuthenticatedEntity: The authenticated entity.
-
-        Raises:
-            HTTPException: If authentication fails.
         """
         self.logger.debug("Attempting authentication")
         if token:
             self.logger.debug("Attempting to authenticate with bearer token")
-            try:
-                return self._verify_bearer_token(token)
-            except HTTPException:
-                raise
-            except Exception:
-                self.logger.exception("Failed to validate token")
-                raise HTTPException(
-                    status_code=401, detail="Invalid authentication credentials"
-                )
+            return self._verify_bearer_token(token)
 
         api_key = self._extract_api_key(request, api_key, authorization)
         if api_key:
             self.logger.debug("Attempting to authenticate with API key")
-            try:
-                return self._verify_api_key(request, api_key, authorization)
-            except HTTPException:
-                raise
-            except Exception:
-                self.logger.exception("Failed to validate API Key")
-                raise HTTPException(
-                    status_code=401, detail="Invalid authentication credentials"
-                )
+            return self._verify_api_key(request, api_key, authorization)
+
         self.logger.error("No valid authentication method found")
         raise HTTPException(
             status_code=401, detail="Missing authentication credentials"
@@ -364,14 +337,9 @@ class AuthVerifierBase:
             role=role,
         )
 
-    def _provision_user(self, tenant_api_key, user_name, role):
+    def _provision_user(self, tenant_api_key: str, user_name: str, role: str) -> None:
         """
         Create a user for impersonation.
-
-        Args:
-            tenant_api_key: The API key used for impersonation.
-            user_name: The name of the user to create.
-            role: The role of the user to create.
         """
         raise NotImplementedError(
             "User provisioning not implemented"
