@@ -51,7 +51,7 @@ interface MenuProps {
   children?: React.ReactNode;
 }
 
-export const MenuComponent = React.forwardRef<
+const MenuComponent = React.forwardRef<
   HTMLButtonElement,
   MenuProps & React.HTMLProps<HTMLButtonElement>
 >(({ icon, children, label, ...props }, forwardedRef) => {
@@ -210,6 +210,8 @@ export const MenuComponent = React.forwardRef<
   );
 });
 
+MenuComponent.displayName = "DropdownMenuComponent";
+
 interface DropdownDropdownMenuItemProps {
   label: string;
   icon?: ElementType;
@@ -256,6 +258,8 @@ const DropdownDropdownMenuItem = React.forwardRef<
   );
 });
 
+DropdownDropdownMenuItem.displayName = "DropdownDropdownMenuItem";
+
 const _DropdownMenu = React.forwardRef<
   HTMLButtonElement,
   MenuProps & React.HTMLProps<HTMLButtonElement>
@@ -272,6 +276,8 @@ const _DropdownMenu = React.forwardRef<
 
   return <MenuComponent {...props} ref={ref} />;
 });
+
+_DropdownMenu.displayName = "DropdownMenu";
 
 export const DropdownMenu = {
   Menu: _DropdownMenu,
