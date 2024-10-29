@@ -1,6 +1,24 @@
 import os
 import subprocess
 
+"""
+Shahar: this is internal script to produce the protobuf files that are used in the cilium provider.
+
+In short:
+- It downloads the proto files from the cilium repository
+- It generates the python code from the proto files
+
+The generated code is used in the cilium provider to communicate with the cilium hubble relay.
+
+Notice that the generated code is unaware of the location of the provider in Keep, so there are few adjustments needed:
+1. change all from flow.flow_pb2 import * to from keep.providers.cilium_provider.grpc.flow.flow_pb2 import *
+2. comment all the # from google.protobuf import runtime_version as _runtime_version
+3. comment all the ValidateProtobufRuntimeVersion
+
+Anyway - if you are reading this, you probably need to talk with me.
+"""
+
+
 # Create directories for the proto files
 os.makedirs("hubble_proto/google/protobuf", exist_ok=True)
 os.makedirs("hubble_proto/flow", exist_ok=True)
