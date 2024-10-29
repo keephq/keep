@@ -13,7 +13,7 @@ import { DashboardLink } from "./DashboardLink";
 import { Subtitle, Button, Badge, Text } from "@tremor/react";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { useApiUrl } from "utils/hooks/useConfig";
 
@@ -105,7 +105,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
                   Beta
                 </Badge>
                 <IoChevronUp
-                  className={classNames(
+                  className={clsx(
                     { "rotate-180": open },
                     "mr-2 text-slate-400"
                   )}
@@ -132,6 +132,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
                   dashboard={dashboard}
                   pathname={pathname}
                   deleteDashboard={deleteDashboard}
+                  titleClassName="max-w-[150px] overflow-hidden overflow-ellipsis"
                 />
               ))
             ) : (
