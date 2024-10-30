@@ -17,6 +17,34 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class SmtpProviderAuthConfig:
+    smtp_server: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "SMTP Server Address",
+            "config_main_group": "authentication",
+        }
+    )
+
+    smtp_port: int = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "SMTP port",
+            "config_main_group": "authentication",
+        },
+        default=587,
+    )
+
+    encryption: typing.Literal["SSL", "TLS"] = dataclasses.field(
+        default="TLS",
+        metadata={
+            "required": True,
+            "description": "SMTP encryption",
+            "type": "select",
+            "options": ["SSL", "TLS"],
+            "config_main_group": "authentication",
+        },
+    )
+
     smtp_username: str = dataclasses.field(
         metadata={
             "required": False,
@@ -34,33 +62,6 @@ class SmtpProviderAuthConfig:
             "config_main_group": "authentication",
         },
         default="",
-    )
-
-    smtp_server: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "SMTP Server Address",
-            "config_main_group": "authentication",
-        }
-    )
-
-    smtp_port: int = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "SMTP port",
-            "config_main_group": "authentication",
-        }
-    )
-
-    encryption: typing.Literal["SSL", "TLS"] = dataclasses.field(
-        default="TLS",
-        metadata={
-            "required": True,
-            "description": "SMTP encryption",
-            "type": "select",
-            "options": ["SSL", "TLS"],
-            "config_main_group": "authentication",
-        },
     )
 
 
