@@ -532,7 +532,7 @@ def get_workflow_by_id(
         )
         return workflow_dto
     except yaml.YAMLError:
-        logger.error(f"Invalid YAML format")
+        logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
  
 
