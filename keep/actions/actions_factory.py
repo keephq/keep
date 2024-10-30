@@ -28,8 +28,8 @@ class ActionsCRUD:
                 dto = ActionDTO(id=model.id, use=model.use, name=model.name, details=yaml.safe_load(StringIO(model.action_raw)))
                 results.append(dto)
             except ValidationError:
-                logger.warning("Unmatched Action model and the coresponding DTO", exc_info=True, extra={
-                    "data": model.dict()
+                logger.warning("Unmatched Action model and the corresponding DTO", exc_info=True, extra={
+                    "data": model.dict() if hasattr(model, 'dict') else str(model)
                 })
         return results
 
@@ -44,31 +44,31 @@ class ActionsCRUD:
                     installed_by=installed_by,
                     installation_time=time.time(),
                     name=action_dto.get("name"),
-                    use=action_dto.get("use") or action_dto.get("name"), # if there is no `use` tag, use `name` instead
+                    use=action_dto.get("use") or action_dto.get("name"),  # if there is no `use` tag, use `name` instead
                     action_raw=yaml.dump(action_dto)
                 )
                 actions.append(action)
             create_actions(actions)
-        except Exception:
+        except Exception as e:
             logger.exception("Failed to create actions")
-            raise ActionsCRUDException(status_code=422, detail="Unable to create the actions")
+            raise ActionsCRUDException(status_code=422, detail="Unable to create the actions") from e
 
     @staticmethod
     def remove_action(tenant_id: str, action_id: str):
         try:
             deleted_action = delete_action(tenant_id, action_id)
             return deleted_action
-        except Exception:
-            logger.exception("Unknown exception when delete action from database")
-            raise ActionsCRUDException(status_code=422, detail="Unable to delete the requested action")
+        except Exception as e:
+            logger.exception("Unknown exception when deleting action from database")
+            raise ActionsCRUDException(status_code=422, detail="Unable to delete the requested action") from e
 
     @staticmethod
     def get_action(tenant_id: str, action_id: str) -> Union[Action, None]:
         try:
             return get_action(tenant_id, action_id)
-        except Exception:
+        except Exception as e:
             logger.exception("Unknown exception when getting action from database")
-            raise ActionsCRUDException(status_code=400, detail="Unable to get an action")
+            raise ActionsCRUDException(status_code=400, detail="Unable to get an action") from e
 
     @staticmethod
     def update_action(tenant_id: str, action_id: str, payload: dict) -> Union[Action, None]:
@@ -80,8 +80,8 @@ class ActionsCRUD:
             )
             updated_action = update_action(tenant_id, action_id, action_payload)
             if updated_action:
-                return update_action
+                return updated_action
             raise ActionsCRUDException(status_code=422, detail="No action matched to be updated")
-        except Exception:
-            logger.exception("Uknown exception when update an action on database")
-            raise ActionsCRUDException(status_code=400, detail="Unable to update an action")
+        except Exception as e:
+            logger.exception("Unknown exception when updating an action in the database")
+            raise ActionsCRUDException(status_code=400, detail="Unable to update an action") from e
