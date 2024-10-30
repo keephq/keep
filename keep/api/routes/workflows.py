@@ -492,7 +492,7 @@ def get_raw_workflow_by_id(
         },
     )
     
-@router.get("/{workflow_id}/data", description="Get workflow by ID")
+@router.get("/{workflow_id}", description="Get workflow by ID")
 def get_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -531,8 +531,8 @@ def get_workflow_by_id(
             provisioned=workflow.provisioned,
         )
         return workflow_dto
-    except Exception as e:
-        logger.error(f"Error fetching workflow meta data: {e}")
+    except yaml.YAMLError:
+        logger.error(f"Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
  
 
@@ -563,7 +563,7 @@ def get_workflow_executions_by_alert_fingerprint(
     ]
 
 
-@router.get("/{workflow_id}", description="Get workflow executions by ID")
+@router.get("/{workflow_id}/logs", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
     tab: int = 1,

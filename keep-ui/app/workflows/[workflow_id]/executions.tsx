@@ -29,6 +29,7 @@ import { getApiURL } from "@/utils/apiUrl";
 import { fetcher } from "@/utils/fetcher";
 import BuilderModalContent from "../builder/builder-modal";
 import PageClient from "../builder/page.client";
+import { useApiUrl } from "@/utils/hooks/useConfig";
 
 const tabs = [
   { name: "All Time", value: "alltime" },
@@ -88,7 +89,7 @@ interface Pagination {
   offset: number;
 }
 
-const OverViewContent = ({ workflow_id }: { workflow_id: string }) => {
+const WorkflowOverview = ({ workflow_id }: { workflow_id: string }) => {
   const [executionPagination, setExecutionPagination] = useState<Pagination>({
     limit: 25,
     offset: 0,
@@ -248,14 +249,14 @@ export default function WorkflowDetailPage({
   const { data: session, status } = useSession();
   const [navlink, setNavLink] = useState("overview");
 
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const {
     data: workflow,
     isLoading,
     error,
   } = useSWR<Partial<Workflow>>(
-    () => (session ? `${apiUrl}/workflows/${params.workflow_id}/data` : null),
+    () => (session ? `${apiUrl}/workflows/${params.workflow_id}` : null),
     (url: string) => fetcher(url, session?.accessToken)
   );
 
@@ -298,7 +299,7 @@ export default function WorkflowDetailPage({
       />
       <div className="relative overflow-auto p-0.5 flex-1 flex-shrink-1">
         {navlink === "overview" && (
-          <OverViewContent workflow_id={params.workflow_id} />
+          <WorkflowOverview workflow_id={params.workflow_id} />
         )}
         {navlink === "builder" && (
           <div className="h-[95%]">
@@ -314,7 +315,7 @@ export default function WorkflowDetailPage({
               closeModal={() => {}}
               compiledAlert={workflow.workflow_raw!}
               id={workflow.id}
-              hideClose={true}
+              hideCloseButton={true}
             />
           )}
         </div>

@@ -12,14 +12,14 @@ interface Props {
   closeModal: () => void;
   compiledAlert: Alert | string | null;
   id?: string;
-  hideClose?: boolean;
+  hideCloseButton?: boolean;
 }
 
 export default function BuilderModalContent({
   closeModal,
   compiledAlert,
   id,
-  hideClose,
+  hideCloseButton,
 }: Props) {
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,7 +57,7 @@ export default function BuilderModalContent({
           <Subtitle>Keep alert specification ready to use</Subtitle>
         </div>
         <div>
-          {!hideClose && (
+          {!hideCloseButton && (
             <Button
               color="orange"
               className="w-36"
