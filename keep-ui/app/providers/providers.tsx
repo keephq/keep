@@ -2,7 +2,11 @@ export interface ProviderAuthConfig {
   name: string;
   description: string;
   hint?: string;
+  host: string;
   placeholder?: string;
+  provider_name: string;
+  port: number;
+  url: string;
   validation: string; // regex
   required?: boolean;
   value?: string;

@@ -24,6 +24,8 @@ from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
 )
+from keep.api.models.provider import ProviderConfigInput
+from keep.providers.providers_factory import ProvidersFactory
 from keep.providers.providers_factory import ProvidersFactory
 from keep.providers.providers_service import ProvidersService
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -34,7 +36,33 @@ logger = logging.getLogger(__name__)
 PROVIDER_DISTRIBUTION_ENABLED = config(
     "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
 )
-
+@router.post(
+    "/{provider_type}/{provider_id}/alerts",
+    description="Push new alerts to the provider",
+)
+def add_alert(
+    provider_type: str,
+    provider_id: str,
+    alert: ProviderConfigInput,  # Automatically validates the input data
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+) -> JSONResponse:
+    try:
+        # Proceed with business logic if validation passes
+        tenant_id = authenticated_entity.tenant_id
+        context_manager = ContextManager(tenant_id=tenant_id)
+        secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
+        provider_config = secret_manager.read_secret(
+            f"{tenant_id}_{provider_type}_{provider_id}", is_json=True
+        )
+        provider = ProvidersFactory.get_provider(
+            context_manager, provider_id, provider_type, provider_config
+        )
+        provider.deploy_alert(alert.dict())  # Convert Pydantic model to dict
+        return JSONResponse(status_code=200, content={"message": "deployed"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content=str(e))
 
 def _is_localhost():
     # TODO - there are more "advanced" cases that we don't catch here

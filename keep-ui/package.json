@@ -371,6 +371,7 @@
     "yallist": "^4.0.0",
     "yaml": "^2.2.2",
     "yocto-queue": "^0.1.0",
+    "yup": "^1.4.0",
     "zod": "^3.22.3"
   },
   "devDependencies": {

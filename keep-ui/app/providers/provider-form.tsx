@@ -53,6 +53,7 @@ import "./provider-form.css";
 import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
+import { providerInputSchema } from "../providers/providerInputSchema";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -297,24 +298,36 @@ const ProviderForm = ({
 
   const validateForm = (updatedFormValues) => {
     const errors = {};
-    for (const [configKey, method] of Object.entries(provider.config)) {
-      if (!formValues[configKey] && method.required) {
-        errors[configKey] = true;
+    try {
+      providerInputSchema.validateSync(updatedFormValues, { abortEarly: false });
+      setInputErrors({});
+      for (const [configKey, method] of Object.entries(provider.config)) {
+        if (!formValues[configKey] && method.required) {
+          errors[configKey] = true;
+        }
+        if (
+          "validation" in method &&
+          formValues[configKey] &&
+          !method.validation(updatedFormValues[configKey])
+        ) {
+          errors[configKey] = true;
+        }
+        if (!formValues.provider_name) {
+          errors["provider_name"] = true;
+        }
       }
-      if (
-        "validation" in method &&
-        formValues[configKey] &&
-        !method.validation(updatedFormValues[configKey])
-      ) {
-        errors[configKey] = true;
-      }
-      if (!formValues.provider_name) {
-        errors["provider_name"] = true;
-      }
+      return {};
     }
+     catch (validationErrors) {
+      const errors = validationErrors.inner.reduce((acc, error) => {
+        acc[error.path] = error.message;
+        return acc;
+      }, {});
+   
     setInputErrors(errors);
     return errors;
   };
+}
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, type } = event.target;

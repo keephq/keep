@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import Literal
-
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field, HttpUrl, validator
 from keep.providers.models.provider_config import ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 
@@ -10,6 +8,20 @@ from keep.providers.models.provider_method import ProviderMethod
 class ProviderAlertsCountResponseDTO(BaseModel):
     count: int
 
+
+
+
+class ProviderConfigInput(BaseModel):
+    provider_name: str = Field(..., min_length=3, max_length=50)
+    provider_url: HttpUrl
+    port: int = Field(..., gt=0, lt=65536)  # Ensures port is within valid range
+    api_key: str = Field(..., min_length=10)  # Example: Min length of 10 characters
+
+    @validator("provider_name")
+    def name_cannot_contain_special_chars(cls, v):
+        if not v.isalnum():
+            raise ValueError("Provider name should be alphanumeric")
+        return v
 
 class Provider(BaseModel):
     id: str | None = None
