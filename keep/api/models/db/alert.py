@@ -59,9 +59,6 @@ class AlertToIncident(SQLModel, table=True):
             primary_key=True,
         )
     )
-    alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
-    incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
-    
     is_created_by_ai: bool = Field(default=False)
 
     deleted_at: datetime = Field(
@@ -93,28 +90,6 @@ class Incident(SQLModel, table=True):
     start_time: datetime | None
     end_time: datetime | None
     last_seen_time: datetime | None
-
-    # map of attributes to values
-    alerts: List["Alert"] = Relationship(
-        back_populates="incidents", link_model=AlertToIncident,
-        # primaryjoin is used to filter out deleted links for various DB dialects
-        sa_relationship_kwargs={
-            "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
-                or_(
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
-                ))""",
-            "uselist": True,
-            "overlaps": "alert,incident",
-        }
-        
-    )
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="incident",
-        sa_relationship_kwargs={
-            "overlaps": "alerts,incidents"
-        }
-    )
 
     is_predicted: bool = Field(default=False)
     is_confirmed: bool = Field(default=False)
@@ -218,27 +193,6 @@ class Alert(SQLModel, table=True):
         sa_relationship_kwargs={
             "primaryjoin": "and_(Alert.fingerprint == foreign(AlertEnrichment.alert_fingerprint), Alert.tenant_id == AlertEnrichment.tenant_id)",
             "uselist": False,
-        }
-    )
-
-    incidents: List["Incident"] = Relationship(
-        back_populates="alerts", 
-        link_model=AlertToIncident,
-        sa_relationship_kwargs={
-            # primaryjoin is used to filter out deleted links for various DB dialects
-            "primaryjoin": f"""and_(AlertToIncident.alert_id == Alert.id,
-                or_(
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
-                ))""",
-            "uselist": True,
-            "overlaps": "alert,incident",
-        }
-    )
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="alert",
-        sa_relationship_kwargs={
-            "overlaps": "alerts,incidents"
         }
     )
 
