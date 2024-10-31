@@ -1,16 +1,23 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from keep.api.core.db import create_dashboard as create_dashboard_db
+from keep.api.core.db import (
+    create_dashboard as create_dashboard_db,
+    get_provider_distribution,
+    get_incidents_created_distribution,
+    get_combined_workflow_execution_distribution,
+    calc_incidents_mttr,
+)
 from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
 from keep.api.core.db import update_dashboard as update_dashboard_db
+from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -136,3 +143,40 @@ def delete_dashboard(
     if not dashboard:
         raise HTTPException(status_code=404, detail="Dashboard not found")
     return {"ok": True}
+
+
+@router.get("/metric-widgets")
+def get_metric_widgets(
+    time_stamp: TimeStampFilter = Depends(_get_time_stamp_filter),
+    mttr: bool = True,
+    apd: bool = True,
+    ipd: bool = True,
+    wpd: bool = True,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:dashboards"])
+    ),
+):
+    data = {}
+    tenant_id = authenticated_entity.tenant_id
+    if not time_stamp.lower_timestamp or not time_stamp.upper_timestamp:
+        time_stamp = TimeStampFilter(
+            upper_timestamp=datetime.utcnow(),
+            lower_timestamp=datetime.utcnow() - timedelta(hours=24),
+        )
+    if apd:
+        data["apd"] = get_provider_distribution(
+            tenant_id=tenant_id, aggregate_all=True, timestamp_filter=time_stamp
+        )
+    if ipd:
+        data["ipd"] = get_incidents_created_distribution(
+            tenant_id=tenant_id, timestamp_filter=time_stamp
+        )
+    if wpd:
+        data["wpd"] = get_combined_workflow_execution_distribution(
+            tenant_id=tenant_id, timestamp_filter=time_stamp
+        )
+    if mttr:
+        data["mttr"] = calc_incidents_mttr(
+            tenant_id=tenant_id, timestamp_filter=time_stamp
+        )
+    return data

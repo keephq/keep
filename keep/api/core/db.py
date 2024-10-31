@@ -49,6 +49,7 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.time_stamp import TimeStampFilter
 
 logger = logging.getLogger(__name__)
 
@@ -2126,11 +2127,46 @@ def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
     return linked_provider is not None
 
 
-def get_provider_distribution(tenant_id: str) -> dict:
-    """Returns hits per hour and the last alert timestamp for each provider, limited to the last 24 hours."""
+def get_provider_distribution(
+    tenant_id: str,
+    aggregate_all: bool = False,
+    timestamp_filter: TimeStampFilter = None,
+) -> (
+    list[dict[str, int | Any]]
+    | dict[str, dict[str, datetime | list[dict[str, int]] | Any]]
+):
+    """
+    Calculate the distribution of incidents created over time for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose incidents are being queried.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly distribution of incidents.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'number' (int): Number of incidents created in that hour.
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
+    """
     with Session(engine) as session:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
         time_format = "%Y-%m-%d %H"
+
+        filters = [Alert.tenant_id == tenant_id]
+
+        if timestamp_filter:
+            if timestamp_filter.lower_timestamp:
+                filters.append(Alert.timestamp >= timestamp_filter.lower_timestamp)
+            if timestamp_filter.upper_timestamp:
+                filters.append(Alert.timestamp <= timestamp_filter.upper_timestamp)
+        else:
+            filters.append(Alert.timestamp >= twenty_four_hours_ago)
 
         if session.bind.dialect.name == "mysql":
             timestamp_format = func.date_format(Alert.timestamp, time_format)
@@ -2141,62 +2177,339 @@ def get_provider_distribution(tenant_id: str) -> dict:
         elif session.bind.dialect.name == "sqlite":
             timestamp_format = func.strftime(time_format, Alert.timestamp)
 
-        # Adjusted query to include max timestamp
-        query = (
-            session.query(
-                Alert.provider_id,
-                Alert.provider_type,
-                timestamp_format.label("time"),
-                func.count().label("hits"),
-                func.max(Alert.timestamp).label(
-                    "last_alert_timestamp"
-                ),  # Include max timestamp
-            )
-            .filter(
-                Alert.tenant_id == tenant_id,
-                Alert.timestamp >= twenty_four_hours_ago,
-            )
-            .group_by(Alert.provider_id, Alert.provider_type, "time")
-            .order_by(Alert.provider_id, Alert.provider_type, "time")
-        )
-
-        results = query.all()
-
-        provider_distribution = {}
-
-        for provider_id, provider_type, time, hits, last_alert_timestamp in results:
-            provider_key = f"{provider_id}_{provider_type}"
-            last_alert_timestamp = (
-                datetime.fromisoformat(last_alert_timestamp)
-                if isinstance(last_alert_timestamp, str)
-                else last_alert_timestamp
+        if aggregate_all:
+            # Query for combined alert distribution across all providers
+            query = (
+                session.query(
+                    timestamp_format.label("time"), func.count().label("hits")
+                )
+                .filter(*filters)
+                .group_by("time")
+                .order_by("time")
             )
 
-            if provider_key not in provider_distribution:
-                provider_distribution[provider_key] = {
-                    "provider_id": provider_id,
-                    "provider_type": provider_type,
-                    "alert_last_24_hours": [
-                        {"hour": i, "number": 0} for i in range(24)
-                    ],
-                    "last_alert_received": last_alert_timestamp,  # Initialize with the first seen timestamp
-                }
-            else:
-                # Update the last alert timestamp if the current one is more recent
-                provider_distribution[provider_key]["last_alert_received"] = max(
-                    provider_distribution[provider_key]["last_alert_received"],
-                    last_alert_timestamp,
+            results = query.all()
+
+            results = {str(time): hits for time, hits in results}
+
+            # Create a complete list of timestamps within the specified range
+            distribution = []
+            current_time = timestamp_filter.lower_timestamp.replace(
+                minute=0, second=0, microsecond=0
+            )
+            while current_time <= timestamp_filter.upper_timestamp:
+                timestamp_str = current_time.strftime(time_format)
+                distribution.append(
+                    {
+                        "timestamp": timestamp_str + ":00",
+                        "number": results.get(timestamp_str, 0),
+                    }
+                )
+                current_time += timedelta(hours=1)
+            return distribution
+
+        else:
+            # Query for alert distribution grouped by provider
+            query = (
+                session.query(
+                    Alert.provider_id,
+                    Alert.provider_type,
+                    timestamp_format.label("time"),
+                    func.count().label("hits"),
+                    func.max(Alert.timestamp).label("last_alert_timestamp"),
+                )
+                .filter(*filters)
+                .group_by(Alert.provider_id, Alert.provider_type, "time")
+                .order_by(Alert.provider_id, Alert.provider_type, "time")
+            )
+
+            results = query.all()
+
+            provider_distribution = {}
+
+            for provider_id, provider_type, time, hits, last_alert_timestamp in results:
+                provider_key = f"{provider_id}_{provider_type}"
+                last_alert_timestamp = (
+                    datetime.fromisoformat(last_alert_timestamp)
+                    if isinstance(last_alert_timestamp, str)
+                    else last_alert_timestamp
                 )
 
-            time = datetime.strptime(time, time_format)
-            index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
+                if provider_key not in provider_distribution:
+                    provider_distribution[provider_key] = {
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                        "alert_last_24_hours": [
+                            {"hour": i, "number": 0} for i in range(24)
+                        ],
+                        "last_alert_received": last_alert_timestamp,
+                    }
+                else:
+                    provider_distribution[provider_key]["last_alert_received"] = max(
+                        provider_distribution[provider_key]["last_alert_received"],
+                        last_alert_timestamp,
+                    )
 
-            if 0 <= index < 24:
-                provider_distribution[provider_key]["alert_last_24_hours"][index][
-                    "number"
-                ] += hits
+                time = datetime.strptime(time, time_format)
+                index = int((time - twenty_four_hours_ago).total_seconds() // 3600)
 
-    return provider_distribution
+                if 0 <= index < 24:
+                    provider_distribution[provider_key]["alert_last_24_hours"][index][
+                        "number"
+                    ] += hits
+
+            return provider_distribution
+
+
+def get_combined_workflow_execution_distribution(
+    tenant_id: str, timestamp_filter: TimeStampFilter = None
+):
+    """
+    Calculate the distribution of WorkflowExecutions started over time, combined across all workflows for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose workflow executions are being analyzed.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly distribution of workflow executions.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'number' (int): Number of workflow executions started in that hour.
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
+    """
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        filters = [WorkflowExecution.tenant_id == tenant_id]
+
+        if timestamp_filter:
+            if timestamp_filter.lower_timestamp:
+                filters.append(
+                    WorkflowExecution.started >= timestamp_filter.lower_timestamp
+                )
+            if timestamp_filter.upper_timestamp:
+                filters.append(
+                    WorkflowExecution.started <= timestamp_filter.upper_timestamp
+                )
+        else:
+            filters.append(WorkflowExecution.started >= twenty_four_hours_ago)
+
+        # Database-specific timestamp formatting
+        if session.bind.dialect.name == "mysql":
+            timestamp_format = func.date_format(WorkflowExecution.started, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(WorkflowExecution.started, "YYYY-MM-DD HH")
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, WorkflowExecution.started)
+
+        # Query for combined execution count across all workflows
+        query = (
+            session.query(
+                timestamp_format.label("time"),
+                func.count().label("executions"),
+            )
+            .filter(*filters)
+            .group_by("time")
+            .order_by("time")
+        )
+
+        results = {str(time): executions for time, executions in query.all()}
+
+        distribution = []
+        current_time = timestamp_filter.lower_timestamp.replace(
+            minute=0, second=0, microsecond=0
+        )
+        while current_time <= timestamp_filter.upper_timestamp:
+            timestamp_str = current_time.strftime(time_format)
+            distribution.append(
+                {
+                    "timestamp": timestamp_str + ":00",
+                    "number": results.get(timestamp_str, 0),
+                }
+            )
+            current_time += timedelta(hours=1)
+
+        return distribution
+
+
+def get_incidents_created_distribution(
+    tenant_id: str, timestamp_filter: TimeStampFilter = None
+):
+    """
+    Calculate the distribution of incidents created over time for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose incidents are being queried.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly distribution of incidents.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'number' (int): Number of incidents created in that hour.
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
+    """
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        filters = [Incident.tenant_id == tenant_id]
+
+        if timestamp_filter:
+            if timestamp_filter.lower_timestamp:
+                filters.append(
+                    Incident.creation_time >= timestamp_filter.lower_timestamp
+                )
+            if timestamp_filter.upper_timestamp:
+                filters.append(
+                    Incident.creation_time <= timestamp_filter.upper_timestamp
+                )
+        else:
+            filters.append(Incident.creation_time >= twenty_four_hours_ago)
+
+        # Database-specific timestamp formatting
+        if session.bind.dialect.name == "mysql":
+            timestamp_format = func.date_format(Incident.creation_time, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(Incident.creation_time, "YYYY-MM-DD HH")
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, Incident.creation_time)
+
+        query = (
+            session.query(
+                timestamp_format.label("time"), func.count().label("incidents")
+            )
+            .filter(*filters)
+            .group_by("time")
+            .order_by("time")
+        )
+
+        results = {str(time): incidents for time, incidents in query.all()}
+
+        distribution = []
+        current_time = timestamp_filter.lower_timestamp.replace(
+            minute=0, second=0, microsecond=0
+        )
+        while current_time <= timestamp_filter.upper_timestamp:
+            timestamp_str = current_time.strftime(time_format)
+            distribution.append(
+                {
+                    "timestamp": timestamp_str + ":00",
+                    "number": results.get(timestamp_str, 0),
+                }
+            )
+            current_time += timedelta(hours=1)
+
+        return distribution
+
+
+def calc_incidents_mttr(tenant_id: str, timestamp_filter: TimeStampFilter = None):
+    """
+    Calculate the Mean Time to Resolve (MTTR) for incidents over time for a specific tenant.
+
+    Args:
+        tenant_id (str): ID of the tenant whose incidents are being analyzed.
+        timestamp_filter (TimeStampFilter, optional): Filter to specify the time range.
+            - lower_timestamp (datetime): Start of the time range.
+            - upper_timestamp (datetime): End of the time range.
+
+    Returns:
+        List[dict]: A list of dictionaries representing the hourly MTTR of incidents.
+            Each dictionary contains:
+            - 'timestamp' (str): Timestamp of the hour in "YYYY-MM-DD HH:00" format.
+            - 'mttr' (float): Mean Time to Resolve incidents in that hour (in hours).
+
+    Notes:
+        - If no timestamp_filter is provided, defaults to the last 24 hours.
+        - Only includes resolved incidents.
+        - Supports MySQL, PostgreSQL, and SQLite for timestamp formatting.
+    """
+    with Session(engine) as session:
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+        time_format = "%Y-%m-%d %H"
+
+        filters = [
+            Incident.tenant_id == tenant_id,
+            Incident.status == IncidentStatus.RESOLVED.value,
+        ]
+        if timestamp_filter:
+            if timestamp_filter.lower_timestamp:
+                filters.append(
+                    Incident.creation_time >= timestamp_filter.lower_timestamp
+                )
+            if timestamp_filter.upper_timestamp:
+                filters.append(
+                    Incident.creation_time <= timestamp_filter.upper_timestamp
+                )
+        else:
+            filters.append(Incident.creation_time >= twenty_four_hours_ago)
+
+        # Database-specific timestamp formatting
+        if session.bind.dialect.name == "mysql":
+            timestamp_format = func.date_format(Incident.creation_time, time_format)
+        elif session.bind.dialect.name == "postgresql":
+            timestamp_format = func.to_char(Incident.creation_time, "YYYY-MM-DD HH")
+        elif session.bind.dialect.name == "sqlite":
+            timestamp_format = func.strftime(time_format, Incident.creation_time)
+
+        query = (
+            session.query(
+                timestamp_format.label("time"),
+                Incident.start_time,
+                Incident.end_time,
+                func.count().label("incidents"),
+            )
+            .filter(*filters)
+            .group_by("time", Incident.start_time, Incident.end_time)
+            .order_by("time")
+        )
+        results = {}
+        for time, start_time, end_time, incidents in query.all():
+            if start_time and end_time:
+                resolution_time = (
+                    end_time - start_time
+                ).total_seconds() / 3600  # in hours
+                time_str = str(time)
+                if time_str not in results:
+                    results[time_str] = {"number": 0, "mttr": 0}
+
+                results[time_str]["number"] += incidents
+                results[time_str]["mttr"] += resolution_time * incidents
+
+        distribution = []
+        current_time = timestamp_filter.lower_timestamp.replace(
+            minute=0, second=0, microsecond=0
+        )
+        while current_time <= timestamp_filter.upper_timestamp:
+            timestamp_str = current_time.strftime(time_format)
+            if timestamp_str in results and results[timestamp_str]["number"] > 0:
+                avg_mttr = (
+                    results[timestamp_str]["mttr"] / results[timestamp_str]["number"]
+                )
+            else:
+                avg_mttr = 0
+
+            distribution.append(
+                {
+                    "timestamp": timestamp_str + ":00",
+                    "mttr": avg_mttr,
+                }
+            )
+            current_time += timedelta(hours=1)
+
+        return distribution
 
 
 def get_presets(
@@ -3717,7 +4030,10 @@ def get_alerts_fields(tenant_id: str) -> List[AlertField]:
 
 
 def change_incident_status_by_id(
-    tenant_id: str, incident_id: UUID | str, status: IncidentStatus
+    tenant_id: str,
+    incident_id: UUID | str,
+    status: IncidentStatus,
+    end_time: datetime | None = None,
 ) -> bool:
     with Session(engine) as session:
         stmt = (
@@ -3726,7 +4042,10 @@ def change_incident_status_by_id(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
-            .values(status=status.value)
+            .values(
+                status=status.value,
+                end_time=end_time,
+            )
         )
         updated = session.execute(stmt)
         session.commit()
@@ -3890,10 +4209,7 @@ def is_edge_incident_alert_resolved(
                 AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
             )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
-            .where(
-                AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                AlertToIncident.incident_id == incident.id,
-            )
+            .where(AlertToIncident.incident_id == incident.id)
             .group_by(Alert.fingerprint)
             .having(func.max(Alert.timestamp))
             .order_by(direction(Alert.timestamp))
