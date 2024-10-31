@@ -5,6 +5,7 @@ import posthog
 import logging
 import requests
 
+from importlib import metadata
 from posthog import Posthog
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,11 @@ RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH = uuid.uuid4()
 
 if DISABLE_POSTHOG:
     posthog.disabled = True
+
+try:
+    KEEP_VERSION = metadata.version("keep")
+except Exception:
+    KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
 def get_posthog_client(sync_mode=False):
     posthog_api_key = (
@@ -41,7 +47,10 @@ def report_uptime_to_posthog_blocking():
         posthog_client.capture(
             RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH,
             "backend_status",
-            properties={"status": "up"},
+            properties={
+                "status": "up",
+                "keep_version": KEEP_VERSION,
+            },
         )
         logger.info("Uptime reported to PostHog.")
         time.sleep(UPTIME_REPORTING_CADENCE)
