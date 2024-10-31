@@ -2,25 +2,26 @@
 
 import { AlertDto } from "@/app/alerts/models";
 import { IncidentDto } from "../../models";
-import { Chrono } from "react-chrono";
 import { useUsers } from "@/utils/hooks/useUsers";
 import Image from "next/image";
 import UserAvatar from "@/components/navbar/UserAvatar";
 import "./incident-activity.css";
-import AlertSeverity from "@/app/alerts/alert-severity";
-import TimeAgo from "react-timeago";
-import { Button, TextInput } from "@tremor/react";
 import {
   useIncidentAlerts,
   usePollIncidentComments,
 } from "@/utils/hooks/useIncidents";
-import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
+import { useAlerts } from "@/utils/hooks/useAlerts";
 import Loading from "@/app/loading";
-import { useCallback, useState, useEffect } from "react";
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
-import { KeyedMutator } from "swr";
-import { toast } from "react-toastify";
+import { IncidentActivityItem } from "./ui/IncidentActivityItem";
+import { IncidentActivityComment } from "./ui/IncidentActivityComment";
+import dynamic from "next/dynamic";
+
+// react-chrono is not compatible with server-side rendering, so we need to import it dynamically
+const Chrono = dynamic(
+  () => import("react-chrono").then((mod) => mod.Chrono),
+  { ssr: false } // Disable SSR for this component
+);
 
 interface IncidentActivity {
   id: string;
@@ -30,117 +31,7 @@ interface IncidentActivity {
   initiator?: string | AlertDto;
 }
 
-export function IncidentActivityChronoItem({ activity }: { activity: any }) {
-  const title =
-    typeof activity.initiator === "string"
-      ? activity.initiator
-      : activity.initiator?.name;
-  const subTitle =
-    typeof activity.initiator === "string"
-      ? " Added a comment. "
-      : (activity.initiator?.status === "firing" ? " triggered" : " resolved") +
-        ". ";
-  return (
-    <div className="relative h-full w-full flex items-center">
-      {activity.type === "alert" &&
-        (activity.initiator as AlertDto)?.severity && (
-          <AlertSeverity
-            severity={(activity.initiator as AlertDto).severity}
-            marginLeft={false}
-          />
-        )}
-      <span className="font-semibold mr-2.5">{title}</span>
-      <span className="text-gray-300">
-        {subTitle} <TimeAgo date={activity.timestamp + "Z"} />
-      </span>
-      {activity.text && (
-        <div className="absolute top-14 font-light text-gray-800">
-          {activity.text}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function IncidentActivityChronoItemComment({
-  incident,
-  mutator,
-}: {
-  incident: IncidentDto;
-  mutator: KeyedMutator<AuditEvent[]>;
-}) {
-  const [comment, setComment] = useState("");
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
-
-  const onSubmit = useCallback(async () => {
-    const response = await fetch(`${apiUrl}/incidents/${incident.id}/comment`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        status: incident.status,
-        comment: comment,
-      }),
-    });
-    if (response.ok) {
-      toast.success("Comment added!", { position: "top-right" });
-      setComment("");
-      mutator();
-    } else {
-      toast.error("Failed to add comment", { position: "top-right" });
-    }
-  }, [
-    apiUrl,
-    incident.id,
-    incident.status,
-    comment,
-    session?.accessToken,
-    mutator,
-  ]);
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (
-        event.key === "Enter" &&
-        (event.metaKey || event.ctrlKey) &&
-        comment
-      ) {
-        onSubmit();
-      }
-    },
-    [onSubmit, comment]
-  );
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [comment, handleKeyDown]);
-
-  return (
-    <div className="flex h-full w-full relative items-center">
-      <TextInput
-        value={comment}
-        onValueChange={setComment}
-        placeholder="Add a new comment..."
-      />
-      <Button
-        color="orange"
-        variant="secondary"
-        className="ml-2.5"
-        disabled={!comment}
-        onClick={onSubmit}
-      >
-        Comment
-      </Button>
-    </div>
-  );
-}
-
+// FIX: if the activity loaded as SSR, there's no activities displayed, only comment field is shown
 export function IncidentActivity({ incident }: { incident: IncidentDto }) {
   const { data: session } = useSession();
   const { useMultipleFingerprintsAlertAudit, useAlertAudit } = useAlerts();
@@ -163,8 +54,9 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     incidentEventsLoading ||
     auditEventsLoading ||
     alertsLoading
-  )
+  ) {
     return <Loading />;
+  }
 
   const newCommentActivity = {
     id: "newcomment",
@@ -203,13 +95,13 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
 
   const chronoContent = activities?.map((activity, index) =>
     activity.type === "newcomment" ? (
-      <IncidentActivityChronoItemComment
+      <IncidentActivityComment
         mutator={mutateIncidentActivity}
         incident={incident}
         key={activity.id}
       />
     ) : (
-      <IncidentActivityChronoItem key={activity.id} activity={activity} />
+      <IncidentActivityItem key={activity.id} activity={activity} />
     )
   );
   const chronoIcons = activities?.map((activity, index) => {

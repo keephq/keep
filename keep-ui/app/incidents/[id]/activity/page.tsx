@@ -1,13 +1,7 @@
+import { Metadata } from "next";
 import { Card } from "@tremor/react";
 import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
-import dynamic from "next/dynamic";
-import { Metadata } from "next";
-
-// Import the client component dynamically with ssr disabled
-const IncidentActivity = dynamic(
-  () => import("./incident-activity").then((mod) => mod.IncidentActivity),
-  { ssr: false } // This ensures the component only renders on client-side
-);
+import { IncidentActivity } from "./incident-activity";
 
 export default async function IncidentActivityPage({
   params: { id },
