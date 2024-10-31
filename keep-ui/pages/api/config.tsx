@@ -24,8 +24,14 @@ export default async function handler(
   }
 
   // we want to support preview branches on vercel
-  let API_URL_CLIENT = process.env.API_URL_CLIENT || getApiURL();
-
+  let API_URL_CLIENT;
+  // if we are on vercel, default to getApiURL() if no API_URL_CLIENT is set
+  if (process.env.VERCEL_GIT_COMMIT_REF) {
+    API_URL_CLIENT = process.env.API_URL_CLIENT || getApiURL();
+    // else, no default since we will use relative URLs
+  } else {
+    API_URL_CLIENT = process.env.API_URL_CLIENT;
+  }
   res.status(200).json({
     AUTH_TYPE: authType,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
