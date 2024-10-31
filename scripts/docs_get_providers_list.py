@@ -23,7 +23,7 @@ def validate_overview_is_complete(documented_providers):
     """
     This function validates the providers to be added to the overview.md file.
     """
-    overview_file = "./../../docs/providers/overview.mdx"
+    overview_file = "./../docs/providers/overview.mdx"
     with open(overview_file, "r") as file:
         overview_content = file.read()
 
@@ -69,7 +69,7 @@ def main():
     Post here to get clickable links: https://markdownlivepreview.com/
     """
 
-    files = glob.glob(os.path.join("./../../docs/providers/documentation/", "*"))
+    files = glob.glob(os.path.join("./../docs/providers/documentation/", "*"))
 
     files_to_docs_urls = {}
 
