@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import UUID
 
 import pytz
@@ -14,7 +14,7 @@ from pydantic import (
     Extra,
     PrivateAttr,
     root_validator,
-    validator
+    validator,
 )
 from sqlalchemy import desc
 from sqlmodel import col
@@ -310,20 +310,24 @@ class AlertDto(BaseModel):
             "examples": [
                 {
                     "id": "1234",
-                    "name": "Alert name",
+                    "name": "Pod 'api-service-production' lacks memory",
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
                     "duplicateReason": None,
                     "service": "backend",
-                    "source": ["keep"],
-                    "message": "Keep: Alert message",
-                    "description": "Keep: Alert description",
+                    "source": ["prometheus"],
+                    "message": "The pod 'api-service-production' lacks memory causing high error rate",
+                    "description": "Due to the lack of memory, the pod 'api-service-production' is experiencing high error rate",
                     "severity": "critical",
                     "pushed": True,
-                    "event_id": "1234",
                     "url": "https://www.keephq.dev?alertId=1234",
-                    "labels": {"key": "value"},
+                    "labels": {
+                        "pod": "api-service-production",
+                        "region": "us-east-1",
+                        "cpu": "88",
+                        "memory": "100Mi",
+                    },
                     "ticket_url": "https://www.keephq.dev?enrichedTicketId=456",
                     "fingerprint": "1234",
                 }

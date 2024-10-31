@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Card } from "@tremor/react";
+import { AreaChart, Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
-import { WidgetData } from "./types";
+import {WidgetData, WidgetType} from "./types";
 import AlertQuality from "@/app/alerts/alert-quality-table";
 import { useSearchParams } from "next/navigation";
 
@@ -55,11 +55,13 @@ const GridItem: React.FC<GridItemProps> = ({
   }
   const getColor = () => {
     let color = "#000000";
+    if (item.widgetType === WidgetType.PRESET && item.thresholds && item.preset) {
     for (let i = item.thresholds.length - 1; i >= 0; i--) {
       if (item.preset && item.preset.alerts_count >= item.thresholds[i].value) {
         color = item.thresholds[i].color;
         break;
       }
+    }
     }
     return color;
   };
@@ -80,11 +82,13 @@ const GridItem: React.FC<GridItemProps> = ({
   };
 
   return (
-    <Card className="relative w-full h-full p-4">
+    <Card className={`relative w-full h-full ${
+      !item.metric ? '!p-4' : '!pt-0.5' 
+    }`}>
       <div className="flex flex-col h-full">
         <div
           className={`flex-none flex items-center justify-between p-2 ${
-            item.preset ? "h-1/5" : "h-[10%]"
+            item.preset ? "h-1/5" : item.metric ? "h-1/5 mb-3" : "h-[10%]"
           }`}
         >
           {/* For table view we need intract with table filter and pagination.so we aare dragging the widget here */}
@@ -111,16 +115,40 @@ const GridItem: React.FC<GridItemProps> = ({
             </div>
           </div>
         )}
-        <div className="w-full h-[90%]">
-          <GenericMetrics
-            item={item}
-            filters={filters}
-            setFilters={setFilters}
-          />
-        </div>
-      </div>
-    </Card>
-  );
-};
+        { item.metric && (
+            <div
+                className={'h-56 w-full "flex-1 flex items-center justify-center grid-item__widget'}>
+              <div className={"w-[100%]"}>
+                <AreaChart
+                    className="h-56"
+                    data={item.metric?.data}
+                    index="timestamp"
+                    categories={[item.metric?.id === "mttr" ? "mttr" : "number"]}
+                    valueFormatter={(number: number) =>
+                        `${Intl.NumberFormat().format(number).toString()}`
+                    }
+                    startEndOnly
+                    connectNulls
+                    showLegend={false}
+                    showTooltip={true}
+                    xAxisLabel="Timestamp"
+                />
+              </div>
+            </div>
 
-export default GridItem;
+              )}
+
+
+              <div className="w-full h-[90%]">
+                <GenericMetrics
+                    item={item}
+                    filters={filters}
+                    setFilters={setFilters}
+                />
+              </div>
+            </div>
+          </Card>
+          );
+        };
+
+        export default GridItem;
