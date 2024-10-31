@@ -63,7 +63,7 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
-from keep.posthog.posthog import get_posthog_client
+from keep.posthog.posthog import get_posthog_client, is_posthog_reachable
 
 # load all providers into cache
 from keep.providers.providers_factory import ProvidersFactory
@@ -86,7 +86,7 @@ try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
-POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "false") == "true"
+POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "true") == "true"
 
 
 # Monkey patch requests to disable redirects
@@ -121,7 +121,7 @@ def _extract_identity(request: Request, attribute="email") -> str:
         return "anonymous"
 
 
-class EventCaptureMiddleware(BaseHTTPMiddleware):
+class PostHogEventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
         self.posthog_client = get_posthog_client()
@@ -204,7 +204,11 @@ def get_app(
         allow_headers=["*"],
     )
     if not os.getenv("DISABLE_POSTHOG", "false") == "true":
-        app.add_middleware(EventCaptureMiddleware)
+        if is_posthog_reachable():
+            app.add_middleware(PostHogEventCaptureMiddleware)
+            logger.warning("Posthog API is reachable, middleware plugged.")
+        else:
+            logger.warning("Posthog API is not reachable, not using the middleware.")
     # app.add_middleware(GZipMiddleware)
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
