@@ -79,7 +79,7 @@ class IncidentBl:
             "Alerts pushed to elastic",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
         )
-        self.__update_client_on_incident_change(incident_id, incident)
+        self.__update_client_on_incident_change(incident_id)
         self.logger.info(
             "Client updated on incident change",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
@@ -89,7 +89,7 @@ class IncidentBl:
             "Workflows run on incident",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
         )
-        await self.__generate_summary(incident_id)
+        await self.__generate_summary(incident_id, incident)
         self.logger.info(
             "Summary generated",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
