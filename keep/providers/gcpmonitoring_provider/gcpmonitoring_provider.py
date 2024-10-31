@@ -23,12 +23,6 @@ class LogEntry(pydantic.BaseModel):
     payload_exists: bool = False
     http_request_exists: bool = False
 
-    @pydantic.validator("severity", pre=True)
-    def set_default_severity(cls, severity):
-        if severity is None:
-            return "INFO"
-        return severity
-
 
 @pydantic.dataclasses.dataclass
 class GcpmonitoringProviderAuthConfig:
