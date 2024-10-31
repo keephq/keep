@@ -107,7 +107,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         scopes = {}
         # try initializing the client to validate the scopes
         try:
-            self.client
+            self.client.list_entries(max_results=1)
             scopes["roles/logs.viewer"] = True
         except google.api_core.exceptions.PermissionDenied:
             scopes["roles/logs.viewer"] = (
