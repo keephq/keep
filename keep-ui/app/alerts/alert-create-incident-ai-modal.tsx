@@ -1,6 +1,6 @@
 import React, { useState, useEffect, use } from "react";
 import Modal from "@/components/ui/Modal";
-import { Callout, Button, Title } from "@tremor/react";
+import { Callout, Button, Title, Card, Text } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import Loading from "../loading";
@@ -33,6 +33,7 @@ const CreateIncidentWithAIModal = ({
   alerts,
 }: CreateIncidentWithAIModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [incidentCandidates, setIncidentCandidates] = useState<
     IncidentCandidatDto[]
   >([]);
@@ -55,22 +56,55 @@ const CreateIncidentWithAIModal = ({
     {}
   );
 
+  const handleCloseAIModal = () => {
+    setError(null);
+    setSelectedIncidents([]);
+    setOriginalSuggestions([]);
+    setIncidentCandidates([]);
+    handleClose();
+  };
+
   const createIncidentWithAI = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
 
       try {
-        const response = await fetch(`${apiUrl}/incidents/ai/suggest`, {
+        const alertsToProcess =
+          alerts.length > 50 ? alerts.slice(0, 50) : alerts;
+
+        // First attempt
+        let response = await fetch(`${apiUrl}/incidents/ai/suggest`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.accessToken}`,
           },
-          body: JSON.stringify(alerts.map((alert) => alert.fingerprint)),
+          body: JSON.stringify(
+            alertsToProcess.map((alert) => alert.fingerprint)
+          ),
           signal: controller.signal,
         });
+
+        // If timeout error (which happens after 30s with NextJS), wait 10s and retry
+        // This handles cases where the request goes through the NextJS server which has a 30s timeout
+        if (!response.ok && response.status === 500) {
+          await new Promise((resolve) => setTimeout(resolve, 10000));
+          response = await fetch(`${apiUrl}/incidents/ai/suggest`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+            body: JSON.stringify(
+              alertsToProcess.map((alert) => alert.fingerprint)
+            ),
+            signal: controller.signal,
+          });
+        }
+
         if (response.ok) {
           const data: IncidentSuggestion = await response.json();
           setIncidentCandidates(data.incident_suggestion);
@@ -82,6 +116,10 @@ const CreateIncidentWithAIModal = ({
           );
           toast.success("AI has suggested incident groupings");
         } else {
+          const errorData = await response.json();
+          setError(
+            errorData.detail || "Failed to create incident suggestions with AI"
+          );
           toast.error("Failed to create incident suggestions with AI");
         }
       } finally {
@@ -89,6 +127,7 @@ const CreateIncidentWithAIModal = ({
       }
     } catch (error) {
       console.error("Error creating incident with AI:", error);
+      setError("An unexpected error occurred. Please try again.");
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -204,7 +243,7 @@ const CreateIncidentWithAIModal = ({
       if (response.ok) {
         toast.success("Incidents created successfully");
         await mutateIncidents();
-        handleClose();
+        handleCloseAIModal();
       } else {
         const errorData = await response.json();
         toast.error(`Failed to create incidents: ${errorData.detail}`);
@@ -226,18 +265,15 @@ const CreateIncidentWithAIModal = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={handleCloseAIModal}
       beta={true}
       title="Create Incidents with AI"
-      className="w-[90%] max-w-6xl"
+      className="max-w-[600px] w-full lg:max-w-[1200px]"
     >
       <div className="relative bg-white p-6 rounded-lg">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center">
-            <Loading />
-            <Title className="mt-4">
-              Creating incident suggestions with AI...
-            </Title>
+            <Loading loadingText="This is taking a bit longer then usual, please wait..." />
           </div>
         ) : incidentCandidates.length > 0 ? (
           <DragDropContext onDragEnd={onDragEnd}>
@@ -278,22 +314,45 @@ const CreateIncidentWithAIModal = ({
             </div>
           </DragDropContext>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-y-8 h-full">
-            <div className="text-center space-y-3">
-              <Title className="text-2xl">Create New Incident with AI</Title>
-              <p>
-                AI will analyze {alerts.length} alert
-                {alerts.length > 1 ? "s" : ""} and suggest incident groupings.
-              </p>
+          <Card className="flex flex-col items-center h-[400px] p-8">
+            <Title className="text-2xl">Create New Incident with AI</Title>
+            <div className="flex-1" />
+            <div className="w-full flex flex-col items-center">
+              {alerts.length > 50 ? (
+                <Callout
+                  title="Alert Limit"
+                  color="orange"
+                  className="w-full mb-4"
+                >
+                  You have selected {alerts.length} alerts. Keep currently
+                  supports only 50 alerts at a time. Only the first 50 alerts
+                  will be processed.
+                </Callout>
+              ) : (
+                <Callout
+                  title="AI Analysis"
+                  color="orange"
+                  className="w-full mb-4"
+                >
+                  AI will analyze {alerts.length} alert
+                  {alerts.length > 1 ? "s" : ""} and suggest incident groupings.
+                </Callout>
+              )}
+              {error && (
+                <Callout title="Error" color="red" className="w-full mb-4">
+                  {error}
+                </Callout>
+              )}
             </div>
+            <div className="flex-1" />
             <Button
               className="w-full"
-              color="green"
+              color="orange"
               onClick={createIncidentWithAI}
             >
               Generate incident suggestions with AI
             </Button>
-          </div>
+          </Card>
         )}
       </div>
     </Modal>

@@ -1034,6 +1034,12 @@ async def commit_with_ai(
                 f"Failed to create incident {incident_with_feedback.incident.name}: {str(e)}"
             )
 
+    # notify the client that the incident has changed
+    pusher_client.trigger(
+        f"private-{tenant_id}",
+        "incident-change",
+        {},
+    )
     return committed_incidents
 
 
