@@ -1,7 +1,3 @@
-"""
-PrometheusProvider is a class that provides a way to read data from Prometheus.
-"""
-
 import dataclasses
 import datetime
 import json
@@ -19,10 +15,23 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
 
+class LogEntry(pydantic.BaseModel):
+    timestamp: datetime.datetime
+    severity: str
+    payload: dict | None
+    http_request: dict | None
+    payload_exists: bool = False
+    http_request_exists: bool = False
+
+    @pydantic.validator("severity", pre=True)
+    def set_default_severity(cls, severity):
+        if severity is None:
+            return "INFO"
+        return severity
+
+
 @pydantic.dataclasses.dataclass
 class GcpmonitoringProviderAuthConfig:
-    """GKE authentication configuration."""
-
     service_account_json: str = dataclasses.field(
         metadata={
             "required": True,
@@ -93,10 +102,6 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         self._client = None
 
     def validate_config(self):
-        """
-        Validates required configuration for Prometheus's provider.
-        """
-        # no config
         self.authentication_config = GcpmonitoringProviderAuthConfig(
             **self.config.authentication
         )
@@ -131,7 +136,10 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             )
         return self._client
 
-    def _query(self, filter: str, timedelta_in_days=1, page_size=1000):
+    def _query(
+        self, filter: str, timedelta_in_days=1, page_size=1000, raw="true", **kwargs
+    ):
+        raw = raw == "true"
         self.logger.info(
             f"Querying GCP Monitoring with filter: {filter} and timedelta_in_days: {timedelta_in_days}"
         )
@@ -142,7 +150,21 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
             filter = f'{filter} timestamp>="{start_time}"'
         entries_iterator = self.client.list_entries(filter_=filter, page_size=page_size)
-        entries = [entry for entry in entries_iterator]
+        entries = [
+            (
+                entry
+                if raw
+                else LogEntry(
+                    timestamp=entry.timestamp,
+                    severity=entry.severity,
+                    payload=entry.payload,
+                    http_request=entry.http_request,
+                    payload_exists=entry.payload is not None,
+                    http_request_exists=entry.http_request is not None,
+                )
+            )
+            for entry in entries_iterator
+        ]
         self.logger.info(f"Found {len(entries)} entries")
         return entries
 
