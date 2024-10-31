@@ -9,8 +9,8 @@
 #   for mysql: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 #   for postgres: docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml up -d
 # 2. Run the tests using pytest.
-# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/ 
-# NOTE: to clean the database, run 
+# e.g. poetry run coverage run --branch -m pytest -s tests/e2e_tests/
+# NOTE: to clean the database, run
 # docker compose stop
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-mysql.yml down --volumes
 # docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-postgres.yml down --volumes
@@ -33,9 +33,10 @@ import random
 #    - Spin up the environment using docker-compose.
 #    - Run "playwright codegen localhost:3000"
 #    - Copy the generated code to a new test function.
-import re
 import string
 import sys
+
+from playwright.sync_api import expect
 
 # Running the tests in GitHub Actions:
 # - Look at the test-pr-e2e.yml file in the .github/workflows directory.
@@ -150,3 +151,46 @@ def test_providers_page_is_accessible(browser):
         with open(current_test_name + ".html", "w") as f:
             f.write(browser.content())
         raise
+
+
+def test_provider_validation(browser):
+    """
+    Test field validation for provider fields.
+    """
+    browser.goto(
+        "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
+    )
+    # using Kibana Provider
+    browser.goto("http://localhost:3000/providers")
+    browser.locator("button:has-text('Kibana'):has-text('alert')").click()
+    # test required fields
+    connect_btn = browser.get_by_role("button", name="Connect", exact=True)
+    connect_btn.click()
+    expect(browser.get_by_text("This field is required")).to_have_count(3)
+    # test `any_http_url` field validation
+    browser.get_by_placeholder("Enter provider name").fill("random name")
+    browser.get_by_placeholder("Enter api_key").fill("random api key")
+    browser.get_by_placeholder("Enter kibana_host").fill("invalid url")
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_have_count(1)
+    browser.get_by_placeholder("Enter kibana_host").fill("http://localhost")
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_be_hidden()
+    browser.get_by_placeholder("Enter kibana_host").fill(
+        "https://keep.kb.us-central1.gcp.cloud.es.io"
+    )
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_be_hidden()
+    # test `port` field validation
+    browser.get_by_placeholder("Enter kibana_port").fill("invalid port")
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_have_count(1)
+    browser.get_by_placeholder("Enter kibana_port").fill("0")
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_have_count(1)
+    browser.get_by_placeholder("Enter kibana_port").fill("65_536")
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_have_count(1)
+    browser.get_by_placeholder("Enter kibana_port").fill("9243")
+    connect_btn.click()
+    expect(browser.locator("p.tremor-TextInput-errorMessage")).to_be_hidden()
