@@ -3237,23 +3237,45 @@ def get_incident_alerts_and_links_by_incident_id(
     tenant_id: str,
     incident_id: UUID | str,
     limit: Optional[int] = None,
-    offset: Optional[int] = None,
+    offset: Optional[int] = 0,
     session: Optional[Session] = None,
     include_unlinked: bool = False,
 ) -> tuple[List[tuple[Alert, AlertToIncident]], int]:
     with existed_or_new_session(session) as session:
+
+        last_fingerprints_subquery = (
+            session.query(
+                Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp")
+            )
+            .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
+            .filter(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.incident_id == incident_id,
+            )
+            .group_by(Alert.fingerprint)
+            .subquery()
+        )
+
         query = (
             session.query(
                 Alert,
                 AlertToIncident,
             )
+            .select_from(last_fingerprints_subquery)
+            .outerjoin(
+                Alert,
+                and_(
+                    last_fingerprints_subquery.c.fingerprint == Alert.fingerprint,
+                    last_fingerprints_subquery.c.max_timestamp == Alert.timestamp,
+                ),
+            )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
-            .join(Incident, AlertToIncident.incident_id == Incident.id)
             .filter(
                 AlertToIncident.tenant_id == tenant_id,
-                Incident.id == incident_id,
+                AlertToIncident.incident_id == incident_id,
             )
             .order_by(col(Alert.timestamp).desc())
+            .options(joinedload(Alert.alert_enrichment))
         )
         if not include_unlinked:
             query = query.filter(
@@ -3262,7 +3284,7 @@ def get_incident_alerts_and_links_by_incident_id(
 
     total_count = query.count()
 
-    if limit and offset:
+    if limit is not None and offset is not None:
         query = query.limit(limit).offset(offset)
 
     return query.all(), total_count

@@ -320,7 +320,7 @@ def __handle_formatted_events(
         for key, value in enriched_formatted_event.dict().items():
             if isinstance(value, dict):
                 for nested_key in value.keys():
-                    fields.append(f"{key}_{nested_key}")
+                    fields.append(f"{key}.{nested_key}")
             else:
                 fields.append(key)
 

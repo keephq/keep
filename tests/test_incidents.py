@@ -133,7 +133,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
                 include_unlinked=True,
             )[0]
         )
-        == 120
+        == 100
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)

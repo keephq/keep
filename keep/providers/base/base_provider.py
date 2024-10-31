@@ -405,10 +405,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
         for fingerprint_field in fingerprint_fields:
-            fingerprint_field_value = event_dict.get(fingerprint_field, None)
+            keys = fingerprint_field.split(".")
+            fingerprint_field_value = event_dict
+            for key in keys:
+                if isinstance(fingerprint_field_value, dict):
+                    fingerprint_field_value = fingerprint_field_value.get(key, None)
+                else:
+                    fingerprint_field_value = None
+                    break
             if isinstance(fingerprint_field_value, (list, dict)):
                 fingerprint_field_value = json.dumps(fingerprint_field_value)
-            if fingerprint_field_value:
+            if fingerprint_field_value is not None:
                 fingerprint.update(str(fingerprint_field_value).encode())
         return fingerprint.hexdigest()
 
