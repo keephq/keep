@@ -23,6 +23,7 @@ import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import * as Frigade from "@frigade/react";
 
 interface Webhook {
   webhookApi: string;
@@ -181,9 +182,15 @@ req.end();
             <Title>URL: {data.webhookApi}</Title>
             <Subtitle>API Key: {data.apiKey}</Subtitle>
             <div>
-              <Button icon={PlayIcon} color="orange" onClick={tryNow}>
+              <Button
+                icon={PlayIcon}
+                color="orange"
+                onClick={tryNow}
+                id="tooltip-select-0"
+              >
                 Click to create an example Alert
               </Button>
+              <Frigade.Tour flowId="flow_4iLdns11" />
             </div>
           </div>
           <TabGroup
