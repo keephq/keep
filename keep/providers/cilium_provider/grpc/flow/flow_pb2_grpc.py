@@ -16,6 +16,8 @@ try:
 except ImportError:
     _version_not_supported = True
 
+# Shahar: commented out the following code
+"""
 if _version_not_supported:
     raise RuntimeError(
         f"The grpc package installed is at version {GRPC_VERSION},"
@@ -24,3 +26,4 @@ if _version_not_supported:
         + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
         + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
     )
+"""
