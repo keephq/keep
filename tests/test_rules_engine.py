@@ -385,6 +385,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
     )
     assert alert_count == 2
 
+    # Same fingerprint
     create_alert(
         f"Something went wrong",
         AlertStatus.RESOLVED,
@@ -409,7 +410,8 @@ def test_incident_resolution_on_all(db_session, create_alert):
         limit=10,
         offset=0,
     )
-    assert alert_count == 3
+    # Still 2 alerts, since 2 unique fingerprints
+    assert alert_count == 2
     assert incident.status == IncidentStatus.FIRING.value
 
     create_alert(
@@ -436,7 +438,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
         limit=10,
         offset=0,
     )
-    assert alert_count == 4
+    assert alert_count == 2
     assert incident.status == IncidentStatus.RESOLVED.value
 
 
@@ -528,7 +530,7 @@ def test_incident_resolution_on_edge(db_session, create_alert, direction, second
         limit=10,
         offset=0,
     )
-    assert alert_count == 3
+    assert alert_count == 2
     assert incident.status == IncidentStatus.FIRING.value
 
     create_alert(
@@ -555,7 +557,7 @@ def test_incident_resolution_on_edge(db_session, create_alert, direction, second
         limit=10,
         offset=0,
     )
-    assert alert_count == 4
+    assert alert_count == 2
     assert incident.status == IncidentStatus.RESOLVED.value
 
 # Next steps:
