@@ -190,8 +190,13 @@ def get_app(
     app = FastAPI(
         title="Keep API",
         description="Rest API powering https://platform.keephq.dev and friends 🏄‍♀️",
-        version="0.1.0",
+        version=KEEP_VERSION,
     )
+
+    @app.get("/")
+    async def root():
+        return {"message": app.description, "version": KEEP_VERSION}
+
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
     app.add_middleware(
         GZipMiddleware, minimum_size=30 * 1024 * 1024
