@@ -1322,6 +1322,8 @@ def get_last_alerts(
                     .group_by(AlertToIncident.alert_id)
                     .subquery()
                 )
+            else:
+                raise ValueError(f"Unsupported dialect: {dialect_name}")
 
             query = query.add_columns(incidents_subquery.c.incidents)
             query = query.outerjoin(

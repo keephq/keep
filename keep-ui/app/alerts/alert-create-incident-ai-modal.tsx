@@ -232,7 +232,7 @@ const CreateIncidentWithAIModal = ({
       }));
 
       const response = await fetch(
-        `${configData?.API_URL}/incidents/ai/${suggestionId}/commit`,
+        `${apiUrl}/incidents/ai/${suggestionId}/commit`,
         {
           method: "POST",
           headers: {
