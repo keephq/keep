@@ -14,16 +14,16 @@ import sys
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
-NON_DOCUMENTED_PROVIDERS = [
-    
-] # known not documented providers https://github.com/keephq/keep/issues/2033
+NON_DOCUMENTED_PROVIDERS = (
+    []
+)  # known not documented providers https://github.com/keephq/keep/issues/2033
 
 
 def validate_overview_is_complete(documented_providers):
     """
     This function validates the providers to be added to the overview.md file.
     """
-    overview_file = "./../docs/providers/overview.mdx"
+    overview_file = "./../../docs/providers/overview.mdx"
     with open(overview_file, "r") as file:
         overview_content = file.read()
 
@@ -43,10 +43,15 @@ def validate_all_providers_are_documented(documented_providers):
 
     documented_providers = [provider.lower() for provider in documented_providers]
     from keep.providers.providers_factory import ProvidersFactory
+
     for provider in ProvidersFactory.get_all_providers():
         provider_name = provider.display_name.lower()
-        if provider_name not in documented_providers and provider_name not in NON_DOCUMENTED_PROVIDERS:
-            raise Exception(f"""Provider "{provider_name}" is not documented in the docs/providers/documentation folder,
+        if (
+            provider_name not in documented_providers
+            and provider_name not in NON_DOCUMENTED_PROVIDERS
+        ):
+            raise Exception(
+                f"""Provider "{provider_name}" is not documented in the docs/providers/documentation folder,
 please document it and run the scripts/docs_get_providers_list.py --validate script again.
 
 Provider's PROVIDER_DISPLAY_NAME should match the title in the documentation file: {{PROVIDER_DISPLAY_NAME}}-provider.mdx.
@@ -54,7 +59,9 @@ Provider's PROVIDER_DISPLAY_NAME should match the title in the documentation fil
 {provider_name}-provider.mdx not found.
 
 Documented providers: {documented_providers}
-Excluded list: {NON_DOCUMENTED_PROVIDERS}""")
+Excluded list: {NON_DOCUMENTED_PROVIDERS}"""
+            )
+
 
 def main():
     """
@@ -62,7 +69,7 @@ def main():
     Post here to get clickable links: https://markdownlivepreview.com/
     """
 
-    files = glob.glob(os.path.join("./../docs/providers/documentation/", "*"))
+    files = glob.glob(os.path.join("./../../docs/providers/documentation/", "*"))
 
     files_to_docs_urls = {}
 

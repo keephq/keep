@@ -52,10 +52,30 @@ class IncidentBl:
         self.ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
 
     def create_incident(self, incident_dto: IncidentDtoIn) -> IncidentDto:
+        self.logger.info(
+            "Creating incident",
+            extra={"incident_dto": incident_dto.dict(), "tenant_id": self.tenant_id},
+        )
         incident = create_incident_from_dto(self.tenant_id, incident_dto)
+        self.logger.info(
+            "Incident created",
+            extra={"incident_id": incident.id, "tenant_id": self.tenant_id},
+        )
         new_incident_dto = IncidentDto.from_db_incident(incident)
+        self.logger.info(
+            "Incident DTO created",
+            extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
+        )
         self.__update_client_on_incident_change()
+        self.logger.info(
+            "Client updated on incident change",
+            extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
+        )
         self.__run_workflows(new_incident_dto, "created")
+        self.logger.info(
+            "Workflows run on incident",
+            extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
+        )
         return new_incident_dto
 
     async def add_alerts_to_incident(

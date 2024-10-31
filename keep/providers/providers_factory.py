@@ -377,6 +377,12 @@ class ProvidersFactory:
                     f"Cannot import provider {provider_directory}, module not found."
                 )
                 continue
+            # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
+            except TypeError:
+                logger.warning(
+                    f"Cannot import provider {provider_directory}, unexpected error."
+                )
+                continue
 
         ProvidersFactory._loaded_providers_cache = providers
         return providers
