@@ -290,7 +290,7 @@ class AISuggestionBl:
             self.logger.error(f"AI incident creation failed: {e}")
             raise HTTPException(status_code=500, detail="AI service is unavailable.")
 
-    def commit_incidents(
+    async def commit_incidents(
         self,
         suggestion_id: UUID,
         incidents_with_feedback: List[Dict],
@@ -320,16 +320,15 @@ class AISuggestionBl:
 
             try:
                 # Create the incident
-                created_incident = incident_bl.create_incident(
-                    incident_with_feedback["incident"]
-                )
+                incident_dto = IncidentDto.parse_obj(incident_with_feedback["incident"])
+                created_incident = incident_bl.create_incident(incident_dto)
 
                 # Add alerts to the created incident
                 alert_ids = [
                     uuid.UUID(alert["event_id"])
                     for alert in incident_with_feedback["incident"]["alerts"]
                 ]
-                incident_bl.add_alerts_to_incident(created_incident.id, alert_ids)
+                await incident_bl.add_alerts_to_incident(created_incident.id, alert_ids)
 
                 committed_incidents.append(created_incident)
                 self.logger.info(

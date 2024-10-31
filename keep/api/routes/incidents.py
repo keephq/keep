@@ -616,7 +616,7 @@ async def commit_with_ai(
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
 
     # Commit incidents with feedback
-    committed_incidents = ai_feedback_bl.commit_incidents(
+    committed_incidents = await ai_feedback_bl.commit_incidents(
         suggestion_id=suggestion_id,
         incidents_with_feedback=[
             incident.dict() for incident in incidents_with_feedback

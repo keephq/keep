@@ -50,6 +50,7 @@ class IncidentBl:
         self.pusher_client = pusher_client
         self.logger = logging.getLogger(__name__)
         self.ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
+        self.redis = os.environ.get("REDIS", "false") == "true"
 
     def create_incident(self, incident_dto: IncidentDtoIn) -> IncidentDto:
         self.logger.info(
@@ -104,7 +105,8 @@ class IncidentBl:
             "Client updated on incident change",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
         )
-        self.__run_workflows(IncidentDto(id=incident_id), "updated")
+        incident_dto = IncidentDto.from_db_incident(incident)
+        self.__run_workflows(incident_dto, "updated")
         self.logger.info(
             "Workflows run on incident",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
@@ -164,6 +166,7 @@ class IncidentBl:
             )
             if (
                 ee_enabled
+                and self.redis
                 and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION
                 and not incident.user_summary
             ):
