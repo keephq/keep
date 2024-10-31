@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import threading
 import time
 from importlib import metadata
 
@@ -63,7 +64,7 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
-from keep.posthog.posthog import get_posthog_client, is_posthog_reachable
+from keep.posthog.posthog import DISABLE_POSTHOG, get_posthog_client, is_posthog_reachable, report_uptime_to_posthog_blocking
 
 # load all providers into cache
 from keep.providers.providers_factory import ProvidersFactory
@@ -86,8 +87,6 @@ try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
-POSTHOG_API_ENABLED = os.environ.get("ENABLE_POSTHOG_API", "true") == "true"
-
 
 # Monkey patch requests to disable redirects
 original_request = requests.Session.request
@@ -128,40 +127,37 @@ class PostHogEventCaptureMiddleware(BaseHTTPMiddleware):
         self.tracer = trace.get_tracer(__name__)
 
     async def capture_request(self, request: Request) -> None:
-        if POSTHOG_API_ENABLED:
-            identity = _extract_identity(request)
-            with self.tracer.start_as_current_span("capture_request"):
-                self.posthog_client.capture(
-                    identity,
-                    "request-started",
-                    {
-                        "path": request.url.path,
-                        "method": request.method,
-                        "keep_version": KEEP_VERSION,
-                    },
-                )
+        identity = _extract_identity(request)
+        with self.tracer.start_as_current_span("capture_request"):
+            self.posthog_client.capture(
+                identity,
+                "request-started",
+                {
+                    "path": request.url.path,
+                    "method": request.method,
+                    "keep_version": KEEP_VERSION,
+                },
+            )
 
     async def capture_response(self, request: Request, response: Response) -> None:
-        if POSTHOG_API_ENABLED:
-            identity = _extract_identity(request)
-            with self.tracer.start_as_current_span("capture_response"):
-                self.posthog_client.capture(
-                    identity,
-                    "request-finished",
-                    {
-                        "path": request.url.path,
-                        "method": request.method,
-                        "status_code": response.status_code,
-                        "keep_version": KEEP_VERSION,
-                    },
-                )
+        identity = _extract_identity(request)
+        with self.tracer.start_as_current_span("capture_response"):
+            self.posthog_client.capture(
+                identity,
+                "request-finished",
+                {
+                    "path": request.url.path,
+                    "method": request.method,
+                    "status_code": response.status_code,
+                    "keep_version": KEEP_VERSION,
+                },
+            )
 
     async def flush(self):
-        if POSTHOG_API_ENABLED:
-            with self.tracer.start_as_current_span("flush_posthog_events"):
-                logger.info("Flushing Posthog events")
-                self.posthog_client.flush()
-                logger.info("Posthog events flushed")
+        with self.tracer.start_as_current_span("flush_posthog_events"):
+            logger.debug("Flushing Posthog events")
+            self.posthog_client.flush()
+            logger.debug("Posthog events flushed")
 
     async def dispatch(self, request: Request, call_next):
         # Skip OPTIONS requests
@@ -203,7 +199,7 @@ def get_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    if not os.getenv("DISABLE_POSTHOG", "false") == "true":
+    if not DISABLE_POSTHOG:
         if is_posthog_reachable():
             app.add_middleware(PostHogEventCaptureMiddleware)
             logger.warning("Posthog API is reachable, middleware plugged.")
@@ -256,6 +252,18 @@ def get_app(
     )
     # if any endpoints needed, add them on_start
     identity_manager.on_start(app)
+
+    @app.on_event("startup")
+    async def report_posthog():
+        if not DISABLE_POSTHOG:
+            if is_posthog_reachable():
+                thread = threading.Thread(target=report_uptime_to_posthog_blocking)
+                thread.start()
+                logger.info("Uptime Reporting to Posthog launched.")
+            else:
+                logger.info("Reporting to Posthog not launched because it's not reachable.")
+        else:
+            logger.info("Posthog reporting is disabled so no uptime reporting.")
 
     @app.on_event("startup")
     async def on_startup():

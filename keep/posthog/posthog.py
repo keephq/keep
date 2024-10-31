@@ -1,13 +1,20 @@
 import os
-
+import time
+import uuid
 import posthog
+import logging
 import requests
 
 from posthog import Posthog
 
-if os.getenv("DISABLE_POSTHOG", "false") == "true":
-    posthog.disabled = True
+logger = logging.getLogger(__name__)
 
+DISABLE_POSTHOG = os.getenv("DISABLE_POSTHOG", "false") == "true"
+UPTIME_REPORTING_CADENCE = 60 * 10
+RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH = uuid.uuid4()
+
+if DISABLE_POSTHOG:
+    posthog.disabled = True
 
 def get_posthog_client(sync_mode=False):
     posthog_api_key = (
@@ -21,9 +28,20 @@ def is_posthog_reachable():
     posthog_client = get_posthog_client(sync_mode=True)
     try:
         posthog_client.capture(
-            "no_id_yet", 
+            RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH, 
             "connectivity_check",
         )
         return True
     except requests.exceptions.ConnectionError:
         return False
+
+def report_uptime_to_posthog_blocking():
+    while True:
+        posthog_client = get_posthog_client()
+        posthog_client.capture(
+            RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH,
+            "backend_status",
+            properties={"status": "up"},
+        )
+        logger.info("Uptime reported to PostHog.")
+        time.sleep(UPTIME_REPORTING_CADENCE)
