@@ -4,6 +4,7 @@ import GridItemContainer from "./GridItemContainer";
 import { LayoutItem, WidgetData } from "./types";
 import "react-grid-layout/css/styles.css";
 import { Preset } from "app/alerts/models";
+import {MetricsWidget} from "@/utils/hooks/useDashboardMetricWidgets";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -15,6 +16,7 @@ interface GridLayoutProps {
   onDelete: (id: string) => void;
   presets: Preset[];
   onSave: (updateItem: WidgetData) => void;
+  metrics: MetricsWidget[];
 }
 
 const GridLayout: React.FC<GridLayoutProps> = ({
@@ -25,6 +27,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   onDelete,
   onSave,
   presets,
+  metrics
 }) => {
   const layouts = { lg: layout };
 
@@ -52,14 +55,18 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         draggableHandle=".grid-item__widget"
       >
         {data.map((item) => {
-          //Fixing the static hardcode db value.
+          //Updating the static hardcode db value.
           if (item.preset) {
             const preset = presets?.find((p) => p?.id === item?.preset?.id);
             item.preset = {
               ...item.preset,
               alerts_count: preset?.alerts_count ?? 0,
             };
-           
+          } else if (item.metric) {
+            const metric = metrics?.find(m => m?.id === item?.metric?.id);
+            if (metric) {
+              item.metric = {...metric}
+            }
           }
           return (
             <div key={item.i} data-grid={item}>

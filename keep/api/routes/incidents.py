@@ -569,7 +569,9 @@ async def add_alerts_to_incident(
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    add_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids, is_created_by_ai)
+    add_alerts_to_incident_by_incident_id(
+        tenant_id, incident_id, alert_ids, is_created_by_ai
+    )
     try:
         logger.info("Pushing enriched alert to elasticsearch")
         elastic_client = ElasticClient(tenant_id)
@@ -762,7 +764,10 @@ def change_incident_status(
 
     # We need to do something only if status really changed
     if not change.status == incident.status:
-        result = change_incident_status_by_id(tenant_id, incident_id, change.status)
+        end_time = datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
+        result = change_incident_status_by_id(
+            tenant_id, incident_id, change.status, end_time
+        )
         if not result:
             raise HTTPException(
                 status_code=500, detail="Error changing incident status"
@@ -778,7 +783,7 @@ def change_incident_status(
                     ),
                     authenticated_entity=authenticated_entity,
                 )
-
+        incident.end_time = end_time
         incident.status = change.status
 
     new_incident_dto = IncidentDto.from_db_incident(incident)
