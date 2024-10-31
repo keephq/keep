@@ -1,10 +1,15 @@
 import { TopologySearchProvider } from "@/app/topology/TopologySearchContext";
 import { TopologyMap } from "@/app/topology/ui/map";
-import { withIncident, withIncidentMetadata } from "../withIncident";
+import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 
-const IncidentTopologyPage = withIncident(function _IncidentTopologyPage({
-  incident,
-}) {
+type PageProps = {
+  params: { id: string };
+};
+
+export default async function IncidentTopologyPage({
+  params: { id },
+}: PageProps) {
+  const incident = await getIncidentWithErrorHandling(id);
   return (
     <main className="pt-3 h-[calc(100vh-12rem)]">
       <TopologySearchProvider>
@@ -12,13 +17,12 @@ const IncidentTopologyPage = withIncident(function _IncidentTopologyPage({
       </TopologySearchProvider>
     </main>
   );
-});
+}
 
-export default IncidentTopologyPage;
-
-export const generateMetadata = withIncidentMetadata((incident) => {
+export async function generateMetadata({ params }: PageProps) {
+  const incident = await getIncidentWithErrorHandling(params.id);
   return {
     title: `${incident.user_generated_name} — Topology`,
     description: incident.user_summary || incident.generated_summary,
   };
-});
+}

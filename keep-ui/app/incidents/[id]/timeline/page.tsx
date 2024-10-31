@@ -1,17 +1,21 @@
-import { withIncident, withIncidentMetadata } from "../withIncident";
+import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 import IncidentTimeline from "./incident-timeline";
 
-const IncidentTimelinePage = withIncident(function _IncidentTimelinePage({
-  incident,
-}) {
+type PageProps = {
+  params: { id: string };
+};
+
+export default async function IncidentTimelinePage({
+  params: { id },
+}: PageProps) {
+  const incident = await getIncidentWithErrorHandling(id);
   return <IncidentTimeline incident={incident} />;
-});
+}
 
-export default IncidentTimelinePage;
-
-export const generateMetadata = withIncidentMetadata((incident) => {
+export async function generateMetadata({ params }: PageProps) {
+  const incident = await getIncidentWithErrorHandling(params.id);
   return {
     title: `${incident.user_generated_name} — Timeline`,
     description: incident.user_summary || incident.generated_summary,
   };
-});
+}

@@ -37,9 +37,8 @@ export function TabNavigationLink({
   children,
   className,
   isActive,
-  icon,
+  icon: Icon,
 }: TabNavigationLinkProps) {
-  const Icon = icon;
   return (
     <Link
       href={href}
@@ -49,7 +48,7 @@ export function TabNavigationLink({
         "ui-focus-visible:ring text-sm",
         "border-b-2 border-transparent",
         "transition duration-100 -mb-px px-2 py-2",
-        icon && "gap-2",
+        Icon && "gap-2",
 
         // Default/Hover states
         "hover:border-tremor-content hover:text-tremor-content-emphasis text-tremor-content",
@@ -69,7 +68,7 @@ export function TabNavigationLink({
       aria-selected={isActive}
       tabIndex={isActive ? 0 : -1}
     >
-      {icon && <Icon className="size-5" />}
+      {Icon && <Icon className="size-5" />}
       <span>{children}</span>
     </Link>
   );

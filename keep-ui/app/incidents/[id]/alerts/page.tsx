@@ -1,11 +1,16 @@
 import { Card } from "@tremor/react";
 import IncidentOverview from "./incident-overview";
 import IncidentAlerts from "./incident-alerts";
-import { withIncident, withIncidentMetadata } from "../withIncident";
+import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 
-const IncidentAlertsPage = withIncident(function _IncidentAlertsPage({
-  incident,
-}) {
+type PageProps = {
+  params: { id: string };
+};
+
+export default async function IncidentAlertsPage({
+  params: { id },
+}: PageProps) {
+  const incident = await getIncidentWithErrorHandling(id);
   return (
     <>
       <Card className="mb-4">
@@ -14,13 +19,12 @@ const IncidentAlertsPage = withIncident(function _IncidentAlertsPage({
       <IncidentAlerts incident={incident} />
     </>
   );
-});
+}
 
-export default IncidentAlertsPage;
-
-export const generateMetadata = withIncidentMetadata((incident) => {
+export async function generateMetadata({ params }: PageProps) {
+  const incident = await getIncidentWithErrorHandling(params.id);
   return {
     title: `${incident.user_generated_name} — Alerts`,
     description: incident.user_summary || incident.generated_summary,
   };
-});
+}

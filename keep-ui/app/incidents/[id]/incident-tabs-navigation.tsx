@@ -24,7 +24,8 @@ export const tabs = [
 ];
 
 export function IncidentTabsNavigation() {
-  const { id } = useParams();
+  // Using type assertion because this component only renders on the /incidents/[id] routes
+  const { id } = useParams<{ id: string }>() as { id: string };
   const pathname = usePathname();
   return (
     <TabNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10">
