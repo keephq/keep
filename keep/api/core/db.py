@@ -1263,13 +1263,19 @@ def get_last_alerts(
         )
 
         if with_incidents:
-            query = query.add_columns(AlertToIncident.incident_id.label("incident"))
+            incidents_subquery = (
+                session.query(
+                    AlertToIncident.alert_id,
+                    func.group_concat(AlertToIncident.incident_id).label("incidents"),
+                )
+                .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                .group_by(AlertToIncident.alert_id)
+                .subquery()
+            )
+
+            query = query.add_columns(incidents_subquery.c.incidents)
             query = query.outerjoin(
-                AlertToIncident,
-                and_(
-                    AlertToIncident.alert_id == Alert.id,
-                    AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                ),
+                incidents_subquery, Alert.id == incidents_subquery.c.alert_id
             )
 
         if provider_id:

@@ -1035,11 +1035,16 @@ async def commit_with_ai(
             )
 
     # notify the client that the incident has changed
-    pusher_client.trigger(
-        f"private-{tenant_id}",
-        "incident-change",
-        {},
-    )
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "incident-change",
+                {},
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify client: {str(e)}")
+            pass
     return committed_incidents
 
 

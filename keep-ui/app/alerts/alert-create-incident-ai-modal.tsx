@@ -10,6 +10,7 @@ import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { DragDropContext } from "react-beautiful-dnd";
 import IncidentCard from "./alert-create-incident-ai-card";
 import { useIncidents } from "utils/hooks/useIncidents";
+import { useRouter } from "next/navigation";
 
 interface CreateIncidentWithAIModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ const CreateIncidentWithAIModal = ({
   const { data: session } = useSession();
   const { data: configData } = useConfig();
   const apiUrl = useApiUrl();
+  const router = useRouter();
   const { mutate: mutateIncidents } = useIncidents(
     true,
     20,
@@ -244,6 +246,7 @@ const CreateIncidentWithAIModal = ({
         toast.success("Incidents created successfully");
         await mutateIncidents();
         handleCloseAIModal();
+        router.push("/incidents");
       } else {
         const errorData = await response.json();
         toast.error(`Failed to create incidents: ${errorData.detail}`);
