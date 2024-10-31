@@ -1,9 +1,10 @@
+"use client";
 import { IncidentDto } from "@/app/incidents/models";
 import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   deleteIncident,
   handleConfirmPredictedIncident,
@@ -14,8 +15,9 @@ import { useApiUrl } from "@/utils/hooks/useConfig";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import CreateOrUpdateIncident from "@/app/incidents/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import { KeyedMutator } from "swr";
+import { useSWRConfig } from "swr";
 
+// TODO: replace with a reusable icon component
 function SeverityBadge({ severity }: { severity: IncidentDto["severity"] }) {
   let severityColor;
   if (severity === "critical") {
@@ -32,13 +34,16 @@ function SeverityBadge({ severity }: { severity: IncidentDto["severity"] }) {
   );
 }
 
-export function IncidentHeader({
-  incident,
-  mutate,
-}: {
-  incident: IncidentDto;
-  mutate: KeyedMutator<IncidentDto>;
-}) {
+export function IncidentHeader({ incident }: { incident: IncidentDto }) {
+  const { mutate } = useSWRConfig();
+  const mutateIncident = useCallback(
+    () =>
+      mutate(
+        (key: string) =>
+          typeof key === "string" && key.includes(`/incidents/${incident.id}`)
+      ),
+    [incident.id]
+  );
   const router = useRouter();
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
@@ -54,11 +59,11 @@ export function IncidentHeader({
 
   const handleFinishEdit = () => {
     setIsFormOpen(false);
-    mutate();
+    mutateIncident();
   };
   const handleRunWorkflow = () => {
     setRunWorkflowModalIncident(incident);
-    mutate();
+    mutateIncident();
   };
 
   const handleStartEdit = () => {
@@ -121,7 +126,7 @@ export function IncidentHeader({
                   handleConfirmPredictedIncident({
                     apiUrl: apiUrl!,
                     incidentId: incident.id!,
-                    mutate,
+                    mutate: mutateIncident,
                     session,
                   });
                 }}
@@ -140,7 +145,7 @@ export function IncidentHeader({
                   const success = await deleteIncident({
                     apiUrl: apiUrl!,
                     incidentId: incident.id!,
-                    mutate,
+                    mutate: mutateIncident,
                     session,
                   });
                   if (success) {

@@ -1,5 +1,7 @@
+"use client";
+
 import { AlertDto } from "@/app/alerts/models";
-import { IncidentDto } from "../models";
+import { IncidentDto } from "../../models";
 import { Chrono } from "react-chrono";
 import { useUsers } from "@/utils/hooks/useUsers";
 import Image from "next/image";
@@ -139,11 +141,7 @@ export function IncidentActivityChronoItemComment({
   );
 }
 
-export default function IncidentActivity({
-  incident,
-}: {
-  incident: IncidentDto;
-}) {
+export function IncidentActivity({ incident }: { incident: IncidentDto }) {
   const { data: session } = useSession();
   const { useMultipleFingerprintsAlertAudit, useAlertAudit } = useAlerts();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
@@ -215,14 +213,15 @@ export default function IncidentActivity({
     )
   );
   const chronoIcons = activities?.map((activity, index) => {
-    console.log("activity", activity);
     if (activity.type === "comment" || activity.type === "newcomment") {
       const user = users?.find((user) => user.email === activity.initiator);
       return (
         <UserAvatar
           key={`icon-${activity.id}`}
           image={user?.picture}
-          name={user?.name ?? user?.email ?? (activity.initiator as string)}
+          name={
+            user?.name ?? user?.email ?? (activity.initiator as string) ?? ""
+          }
         />
       );
     } else {

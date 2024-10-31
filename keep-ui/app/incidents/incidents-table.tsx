@@ -148,7 +148,10 @@ export default function IncidentsTable({
       header: "Incident",
       cell: ({ row }) => (
         <div className="min-w-64">
-          <Link href={`/incidents/${row.original.id}`} className="text-pretty">
+          <Link
+            href={`/incidents/${row.original.id}/alerts`}
+            className="text-pretty"
+          >
             {row.original.user_generated_name || row.original.ai_generated_name}
           </Link>
           <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">

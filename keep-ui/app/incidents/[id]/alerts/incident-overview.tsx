@@ -1,4 +1,6 @@
-import { IncidentDto } from "../models";
+"use client";
+
+import { IncidentDto } from "../../models";
 import Modal from "@/components/ui/Modal";
 import React, { useState } from "react";
 import {

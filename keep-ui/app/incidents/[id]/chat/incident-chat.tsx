@@ -3,7 +3,7 @@ import {
   CopilotKitCSSProperties,
   useCopilotChatSuggestions,
 } from "@copilotkit/react-ui";
-import { IncidentDto } from "../models";
+import { IncidentDto } from "../../models";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,7 @@ import "./incident-chat.css";
 import { Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
-export default function IncidentChat({ incident }: { incident: IncidentDto }) {
+export function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id

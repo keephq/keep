@@ -5,7 +5,7 @@ import { format, parseISO } from "date-fns";
 import { AuditEvent, useAlerts } from "utils/hooks/useAlerts";
 import { AlertDto } from "app/alerts/models";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
-import { IncidentDto } from "../models";
+import { IncidentDto } from "../../models";
 import Image from "next/image";
 import AlertSeverity from "app/alerts/alert-severity";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";

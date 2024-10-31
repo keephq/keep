@@ -1,4 +1,4 @@
-import { PaginatedIncidentsDto } from "@/app/incidents/models";
+import { IncidentDto, PaginatedIncidentsDto } from "@/app/incidents/models";
 import { fetcher } from "@/utils/fetcher";
 import { Session } from "next-auth";
 
@@ -49,4 +49,13 @@ export async function getIncidents(
     url,
     session.accessToken
   )) as Promise<PaginatedIncidentsDto>;
+}
+
+export async function getIncident(
+  apiUrl: string,
+  session: Session | null,
+  id: string
+) {
+  const url = `${apiUrl}/incidents/${id}`;
+  return (await fetcher(url, session?.accessToken)) as IncidentDto;
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import {
   createColumnHelper,
@@ -20,8 +22,8 @@ import {
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { IncidentDto } from "../models";
-import IncidentPagination from "../incident-pagination";
+import { IncidentDto } from "../../models";
+import IncidentPagination from "../../incident-pagination";
 import {
   PaginatedWorkflowExecutionDto,
   WorkflowExecution,

@@ -1,7 +1,13 @@
+"use client";
+
 import {
   createColumnHelper,
+  DisplayColumnDef,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -27,10 +33,11 @@ import {
 import AlertName from "app/alerts/alert-name";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
-import IncidentPagination from "../incident-pagination";
-import React, { useEffect, useState } from "react";
-import { IncidentDto } from "../models";
+import IncidentPagination from "../../incident-pagination";
+import React, { useEffect, useMemo, useState } from "react";
+import { IncidentDto } from "../../models";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
+import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 
 interface Props {
   incident: IncidentDto;
@@ -49,16 +56,16 @@ export default function IncidentAlerts({ incident }: Props) {
     offset: 0,
   });
 
+  const [pagination, setTablePagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
+
   const { data: alerts, isLoading } = useIncidentAlerts(
     incident.id,
     alertsPagination.limit,
     alertsPagination.offset
   );
-
-  const [pagination, setTablePagination] = useState({
-    pageIndex: alerts ? Math.ceil(alerts.offset / alerts.limit) : 0,
-    pageSize: alerts ? alerts.limit : 20,
-  });
 
   useEffect(() => {
     if (alerts && alerts.limit != pagination.pageSize) {
@@ -77,104 +84,129 @@ export default function IncidentAlerts({ incident }: Props) {
   }, [pagination]);
   usePollIncidentAlerts(incident.id);
 
-  const columns = [
-    columnHelper.accessor("severity", {
-      id: "severity",
-      header: "Severity",
-      minSize: 100,
-      cell: (context) => <AlertSeverity severity={context.getValue()} />,
-    }),
-    columnHelper.display({
-      id: "name",
-      header: "Name",
-      minSize: 100,
-      cell: (context) => (
-        <div className="max-w-[300px]">
-          <AlertName alert={context.row.original} />
-        </div>
-      ),
-    }),
-    columnHelper.accessor("description", {
-      id: "description",
-      header: "Description",
-      minSize: 100,
-      cell: (context) => (
-        <div title={context.getValue()}>
-          <div className="truncate">{context.getValue()}</div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor("status", {
-      id: "status",
-      minSize: 100,
-      header: "Status",
-    }),
-    columnHelper.accessor("is_created_by_ai", {
-      id: "is_created_by_ai",
-      header: "🔗",
-      minSize: 50,
-      cell: (context) => (
-        <>
-          {context.getValue() ? (
-            <div title="Correlated with AI">🤖</div>
-          ) : (
-            <div title="Correlated manually">👨‍💻</div>
-          )}
-        </>
-      ),
-    }),
-    columnHelper.accessor("lastReceived", {
-      id: "lastReceived",
-      header: "Last Received",
-      minSize: 100,
-      cell: (context) => (
-        <span>{getAlertLastReceieved(context.getValue())}</span>
-      ),
-    }),
-    columnHelper.accessor("source", {
-      id: "source",
-      header: "Source",
-      minSize: 100,
-      cell: (context) =>
-        (context.getValue() ?? []).map((source, index) => (
-          <Image
-            className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-            key={`source-${source}-${index}`}
-            alt={source}
-            height={24}
-            width={24}
-            title={source}
-            src={`/icons/${source}-icon.png`}
-          />
-        )),
-    }),
-    columnHelper.display({
-      id: "remove",
-      header: "",
-      cell: (context) =>
-        incident.is_confirmed && (
-          <IncidentAlertMenu
-            alert={context.row.original}
-            incidentId={incident.id}
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "selected",
+        size: 10,
+        header: (context) => (
+          <AlertTableCheckbox
+            checked={context.table.getIsAllRowsSelected()}
+            indeterminate={context.table.getIsSomeRowsSelected()}
+            onChange={context.table.getToggleAllRowsSelectedHandler()}
+            onClick={(e) => e.stopPropagation()}
           />
         ),
-    }),
-  ];
+        cell: (context) => (
+          <AlertTableCheckbox
+            checked={context.row.getIsSelected()}
+            indeterminate={context.row.getIsSomeSelected()}
+            onChange={context.row.getToggleSelectedHandler()}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+      }),
+      columnHelper.accessor("severity", {
+        id: "severity",
+        header: "Severity",
+        minSize: 100,
+        cell: (context) => <AlertSeverity severity={context.getValue()} />,
+      }),
+      columnHelper.display({
+        id: "name",
+        header: "Name",
+        minSize: 100,
+        cell: (context) => (
+          <div className="max-w-[300px]">
+            <AlertName alert={context.row.original} />
+          </div>
+        ),
+      }),
+      columnHelper.accessor("description", {
+        id: "description",
+        header: "Description",
+        minSize: 100,
+        cell: (context) => (
+          <div title={context.getValue()}>
+            <div className="truncate">{context.getValue()}</div>
+          </div>
+        ),
+      }),
+      columnHelper.accessor("status", {
+        id: "status",
+        minSize: 100,
+        header: "Status",
+      }),
+      columnHelper.accessor("is_created_by_ai", {
+        id: "is_created_by_ai",
+        header: "🔗",
+        minSize: 50,
+        cell: (context) => (
+          <>
+            {context.getValue() ? (
+              <div title="Correlated with AI">🤖</div>
+            ) : (
+              <div title="Correlated manually">👨‍💻</div>
+            )}
+          </>
+        ),
+      }),
+      columnHelper.accessor("lastReceived", {
+        id: "lastReceived",
+        header: "Last Received",
+        minSize: 100,
+        cell: (context) => (
+          <span>{getAlertLastReceieved(context.getValue())}</span>
+        ),
+      }),
+      columnHelper.accessor("source", {
+        id: "source",
+        header: "Source",
+        minSize: 100,
+        cell: (context) =>
+          (context.getValue() ?? []).map((source, index) => (
+            <Image
+              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+              key={`source-${source}-${index}`}
+              alt={source}
+              height={24}
+              width={24}
+              title={source}
+              src={`/icons/${source}-icon.png`}
+            />
+          )),
+      }),
+      columnHelper.display({
+        id: "remove",
+        header: "",
+        cell: (context) =>
+          incident.is_confirmed && (
+            <IncidentAlertMenu
+              alert={context.row.original}
+              incidentId={incident.id}
+            />
+          ),
+      }),
+    ],
+    [incident.is_confirmed]
+  );
 
   const table = useReactTable({
+    data: alerts?.items ?? [],
     columns: columns,
-    manualPagination: true,
+    rowCount: alerts?.count ?? 0,
     state: {
       pagination,
       columnPinning: {
+        left: ["selected"],
         right: ["remove"],
       },
     },
-    rowCount: alerts ? alerts.count : 0,
     onPaginationChange: setTablePagination,
-    data: alerts?.items ?? [],
     getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
   });
+
   return (
     <>
       <Card className="p-0 overflow-hidden">
