@@ -116,13 +116,15 @@ const CreateIncidentWithAIModal = ({
           setSelectedIncidents(
             data.incident_suggestion.map((incident) => incident.id)
           );
-          toast.success("AI has suggested incident groupings");
+        } else if (response.status === 400) {
+          setError(
+            "Keep backend is not initialized with an AI model. See documentation on how to enable it."
+          );
         } else {
           const errorData = await response.json();
           setError(
             errorData.detail || "Failed to create incident suggestions with AI"
           );
-          toast.error("Failed to create incident suggestions with AI");
         }
       } finally {
         clearTimeout(timeoutId);
@@ -130,7 +132,6 @@ const CreateIncidentWithAIModal = ({
     } catch (error) {
       console.error("Error creating incident with AI:", error);
       setError("An unexpected error occurred. Please try again.");
-      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -249,11 +250,10 @@ const CreateIncidentWithAIModal = ({
         router.push("/incidents");
       } else {
         const errorData = await response.json();
-        toast.error(`Failed to create incidents: ${errorData.detail}`);
+        setError(errorData.detail || "Failed to create incidents");
       }
     } catch (error) {
       console.error("Error creating incidents:", error);
-      toast.error("An unexpected error occurred while creating incidents");
     }
   };
 
@@ -334,7 +334,7 @@ const CreateIncidentWithAIModal = ({
               ) : (
                 <Callout
                   title="AI Analysis"
-                  color="orange"
+                  color="purple"
                   className="w-full mb-4"
                 >
                   AI will analyze {alerts.length} alert

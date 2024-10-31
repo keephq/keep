@@ -12,6 +12,7 @@ from pydantic import (
     AnyHttpUrl,
     BaseModel,
     Extra,
+    Field,
     PrivateAttr,
     root_validator,
     validator,
@@ -587,3 +588,38 @@ class IncidentListFilterParamsDto(BaseModel):
     assignees: List[str]
     services: List[str]
     sources: List[str]
+
+
+class IncidentCandidate(BaseModel):
+    incident_name: str
+    alerts: List[int] = Field(
+        description="List of alert numbers (1-based index) included in this incident"
+    )
+    reasoning: str
+    severity: str = Field(
+        description="Assessed severity level",
+        enum=["Low", "Medium", "High", "Critical"],
+    )
+    recommended_actions: List[str]
+    confidence_score: float = Field(
+        description="Confidence score of the incident clustering (0.0 to 1.0)"
+    )
+    confidence_explanation: str = Field(
+        description="Explanation of how the confidence score was calculated"
+    )
+
+
+class IncidentClustering(BaseModel):
+    incidents: List[IncidentCandidate]
+
+
+class IncidentCommit(BaseModel):
+    accepted: bool
+    original_suggestion: dict
+    changes: dict = Field(default_factory=dict)
+    incident: IncidentDto
+
+
+class IncidentsClusteringSuggestion(BaseModel):
+    incident_suggestion: list[IncidentDto]
+    suggestion_id: str
