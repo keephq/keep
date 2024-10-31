@@ -38,6 +38,7 @@ from keep.providers.datadog_provider.datadog_alert_format_description import \
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import HttpsUrl
 
 logger = logging.getLogger(__name__)
 
@@ -68,13 +69,13 @@ class DatadogProviderAuthConfig:
         },
         default="",
     )
-    domain: pydantic.HttpUrl = dataclasses.field(
+    domain: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "Datadog API domain",
             "sensitive": False,
             "hint": "https://api.datadoghq.com",
-            "validation": "http_url"
+            "validation": "https_url"
         },
         default="https://api.datadoghq.com",
     )

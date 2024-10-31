@@ -21,12 +21,12 @@ class CentreonProviderAuthConfig:
     CentreonProviderAuthConfig is a class that holds the authentication information for the CentreonProvider.
     """
 
-    host_url: pydantic.HttpUrl = dataclasses.field(
+    host_url: pydantic.AnyHttpUrl | None = dataclasses.field(
         metadata={
             "required": True,
             "description": "Centreon Host URL",
             "sensitive": False,
-            "validation": "http_url",
+            "validation": "any_http_url",
         },
         default=None,
     )

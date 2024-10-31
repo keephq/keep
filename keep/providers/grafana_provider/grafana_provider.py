@@ -35,12 +35,12 @@ class GrafanaProviderAuthConfig:
             "sensitive": True,
         },
     )
-    host: pydantic.HttpUrl = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana host",
             "hint": "e.g. https://keephq.grafana.net",
-            "validation": "http_url"
+            "validation": "any_http_url"
         },
     )
 
@@ -110,17 +110,10 @@ class GrafanaProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Grafana provider.
-
         """
         self.authentication_config = GrafanaProviderAuthConfig(
             **self.config.authentication
         )
-        if not self.authentication_config.host.startswith(
-            "https://"
-        ) and not self.authentication_config.host.startswith("http://"):
-            self.authentication_config.host = (
-                f"https://{self.authentication_config.host}"
-            )
 
     def validate_scopes(self) -> dict[str, bool | str]:
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}

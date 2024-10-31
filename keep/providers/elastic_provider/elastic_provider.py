@@ -27,12 +27,12 @@ class ElasticProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: typing.Optional[pydantic.HttpUrl] = dataclasses.field(
+    host: pydantic.AnyHttpUrl | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
             "description": "Elasticsearch host",
-            "validation": "http_url",
+            "validation": "any_http_url",
         },
     )
     cloud_id: typing.Optional[str] = dataclasses.field(
