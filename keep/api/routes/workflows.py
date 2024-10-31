@@ -563,7 +563,7 @@ def get_workflow_executions_by_alert_fingerprint(
     ]
 
 
-@router.get("/{workflow_id}/logs", description="Get workflow executions by ID")
+@router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
     tab: int = 1,

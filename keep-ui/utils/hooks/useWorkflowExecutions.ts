@@ -49,7 +49,7 @@ export const useWorkflowExecutionsV2 = (
   return useSWR<PaginatedWorkflowExecutionDto>(
     () =>
       session
-        ? `${apiUrl}/workflows/${workflowId}/logs?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
+        ? `${apiUrl}/workflows/${workflowId}/runs?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
             searchParams ? `&${searchParams.toString()}` : ""
           }`
         : null,
