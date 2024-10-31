@@ -19,7 +19,19 @@ import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, case, desc, func, literal, null, union, update
+from sqlalchemy import (
+    String,
+    and_,
+    case,
+    cast,
+    desc,
+    func,
+    literal,
+    null,
+    select,
+    union,
+    update,
+)
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -1193,6 +1205,7 @@ def get_last_alerts(
 ) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
+    Supports MySQL, PostgreSQL, and SQLite databases.
 
     Args:
         tenant_id (_type_): The tenant_id to filter the alerts by.
@@ -1207,7 +1220,9 @@ def get_last_alerts(
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
     with Session(engine) as session:
-        # Subquery that selects the max and min timestamp for each fingerprint.
+        dialect_name = session.bind.dialect.name
+
+        # Subquery that selects the max and min timestamp for each fingerprint
         subquery = (
             session.query(
                 Alert.fingerprint,
@@ -1230,6 +1245,7 @@ def get_last_alerts(
                 .subquery()
             )
 
+        # Apply additional filters
         filter_conditions = []
 
         if upper_timestamp is not None:
@@ -1242,11 +1258,11 @@ def get_last_alerts(
             filter_conditions.append(subquery.c.fingerprint.in_(tuple(fingerprints)))
 
         logger.info(f"filter_conditions: {filter_conditions}")
-        # Apply the filter conditions
+
         if filter_conditions:
             subquery = session.query(subquery).filter(*filter_conditions).subquery()
 
-        # Main query joins the subquery to select alerts with their first and last occurrence.
+        # Main query for alerts
         query = (
             session.query(
                 Alert,
@@ -1264,15 +1280,48 @@ def get_last_alerts(
         )
 
         if with_incidents:
-            incidents_subquery = (
-                session.query(
-                    AlertToIncident.alert_id,
-                    func.group_concat(AlertToIncident.incident_id).label("incidents"),
+            if dialect_name == "sqlite":
+                # SQLite version - using JSON
+                incidents_subquery = (
+                    session.query(
+                        AlertToIncident.alert_id,
+                        func.json_group_array(
+                            cast(AlertToIncident.incident_id, String)
+                        ).label("incidents"),
+                    )
+                    .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .group_by(AlertToIncident.alert_id)
+                    .subquery()
                 )
-                .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
-                .group_by(AlertToIncident.alert_id)
-                .subquery()
-            )
+
+            elif dialect_name == "mysql":
+                # MySQL version - using GROUP_CONCAT
+                incidents_subquery = (
+                    session.query(
+                        AlertToIncident.alert_id,
+                        func.group_concat(
+                            cast(AlertToIncident.incident_id, String)
+                        ).label("incidents"),
+                    )
+                    .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .group_by(AlertToIncident.alert_id)
+                    .subquery()
+                )
+
+            elif dialect_name == "postgresql":
+                # PostgreSQL version - using string_agg
+                incidents_subquery = (
+                    session.query(
+                        AlertToIncident.alert_id,
+                        func.string_agg(
+                            cast(AlertToIncident.incident_id, String),
+                            ",",
+                        ).label("incidents"),
+                    )
+                    .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .group_by(AlertToIncident.alert_id)
+                    .subquery()
+                )
 
             query = query.add_columns(incidents_subquery.c.incidents)
             query = query.outerjoin(
@@ -1288,19 +1337,28 @@ def get_last_alerts(
         # Execute the query
         alerts_with_start = query.all()
 
-        # Convert result to list of Alert objects and include "startedAt" information
+        # Process results based on dialect
         alerts = []
         for alert_data in alerts_with_start:
             alert = alert_data[0]
             startedAt = alert_data[1]
             alert.event["startedAt"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
+
             if with_incidents:
                 incident_id = alert_data[2]
+                if dialect_name == "sqlite":
+                    # Parse JSON array for SQLite
+                    incident_id = json.loads(incident_id)[0] if incident_id else None
+                elif dialect_name in ("mysql", "postgresql"):
+                    # Split comma-separated string for MySQL and PostgreSQL
+                    incident_id = incident_id.split(",")[0] if incident_id else None
+
                 alert.event["incident"] = str(incident_id) if incident_id else None
+
             alerts.append(alert)
 
-    return alerts
+        return alerts
 
 
 def get_alerts_by_fingerprint(
