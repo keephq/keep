@@ -11,11 +11,12 @@ import { GenericTable } from "@/components/table/GenericTable";
 import { useAlertQualityMetrics } from "utils/hooks/useAlertQuality";
 import { useProviders } from "utils/hooks/useProviders";
 import { Provider, ProvidersResponse } from "app/providers/providers";
-import { TabGroup, TabList, Tab } from "@tremor/react";
+import { TabGroup, TabList, Tab, Callout } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useSearchParams } from "next/navigation";
 import { AlertKnownKeys } from "./models";
 import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
+import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 
 const tabs = [
   { name: "All", value: "all" },
@@ -339,6 +340,20 @@ const AlertQuality = ({
   const { data: alertsQualityMetrics, error } = useAlertQualityMetrics(
     isDashBoard ? (fieldsValue as string | string[]) : ""
   );
+
+ 
+  if (error) {
+    return (
+      <Callout
+        className="mt-4"
+        title="Error"
+        icon={ExclamationCircleIcon}
+        color="rose"
+      >
+        Failed to load Alert Quality Metrics
+      </Callout>
+    );
+  }
 
   return (
     <QualityTable

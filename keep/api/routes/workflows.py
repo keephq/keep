@@ -491,6 +491,50 @@ def get_raw_workflow_by_id(
             )
         },
     )
+    
+@router.get("/{workflow_id}", description="Get workflow by ID")
+def get_workflow_by_id(
+    workflow_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    # get all workflow
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    
+    if not workflow:
+        logger.warning(
+            f"Tenant tried to get workflow {workflow_id} that does not exist",
+            extra={"tenant_id": tenant_id},
+        )
+        raise HTTPException(404, "Workflow not found")
+    
+    try: 
+        workflow_yaml = yaml.safe_load(workflow.workflow_raw)
+        valid_workflow_yaml = {"workflow": workflow_yaml}
+        final_workflow_raw = yaml.dump(valid_workflow_yaml)
+        workflow_dto = WorkflowDTO(
+            id=workflow.id,
+            name=workflow.name,
+            description=workflow.description
+            or "[This workflow has no description]",
+            created_by=workflow.created_by,
+            creation_time=workflow.creation_time,
+            interval=workflow.interval,
+            providers=[],
+            triggers=[],
+            workflow_raw=final_workflow_raw,
+            revision=workflow.revision,
+            last_updated=workflow.last_updated,
+            disabled=workflow.is_disabled,
+            provisioned=workflow.provisioned,
+        )
+        return workflow_dto
+    except yaml.YAMLError:
+        logger.exception("Invalid YAML format")
+        raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
+ 
 
 
 @router.get("/executions", description="Get workflow executions by alert fingerprint")
@@ -519,7 +563,7 @@ def get_workflow_executions_by_alert_fingerprint(
     ]
 
 
-@router.get("/{workflow_id}", description="Get workflow executions by ID")
+@router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
     tab: int = 1,
