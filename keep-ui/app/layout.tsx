@@ -14,6 +14,7 @@ const mulish = Mulish({
 import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
 import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPollingContext";
+import { FrigadeProvider } from "./frigade-provider";
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -25,13 +26,15 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
         <NextAuthProvider>
           <TopologyPollingContextProvider>
-            {/* @ts-ignore-error Server Component */}
-            <Navbar />
-            {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
-            <main className="page-container flex flex-col col-start-3 overflow-auto">
-              <div className="flex-1">{children}</div>
-              <ToastContainer />
-            </main>
+            <FrigadeProvider>
+              {/* @ts-ignore-error Server Component */}
+              <Navbar />
+              {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
+              <main className="page-container flex flex-col col-start-3 overflow-auto">
+                <div className="flex-1">{children}</div>
+                <ToastContainer />
+              </main>
+            </FrigadeProvider>
           </TopologyPollingContextProvider>
         </NextAuthProvider>
 

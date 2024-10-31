@@ -25,7 +25,7 @@ export default async function NavbarInner() {
           <NoiseReductionLinks session={session} />
           <DashboardLinks session={session} />
         </div>
-        <UserInfo session={session}/>
+        <UserInfo session={session} />
       </Menu>
       <MinimizeMenuButton />
     </>
