@@ -6,7 +6,6 @@ import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthenticationType } from "utils/authenticationType";
-import Image from "next/image";
 import Link from "next/link";
 import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
@@ -15,6 +14,9 @@ import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
 import { Icon, Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
+import * as Frigade from "@frigade/react";
+import { useState } from "react";
+import Onboarding from "./Onboarding";
 
 type UserDropdownProps = {
   session: Session;
@@ -85,28 +87,49 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
-  return (
-    <ul className="space-y-2 p-2">
-      <li>
-        <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-          Providers
-        </LinkWithIcon>
-      </li>
-      <li>
-        {/* TODO: slows everything down. needs to be replaced */}
-        <DarkModeToggle />
-      </li>
-      <li>
-        <LinkWithIcon
-          icon={LuSlack}
-          href="https://slack.keephq.dev/"
-          target="_blank"
-        >
-          Join our Slack
-        </LinkWithIcon>
-      </li>
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
-      {session && <UserDropdown session={session} />}
-    </ul>
+  return (
+    <>
+      <ul className="space-y-2 p-2">
+        <li>
+          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
+            Providers
+          </LinkWithIcon>
+        </li>
+        <li>
+          {/* TODO: slows everything down. needs to be replaced */}
+          <DarkModeToggle />
+        </li>
+        <li>
+          <LinkWithIcon
+            icon={LuSlack}
+            href="https://slack.keephq.dev/"
+            target="_blank"
+          >
+            Join our Slack
+          </LinkWithIcon>
+        </li>
+        {session && <UserDropdown session={session} />}
+        {isOnboardingComplete === false && (
+          <li>
+            <Frigade.ProgressBadge
+              flowId="flow_FHDz1hit"
+              onComplete={() => setIsOnboardingComplete(true)}
+              onClick={() => setIsOnboardingOpen(true)}
+              // css={{ backgroundColor: "#F9FAFB" }}
+            />
+            <Onboarding
+              isOpen={isOnboardingOpen}
+              toggle={() => setIsOnboardingOpen(false)}
+              variables={{
+                name: session?.user.name ?? session?.user.email,
+              }}
+            />
+          </li>
+        )}
+      </ul>
+    </>
   );
 };
