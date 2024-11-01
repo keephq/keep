@@ -1,33 +1,27 @@
 import { useSession } from "next-auth/react";
-import { getApiURL } from "../apiUrl";
 import { SWRConfiguration } from "swr";
 import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 import { useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import {  useMemo } from "react";
+import { useApiUrl } from "./useConfig";
 
 export const useAlertQualityMetrics = (
   fields: string | string[],
   options: SWRConfiguration = {}
 ) => {
   const { data: session } = useSession();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const searchParams = useSearchParams();
-  ``;
-  let filters = useMemo(() => {
-    let params = searchParams?.toString();
+  const filters = useMemo(() => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
     if (fields) {
-      fields = Array.isArray(fields) ? fields : [fields];
-      let fieldParams = new URLSearchParams("");
-      fields.forEach((field) => {
-        fieldParams.append("fields", field);
-      });
-      params = params
-        ? `${params}&${fieldParams.toString()}`
-        : fieldParams.toString();
+      const fieldArray = Array.isArray(fields) ? fields : [fields];
+      fieldArray.forEach((field) => params.append("fields", field));
     }
-    return params;
-  }, [fields?.toString(), searchParams?.toString()]);
+  
+    return params.toString();
+  }, [fields, searchParams]);
   // TODO: Proper type needs to be defined.
   return useSWRImmutable<Record<string, Record<string, any>>>(
     () =>
