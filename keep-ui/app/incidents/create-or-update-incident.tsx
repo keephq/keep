@@ -2,7 +2,6 @@
 
 import {
   TextInput,
-  Textarea,
   Divider,
   Subtitle,
   Text,
@@ -10,17 +9,14 @@ import {
   Select,
   SelectItem,
 } from "@tremor/react";
-import { useSession } from "next-auth/react";
 import { FormEvent, useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import { getApiURL } from "utils/apiUrl";
 import { IncidentDto } from "./models";
-import { useIncidents } from "utils/hooks/useIncidents";
-import { Session } from "next-auth";
 import { useUsers } from "utils/hooks/useUsers";
 const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "react-quill/dist/quill.snow.css";
+import "./react-quill-override.css";
+import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -28,51 +24,17 @@ interface Props {
   exitCallback?: () => void;
 }
 
-export const updateIncidentRequest = async ({
-  session,
-  incidentId,
-  incidentName,
-  incidentUserSummary,
-  incidentAssignee,
-  incidentSameIncidentInThePastId,
-  generatedByAi,
-}: {
-  session: Session | null;
-  incidentId: string;
-  incidentName: string;
-  incidentUserSummary: string;
-  incidentAssignee: string;
-  incidentSameIncidentInThePastId: string | null;
-  generatedByAi: boolean;
-}) => {
-  const apiUrl = getApiURL();
-  const response = await fetch(`${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${session?.accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_generated_name: incidentName,
-      user_summary: incidentUserSummary,
-      assignee: incidentAssignee,
-      same_incident_in_the_past_id: incidentSameIncidentInThePastId,
-    }),
-  });
-  return response;
-};
-
 export default function CreateOrUpdateIncident({
   incidentToEdit,
   createCallback,
   exitCallback,
 }: Props) {
-  const { data: session } = useSession();
-  const { mutate } = useIncidents(true, 20);
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const { data: users = [] } = useUsers();
+  const { addIncident, updateIncident } = useIncidentActions();
+
   const editMode = incidentToEdit !== null;
 
   // Display cancel btn if editing or we need to cancel for another reason (eg. going one step back in the modal etc.)
@@ -98,62 +60,36 @@ export default function CreateOrUpdateIncident({
     setIncidentAssignee("");
   };
 
-  const addIncident = async (e: FormEvent) => {
-    e.preventDefault();
-    const apiUrl = getApiURL();
-    const response = await fetch(`${apiUrl}/incidents`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_generated_name: incidentName,
-        user_summary: incidentUserSummary,
-        assignee: incidentAssignee,
-      }),
-    });
-    if (response.ok) {
-      exitEditMode();
-      await mutate();
-      toast.success("Incident created successfully");
-
-      const created = await response.json();
-      createCallback?.(created.id); // close the modal and associate the alert incident
-    } else {
-      toast.error(
-        "Failed to create incident, please contact us if this issue persists."
-      );
-    }
-  };
-
-  // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backend.
-  const updateIncident = async (e: FormEvent) => {
-    e.preventDefault();
-    const response = await updateIncidentRequest({
-      session: session,
-      incidentId: incidentToEdit?.id!,
-      incidentName: incidentName,
-      incidentUserSummary: incidentUserSummary,
-      incidentAssignee: incidentAssignee,
-      incidentSameIncidentInThePastId: incidentToEdit?.same_incident_in_the_past_id!,
-      generatedByAi: false,
-    })
-    if (response.ok) {
-      exitEditMode();
-      await mutate();
-      toast.success("Incident updated successfully");
-    } else {
-      toast.error(
-        "Failed to update incident, please contact us if this issue persists."
-      );
-    }
-  };
-
   // If the Incident is successfully updated or the user cancels the update we exit the editMode and set the editRule in the incident.tsx to null.
   const exitEditMode = () => {
     exitCallback?.();
     clearForm();
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (editMode) {
+      await updateIncident(
+        incidentToEdit!.id,
+        {
+          user_generated_name: incidentName,
+          user_summary: incidentUserSummary,
+          assignee: incidentAssignee,
+          same_incident_in_the_past_id:
+            incidentToEdit!.same_incident_in_the_past_id,
+        },
+        false
+      );
+      exitEditMode();
+    } else {
+      const newIncident = await addIncident({
+        user_generated_name: incidentName,
+        user_summary: incidentUserSummary,
+        assignee: incidentAssignee,
+      });
+      createCallback?.(newIncident.id);
+      exitEditMode();
+    }
   };
 
   const submitEnabled = (): boolean => {
@@ -187,7 +123,7 @@ export default function CreateOrUpdateIncident({
   };
 
   return (
-    <form className="py-2" onSubmit={editMode ? updateIncident : addIncident}>
+    <form className="py-2" onSubmit={handleSubmit}>
       <Subtitle>Incident Metadata</Subtitle>
       <div className="mt-2.5">
         <Text className="mb-2">
@@ -209,6 +145,7 @@ export default function CreateOrUpdateIncident({
           modules={modules}
           formats={formats} // Add formats
           placeholder="What happened?"
+          className="border border-tremor-border rounded-tremor-default shadow-tremor-input"
           required={false}
           onValueChange={setIncidentUserSummary}
         />

@@ -6,13 +6,15 @@ import sys
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pusher import Pusher
 from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    add_audit,
+    change_incident_status_by_id,
     confirm_predicted_incident_by_id,
     create_incident_from_dto,
     delete_incident_by_id,
@@ -21,27 +23,31 @@ from keep.api.core.db import (
     get_incident_alerts_and_links_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
+    get_incidents_meta_for_tenant,
     get_last_incidents,
     get_workflow_executions_for_incident_or_alert,
     remove_alerts_to_incident_by_incident_id,
-    change_incident_status_by_id,
     update_incident_from_dto_by_id,
     get_incidents_meta_for_tenant,
+    merge_incidents_to_id,
+    DestinationIncidentNotFound,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
+    EnrichAlertRequestBody,
     IncidentDto,
     IncidentDtoIn,
-    IncidentStatusChangeDto,
-    IncidentStatus,
-    EnrichAlertRequestBody,
-    IncidentSorting,
-    IncidentSeverity,
     IncidentListFilterParamsDto,
+    MergeIncidentsRequestDto,
+    IncidentSeverity,
+    IncidentSorting,
+    IncidentStatus,
+    IncidentStatusChangeDto,
+    MergeIncidentsResponseDto,
 )
-
+from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
@@ -50,6 +56,7 @@ from keep.api.utils.pagination import (
     IncidentsPaginatedResultsDto,
     WorkflowExecutionsPaginatedResultsDto,
 )
+from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -192,7 +199,6 @@ def get_all_incidents(
         filters["sources"] = sources
     if affected_services:
         filters["affected_services"] = affected_services
-
 
     logger.info(
         "Fetching incidents from DB",
@@ -348,6 +354,54 @@ def delete_incident(
     return Response(status_code=202)
 
 
+@router.post(
+    "/merge", description="Merge incidents", response_model=MergeIncidentsResponseDto
+)
+def merge_incidents(
+    command: MergeIncidentsRequestDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+) -> MergeIncidentsResponseDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Merging incidents",
+        extra={
+            "source_incident_ids": command.source_incident_ids,
+            "destination_incident_id": command.destination_incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    try:
+        merged_ids, skipped_ids, failed_ids = merge_incidents_to_id(
+            tenant_id,
+            command.source_incident_ids,
+            command.destination_incident_id,
+            authenticated_entity.email,
+        )
+
+        if not merged_ids:
+            message = "No incidents merged"
+        else:
+            message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
+        
+        if skipped_ids:
+            message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
+        if failed_ids:
+            message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
+
+        return MergeIncidentsResponseDto(
+            merged_incident_ids=merged_ids,
+            skipped_incident_ids=skipped_ids,
+            failed_incident_ids=failed_ids,
+            destination_incident_id=command.destination_incident_id,
+            message=message,
+        )
+    except DestinationIncidentNotFound as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get(
     "/{incident_id}/alerts",
     description="Get incident alerts by incident incident id",
@@ -437,7 +491,9 @@ def get_future_incidents_for_an_incident(
         offset=offset,
         incident_id=incident_id,
     )
-    future_incidents = [IncidentDto.from_db_incident(incident) for incident in db_incidents]
+    future_incidents = [
+        IncidentDto.from_db_incident(incident) for incident in db_incidents
+    ]
     logger.info(
         "Fetched future incidents from DB",
         extra={
@@ -524,7 +580,9 @@ async def add_alerts_to_incident(
                 limit=len(alert_ids) + incident.alerts_count,
             )
 
-            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts, with_incidents=True)
+            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
+                db_alerts, with_incidents=True
+            )
             logger.info(
                 "Fetched alerts from DB",
                 extra={
@@ -726,3 +784,36 @@ def change_incident_status(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
+
+@router.post("/{incident_id}/comment", description="Add incident audit activity")
+def add_comment(
+    incident_id: UUID,
+    change: IncidentStatusChangeDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
+) -> AlertAudit:
+    extra = {
+        "tenant_id": authenticated_entity.tenant_id,
+        "commenter": authenticated_entity.email,
+        "comment": change.comment,
+        "incident_id": str(incident_id),
+    }
+    logger.info("Adding comment to incident", extra=extra)
+    comment = add_audit(
+        authenticated_entity.tenant_id,
+        str(incident_id),
+        authenticated_entity.email,
+        AlertActionType.INCIDENT_COMMENT,
+        change.comment,
+    )
+
+    if pusher_client:
+        pusher_client.trigger(
+            f"private-{authenticated_entity.tenant_id}", "incident-comment", {}
+        )
+
+    logger.info("Added comment to incident", extra=extra)
+    return comment

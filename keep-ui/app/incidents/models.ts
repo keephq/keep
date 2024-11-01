@@ -1,11 +1,11 @@
-import {AlertDto} from "../alerts/models";
+import { AlertDto } from "../alerts/models";
 
 export enum Status {
   Firing = "firing",
   Resolved = "resolved",
   Acknowledged = "acknowledged",
+  Merged = "merged",
 }
-
 
 export interface IncidentDto {
   id: string;
@@ -27,6 +27,9 @@ export interface IncidentDto {
   rule_fingerprint: string;
   same_incident_in_the_past_id: string;
   following_incidents_ids: string[];
+  merged_into_incident_id: string;
+  merged_by: string;
+  merged_at: Date;
 }
 
 export interface PaginatedIncidentsDto {

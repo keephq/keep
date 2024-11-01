@@ -1,16 +1,11 @@
 import { Fragment } from "react";
 import { Button, Subtitle, Title } from "@tremor/react";
 
-
 interface Props {
   setIsFormOpen: (value: boolean) => void;
 }
 
-
-export const IncidentPlaceholder = ({
-  setIsFormOpen,
-}: Props) => {
-
+export const IncidentListPlaceholder = ({ setIsFormOpen }: Props) => {
   const onCreateButtonClick = () => {
     setIsFormOpen(true);
   };
@@ -32,7 +27,6 @@ export const IncidentPlaceholder = ({
           Create Incident
         </Button>
       </div>
-
     </Fragment>
   );
 };

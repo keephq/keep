@@ -1,8 +1,8 @@
 "use client";
 import { defaultProvider, Provider } from "./providers";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "../../utils/apiUrl";
-import { KeepApiError } from "../error";
+import { KeepApiError } from "@/shared/lib/KeepApiError";
+import { useApiUrl } from "utils/hooks/useConfig";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
 import Loading from "../loading";
@@ -111,6 +111,7 @@ export default function ProvidersPage({
     isLocalhost,
   } = useFetchProviders();
   const { providersSearchString, providersSelectedTags } = useFilterContext();
+  const apiUrl = useApiUrl();
   const router = useRouter();
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
@@ -127,7 +128,7 @@ export default function ProvidersPage({
   if (error) {
     throw new KeepApiError(
       error.message,
-      `${getApiURL()}/providers`,
+      `${apiUrl}/providers`,
       error.proposedResolution,
       error.statusCode
     );

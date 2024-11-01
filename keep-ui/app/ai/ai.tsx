@@ -2,7 +2,7 @@
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
 import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { AILogs } from "./model";
@@ -15,6 +15,7 @@ export default function Ai() {
   const [newText, setNewText] = useState("Mine incidents");
   const [animate, setAnimate] = useState(false);
   const onlyOnce = useRef(false);
+  const apiUrl = useApiUrl();
 
   const mutateAILogs = (logs: AILogs) => {
     setBasicAlgorithmLog(logs.log);
@@ -42,7 +43,6 @@ export default function Ai() {
     e.preventDefault();
     setAnimate(true);
     setNewText("Mining 🚀🚀🚀 ...");
-    const apiUrl = getApiURL();
     const response = await fetch(`${apiUrl}/incidents/mine`, {
       method: "POST",
       headers: {

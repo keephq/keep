@@ -1,10 +1,10 @@
-import {Button, Select, SelectItem, Title} from "@tremor/react";
+import { Button, Select, SelectItem, Title } from "@tremor/react";
 
 import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { IncidentDto } from "@/app/incidents/models";
@@ -16,7 +16,11 @@ interface Props {
   handleClose: () => void;
 }
 
-export default function ManualRunWorkflowModal({ alert, incident, handleClose }: Props) {
+export default function ManualRunWorkflowModal({
+  alert,
+  incident,
+  handleClose,
+}: Props) {
   /**
    *
    */
@@ -26,7 +30,7 @@ export default function ManualRunWorkflowModal({ alert, incident, handleClose }:
   const { data: workflows } = useWorkflows({});
   const { data: session } = useSession();
   const router = useRouter();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const isOpen = !!alert || !!incident;
 
@@ -44,7 +48,10 @@ export default function ManualRunWorkflowModal({ alert, incident, handleClose }:
           Authorization: `Bearer ${session?.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({"type": alert ? "alert" : "incident", "body": alert ? alert : incident}),
+        body: JSON.stringify({
+          type: alert ? "alert" : "incident",
+          body: alert ? alert : incident,
+        }),
       }
     );
 

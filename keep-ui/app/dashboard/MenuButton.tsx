@@ -3,13 +3,15 @@ import { Menu, Transition } from "@headlessui/react";
 import { Icon } from "@tremor/react";
 import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Bars3Icon } from "@heroicons/react/20/solid";
+import { FiSave } from "react-icons/fi";
 
 interface MenuButtonProps {
   onEdit: () => void;
   onDelete: () => void;
+  onSave?: () => void;
 }
 
-const MenuButton: React.FC<MenuButtonProps> = ({ onEdit, onDelete }) => {
+const MenuButton: React.FC<MenuButtonProps> = ({ onEdit, onDelete, onSave }) => {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
@@ -70,6 +72,24 @@ const MenuButton: React.FC<MenuButtonProps> = ({ onEdit, onDelete }) => {
                   </button>
                 )}
               </Menu.Item>
+              {onSave && (
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      onClick={(e) => {
+                        stopPropagation(e);
+                        onSave();
+                      }}
+                      className={`${
+                        active ? "bg-slate-200" : "text-gray-900"
+                      } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+                    >
+                      <FiSave className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Save
+                    </button>
+                  )}
+                </Menu.Item>
+              )}
             </div>
           </Menu.Items>
         </Transition>

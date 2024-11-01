@@ -1,13 +1,11 @@
 import { Button, Divider, Title } from "@tremor/react";
 import Select from "@/components/ui/Select";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { toast } from "react-toastify";
 import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
-import { updateIncidentRequest } from "./create-or-update-incident";
 import { IncidentDto } from "./models";
+import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 interface ChangeSameIncidentInThePast {
   incident: IncidentDto;
@@ -26,31 +24,32 @@ const ChangeSameIncidentInThePast = ({
   const [selectedIncident, setSelectedIncident] = useState<
     string | undefined
   >();
-  const { data: session } = useSession();
+  const { updateIncident } = useIncidentActions();
   const router = useRouter();
 
   const associateIncidentHandler = async (
     selectedIncidentId: string | null
   ) => {
-    const response = await updateIncidentRequest({
-      session: session,
-      incidentId: incident.id,
-      incidentSameIncidentInThePastId: selectedIncidentId,
-      incidentName: incident.user_generated_name,
-      incidentUserSummary: incident.user_summary,
-      incidentAssignee: incident.assignee,
-      generatedByAi: false,
-    });
-    if (response.ok) {
-      mutate();
-      toast.success("Incident updated successfully!");
+    try {
+      await updateIncident(
+        incident.id,
+        {
+          same_incident_in_the_past_id: selectedIncidentId,
+        },
+        false
+      );
       handleClose();
+    } catch (error) {
+      console.error(error);
     }
   };
 
   const handleLinkIncident = (e: FormEvent) => {
     e.preventDefault();
-    if (selectedIncident) associateIncidentHandler(selectedIncident);
+    if (!selectedIncident) {
+      return;
+    }
+    associateIncidentHandler(selectedIncident);
   };
 
   const handleUnlinkIncident = (e: FormEvent) => {
