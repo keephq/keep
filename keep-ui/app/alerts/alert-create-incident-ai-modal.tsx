@@ -92,6 +92,7 @@ const CreateIncidentWithAIModal = ({
 
         // If timeout error (which happens after 30s with NextJS), wait 10s and retry
         // This handles cases where the request goes through the NextJS server which has a 30s timeout
+        // TODO: https://github.com/keephq/keep/issues/2374
         if (!response.ok && response.status === 500) {
           await new Promise((resolve) => setTimeout(resolve, 10000));
           response = await fetch(`${apiUrl}/incidents/ai/suggest`, {

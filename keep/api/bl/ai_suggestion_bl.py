@@ -29,8 +29,11 @@ class AISuggestionBl:
         self.session = session if session else get_session_sync()
 
         # Todo: interface it with any model
+        #       https://github.com/keephq/keep/issues/2373
         # Todo: per-tenant keys
+        #       https://github.com/keephq/keep/issues/2365
         # Todo: also goes with settings page
+        #       https://github.com/keephq/keep/issues/2365
         try:
             self._client = OpenAI()
         except OpenAIError as e:

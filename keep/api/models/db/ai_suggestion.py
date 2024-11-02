@@ -51,31 +51,3 @@ class AIFeedback(SQLModel, table=True):
 
     class Config:
         arbitrary_types_allowed = True
-
-
-"""
-SQL commands to create the tables in SQLite:
-
-CREATE TABLE aisuggestion (
-    id TEXT PRIMARY KEY,
-    tenant_id TEXT,
-    user_id TEXT,
-    suggestion_input TEXT,
-    suggestion_input_hash TEXT,
-    suggestion_type TEXT,
-    suggestion_content TEXT,
-    model TEXT,
-    created_at TIMESTAMP
-);
-CREATE TABLE aifeedback (
-    id TEXT PRIMARY KEY,
-    suggestion_id TEXT,
-    user_id TEXT,
-    feedback_content TEXT,
-    rating INTEGER,
-    comment TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    FOREIGN KEY(suggestion_id) REFERENCES aisuggestion(id)
-);
-"""
