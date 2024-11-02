@@ -52,7 +52,7 @@ import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
 import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { z } from "zod";
+import { getZodSchema } from "./form-validation";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -155,137 +155,6 @@ function getInitialFormValues(provider: Provider) {
   }
 
   return initialValues;
-}
-
-function getZodSchema(fields: Provider["config"]) {
-  const required_error = "This field is required";
-  const portError = "Invalid port number";
-  const emptyStringToNull = z
-    .string()
-    .optional()
-    .transform((val) => (val?.length === 0 ? null : val));
-  const kvPairs = Object.entries(fields).map(([field, config]) => {
-    if (config.type === "form") {
-      const baseFormSchema = z.record(z.string(), z.string()).array();
-      const formSchema = config.required
-        ? baseFormSchema.nonempty({
-            message: "At least one key-value entry should be provided.",
-          })
-        : baseFormSchema.optional();
-      return [field, formSchema];
-    }
-
-    if (config.type === "file") {
-      const baseFileSchema = z
-        .instanceof(File, { message: "Please upload a file here." })
-        .refine(
-          (file) => {
-            if (config.file_type == undefined) return true;
-            if (config.file_type.length <= 1) return true;
-            return config.file_type.includes(file.type);
-          },
-          {
-            message:
-              config.file_type && config.file_type?.split(",").length > 1
-                ? `File type should be one of ${config.file_type}.`
-                : `File should be of type ${config.file_type}.`,
-          }
-        );
-      const fileSchema = config.required
-        ? baseFileSchema
-        : baseFileSchema.optional();
-      return [field, fileSchema];
-    }
-
-    if (config.type === "switch") {
-      const switchSchema = config.required
-        ? z.boolean()
-        : z.boolean().optional();
-      return [field, switchSchema];
-    }
-
-    const urlSchema = z.string({ required_error }).url({
-      message:
-        "Please provide a valid url, with a scheme & hostname as required.",
-    });
-    const urlTldSchema = z.string().regex(new RegExp(/\.[a-z]{2,63}$/), {
-      message: "Url must contain a valid TLD e.g .com, .io, .dev, .net",
-    });
-    const baseAnyHttpSchema = urlSchema.refine(
-      (url) => url.startsWith("http://") || url.startsWith("https://"),
-      { message: "A url with `http` or `https` protocol is reuquired." }
-    );
-    const baseHttpSchema = baseAnyHttpSchema.and(urlTldSchema);
-    const baseHttpsSchema = urlSchema
-      .refine((url) => url.startsWith("https://"), {
-        message: "A url with `https` protocol is required.",
-      })
-      .and(urlTldSchema);
-
-    if (config.validation === "any_url") {
-      const anyUrlSchema = config.required
-        ? urlSchema
-        : emptyStringToNull.pipe(urlSchema.nullish());
-      return [field, anyUrlSchema];
-    }
-
-    if (config.validation === "any_http_url") {
-      const anyHttpSchema = config.required
-        ? baseAnyHttpSchema
-        : emptyStringToNull.pipe(baseAnyHttpSchema.nullish());
-      return [field, anyHttpSchema];
-    }
-
-    if (config.validation === "http_url") {
-      const httpSchema = config.required
-        ? baseHttpSchema
-        : emptyStringToNull.pipe(baseHttpSchema.nullish());
-      return [field, httpSchema];
-    }
-    if (config.validation === "https_url") {
-      const httpsSchema = config.required
-        ? baseHttpsSchema
-        : emptyStringToNull.pipe(baseHttpsSchema.nullish());
-      return [field, httpsSchema];
-    }
-    if (config.validation === "tld") {
-      const baseTldSchema = z
-        .string({ required_error })
-        .regex(new RegExp(/\.[a-z]{2,63}$/), {
-          message: "Please provide a valid TLD e.g .com, .io, .dev, .net",
-        });
-      const tldSchema = config.required
-        ? baseTldSchema
-        : baseTldSchema.optional();
-      return [field, tldSchema];
-    }
-    if (config.validation === "port") {
-      const basePortSchema = z.coerce
-        .number({ required_error, invalid_type_error: portError })
-        .min(1, { message: portError })
-        .max(65_535, { message: portError });
-      const portSchema = config.required
-        ? basePortSchema
-        : emptyStringToNull.pipe(basePortSchema.nullish());
-      return [field, portSchema];
-    }
-    return [
-      field,
-      config.required
-        ? z
-            .string({ required_error })
-            .trim()
-            .min(1, { message: required_error })
-        : z.string().optional(),
-    ];
-  });
-  return z.object({
-    provider_name: z
-      .string({ required_error })
-      .trim()
-      .min(1, { message: required_error }),
-    ...Object.fromEntries(kvPairs),
-  });
 }
 
 const providerNameFieldConfig: ProviderAuthConfig = {
