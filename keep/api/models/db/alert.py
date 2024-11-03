@@ -47,6 +47,7 @@ else:
 # but we also want to allow it to be nullable. MySQL doesn't allow nullable fields in primary keys, so:
 NULL_FOR_DELETED_AT = datetime(1000, 1, 1, 0, 0)
 
+
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -61,15 +62,16 @@ class AlertToIncident(SQLModel, table=True):
     )
     alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
     incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
-    
+
     is_created_by_ai: bool = Field(default=False)
 
     deleted_at: datetime = Field(
         default_factory=None,
-        nullable=True, 
+        nullable=True,
         primary_key=True,
         default=NULL_FOR_DELETED_AT,
     )
+
 
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -96,7 +98,8 @@ class Incident(SQLModel, table=True):
 
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        back_populates="incidents", link_model=AlertToIncident,
+        back_populates="incidents",
+        link_model=AlertToIncident,
         # primaryjoin is used to filter out deleted links for various DB dialects
         sa_relationship_kwargs={
             "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
@@ -106,14 +109,11 @@ class Incident(SQLModel, table=True):
                 ))""",
             "uselist": True,
             "overlaps": "alert,incident",
-        }
-        
+        },
     )
     alert_to_incident_link: List[AlertToIncident] = Relationship(
         back_populates="incident",
-        sa_relationship_kwargs={
-            "overlaps": "alerts,incidents"
-        }
+        sa_relationship_kwargs={"overlaps": "alerts,incidents"},
     )
 
     is_predicted: bool = Field(default=False)
@@ -222,7 +222,7 @@ class Alert(SQLModel, table=True):
     )
 
     incidents: List["Incident"] = Relationship(
-        back_populates="alerts", 
+        back_populates="alerts",
         link_model=AlertToIncident,
         sa_relationship_kwargs={
             # primaryjoin is used to filter out deleted links for various DB dialects
@@ -233,13 +233,19 @@ class Alert(SQLModel, table=True):
                 ))""",
             "uselist": True,
             "overlaps": "alert,incident",
-        }
+        },
     )
     alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="alert",
-        sa_relationship_kwargs={
-            "overlaps": "alerts,incidents"
-        }
+        back_populates="alert", sa_relationship_kwargs={"overlaps": "alerts,incidents"}
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_alert_tenant_fingerprint_timestamp",
+            "tenant_id",
+            "fingerprint",
+            "timestamp",
+        ),
     )
 
     class Config:
