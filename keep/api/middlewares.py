@@ -9,7 +9,7 @@ from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from keep.api.core.db import get_api_key
-from keep.posthog.posthog import get_posthog_client
+from keep.posthog.posthog import posthog_client
 
 logger = logging.getLogger(__name__)
 try:
@@ -40,7 +40,7 @@ def _extract_identity(request: Request, attribute="email") -> str:
 class PostHogEventCaptureMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: FastAPI):
         super().__init__(app)
-        self.posthog_client = get_posthog_client()
+        self.posthog_client = posthog_client
         self.tracer = trace.get_tracer(__name__)
 
     async def capture_request(self, request: Request) -> None:
