@@ -22,16 +22,24 @@ try:
 except Exception:
     KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
-def get_posthog_client(sync_mode=False):
+def get_posthog_client(sync_mode=False, feature_flags_request_timeout_seconds=None):
     posthog_api_key = (
         os.getenv("POSTHOG_API_KEY")
         or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
     )
-    posthog_client = Posthog(api_key=posthog_api_key, host="https://app.posthog.com", sync_mode=sync_mode)
+    posthog_client = Posthog(
+        api_key=posthog_api_key, 
+        host="https://app.posthog.com", 
+        sync_mode=sync_mode,
+        feature_flags_request_timeout_seconds=feature_flags_request_timeout_seconds
+    )
     return posthog_client
 
 def is_posthog_reachable():
-    posthog_client = get_posthog_client(sync_mode=True)
+    posthog_client = get_posthog_client(
+        sync_mode=True,
+        feature_flags_request_timeout_seconds=3, # Explicitly set timeout to 3 seconds to avoid clogging.
+    )
     try:
         posthog_client.capture(
             RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH, 
@@ -42,6 +50,10 @@ def is_posthog_reachable():
         return False
 
 def report_uptime_to_posthog_blocking():
+    """
+    It's a blocking function that reports uptime and current version to PostHog every hour.
+    Should be lunched in a separate thread.
+    """
     while True:
         posthog_client = get_posthog_client()
         posthog_client.capture(

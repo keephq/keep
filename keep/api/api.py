@@ -1,19 +1,15 @@
+import os
 import asyncio
 import logging
-import os
 import threading
-import time
 from importlib import metadata
 
-import jwt
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
-from opentelemetry import trace
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
@@ -30,7 +26,6 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
     KEEP_ARQ_TASK_POOL_NONE,
 )
-from keep.api.core.db import get_api_key
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.routes import (
@@ -64,13 +59,15 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
-from keep.posthog.posthog import DISABLE_POSTHOG, get_posthog_client, is_posthog_reachable, report_uptime_to_posthog_blocking
+from keep.posthog.posthog import DISABLE_POSTHOG, is_posthog_reachable, report_uptime_to_posthog_blocking
 
 # load all providers into cache
 from keep.providers.providers_factory import ProvidersFactory
 from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
+
+from keep.api.middlewares import LoggingMiddleware, PostHogEventCaptureMiddleware
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
@@ -98,82 +95,6 @@ def no_redirect_request(self, method, url, **kwargs):
 
 
 requests.Session.request = no_redirect_request
-
-
-def _extract_identity(request: Request, attribute="email") -> str:
-    try:
-        token = request.headers.get("Authorization").split(" ")[1]
-        decoded_token = jwt.decode(token, options={"verify_signature": False})
-        return decoded_token.get(attribute)
-    # case api key
-    except AttributeError:
-        # try api key
-        api_key = request.headers.get("x-api-key")
-        if not api_key:
-            return "anonymous"
-
-        api_key = get_api_key(api_key)
-        if api_key:
-            return api_key.tenant_id
-        return "anonymous"
-    except Exception:
-        return "anonymous"
-
-
-class PostHogEventCaptureMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: FastAPI):
-        super().__init__(app)
-        self.posthog_client = get_posthog_client()
-        self.tracer = trace.get_tracer(__name__)
-
-    async def capture_request(self, request: Request) -> None:
-        identity = _extract_identity(request)
-        with self.tracer.start_as_current_span("capture_request"):
-            self.posthog_client.capture(
-                identity,
-                "request-started",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
-
-    async def capture_response(self, request: Request, response: Response) -> None:
-        identity = _extract_identity(request)
-        with self.tracer.start_as_current_span("capture_response"):
-            self.posthog_client.capture(
-                identity,
-                "request-finished",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "status_code": response.status_code,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
-
-    async def flush(self):
-        with self.tracer.start_as_current_span("flush_posthog_events"):
-            logger.debug("Flushing Posthog events")
-            self.posthog_client.flush()
-            logger.debug("Posthog events flushed")
-
-    async def dispatch(self, request: Request, call_next):
-        # Skip OPTIONS requests
-        if request.method == "OPTIONS":
-            return await call_next(request)
-        # Capture event before request
-        await self.capture_request(request)
-
-        response = await call_next(request)
-
-        # Capture event after request
-        await self.capture_response(request, response)
-
-        # Perform async tasks or flush events after the request is handled
-        await self.flush()
-        return response
 
 
 def get_app(
@@ -207,9 +128,9 @@ def get_app(
     if not DISABLE_POSTHOG:
         if is_posthog_reachable():
             app.add_middleware(PostHogEventCaptureMiddleware)
-            logger.warning("Posthog API is reachable, middleware plugged.")
+            logger.info("Posthog API is reachable, middleware plugged.")
         else:
-            logger.warning("Posthog API is not reachable, not using the middleware.")
+            logger.info("Posthog API is not reachable, not using the middleware.")
     # app.add_middleware(GZipMiddleware)
 
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
@@ -359,27 +280,7 @@ def get_app(
             },
         )
 
-    @app.middleware("http")
-    async def log_middleware(request: Request, call_next):
-        identity = _extract_identity(request, attribute="keep_tenant_id")
-        logger.info(
-            f"Request started: {request.method} {request.url.path}",
-            extra={"tenant_id": identity},
-        )
-
-        # for debugging purposes, log the payload
-        if os.environ.get("LOG_AUTH_PAYLOAD", "false") == "true":
-            logger.info(f"Request headers: {request.headers}")
-
-        start_time = time.time()
-        request.state.tenant_id = identity
-        response = await call_next(request)
-
-        end_time = time.time()
-        logger.info(
-            f"Request finished: {request.method} {request.url.path} {response.status_code} in {end_time - start_time:.2f}s",
-        )
-        return response
+    app.add_middleware(LoggingMiddleware)
 
     keep.api.observability.setup(app)
 
