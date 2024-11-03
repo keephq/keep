@@ -178,17 +178,17 @@ def get_app(
     # if any endpoints needed, add them on_start
     identity_manager.on_start(app)
 
-    # @app.on_event("startup")
-    # async def report_posthog():
-    #     if not DISABLE_POSTHOG:
-    #         if is_posthog_reachable():
-    #             thread = threading.Thread(target=report_uptime_to_posthog_blocking)
-    #             thread.start()
-    #             logger.info("Uptime Reporting to Posthog launched.")
-    #         else:
-    #             logger.info("Reporting to Posthog not launched because it's not reachable.")
-    #     else:
-    #         logger.info("Posthog reporting is disabled so no uptime reporting.")
+    @app.on_event("startup")
+    async def report_posthog():
+        if not DISABLE_POSTHOG:
+            if is_posthog_reachable():
+                thread = threading.Thread(target=report_uptime_to_posthog_blocking)
+                thread.start()
+                logger.info("Uptime Reporting to Posthog launched.")
+            else:
+                logger.info("Reporting to Posthog not launched because it's not reachable.")
+        else:
+            logger.info("Posthog reporting is disabled so no uptime reporting.")
 
     @app.on_event("startup")
     async def on_startup():
@@ -279,7 +279,7 @@ def get_app(
             },
         )
 
-    # app.add_middleware(LoggingMiddleware)
+    app.add_middleware(LoggingMiddleware)
 
     keep.api.observability.setup(app)
 
