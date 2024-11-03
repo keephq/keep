@@ -4,12 +4,10 @@ import time
 import logging
 from importlib import metadata
 
-from fastapi import FastAPI, Request, Response
-from opentelemetry import trace
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from keep.api.core.db import get_api_key
-from keep.posthog.posthog import posthog_client
 
 logger = logging.getLogger(__name__)
 try:
@@ -36,62 +34,6 @@ def _extract_identity(request: Request, attribute="email") -> str:
         return "anonymous"
     except Exception:
         return "anonymous"
-    
-class PostHogEventCaptureMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: FastAPI):
-        super().__init__(app)
-        self.posthog_client = posthog_client
-        self.tracer = trace.get_tracer(__name__)
-
-    async def capture_request(self, request: Request) -> None:
-        identity = _extract_identity(request)
-        with self.tracer.start_as_current_span("capture_request"):
-            self.posthog_client.capture(
-                identity,
-                "request-started",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
-
-    async def capture_response(self, request: Request, response: Response) -> None:
-        identity = _extract_identity(request)
-        with self.tracer.start_as_current_span("capture_response"):
-            self.posthog_client.capture(
-                identity,
-                "request-finished",
-                {
-                    "path": request.url.path,
-                    "method": request.method,
-                    "status_code": response.status_code,
-                    "keep_version": KEEP_VERSION,
-                },
-            )
-
-    async def flush(self):
-        with self.tracer.start_as_current_span("flush_posthog_events"):
-            logger.debug("Flushing Posthog events")
-            self.posthog_client.flush()
-            logger.debug("Posthog events flushed")
-
-    async def dispatch(self, request: Request, call_next):
-        # Skip OPTIONS requests
-        if request.method == "OPTIONS":
-            return await call_next(request)
-        # Capture event before request
-        await self.capture_request(request)
-
-        response = await call_next(request)
-
-        # Capture event after request
-        await self.capture_response(request, response)
-
-        # Perform async tasks or flush events after the request is handled
-        await self.flush()
-        return response
-
 
 class LoggingMiddleware(BaseHTTPMiddleware):
 
