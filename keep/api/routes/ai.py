@@ -6,7 +6,8 @@ from keep.api.core.db import (
     get_alerts_count,
     get_first_alert_datetime,
     get_incidents_count,
-    get_or_create_ai_settings,
+    get_or_create_external_ai_settings,
+    update_extrnal_ai_settings,
 )
 from keep.api.utils.import_ee import ALGORITHM_VERBOSE_NAME
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -31,5 +32,20 @@ def get_stats(
         "alerts_count": get_alerts_count(tenant_id),
         "first_alert_datetime": get_first_alert_datetime(tenant_id),
         "incidents_count": get_incidents_count(tenant_id),
-        "algorithms": get_or_create_ai_settings(tenant_id),
+        "algorithms": get_or_create_external_ai_settings(tenant_id),
     }
+
+@router.put(
+    "/{algorithm_id}/settings",
+    description="Update settings for an external AI",
+    include_in_schema=False,
+)
+def update_settings(
+    algorithm_id: str,
+    settings: dict,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:alert"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    return update_extrnal_ai_settings(tenant_id, settings)

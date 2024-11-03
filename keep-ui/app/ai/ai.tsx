@@ -1,65 +1,20 @@
 "use client";
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
-import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
+import { useAIStats as useAI, usePollAILogs } from "utils/hooks/useAI";
 import { useSession } from "next-auth/react";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { toast } from "react-toastify";
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { AILogs } from "./model";
 
 export default function Ai() {
-  const { data: aistats, isLoading } = useAIStats();
+  const { data: aistats, isLoading } = useAI();
   const { data: session } = useSession();
   const [text, setText] = useState("");
   const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
-  const [newText, setNewText] = useState("Mine incidents");
-  const [animate, setAnimate] = useState(false);
-  const onlyOnce = useRef(false);
-  const apiUrl = useApiUrl();
 
   const mutateAILogs = (logs: AILogs) => {
     setBasicAlgorithmLog(logs.log);
   };
   usePollAILogs(mutateAILogs);
-
-  useEffect(() => {
-    let index = 0;
-
-    const interval = setInterval(() => {
-      setText(newText.slice(0, index + 1));
-      index++;
-
-      if (index === newText.length) {
-        clearInterval(interval);
-      }
-    }, 100);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [newText]);
-
-  const mineIncidents = async (e: FormEvent) => {
-    e.preventDefault();
-    setAnimate(true);
-    setNewText("Mining 🚀🚀🚀 ...");
-    const response = await fetch(`${apiUrl}/incidents/mine`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
-    if (!response.ok) {
-      toast.error(
-        "Failed to mine incidents, please contact us if this issue persists."
-      );
-    }
-
-    setAnimate(false);
-    setNewText("Mine incidents");
-  };
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
@@ -74,57 +29,21 @@ export default function Ai() {
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
-          {aistats?.is_mining_enabled == false && (
-            <div>
-              <div className="prose-2xl">👋 You are almost there!</div>
-              AI Correlation is coming soon. Make sure you have enough data
-              collected to prepare.
-              <div className="max-w-md mt-10 flex justify-items-start justify-start">
-                <List>
-                  <ListItem>
-                    <span>
-                      Connect an incident source to dump incidents, or create 10
-                      incidents manually
-                    </span>
-                    <span>
-                      {aistats?.incidents_count &&
-                      aistats?.incidents_count >= 10 ? (
-                        <div>✅</div>
-                      ) : (
-                        <div>⏳</div>
-                      )}
-                    </span>
-                  </ListItem>
-                  <ListItem>
-                    <span>Collect 100 alerts</span>
-                    <span>
-                      {aistats?.alerts_count && aistats?.alerts_count >= 100 ? (
-                        <div>✅</div>
-                      ) : (
-                        <div>⏳</div>
-                      )}
-                    </span>
-                  </ListItem>
-                  <ListItem>
-                    <span>Collect alerts for more than 3 days</span>
-                    <span>
-                      {aistats?.first_alert_datetime &&
-                      new Date(aistats.first_alert_datetime) <
-                        new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) ? (
-                        <div>✅</div>
-                      ) : (
-                        <div>⏳</div>
-                      )}
-                    </span>
-                  </ListItem>
-                </List>
-              </div>
-            </div>
-          )}
-          {aistats?.is_mining_enabled && (
-            <div>
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                <Card
+          <div>
+            <div className="grid grid-cols-2 gap-4 mt-6">
+
+              {aistats?.algorithms?.map((algorithm, index) => (
+                <Card key={index} className="p-4 flex flex-col justify-between w-full border-white border-2">
+                  <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
+                    {algorithm.name}
+                    {console.log(algorithm) && (<></>)}
+                  </h3>
+                  <p className="text-sm">
+                    {algorithm.description}
+                  </p>
+                </Card>
+              ))}
+            <Card
                   className={
                     "p-4 flex flex-col justify-between w-full border-white border-2"
                   }
@@ -146,14 +65,14 @@ export default function Ai() {
 
                   <button
                     className={
-                      (animate && "animate-pulse") +
+                      ("animate-pulse") +
                       " w-full text-white mt-2 pt-2 pb-2 pr-2 rounded-xl transition-all duration-500 bg-gradient-to-tl from-amber-800 via-amber-600 to-amber-400 bg-size-200 bg-pos-0 hover:bg-pos-100"
                     }
-                    onClick={mineIncidents}
+                    // onClick={mineIncidents}
                   >
                     <div className="flex flex-row p-2">
                       <div className="p-2">
-                        {animate && (
+                        {(
                           <svg
                             className="animate-spin h-6 w-6 text-white"
                             xmlns="http://www.w3.org/2000/svg"
@@ -175,7 +94,7 @@ export default function Ai() {
                             ></path>
                           </svg>
                         )}
-                        {!animate && (
+                        {(
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
@@ -196,19 +115,8 @@ export default function Ai() {
                     </div>
                   </button>
                 </Card>
-                <Card
-                  className={"p-4 flex flex-col w-full border-white border-2"}
-                >
-                  <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
-                    Summarization v0.1
-                  </h3>
-                  <p className="text-sm top-0">
-                    Using LLMs to provide a human-readable incident summary.
-                  </p>
-                </Card>
-              </div>
             </div>
-          )}
+          </div>
         </div>
       </Card>
     </main>

@@ -22,6 +22,24 @@ export const useAIStats = (
   );
 };
 
+export const useUpdateAISettings = () => {
+  const apiUrl = useApiUrl();
+  const { data: session } = useSession();
+
+  return async (settings: Record<string, any>) => {
+    const response = await fetch(`${apiUrl}/ai/settings`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    });
+
+    return response.ok;
+  };
+}
+
 export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
   const { bind, unbind } = useWebsocket();
   const handleIncoming = useCallback(

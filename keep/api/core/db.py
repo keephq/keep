@@ -31,6 +31,7 @@ from sqlmodel import Session, col, or_, select, text
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
+from keep.api.models.ai_external import ExternalAIConfigAndMetadataDTO
 from keep.api.models.alert import AlertStatus, IncidentDtoIn, IncidentSorting
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
@@ -44,7 +45,7 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.algorithm_metadata import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
@@ -3882,17 +3883,28 @@ def get_alerts_metrics_by_provider(
         for row in results
     }
 
-def get_or_create_ai_settings(tenant_id: str) -> List[AIConfigAndMetadata]:
+def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigAndMetadataDTO]:
     with Session(engine) as session:
-        algorithms = session.exec(
-            select(AIConfigAndMetadata).where(AIConfigAndMetadata.tenant_id == tenant_id)
+        algorithm_configs = session.exec(
+            select(ExternalAIConfigAndMetadata).where(ExternalAIConfigAndMetadata.tenant_id == tenant_id)
         ).all()
-        if len(algorithms) == 0:
-            algorithm = AIConfigAndMetadata.from_external_ai(
+        if len(algorithm_configs) == 0:
+            # Once more algorithms, more complicated design of which algo for whom to enable is needed here.
+            algorithm_config = ExternalAIConfigAndMetadata.from_external_ai(
                 tenant_id=tenant_id,
-                algorithm=TransformersAlgorithm
+                algorithm=ExternalAITransformers
             )
-            session.add(algorithm)
+            session.add(algorithm_config)
             session.commit()
-            algorithms = [algorithm]
-    return algorithms
+            algorithm_configs = [algorithm_config]
+    return algorithm_configs
+
+def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDTO:
+    with Session(engine) as session:
+        session.query(ExternalAIConfigAndMetadata).filter(
+            ExternalAIConfigAndMetadata.tenant_id == tenant_id,
+            ExternalAIConfigAndMetadata.id == ai_settings.id
+        ).update(ai_settings.dict())
+        session.commit()
+        session.refresh(ai_settings)
+    return ai_settings

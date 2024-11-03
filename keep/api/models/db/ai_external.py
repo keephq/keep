@@ -39,19 +39,20 @@ class ExternalAI(BaseModel):
 
 
 # Not sure if we'll need to move algorithm objects to the DB, 
-# for now while we don't have a lot of them, it's ok to keep them as code.
-TransformersAlgorithm = ExternalAI(
-    name="transformers",
+# for now, it's ok to keep them as code.
+ExternalAITransformers = ExternalAI(
+    name="Transformers",
+    description="Transformers-based alert-to-incident correlation algorithm. Trained per tenant and taking into account the tenant's alert and incident data.",
     version=1,
-    api_url=os.environ.get("AI_TRANSFORMERS_API_HOST", "localhost:8082"),
+    api_url=os.environ.get("AI_TRANSFORMERS_API_HOST", None),
     config_default=json.dumps({"threshold": {"min": 0.3, "max": 0.99, "value": 0.8, "type": "float"}})
 )
 
-AI_ALGORYTHMS = [
-    TransformersAlgorithm
+EXTERNAL_AIS = [
+    ExternalAITransformers
 ]
 
-class AIConfigAndMetadata(SQLModel, table=True):
+class ExternalAIConfigAndMetadata(SQLModel, table=True):
     """
     Dynamic per-tenant algo settings and metadata
     """
@@ -63,11 +64,20 @@ class AIConfigAndMetadata(SQLModel, table=True):
 
     @property
     def algorithm(self) -> ExternalAI:
-        return [algo for algo in AI_ALGORYTHMS if algo.unique_id == self.algorithm_id][0]
+        return [algo for algo in EXTERNAL_AIS if algo.unique_id == self.algorithm_id][0]
+    
+    @property
+    def name(self) -> str:
+        return self.algorithm.name
+    
+    @property
+    def description(self) -> str:
+        return self.algorithm.description
     
     def from_external_ai(tenant_id: str, algorithm: ExternalAI):
-        return AIConfigAndMetadata(
+        external_ai = ExternalAIConfigAndMetadata(
             algorithm_id=algorithm.unique_id,
             tenant_id=tenant_id,
             settings=json.dumps(algorithm.config_default),
         )
+        return external_ai
