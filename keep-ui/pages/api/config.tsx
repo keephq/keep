@@ -5,6 +5,8 @@ import {
   SINGLE_TENANT,
   NO_AUTH,
 } from "utils/authenticationType";
+import { getApiURL } from "utils/apiUrl";
+import { get } from "http";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,6 +23,15 @@ export default async function handler(
     authType = AuthenticationType.NOAUTH;
   }
 
+  // we want to support preview branches on vercel
+  let API_URL_CLIENT;
+  // if we are on vercel, default to getApiURL() if no API_URL_CLIENT is set
+  if (process.env.VERCEL_GIT_COMMIT_REF) {
+    API_URL_CLIENT = process.env.API_URL_CLIENT || getApiURL();
+    // else, no default since we will use relative URLs
+  } else {
+    API_URL_CLIENT = process.env.API_URL_CLIENT;
+  }
   res.status(200).json({
     AUTH_TYPE: authType,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
@@ -37,7 +48,7 @@ export default async function handler(
     //   whereas the client (browser) can get only localhost
     API_URL: process.env.API_URL,
     // could be relative (e.g. for ingress) or absolute (e.g. for cloud run)
-    API_URL_CLIENT: process.env.API_URL_CLIENT,
+    API_URL_CLIENT: API_URL_CLIENT,
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,

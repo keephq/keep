@@ -19,7 +19,19 @@ import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from sqlalchemy import and_, case, desc, literal, null, union, update, func, case
+from sqlalchemy import (
+    String,
+    and_,
+    case,
+    cast,
+    desc,
+    func,
+    literal,
+    null,
+    select,
+    union,
+    update,
+)
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -31,7 +43,12 @@ from sqlmodel import Session, col, or_, select, text
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus, IncidentDtoIn, IncidentSorting
+from keep.api.models.alert import (
+    AlertStatus,
+    IncidentDto,
+    IncidentDtoIn,
+    IncidentSorting,
+)
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -1184,32 +1201,40 @@ def get_last_alerts(
     upper_timestamp=None,
     lower_timestamp=None,
     with_incidents=False,
+    fingerprints=None,
 ) -> list[Alert]:
     """
     Get the last alert for each fingerprint along with the first time the alert was triggered.
+    Supports MySQL, PostgreSQL, and SQLite databases.
 
     Args:
         tenant_id (_type_): The tenant_id to filter the alerts by.
         provider_id (_type_, optional): The provider id to filter by. Defaults to None.
+        limit (int, optional): The maximum number of alerts to return. Defaults to 1000.
+        timeframe (int, optional): The number of days to look back. Defaults to None.
+        upper_timestamp (datetime, optional): The upper bound for the timestamp filter. Defaults to None.
+        lower_timestamp (datetime, optional): The lower bound for the timestamp filter. Defaults to None.
+        fingerprints (List[str], optional): List of fingerprints to filter by. Defaults to None.
 
     Returns:
         List[Alert]: A list of Alert objects including the first time the alert was triggered.
     """
     with Session(engine) as session:
-        # Subquery that selects the max and min timestamp for each fingerprint.
+        dialect_name = session.bind.dialect.name
+
+        # Subquery that selects the max and min timestamp for each fingerprint
         subquery = (
             session.query(
                 Alert.fingerprint,
                 func.max(Alert.timestamp).label("max_timestamp"),
-                func.min(Alert.timestamp).label(
-                    "min_timestamp"
-                ),  # Include minimum timestamp
+                func.min(Alert.timestamp).label("min_timestamp"),
             )
             .filter(Alert.tenant_id == tenant_id)
             .group_by(Alert.fingerprint)
             .subquery()
         )
-        # if timeframe is provided, filter the alerts by the timeframe
+
+        # Apply timeframe filter if provided
         if timeframe:
             subquery = (
                 session.query(subquery)
@@ -1220,6 +1245,7 @@ def get_last_alerts(
                 .subquery()
             )
 
+        # Apply additional filters
         filter_conditions = []
 
         if upper_timestamp is not None:
@@ -1228,21 +1254,19 @@ def get_last_alerts(
         if lower_timestamp is not None:
             filter_conditions.append(subquery.c.max_timestamp >= lower_timestamp)
 
+        if fingerprints:
+            filter_conditions.append(subquery.c.fingerprint.in_(tuple(fingerprints)))
+
         logger.info(f"filter_conditions: {filter_conditions}")
-        # Apply the filter conditions
+
         if filter_conditions:
-            subquery = (
-                session.query(subquery)
-                .filter(*filter_conditions)  # Unpack and apply all conditions
-                .subquery()
-            )
-        # Main query joins the subquery to select alerts with their first and last occurrence.
+            subquery = session.query(subquery).filter(*filter_conditions).subquery()
+
+        # Main query for alerts
         query = (
             session.query(
                 Alert,
-                subquery.c.min_timestamp.label(
-                    "startedAt"
-                ),  # Include "startedAt" in the selected columns
+                subquery.c.min_timestamp.label("startedAt"),
             )
             .filter(Alert.tenant_id == tenant_id)
             .join(
@@ -1256,41 +1280,87 @@ def get_last_alerts(
         )
 
         if with_incidents:
-            query = query.add_columns(AlertToIncident.incident_id.label("incident"))
+            if dialect_name == "sqlite":
+                # SQLite version - using JSON
+                incidents_subquery = (
+                    session.query(
+                        AlertToIncident.alert_id,
+                        func.json_group_array(
+                            cast(AlertToIncident.incident_id, String)
+                        ).label("incidents"),
+                    )
+                    .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .group_by(AlertToIncident.alert_id)
+                    .subquery()
+                )
+
+            elif dialect_name == "mysql":
+                # MySQL version - using GROUP_CONCAT
+                incidents_subquery = (
+                    session.query(
+                        AlertToIncident.alert_id,
+                        func.group_concat(
+                            cast(AlertToIncident.incident_id, String)
+                        ).label("incidents"),
+                    )
+                    .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .group_by(AlertToIncident.alert_id)
+                    .subquery()
+                )
+
+            elif dialect_name == "postgresql":
+                # PostgreSQL version - using string_agg
+                incidents_subquery = (
+                    session.query(
+                        AlertToIncident.alert_id,
+                        func.string_agg(
+                            cast(AlertToIncident.incident_id, String),
+                            ",",
+                        ).label("incidents"),
+                    )
+                    .filter(AlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .group_by(AlertToIncident.alert_id)
+                    .subquery()
+                )
+            else:
+                raise ValueError(f"Unsupported dialect: {dialect_name}")
+
+            query = query.add_columns(incidents_subquery.c.incidents)
             query = query.outerjoin(
-                AlertToIncident,
-                and_(
-                    AlertToIncident.alert_id == Alert.id,
-                    AlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                ),
+                incidents_subquery, Alert.id == incidents_subquery.c.alert_id
             )
 
         if provider_id:
             query = query.filter(Alert.provider_id == provider_id)
 
-        if timeframe:
-            query = query.filter(
-                subquery.c.max_timestamp
-                >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
-            )
-
         # Order by timestamp in descending order and limit the results
         query = query.order_by(desc(Alert.timestamp)).limit(limit)
+
         # Execute the query
         alerts_with_start = query.all()
-        # Convert result to list of Alert objects and include "startedAt" information if needed
+
+        # Process results based on dialect
         alerts = []
         for alert_data in alerts_with_start:
             alert = alert_data[0]
             startedAt = alert_data[1]
             alert.event["startedAt"] = str(startedAt)
             alert.event["event_id"] = str(alert.id)
+
             if with_incidents:
                 incident_id = alert_data[2]
+                if dialect_name == "sqlite":
+                    # Parse JSON array for SQLite
+                    incident_id = json.loads(incident_id)[0] if incident_id else None
+                elif dialect_name in ("mysql", "postgresql"):
+                    # Split comma-separated string for MySQL and PostgreSQL
+                    incident_id = incident_id.split(",")[0] if incident_id else None
+
                 alert.event["incident"] = str(incident_id) if incident_id else None
+
             alerts.append(alert)
 
-    return alerts
+        return alerts
 
 
 def get_alerts_by_fingerprint(
@@ -2098,6 +2168,23 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
         )
 
     return providers
+
+
+def is_linked_provider(tenant_id: str, provider_id: str) -> bool:
+    with Session(engine) as session:
+        linked_provider = (
+            session.query(Alert.provider_id)
+            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.provider_type != "group",
+                Alert.provider_id == provider_id,
+                Provider.id == None,
+            )
+            .first()
+        )
+
+    return linked_provider is not None
 
 
 def get_provider_distribution(
@@ -3088,9 +3175,28 @@ def get_incident_by_id(
 
 
 def create_incident_from_dto(
-    tenant_id: str, incident_dto: IncidentDtoIn
+    tenant_id: str, incident_dto: IncidentDtoIn | IncidentDto
 ) -> Optional[Incident]:
-    return create_incident_from_dict(tenant_id, incident_dto.dict())
+    # from AI
+    if isinstance(incident_dto, IncidentDto):
+        # get all the fields from the DTO
+
+        # NOTE: we do not use dto's alerts, alert count, start time etc
+        #       because we want to re-use the BL of creating incidents
+        #       where all of these are calculated inside add_alerts_to_incident
+        incident_dict = {
+            "user_summary": incident_dto.user_summary,
+            "generated_summary": incident_dto.description,
+            "user_generated_name": incident_dto.user_generated_name,
+            "ai_generated_name": incident_dto.dict().get("name"),
+            "assignee": incident_dto.assignee,
+            "is_predicted": False,  # its not a prediction, but an AI generation
+            "is_confirmed": True,  # confirmed by the user :)
+        }
+        return create_incident_from_dict(tenant_id, incident_dict)
+    # from user
+    else:
+        return create_incident_from_dict(tenant_id, incident_dto.dict())
 
 
 def create_incident_from_dict(
@@ -3198,7 +3304,9 @@ def get_incident_alerts_and_links_by_incident_id(
     with existed_or_new_session(session) as session:
 
         last_fingerprints_subquery = (
-            session.query(Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp"))
+            session.query(
+                Alert.fingerprint, func.max(Alert.timestamp).label("max_timestamp")
+            )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .filter(
                 AlertToIncident.tenant_id == tenant_id,
@@ -3214,11 +3322,13 @@ def get_incident_alerts_and_links_by_incident_id(
                 AlertToIncident,
             )
             .select_from(last_fingerprints_subquery)
-            .outerjoin(Alert, and_(
-                last_fingerprints_subquery.c.fingerprint == Alert.fingerprint,
-                last_fingerprints_subquery.c.max_timestamp == Alert.timestamp,
-
-            ))
+            .outerjoin(
+                Alert,
+                and_(
+                    last_fingerprints_subquery.c.fingerprint == Alert.fingerprint,
+                    last_fingerprints_subquery.c.max_timestamp == Alert.timestamp,
+                ),
+            )
             .join(AlertToIncident, AlertToIncident.alert_id == Alert.id)
             .filter(
                 AlertToIncident.tenant_id == tenant_id,
@@ -3290,15 +3400,17 @@ def get_all_same_alert_ids(
 
 
 def get_alerts_data_for_incident(
+    tenant_id: str,
     alert_ids: List[str | UUID],
     existed_fingerprints: Optional[List[str]] = None,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ) -> dict:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
     Logic is wrapped to the inner function for better usability with an optional database session
 
     Args:
+        tenant_id (str): The tenant ID to filter alerts
         alert_ids (list[str | UUID]): list of alert ids for aggregation
         session (Optional[Session]): The database session or None
 
@@ -3317,6 +3429,7 @@ def get_alerts_data_for_incident(
 
         alerts_data = session.exec(
             select(*fields).where(
+                Alert.tenant_id == tenant_id,
                 col(Alert.id).in_(alert_ids),
             )
         ).all()
@@ -3417,7 +3530,9 @@ def add_alerts_to_incident(
             if not new_alert_ids:
                 return incident
 
-            alerts_data_for_incident = get_alerts_data_for_incident(new_alert_ids, existing_fingerprints, session)
+            alerts_data_for_incident = get_alerts_data_for_incident(
+                tenant_id, new_alert_ids, existing_fingerprints, session
+            )
 
             incident.sources = list(
                 set(incident.sources if incident.sources else [])
@@ -3428,7 +3543,11 @@ def add_alerts_to_incident(
                 | set(alerts_data_for_incident["services"])
             )
             # If incident has alerts already, use the max severity between existing and new alerts, otherwise use the new alerts max severity
-            incident.severity = max(incident.severity, alerts_data_for_incident["max_severity"].order) if incident.alerts_count else alerts_data_for_incident["max_severity"].order
+            incident.severity = (
+                max(incident.severity, alerts_data_for_incident["max_severity"].order)
+                if incident.alerts_count
+                else alerts_data_for_incident["max_severity"].order
+            )
             incident.alerts_count += alerts_data_for_incident["count"]
 
             alert_to_incident_entries = [
@@ -3546,7 +3665,9 @@ def remove_alerts_to_incident_by_incident_id(
         session.commit()
 
         # Getting aggregated data for incidents for alerts which just was removed
-        alerts_data_for_incident = get_alerts_data_for_incident(all_alert_ids, session=session)
+        alerts_data_for_incident = get_alerts_data_for_incident(
+            tenant_id, all_alert_ids, session=session
+        )
 
         service_field = get_json_extract_field(session, Alert.event, "service")
 
@@ -4086,6 +4207,7 @@ def get_workflow_executions_for_incident_or_alert(
 def is_all_incident_alerts_resolved(
     incident: Incident, session: Optional[Session] = None
 ) -> bool:
+
     if incident.alerts_count == 0:
         return False
 
