@@ -1,7 +1,6 @@
 import os
 import asyncio
 import logging
-import threading
 from importlib import metadata
 
 import requests
@@ -59,7 +58,6 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
-from keep.posthog.posthog import POSTHOG_DISABLED, is_posthog_reachable, report_uptime_to_posthog_blocking
 
 # load all providers into cache
 from keep.providers.providers_factory import ProvidersFactory
@@ -67,7 +65,7 @@ from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
-from keep.api.middlewares import LoggingMiddleware, PostHogEventCaptureMiddleware
+from keep.api.middlewares import LoggingMiddleware
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
@@ -125,13 +123,6 @@ def get_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    if not POSTHOG_DISABLED:
-        if is_posthog_reachable():
-            app.add_middleware(PostHogEventCaptureMiddleware)
-            logger.info("Posthog API is reachable, middleware plugged.")
-        else:
-            logger.info("Posthog API is not reachable, not using the middleware.")
-
     app.include_router(providers.router, prefix="/providers", tags=["providers"])
     app.include_router(actions.router, prefix="/actions", tags=["actions"])
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
@@ -177,18 +168,6 @@ def get_app(
     )
     # if any endpoints needed, add them on_start
     identity_manager.on_start(app)
-
-    @app.on_event("startup")
-    async def report_posthog():
-        if not POSTHOG_DISABLED:
-            if is_posthog_reachable():
-                thread = threading.Thread(target=report_uptime_to_posthog_blocking)
-                thread.start()
-                logger.info("Uptime Reporting to Posthog launched.")
-            else:
-                logger.info("Reporting to Posthog not launched because it's not reachable.")
-        else:
-            logger.info("Posthog reporting is disabled so no uptime reporting.")
 
     @app.on_event("startup")
     async def on_startup():
