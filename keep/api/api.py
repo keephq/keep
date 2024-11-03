@@ -59,7 +59,7 @@ from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
-from keep.posthog.posthog import DISABLE_POSTHOG, is_posthog_reachable, report_uptime_to_posthog_blocking
+from keep.posthog.posthog import POSTHOG_DISABLED, is_posthog_reachable, report_uptime_to_posthog_blocking
 
 # load all providers into cache
 from keep.providers.providers_factory import ProvidersFactory
@@ -125,7 +125,7 @@ def get_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    if not DISABLE_POSTHOG:
+    if not POSTHOG_DISABLED:
         if is_posthog_reachable():
             app.add_middleware(PostHogEventCaptureMiddleware)
             logger.info("Posthog API is reachable, middleware plugged.")
@@ -180,7 +180,7 @@ def get_app(
 
     @app.on_event("startup")
     async def report_posthog():
-        if not DISABLE_POSTHOG:
+        if not POSTHOG_DISABLED:
             if is_posthog_reachable():
                 thread = threading.Thread(target=report_uptime_to_posthog_blocking)
                 thread.start()

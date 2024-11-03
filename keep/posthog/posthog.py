@@ -10,11 +10,11 @@ from posthog import Posthog
 
 logger = logging.getLogger(__name__)
 
-DISABLE_POSTHOG = os.getenv("DISABLE_POSTHOG", "false") == "true"
+POSTHOG_DISABLED = os.getenv("POSTHOG_DISABLED", "false") == "true"
 UPTIME_REPORTING_CADENCE = 60 * 60
 RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH = uuid.uuid4()
 
-if DISABLE_POSTHOG:
+if POSTHOG_DISABLED:
     posthog.disabled = True
 
 try:
