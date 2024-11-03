@@ -17,16 +17,16 @@ import {
 } from "@tremor/react";
 import { Droppable, Draggable } from "react-beautiful-dnd";
 import { AlertDto } from "./models";
-import { IncidentCandidatDto } from "../incidents/models";
+import { IncidentCandidateDto } from "../incidents/models";
 
 interface IncidentCardProps {
-  incident: IncidentCandidatDto;
+  incident: IncidentCandidateDto;
   index: number;
-  onIncidentChange: (updatedIncident: IncidentCandidatDto) => void;
+  onIncidentChange: (updatedIncident: IncidentCandidateDto) => void;
 }
 
 interface EditableField {
-  name: keyof IncidentCandidatDto;
+  name: keyof IncidentCandidateDto;
   label: string;
   type: "text" | "textarea";
 }
@@ -49,7 +49,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedIncident, setEditedIncident] =
-    useState<IncidentCandidatDto>(incident);
+    useState<IncidentCandidateDto>(incident);
 
   useEffect(() => {
     setEditedIncident(incident);
@@ -63,7 +63,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
   };
 
   const handleFieldChange = (
-    field: keyof IncidentCandidatDto,
+    field: keyof IncidentCandidateDto,
     value: string
   ) => {
     setEditedIncident((prev) => ({ ...prev, [field]: value }));

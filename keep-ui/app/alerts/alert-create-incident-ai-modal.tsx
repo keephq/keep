@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import Loading from "../loading";
 import { AlertDto } from "./models";
-import { IncidentDto, IncidentCandidatDto } from "../incidents/models";
+import { IncidentDto, IncidentCandidateDto } from "../incidents/models";
 import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { DragDropContext } from "react-beautiful-dnd";
 import IncidentCard from "./alert-create-incident-ai-card";
@@ -24,7 +24,7 @@ interface IncidentChange {
 }
 
 interface IncidentSuggestion {
-  incident_suggestion: IncidentCandidatDto[];
+  incident_suggestion: IncidentCandidateDto[];
   suggestion_id: string;
 }
 
@@ -36,14 +36,14 @@ const CreateIncidentWithAIModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [incidentCandidates, setIncidentCandidates] = useState<
-    IncidentCandidatDto[]
+    IncidentCandidateDto[]
   >([]);
   const [changes, setChanges] = useState<
     Record<string, Record<string, IncidentChange>>
   >({});
   const [selectedIncidents, setSelectedIncidents] = useState<string[]>([]);
   const [originalSuggestions, setOriginalSuggestions] = useState<
-    IncidentCandidatDto[]
+    IncidentCandidateDto[]
   >([]);
   const [suggestionId, setSuggestionId] = useState<string>("");
   const { data: session } = useSession();
@@ -183,7 +183,7 @@ const CreateIncidentWithAIModal = ({
     });
   };
 
-  const handleIncidentChange = (updatedIncident: IncidentCandidatDto) => {
+  const handleIncidentChange = (updatedIncident: IncidentCandidateDto) => {
     setIncidentCandidates((prevIncidents) =>
       prevIncidents.map((incident) =>
         incident.id === updatedIncident.id ? updatedIncident : incident
@@ -201,12 +201,12 @@ const CreateIncidentWithAIModal = ({
         );
         if (
           originalIncident &&
-          updatedIncident[key as keyof IncidentCandidatDto] !==
-            originalIncident[key as keyof IncidentCandidatDto]
+          updatedIncident[key as keyof IncidentCandidateDto] !==
+            originalIncident[key as keyof IncidentCandidateDto]
         ) {
           newChanges[key] = {
-            from: originalIncident[key as keyof IncidentCandidatDto],
-            to: updatedIncident[key as keyof IncidentCandidatDto],
+            from: originalIncident[key as keyof IncidentCandidateDto],
+            to: updatedIncident[key as keyof IncidentCandidateDto],
           };
         }
       });

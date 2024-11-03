@@ -32,7 +32,7 @@ export interface IncidentDto {
   merged_at: Date;
 }
 
-export interface IncidentCandidatDto {
+export interface IncidentCandidateDto {
   id: string;
   name: string;
   description: string;
