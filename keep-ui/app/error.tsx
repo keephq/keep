@@ -33,6 +33,8 @@ export default function ErrorComponent({
               Status Code: {error.statusCode}
               <br />
               Message: {error.message}
+              <br />
+              Url: {error.url}
             </div>
           )}
         </code>

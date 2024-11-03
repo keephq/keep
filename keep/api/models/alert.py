@@ -12,6 +12,7 @@ from pydantic import (
     AnyHttpUrl,
     BaseModel,
     Extra,
+    Field,
     PrivateAttr,
     root_validator,
     validator,
@@ -423,6 +424,12 @@ class IncidentDto(IncidentDtoIn):
     merged_at: datetime.datetime | None
 
     _tenant_id: str = PrivateAttr()
+    _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if "alerts" in data:
+            self._alerts = data["alerts"]
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -445,6 +452,9 @@ class IncidentDto(IncidentDtoIn):
 
     @property
     def alerts(self) -> List["AlertDto"]:
+        if self._alerts is not None:
+            return self._alerts
+
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
@@ -582,3 +592,38 @@ class IncidentListFilterParamsDto(BaseModel):
     assignees: List[str]
     services: List[str]
     sources: List[str]
+
+
+class IncidentCandidate(BaseModel):
+    incident_name: str
+    alerts: List[int] = Field(
+        description="List of alert numbers (1-based index) included in this incident"
+    )
+    reasoning: str
+    severity: str = Field(
+        description="Assessed severity level",
+        enum=["Low", "Medium", "High", "Critical"],
+    )
+    recommended_actions: List[str]
+    confidence_score: float = Field(
+        description="Confidence score of the incident clustering (0.0 to 1.0)"
+    )
+    confidence_explanation: str = Field(
+        description="Explanation of how the confidence score was calculated"
+    )
+
+
+class IncidentClustering(BaseModel):
+    incidents: List[IncidentCandidate]
+
+
+class IncidentCommit(BaseModel):
+    accepted: bool
+    original_suggestion: dict
+    changes: dict = Field(default_factory=dict)
+    incident: IncidentDto
+
+
+class IncidentsClusteringSuggestion(BaseModel):
+    incident_suggestion: list[IncidentDto]
+    suggestion_id: str
