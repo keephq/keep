@@ -29,12 +29,16 @@ POSTHOG_API_KEY = (
 posthog_client = Posthog(
     api_key=POSTHOG_API_KEY, 
     host="https://app.posthog.com", 
-    feature_flags_request_timeout_seconds=3
 )
 
 def is_posthog_reachable():
     try:
-        posthog_client.capture(
+        Posthog(
+            api_key=POSTHOG_API_KEY, 
+            host="https://app.posthog.com", 
+            feature_flags_request_timeout_seconds=3,
+            sync_mode=True  # Explicitly to trigger exception if it's not reachable.
+        ).capture(
             RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH, 
             "connectivity_check",
         )
