@@ -69,6 +69,7 @@ function SelectedRowActions({
     </div>
   );
 }
+import { AlertDto } from "@/app/alerts/models";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 

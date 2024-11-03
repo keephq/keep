@@ -18,7 +18,6 @@ export const useApiUrl = () => {
     return config.API_URL_CLIENT;
   }
 
-  // backward compatibility or for docker-compose or other deployments where the browser
   // can't access the API directly
   return "/backend";
 };
