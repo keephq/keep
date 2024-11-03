@@ -17,14 +17,13 @@ from prettytable import PrettyTable
 from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
-from keep.posthog.posthog import get_posthog_client
+from keep.posthog.posthog import posthog_client
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 
-posthog_client = get_posthog_client()
 try:
     KEEP_VERSION = metadata.version("keep")
 except metadata.PackageNotFoundError:

@@ -12,6 +12,8 @@ from keep.api.models.db.tenant import TenantApiKey
 
 @pytest.fixture
 def test_app(monkeypatch, request):
+    monkeypatch.setenv("POSTHOG_DISABLED", "true")
+
     # Check if request.param is a dict or a string
     if isinstance(request.param, dict):
         # Set environment variables based on the provided dictionary
