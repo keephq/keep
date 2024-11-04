@@ -21,6 +21,10 @@ export default function IncidentSeverityBadge({ severity }: Props) {
       icon = ExclamationCircleIcon;
       color = "red";
       break;
+    case "high":
+      icon = ExclamationTriangleIcon;
+      color = "orange";
+      break;
     case "warning":
       color = "yellow";
       icon = ExclamationTriangleIcon;
@@ -28,6 +32,10 @@ export default function IncidentSeverityBadge({ severity }: Props) {
     case "info":
       icon = InformationCircleIcon;
       color = "green";
+      break;
+    case "low":
+      icon = InformationCircleIcon;
+      color = "blue";
       break;
     default:
       icon = InformationCircleIcon;
