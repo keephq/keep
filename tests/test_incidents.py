@@ -42,7 +42,11 @@ def test_get_alerts_data_for_incident(db_session, create_alert):
             },
         )
 
+    sleep(0.5)
+
     alerts = db_session.query(Alert).all()
+
+    assert len(alerts) == 100
 
     unique_fingerprints = db_session.query(
         func.count(distinct(Alert.fingerprint))
