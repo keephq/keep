@@ -4,18 +4,24 @@ import { getApiURL } from "@/utils/apiUrl";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 
 import { notFound } from "next/navigation";
+import { KeepApiError } from "@/shared/lib/KeepApiError";
+import { IncidentDto } from "@/entities/incidents/model";
 
-export async function getIncidentWithErrorHandling(id: string) {
+export async function getIncidentWithErrorHandling(
+  id: string,
+  redirect = true
+  // @ts-ignore ignoring since not found will be handled by nextjs
+): Promise<IncidentDto> {
   try {
     const session = await getServerSession(authOptions);
     const apiUrl = getApiURL();
     const incident = await getIncident(apiUrl, session, id);
-    if (!incident) {
-      return notFound();
-    }
     return incident;
   } catch (error) {
-    // You can handle different error cases here
-    throw error; // This will trigger Next.js error boundary
+    if (error instanceof KeepApiError && error.statusCode === 404 && redirect) {
+      notFound();
+    } else {
+      throw error;
+    }
   }
 }
