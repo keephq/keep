@@ -58,6 +58,7 @@ from keep.api.utils.pagination import (
 from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import TopologiesService  # noqa
 
 router = APIRouter()
