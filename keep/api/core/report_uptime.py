@@ -10,7 +10,7 @@ from keep.api.core.posthog import (
 )
 
 logger = logging.getLogger(__name__)
-UPTIME_REPORTING_CADENCE = 5
+UPTIME_REPORTING_CADENCE = 60 * 60  # 1 hour
 
 def report_uptime_to_posthog_blocking():
     """
