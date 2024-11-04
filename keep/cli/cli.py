@@ -5,6 +5,7 @@ import os
 import sys
 import typing
 import uuid
+import posthog
 from collections import OrderedDict
 from importlib import metadata
 
@@ -13,18 +14,17 @@ import requests
 import yaml
 from dotenv import find_dotenv, load_dotenv
 from prettytable import PrettyTable
+from posthog import Posthog
 
 from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.cli.click_extensions import NotRequiredIf
-from keep.posthog.posthog import get_posthog_client
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 
-posthog_client = get_posthog_client()
 try:
     KEEP_VERSION = metadata.version("keep")
 except metadata.PackageNotFoundError:
@@ -32,6 +32,20 @@ except metadata.PackageNotFoundError:
         KEEP_VERSION = metadata.version("keephq")
     except metadata.PackageNotFoundError:
         KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
+
+POSTHOG_DISABLED = os.getenv("POSTHOG_DISABLED", "false") == "true"
+
+if POSTHOG_DISABLED:
+    posthog.disabled = True
+
+POSTHOG_API_KEY = (
+    os.getenv("POSTHOG_API_KEY")
+    or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+)
+posthog_client = Posthog(
+    api_key=POSTHOG_API_KEY, 
+    host="https://app.posthog.com", 
+)
 
 logging_config = {
     "version": 1,

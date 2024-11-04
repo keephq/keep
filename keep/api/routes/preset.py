@@ -34,7 +34,6 @@ from keep.api.models.db.preset import (
 from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
-from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
@@ -60,12 +59,9 @@ def pull_data_from_providers(
         logger.debug("Pull data from providers is disabled")
         return
 
-    context_manager = ContextManager(
-        tenant_id=tenant_id,
-        workflow_id=None,
+    providers = ProvidersFactory.get_installed_providers(
+        tenant_id=tenant_id, include_details=False
     )
-
-    providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
 
     logger.info(
         "Pulling data from providers",
@@ -110,11 +106,10 @@ def pull_data_from_providers(
             # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
             update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
 
-            provider_class = ProvidersFactory.get_provider(
-                context_manager=context_manager,
+            provider_class = ProvidersFactory.get_installed_provider(
+                tenant_id=tenant_id,
                 provider_id=provider.id,
                 provider_type=provider.type,
-                provider_config=provider.details,
             )
             sorted_provider_alerts_by_fingerprint = (
                 provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
