@@ -3182,27 +3182,7 @@ def create_incident_from_dto(
         return create_incident_from_dict(tenant_id, incident_dict)
 
     return create_incident_from_dict(tenant_id, incident_dto.dict())
-    # TODO: resolve this
-    #     # from AI
-    #     if isinstance(incident_dto, IncidentDto):
-    #         # get all the fields from the DTO
-    #
-    #         # NOTE: we do not use dto's alerts, alert count, start time etc
-    #         #       because we want to re-use the BL of creating incidents
-    #         #       where all of these are calculated inside add_alerts_to_incident
-    #         incident_dict = {
-    #             "user_summary": incident_dto.user_summary,
-    #             "generated_summary": incident_dto.description,
-    #             "user_generated_name": incident_dto.user_generated_name,
-    #             "ai_generated_name": incident_dto.dict().get("name"),
-    #             "assignee": incident_dto.assignee,
-    #             "is_predicted": False,  # its not a prediction, but an AI generation
-    #             "is_confirmed": True,  # confirmed by the user :)
-    #         }
-    #         return create_incident_from_dict(tenant_id, incident_dict)
-    #     # from user
-    #     else:
-    #         return create_incident_from_dict(tenant_id, incident_dto.dict())
+
 
 def create_incident_from_dict(
     tenant_id: str, incident_data: dict
