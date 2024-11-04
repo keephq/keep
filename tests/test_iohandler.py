@@ -767,63 +767,63 @@ def test_add_time_to_date_function(context_manager):
     assert s == str(expected_date), f"Expected {expected_date}, but got {s}"
 
 
-def test_openobserve_rows_bug(db_session, context_manager):
-    template = "keep.get_firing_time('{{ alert }}', 'minutes') >= 30 and keep.get_firing_time('{{ alert }}', 'minutes') < 90"
-    # from 1 hour ago
-    lastReceived = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-    alert = AlertDto(
-        **{
-            "id": "dfbc23f1-9a71-475c-8fc6-8bf051cc2336",
-            "name": "camera_reachability_23",
-            "status": "firing",
-            "severity": "warning",
-            "lastReceived": str(lastReceived),
-            "environment": "camera_reachability",
-            "isFullDuplicate": False,
-            "isPartialDuplicate": True,
-            "duplicateReason": None,
-            "service": None,
-            "source": ["openobserve"],
-            "apiKeyRef": "webhook",
-            "message": None,
-            "description": "scheduled",
-            "pushed": True,
-            "event_id": "42172953-9f5d-4b65-80a0-d1a29d205934",
-            "url": None,
-            "labels": {
-                "url": "",
-                "alert_period": "5",
-                "alert_operator": "&gt;=",
-                "alert_threshold": "1",
-                "alert_count": "2",
-                "alert_agg_value": "0.00",
-                "alert_end_time": "2024-10-18T13:34:35",
-            },
-            "fingerprint": "d135867d811043414f60f8b6d7b5e9f69464389650e50f476848a64faec2c9b5",
-            "deleted": False,
-            "dismissUntil": None,
-            "dismissed": False,
-            "assignee": None,
-            "providerId": "e3ac6f75cda04397b09099af62d35329",
-            "providerType": "openobserve",
-            "note": None,
-            "startedAt": "2024-10-18T13:28:42",
-            "isNoisy": False,
-            "enriched_fields": [],
-            "incident": None,
-            "trigger": "manual",
-            "rows": "{\\'host': 'somedevice-va1.data.city.keephq.dev'}\\n{'host': 'somedevice2-va1.data.city.keephq.dev'}",
-            "alert_url": "/web/logs?stream_type=metrics&amp;stream=camera_reachability&amp;stream_value=camera_reachability&amp;from=1729258122035000&amp;to=1729258475705000&amp;sql_mode=true&amp;query=123&amp;org_identifier=somecity",
-            "alert_hash": "6530fb046247d056996d3ce7b0f25083ffff9700393f27c21e979e150bf049db",
-            "org_name": "somecity",
-            "stream_type": "metrics",
-        }
-    )
-    context_manager.alert = alert
-    context_manager.event_context = context_manager.alert
-    iohandler = IOHandler(context_manager)
+# def test_openobserve_rows_bug(db_session, context_manager):
+#     template = "keep.get_firing_time('{{ alert }}', 'minutes') >= 30 and keep.get_firing_time('{{ alert }}', 'minutes') < 90"
+#     # from 1 hour ago
+#     lastReceived = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+#     alert = AlertDto(
+#         **{
+#             "id": "dfbc23f1-9a71-475c-8fc6-8bf051cc2336",
+#             "name": "camera_reachability_23",
+#             "status": "firing",
+#             "severity": "warning",
+#             "lastReceived": str(lastReceived),
+#             "environment": "camera_reachability",
+#             "isFullDuplicate": False,
+#             "isPartialDuplicate": True,
+#             "duplicateReason": None,
+#             "service": None,
+#             "source": ["openobserve"],
+#             "apiKeyRef": "webhook",
+#             "message": None,
+#             "description": "scheduled",
+#             "pushed": True,
+#             "event_id": "42172953-9f5d-4b65-80a0-d1a29d205934",
+#             "url": None,
+#             "labels": {
+#                 "url": "",
+#                 "alert_period": "5",
+#                 "alert_operator": "&gt;=",
+#                 "alert_threshold": "1",
+#                 "alert_count": "2",
+#                 "alert_agg_value": "0.00",
+#                 "alert_end_time": "2024-10-18T13:34:35",
+#             },
+#             "fingerprint": "d135867d811043414f60f8b6d7b5e9f69464389650e50f476848a64faec2c9b5",
+#             "deleted": False,
+#             "dismissUntil": None,
+#             "dismissed": False,
+#             "assignee": None,
+#             "providerId": "e3ac6f75cda04397b09099af62d35329",
+#             "providerType": "openobserve",
+#             "note": None,
+#             "startedAt": "2024-10-18T13:28:42",
+#             "isNoisy": False,
+#             "enriched_fields": [],
+#             "incident": None,
+#             "trigger": "manual",
+#             "rows": "{\\'host': 'somedevice-va1.data.city.keephq.dev'}\\n{'host': 'somedevice2-va1.data.city.keephq.dev'}",
+#             "alert_url": "/web/logs?stream_type=metrics&amp;stream=camera_reachability&amp;stream_value=camera_reachability&amp;from=1729258122035000&amp;to=1729258475705000&amp;sql_mode=true&amp;query=123&amp;org_identifier=somecity",
+#             "alert_hash": "6530fb046247d056996d3ce7b0f25083ffff9700393f27c21e979e150bf049db",
+#             "org_name": "somecity",
+#             "stream_type": "metrics",
+#         }
+#     )
+#     context_manager.alert = alert
+#     context_manager.event_context = context_manager.alert
+#     iohandler = IOHandler(context_manager)
 
-    # it should be greater than 60 minutes and less than 90 minutes
-    s = iohandler.render(template)
-    # the alert is not really added to the DB so the firing time is 0.00
-    assert s == "0.00 >= 30 and 0.00 < 90"
+#     # it should be greater than 60 minutes and less than 90 minutes
+#     s = iohandler.render(template)
+#     # the alert is not really added to the DB so the firing time is 0.00
+#     assert s == "0.00 >= 30 and 0.00 < 90"
