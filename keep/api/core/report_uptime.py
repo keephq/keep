@@ -15,7 +15,7 @@ UPTIME_REPORTING_CADENCE = 60 * 60  # 1 hour
 
 async def report_uptime_to_posthog():
     """
-    It's a blocking function that reports uptime and current version to PostHog every hour.
+    Reports uptime and current version to PostHog every hour.
     Should be lunched in a separate thread.
     """
     while True:
