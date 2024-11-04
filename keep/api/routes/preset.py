@@ -119,7 +119,7 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
-            if issubclass(type(provider_class), BaseIncidentProvider):
+            if isinstance(provider_class, BaseIncidentProvider):
                 try:
                     incidents = provider_class.get_incidents()
                     process_event(
@@ -165,7 +165,7 @@ def pull_data_from_providers(
                     logger.info("Finished processing topology data", extra=extra)
             except NotImplementedError:
                 logger.debug(
-                    f"Provider {provider.type} ({provider.id}) does not implement puliing topology data",
+                    f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
                     extra=extra,
                 )
             except Exception as e:
