@@ -23,6 +23,12 @@ class LogEntry(pydantic.BaseModel):
     payload_exists: bool = False
     http_request_exists: bool = False
 
+    @pydantic.validator("severity", pre=True)
+    def validate_severity(cls, severity):
+        if severity is None:
+            return "INFO"
+        return severity
+
 
 @pydantic.dataclasses.dataclass
 class GcpmonitoringProviderAuthConfig:
@@ -131,7 +137,13 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         return self._client
 
     def _query(
-        self, filter: str, timedelta_in_days=1, page_size=1000, raw="true", **kwargs
+        self,
+        filter: str,
+        timedelta_in_days=1,
+        page_size=1000,
+        raw="true",
+        project="",
+        **kwargs,
     ):
         raw = raw == "true"
         self.logger.info(
@@ -143,6 +155,10 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
                 - datetime.timedelta(days=timedelta_in_days)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
             filter = f'{filter} timestamp>="{start_time}"'
+
+        if project:
+            self.client.project = project
+
         entries_iterator = self.client.list_entries(filter_=filter, page_size=page_size)
         entries = []
         for entry in entries_iterator:
@@ -237,7 +253,7 @@ if __name__ == "__main__":
     )
 
     # Get these from a secure source or environment variables
-    with open("sa.json") as f:
+    with open("/Users/talboren/Downloads/sa.json") as f:
         service_account_data = f.read()
 
     config = {
@@ -252,5 +268,8 @@ if __name__ == "__main__":
         provider_type="gcpmonitoring",
         provider_config=config,
     )
-    entries = provider._query(filter='resource.type = "cloud_run_revision"')
+    entries = provider._query(
+        filter='resource.type = "cloud_run_revision" 320b4889c536e16f2b1fecc1e5bfab6f',
+        raw=False,
+    )
     print(entries)
