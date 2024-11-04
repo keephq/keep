@@ -6,24 +6,24 @@ import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
 import { IncidentDto } from "./models";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
 
 interface ChangeSameIncidentInThePast {
   incident: IncidentDto;
-  mutate: () => void;
   handleClose: () => void;
+  linkedIncident: IncidentDto | null;
 }
 
 const ChangeSameIncidentInThePast = ({
   incident,
-  mutate,
   handleClose,
+  linkedIncident,
 }: ChangeSameIncidentInThePast) => {
   const { data: incidents, isLoading } = useIncidents(true, 100);
-  usePollIncidents(mutate);
 
-  const [selectedIncident, setSelectedIncident] = useState<
-    string | undefined
-  >();
+  const [selectedIncident, setSelectedIncident] = useState<string | undefined>(
+    linkedIncident?.id
+  );
   const { updateIncident } = useIncidentActions();
   const router = useRouter();
 
@@ -34,6 +34,8 @@ const ChangeSameIncidentInThePast = ({
       await updateIncident(
         incident.id,
         {
+          // TODO: remove this once the backend supports partial updates
+          ...incident,
           same_incident_in_the_past_id: selectedIncidentId,
         },
         false
@@ -57,67 +59,9 @@ const ChangeSameIncidentInThePast = ({
     associateIncidentHandler(null);
   };
 
-  return (
-    <div className="relative bg-white p-6 rounded-lg">
-      {isLoading ? (
-        <Loading />
-      ) : incidents && incidents.items.length > 0 ? (
-        <div className="h-full justify-center">
-          <Select
-            className="my-2.5"
-            placeholder="Select incident"
-            value={
-              selectedIncident
-                ? {
-                    value: selectedIncident,
-                    label:
-                      incidents.items.find(
-                        (incident) => incident.id === selectedIncident
-                      )?.user_generated_name ||
-                      incidents.items.find(
-                        (incident) => incident.id === selectedIncident
-                      )?.ai_generated_name ||
-                      "",
-                  }
-                : null
-            }
-            onChange={(selectedOption) =>
-              setSelectedIncident(selectedOption?.value)
-            }
-            options={incidents.items
-              ?.filter(
-                (incident_iteration_on) =>
-                  incident_iteration_on.id !== incident.id
-              )
-              .map((incident_iteration_on) => ({
-                value: incident_iteration_on.id,
-                label:
-                  incident_iteration_on.user_generated_name ||
-                  incident_iteration_on.ai_generated_name ||
-                  "",
-              }))}
-          />
-          <Divider />
-          <div className="flex items-center justify-between gap-6">
-            <Button
-              className="flex-1"
-              color="red"
-              onClick={handleUnlinkIncident}
-              disabled={selectedIncident === null}
-            >
-              Unlink
-            </Button>
-            <Button
-              className="flex-1"
-              color="orange"
-              onClick={handleLinkIncident}
-              disabled={selectedIncident === null}
-            >
-              Link and help AI 🤗
-            </Button>
-          </div>
-        </div>
-      ) : (
+  const renderSelectIncidentForm = () => {
+    if (!incidents || !incidents.items.length) {
+      return (
         <div className="flex flex-col items-center justify-center gap-y-8 h-full">
           <div className="text-center space-y-3">
             <Title className="text-2xl">No Incidents Yet</Title>
@@ -133,7 +77,65 @@ const ChangeSameIncidentInThePast = ({
             </Button>
           </div>
         </div>
-      )}
+      );
+    }
+
+    const selectedIncidentInstance = incidents.items.find(
+      (incident) => incident.id === selectedIncident
+    );
+
+    return (
+      <div className="h-full justify-center">
+        <Select
+          className="my-2.5"
+          placeholder="Select incident"
+          value={
+            selectedIncidentInstance
+              ? {
+                  value: selectedIncidentInstance.id,
+                  label: getIncidentName(selectedIncidentInstance),
+                }
+              : null
+          }
+          onChange={(selectedOption) =>
+            setSelectedIncident(selectedOption?.value)
+          }
+          options={incidents.items
+            ?.filter(
+              (incident_iteration_on) =>
+                incident_iteration_on.id !== incident.id
+            )
+            .map((incident_iteration_on) => ({
+              value: incident_iteration_on.id,
+              label: getIncidentName(incident_iteration_on),
+            }))}
+        />
+        <Divider />
+        <div className="flex items-center justify-end gap-2">
+          {selectedIncident && (
+            <Button
+              color="red"
+              onClick={handleUnlinkIncident}
+              disabled={selectedIncident === null}
+            >
+              Unlink
+            </Button>
+          )}
+          <Button
+            color="orange"
+            onClick={handleLinkIncident}
+            disabled={selectedIncident === null}
+          >
+            Link and help AI
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative">
+      {isLoading ? <Loading /> : renderSelectIncidentForm()}
     </div>
   );
 };

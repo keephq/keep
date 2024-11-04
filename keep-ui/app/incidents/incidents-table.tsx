@@ -71,6 +71,7 @@ function SelectedRowActions({
 }
 import { AlertDto } from "@/app/alerts/models";
 import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -153,7 +154,7 @@ export default function IncidentsTable({
             href={`/incidents/${row.original.id}/alerts`}
             className="text-pretty"
           >
-            {row.original.user_generated_name || row.original.ai_generated_name}
+            {getIncidentName(row.original)}
           </Link>
           <div className="text-pretty overflow-hidden overflow-ellipsis line-clamp-3">
             <Markdown

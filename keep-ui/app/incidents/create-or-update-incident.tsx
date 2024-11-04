@@ -17,6 +17,7 @@ const ReactQuill =
 import "react-quill/dist/quill.snow.css";
 import "./react-quill-override.css";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -42,11 +43,7 @@ export default function CreateOrUpdateIncident({
 
   useEffect(() => {
     if (incidentToEdit) {
-      setIncidentName(
-        incidentToEdit.user_generated_name ??
-          incidentToEdit.ai_generated_name ??
-          ""
-      );
+      setIncidentName(getIncidentName(incidentToEdit));
       setIncidentUserSummary(
         incidentToEdit.user_summary ?? incidentToEdit.generated_summary ?? ""
       );

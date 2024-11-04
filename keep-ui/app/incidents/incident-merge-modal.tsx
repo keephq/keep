@@ -5,8 +5,9 @@ import { STATUS_ICONS } from "@/app/incidents/statuses";
 import { useMemo, useState } from "react";
 import Select, { GroupBase, StylesConfig } from "react-select";
 import { clsx } from "clsx";
-import "./vertical-rounded-list.css";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
+import "./vertical-rounded-list.css";
 
 function IncidentRow({
   incident,
@@ -25,7 +26,7 @@ function IncidentRow({
     >
       <div className="w-4 h-4 mr-2">{STATUS_ICONS[incident.status]}</div>
       <div className="flex-1">
-        <div className="text-pretty">{incident.user_generated_name}</div>
+        <div className="text-pretty">{getIncidentName(incident)}</div>
       </div>
     </div>
   );

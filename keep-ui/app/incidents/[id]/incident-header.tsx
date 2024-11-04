@@ -1,6 +1,6 @@
 "use client";
 import { IncidentDto } from "@/app/incidents/models";
-import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
+import { Button, Icon, Subtitle, Title } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
@@ -17,16 +17,25 @@ import CreateOrUpdateIncident from "@/app/incidents/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import { useSWRConfig } from "swr";
 import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
+import { useIncident } from "@/utils/hooks/useIncidents";
 
-export function IncidentHeader({ incident }: { incident: IncidentDto }) {
+export function IncidentHeader({
+  incident: initialIncidentData,
+}: {
+  incident: IncidentDto;
+}) {
+  const { data: incident } = useIncident(initialIncidentData.id, {
+    fallbackData: initialIncidentData,
+  });
   const { mutate } = useSWRConfig();
   const mutateIncident = useCallback(
     () =>
       mutate(
         (key: string) =>
-          typeof key === "string" && key.includes(`/incidents/${incident.id}`)
+          typeof key === "string" && key.includes(`/incidents/${incident?.id}`)
       ),
-    [incident.id]
+    [incident?.id]
   );
   const router = useRouter();
   const { data: session } = useSession();
@@ -54,9 +63,6 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
     setIsFormOpen(true);
   };
 
-  const incidentName =
-    incident.user_generated_name || incident.ai_generated_name;
-
   return (
     <>
       <header className="flex flex-col gap-4">
@@ -68,7 +74,7 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
         <div className="flex justify-between items-end text-sm gap-1">
           <Title className="prose-2xl flex-grow flex flex-col gap-1">
             <IncidentSeverityBadge severity={incident.severity} />
-            <span>{incidentName}</span>
+            <span>{getIncidentName(incident)}</span>
           </Title>
           <Button
             color="orange"

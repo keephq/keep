@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Card } from "@tremor/react";
 import { getIncidentWithErrorHandling } from "../getIncidentWithErrorHandling";
 import { IncidentActivity } from "./incident-activity";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
 
 export default async function IncidentActivityPage({
   params: { id },
@@ -22,8 +23,9 @@ export async function generateMetadata({
   params: { id: string };
 }): Promise<Metadata> {
   const incident = await getIncidentWithErrorHandling(params.id);
+  const incidentName = getIncidentName(incident);
   return {
-    title: `${incident.user_generated_name} — Activity`,
+    title: `Keep — ${incidentName} — Activity`,
     description: incident.user_summary || incident.generated_summary,
   };
 }

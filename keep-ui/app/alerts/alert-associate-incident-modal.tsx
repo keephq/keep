@@ -10,6 +10,8 @@ import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
 import { AlertDto } from "./models";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
+import { IncidentDto } from "../incidents/models";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -87,7 +89,87 @@ const AlertAssociateIncidentModal = ({
   }, [hideCreateIncidentForm, isOpen]);
 
   // if this modal should not be open, do nothing
-  if (!alerts) return null;
+  if (!alerts) {
+    return null;
+  }
+
+  const renderSelectIncidentForm = () => {
+    if (!incidents) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-y-8 h-full">
+          <div className="text-center space-y-3">
+            <Title className="text-2xl">No Incidents Yet</Title>
+          </div>
+
+          <div className="flex items-center justify-between w-full gap-6">
+            <Button
+              className="flex-1"
+              color="orange"
+              onClick={() => router.push("/incidents")}
+            >
+              Incidents page
+            </Button>
+
+            <Button
+              className="flex-1"
+              color="green"
+              onClick={showCreateIncidentForm}
+            >
+              Create a new incident
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    const selectedIncidentInstance = incidents.items.find(
+      (incident) => incident.id === selectedIncident
+    );
+
+    return (
+      <div className="h-full justify-center">
+        <Select
+          className="my-2.5"
+          placeholder="Select incident"
+          value={
+            selectedIncidentInstance
+              ? {
+                  value: selectedIncident,
+                  label: getIncidentName(selectedIncidentInstance),
+                }
+              : null
+          }
+          onChange={(selectedOption) =>
+            setSelectedIncident(selectedOption?.value)
+          }
+          options={incidents.items?.map((incident) => ({
+            value: incident.id,
+            label: getIncidentName(incident),
+          }))}
+        />
+        <Divider />
+        <div className="flex items-center justify-between gap-6">
+          <Button
+            className="flex-1"
+            color="orange"
+            onClick={handleAssociateAlerts}
+            disabled={!selectedIncidentInstance}
+          >
+            Associate {alerts.length} alert{alerts.length > 1 ? "s" : ""}
+          </Button>
+
+          <Button
+            className="flex-1"
+            color="orange"
+            variant="secondary"
+            onClick={showCreateIncidentForm}
+          >
+            Create a new incident
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Modal
@@ -96,7 +178,7 @@ const AlertAssociateIncidentModal = ({
       title="Choose Incident"
       className="w-[600px]"
     >
-      <div className="relative bg-white p-6 rounded-lg">
+      <div className="relative">
         {isLoading ? (
           <Loading />
         ) : createIncident ? (
@@ -106,82 +188,8 @@ const AlertAssociateIncidentModal = ({
             exitCallback={hideCreateIncidentForm}
           />
         ) : incidents && incidents.items.length > 0 ? (
-          <div className="h-full justify-center">
-            <Select
-              className="my-2.5"
-              placeholder="Select incident"
-              value={
-                selectedIncident
-                  ? {
-                      value: selectedIncident,
-                      label:
-                        incidents.items.find(
-                          (incident) => incident.id === selectedIncident
-                        )?.user_generated_name ||
-                        incidents.items.find(
-                          (incident) => incident.id === selectedIncident
-                        )?.ai_generated_name ||
-                        "",
-                    }
-                  : null
-              }
-              onChange={(selectedOption) =>
-                setSelectedIncident(selectedOption?.value)
-              }
-              options={incidents.items?.map((incident) => ({
-                value: incident.id,
-                label:
-                  incident.user_generated_name ||
-                  incident.ai_generated_name ||
-                  "",
-              }))}
-            />
-            <Divider />
-            <div className="flex items-center justify-between gap-6">
-              <Button
-                className="flex-1"
-                color="orange"
-                onClick={handleAssociateAlerts}
-                disabled={selectedIncident === null}
-              >
-                Associate {alerts.length} alert{alerts.length > 1 ? "s" : ""}
-              </Button>
-
-              <Button
-                className="flex-1"
-                color="orange"
-                variant="secondary"
-                onClick={showCreateIncidentForm}
-              >
-                Create a new incident
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-y-8 h-full">
-            <div className="text-center space-y-3">
-              <Title className="text-2xl">No Incidents Yet</Title>
-            </div>
-
-            <div className="flex items-center justify-between w-full gap-6">
-              <Button
-                className="flex-1"
-                color="orange"
-                onClick={() => router.push("/incidents")}
-              >
-                Incidents page
-              </Button>
-
-              <Button
-                className="flex-1"
-                color="green"
-                onClick={showCreateIncidentForm}
-              >
-                Create a new incident
-              </Button>
-            </div>
-          </div>
-        )}
+          renderSelectIncidentForm()
+        ) : null}
       </div>
     </Modal>
   );

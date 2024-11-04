@@ -47,7 +47,10 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const mutateIncidentsList = () =>
     mutate((key) => typeof key === "string" && key.startsWith("/incidents?"));
   const mutateIncident = (incidentId: string) =>
-    mutate(`/incidents/${incidentId}`);
+    mutate(
+      (key) =>
+        typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
+    );
 
   const addIncident = useCallback(async (incident: IncidentCreateDto) => {
     const response = await fetch(`${apiUrl}/incidents`, {
