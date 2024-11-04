@@ -640,7 +640,7 @@ def test_merge_incidents_app(
             datetime.utcnow(),
             {"severity": AlertSeverity.INFO.value},
         )
-    sleep(0.1)
+    sleep(0.5)
     alerts_1 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-1-")).all()
     )
@@ -663,7 +663,7 @@ def test_merge_incidents_app(
             datetime.utcnow(),
             {"severity": AlertSeverity.CRITICAL.value, "service": "second-service"},
         )
-    sleep(0.1)
+    sleep(0.5)
     alerts_2 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-2-")).all()
     )
@@ -677,7 +677,7 @@ def test_merge_incidents_app(
         {"user_generated_name": "test-3", "user_summary": "test-3"},
     )
     alerts_3 = setup_stress_alerts_no_elastic(50)
-    sleep(0.1)
+    sleep(0.5)
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
     )
