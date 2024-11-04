@@ -20,7 +20,12 @@ import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import get_custom_deduplication_rule, get_enrichments
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import (
+    AlertDto,
+    AlertSeverity,
+    AlertStatus,
+    IncidentDto,
+)
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
@@ -700,3 +705,75 @@ class BaseProvider(metaclass=abc.ABCMeta):
 class BaseTopologyProvider(BaseProvider):
     def pull_topology(self) -> list[TopologyServiceInDto]:
         raise NotImplementedError("get_topology() method not implemented")
+
+
+class BaseIncidentProvider(BaseProvider):
+    def _get_incidents(self) -> list[IncidentDto]:
+        raise NotImplementedError("_get_incidents() in not implemented")
+
+    def get_incidents(self) -> list[IncidentDto]:
+        return self._get_incidents()
+
+    @staticmethod
+    def _format_incident(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> IncidentDto | list[IncidentDto]:
+        raise NotImplementedError("_format_incidents() not implemented")
+
+    @classmethod
+    def format_incident(
+        cls,
+        event: dict,
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
+    ) -> IncidentDto | list[IncidentDto]:
+        logger = logging.getLogger(__name__)
+
+        provider_instance: BaseProvider | None = None
+        if provider_id and provider_type and tenant_id:
+            try:
+                # To prevent circular imports
+                from keep.providers.providers_factory import ProvidersFactory
+
+                provider_instance: BaseProvider = (
+                    ProvidersFactory.get_installed_provider(
+                        tenant_id, provider_id, provider_type
+                    )
+                )
+            except Exception:
+                logger.exception(
+                    "Failed loading provider instance although all parameters were given",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    },
+                )
+        logger.debug("Formatting Incident")
+        return cls._format_incident(event, provider_instance)
+
+    def setup_incident_webhook(
+        self,
+        tenant_id: str,
+        keep_api_url: str,
+        api_key: str,
+        setup_alerts: bool = True,
+    ) -> dict | None:
+        """
+        Setup a webhook for the provider.
+
+        Args:
+            tenant_id (str): _description_
+            keep_alerts_api_url (str): _description_
+            api_key (str): _description_
+            setup_alerts (bool, optional): _description_. Defaults to True.
+            keep_incidents_api_url (str, optional): _description_. Defaults to None.
+
+        Returns:
+            dict | None: If some secrets needs to be saved, return them in a dict.
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        raise NotImplementedError("setup_webhook() method not implemented")

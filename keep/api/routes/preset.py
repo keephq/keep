@@ -37,7 +37,7 @@ from keep.api.tasks.process_topology_task import process_topology
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseTopologyProvider, BaseIncidentProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -100,7 +100,7 @@ def pull_data_from_providers(
                         "provider_last_pull_time": str(provider.last_pull_time),
                     },
                 )
-                continue
+                # continue
 
         try:
             logger.info(
@@ -123,6 +123,38 @@ def pull_data_from_providers(
                 f"Pulling alerts from provider {provider.type} ({provider.id}) completed",
                 extra=extra,
             )
+
+            if issubclass(type(provider), BaseIncidentProvider):
+                try:
+                    incidents = provider_class.get_incidents()
+                    process_event(
+                        {},
+                        tenant_id,
+                        provider.type,
+                        provider.id,
+                        None,
+                        None,
+                        trace_id,
+                        incidents,
+                        notify_client=False,
+                        timestamp_forced=None,
+                        process_event_as="incident"
+                    )
+                except NotImplementedError:
+                    logger.debug(
+                        f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
+                        extra=extra,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
+                        extra={**extra, "error": str(e)},
+                    )
+            else:
+                logger.debug(
+                    f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
+                    extra=extra,
+                )
 
             try:
                 if isinstance(provider_class, BaseTopologyProvider):

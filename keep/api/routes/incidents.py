@@ -6,11 +6,13 @@ import sys
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from arq import ArqRedis
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, BackgroundTasks, Request
 from pusher import Pusher
 from pydantic.types import UUID
 
 from keep.api.arq_pool import get_pool
+from keep.api.consts import REDIS, KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     add_audit,
@@ -32,7 +34,7 @@ from keep.api.core.db import (
     merge_incidents_to_id,
     DestinationIncidentNotFound,
 )
-from keep.api.core.dependencies import get_pusher_client
+from keep.api.core.dependencies import get_pusher_client, extract_generic_body
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
@@ -49,6 +51,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
+from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
@@ -59,6 +62,7 @@ from keep.api.utils.pagination import (
 from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
+from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 router = APIRouter()
@@ -705,6 +709,81 @@ def mine(
         )
     )
     return result
+
+
+@router.post(
+    "/event/{provider_type}",
+    description="Receive an alert event from a provider",
+    status_code=202,
+)
+async def receive_event(
+    provider_type: str,
+    bg_tasks: BackgroundTasks,
+    request: Request,
+    provider_id: str | None = None,
+    event=Depends(extract_generic_body),
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher = Depends(get_pusher_client),
+) -> dict[str, str]:
+    trace_id = request.state.trace_id
+
+    provider_class = None
+    try:
+        provider_class = ProvidersFactory.get_provider_class(provider_type)
+    except ModuleNotFoundError:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+    if not provider_class:
+        raise HTTPException(
+            status_code=400, detail=f"Provider {provider_type} not found"
+        )
+
+    # Parse the raw body
+    event = provider_class.parse_event_raw_body(event)
+
+    if REDIS:
+        redis: ArqRedis = await get_pool()
+        job = await redis.enqueue_job(
+            "async_process_event",
+            authenticated_entity.tenant_id,
+            provider_type,
+            provider_id,
+            None,
+            authenticated_entity.api_key_name,
+            trace_id,
+            event,
+            True,
+            None,
+            "incident",
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": authenticated_entity.tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
+        )
+    else:
+        bg_tasks.add_task(
+            process_event,
+            {},
+            authenticated_entity.tenant_id,
+            provider_type,
+            provider_id,
+            None,
+            authenticated_entity.api_key_name,
+            trace_id,
+            event,
+            True,
+            None,
+            "incident"
+        )
+    return Response(status_code=202)
 
 
 @router.post(

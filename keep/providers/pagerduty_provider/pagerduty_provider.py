@@ -1,16 +1,27 @@
 import dataclasses
 import datetime
+import hashlib
 import json
+import os
+import time
 import typing
 import uuid
 
 import pydantic
 import requests
 
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import (
+    AlertDto,
+    AlertSeverity,
+    AlertStatus,
+    IncidentDto,
+    IncidentStatus,
+    IncidentSeverity,
+)
+from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
-from keep.providers.base.base_provider import BaseProvider
+from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, BaseIncidentProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -23,7 +34,7 @@ class PagerdutyProviderAuthConfig:
     routing_key: str | None = dataclasses.field(
         metadata={
             "required": False,
-            "description": "Routing Key (an integration or ruleset key)",
+            "description": "Routing Key(s), seperated by a comma (an integration or ruleset key)",
         },
         default=None,
     )
@@ -35,9 +46,18 @@ class PagerdutyProviderAuthConfig:
         },
         default=None,
     )
+    oauth_data: dict = dataclasses.field(
+        metadata={
+            "description": "For oauth flow",
+            "required": False,
+            "sensitive": True,
+            "hidden": True,
+        },
+        default="",
+    )
 
 
-class PagerdutyProvider(BaseProvider):
+class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     """Pull alerts and query incidents from PagerDuty."""
 
     PROVIDER_SCOPES = [
@@ -70,22 +90,90 @@ class PagerdutyProvider(BaseProvider):
     ]
     SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
     PROVIDER_DISPLAY_NAME = "PagerDuty"
-    SEVERITIES_MAP = {
-        "P1": AlertSeverity.CRITICAL,
-        "P2": AlertSeverity.HIGH,
-        "P3": AlertSeverity.WARNING,
-        "P4": AlertSeverity.INFO,
+    ALERT_SEVERITIES_MAP = {
+        "critical": AlertSeverity.CRITICAL,
+        "error": AlertSeverity.HIGH,
+        "warning": AlertSeverity.WARNING,
+        "info": AlertSeverity.INFO,
     }
-    STATUS_MAP = {
+    INCIDENT_SEVERITIES_MAP = {
+        "P1": IncidentSeverity.CRITICAL,
+        "P2": IncidentSeverity.HIGH,
+        "P3": IncidentSeverity.WARNING,
+        "P4": IncidentSeverity.INFO,
+    }
+    ALERT_STATUS_MAP = {
         "triggered": AlertStatus.FIRING,
-        "acknowledged": AlertStatus.ACKNOWLEDGED,
         "resolved": AlertStatus.RESOLVED,
     }
+    INCIDENT_STATUS_MAP = {
+        "triggered": IncidentStatus.FIRING,
+        "acknowledged": IncidentStatus.ACKNOWLEDGED,
+        "resolved": IncidentStatus.RESOLVED,
+    }
+    BASE_OAUTH_URL = "https://identity.pagerduty.com"
+    SCOPES = "abilities.read incidents.read incidents.write schedules.read users:oauth_tokens.read users:oauth_tokens.write users:sessions.read users:sessions.write webhook_subscriptions.read webhook_subscriptions.write services.read teams.read"
+    PAGERDUTY_CLIENT_ID = os.environ.get("PAGERDUTY_CLIENT_ID")
+    OAUTH2_URL = f"{BASE_OAUTH_URL}/oauth/authorize?client_id={PAGERDUTY_CLIENT_ID}&response_type=code&scope={SCOPES}"
+    PAGERDUTY_CLIENT_SECRET = os.environ.get("PAGERDUTY_CLIENT_SECRET")
+
+    FINGERPRINT_FIELDS = ["alert_key"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+
+        if self.authentication_config.oauth_data:
+
+            last_fetched_at = self.authentication_config.oauth_data["last_fetched_at"]
+            expires_in: float | None = self.authentication_config.oauth_data.get(
+                "expires_in", None
+            )
+            if expires_in:
+                # Calculate expiration time by adding expires_in to last_fetched_at
+                expiration_time = last_fetched_at + expires_in - 600
+
+                # Check if the current epoch time (in seconds) has passed the expiration time
+                if time.time() >= expiration_time:
+                    self.logger.debug("access_token is expired")
+                else:
+                    self.logger.debug("access_token is still valid")
+                    return
+
+            # Using the refresh token to get the access token
+            try:
+                access_token_response = requests.post(
+                    url=f"{PagerdutyProvider.BASE_OAUTH_URL}/oauth/token",
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    data={
+                        "grant_type": "refresh_token",
+                        "client_id": PagerdutyProvider.PAGERDUTY_CLIENT_ID,
+                        "client_secret": PagerdutyProvider.PAGERDUTY_CLIENT_SECRET,
+                        "refresh_token": f'{self.authentication_config.oauth_data["refresh_token"]}',
+                    },
+                )
+                if access_token_response.status_code != 200:
+                    raise Exception(access_token_response.text)
+                access_token_response = access_token_response.json()
+                self.config.authentication["oauth_data"] = {
+                    "access_token": access_token_response["access_token"],
+                    "refresh_token": access_token_response["refresh_token"],
+                    "expires_in": access_token_response["expires_in"],
+                    "last_fetched_at": time.time(),
+                }
+            except Exception as e:
+                self.logger.error(
+                    "Error while getting access_token from refresh token",
+                    extra={"exception": str(e)},
+                )
+                raise Exception(e)
+        elif (
+            self.authentication_config.api_key or self.authentication_config.routing_key
+        ):
+            pass
+        else:
+            raise Exception("No authentication provided")
 
     def validate_config(self):
         self.authentication_config = PagerdutyProviderAuthConfig(
@@ -94,20 +182,86 @@ class PagerdutyProvider(BaseProvider):
         if (
             not self.authentication_config.routing_key
             and not self.authentication_config.api_key
+            and not self.authentication_config.oauth_data
         ):
             raise ProviderConfigException(
-                "PagerdutyProvider requires either routing_key or api_key",
+                "PagerdutyProvider requires either routing_key or api_key or OAuth configuration",
                 provider_id=self.provider_id,
             )
+
+    @staticmethod
+    def oauth2_logic(**payload) -> dict:
+        """
+        Logic for handling oauth2 callback.
+
+        Returns:
+            dict: access token to Datadog.
+        """
+        code_verifier = payload.get("verifier")
+        if not code_verifier:
+            raise Exception("No code verifier")
+
+        code = payload.get("code")
+        if not code:
+            raise Exception("No code")
+
+        redirect_uri = payload.get("redirect_uri")
+        if not redirect_uri:
+            raise Exception("Missing redirect URI")
+
+        access_token_params = {
+            "client_id": PagerdutyProvider.PAGERDUTY_CLIENT_ID,
+            "client_secret": PagerdutyProvider.PAGERDUTY_CLIENT_SECRET,
+            "code_verifier": code_verifier,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        }
+
+        try:
+            access_token_response = requests.post(
+                url=f"{PagerdutyProvider.BASE_OAUTH_URL}/oauth/token",
+                data=access_token_params,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            if access_token_response.status_code != 200:
+                raise Exception(access_token_response.text)
+            access_token_response = access_token_response.json()
+        except Exception as e:
+            raise Exception(e)
+
+        access_token = access_token_response.get("access_token")
+        if not access_token:
+            raise Exception("No access token provided")
+        return {
+            "oauth_data": {
+                "access_token": access_token_response["access_token"],
+                "refresh_token": access_token_response["refresh_token"],
+                "last_fetched_at": time.time(),
+                "expires_in": access_token_response.get("expires_in", None),
+            }
+        }
+
+    def __get_headers(self, **kwargs):
+        if self.authentication_config.api_key or self.authentication_config.routing_key:
+            return {
+                "Accept": "application/vnd.pagerduty+json;version=2",
+                "Content-Type": "application/json",
+                "Authorization": f"Token token={self.authentication_config.api_key}",
+                **kwargs,
+            }
+        elif self.authentication_config.oauth_data:
+            return {
+                "Accept": "application/vnd.pagerduty+json;version=2",
+                "Authorization": f"Bearer {self.authentication_config.oauth_data['access_token']}",
+                "Content-Type": "application/json",
+            }
 
     def validate_scopes(self):
         """
         Validate that the provider has the required scopes.
         """
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Token token={self.authentication_config.api_key}",
-        }
+        headers = self.__get_headers()
         scopes = {}
         for scope in self.PROVIDER_SCOPES:
             try:
@@ -172,7 +326,7 @@ class PagerdutyProvider(BaseProvider):
         if dedup is None:
             dedup = str(datetime.datetime.now().timestamp())
 
-        url = "https://events.pagerduty.com//v2/enqueue"
+        url = "https://events.pagerduty.com/v2/enqueue"
 
         result = requests.post(url, json=self._build_alert(title, body, dedup))
 
@@ -194,12 +348,7 @@ class PagerdutyProvider(BaseProvider):
             incident_key = str(uuid.uuid4()).replace("-", "")
 
         url = "https://api.pagerduty.com/incidents"
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.pagerduty+json;version=2",
-            "Authorization": f"Token token={self.authentication_config.api_key}",
-            "From": requester,
-        }
+        headers = self.__get_headers(From=requester)
 
         payload = {
             "incident": {
@@ -223,11 +372,15 @@ class PagerdutyProvider(BaseProvider):
         """
         pass
 
-    def setup_webhook(
-        self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
+    def setup_incident_webhook(
+        self,
+        tenant_id: str,
+        keep_api_url: str,
+        api_key: str,
+        setup_alerts: bool = True,
     ):
         self.logger.info("Setting up Pagerduty webhook")
-        headers = {"Authorization": f"Token token={self.authentication_config.api_key}"}
+        headers = self.__get_headers()
         request = requests.get(self.SUBSCRIPTION_API_URL, headers=headers)
         if not request.ok:
             raise Exception("Could not get existing webhooks")
@@ -237,7 +390,8 @@ class PagerdutyProvider(BaseProvider):
                 [
                     webhook
                     for webhook in existing_webhooks
-                    if tenant_id in webhook.get("description")
+                    if keep_api_url
+                    == webhook.get("delivery_method", {}).get("url", "")
                 ]
             ),
             False,
@@ -250,7 +404,7 @@ class PagerdutyProvider(BaseProvider):
                     "url": keep_api_url,
                     "custom_headers": [{"name": "X-API-KEY", "value": api_key}],
                 },
-                "description": f"Keep Pagerduty webhook ({tenant_id}) - do not change",
+                "description": f"Keep Pagerduty webhook ({self.provider_id}) - do not change",
                 "events": [
                     "incident.acknowledged",
                     "incident.annotated",
@@ -290,76 +444,43 @@ class PagerdutyProvider(BaseProvider):
         self.logger.info("Webhook created")
 
     def _get_alerts(self) -> list[AlertDto]:
-        request = requests.get(
-            "https://api.pagerduty.com/incidents",
-            headers={
-                "Authorization": f"Token token={self.authentication_config.api_key}",
-            },
-        )
-        if not request.ok:
-            self.logger.error("Failed to get alerts", extra=request.json())
-            raise Exception("Could not get alerts")
-        incidents = request.json().get("incidents", [])
-        incidents = [
-            self._format_alert({"event": {"data": incident}}) for incident in incidents
-        ]
-        return incidents
+        incidents = self.__get_all_incidents_or_alerts(endpoint="incidents")
+        all_alerts = []
+        for incident in incidents:
+            all_alerts.extend(
+                self.__get_all_incidents_or_alerts(
+                    endpoint="alerts", incident_id=incident["id"]
+                )
+            )
+        try:
+            alerts = [self.__map_alert_to_dto(alert) for alert in all_alerts]
+            return alerts
+        except Exception as e:
+            self.logger.error(
+                "Error while mapping alert to dtos", extra={"exception": str(e)}
+            )
+            raise e
 
-    @staticmethod
-    def _format_alert(
-        event: dict, provider_instance: "BaseProvider" = None
-    ) -> AlertDto:
-        actual_event = event.get("event", {})
-        data = actual_event.get("data", {})
-        url = data.pop("self", data.pop("html_url"))
-        # format status and severity to Keep format
-        status = PagerdutyProvider.STATUS_MAP.get(
-            data.pop("status"), AlertStatus.FIRING
-        )
-        priority_summary = (data.get("priority", {}) or {}).get("summary")
-        priority = PagerdutyProvider.SEVERITIES_MAP.get(
-            priority_summary, AlertSeverity.INFO
-        )
-        last_received = data.pop("created_at")
-        name = data.pop("title")
-        service = data.pop("service", {}).get("summary", "unknown")
-        environment = next(
-            iter(
-                [
-                    x
-                    for x in data.pop("custom_fields", [])
-                    if x.get("name") == "environment"
-                ]
+    def __map_alert_to_dto(self, alert) -> AlertDto:
+        alert_dto = AlertDto(
+            id=alert.get("id", ""),
+            name=alert.get("summary", ""),
+            lastReceived=alert.get("created_at"),
+            severity=PagerdutyProvider.ALERT_SEVERITIES_MAP.get(
+                alert.get("severity", "info")
             ),
-            {},
-        ).get("value", "unknown")
-
-        last_status_change_by = data.get("last_status_change_by", {}).get("summary")
-        acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
-        conference_bridge = data.get("conference_bridge", {}).get("summary")
-        urgency = data.get("urgency")
-
-        # Additional metadata
-        metadata = {
-            "urgency": urgency,
-            "acknowledgers": acknowledgers,
-            "last_updated_by": last_status_change_by,
-            "conference_bridge": conference_bridge,
-            "impacted_services": service,
-        }
-
-        return AlertDto(
-            **data,
-            url=url,
-            status=status,
-            lastReceived=last_received,
-            name=name,
-            severity=priority,
-            environment=environment,
+            status=PagerdutyProvider.ALERT_STATUS_MAP.get(
+                alert.get("status", "triggered")
+            ),
+            service=alert.get("service", {}).get("summary", "unknown"),
+            url=alert.get("self", alert.get("html_url")),
+            alert_key=alert.get("alert_key"),
             source=["pagerduty"],
-            service=service,
-            labels=metadata,
         )
+        alert_dto.fingerprint = self.get_alert_fingerprint(
+            alert_dto, self.FINGERPRINT_FIELDS
+        )
+        return alert_dto
 
     def _notify(
         self,
@@ -385,6 +506,157 @@ class PagerdutyProvider(BaseProvider):
             return self._trigger_incident(
                 service_id, title, alert_body, requester, incident_id, **kwargs
             )
+
+    def __get_all_incidents_or_alerts(
+        self, endpoint: typing.Literal["incidents", "alerts"], incident_id: str = None
+    ):
+        all_res = []
+        offset = 0
+        more = True
+        while more:
+            try:
+                services_response = requests.get(
+                    url=(
+                        f"https://api.pagerduty.com/{endpoint if endpoint == 'incidents' else f'incidents/{incident_id}/{endpoint}'}"
+                    ),
+                    headers=self.__get_headers(),
+                    params={
+                        "include[]": (
+                            ["teams", "services"] if endpoint == "alert" else []
+                        ),
+                        "offset": offset,
+                        "limit": 100,
+                    },
+                )
+                if services_response.status_code != 200:
+                    raise Exception(services_response.text)
+                services_response = services_response.json()
+            except Exception as e:
+                self.logger.error("Failed to get all services", extra={"exception": e})
+                raise e
+            more = services_response.get("more", False)
+            offset = services_response.get("offset", 0)
+            all_res.extend(services_response.get(endpoint, []))
+        return all_res
+
+    def __get_all_services(self, business_services: bool = False):
+        all_services = []
+        offset = 0
+        more = True
+        endpoint = "business_services" if business_services else "services"
+        while more:
+            try:
+                services_response = requests.get(
+                    url=f"https://api.pagerduty.com/{endpoint}",
+                    headers=self.__get_headers(),
+                    params={"include[]": ["teams"], "offset": offset, "limit": 100},
+                )
+                if services_response.status_code != 200:
+                    raise Exception(services_response.text)
+                services_response = services_response.json()
+            except Exception as e:
+                self.logger.error("Failed to get all services", extra={"exception": e})
+                raise e
+            more = services_response.get("more", False)
+            offset = services_response.get("offset", 0)
+            all_services.extend(services_response.get(endpoint, []))
+        return all_services
+
+    def pull_topology(self) -> list[TopologyServiceInDto]:
+        all_services = self.__get_all_services()
+        all_business_services = self.__get_all_services(business_services=True)
+        service_metadata = {}
+        for service in all_services:
+            service_metadata[service["id"]] = service
+
+        for business_service in all_business_services:
+            service_metadata[business_service["id"]] = business_service
+
+        try:
+            service_map_response = requests.get(
+                url="https://api.pagerduty.com/service_dependencies",
+                headers=self.__get_headers(),
+            )
+            if service_map_response.status_code != 200:
+                raise Exception(service_map_response.text)
+            service_map_response = service_map_response.json()
+        except Exception as e:
+            self.logger.error("Error while getting service dependencies")
+            raise e
+
+        service_topology = {}
+
+        for relationship in service_map_response.get("relationships", []):
+            # Extract dependent and supporting service details
+            dependent = relationship["dependent_service"]
+            supporting = relationship["supporting_service"]
+
+            if dependent["id"] not in service_topology:
+                service_topology[dependent["id"]] = TopologyServiceInDto(
+                    source_provider_id=self.provider_id,
+                    service=dependent["id"],
+                    display_name=service_metadata[dependent["id"]]["name"],
+                    description=service_metadata[dependent["id"]]["description"],
+                    team=", ".join(
+                        team["name"]
+                        for team in service_metadata[dependent["id"]].get("teams", [])
+                    ),
+                )
+            if supporting["id"] not in service_topology:
+                service_topology[supporting["id"]] = TopologyServiceInDto(
+                    source_provider_id=self.provider_id,
+                    service=supporting["id"],
+                    display_name=service_metadata[supporting["id"]]["name"],
+                    description=service_metadata[supporting["id"]]["description"],
+                    team=", ".join(
+                        team["name"]
+                        for team in service_metadata[supporting["id"]].get("teams", [])
+                    ),
+                )
+            service_topology[dependent["id"]].dependencies[supporting["id"]] = "unknown"
+        return list(service_topology.values())
+
+    def _get_incidents(self) -> list[IncidentDto]:
+        incidents = self.__get_all_incidents_or_alerts(endpoint="incidents")
+        incidents = [
+            self._format_incident({"event": {"data": incident}})
+            for incident in incidents
+        ]
+        return incidents
+
+    @staticmethod
+    def _format_incident(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> IncidentDto | list[IncidentDto]:
+
+        # Creating an uuid from incident id.
+        m = hashlib.md5()
+        event = event["event"]["data"]
+        seed = event["id"]
+        m.update(seed.encode("utf-8"))
+        incident_id = uuid.UUID(m.hexdigest())
+        status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
+            event["status"], IncidentStatus.FIRING
+        )
+        priority_summary = (event.get("priority", {}) or {}).get("summary")
+        severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
+            priority_summary, IncidentSeverity.INFO
+        )
+        service = event.pop("service", {}).get("summary", "unknown")
+        return IncidentDto(
+            id=incident_id,
+            creation_time=datetime.datetime.fromisoformat(event["created_at"])
+            .astimezone(datetime.timezone.utc)
+            .replace(tzinfo=None),
+            user_generated_name=f'PD-{event["title"]}-{event["id"]}',
+            status=status,
+            severity=severity,
+            alert_sources=["pagerduty"],
+            alerts_count=0,
+            services=[service],
+            is_predicted=False,
+            is_confirmed=True,
+        )
 
 
 if __name__ == "__main__":
@@ -413,6 +685,7 @@ if __name__ == "__main__":
     results = provider.setup_webhook(
         "keep",
         "https://eb8a-77-137-44-66.ngrok-free.app/alerts/event/pagerduty?provider_id=keep-pd",
+        "https://eb8a-77-137-44-66.ngrok-free.app/incidents/event/pagerduty?provider_id=keep-pd",
         "just-a-test",
         True,
     )

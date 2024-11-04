@@ -31,7 +31,7 @@ from sqlmodel import Session, col, or_, select, text
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.alert import AlertStatus, IncidentDtoIn, IncidentSorting
+from keep.api.models.alert import AlertStatus, IncidentDtoIn, IncidentSorting, IncidentDto
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -3088,8 +3088,12 @@ def get_incident_by_id(
 
 
 def create_incident_from_dto(
-    tenant_id: str, incident_dto: IncidentDtoIn
+    tenant_id: str, incident_dto: IncidentDtoIn | IncidentDto
 ) -> Optional[Incident]:
+    if issubclass(type(incident_dto), IncidentDto):
+        incident_dict = incident_dto.to_db_incident().dict()
+        return create_incident_from_dict(tenant_id, incident_dict)
+
     return create_incident_from_dict(tenant_id, incident_dto.dict())
 
 
@@ -3111,7 +3115,7 @@ def create_incident_from_dict(
 def update_incident_from_dto_by_id(
     tenant_id: str,
     incident_id: str,
-    updated_incident_dto: IncidentDtoIn,
+    updated_incident_dto: IncidentDtoIn | IncidentDto,
     generated_by_ai: bool = False,
 ) -> Optional[Incident]:
     with Session(engine) as session:
@@ -3127,11 +3131,18 @@ def update_incident_from_dto_by_id(
         if not incident:
             return None
 
-        incident.user_generated_name = updated_incident_dto.user_generated_name
-        incident.assignee = updated_incident_dto.assignee
-        incident.same_incident_in_the_past_id = (
-            updated_incident_dto.same_incident_in_the_past_id
-        )
+        if issubclass(type(updated_incident_dto), IncidentDto):
+            updated_data = updated_incident_dto.to_db_incident().dict()
+        else:
+            updated_data = updated_incident_dto.dict()
+        for key, value in updated_data.items():
+            # Update only if the new value is different from the current one
+            if hasattr(incident, key) and getattr(incident, key) != value:
+                if isinstance(value, Enum):
+                    setattr(incident, key, value.value)
+
+                else:
+                    setattr(incident, key, value)
 
         if generated_by_ai:
             incident.generated_summary = updated_incident_dto.user_summary

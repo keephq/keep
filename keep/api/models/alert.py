@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 from uuid import UUID
 
 import pytz
@@ -400,6 +400,7 @@ class IncidentDto(IncidentDtoIn):
     start_time: datetime.datetime | None
     last_seen_time: datetime.datetime | None
     end_time: datetime.datetime | None
+    creation_time: datetime.datetime | None
 
     alerts_count: int
     alert_sources: list[str]
@@ -504,6 +505,36 @@ class IncidentDto(IncidentDtoIn):
         # This field is required for getting alerts when required
         dto._tenant_id = db_incident.tenant_id
         return dto
+
+    def to_db_incident(self) -> "Incident":
+        """Converts an IncidentDto instance to an Incident database model."""
+        from keep.api.models.db.alert import Incident
+        db_incident = Incident(
+            id=self.id,
+            user_generated_name=self.user_generated_name,
+            ai_generated_name=self.ai_generated_name,
+            user_summary=self.user_summary,
+            generated_summary=self.generated_summary,
+            assignee=self.assignee,
+            severity=self.severity.value if isinstance(self.severity, IncidentSeverity) else self.severity,
+            status=self.status.value if isinstance(self.status, IncidentStatus) else self.status,
+            creation_time=self.creation_time or datetime.datetime.utcnow(),
+            start_time=self.start_time,
+            end_time=self.end_time,
+            last_seen_time=self.last_seen_time,
+            alerts_count=self.alerts_count,
+            affected_services=self.services,
+            sources=self.alert_sources,
+            is_predicted=self.is_predicted,
+            is_confirmed=self.is_confirmed,
+            rule_fingerprint=self.rule_fingerprint,
+            same_incident_in_the_past_id=self.same_incident_in_the_past_id,
+            merged_into_incident_id=self.merged_into_incident_id,
+            merged_by=self.merged_by,
+            merged_at=self.merged_at,
+        )
+
+        return db_incident
 
 
 class MergeIncidentsRequestDto(BaseModel):

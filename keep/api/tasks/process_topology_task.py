@@ -36,10 +36,13 @@ def process_topology(
             "Deleting existing topology data",
             extra=extra,
         )
-        session.query(TopologyService).filter(
+        services = session.query(TopologyService).filter(
             TopologyService.source_provider_id == provider_id,
             TopologyService.tenant_id == tenant_id,
-        ).delete()
+        ).all()
+
+        for service in services:
+            session.delete(service)
         session.commit()
         logger.info(
             "Deleted existing topology data",
