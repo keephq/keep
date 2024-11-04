@@ -14,8 +14,12 @@ export default async function IncidentTimelinePage({
 
 export async function generateMetadata({ params }: PageProps) {
   const incident = await getIncidentWithErrorHandling(params.id);
+  const incidentName =
+    incident.user_generated_name || incident.ai_generated_name;
+  const incidentDescription =
+    incident.user_summary || incident.generated_summary;
   return {
-    title: `${incident.user_generated_name} — Timeline`,
-    description: incident.user_summary || incident.generated_summary,
+    title: `${incidentName} — Timeline`,
+    description: incidentDescription,
   };
 }

@@ -70,6 +70,9 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
     setIsFormOpen(true);
   };
 
+  const incidentName =
+    incident.user_generated_name || incident.ai_generated_name;
+
   return (
     <>
       <header className="flex flex-col gap-4">
@@ -81,9 +84,7 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
         <div className="flex justify-between items-end text-sm gap-1">
           <Title className="prose-2xl flex-grow flex flex-col gap-1">
             <SeverityBadge severity={incident.severity} />
-            <span>
-              {incident.user_generated_name || incident.ai_generated_name}
-            </span>
+            <span>{incidentName}</span>
           </Title>
           <Button
             color="orange"
