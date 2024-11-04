@@ -28,19 +28,40 @@ interface IncidentActivity {
 export function IncidentActivity({ incident }: { incident: IncidentDto }) {
   const { data: session } = useSession();
   const { useMultipleFingerprintsAlertAudit, useAlertAudit } = useAlerts();
-  const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
-    incident.id
+  const {
+    data: alerts,
+    isLoading: _alertsLoading,
+    error: alertsError,
+  } = useIncidentAlerts(incident.id);
+  const {
+    data: auditEvents = [],
+    isLoading: _auditEventsLoading,
+    error: auditEventsError,
+  } = useMultipleFingerprintsAlertAudit(
+    alerts?.items.map((m) => m.fingerprint)
   );
-  const { data: auditEvents = [], isLoading: auditEventsLoading } =
-    useMultipleFingerprintsAlertAudit(alerts?.items.map((m) => m.fingerprint));
   const {
     data: incidentEvents = [],
-    isLoading: incidentEventsLoading,
+    isLoading: _incidentEventsLoading,
+    error: incidentEventsError,
     mutate: mutateIncidentActivity,
   } = useAlertAudit(incident.id);
 
-  const { data: users, isLoading: usersLoading } = useUsers();
+  const {
+    data: users,
+    isLoading: _usersLoading,
+    error: usersError,
+  } = useUsers();
   usePollIncidentComments(incident.id);
+
+  // TODO: Load data on server side
+  // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
+  const alertsLoading = _alertsLoading || (!alerts && !alertsError);
+  const auditEventsLoading =
+    _auditEventsLoading || (!auditEvents && !auditEventsError);
+  const incidentEventsLoading =
+    _incidentEventsLoading || (!incidentEvents && !incidentEventsError);
+  const usersLoading = _usersLoading || (!users && !usersError);
 
   const auditActivities = useMemo(() => {
     if (!auditEvents.length && !incidentEvents.length) {
@@ -80,7 +101,6 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     auditEventsLoading ||
     alertsLoading
   ) {
-    console.log("51 loading");
     return <Loading />;
   }
 

@@ -148,7 +148,7 @@ export default function IncidentsTable({
       id: "name",
       header: "Incident",
       cell: ({ row }) => (
-        <div className="max-w-64">
+        <div className="max-w-64 min-w-48">
           <Link
             href={`/incidents/${row.original.id}/alerts`}
             className="text-pretty"

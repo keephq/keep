@@ -61,11 +61,19 @@ export default function IncidentAlerts({ incident }: Props) {
     pageSize: 20,
   });
 
-  const { data: alerts, isLoading } = useIncidentAlerts(
+  const {
+    data: alerts,
+    isLoading: _alertsLoading,
+    error: alertsError,
+  } = useIncidentAlerts(
     incident.id,
     alertsPagination.limit,
     alertsPagination.offset
   );
+
+  // TODO: Load data on server side
+  // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
+  const isLoading = _alertsLoading || (!alerts && !alertsError);
 
   useEffect(() => {
     if (alerts && alerts.limit != pagination.pageSize) {

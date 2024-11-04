@@ -11,6 +11,7 @@ import AlertSeverity from "app/alerts/alert-severity";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import { Card } from "@tremor/react";
+import Loading from "@/app/loading";
 
 const severityColors = {
   critical: "bg-red-300",
@@ -259,17 +260,26 @@ export default function IncidentTimeline({
 }: {
   incident: IncidentDto;
 }) {
-  const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
-    incident.id
-  );
+  const {
+    data: alerts,
+    isLoading: _alertsLoading,
+    error: alertsError,
+  } = useIncidentAlerts(incident.id);
   const { useMultipleFingerprintsAlertAudit } = useAlerts();
   const {
     data: auditEvents,
-    isLoading: auditEventsLoading,
+    isLoading: _auditEventsLoading,
+    error: auditEventsError,
     mutate,
   } = useMultipleFingerprintsAlertAudit(
     alerts?.items.map((m) => m.fingerprint)
   );
+
+  // TODO: Load data on server side
+  // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
+  const alertsLoading = _alertsLoading || (!alerts && !alertsError);
+  const auditEventsLoading =
+    _auditEventsLoading || (!auditEvents && !auditEventsError);
 
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
@@ -333,8 +343,17 @@ export default function IncidentTimeline({
     return {};
   }, [auditEvents, alerts]);
 
-  if (auditEventsLoading || !auditEvents || alertsLoading)
+  if (auditEventsLoading || alertsLoading) {
+    return (
+      <Card>
+        <Loading />
+      </Card>
+    );
+  }
+
+  if (!auditEvents || !alerts) {
     return <IncidentTimelineNoAlerts />;
+  }
 
   const {
     startTime,

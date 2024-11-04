@@ -59,11 +59,19 @@ export default function IncidentWorkflowTable({ incident }: Props) {
   const [selectedExecution, setSelectedExecution] =
     useState<WorkflowExecution | null>(null);
 
-  const { data: workflows, isLoading } = useIncidentWorkflowExecutions(
+  const {
+    data: workflows,
+    isLoading: _workflowsLoading,
+    error: workflowsError,
+  } = useIncidentWorkflowExecutions(
     incident.id,
     workflowsPagination.limit,
     workflowsPagination.offset
   );
+
+  // TODO: Load data on server side
+  // Loading state is true if the data is not loaded and there is no error for smoother loading state on initial load
+  const isLoading = _workflowsLoading || (!workflows && !workflowsError);
 
   const [pagination, setTablePagination] = useState({
     pageIndex: workflows ? Math.ceil(workflows.offset / workflows.limit) : 0,
@@ -235,7 +243,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
               ))}
             </TableBody>
           )}
-          {(isLoading || (workflows?.items ?? []).length === 0) && (
+          {isLoading && (
             <TableBody>
               {Array(pagination.pageSize)
                 .fill("")
