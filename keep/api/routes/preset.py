@@ -100,7 +100,7 @@ def pull_data_from_providers(
                         "provider_last_pull_time": str(provider.last_pull_time),
                     },
                 )
-                # continue
+                continue
 
         try:
             logger.info(
