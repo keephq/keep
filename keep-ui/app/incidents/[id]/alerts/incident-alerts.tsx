@@ -2,12 +2,8 @@
 
 import {
   createColumnHelper,
-  DisplayColumnDef,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -37,7 +33,9 @@ import IncidentPagination from "../../incident-pagination";
 import React, { useEffect, useMemo, useState } from "react";
 import { IncidentDto } from "../../models";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
-import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
+// import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
+import { EmptyStateCard } from "@/components/ui";
+import { useRouter } from "next/navigation";
 
 interface Props {
   incident: IncidentDto;
@@ -94,26 +92,27 @@ export default function IncidentAlerts({ incident }: Props) {
 
   const columns = useMemo(
     () => [
-      columnHelper.display({
-        id: "selected",
-        size: 10,
-        header: (context) => (
-          <AlertTableCheckbox
-            checked={context.table.getIsAllRowsSelected()}
-            indeterminate={context.table.getIsSomeRowsSelected()}
-            onChange={context.table.getToggleAllRowsSelectedHandler()}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ),
-        cell: (context) => (
-          <AlertTableCheckbox
-            checked={context.row.getIsSelected()}
-            indeterminate={context.row.getIsSomeSelected()}
-            onChange={context.row.getToggleSelectedHandler()}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ),
-      }),
+      // TODO: Add back when we have Split action
+      // columnHelper.display({
+      //   id: "selected",
+      //   size: 10,
+      //   header: (context) => (
+      //     <AlertTableCheckbox
+      //       checked={context.table.getIsAllRowsSelected()}
+      //       indeterminate={context.table.getIsSomeRowsSelected()}
+      //       onChange={context.table.getToggleAllRowsSelectedHandler()}
+      //       onClick={(e) => e.stopPropagation()}
+      //     />
+      //   ),
+      //   cell: (context) => (
+      //     <AlertTableCheckbox
+      //       checked={context.row.getIsSelected()}
+      //       indeterminate={context.row.getIsSomeSelected()}
+      //       onChange={context.row.getToggleSelectedHandler()}
+      //       onClick={(e) => e.stopPropagation()}
+      //     />
+      //   ),
+      // }),
       columnHelper.accessor("severity", {
         id: "severity",
         header: "Severity",
@@ -219,19 +218,24 @@ export default function IncidentAlerts({ incident }: Props) {
     manualPagination: true,
   });
 
+  const router = useRouter();
+
+  if (!isLoading && (alerts?.items ?? []).length === 0) {
+    return (
+      <EmptyStateCard
+        title="No alerts yet"
+        description="Alerts will show up here as they are correlated into this incident."
+        buttonText="Associate alerts manually"
+        onClick={() => {
+          router.push(`/alerts/feed`);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <Card className="p-0 overflow-hidden">
-        {!isLoading && (alerts?.items ?? []).length === 0 && (
-          <Callout
-            className="m-4"
-            title="Missing Alerts"
-            icon={ExclamationTriangleIcon}
-            color={"orange"}
-          >
-            Alerts will show up here as they are correlated into this incident.
-          </Callout>
-        )}
         <Table>
           <TableHead>
             {table.getHeaderGroups().map((headerGroup) => (
