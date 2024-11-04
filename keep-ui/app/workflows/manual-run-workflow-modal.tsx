@@ -71,8 +71,8 @@ export default function ManualRunWorkflowModal({
 
   return (
     <Modal onClose={clearAndClose} isOpen={isOpen} className="overflow-visible">
-      <Title className="mb-1">Select Workflow to run</Title>
-      {workflows && (
+      <Title className="mb-1">Select workflow to run</Title>
+      {workflows ? (
         <Select
           value={selectedWorkflowId}
           onValueChange={setSelectedWorkflowId}
@@ -85,15 +85,21 @@ export default function ManualRunWorkflowModal({
             );
           })}
         </Select>
+      ) : (
+        <div>No workflows found</div>
       )}
-      <Button
-        onClick={handleRun}
-        color="orange"
-        className="mt-2.5"
-        disabled={!selectedWorkflowId}
-      >
-        Run
-      </Button>
+      <div className="flex justify-end gap-2 mt-4">
+        <Button onClick={clearAndClose} color="orange" variant="secondary">
+          Cancel
+        </Button>
+        <Button
+          onClick={handleRun}
+          color="orange"
+          disabled={!selectedWorkflowId}
+        >
+          Run
+        </Button>
+      </div>
     </Modal>
   );
 }

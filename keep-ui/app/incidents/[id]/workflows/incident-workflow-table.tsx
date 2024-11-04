@@ -24,10 +24,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { IncidentDto } from "../../models";
 import IncidentPagination from "../../incident-pagination";
-import {
-  PaginatedWorkflowExecutionDto,
-  WorkflowExecution,
-} from "app/workflows/builder/types";
+import { WorkflowExecution } from "app/workflows/builder/types";
 import { useIncidentWorkflowExecutions } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
 import {
@@ -37,6 +34,7 @@ import {
   extractTriggerDetails,
 } from "app/workflows/[workflow_id]/workflow-execution-table";
 import IncidentWorkflowSidebar from "./incident-workflow-sidebar";
+import { IncidentWorkflowsEmptyState } from "./incident-workflow-empty";
 
 interface Props {
   incident: IncidentDto;
@@ -50,7 +48,6 @@ interface Pagination {
 const columnHelper = createColumnHelper<WorkflowExecution>();
 
 export default function IncidentWorkflowTable({ incident }: Props) {
-  const router = useRouter();
   const [workflowsPagination, setWorkflowsPagination] = useState<Pagination>({
     limit: 20,
     offset: 0,
@@ -194,6 +191,10 @@ export default function IncidentWorkflowTable({ incident }: Props) {
     },
     onPaginationChange: setTablePagination,
   });
+
+  if (!isLoading && (workflows?.items ?? []).length === 0) {
+    return <IncidentWorkflowsEmptyState incident={incident} />;
+  }
 
   return (
     <>
