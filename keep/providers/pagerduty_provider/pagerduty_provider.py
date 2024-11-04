@@ -88,7 +88,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             alias="Webhooks Write",
         ),
     ]
-    SUBSCRIPTION_API_URL = "https://api.pagerduty.com/webhook_subscriptions"
+    BASE_API_URL = "https://api.pagerduty.com"
+    SUBSCRIPTION_API_URL = f"{BASE_API_URL}/webhook_subscriptions"
     PROVIDER_DISPLAY_NAME = "PagerDuty"
     ALERT_SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
@@ -268,7 +269,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 # Todo: how to check validity for write scopes?
                 if scope.name.startswith("incidents"):
                     response = requests.get(
-                        "https://api.pagerduty.com/incidents",
+                        f"{self.BASE_API_URL}/incidents",
                         headers=headers,
                     )
                 elif scope.name.startswith("webhook_subscriptions"):
@@ -347,7 +348,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         if not incident_key:
             incident_key = str(uuid.uuid4()).replace("-", "")
 
-        url = "https://api.pagerduty.com/incidents"
+        url = f"{self.BASE_API_URL}/incidents"
         headers = self.__get_headers(From=requester)
 
         payload = {
@@ -517,7 +518,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             try:
                 services_response = requests.get(
                     url=(
-                        f"https://api.pagerduty.com/{endpoint if endpoint == 'incidents' else f'incidents/{incident_id}/{endpoint}'}"
+                        f"{self.BASE_API_URL}/{endpoint if endpoint == 'incidents' else f'incidents/{incident_id}/{endpoint}'}"
                     ),
                     headers=self.__get_headers(),
                     params={
@@ -547,7 +548,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         while more:
             try:
                 services_response = requests.get(
-                    url=f"https://api.pagerduty.com/{endpoint}",
+                    url=f"{self.BASE_API_URL}/{endpoint}",
                     headers=self.__get_headers(),
                     params={"include[]": ["teams"], "offset": offset, "limit": 100},
                 )
@@ -574,7 +575,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         try:
             service_map_response = requests.get(
-                url="https://api.pagerduty.com/service_dependencies",
+                url=f"{self.BASE_API_URL}/service_dependencies",
                 headers=self.__get_headers(),
             )
             if service_map_response.status_code != 200:
