@@ -32,7 +32,7 @@ async def report_uptime_to_posthog():
 
 def launch_uptime_reporting():
     """
-    Running acync uptime reporting as a sub-thread.
+    Running async uptime reporting as a sub-thread.
     """
     if not POSTHOG_DISABLED:
         if is_posthog_reachable():
