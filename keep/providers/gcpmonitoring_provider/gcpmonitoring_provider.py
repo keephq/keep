@@ -253,7 +253,7 @@ if __name__ == "__main__":
     )
 
     # Get these from a secure source or environment variables
-    with open("/Users/talboren/Downloads/sa.json") as f:
+    with open("sa.json") as f:
         service_account_data = f.read()
 
     config = {
@@ -269,7 +269,7 @@ if __name__ == "__main__":
         provider_config=config,
     )
     entries = provider._query(
-        filter='resource.type = "cloud_run_revision" 320b4889c536e16f2b1fecc1e5bfab6f',
+        filter='resource.type = "cloud_run_revision"',
         raw=False,
     )
     print(entries)
