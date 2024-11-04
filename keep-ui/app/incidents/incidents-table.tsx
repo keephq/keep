@@ -26,11 +26,12 @@ import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
 import IncidentMergeModal from "@/app/incidents/incident-merge-modal";
-import { capitalize } from "@/utils/helpers";
 import { IncidentDropdownMenu } from "./incident-dropdown-menu";
 import clsx from "clsx";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -69,9 +70,6 @@ function SelectedRowActions({
     </div>
   );
 }
-import { AlertDto } from "@/app/alerts/models";
-import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
-import { getIncidentName } from "@/entities/incidents/lib/utils";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -325,7 +323,7 @@ export default function IncidentsTable({
       const incidentId = selectedRowIds[i];
       deleteIncident(incidentId, true);
     }
-  }, [selectedRowIds]);
+  }, [deleteIncident, selectedRowIds]);
 
   return (
     <>

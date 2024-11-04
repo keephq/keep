@@ -42,20 +42,23 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
 
   const { data: incidentsMeta, isLoading } = useIncidentsMeta();
 
-  const setFilterValue = (filterName: string) => {
-    return () => {
-      if (incidentsMeta === undefined) return [];
+  const setFilterValue = useCallback(
+    (filterName: string) => {
+      return () => {
+        if (incidentsMeta === undefined) return [];
 
-      const values = searchParams?.get(filterName);
-      const valuesArray = values
-        ?.split(",")
-        .filter((value) =>
-          incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
-        );
+        const values = searchParams?.get(filterName);
+        const valuesArray = values
+          ?.split(",")
+          .filter((value) =>
+            incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
+          );
 
-      return (valuesArray || []) as string[];
-    };
-  };
+        return (valuesArray || []) as string[];
+      };
+    },
+    [incidentsMeta, searchParams]
+  );
 
   const [statuses, setStatuses] = useState<string[]>(
     setFilterValue("statuses")
@@ -79,7 +82,7 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
       setServices(setFilterValue("services"));
       setSources(setFilterValue("sources"));
     }
-  }, [isLoading]);
+  }, [isLoading, setFilterValue]);
 
   const createQueryString = useCallback(
     (name: string, value: string[]) => {

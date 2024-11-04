@@ -38,7 +38,7 @@ export function IncidentHeader({
         (key: string) =>
           typeof key === "string" && key.includes(`/incidents/${incident?.id}`)
       ),
-    [incident?.id]
+    [incident?.id, mutate]
   );
   const router = useRouter();
   const { data: session } = useSession();

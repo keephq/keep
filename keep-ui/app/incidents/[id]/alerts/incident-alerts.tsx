@@ -7,7 +7,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  Callout,
   Card,
   Table,
   TableBody,
@@ -27,7 +26,6 @@ import {
   usePollIncidentAlerts,
 } from "utils/hooks/useIncidents";
 import AlertName from "app/alerts/alert-name";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import IncidentAlertMenu from "./incident-alert-menu";
 import IncidentPagination from "../../incident-pagination";
 import React, { useEffect, useMemo, useState } from "react";
@@ -87,7 +85,7 @@ export default function IncidentAlerts({ incident }: Props) {
         offset: currentOffset,
       });
     }
-  }, [pagination]);
+  }, [alerts, pagination]);
   usePollIncidentAlerts(incident.id);
 
   const columns = useMemo(
@@ -199,7 +197,7 @@ export default function IncidentAlerts({ incident }: Props) {
           ),
       }),
     ],
-    [incident.is_confirmed]
+    [incident.id, incident.is_confirmed]
   );
 
   const table = useReactTable({
