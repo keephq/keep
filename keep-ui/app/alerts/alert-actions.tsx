@@ -3,12 +3,13 @@ import { Button } from "@tremor/react";
 import { getSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
 import { SilencedDoorbellNotification } from "@/components/icons";
 import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
+import CreateIncidentWithAIModal from "./alert-create-incident-ai-modal";
 
 interface Props {
   selectedRowIds: string[];
@@ -32,6 +33,8 @@ export default function AlertActions({
     revalidateOnFocus: false,
   });
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
+  const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
 
   const selectedAlerts = alerts.filter((_alert, index) =>
@@ -88,6 +91,13 @@ export default function AlertActions({
     setIsIncidentSelectorOpen(false);
   };
 
+  const showCreateIncidentWithAI = () => {
+    setIsCreateIncidentWithAIOpen(true);
+  };
+  const hideCreateIncidentWithAI = () => {
+    setIsCreateIncidentWithAIOpen(false);
+  };
+
   const handleSuccessfulAlertsAssociation = () => {
     hideIncidentSelector();
     clearRowSelection();
@@ -130,11 +140,26 @@ export default function AlertActions({
       >
         Associate with incident
       </Button>
+      <Button
+        icon={RocketIcon}
+        size="xs"
+        color="orange"
+        className="ml-2.5"
+        onClick={showCreateIncidentWithAI}
+        tooltip="Create incidents using AI"
+      >
+        Create incidents with AI
+      </Button>
       <AlertAssociateIncidentModal
         isOpen={isIncidentSelectorOpen}
         alerts={selectedAlerts}
         handleSuccess={handleSuccessfulAlertsAssociation}
         handleClose={hideIncidentSelector}
+      />
+      <CreateIncidentWithAIModal
+        isOpen={isCreateIncidentWithAIOpen}
+        alerts={selectedAlerts}
+        handleClose={hideCreateIncidentWithAI}
       />
     </div>
   );

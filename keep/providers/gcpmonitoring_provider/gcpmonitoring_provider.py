@@ -144,21 +144,25 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
             filter = f'{filter} timestamp>="{start_time}"'
         entries_iterator = self.client.list_entries(filter_=filter, page_size=page_size)
-        entries = [
-            (
-                entry
-                if raw
-                else LogEntry(
-                    timestamp=entry.timestamp,
-                    severity=entry.severity,
-                    payload=entry.payload,
-                    http_request=entry.http_request,
-                    payload_exists=entry.payload is not None,
-                    http_request_exists=entry.http_request is not None,
-                )
-            )
-            for entry in entries_iterator
-        ]
+        entries = []
+        for entry in entries_iterator:
+            if raw:
+                entries.append(entry)
+            else:
+                try:
+                    log_entry = LogEntry(
+                        timestamp=entry.timestamp,
+                        severity=entry.severity,
+                        payload=entry.payload,
+                        http_request=entry.http_request,
+                        payload_exists=entry.payload is not None,
+                        http_request_exists=entry.http_request is not None,
+                    )
+                    entries.append(log_entry)
+                except Exception:
+                    self.logger.error("Error parsing log entry")
+                    continue
+
         self.logger.info(f"Found {len(entries)} entries")
         return entries
 

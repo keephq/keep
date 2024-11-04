@@ -1,52 +1,48 @@
 import asyncio
 import logging
-import os
-import pathlib
-import sys
 from datetime import datetime
 from typing import List
 
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, BackgroundTasks, Request
 from pusher import Pusher
+from pydantic import BaseModel, Field  # noqa
 from pydantic.types import UUID
+from sqlmodel import Session
 
+from keep.api.bl.ai_suggestion_bl import AISuggestionBl
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.arq_pool import get_pool
 from keep.api.consts import REDIS, KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.db import (
-    add_alerts_to_incident_by_incident_id,
+    DestinationIncidentNotFound,
     add_audit,
     change_incident_status_by_id,
     confirm_predicted_incident_by_id,
-    create_incident_from_dto,
-    delete_incident_by_id,
     get_future_incidents_by_incident_id,
-    get_incident_alerts_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
     get_incident_by_id,
-    get_incident_unique_fingerprint_count,
     get_incidents_meta_for_tenant,
+    get_last_alerts,
     get_last_incidents,
+    get_session,
     get_workflow_executions_for_incident_or_alert,
-    remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id,
-    get_incidents_meta_for_tenant,
     merge_incidents_to_id,
-    DestinationIncidentNotFound,
 )
 from keep.api.core.dependencies import get_pusher_client, extract_generic_body
-from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
+    IncidentCommit,
     IncidentDto,
     IncidentDtoIn,
     IncidentListFilterParamsDto,
-    MergeIncidentsRequestDto,
+    IncidentsClusteringSuggestion,
     IncidentSeverity,
     IncidentSorting,
     IncidentStatus,
     IncidentStatusChangeDto,
+    MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
@@ -62,55 +58,10 @@ from keep.api.utils.pagination import (
 from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.providers_factory import ProvidersFactory
-from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.topologies.topologies_service import TopologiesService  # noqa
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
-    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5)
-)
-
-ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
-if ee_enabled:
-    path_with_ee = (
-        str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
-    )
-    sys.path.insert(0, path_with_ee)
-    from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa
-
-
-def __update_client_on_incident_change(
-    pusher_client: Pusher | None, tenant_id: str, incident_id: UUID | None = None
-):
-    """
-    Update the client on incident change, making the client poll changes.
-
-    Args:
-        pusher_client (Pusher | None): Pusher client if pusher is enabled.
-        tenant_id (str): Tenant id.
-        incident_id (str | None, optional): If this is relevant to a specific incident id. Defaults to None.
-            E.g., when someone correlates new alerts to an incident, we want to notify the client that the incident has changed.
-    """
-    if pusher_client is not None:
-        logger.info(
-            "Notifying client on incident change",
-            extra={"tenant_id": tenant_id, "incident_id": incident_id},
-        )
-        pusher_client.trigger(
-            f"private-{tenant_id}",
-            "incident-change",
-            {"incident_id": str(incident_id)},
-        )
-        logger.info(
-            "Client notified on incident change",
-            extra={"tenant_id": tenant_id, "incident_id": incident_id},
-        )
-    else:
-        logger.debug(
-            "Pusher client not available, skipping incident change notification"
-        )
 
 
 @router.post(
@@ -119,42 +70,17 @@ def __update_client_on_incident_change(
     status_code=202,
     response_model=IncidentDto,
 )
-def create_incident_endpoint(
+def create_incident(
     incident_dto: IncidentDtoIn,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Creating incidents in DB",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    incident = create_incident_from_dto(tenant_id, incident_dto)
-    new_incident_dto = IncidentDto.from_db_incident(incident)
-    logger.info(
-        "New incident created in DB",
-        extra={
-            "tenant_id": tenant_id,
-        },
-    )
-    __update_client_on_incident_change(pusher_client, tenant_id)
-
-    try:
-        workflow_manager = WorkflowManager.get_instance()
-        logger.info("Adding incident to the workflow manager queue")
-        workflow_manager.insert_incident(tenant_id, new_incident_dto, "created")
-        logger.info("Added incident to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on incident",
-            extra={"incident_id": new_incident_dto.id, "tenant_id": tenant_id},
-        )
-
-    return new_incident_dto
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    return incident_bl.create_incident(incident_dto)
 
 
 @router.get(
@@ -286,32 +212,14 @@ def update_incident(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
+    incident_bl = IncidentBl(tenant_id, session=session, pusher_client=pusher_client)
+    new_incident_dto = incident_bl.update_incident(
+        incident_id, updated_incident_dto, generated_by_ai
     )
-    incident = update_incident_from_dto_by_id(
-        tenant_id, incident_id, updated_incident_dto, generated_by_ai
-    )
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    new_incident_dto = IncidentDto.from_db_incident(incident)
-    try:
-        workflow_manager = WorkflowManager.get_instance()
-        logger.info("Adding incident to the workflow manager queue")
-        workflow_manager.insert_incident(tenant_id, new_incident_dto, "updated")
-        logger.info("Added incident to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on incident",
-            extra={"incident_id": new_incident_dto.id, "tenant_id": tenant_id},
-        )
     return new_incident_dto
 
 
@@ -325,36 +233,11 @@ def delete_incident(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
-    )
-
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    incident_dto = IncidentDto.from_db_incident(incident)
-
-    deleted = delete_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    __update_client_on_incident_change(pusher_client, tenant_id)
-    try:
-        workflow_manager = WorkflowManager.get_instance()
-        logger.info("Adding incident to the workflow manager queue")
-        workflow_manager.insert_incident(tenant_id, incident_dto, "deleted")
-        logger.info("Added incident to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on incident",
-            extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
-        )
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    incident_bl.delete_incident(incident_id)
     return Response(status_code=202)
 
 
@@ -389,7 +272,7 @@ def merge_incidents(
             message = "No incidents merged"
         else:
             message = f"{pluralize(len(merged_ids), 'incident')} merged into {command.destination_incident_id} successfully"
-        
+
         if skipped_ids:
             message += f", {pluralize(len(skipped_ids), 'incident')} were skipped"
         if failed_ids:
@@ -536,7 +419,10 @@ def get_incident_workflows(
     )
     workflow_execution_dtos, total_count = (
         get_workflow_executions_for_incident_or_alert(
-            tenant_id=tenant_id, incident_id=incident_id, limit=limit, offset=offset
+            tenant_id=tenant_id,
+            incident_id=str(incident_id),
+            limit=limit,
+            offset=offset,
         )
     )
 
@@ -560,85 +446,11 @@ async def add_alerts_to_incident(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
-    )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    add_alerts_to_incident_by_incident_id(
-        tenant_id, incident_id, alert_ids, is_created_by_ai
-    )
-    try:
-        logger.info("Pushing enriched alert to elasticsearch")
-        elastic_client = ElasticClient(tenant_id)
-        if elastic_client.enabled:
-            db_alerts, _ = get_incident_alerts_by_incident_id(
-                tenant_id=tenant_id,
-                incident_id=incident_id,
-                limit=len(alert_ids) + incident.alerts_count,
-            )
-
-            enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
-                db_alerts, with_incidents=True
-            )
-            logger.info(
-                "Fetched alerts from DB",
-                extra={
-                    "tenant_id": tenant_id,
-                },
-            )
-            elastic_client.index_alerts(
-                alerts=enriched_alerts_dto,
-            )
-            logger.info("Pushed enriched alert to elasticsearch")
-    except Exception:
-        logger.exception("Failed to push alert to elasticsearch")
-        pass
-    __update_client_on_incident_change(pusher_client, tenant_id, incident_id)
-
-    incident_dto = IncidentDto.from_db_incident(incident)
-
-    try:
-        workflow_manager = WorkflowManager.get_instance()
-        logger.info("Adding incident to the workflow manager queue")
-        workflow_manager.insert_incident(tenant_id, incident_dto, "updated")
-        logger.info("Added incident to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run workflows based on incident",
-            extra={"incident_id": incident_dto.id, "tenant_id": tenant_id},
-        )
-
-    fingerprints_count = get_incident_unique_fingerprint_count(tenant_id, incident_id)
-
-    if (
-        ee_enabled
-        and fingerprints_count > MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION
-        and not incident.user_summary
-    ):
-        pool = await get_pool()
-        job = await pool.enqueue_job(
-            "process_summary_generation",
-            tenant_id=tenant_id,
-            incident_id=incident_id,
-        )
-        logger.info(
-            f"Summary generation for incident {incident_id} scheduled, job: {job}",
-            extra={
-                "algorithm": ALGORITHM_VERBOSE_NAME,
-                "tenant_id": tenant_id,
-                "incident_id": incident_id,
-            },
-        )
-
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    await incident_bl.add_alerts_to_incident(incident_id, alert_ids)
     return Response(status_code=202)
 
 
@@ -654,64 +466,18 @@ def delete_alerts_from_incident(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
+    session=Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    incident_bl.delete_alerts_from_incident(
+        incident_id=incident_id, alert_ids=alert_ids
     )
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-
-    remove_alerts_to_incident_by_incident_id(tenant_id, incident_id, alert_ids)
-
     return Response(status_code=202)
 
 
-@router.post(
-    "/mine",
-    description="Create incidents using historical alerts",
-    include_in_schema=False,
-)
-def mine(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-    alert_lower_timestamp: datetime = None,
-    alert_upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = None,
-    incident_lower_timestamp: datetime = None,
-    incident_upper_timestamp: datetime = None,
-    use_n_historical_incidents: int = None,
-    pmi_threshold: float = None,
-    knee_threshold: float = None,
-    min_incident_size: int = None,
-    incident_similarity_threshold: float = None,
-) -> dict:
-    result = asyncio.run(
-        mine_incidents_and_create_objects(
-            ctx=None,
-            tenant_id=authenticated_entity.tenant_id,
-            alert_lower_timestamp=alert_lower_timestamp,
-            alert_upper_timestamp=alert_upper_timestamp,
-            use_n_historical_alerts=use_n_historical_alerts,
-            incident_lower_timestamp=incident_lower_timestamp,
-            incident_upper_timestamp=incident_upper_timestamp,
-            use_n_historical_incidents=use_n_historical_incidents,
-            pmi_threshold=pmi_threshold,
-            knee_threshold=knee_threshold,
-            min_incident_size=min_incident_size,
-            incident_similarity_threshold=incident_similarity_threshold,
-        )
-    )
-    return result
-
-
-@router.post(
+router.post(
     "/event/{provider_type}",
     description="Receive an alert event from a provider",
     status_code=202,
@@ -787,35 +553,6 @@ async def receive_event(
 
 
 @router.post(
-    "/{incident_id}/confirm",
-    description="Confirm predicted incident by id",
-    response_model=IncidentDto,
-)
-def confirm_incident(
-    incident_id: UUID,
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-) -> IncidentDto:
-    tenant_id = authenticated_entity.tenant_id
-    logger.info(
-        "Fetching incident",
-        extra={
-            "incident_id": incident_id,
-            "tenant_id": tenant_id,
-        },
-    )
-
-    incident = confirm_predicted_incident_by_id(tenant_id, incident_id)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident candidate not found")
-
-    new_incident_dto = IncidentDto.from_db_incident(incident)
-
-    return new_incident_dto
-
-
-@router.post(
     "/{incident_id}/status",
     description="Change incident status",
     response_model=IncidentDto,
@@ -843,7 +580,9 @@ def change_incident_status(
 
     # We need to do something only if status really changed
     if not change.status == incident.status:
-        end_time = datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
+        end_time = (
+            datetime.utcnow() if change.status == IncidentStatus.RESOLVED else None
+        )
         result = change_incident_status_by_id(
             tenant_id, incident_id, change.status, end_time
         )
@@ -901,3 +640,150 @@ def add_comment(
 
     logger.info("Added comment to incident", extra=extra)
     return comment
+
+
+@router.post(
+    "/ai/suggest",
+    description="Create incident with AI",
+    response_model=IncidentsClusteringSuggestion,
+    status_code=202,
+)
+async def create_with_ai(
+    alerts_fingerprints: List[str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+) -> IncidentsClusteringSuggestion:
+    tenant_id = authenticated_entity.tenant_id
+
+    # Get alerts data
+    alerts = get_last_alerts(tenant_id, fingerprints=alerts_fingerprints)
+    alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
+
+    # Get topology data
+    topology_data = TopologiesService.get_all_topology_data(tenant_id, session)
+
+    # Create suggestions using AI
+    suggestion_bl = AISuggestionBl(tenant_id, session)
+    return suggestion_bl.suggest_incidents(
+        alerts_dto=alerts_dto,
+        topology_data=topology_data,
+        user_id=authenticated_entity.email,
+    )
+
+
+@router.post(
+    "/ai/{suggestion_id}/commit",
+    description="Commit incidents with AI and user feedback",
+    response_model=List[IncidentDto],
+    status_code=202,
+)
+async def commit_with_ai(
+    suggestion_id: UUID,
+    incidents_with_feedback: List[IncidentCommit],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    session: Session = Depends(get_session),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+) -> List[IncidentDto]:
+    tenant_id = authenticated_entity.tenant_id
+
+    # Create business logic instances
+    ai_feedback_bl = AISuggestionBl(tenant_id, session)
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+
+    # Commit incidents with feedback
+    committed_incidents = await ai_feedback_bl.commit_incidents(
+        suggestion_id=suggestion_id,
+        incidents_with_feedback=[
+            incident.dict() for incident in incidents_with_feedback
+        ],
+        user_id=authenticated_entity.email,
+        incident_bl=incident_bl,
+    )
+
+    # Notify about changes if pusher client is available
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "incident-change",
+                {},
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify client: {str(e)}")
+
+    return committed_incidents
+
+
+### Deprecated? ###
+
+
+@router.post(
+    "/mine",
+    description="Create incidents using historical alerts",
+    include_in_schema=False,
+)
+def mine(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    alert_lower_timestamp: datetime = None,
+    alert_upper_timestamp: datetime = None,
+    use_n_historical_alerts: int = None,
+    incident_lower_timestamp: datetime = None,
+    incident_upper_timestamp: datetime = None,
+    use_n_historical_incidents: int = None,
+    pmi_threshold: float = None,
+    knee_threshold: float = None,
+    min_incident_size: int = None,
+    incident_similarity_threshold: float = None,
+) -> dict:
+    result = asyncio.run(
+        mine_incidents_and_create_objects(
+            ctx=None,
+            tenant_id=authenticated_entity.tenant_id,
+            alert_lower_timestamp=alert_lower_timestamp,
+            alert_upper_timestamp=alert_upper_timestamp,
+            use_n_historical_alerts=use_n_historical_alerts,
+            incident_lower_timestamp=incident_lower_timestamp,
+            incident_upper_timestamp=incident_upper_timestamp,
+            use_n_historical_incidents=use_n_historical_incidents,
+            pmi_threshold=pmi_threshold,
+            knee_threshold=knee_threshold,
+            min_incident_size=min_incident_size,
+            incident_similarity_threshold=incident_similarity_threshold,
+        )
+    )
+    return result
+
+
+@router.post(
+    "/{incident_id}/confirm",
+    description="Confirm predicted incident by id",
+    response_model=IncidentDto,
+)
+def confirm_incident(
+    incident_id: UUID,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+) -> IncidentDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Fetching incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    incident = confirm_predicted_incident_by_id(tenant_id, incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident candidate not found")
+
+    new_incident_dto = IncidentDto.from_db_incident(incident)
+
+    return new_incident_dto
