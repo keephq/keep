@@ -33,9 +33,7 @@ async def report_uptime_to_posthog():
 def launch_uptime_reporting():
     """
     Running uptime reporting as a sub-thread. Important to avoid 
-    Launching at app.on_start() caused misterious isses on production, see:
-    Check: https://github.com/keephq/keep/pull/2366
-    Reverted: https://github.com/keephq/keep/pull/2384
+    Launching at app.on_start() caused miltiple instances being launched per-gunicorn worker.
     """
     if not POSTHOG_DISABLED:
         if is_posthog_reachable():
