@@ -19,7 +19,7 @@ export function TabNavigation({ children, className }: TabNavigationProps) {
   return (
     <nav
       className={twMerge(
-        "justify-start overflow-x-clip flex border-b space-x-4",
+        "justify-start overflow-x-auto flex border-b space-x-4",
         "border-tremor-border dark:border-dark-tremor-border",
         "sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10",
         className
@@ -44,7 +44,7 @@ export function TabNavigationLink({
       href={href}
       className={twMerge(
         // Base styles
-        "flex items-center whitespace-nowrap truncate max-w-xs outline-none",
+        "flex items-center whitespace-nowrap outline-none",
         "ui-focus-visible:ring text-sm",
         "border-b-2 border-transparent",
         "transition duration-100 -mb-px px-2 py-2",
@@ -68,8 +68,8 @@ export function TabNavigationLink({
       aria-selected={isActive}
       tabIndex={isActive ? 0 : -1}
     >
-      {Icon && <Icon className="size-5" />}
-      <span>{children}</span>
+      {Icon && <Icon className="size-5 flex-shrink-0" />}
+      <span className="truncate">{children}</span>
     </Link>
   );
 }

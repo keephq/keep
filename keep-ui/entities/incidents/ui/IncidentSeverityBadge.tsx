@@ -1,7 +1,6 @@
-import { Badge } from "@tremor/react";
+import { Badge, BadgeProps } from "@tremor/react";
 import { IncidentDto } from "@/app/incidents/models";
 
-import { Icon } from "@tremor/react";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
@@ -11,9 +10,13 @@ import { capitalize } from "@/utils/helpers";
 
 interface Props {
   severity: IncidentDto["severity"];
+  size?: BadgeProps["size"];
 }
 
-export default function IncidentSeverityBadge({ severity }: Props) {
+export default function IncidentSeverityBadge({
+  severity,
+  size = "xs",
+}: Props) {
   let icon: any;
   let color: any;
   switch (severity) {
@@ -44,7 +47,7 @@ export default function IncidentSeverityBadge({ severity }: Props) {
   }
 
   return (
-    <Badge color={color} className="capitalize" size="sm" icon={icon}>
+    <Badge color={color} className="capitalize" size={size} icon={icon}>
       {capitalize(severity)}
     </Badge>
   );
