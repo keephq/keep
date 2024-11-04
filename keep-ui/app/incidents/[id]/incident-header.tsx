@@ -25,10 +25,12 @@ export function IncidentHeader({
 }: {
   incident: IncidentDto;
 }) {
-  const { data: incident } = useIncident(initialIncidentData.id, {
+  const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
     fallbackData: initialIncidentData,
   });
   const { mutate } = useSWRConfig();
+  const incident = fetchedIncident || initialIncidentData;
+
   const mutateIncident = useCallback(
     () =>
       mutate(

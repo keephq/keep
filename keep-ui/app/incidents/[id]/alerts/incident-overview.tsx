@@ -93,12 +93,10 @@ function MergedCallout({
 export default function IncidentOverview({
   incident: initialIncidentData,
 }: Props) {
-  const { data: incident = initialIncidentData } = useIncident(
-    initialIncidentData.id,
-    {
-      fallbackData: initialIncidentData,
-    }
-  );
+  const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
+    fallbackData: initialIncidentData,
+  });
+  const incident = fetchedIncident || initialIncidentData;
   const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
   const summary = incident.user_summary || incident.generated_summary;
 
