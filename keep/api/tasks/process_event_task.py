@@ -202,7 +202,7 @@ def __save_to_db(
             enriched_formatted_events.append(alert_dto)
         session.commit()
         logger.info(
-            "Asyncronusly added new alerts to the DB",
+            "Asynchronously added new alerts to the DB",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),
@@ -247,7 +247,7 @@ def __handle_formatted_events(
 
     """
     logger.info(
-        "Asyncronusly adding new alerts to the DB",
+        "Asynchronously adding new alerts to the DB",
         extra={
             "provider_type": provider_type,
             "num_of_alerts": len(formatted_events),

@@ -621,7 +621,6 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     assert incident_3.merged_by == "test-user-email"
 
 
-"""
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_merge_incidents_app(
     db_session, client, test_app, setup_stress_alerts_no_elastic, create_alert
@@ -643,6 +642,8 @@ def test_merge_incidents_app(
     alerts_1 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-1-")).all()
     )
+    assert len(alerts_1) == 50
+
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
     )
@@ -663,6 +664,8 @@ def test_merge_incidents_app(
     alerts_2 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-2-")).all()
     )
+    assert len(alerts_2) == 50
+
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
     )
@@ -728,4 +731,3 @@ def test_merge_incidents_app(
     ).json()
     assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
     assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
-"""

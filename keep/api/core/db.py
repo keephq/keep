@@ -3746,7 +3746,7 @@ class DestinationIncidentNotFound(Exception):
 def merge_incidents_to_id(
     tenant_id: str,
     source_incident_ids: List[UUID],
-    # Maybe to add optional destionation_incident_dto to merge to
+    # Maybe to add optional destination_incident_dto to merge to
     destination_incident_id: UUID,
     merged_by: str | None = None,
 ) -> Tuple[List[UUID], List[UUID], List[UUID]]:
