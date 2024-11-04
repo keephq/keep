@@ -27,6 +27,7 @@ export function IncidentHeader({
 }) {
   const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
     fallbackData: initialIncidentData,
+    revalidateOnMount: false,
   });
   const { mutate } = useSWRConfig();
   const incident = fetchedIncident || initialIncidentData;

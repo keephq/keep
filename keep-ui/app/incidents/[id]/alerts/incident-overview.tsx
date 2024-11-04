@@ -95,6 +95,7 @@ export default function IncidentOverview({
 }: Props) {
   const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
     fallbackData: initialIncidentData,
+    revalidateOnMount: false,
   });
   const incident = fetchedIncident || initialIncidentData;
   const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
