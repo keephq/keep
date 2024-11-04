@@ -652,7 +652,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             status=status,
             severity=severity,
             alert_sources=["pagerduty"],
-            alerts_count=0,
+            alerts_count=event.get("alert_counts", {}).get("all", 0),
             services=[service],
             is_predicted=False,
             is_confirmed=True,

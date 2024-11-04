@@ -478,7 +478,7 @@ def delete_alerts_from_incident(
     return Response(status_code=202)
 
 
-router.post(
+@router.post(
     "/event/{provider_type}",
     description="Receive an alert event from a provider",
     status_code=202,
