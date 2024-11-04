@@ -1,4 +1,5 @@
 import time
+import asyncio
 import logging
 import threading
 from keep.api.core.posthog import (
@@ -12,7 +13,7 @@ from keep.api.core.posthog import (
 logger = logging.getLogger(__name__)
 UPTIME_REPORTING_CADENCE = 60 * 60  # 1 hour
 
-def report_uptime_to_posthog_blocking():
+async def report_uptime_to_posthog_blocking():
     """
     It's a blocking function that reports uptime and current version to PostHog every hour.
     Should be lunched in a separate thread.
@@ -27,7 +28,7 @@ def report_uptime_to_posthog_blocking():
             },
         )
         logger.info("Uptime reported to PostHog.")
-        time.sleep(UPTIME_REPORTING_CADENCE)
+        await asyncio.sleep(UPTIME_REPORTING_CADENCE)
 
 def launch_uptime_reporting():
     """
@@ -38,7 +39,7 @@ def launch_uptime_reporting():
     """
     if not POSTHOG_DISABLED:
         if is_posthog_reachable():
-            thread = threading.Thread(target=report_uptime_to_posthog_blocking)
+            thread = threading.Thread(target=asyncio.run, args=(report_uptime_to_posthog_blocking()))
             thread.start()
             logger.info("Uptime Reporting to Posthog launched.")
         else:
