@@ -3,7 +3,6 @@ import { Button, Divider, Title } from "@tremor/react";
 import Select from "@/components/ui/Select";
 import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";
@@ -36,7 +35,6 @@ const AlertAssociateIncidentModal = ({
   // get the token
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
-  const router = useRouter();
 
   const associateAlertsHandler = useCallback(
     async (incidentId: string) => {
@@ -96,30 +94,18 @@ const AlertAssociateIncidentModal = ({
   }
 
   const renderSelectIncidentForm = () => {
-    if (!incidents) {
+    if (!incidents || incidents.items.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center gap-y-8 h-full">
-          <div className="text-center space-y-3">
-            <Title className="text-2xl">No Incidents Yet</Title>
-          </div>
+        <div className="flex flex-col">
+          <Title className="text-md text-gray-500 my-4">No incidents yet</Title>
 
-          <div className="flex items-center justify-between w-full gap-6">
-            <Button
-              className="flex-1"
-              color="orange"
-              onClick={() => router.push("/incidents")}
-            >
-              Incidents page
-            </Button>
-
-            <Button
-              className="flex-1"
-              color="green"
-              onClick={showCreateIncidentForm}
-            >
-              Create a new incident
-            </Button>
-          </div>
+          <Button
+            className="flex-1"
+            color="orange"
+            onClick={showCreateIncidentForm}
+          >
+            Create a new incident
+          </Button>
         </div>
       );
     }
@@ -177,7 +163,7 @@ const AlertAssociateIncidentModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Choose Incident"
+      title="Associate alerts to incident"
       className="w-[600px]"
     >
       <div className="relative">
@@ -189,9 +175,9 @@ const AlertAssociateIncidentModal = ({
             createCallback={onIncidentCreated}
             exitCallback={hideCreateIncidentForm}
           />
-        ) : incidents && incidents.items.length > 0 ? (
+        ) : (
           renderSelectIncidentForm()
-        ) : null}
+        )}
       </div>
     </Modal>
   );
