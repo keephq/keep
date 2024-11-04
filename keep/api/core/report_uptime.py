@@ -27,12 +27,12 @@ async def report_uptime_to_posthog():
             },
         )
         logger.info("Uptime reported to PostHog.")
+         # Important to keep it async, otherwise will clog main gunicorn thread and cause timeouts.
         await asyncio.sleep(UPTIME_REPORTING_CADENCE)
 
 def launch_uptime_reporting():
     """
-    Running uptime reporting as a sub-thread. Important to avoid 
-    Launching at app.on_start() caused miltiple instances being launched per-gunicorn worker.
+    Running acync uptime reporting as a sub-thread.
     """
     if not POSTHOG_DISABLED:
         if is_posthog_reachable():

@@ -21,7 +21,7 @@ if POSTHOG_DISABLED:
 
 POSTHOG_API_KEY = (
     os.getenv("POSTHOG_API_KEY")
-    or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"
+    or "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ"  # It's a public PH API key, not a leaked secret ;)
 )
 posthog_client = Posthog(
     api_key=POSTHOG_API_KEY, 
