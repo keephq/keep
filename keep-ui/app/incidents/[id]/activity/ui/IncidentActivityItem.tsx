@@ -19,7 +19,6 @@ export function IncidentActivityItem({ activity }: { activity: any }) {
           (activity.initiator as AlertDto)?.severity && (
             <AlertSeverity
               severity={(activity.initiator as AlertDto).severity}
-              marginLeft={false}
             />
           )}
         <span className="font-semibold mr-2.5">{title}</span>

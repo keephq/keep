@@ -109,8 +109,12 @@ export default function IncidentAlerts({ incident }: Props) {
       columnHelper.accessor("severity", {
         id: "severity",
         header: "Severity",
-        minSize: 100,
-        cell: (context) => <AlertSeverity severity={context.getValue()} />,
+        minSize: 80,
+        cell: (context) => (
+          <div className="text-center">
+            <AlertSeverity severity={context.getValue()} />
+          </div>
+        ),
       }),
       columnHelper.display({
         id: "name",

@@ -16,23 +16,7 @@ import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import CreateOrUpdateIncident from "@/app/incidents/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
 import { useSWRConfig } from "swr";
-
-// TODO: replace with a reusable icon component
-function SeverityBadge({ severity }: { severity: IncidentDto["severity"] }) {
-  let severityColor;
-  if (severity === "critical") {
-    severityColor = "red";
-  } else if (severity === "info") {
-    severityColor = "blue";
-  } else if (severity === "warning") {
-    severityColor = "yellow";
-  }
-  return (
-    <Badge color={severityColor} className="capitalize" size="xs">
-      {severity}
-    </Badge>
-  );
-}
+import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
 
 export function IncidentHeader({ incident }: { incident: IncidentDto }) {
   const { mutate } = useSWRConfig();
@@ -83,7 +67,7 @@ export function IncidentHeader({ incident }: { incident: IncidentDto }) {
         </Subtitle>
         <div className="flex justify-between items-end text-sm gap-1">
           <Title className="prose-2xl flex-grow flex flex-col gap-1">
-            <SeverityBadge severity={incident.severity} />
+            <IncidentSeverityBadge severity={incident.severity} />
             <span>{incidentName}</span>
           </Title>
           <Button

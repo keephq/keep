@@ -15,7 +15,7 @@ import ChangeSameIncidentInThePast from "@/app/incidents/incident-change-same-in
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
-import { Callout } from "@tremor/react";
+import { Badge, Callout } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 
@@ -159,6 +159,16 @@ export default function IncidentOverview({ incident }: Props) {
               collapsable={true}
             />
           ) : null}
+        </div>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-gray-500 text-sm">Involved services</h3>
+          <div className="flex flex-wrap gap-1">
+            {incident.services.map((service) => (
+              <Badge key={service} size="sm">
+                {service}
+              </Badge>
+            ))}
+          </div>
         </div>
         <div>
           <h3 className="text-gray-500 text-sm">Assignee</h3>

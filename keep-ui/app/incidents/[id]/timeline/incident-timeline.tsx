@@ -70,7 +70,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
 
         <p className="text-gray-400">Severity:</p>
         <div className="flex items-center">
-          <AlertSeverity marginLeft={false} severity={alert.severity} />
+          <AlertSeverity severity={alert.severity} />
           <p className="ml-2">{alert.severity}</p>
         </div>
 
@@ -209,7 +209,7 @@ const AlertBar: React.FC<AlertBarProps> = ({
           } relative overflow-hidden`}
         >
           <div className="absolute inset-y-0 left-2 flex items-center font-semibold truncate w-full pr-4">
-            <AlertSeverity marginLeft={false} severity={alert.severity} />
+            <AlertSeverity severity={alert.severity} />
             <span
               className={`ml-2 ${
                 severityTextColors[

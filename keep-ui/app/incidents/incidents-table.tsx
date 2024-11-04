@@ -70,6 +70,7 @@ function SelectedRowActions({
   );
 }
 import { AlertDto } from "@/app/alerts/models";
+import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
@@ -116,7 +117,6 @@ export default function IncidentsTable({
   const columns = [
     columnHelper.display({
       id: "selected",
-      size: 10,
       header: (context) => (
         <AlertTableCheckbox
           checked={context.table.getIsAllRowsSelected()}
@@ -148,7 +148,7 @@ export default function IncidentsTable({
       id: "name",
       header: "Incident",
       cell: ({ row }) => (
-        <div className="min-w-64">
+        <div className="max-w-64">
           <Link
             href={`/incidents/${row.original.id}/alerts`}
             className="text-pretty"
@@ -173,20 +173,8 @@ export default function IncidentsTable({
     columnHelper.accessor("severity", {
       id: "severity",
       header: "Severity",
-      cell: (context) => {
-        const severity = context.row.original.severity;
-        let color;
-        if (severity === "critical") color = "red";
-        else if (severity === "info") color = "blue";
-        else if (severity === "warning") color = "yellow";
-        return <Badge color={color}>{capitalize(severity)}</Badge>;
-      },
-    }),
-    columnHelper.display({
-      id: "rule_fingerprint",
-      header: "Group by value",
       cell: ({ row }) => (
-        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
+        <IncidentSeverityBadge severity={row.original.severity} />
       ),
     }),
     columnHelper.display({
@@ -213,15 +201,26 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "services",
       header: "Involved Services",
-      cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          {row.original.services
-            .filter((service) => service !== "null")
-            .map((service) => (
-              <Badge key={service}>{service}</Badge>
-            ))}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const notNullServices = row.original.services.filter(
+          (service) => service !== "null"
+        );
+        return (
+          <div className="flex flex-wrap items-baseline gap-1">
+            {notNullServices
+              .map((service) => <Badge key={service}>{service}</Badge>)
+              .slice(0, 3)}
+            {notNullServices.length > 3 ? (
+              <>
+                and{" "}
+                <Link href={`/incidents/${row.original.id}/alerts`}>
+                  {notNullServices.length - 3} more
+                </Link>
+              </>
+            ) : null}
+          </div>
+        );
+      },
     }),
     columnHelper.display({
       id: "assignee",
@@ -233,6 +232,13 @@ export default function IncidentsTable({
       header: "Created At",
       cell: ({ row }) =>
         new Date(row.original.creation_time + "Z").toLocaleString(),
+    }),
+    columnHelper.display({
+      id: "rule_fingerprint",
+      header: "Group by value",
+      cell: ({ row }) => (
+        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
+      ),
     }),
     columnHelper.display({
       id: "actions",
