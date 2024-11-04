@@ -124,7 +124,7 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
-            if issubclass(type(provider), BaseIncidentProvider):
+            if issubclass(type(provider_class), BaseIncidentProvider):
                 try:
                     incidents = provider_class.get_incidents()
                     process_event(
@@ -191,10 +191,10 @@ def pull_data_from_providers(
                     alert,
                     notify_client=False,
                 )
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"Unknown error pulling from provider {provider.type} ({provider.id})",
-                extra=extra,
+                extra={**extra, "exception": str(e)},
             )
     logger.info(
         "Pulling data from providers completed",
