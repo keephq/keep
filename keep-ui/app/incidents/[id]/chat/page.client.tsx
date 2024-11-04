@@ -1,7 +1,7 @@
 "use client";
 
 import { IncidentChat } from "./incident-chat";
-import { IncidentDto } from "../../models";
+import { IncidentDto } from "@/entities/incidents/model";
 import { CopilotKit } from "@copilotkit/react-core";
 
 export function IncidentChatClientPage({

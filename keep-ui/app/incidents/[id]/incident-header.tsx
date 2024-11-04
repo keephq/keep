@@ -1,22 +1,19 @@
 "use client";
-import { IncidentDto } from "@/app/incidents/models";
+
+import {
+  useIncidentActions,
+  type IncidentDto,
+} from "@/entities/incidents/model";
 import { Button, Icon, Subtitle, Title } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
-import React, { useCallback, useState } from "react";
-import {
-  deleteIncident,
-  handleConfirmPredictedIncident,
-} from "@/app/incidents/incident-candidate-actions";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
-import CreateOrUpdateIncident from "@/app/incidents/create-or-update-incident";
+import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import { useSWRConfig } from "swr";
-import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
+import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 
@@ -29,20 +26,10 @@ export function IncidentHeader({
     fallbackData: initialIncidentData,
     revalidateOnMount: false,
   });
-  const { mutate } = useSWRConfig();
+  const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
   const incident = fetchedIncident || initialIncidentData;
 
-  const mutateIncident = useCallback(
-    () =>
-      mutate(
-        (key: string) =>
-          typeof key === "string" && key.includes(`/incidents/${incident?.id}`)
-      ),
-    [incident?.id, mutate]
-  );
   const router = useRouter();
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -55,11 +42,9 @@ export function IncidentHeader({
 
   const handleFinishEdit = () => {
     setIsFormOpen(false);
-    mutateIncident();
   };
   const handleRunWorkflow = () => {
     setRunWorkflowModalIncident(incident);
-    mutateIncident();
   };
 
   const handleStartEdit = () => {
@@ -117,12 +102,7 @@ export function IncidentHeader({
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleConfirmPredictedIncident({
-                    apiUrl: apiUrl!,
-                    incidentId: incident.id!,
-                    mutate: mutateIncident,
-                    session,
-                  });
+                  confirmPredictedIncident(incident.id!);
                 }}
               >
                 Confirm
@@ -136,12 +116,7 @@ export function IncidentHeader({
                 onClick={async (e: React.MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const success = await deleteIncident({
-                    apiUrl: apiUrl!,
-                    incidentId: incident.id!,
-                    mutate: mutateIncident,
-                    session,
-                  });
+                  const success = await deleteIncident(incident.id);
                   if (success) {
                     router.push("/incidents");
                   }
@@ -157,7 +132,7 @@ export function IncidentHeader({
         className="w-[600px]"
         title="Edit Incident"
       >
-        <CreateOrUpdateIncident
+        <CreateOrUpdateIncidentForm
           incidentToEdit={incident}
           exitCallback={handleFinishEdit}
         />

@@ -1,4 +1,4 @@
-import { IncidentDto } from "@/app/incidents/models";
+import { IncidentDto } from "@/entities/incidents/model";
 import { AuditEvent } from "@/utils/hooks/useAlerts";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 import { TextInput, Button } from "@tremor/react";

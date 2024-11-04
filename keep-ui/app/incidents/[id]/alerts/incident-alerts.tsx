@@ -27,13 +27,13 @@ import {
 } from "utils/hooks/useIncidents";
 import AlertName from "app/alerts/alert-name";
 import IncidentAlertMenu from "./incident-alert-menu";
-import IncidentPagination from "../../incident-pagination";
 import React, { useEffect, useMemo, useState } from "react";
-import { IncidentDto } from "../../models";
+import type { IncidentDto } from "@/entities/incidents/model";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
 // import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { EmptyStateCard } from "@/components/ui";
 import { useRouter } from "next/navigation";
+import { TablePagination } from "@/shared/ui";
 
 interface Props {
   incident: IncidentDto;
@@ -306,7 +306,7 @@ export default function IncidentAlerts({ incident }: Props) {
       </Card>
 
       <div className="mt-4 mb-8">
-        <IncidentPagination table={table} isRefreshAllowed={true} />
+        <TablePagination table={table} />
       </div>
     </>
   );

@@ -1,4 +1,4 @@
-import { Status } from "@/app/incidents/models";
+import { Status } from "@/entities/incidents/model";
 import { Icon, IconProps } from "@tremor/react";
 import {
   CheckCircleIcon,

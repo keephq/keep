@@ -8,7 +8,10 @@ import {
   getSortedRowModel,
   ColumnDef,
 } from "@tanstack/react-table";
-import { IncidentDto, PaginatedIncidentsDto } from "./models";
+import type {
+  IncidentDto,
+  PaginatedIncidentsDto,
+} from "@/entities/incidents/model";
 import React, {
   Dispatch,
   SetStateAction,
@@ -17,7 +20,6 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
-import IncidentPagination from "./incident-pagination";
 import IncidentTableComponent from "./incident-table-component";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
@@ -25,13 +27,14 @@ import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
-import IncidentMergeModal from "@/app/incidents/incident-merge-modal";
+import { MergeIncidentsModal } from "@/features/merge-incidents";
 import { IncidentDropdownMenu } from "./incident-dropdown-menu";
 import clsx from "clsx";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
-import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
-import IncidentSeverityBadge from "@/entities/incidents/ui/IncidentSeverityBadge";
+import { useIncidentActions } from "@/entities/incidents/model";
+import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
+import { TablePagination } from "@/shared/ui";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -349,14 +352,14 @@ export default function IncidentsTable({
         </Card>
       )}
       <div className="mt-4 mb-8">
-        <IncidentPagination table={table} isRefreshAllowed={true} />
+        <TablePagination table={table} />
       </div>
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}
       />
       {mergeOptions && (
-        <IncidentMergeModal
+        <MergeIncidentsModal
           incidents={mergeOptions.incidents}
           handleClose={() => setMergeOptions(null)}
           onSuccess={() => table.resetRowSelection()}

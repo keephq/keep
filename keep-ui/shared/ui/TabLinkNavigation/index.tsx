@@ -1,1 +1,2 @@
-export * from "./TabNavigation";
+export { TabLinkNavigation } from "./TabLinkNavigation";
+export { TabNavigationLink } from "./TabNavigationLink";

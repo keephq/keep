@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertDto } from "@/app/alerts/models";
-import { IncidentDto } from "../../models";
+import { IncidentDto } from "@/entities/incidents/model";
 import { useUsers } from "@/utils/hooks/useUsers";
 import Image from "next/image";
 import UserAvatar from "@/components/navbar/UserAvatar";

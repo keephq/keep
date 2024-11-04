@@ -10,14 +10,15 @@ import {
   SelectItem,
 } from "@tremor/react";
 import { FormEvent, useEffect, useState } from "react";
-import { IncidentDto } from "./models";
 import { useUsers } from "utils/hooks/useUsers";
-const ReactQuill =
-  typeof window === "object" ? require("react-quill") : () => false;
+import { useIncidentActions } from "@/entities/incidents/model";
+import type { IncidentDto } from "@/entities/incidents/model";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
 import "react-quill/dist/quill.snow.css";
 import "./react-quill-override.css";
-import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
-import { getIncidentName } from "@/entities/incidents/lib/utils";
+
+const ReactQuill =
+  typeof window === "object" ? require("react-quill") : () => false;
 
 interface Props {
   incidentToEdit: IncidentDto | null;
@@ -25,7 +26,7 @@ interface Props {
   exitCallback?: () => void;
 }
 
-export default function CreateOrUpdateIncident({
+export function CreateOrUpdateIncidentForm({
   incidentToEdit,
   createCallback,
   exitCallback,

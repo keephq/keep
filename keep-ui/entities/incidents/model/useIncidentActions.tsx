@@ -1,9 +1,9 @@
-import { IncidentDto, Status } from "@/app/incidents/models";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 import { useSession } from "next-auth/react";
 import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
+import { IncidentDto, Status } from "./models";
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -25,6 +25,9 @@ type UseIncidentActionsValue = {
     sourceIncidents: IncidentDto[],
     destinationIncident: IncidentDto
   ) => Promise<void>;
+  confirmPredictedIncident: (incidentId: string) => Promise<void>;
+  mutateIncidentsList: () => void;
+  mutateIncident: (incidentId: string) => void;
 };
 
 type IncidentCreateDto = {
@@ -43,34 +46,43 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const { data: session } = useSession();
   const { mutate } = useSWRConfig();
 
-  // Adding "?" to the key because the list always has a query param
-  const mutateIncidentsList = () =>
-    mutate((key) => typeof key === "string" && key.startsWith("/incidents?"));
-  const mutateIncident = (incidentId: string) =>
-    mutate(
-      (key) =>
-        typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
-    );
+  const mutateIncidentsList = useCallback(
+    () =>
+      // Adding "?" to the key because the list always has a query param
+      mutate((key) => typeof key === "string" && key.startsWith("/incidents?")),
+    [mutate]
+  );
+  const mutateIncident = useCallback(
+    (incidentId: string) =>
+      mutate(
+        (key) =>
+          typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
+      ),
+    [mutate]
+  );
 
-  const addIncident = useCallback(async (incident: IncidentCreateDto) => {
-    const response = await fetch(`${apiUrl}/incidents`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(incident),
-    });
-    if (response.ok) {
-      mutateIncidentsList();
-      toast.success("Incident created successfully");
-      return await response.json();
-    } else {
-      toast.error(
-        "Failed to create incident, please contact us if this issue persists."
-      );
-    }
-  }, []);
+  const addIncident = useCallback(
+    async (incident: IncidentCreateDto) => {
+      const response = await fetch(`${apiUrl}/incidents`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(incident),
+      });
+      if (response.ok) {
+        mutateIncidentsList();
+        toast.success("Incident created successfully");
+        return await response.json();
+      } else {
+        toast.error(
+          "Failed to create incident, please contact us if this issue persists."
+        );
+      }
+    },
+    [apiUrl, mutateIncidentsList, session?.accessToken]
+  );
 
   const updateIncident = useCallback(
     async (
@@ -99,7 +111,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         );
       }
     },
-    []
+    [apiUrl, mutateIncident, mutateIncidentsList, session?.accessToken]
   );
 
   const mergeIncidents = useCallback(
@@ -135,7 +147,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.error("An error occurred while merging incidents.");
       }
     },
-    []
+    [apiUrl, mutateIncidentsList, session?.accessToken]
   );
 
   const deleteIncident = useCallback(
@@ -162,7 +174,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         return false;
       }
     },
-    []
+    [apiUrl, mutateIncidentsList, session?.accessToken]
   );
 
   const changeStatus = useCallback(
@@ -198,7 +210,33 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.error("An error occurred while changing incident status.");
       }
     },
-    []
+    [apiUrl, mutateIncidentsList, session?.accessToken]
+  );
+
+  // Is it used?
+  const confirmPredictedIncident = useCallback(
+    async (incidentId: string) => {
+      const response = await fetch(
+        `${apiUrl}/incidents/${incidentId}/confirm`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response.ok) {
+        mutateIncidentsList();
+        mutateIncident(incidentId);
+        toast.success("Predicted incident confirmed successfully");
+      } else {
+        toast.error(
+          "Failed to confirm predicted incident, please contact us if this issue persists."
+        );
+      }
+    },
+    [apiUrl, mutateIncident, mutateIncidentsList, session?.accessToken]
   );
 
   return {
@@ -207,5 +245,8 @@ export function useIncidentActions(): UseIncidentActionsValue {
     changeStatus,
     deleteIncident,
     mergeIncidents,
+    confirmPredictedIncident,
+    mutateIncidentsList,
+    mutateIncident,
   };
 }

@@ -1,7 +1,7 @@
 import Modal from "@/components/ui/Modal";
-import { Button, Divider, SelectItem, Title } from "@tremor/react";
+import { Button, Divider, Title } from "@tremor/react";
 import Select from "@/components/ui/Select";
-import CreateOrUpdateIncident from "app/incidents/create-or-update-incident";
+import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -11,7 +11,6 @@ import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
 import Loading from "../loading";
 import { AlertDto } from "./models";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { IncidentDto } from "../incidents/models";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -39,25 +38,28 @@ const AlertAssociateIncidentModal = ({
   const apiUrl = useApiUrl();
   const router = useRouter();
 
-  const associateAlertsHandler = async (incidentId: string) => {
-    const response = await fetch(`${apiUrl}/incidents/${incidentId}/alerts`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(alerts.map(({ event_id }) => event_id)),
-    });
-    if (response.ok) {
-      handleSuccess();
-      await mutate();
-      toast.success("Alerts associated with incident successfully");
-    } else {
-      toast.error(
-        "Failed to associated alerts with incident, please contact us if this issue persists."
-      );
-    }
-  };
+  const associateAlertsHandler = useCallback(
+    async (incidentId: string) => {
+      const response = await fetch(`${apiUrl}/incidents/${incidentId}/alerts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(alerts.map(({ event_id }) => event_id)),
+      });
+      if (response.ok) {
+        handleSuccess();
+        await mutate();
+        toast.success("Alerts associated with incident successfully");
+      } else {
+        toast.error(
+          "Failed to associated alerts with incident, please contact us if this issue persists."
+        );
+      }
+    },
+    [alerts, apiUrl, handleSuccess, mutate, session?.accessToken]
+  );
 
   const handleAssociateAlerts = (e: FormEvent) => {
     e.preventDefault();
@@ -182,7 +184,7 @@ const AlertAssociateIncidentModal = ({
         {isLoading ? (
           <Loading />
         ) : createIncident ? (
-          <CreateOrUpdateIncident
+          <CreateOrUpdateIncidentForm
             incidentToEdit={null}
             createCallback={onIncidentCreated}
             exitCallback={hideCreateIncidentForm}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { EmptyStateCard } from "@/components/ui";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
-import { IncidentDto } from "../../models";
+import type { IncidentDto } from "@/entities/incidents/model";
 
 export function IncidentWorkflowsEmptyState({
   incident,
@@ -12,7 +12,6 @@ export function IncidentWorkflowsEmptyState({
     useState<IncidentDto | null>();
 
   const handleRunWorkflow = () => {
-    console.log("handleRunWorkflow", incident);
     setRunWorkflowModalIncident(incident);
   };
 

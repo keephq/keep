@@ -8,8 +8,8 @@ import {
 
 import { createContext, useState, FC, PropsWithChildren } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useIncidentsMeta } from "../../utils/hooks/useIncidents";
-import { IncidentsMetaDto } from "./models";
+import { useIncidentsMeta } from "../../../utils/hooks/useIncidents";
+import type { IncidentsMetaDto } from "@/entities/incidents/model";
 
 interface IIncidentFilterContext {
   meta: IncidentsMetaDto | undefined;

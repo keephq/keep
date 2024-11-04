@@ -2,30 +2,31 @@ import { Button, Divider, Title } from "@tremor/react";
 import Select from "@/components/ui/Select";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
-import Loading from "../loading";
-import { IncidentDto } from "./models";
-import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
+import Loading from "@/app/loading";
+import type { IncidentDto } from "@/entities/incidents/model";
+import { useIncidentActions } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 
-interface ChangeSameIncidentInThePast {
+interface ChangeSameIncidentInThePastFormProps {
   incident: IncidentDto;
   handleClose: () => void;
   linkedIncident: IncidentDto | null;
 }
 
-const ChangeSameIncidentInThePast = ({
+export function ChangeSameIncidentInThePastForm({
   incident,
   handleClose,
   linkedIncident,
-}: ChangeSameIncidentInThePast) => {
+}: ChangeSameIncidentInThePastFormProps) {
   const { data: incidents, isLoading } = useIncidents(true, 100);
 
   const [selectedIncident, setSelectedIncident] = useState<string | undefined>(
     linkedIncident?.id
   );
-  const { updateIncident } = useIncidentActions();
+  const { updateIncident, mutateIncidentsList } = useIncidentActions();
   const router = useRouter();
+  usePollIncidents(mutateIncidentsList);
 
   const associateIncidentHandler = async (
     selectedIncidentId: string | null
@@ -85,7 +86,7 @@ const ChangeSameIncidentInThePast = ({
     );
 
     return (
-      <div className="h-full justify-center">
+      <form className="h-full justify-center">
         <Select
           className="my-2.5"
           placeholder="Select incident"
@@ -129,7 +130,7 @@ const ChangeSameIncidentInThePast = ({
             Link and help AI
           </Button>
         </div>
-      </div>
+      </form>
     );
   };
 
@@ -138,6 +139,4 @@ const ChangeSameIncidentInThePast = ({
       {isLoading ? <Loading /> : renderSelectIncidentForm()}
     </div>
   );
-};
-
-export default ChangeSameIncidentInThePast;
+}

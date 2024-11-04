@@ -1,10 +1,8 @@
 import clsx from "clsx";
-// TODO: Move to entities/incidents/model/models.ts
-import { Status } from "../../../app/incidents/models";
-// TODO: Move to entities/incidents/ui/statuses.ts
-import { STATUS_ICONS } from "../../../app/incidents/statuses";
+import { Status } from "@/entities/incidents/model";
+import { STATUS_ICONS } from "@/entities/incidents/ui";
 import Select, { ClassNamesConfig } from "react-select";
-import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { useIncidentActions } from "@/entities/incidents/model";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const customClassNames: ClassNamesConfig<any, false, any> = {
@@ -56,7 +54,7 @@ export function IncidentChangeStatusSelect({
           </div>
         ),
       })),
-    [Status]
+    []
   );
 
   const handleChange = useCallback(
@@ -72,7 +70,7 @@ export function IncidentChangeStatusSelect({
 
   const selectedOption = useMemo(
     () => statusOptions.find((option) => option.value === value),
-    [value]
+    [statusOptions, value]
   );
 
   return (

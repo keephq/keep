@@ -1,6 +1,6 @@
 "use client";
 
-import { IncidentDto } from "../../models";
+import type { IncidentDto } from "@/entities/incidents/model";
 import React from "react";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { format } from "date-fns";
@@ -14,7 +14,7 @@ import { Badge, Callout, Divider } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { LinkedIncidents } from "./linked-incidents";
+import { SameIncidentsOverview } from "@/features/same-incidents-in-the-past";
 
 interface Props {
   incident: IncidentDto;
@@ -175,7 +175,7 @@ export default function IncidentOverview({
         )}
       </div>
       <Divider />
-      <LinkedIncidents incident={incident} />
+      <SameIncidentsOverview incident={incident} />
     </div>
   );
 }

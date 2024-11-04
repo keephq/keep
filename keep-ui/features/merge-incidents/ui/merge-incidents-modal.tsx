@@ -1,11 +1,11 @@
 import { Button, Title, Subtitle } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
-import { IncidentDto, Status } from "./models";
-import { STATUS_ICONS } from "@/app/incidents/statuses";
+import type { IncidentDto } from "@/entities/incidents/model";
+import { useIncidentActions, Status } from "@/entities/incidents/model";
+import { STATUS_ICONS } from "@/entities/incidents/ui";
 import { useMemo, useState } from "react";
 import Select, { GroupBase, StylesConfig } from "react-select";
 import { clsx } from "clsx";
-import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import "./vertical-rounded-list.css";
 
@@ -73,7 +73,7 @@ const customSelectStyles: StylesConfig<
   }),
 };
 
-export default function IncidentMergeModal({
+export function MergeIncidentsModal({
   incidents,
   handleClose,
   onSuccess,

@@ -1,4 +1,4 @@
-import { IncidentDto } from "@/app/incidents/models";
+import { IncidentDto } from "@/entities/incidents/model";
 
 export function getIncidentName(incident: IncidentDto) {
   return (

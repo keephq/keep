@@ -17,7 +17,7 @@ import {
 } from "@tremor/react";
 import { Droppable, Draggable } from "react-beautiful-dnd";
 import { AlertDto } from "./models";
-import { IncidentCandidateDto } from "../incidents/models";
+import { IncidentCandidateDto } from "@/entities/incidents/model";
 
 interface IncidentCardProps {
   incident: IncidentCandidateDto;

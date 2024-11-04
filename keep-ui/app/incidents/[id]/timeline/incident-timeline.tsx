@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
-import { AuditEvent, useAlerts } from "utils/hooks/useAlerts";
-import { AlertDto } from "app/alerts/models";
-import { useIncidentAlerts } from "utils/hooks/useIncidents";
-import { IncidentDto } from "../../models";
-import Image from "next/image";
-import AlertSeverity from "app/alerts/alert-severity";
-import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import { useRouter } from "next/navigation";
-import { Card } from "@tremor/react";
 import Loading from "@/app/loading";
+import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
+import type { IncidentDto } from "@/entities/incidents/model";
+import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";
+import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
+import { Card } from "@tremor/react";
+import AlertSeverity from "app/alerts/alert-severity";
+import { AlertDto } from "app/alerts/models";
+import { format, parseISO } from "date-fns";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
 
 const severityColors = {
   critical: "bg-red-300",

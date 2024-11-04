@@ -5,7 +5,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
-import { IncidentDto } from "./models";
+import { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 
 interface Props {

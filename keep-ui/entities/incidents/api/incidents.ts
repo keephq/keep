@@ -1,4 +1,4 @@
-import { IncidentDto, PaginatedIncidentsDto } from "@/app/incidents/models";
+import { IncidentDto, PaginatedIncidentsDto } from "@/entities/incidents/model";
 import { fetcher } from "@/utils/fetcher";
 import { Session } from "next-auth";
 

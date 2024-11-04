@@ -9,7 +9,7 @@ import {
 } from "@tremor/react";
 import { flexRender, Header, Table as ReactTable } from "@tanstack/react-table";
 import React, { ReactNode } from "react";
-import { IncidentDto } from "./models";
+import { IncidentDto } from "@/entities/incidents/model";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";

@@ -2,18 +2,21 @@
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
 import Loading from "app/loading";
 import React, { useState } from "react";
-import { IncidentDto, PaginatedIncidentsDto } from "@/app/incidents/models";
-import CreateOrUpdateIncident from "./create-or-update-incident";
+import type {
+  IncidentDto,
+  PaginatedIncidentsDto,
+} from "@/entities/incidents/model";
+import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import IncidentsTable from "./incidents-table";
-import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
+import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import PredictedIncidentsTable from "./predicted-incidents-table";
+import PredictedIncidentsTable from "../../../app/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentTableFilters } from "./incident-table-filters";
 import { useIncidentFilterContext } from "./incident-table-filters-context";
-import { IncidentListError } from "@/app/incidents/incident-list-error";
+import { IncidentListError } from "@/features/incident-list/ui/incident-list-error";
 
 interface Pagination {
   limit: number;
@@ -28,7 +31,7 @@ interface Filters {
   affected_services: string[];
 }
 
-export default function IncidentList({
+export function IncidentList({
   initialData,
 }: {
   initialData?: PaginatedIncidentsDto;
@@ -76,11 +79,8 @@ export default function IncidentList({
       fallbackData: initialData,
     }
   );
-  const {
-    data: predictedIncidents,
-    isLoading: isPredictedLoading,
-    mutate: mutatePredictedIncidents,
-  } = useIncidents(false);
+  const { data: predictedIncidents, isLoading: isPredictedLoading } =
+    useIncidents(false);
   usePollIncidents(mutateIncidents);
 
   const [incidentToEdit, setIncidentToEdit] = useState<IncidentDto | null>(
@@ -156,10 +156,6 @@ export default function IncidentList({
             </Subtitle>
             <PredictedIncidentsTable
               incidents={predictedIncidents}
-              mutate={async () => {
-                await mutatePredictedIncidents();
-                await mutateIncidents();
-              }}
               editCallback={handleStartEdit}
             />
           </Card>
@@ -194,7 +190,7 @@ export default function IncidentList({
         className="w-[600px]"
         title="Add Incident"
       >
-        <CreateOrUpdateIncident
+        <CreateOrUpdateIncidentForm
           incidentToEdit={incidentToEdit}
           exitCallback={handleFinishEdit}
         />

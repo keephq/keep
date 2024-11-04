@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import type { IncidentDto } from "@/entities/incidents/model";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import {
   createColumnHelper,
   flexRender,
@@ -8,33 +9,31 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
+  Badge,
+  Button,
   Callout,
+  Card,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeaderCell,
   TableRow,
-  Button,
-  Badge,
-  Card,
 } from "@tremor/react";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
-import { IncidentDto } from "../../models";
-import IncidentPagination from "../../incident-pagination";
-import { WorkflowExecution } from "app/workflows/builder/types";
-import { useIncidentWorkflowExecutions } from "utils/hooks/useIncidents";
-import { useRouter } from "next/navigation";
 import {
+  extractTriggerDetails,
+  extractTriggerValue,
   getIcon,
   getTriggerIcon,
-  extractTriggerValue,
-  extractTriggerDetails,
 } from "app/workflows/[workflow_id]/workflow-execution-table";
-import IncidentWorkflowSidebar from "./incident-workflow-sidebar";
+import { WorkflowExecution } from "app/workflows/builder/types";
+import { useEffect, useState } from "react";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import { useIncidentWorkflowExecutions } from "utils/hooks/useIncidents";
 import { IncidentWorkflowsEmptyState } from "./incident-workflow-empty";
+import IncidentWorkflowSidebar from "./incident-workflow-sidebar";
+import { TablePagination } from "@/shared/ui";
 
 interface Props {
   incident: IncidentDto;
@@ -263,7 +262,7 @@ export default function IncidentWorkflowTable({ incident }: Props) {
       </Card>
 
       <div className="mt-4 mb-8">
-        <IncidentPagination table={table} isRefreshAllowed={true} />
+        <TablePagination table={table} />
       </div>
 
       {selectedExecution ? (

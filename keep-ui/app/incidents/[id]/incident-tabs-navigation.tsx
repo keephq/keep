@@ -5,10 +5,7 @@ import { CiBellOn, CiChat2, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
 import { Workflows } from "components/icons";
 import { useParams, usePathname } from "next/navigation";
-import {
-  TabNavigation,
-  TabNavigationLink,
-} from "@/shared/ui/TabLinkNavigation";
+import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
 
 export const tabs = [
   { icon: CiBellOn, label: "Overview and Alerts", path: "alerts" },
@@ -28,7 +25,7 @@ export function IncidentTabsNavigation() {
   const { id } = useParams<{ id: string }>() as { id: string };
   const pathname = usePathname();
   return (
-    <TabNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10">
+    <TabLinkNavigation className="sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10">
       {tabs.map((tab) => (
         <TabNavigationLink
           key={tab.path}
@@ -39,6 +36,6 @@ export function IncidentTabsNavigation() {
           {tab.label}
         </TabNavigationLink>
       ))}
-    </TabNavigation>
+    </TabLinkNavigation>
   );
 }

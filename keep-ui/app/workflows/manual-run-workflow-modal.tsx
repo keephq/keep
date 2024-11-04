@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { IncidentDto } from "@/app/incidents/models";
+import { IncidentDto } from "@/entities/incidents/model";
 import { AlertDto } from "@/app/alerts/models";
 
 interface Props {

@@ -5,9 +5,9 @@ import {
   useIncident,
   useIncidentFutureIncidents,
 } from "@/utils/hooks/useIncidents";
-import { IncidentDto } from "../../models";
+import type { IncidentDto } from "@/entities/incidents/model";
 import { useState } from "react";
-import ChangeSameIncidentInThePast from "../../incident-change-same-in-the-past";
+import { ChangeSameIncidentInThePastForm } from "./incident-change-same-in-the-past";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Link } from "@/components/ui";
@@ -49,7 +49,7 @@ function ManageSameIncidentInThePast({ incident }: { incident: IncidentDto }) {
     <>
       <h3 className="text-gray-500 text-sm mb-1">Same in the past</h3>
       {same_incident_in_the_past ? (
-        <p className="flex items-center gap-2">
+        <p className="flex items-baseline gap-2">
           <Link href={"/incidents/" + same_incident_in_the_past.id}>
             {getIncidentName(same_incident_in_the_past)}
           </Link>
@@ -64,7 +64,7 @@ function ManageSameIncidentInThePast({ incident }: { incident: IncidentDto }) {
           </Button>
         </p>
       ) : (
-        <p className="flex items-center gap-2">
+        <p className="flex items-baseline gap-2">
           No linked incidents
           <Button
             color="orange"
@@ -84,7 +84,7 @@ function ManageSameIncidentInThePast({ incident }: { incident: IncidentDto }) {
           title="Link to the same incident in the past"
           className="w-[600px]"
         >
-          <ChangeSameIncidentInThePast
+          <ChangeSameIncidentInThePastForm
             key={incident.id}
             incident={changeSameIncidentInThePast}
             linkedIncident={same_incident_in_the_past ?? null}
@@ -96,7 +96,7 @@ function ManageSameIncidentInThePast({ incident }: { incident: IncidentDto }) {
   );
 }
 
-export function LinkedIncidents({ incident }: { incident: IncidentDto }) {
+export function SameIncidentsOverview({ incident }: { incident: IncidentDto }) {
   const { data: same_incidents_in_the_future } = useIncidentFutureIncidents(
     incident.id
   );
