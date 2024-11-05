@@ -121,9 +121,9 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
   );
 
   return (
-    <div className="flex gap-6 w-full">
+    <div className="flex gap-6 items-start w-full">
       <div className="basis-2/3 grow">
-        <div className="max-w-3xl flex flex-col gap-2">
+        <div className="max-w-3xl flex flex-col gap-4">
           {incident.merged_into_incident_id && (
             <MergedCallout
               merged_into_incident_id={incident.merged_into_incident_id}
@@ -151,8 +151,8 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           </div>
         </div>
       </div>
-      <div className="min-w-96 grid grid-cols-2 gap-2">
-        <div className="col-span-2">
+      <div className="pr-10 grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="xl:col-span-2">
           <FieldHeader>Status</FieldHeader>
           <IncidentChangeStatusSelect
             incidentId={incident.id}
