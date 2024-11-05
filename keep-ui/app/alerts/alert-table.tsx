@@ -344,7 +344,7 @@ export function AlertTable({
           </div>
         </Card>
       </div>
-      <div className="mt-2 mb-8">
+      <div className="mt-2 mb-8 pl-[12rem] ml-4">
         <AlertPagination
           table={table}
           presetName={presetName}

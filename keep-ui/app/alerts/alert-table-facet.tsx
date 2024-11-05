@@ -116,8 +116,9 @@ const FacetValue: React.FC<FacetValueProps> = ({
           type="checkbox"
           checked={isValueSelected}
           onClick={handleCheckboxClick}
-          onChange={() => {}} // Required to avoid React warning
-          className="h-4 w-4 rounded border-gray-300"
+          onChange={() => {}}
+          style={{ accentColor: "#eb6221" }} // orange-500 color code
+          className="h-4 w-4 rounded border-gray-300 cursor-pointer"
         />
         {showIcon && facetKey === "source" && (
           <Image
@@ -146,13 +147,13 @@ const FacetValue: React.FC<FacetValueProps> = ({
         {showIcon && facetKey === "assignee" && (
           <Icon icon={UserCircleIcon} size="sm" className="text-gray-600" />
         )}
-        <span className="truncate text-sm text-gray-700">{label}</span>
+        <Text>{label}</Text>
       </div>
       <div className="min-w-[32px] flex justify-end">
         {isHovered ? (
           <button
             onClick={handleActionClick}
-            className="text-xs text-blue-600 hover:text-blue-800 w-8"
+            className="text-xs text-orange-600 hover:text-orange-800 w-8"
           >
             {isExclusivelySelected() ? "All" : "Only"}
           </button>
@@ -288,7 +289,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
   };
 
   return (
-    <div className="h-full pt-[180px]">
+    <div className="h-full">
       <div className="space-y-2">
         <Facet
           facetKey="severity"
