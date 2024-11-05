@@ -8,6 +8,7 @@ interface TabNavigationLinkProps {
   className?: string;
   isActive?: boolean;
   icon?: ElementType;
+  prefetch?: boolean;
 }
 
 export function TabNavigationLink({
@@ -16,10 +17,12 @@ export function TabNavigationLink({
   className,
   isActive,
   icon: Icon,
+  prefetch,
 }: TabNavigationLinkProps) {
   return (
     <Link
       href={href}
+      prefetch={prefetch}
       className={twMerge(
         // Base styles
         "flex items-center whitespace-nowrap outline-none",

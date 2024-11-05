@@ -10,7 +10,7 @@ import { RectangleStackIcon } from "@heroicons/react/24/outline";
 
 export const tabs = [
   { icon: CiBellOn, label: "Alerts", path: "alerts" },
-  { icon: FiActivity, label: "Activity", path: "activity" },
+  { icon: FiActivity, label: "Activity", path: "activity", prefetch: true },
   { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   {
     icon: IoIosGitNetwork,
@@ -34,6 +34,7 @@ export function IncidentTabsNavigation() {
           icon={tab.icon}
           isActive={pathname?.endsWith(tab.path)}
           href={`/incidents/${id}/${tab.path}`}
+          prefetch={!!tab.prefetch}
         >
           {tab.label}
         </TabNavigationLink>
