@@ -24,6 +24,20 @@ const FieldHeader = ({ children }: { children: React.ReactNode }) => (
   <h3 className="text-sm text-gray-500 font-semibold">{children}</h3>
 );
 
+const TimeField = ({ date }: { date: Date }) => {
+  const formatString = "dd MMM yy, HH:mm.ss 'UTC'";
+  return (
+    <div>
+      <p className="">
+        <TimeAgo date={date + "Z"} />
+      </p>
+      <p className="text-gray-500 text-xs">
+        {format(new Date(date), formatString)}
+      </p>
+    </div>
+  );
+};
+
 function Summary({
   title,
   summary,
@@ -100,7 +114,6 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
     revalidateOnMount: false,
   });
   const incident = fetchedIncident || initialIncidentData;
-  const formatString = "dd MMM yy, HH:mm.ss 'UTC'";
   const summary = incident.user_summary || incident.generated_summary;
   // Why do we have "null" in services?
   const notNullServices = incident.services.filter(
@@ -138,14 +151,26 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
           </div>
         </div>
       </div>
-      <div className="shrink min-w-64 flex flex-col gap-2">
-        <div>
+      <div className="min-w-96 grid grid-cols-2 gap-2">
+        <div className="col-span-2">
           <FieldHeader>Status</FieldHeader>
           <IncidentChangeStatusSelect
             incidentId={incident.id}
             value={incident.status}
           />
         </div>
+        {!!incident.last_seen_time && (
+          <div>
+            <FieldHeader>Last seen at</FieldHeader>
+            <TimeField date={incident.last_seen_time} />
+          </div>
+        )}
+        {!!incident.start_time && (
+          <div>
+            <FieldHeader>Started at</FieldHeader>
+            <TimeField date={incident.start_time} />
+          </div>
+        )}
         <div>
           <FieldHeader>Assignee</FieldHeader>
           {incident.assignee ? (
@@ -154,28 +179,6 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             <p>No assignee yet</p>
           )}
         </div>
-        {!!incident.last_seen_time && (
-          <div>
-            <FieldHeader>Last seen at</FieldHeader>
-            <p>
-              <TimeAgo date={incident.last_seen_time + "Z"} />
-            </p>
-            <p className="text-gray-500 text-sm">
-              {format(new Date(incident.last_seen_time), formatString)}
-            </p>
-          </div>
-        )}
-        {!!incident.start_time && (
-          <div>
-            <FieldHeader>Started at</FieldHeader>
-            <p>
-              <TimeAgo date={incident.start_time + "Z"} />
-            </p>
-            <p className="text-gray-500 text-sm">
-              {format(new Date(incident.start_time), formatString)}
-            </p>
-          </div>
-        )}
         {!!incident.rule_fingerprint && (
           <div>
             <FieldHeader>Group by value</FieldHeader>
