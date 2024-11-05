@@ -708,3 +708,4 @@ def confirm_incident(
     new_incident_dto = IncidentDto.from_db_incident(incident)
 
     return new_incident_dto
+
