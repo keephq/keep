@@ -26,7 +26,6 @@ import {
 export const DEFAULT_COLS = [
   "noise",
   "checkbox",
-  "severity",
   "name",
   "description",
   "status",
@@ -232,13 +231,6 @@ export const useAlertTableCols = (
           }),
         ]
       : ([] as ColumnDef<AlertDto>[])),
-    columnHelper.accessor("severity", {
-      id: "severity",
-      header: "Severity",
-      minSize: 100,
-      cell: (context) => <AlertSeverity severity={context.getValue()} />,
-      sortingFn: customSeveritySortFn,
-    }),
     columnHelper.display({
       id: "name",
       header: "Name",

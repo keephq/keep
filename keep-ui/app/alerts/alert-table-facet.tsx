@@ -61,6 +61,24 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const getSeverityOrder = (severity: string): number => {
+  switch (severity) {
+    case "low":
+      return 1;
+    case "info":
+      return 2;
+    case "warning":
+      return 3;
+    case "error":
+    case "high":
+      return 4;
+    case "critical":
+      return 5;
+    default:
+      return 6; // Unknown severities go last
+  }
+};
+
 const FacetValue: React.FC<FacetValueProps> = ({
   label,
   count,
@@ -278,14 +296,28 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
       }
     });
 
-    return Array.from(valueMap.entries())
-      .map(([label, count]) => ({
-        label,
-        count,
-        isSelected:
-          facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
-      }))
-      .sort((a, b) => b.count - a.count);
+    let values = Array.from(valueMap.entries()).map(([label, count]) => ({
+      label,
+      count,
+      isSelected:
+        facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
+    }));
+
+    // Apply special sorting for severity facet
+    if (key === "severity") {
+      values.sort((a, b) => {
+        // First sort by severity order
+        const orderDiff = getSeverityOrder(a.label) - getSeverityOrder(b.label);
+        if (orderDiff !== 0) return orderDiff;
+        // If same severity level, sort by count
+        return b.count - a.count;
+      });
+    } else {
+      // Other facets maintain the original count-based sorting
+      values.sort((a, b) => b.count - a.count);
+    }
+
+    return values;
   };
 
   return (
