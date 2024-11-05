@@ -100,6 +100,10 @@ export default function IncidentOverview({
   const incident = fetchedIncident || initialIncidentData;
   const formatString = "dd, MMM yyyy - HH:mm.ss 'UTC'";
   const summary = incident.user_summary || incident.generated_summary;
+  // Why do we have "null" in services?
+  const notNullServices = incident.services.filter(
+    (service) => service !== "null"
+  );
 
   return (
     <div className="flex w-full h-full flex-col justify-between">
@@ -132,8 +136,8 @@ export default function IncidentOverview({
         <div className="flex flex-col gap-2">
           <h3 className="text-gray-500 text-sm">Involved services</h3>
           <div className="flex flex-wrap gap-1">
-            {incident.services.length > 0
-              ? incident.services.map((service) => (
+            {notNullServices.length > 0
+              ? notNullServices.map((service) => (
                   <Badge key={service} size="sm">
                     {service}
                   </Badge>
