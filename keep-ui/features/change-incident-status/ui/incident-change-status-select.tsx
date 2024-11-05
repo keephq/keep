@@ -4,6 +4,7 @@ import { STATUS_ICONS } from "@/entities/incidents/ui";
 import Select, { ClassNamesConfig } from "react-select";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { capitalize } from "@/utils/helpers";
 
 const customClassNames: ClassNamesConfig<any, false, any> = {
   container: () => "inline-flex",
@@ -29,12 +30,14 @@ type Props = {
   incidentId: string;
   value: Status;
   onChange?: (status: Status) => void;
+  className?: string;
 };
 
 export function IncidentChangeStatusSelect({
   incidentId,
   value,
   onChange,
+  className,
 }: Props) {
   // Use a portal to render the menu outside the table container with overflow: hidden
   const menuPortalTarget = useRef<HTMLElement | null>(null);
@@ -50,7 +53,7 @@ export function IncidentChangeStatusSelect({
         label: (
           <div className="flex items-center">
             {STATUS_ICONS[status]}
-            <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+            <span>{capitalize(status)}</span>
           </div>
         ),
       })),
@@ -75,6 +78,7 @@ export function IncidentChangeStatusSelect({
 
   return (
     <Select
+      className={className}
       isSearchable={false}
       options={statusOptions}
       value={selectedOption}
