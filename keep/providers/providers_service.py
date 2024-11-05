@@ -13,6 +13,7 @@ from keep.api.models.db.provider import Provider
 from keep.api.models.provider import Provider as ProviderModel
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
+from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
@@ -36,6 +37,45 @@ class ProvidersService:
     @staticmethod
     def get_linked_providers(tenant_id: str) -> List[ProviderModel]:
         return ProvidersFactory.get_linked_providers(tenant_id)
+
+    @staticmethod
+    def validate_scopes(
+        provider: BaseProvider, validate_mandatory=True
+    ) -> dict[str, bool | str]:
+        logger.info("Validating provider scopes")
+        try:
+            validated_scopes = provider.validate_scopes()
+        except Exception as e:
+            logger.exception("Failed to validate provider scopes")
+            raise HTTPException(
+                status_code=412,
+                detail=str(e),
+            )
+        if validate_mandatory:
+            mandatory_scopes_validated = True
+            if provider.PROVIDER_SCOPES and validated_scopes:
+                # All of the mandatory scopes must be validated
+                for scope in provider.PROVIDER_SCOPES:
+                    if scope.mandatory and (
+                        scope.name not in validated_scopes
+                        or validated_scopes[scope.name] is not True
+                    ):
+                        mandatory_scopes_validated = False
+                        break
+            # Otherwise we fail the installation
+            if not mandatory_scopes_validated:
+                logger.warning(
+                    "Failed to validate mandatory provider scopes",
+                    extra={"validated_scopes": validated_scopes},
+                )
+                raise HTTPException(
+                    status_code=412,
+                    detail=validated_scopes,
+                )
+        logger.info(
+            "Validated provider scopes", extra={"validated_scopes": validated_scopes}
+        )
+        return validated_scopes
 
     @staticmethod
     def install_provider(
@@ -73,7 +113,7 @@ class ProvidersService:
             raise HTTPException(status_code=400, detail=str(e))
 
         if validate_scopes:
-            validated_scopes = provider.validate_scopes()
+            validated_scopes = ProvidersService.validate_scopes(provider)
         else:
             validated_scopes = {}
 
