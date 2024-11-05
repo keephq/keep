@@ -21,7 +21,11 @@ from keep.api.models.alert import (
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import (
+    BaseProvider,
+    BaseTopologyProvider,
+    BaseIncidentProvider,
+)
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -115,8 +119,12 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     BASE_OAUTH_URL = "https://identity.pagerduty.com"
     SCOPES = "abilities.read incidents.read incidents.write schedules.read users:oauth_tokens.read users:oauth_tokens.write users:sessions.read users:sessions.write webhook_subscriptions.read webhook_subscriptions.write services.read teams.read"
     PAGERDUTY_CLIENT_ID = os.environ.get("PAGERDUTY_CLIENT_ID")
-    OAUTH2_URL = f"{BASE_OAUTH_URL}/oauth/authorize?client_id={PAGERDUTY_CLIENT_ID}&response_type=code&scope={SCOPES}"
     PAGERDUTY_CLIENT_SECRET = os.environ.get("PAGERDUTY_CLIENT_SECRET")
+    OAUTH2_URL = (
+        f"{BASE_OAUTH_URL}/oauth/authorize?client_id={PAGERDUTY_CLIENT_ID}&response_type=code&scope={SCOPES}"
+        if PAGERDUTY_CLIENT_ID is not None and PAGERDUTY_CLIENT_SECRET is not None
+        else None
+    )
 
     FINGERPRINT_FIELDS = ["alert_key"]
 
@@ -391,8 +399,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 [
                     webhook
                     for webhook in existing_webhooks
-                    if keep_api_url
-                    == webhook.get("delivery_method", {}).get("url", "")
+                    if keep_api_url == webhook.get("delivery_method", {}).get("url", "")
                 ]
             ),
             False,

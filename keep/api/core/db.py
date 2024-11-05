@@ -3175,13 +3175,32 @@ def get_incident_by_id(
 
 
 def create_incident_from_dto(
-    tenant_id: str, incident_dto: IncidentDtoIn | IncidentDto
+    tenant_id: str, incident_dto: IncidentDtoIn | IncidentDto, generated_from_ai: bool = False
 ) -> Optional[Incident]:
-    if issubclass(type(incident_dto), IncidentDto):
-        incident_dict = incident_dto.to_db_incident().dict()
-        return create_incident_from_dict(tenant_id, incident_dict)
 
-    return create_incident_from_dict(tenant_id, incident_dto.dict())
+    if issubclass(type(incident_dto), IncidentDto) and generated_from_ai:
+        # NOTE: we do not use dto's alerts, alert count, start time etc
+        #       because we want to re-use the BL of creating incidents
+        #       where all of these are calculated inside add_alerts_to_incident
+        incident_dict = {
+            "user_summary": incident_dto.user_summary,
+            "generated_summary": incident_dto.description,
+            "user_generated_name": incident_dto.user_generated_name,
+            "ai_generated_name": incident_dto.dict().get("name"),
+            "assignee": incident_dto.assignee,
+            "is_predicted": False,  # its not a prediction, but an AI generation
+            "is_confirmed": True,  # confirmed by the user :)
+        }
+
+    elif issubclass(type(incident_dto), IncidentDto):
+        # we will reach this block when incident is pulled from a provider
+        incident_dict = incident_dto.to_db_incident().dict()
+
+    else:
+        # We'll reach this block when a user creates an incident
+        incident_dict = incident_dto.dict()
+
+    return create_incident_from_dict(tenant_id, incident_dict)
 
 
 def create_incident_from_dict(
@@ -3219,9 +3238,12 @@ def update_incident_from_dto_by_id(
             return None
 
         if issubclass(type(updated_incident_dto), IncidentDto):
+            # We execute this when we update an incident received from the provider
             updated_data = updated_incident_dto.to_db_incident().dict()
         else:
+            # When a user updates an Incident
             updated_data = updated_incident_dto.dict()
+
         for key, value in updated_data.items():
             # Update only if the new value is different from the current one
             if hasattr(incident, key) and getattr(incident, key) != value:

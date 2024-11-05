@@ -17,7 +17,7 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id, create_incident_from_dict,
+    update_incident_from_dto_by_id, create_incident_from_dto,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import IncidentDto, IncidentDtoIn
@@ -51,24 +51,12 @@ class IncidentBl:
         self.ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
         self.redis = os.environ.get("REDIS", "false") == "true"
 
-    def create_incident(self, incident_dto: IncidentDtoIn) -> IncidentDto:
+    def create_incident(self, incident_dto: IncidentDtoIn, generated_from_ai: bool = False) -> IncidentDto:
         self.logger.info(
             "Creating incident",
             extra={"incident_dto": incident_dto.dict(), "tenant_id": self.tenant_id},
         )
-        if isinstance(incident_dto, IncidentDto):
-            incident_dict = {
-                "user_summary": incident_dto.user_summary,
-                "generated_summary": incident_dto.description,
-                "user_generated_name": incident_dto.user_generated_name,
-                "ai_generated_name": incident_dto.dict().get("name"),
-                "assignee": incident_dto.assignee,
-                "is_predicted": False,  # its not a prediction, but an AI generation
-                "is_confirmed": True,  # confirmed by the user :)
-            }
-            incident = create_incident_from_dict(self.tenant_id, incident_dict)
-        else:
-            incident = create_incident_from_dict(self.tenant_id, incident_dto.dict())
+        incident = create_incident_from_dto(self.tenant_id, incident_dto, generated_from_ai=generated_from_ai)
         self.logger.info(
             "Incident created",
             extra={"incident_id": incident.id, "tenant_id": self.tenant_id},
