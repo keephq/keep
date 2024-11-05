@@ -32,6 +32,8 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
+import AlertFacets from "./alert-table-facet";
+import { FacetFilters } from "./alert-table-facet";
 
 interface PresetTab {
   name: string;
@@ -62,11 +64,11 @@ export function AlertTable({
   presetPrivate = false,
   presetNoisy = false,
   presetStatic = false,
-  presetId = '',
+  presetId = "",
   presetTabs = [],
   isRefreshAllowed = true,
   setDismissedModalAlert,
-  mutateAlerts
+  mutateAlerts,
 }: Props) {
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
@@ -79,6 +81,12 @@ export function AlertTable({
     )
   );
 
+  const [facetFilters, setFacetFilters] = useState<FacetFilters>({
+    severity: [],
+    status: [],
+    source: [],
+    assignee: [],
+  });
 
   const columnsIds = getColumnsIds(columns);
 
@@ -110,7 +118,7 @@ export function AlertTable({
     ...presetTabs.map((tab) => ({
       name: tab.name,
       filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
-      id: tab.id
+      id: tab.id,
     })),
     { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
   ]);
@@ -119,7 +127,97 @@ export function AlertTable({
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const filteredAlerts = alerts.filter(tabs[selectedTab].filter);
+  const filteredAlerts = alerts.filter((alert) => {
+    // First apply tab filter
+    if (!tabs[selectedTab].filter(alert)) {
+      return false;
+    }
+
+    // Then apply facet filters
+    return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
+      // If no values are included, don't filter
+      if (includedValues.length === 0) {
+        return true;
+      }
+
+      if (facetKey === "source") {
+        // Special handling for source array
+        const sources = alert[facetKey];
+        return (
+          Array.isArray(sources) &&
+          sources.some((source) => includedValues.includes(source))
+        );
+      } else {
+        const value = String(alert[facetKey as keyof AlertDto]);
+        return includedValues.includes(value);
+      }
+    });
+
+    return true;
+  });
+
+  const handleFacetSelect = (
+    facetKey: string,
+    value: string,
+    exclusive: boolean,
+    isAllOnly: boolean = false
+  ) => {
+    setFacetFilters((prev) => {
+      // Handle All/Only button clicks
+      if (isAllOnly) {
+        if (value === "") {
+          // Reset to include all values (empty array)
+          return {
+            ...prev,
+            [facetKey]: [],
+          };
+        }
+
+        if (exclusive) {
+          // Only include this value
+          return {
+            ...prev,
+            [facetKey]: [value],
+          };
+        }
+      }
+
+      // Handle regular checkbox clicks
+      const currentValues = prev[facetKey] || [];
+
+      if (currentValues.length === 0) {
+        // If no filters, clicking one value means we want to exclude that value
+        // So we need to include all OTHER values
+        const allValues = new Set(
+          alerts
+            .map((alert) => {
+              const val = alert[facetKey as keyof AlertDto];
+              return Array.isArray(val) ? val : [String(val)];
+            })
+            .flat()
+        );
+        return {
+          ...prev,
+          [facetKey]: Array.from(allValues).filter((v) => v !== value),
+        };
+      }
+
+      if (currentValues.includes(value)) {
+        // Remove value if it's already included
+        const newValues = currentValues.filter((v) => v !== value);
+        return {
+          ...prev,
+          [facetKey]: newValues,
+        };
+      } else {
+        // Add value if it's not included
+        return {
+          ...prev,
+          [facetKey]: [...currentValues, value],
+        };
+      }
+    });
+  };
 
   const table = useReactTable({
     data: filteredAlerts,
@@ -181,56 +279,77 @@ export function AlertTable({
         presetName={presetName}
         onThemeChange={handleThemeChange}
       />
-      <Card className="flex-grow h-full flex flex-col mt-4 px-4 pt-6 overflow-hidden">
-        {selectedRowIds.length ? (
-          <AlertActions
-            selectedRowIds={selectedRowIds}
+      <div className="flex flex-grow mt-4">
+        <div className="w-32 min-w-[12rem] border-r border-gray-200">
+          <AlertFacets
             alerts={alerts}
-            clearRowSelection={table.resetRowSelection}
-            setDismissModalAlert={setDismissedModalAlert}
-            mutateAlerts={mutateAlerts}
+            facetFilters={facetFilters}
+            onSelect={handleFacetSelect}
           />
-        ) : (
-          <AlertPresets
-            table={table}
-            presetNameFromApi={presetName}
-            isLoading={isAsyncLoading}
-            presetPrivate={presetPrivate}
-            presetNoisy={presetNoisy}
-          />
-        )}
-        {isAsyncLoading && (
-          <Callout
-            title="Getting your alerts..."
-            icon={CircleStackIcon}
-            color="gray"
-            className="mt-5"
-          >
-            Alerts will show up in this table as they are added to Keep...
-          </Callout>
-        )}
-        {/* For dynamic preset, add alert tabs*/}
-        { !presetStatic &&
-          <AlertTabs presetId={presetId} tabs={tabs} setTabs={setTabs} selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
-        }
-        <Table className="flex-grow mt-4 overflow-auto [&>table]:table-fixed [&>table]:w-full">
-          <AlertsTableHeaders
-            columns={columns}
-            table={table}
-            presetName={presetName}
-          />
-          <AlertsTableBody
-            table={table}
-            showSkeleton={showSkeleton}
-            showEmptyState={showEmptyState}
-            theme={theme}
-            onRowClick={handleRowClick}
-            presetName={presetName}
-          />
-        </Table>
-      </Card>
+        </div>
+        <Card className="flex-grow h-full flex flex-col px-4 pt-6 overflow-hidden ml-4">
+          <div className="flex-grow">
+            {selectedRowIds.length ? (
+              <AlertActions
+                selectedRowIds={selectedRowIds}
+                alerts={alerts}
+                clearRowSelection={table.resetRowSelection}
+                setDismissModalAlert={setDismissedModalAlert}
+                mutateAlerts={mutateAlerts}
+              />
+            ) : (
+              <AlertPresets
+                table={table}
+                presetNameFromApi={presetName}
+                isLoading={isAsyncLoading}
+                presetPrivate={presetPrivate}
+                presetNoisy={presetNoisy}
+              />
+            )}
+            {isAsyncLoading && (
+              <Callout
+                title="Getting your alerts..."
+                icon={CircleStackIcon}
+                color="gray"
+                className="mt-5"
+              >
+                Alerts will show up in this table as they are added to Keep...
+              </Callout>
+            )}
+            {/* For dynamic preset, add alert tabs*/}
+            {!presetStatic && (
+              <AlertTabs
+                presetId={presetId}
+                tabs={tabs}
+                setTabs={setTabs}
+                selectedTab={selectedTab}
+                setSelectedTab={setSelectedTab}
+              />
+            )}
+            <Table className="flex-grow mt-4 overflow-auto [&>table]:table-fixed [&>table]:w-full">
+              <AlertsTableHeaders
+                columns={columns}
+                table={table}
+                presetName={presetName}
+              />
+              <AlertsTableBody
+                table={table}
+                showSkeleton={showSkeleton}
+                showEmptyState={showEmptyState}
+                theme={theme}
+                onRowClick={handleRowClick}
+                presetName={presetName}
+              />
+            </Table>
+          </div>
+        </Card>
+      </div>
       <div className="mt-2 mb-8">
-        <AlertPagination table={table} presetName={presetName} isRefreshAllowed={isRefreshAllowed} />
+        <AlertPagination
+          table={table}
+          presetName={presetName}
+          isRefreshAllowed={isRefreshAllowed}
+        />
       </div>
       <AlertSidebar
         isOpen={isSidebarOpen}
