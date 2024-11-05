@@ -282,17 +282,24 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
 }) => {
   const getFacetValues = (key: keyof AlertDto): FacetValue[] => {
     const valueMap = new Map<string, number>();
+    let nullCount = 0;
 
     alerts.forEach((alert) => {
       let value = alert[key];
 
       if (Array.isArray(value)) {
-        value.forEach((v) => {
-          valueMap.set(v, (valueMap.get(v) || 0) + 1);
-        });
+        if (value.length === 0) {
+          nullCount++;
+        } else {
+          value.forEach((v) => {
+            valueMap.set(v, (valueMap.get(v) || 0) + 1);
+          });
+        }
       } else if (value !== undefined && value !== null) {
         const strValue = String(value);
         valueMap.set(strValue, (valueMap.get(strValue) || 0) + 1);
+      } else {
+        nullCount++;
       }
     });
 
@@ -303,21 +310,66 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
         facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
     }));
 
+    // Add n/a value for facets that support it
+    if (shouldShowNAValue(key) && nullCount > 0) {
+      values.push({
+        label: "n/a",
+        count: nullCount,
+        isSelected:
+          facetFilters[key]?.includes("n/a") || !facetFilters[key]?.length,
+      });
+    }
+
     // Apply special sorting for severity facet
     if (key === "severity") {
       values.sort((a, b) => {
-        // First sort by severity order
+        if (a.label === "n/a") return 1; // Always put n/a last
+        if (b.label === "n/a") return -1;
         const orderDiff = getSeverityOrder(a.label) - getSeverityOrder(b.label);
         if (orderDiff !== 0) return orderDiff;
-        // If same severity level, sort by count
         return b.count - a.count;
       });
     } else {
-      // Other facets maintain the original count-based sorting
-      values.sort((a, b) => b.count - a.count);
+      // Other facets: sort by count but always keep n/a last
+      values.sort((a, b) => {
+        if (a.label === "n/a") return 1;
+        if (b.label === "n/a") return -1;
+        return b.count - a.count;
+      });
     }
 
     return values;
+  };
+
+  // Helper function to determine which facets should show n/a values
+  const shouldShowNAValue = (key: keyof AlertDto): boolean => {
+    // Add facet keys that should show n/a values
+    return ["assignee"].includes(key as string);
+  };
+
+  // Modify FacetValue component to handle n/a value display
+  const getIconForValue = (facetKey: string, label: string) => {
+    if (label === "n/a") {
+      return XCircleIcon;
+    }
+
+    if (facetKey === "source") {
+      return null; // Will use Image component instead
+    }
+
+    if (facetKey === "severity") {
+      return null; // Will use AlertSeverity component
+    }
+
+    if (facetKey === "status") {
+      return getStatusIcon(label);
+    }
+
+    if (facetKey === "assignee") {
+      return UserCircleIcon;
+    }
+
+    return null;
   };
 
   return (

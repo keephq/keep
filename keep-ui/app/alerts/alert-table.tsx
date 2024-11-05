@@ -140,20 +140,36 @@ export function AlertTable({
         return true;
       }
 
+      const value = alert[facetKey as keyof AlertDto];
+
+      // Handle source array separately
       if (facetKey === "source") {
-        // Special handling for source array
-        const sources = alert[facetKey];
+        const sources = value as string[];
+
+        // Check if n/a is selected and sources is empty/null
+        if (includedValues.includes("n/a")) {
+          return !sources || sources.length === 0;
+        }
+
         return (
           Array.isArray(sources) &&
           sources.some((source) => includedValues.includes(source))
         );
-      } else {
-        const value = String(alert[facetKey as keyof AlertDto]);
-        return includedValues.includes(value);
       }
-    });
 
-    return true;
+      // Handle n/a cases for other facets
+      if (includedValues.includes("n/a")) {
+        return value === null || value === undefined || value === "";
+      }
+
+      // For non-n/a cases, convert value to string for comparison
+      // Skip null/undefined values as they should only match n/a
+      if (value === null || value === undefined || value === "") {
+        return false;
+      }
+
+      return includedValues.includes(String(value));
+    });
   });
 
   const handleFacetSelect = (
