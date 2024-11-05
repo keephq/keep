@@ -167,7 +167,7 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
 
   if (!host) return hostError;
   if (isIP(host)) return { success: true };
-  return isFQDN(host);
+  return isFQDN(host, opts);
 }
 
 function addZodErr(valdn: ValidatorRes, ctx: z.RefinementCtx) {
@@ -227,37 +227,51 @@ export function getZodSchema(fields: Provider["config"]) {
     }
 
     const urlStr = z.string({ required_error });
-    const urlSchema = urlStr.superRefine((url, ctx) => {
-      const valdn = isURL(url);
-      addZodErr(valdn, ctx);
-    });
-    const baseAnyHttpSchema = urlStr.superRefine((url, ctx) => {
-      const valdn = isURL(url, { protocols: ["http", "https"] });
-      addZodErr(valdn, ctx);
-    });
-    const baseHttpsSchema = urlStr.superRefine((url, ctx) => {
-      const valdn = isURL(url, { requireTld: true, protocols: ["https"] });
-      addZodErr(valdn, ctx);
-    });
 
     if (config.validation === "any_url") {
+      const urlSchema = urlStr.superRefine((url, ctx) => {
+        const valdn = isURL(url);
+        addZodErr(valdn, ctx);
+      });
       const anyUrlSchema = config.required
         ? urlSchema
         : emptyStringToNull.pipe(urlSchema.nullish());
       return [field, anyUrlSchema];
     }
+
     if (config.validation === "any_http_url") {
+      const baseAnyHttpSchema = urlStr.superRefine((url, ctx) => {
+        const valdn = isURL(url, { protocols: ["http", "https"] });
+        addZodErr(valdn, ctx);
+      });
       const anyHttpSchema = config.required
         ? baseAnyHttpSchema
         : emptyStringToNull.pipe(baseAnyHttpSchema.nullish());
       return [field, anyHttpSchema];
     }
+
     if (config.validation === "https_url") {
+      const baseHttpsSchema = urlStr.superRefine((url, ctx) => {
+        const valdn = isURL(url, { requireTld: true, protocols: ["https"] });
+        addZodErr(valdn, ctx);
+      });
       const httpsSchema = config.required
         ? baseHttpsSchema
         : emptyStringToNull.pipe(baseHttpsSchema.nullish());
       return [field, httpsSchema];
     }
+
+    if (config.validation === "no_scheme_url") {
+      const baseNoSchemeSchema = urlStr.superRefine((url, ctx) => {
+        const valdn = isURL(url, { requireProtocol: false });
+        addZodErr(valdn, ctx);
+      });
+      const noSchemeSchema = config.required
+        ? baseNoSchemeSchema
+        : emptyStringToNull.pipe(baseNoSchemeSchema.nullish());
+      return [field, noSchemeSchema];
+    }
+
     if (config.validation === "tld") {
       const baseTldSchema = z
         .string({ required_error })
@@ -269,6 +283,7 @@ export function getZodSchema(fields: Provider["config"]) {
         : baseTldSchema.optional();
       return [field, tldSchema];
     }
+
     if (config.validation === "port") {
       const basePortSchema = z.coerce
         .number({ required_error, invalid_type_error: portError })

@@ -5,8 +5,8 @@ export interface ProviderAuthConfig {
   validation?:
     | "any_url"
     | "any_http_url"
-    | "http_url"
     | "https_url"
+    | "no_scheme_url"
     | "port"
     | "tld";
   required?: boolean;
