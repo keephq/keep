@@ -287,6 +287,9 @@ class ZabbixProvider(BaseProvider):
                 error = getattr(e, "message", e.args[0])
                 # If we got here, it means it's an exception from Zabbix
                 if "permission" in str(error) or "not authorized" in str(error).lower():
+                    validated_scopes[scope.name] = "Permission denied"
+                    continue
+                else:
                     validated_scopes[scope.name] = error
                     continue
             validated_scopes[scope.name] = True
