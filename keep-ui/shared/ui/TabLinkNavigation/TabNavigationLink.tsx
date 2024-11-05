@@ -29,7 +29,7 @@ export function TabNavigationLink({
         "ui-focus-visible:ring text-sm",
         "border-b-2 border-transparent",
         "transition duration-100 -mb-px px-2 py-2",
-        Icon && "gap-2",
+        Icon && "gap-1.5",
 
         // Default/Hover states
         "hover:border-tremor-content hover:text-tremor-content-emphasis text-tremor-content",
@@ -50,7 +50,7 @@ export function TabNavigationLink({
       aria-selected={isActive}
       tabIndex={isActive ? 0 : -1}
     >
-      {Icon && <Icon className="size-5 flex-shrink-0" />}
+      {Icon && <Icon className="!size-5 flex-shrink-0" />}
       <span className="truncate">{children}</span>
     </Link>
   );

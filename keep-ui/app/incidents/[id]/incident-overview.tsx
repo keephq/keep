@@ -121,7 +121,8 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
   );
 
   return (
-    <div className="flex gap-6 items-start w-full">
+    // Adding padding bottom to visually separate from the tabs
+    <div className="flex gap-6 items-start w-full pb-4">
       <div className="basis-2/3 grow">
         <div className="max-w-3xl flex flex-col gap-4">
           {incident.merged_into_incident_id && (

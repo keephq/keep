@@ -1,17 +1,21 @@
 "use client";
 
-import { FiActivity } from "react-icons/fi";
-import { CiBellOn, CiChat2, CiViewTimeline } from "react-icons/ci";
 import { IoIosGitNetwork } from "react-icons/io";
 import { Workflows } from "components/icons";
 import { useParams, usePathname } from "next/navigation";
 import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
-import { RectangleStackIcon } from "@heroicons/react/24/outline";
+import {
+  BellAlertIcon,
+  BoltIcon,
+  RectangleStackIcon,
+  QueueListIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 
 export const tabs = [
-  { icon: CiBellOn, label: "Alerts", path: "alerts" },
-  { icon: FiActivity, label: "Activity", path: "activity", prefetch: true },
-  { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
+  { icon: BellAlertIcon, label: "Alerts", path: "alerts" },
+  { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
+  { icon: QueueListIcon, label: "Timeline", path: "timeline" },
   {
     icon: IoIosGitNetwork,
     label: "Topology",
@@ -19,7 +23,7 @@ export const tabs = [
   },
   { icon: Workflows, label: "Workflows", path: "workflows" },
   { icon: RectangleStackIcon, label: "Similar incidents", path: "similar" },
-  { icon: CiChat2, label: "Chat", path: "chat" },
+  { icon: SparklesIcon, label: "Chat with AI", path: "chat" },
 ];
 
 export function IncidentTabsNavigation() {

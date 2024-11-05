@@ -12,18 +12,21 @@ export function TabLinkNavigation({
   className,
 }: TabLinkNavigationProps) {
   return (
-    <nav
-      className={twMerge(
-        "justify-start overflow-x-auto flex border-b space-x-4",
-        "border-tremor-border dark:border-dark-tremor-border",
-        "sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10",
-        className
-      )}
-      role="tablist"
-      aria-orientation="horizontal"
-    >
-      {children}
-    </nav>
+    // using overflow-x-auto to allow horizontal scrolling on small screens
+    <div className="overflow-x-auto overflow-y-hidden">
+      <nav
+        className={twMerge(
+          "justify-start flex border-b space-x-4",
+          "border-tremor-border dark:border-dark-tremor-border",
+          "sticky xl:-top-10 -top-4 bg-tremor-background-muted z-10",
+          className
+        )}
+        role="tablist"
+        aria-orientation="horizontal"
+      >
+        {children}
+      </nav>
+    </div>
   );
 }
 

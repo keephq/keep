@@ -12,7 +12,7 @@ export default async function IncidentTopologyPage({
 }: PageProps) {
   const incident = await getIncidentWithErrorHandling(id);
   return (
-    <main className="pt-3 h-[calc(100vh-12rem)]">
+    <main className="h-[calc(100vh-12rem)]">
       <TopologySearchProvider>
         <TopologyMap services={incident.services} />
       </TopologySearchProvider>
