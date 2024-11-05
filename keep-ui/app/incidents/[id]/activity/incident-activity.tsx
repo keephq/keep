@@ -169,7 +169,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col max-w-3xl mx-auto">
       {activities?.map((activity) => renderItem(activity))}
     </div>
   );

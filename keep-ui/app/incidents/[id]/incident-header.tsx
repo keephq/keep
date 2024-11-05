@@ -16,6 +16,7 @@ import Modal from "@/components/ui/Modal";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
+import { IncidentOverview } from "./incident-overview";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -59,7 +60,7 @@ export function IncidentHeader({
           <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
           {incident.is_confirmed ? "⚔️ " : "Possible "}Incident Details
         </Subtitle>
-        <div className="flex justify-between items-end text-sm gap-1">
+        <div className="flex justify-between items-end text-sm gap-2">
           <Title className="prose-2xl flex-grow flex flex-col gap-1">
             <IncidentSeverityBadge severity={incident.severity} />
             <span>{getIncidentName(incident)}</span>
@@ -126,6 +127,7 @@ export function IncidentHeader({
           )}
         </div>
       </header>
+      <IncidentOverview incident={incident} />
       <Modal
         isOpen={isFormOpen}
         onClose={handleCloseForm}

@@ -6,9 +6,10 @@ import { IoIosGitNetwork } from "react-icons/io";
 import { Workflows } from "components/icons";
 import { useParams, usePathname } from "next/navigation";
 import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
+import { RectangleStackIcon } from "@heroicons/react/24/outline";
 
 export const tabs = [
-  { icon: CiBellOn, label: "Overview and Alerts", path: "alerts" },
+  { icon: CiBellOn, label: "Alerts", path: "alerts" },
   { icon: FiActivity, label: "Activity", path: "activity" },
   { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   {
@@ -17,6 +18,7 @@ export const tabs = [
     path: "topology",
   },
   { icon: Workflows, label: "Workflows", path: "workflows" },
+  { icon: RectangleStackIcon, label: "Similar incidents", path: "similar" },
   { icon: CiChat2, label: "Chat", path: "chat" },
 ];
 
