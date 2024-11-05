@@ -11,11 +11,12 @@ import {
   usePollIncidentComments,
 } from "@/utils/hooks/useIncidents";
 import { useAlerts } from "@/utils/hooks/useAlerts";
-import Loading from "@/app/loading";
 import { useSession } from "next-auth/react";
 import { IncidentActivityItem } from "./ui/IncidentActivityItem";
 import { IncidentActivityComment } from "./ui/IncidentActivityComment";
 import { useMemo } from "react";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface IncidentActivity {
   id: string;
@@ -23,6 +24,28 @@ interface IncidentActivity {
   text?: string;
   timestamp: string;
   initiator?: string | AlertDto;
+}
+
+function Item({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-4">
+      <div className="relative py-6 w-12 flex items-center justify-center">
+        {/* vertical line */}
+        <div className="absolute mx-auto right-0 left-0 top-0 bottom-0 h-full bg-gray-200 w-px" />
+        {/* wrapping icon to avoid vertical line visible behind transparent background */}
+        <div className="relative z-[1] bg-tremor-background rounded-full border border-2 border-tremor-background">
+          {icon}
+        </div>
+      </div>
+      <div className="py-6 flex-1">{children}</div>
+    </div>
+  );
 }
 
 export function IncidentActivity({ incident }: { incident: IncidentDto }) {
@@ -95,34 +118,15 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     );
   }, [auditEvents, incidentEvents, alerts]);
 
-  if (
-    usersLoading ||
-    incidentEventsLoading ||
-    auditEventsLoading ||
-    alertsLoading
-  ) {
-    return <Loading />;
-  }
+  const isLoading =
+    incidentEventsLoading || auditEventsLoading || alertsLoading;
 
-  const newCommentActivity = {
+  const newCommentActivity: IncidentActivity = {
     id: "newcomment",
     type: "newcomment",
     timestamp: new Date().toISOString(),
     initiator: session?.user.email,
   };
-
-  const activities = [newCommentActivity, ...auditActivities];
-
-  const renderActivity = (activity: IncidentActivity) =>
-    activity.type === "newcomment" ? (
-      <IncidentActivityComment
-        mutator={mutateIncidentActivity}
-        incident={incident}
-        key={activity.id}
-      />
-    ) : (
-      <IncidentActivityItem key={activity.id} activity={activity} />
-    );
 
   const renderIcon = (activity: IncidentActivity) => {
     if (activity.type === "comment" || activity.type === "newcomment") {
@@ -152,25 +156,28 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     }
   };
 
-  const renderItem = (item: any) => {
-    return (
-      <div className="flex gap-4">
-        <div className="relative py-6 w-12 flex items-center justify-center">
-          {/* vertical line */}
-          <div className="absolute mx-auto right-0 left-0 top-0 bottom-0 h-full bg-gray-200 w-px" />
-          {/* wrapping icon to avoid vertical line visible behind transparent background */}
-          <div className="relative z-[1] bg-tremor-background rounded-full border border-2 border-tremor-background">
-            {renderIcon(item)}
-          </div>
-        </div>
-        <div className="py-6 flex-1">{renderActivity(item)}</div>
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col max-w-3xl mx-auto">
-      {activities?.map((activity) => renderItem(activity))}
+      <Item icon={renderIcon(newCommentActivity)}>
+        <IncidentActivityComment
+          incident={incident}
+          mutator={mutateIncidentActivity}
+        />
+      </Item>
+      {isLoading
+        ? Array.from({ length: 10 }).map((_, i) => (
+            <Item
+              key={i}
+              icon={<Skeleton className="!w-6 !h-6 !rounded-full" />}
+            >
+              <Skeleton className="w-full h-6" />
+            </Item>
+          ))
+        : auditActivities.map((activity) => (
+            <Item key={activity.id} icon={renderIcon(activity)}>
+              <IncidentActivityItem key={activity.id} activity={activity} />
+            </Item>
+          ))}
     </div>
   );
 }
