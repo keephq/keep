@@ -345,7 +345,9 @@ class ZabbixProvider(BaseProvider):
 
     def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
-        time_from = (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat()
+        time_from = int(
+            (datetime.datetime.now() - datetime.timedelta(days=7)).timestamp()
+        )
         problems = self.__send_request(
             "problem.get",
             {
@@ -440,6 +442,8 @@ class ZabbixProvider(BaseProvider):
             {"name": "host_ip", "value": "{HOST.IP}"},
             {"name": "host_name", "value": "{HOST.NAME}"},
             {"name": "url", "value": "{$ZABBIX.URL}"},
+            {"name": "update_action", "value": "{EVENT.UPDATE.ACTION}"},
+            {"name": "event_ack", "value": "{EVENT.ACK.STATUS}"},
         ]
 
         if scripts:
@@ -579,7 +583,7 @@ class ZabbixProvider(BaseProvider):
                 last_received, "%Y.%m.%d %H:%M:%S"
             ).isoformat()
 
-        update_action = event.get("update_action")
+        update_action = event.get("update_action", "")
         if update_action == "acknowledged":
             status = AlertStatus.ACKNOWLEDGED
         elif "suppressed" in update_action:
