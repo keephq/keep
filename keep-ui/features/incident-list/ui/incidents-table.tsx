@@ -214,12 +214,12 @@ export default function IncidentsTable({
               .map((service) => <Badge key={service}>{service}</Badge>)
               .slice(0, 3)}
             {notNullServices.length > 3 ? (
-              <>
+              <span>
                 and{" "}
                 <Link href={`/incidents/${row.original.id}/alerts`}>
                   {notNullServices.length - 3} more
                 </Link>
-              </>
+              </span>
             ) : null}
           </div>
         );
