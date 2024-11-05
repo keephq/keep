@@ -345,45 +345,6 @@ def delete_provider(
         return JSONResponse(status_code=400, content={"message": str(e)})
 
 
-def validate_scopes(
-    provider: BaseProvider, validate_mandatory=True
-) -> dict[str, bool | str]:
-    logger.info("Validating provider scopes")
-    try:
-        validated_scopes = provider.validate_scopes()
-    except Exception as e:
-        logger.exception("Failed to validate provider scopes")
-        raise HTTPException(
-            status_code=412,
-            detail=str(e),
-        )
-    if validate_mandatory:
-        mandatory_scopes_validated = True
-        if provider.PROVIDER_SCOPES and validated_scopes:
-            # All of the mandatory scopes must be validated
-            for scope in provider.PROVIDER_SCOPES:
-                if scope.mandatory and (
-                    scope.name not in validated_scopes
-                    or validated_scopes[scope.name] is not True
-                ):
-                    mandatory_scopes_validated = False
-                    break
-        # Otherwise we fail the installation
-        if not mandatory_scopes_validated:
-            logger.warning(
-                "Failed to validate mandatory provider scopes",
-                extra={"validated_scopes": validated_scopes},
-            )
-            raise HTTPException(
-                status_code=412,
-                detail=validated_scopes,
-            )
-    logger.info(
-        "Validated provider scopes", extra={"validated_scopes": validated_scopes}
-    )
-    return validated_scopes
-
-
 @router.post(
     "/{provider_id}/scopes",
     description="Validate provider scopes",
@@ -422,7 +383,7 @@ def validate_provider_scopes(
         session.commit()
     logger.info(
         "Validated provider scopes",
-        extra={"provider_id": provider_id, "validated_scopes": validate_scopes},
+        extra={"provider_id": provider_id, "validated_scopes": validated_scopes},
     )
     return validated_scopes
 
@@ -511,8 +472,8 @@ async def install_provider(
             pulling_enabled=pulling_enabled,
         )
         return JSONResponse(status_code=200, content=result)
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to install provider")
         return JSONResponse(status_code=400, content={"message": str(e)})
@@ -555,7 +516,7 @@ async def install_provider_oauth2(
             context_manager, provider_unique_id, provider_type, provider_config
         )
 
-        validated_scopes = validate_scopes(provider)
+        validated_scopes = ProvidersService.validate_scopes(provider)
 
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         secret_name = f"{tenant_id}_{provider_type}_{provider_unique_id}"
