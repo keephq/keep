@@ -8,14 +8,14 @@ import {
   BellAlertIcon,
   BoltIcon,
   RectangleStackIcon,
-  QueueListIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
+import { CiViewTimeline } from "react-icons/ci";
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts" },
   { icon: BoltIcon, label: "Activity", path: "activity", prefetch: true },
-  { icon: QueueListIcon, label: "Timeline", path: "timeline" },
+  { icon: CiViewTimeline, label: "Timeline", path: "timeline" },
   {
     icon: IoIosGitNetwork,
     label: "Topology",
