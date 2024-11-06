@@ -7,8 +7,8 @@ export const getSeverityBorderStyle = (severity?: string) => {
       return "border-l-4 border-orange-500";
     case "warning":
       return "border-l-4 border-yellow-500";
-    case "low":
-      return "border-l-4 border-blue-500";
+    case "info":
+      return "border-l-4 border-indigo-500";
     default:
       return "border-l-4 border-emerald-500";
   }
