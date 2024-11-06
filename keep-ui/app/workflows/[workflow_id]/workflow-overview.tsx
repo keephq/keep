@@ -5,13 +5,14 @@ import { Callout, Button, Title, Card, Tab, TabGroup, TabList } from "@tremor/re
 import { load, JSON_SCHEMA } from "js-yaml";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import Loading from "react-loading";
+import Loading from "app/loading";
 import { WorkflowSteps } from "../mockworkflows";
 import { Workflow } from "../models";
 import WorkflowGraph from "../workflow-graph";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
+import { PaginatedWorkflowExecutionDto } from "../builder/types";
 
 interface Pagination {
   limit: number;
@@ -81,6 +82,7 @@ export default function WorkflowOverview({
   });
   const [tab, setTab] = useState<number>(1);
   const searchParams = useSearchParams();
+  const [localData, setLocalData] = useState<PaginatedWorkflowExecutionDto>();
 
   useEffect(() => {
     setExecutionPagination({
@@ -96,15 +98,20 @@ export default function WorkflowOverview({
     executionPagination.offset
   );
 
+  useEffect(()=>{
+    if(data){
+      setLocalData(data);
+    }
+  }, [data]);
+
   const {
     isRunning,
     handleRunClick,
     getTriggerModalProps,
     isRunButtonDisabled,
     message,
-  } = useWorkflowRun(data?.workflow!);
+  } = useWorkflowRun(localData?.workflow!);
 
-  if (isLoading) return <Loading />;
 
   if (error) {
     return (
@@ -119,7 +126,11 @@ export default function WorkflowOverview({
     );
   }
 
-  const parsedWorkflowFile = load(data?.workflow?.workflow_raw ?? "", {
+  if(!localData && isLoading){
+    return <Loading/>
+  }
+
+  const parsedWorkflowFile = load(localData?.workflow?.workflow_raw ?? "", {
     schema: JSON_SCHEMA,
   }) as any;
 
@@ -142,7 +153,7 @@ export default function WorkflowOverview({
           {/*TO DO update searchParams for these filters*/}
           <FilterTabs tabs={tabs} setTab={setTab} tab={tab} />
         </div>
-        {!!data?.workflow && (
+        {!!localData?.workflow && (
           <Button
             disabled={isRunning || isRunButtonDisabled}
             className="p-2 px-4"
@@ -157,24 +168,24 @@ export default function WorkflowOverview({
           </Button>
         )}
       </div>
-      {data?.items && (
+      {localData?.items && (
         <div className="mt-2 flex flex-col gap-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
-            <StatsCard data={`${data.count ?? 0}`}>
+            <StatsCard data={`${localData.count ?? 0}`}>
               <Title>Total Executions</Title>
               <div>
                 <h1 className="text-2xl font-bold">
-                  {formatNumber(data.count ?? 0)}
+                  {formatNumber(localData.count ?? 0)}
                 </h1>
               </div>
             </StatsCard>
-            <StatsCard data={`${data.passCount}/${data.failCount}`}>
+            <StatsCard data={`${localData.passCount}/${localData.failCount}`}>
               <Title>Pass / Fail ratio</Title>
               <div>
                 <h1 className="text-2xl font-bold">
-                  {formatNumber(data.passCount)}
+                  {formatNumber(localData.passCount)}
                   {"/"}
-                  {formatNumber(data.failCount)}
+                  {formatNumber(localData.failCount)}
                 </h1>
               </div>
             </StatsCard>
@@ -182,8 +193,8 @@ export default function WorkflowOverview({
               <Title>Success %</Title>
               <div>
                 <h1 className="text-2xl font-bold">
-                  {(data.count
-                    ? (data.passCount / data.count) * 100
+                  {(localData.count
+                    ? (localData.passCount / localData.count) * 100
                     : 0
                   ).toFixed(2)}
                   {"%"}
@@ -194,7 +205,7 @@ export default function WorkflowOverview({
               <Title>Avg. duration</Title>
               <div>
                 <h1 className="text-2xl font-bold">
-                  {(data.avgDuration ?? 0).toFixed(2)}
+                  {(localData.avgDuration ?? 0).toFixed(2)}
                 </h1>
               </div>
             </StatsCard>
@@ -211,14 +222,14 @@ export default function WorkflowOverview({
             size="sm"
           />
           <h1 className="text-xl font-bold mt-4">Execution History</h1>
-          <TableFilters workflowId={data.workflow.id} />
+          <TableFilters workflowId={localData.workflow.id} />
           <ExecutionTable
-            executions={data}
+            executions={localData}
             setPagination={setExecutionPagination}
           />
         </div>
       )}
-      {!!data?.workflow && !!getTriggerModalProps && (
+      {!!localData?.workflow && !!getTriggerModalProps && (
         <AlertTriggerModal {...getTriggerModalProps()} />
       )}
     </>
