@@ -4,6 +4,7 @@ import KeycloakProvider, {
   KeycloakProfile,
 } from "next-auth/providers/keycloak";
 import Auth0Provider from "next-auth/providers/auth0";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import { getApiURL } from "utils/apiUrl";
 import {
   AuthenticationType,
@@ -31,12 +32,14 @@ if (authTypeEnv === MULTI_TENANT) {
 
 /*
 
-This file implements three different authentication flows:
+This file implements different authentication flows:
 1. Multi-tenant authentication using Auth0
 2. Single-tenant authentication using username/password
 3. No authentication
+4. Keycloak authentication
+5. Azure AD authentication
 
-Depends on authType which can be NO_AUTH, SINGLE_TENANT or MULTI_TENANT
+Depends on authType which can be NO_AUTH, SINGLE_TENANT, MULTI_TENANT, KEYCLOAK, or AZURE_AD
 Note that the same environment variable should be set in the backend too.
 
 */
@@ -329,6 +332,40 @@ const keycloakAuthOptions = {
   },
 } as AuthOptions;
 
+const azureADAuthOptions = {
+  providers: [
+    AzureADProvider({
+      clientId: process.env.AZURE_AD_CLIENT_ID!,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      tenantId: process.env.AZURE_AD_TENANT_ID!,
+      authorization: { params: { scope: "openid email profile User.Read" } },
+    }),
+  ],
+  pages: {
+    signIn: "/signin",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  callbacks: {
+    async jwt({ token, account, profile }) {
+      if (account) {
+        token.accessToken = account.access_token;
+        token.keep_tenant_id = process.env.AZURE_AD_TENANT_ID;
+        token.keep_role = "user"; // Default role - adjust as needed
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
+      session.tenantId = token.keep_tenant_id as string;
+      session.userRole = token.keep_role as string;
+      return session;
+    },
+  },
+} as AuthOptions;
+
 console.log("Starting Keep frontend with auth type: ", authType);
 export const authOptions =
   authType === AuthenticationType.AUTH0
@@ -337,6 +374,8 @@ export const authOptions =
     ? singleTenantAuthOptions
     : authType === AuthenticationType.KEYCLOAK
     ? keycloakAuthOptions
+    : authType === AuthenticationType.AZUREAD
+    ? azureADAuthOptions
     : // oauth2proxy same configuration as noauth
       noAuthOptions;
 
