@@ -14,8 +14,10 @@ import { Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
-import { SameIncidentField } from "@/features/same-incidents-in-the-past/ui";
-import { FollowingIncidents } from "@/features/same-incidents-in-the-past/ui";
+import {
+  SameIncidentField,
+  FollowingIncidents,
+} from "@/features/same-incidents-in-the-past/";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
 
 interface Props {
