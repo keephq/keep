@@ -254,7 +254,7 @@ export default function AlertPresets({
           </div>
         </div>
       </Modal>
-      <div className="flex w-full items-start">
+      <div className="flex w-full items-start relative z-10">
         <AlertsRulesBuilder
           table={table}
           defaultQuery=""

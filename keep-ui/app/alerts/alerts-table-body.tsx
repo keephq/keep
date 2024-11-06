@@ -91,7 +91,7 @@ export function AlertsTableBody({
                 key={cell.id}
                 className={clsx(
                   cell.column.columnDef.meta?.tdClassName || "",
-                  "relative z-10" // Ensure cell content is above the border
+                  "relative z-[1]" // Ensure cell content is above the border
                 )}
               >
                 {showSkeleton ? (
