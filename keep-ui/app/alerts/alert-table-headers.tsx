@@ -1,6 +1,6 @@
 // culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/features/cuesheet/cuesheet-table-elements/CuesheetHeader.tsx
 
-import { CSSProperties, ReactNode, useEffect } from "react";
+import { CSSProperties, ReactNode } from "react";
 import {
   closestCenter,
   DndContext,
@@ -29,6 +29,7 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
 import classnames from "classnames";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
+import clsx from "clsx";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -68,9 +69,11 @@ const DraggableHeaderCell = ({
 
   return (
     <TableHeaderCell
-      className={`relative ${
-        column.getIsPinned() === false ? "hover:bg-slate-100" : ""
-      } group`}
+      className={clsx(
+        "relative",
+        column.columnDef.meta?.thClassName,
+        column.getIsPinned() === false && "hover:bg-slate-100"
+      )}
       style={dragStyle}
       ref={setNodeRef}
     >
