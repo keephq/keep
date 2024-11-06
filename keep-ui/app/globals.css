@@ -113,3 +113,7 @@
 .tremor-TableRow-row.border-emerald-500 {
   border-left-color: rgb(16 185 129) !important;
 }
+
+.tremor-TableRow-row.border-blue-500 {
+  border-left-color: rgb(59 130 246) !important;
+}
