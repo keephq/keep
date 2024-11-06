@@ -124,7 +124,7 @@ const EventDot: React.FC<EventDotProps> = ({
     >
       <div
         className={`w-3 ${
-          isSelected ? "h-full border-2 border-white" : "h-3"
+          isSelected ? "h-full border-2 border-white" : "h-3 animate-pulse"
         } ${dotColors[color as keyof typeof dotColors]} rounded-full`}
       ></div>
     </div>
