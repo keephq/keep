@@ -356,11 +356,11 @@ const ProviderForm = ({
     const error =
       "detail" in data ? data.detail : "message" in data ? data.message : data;
     if (status === 400) setFormErrors(error);
-    if (response.status === 409)
+    if (status === 409)
       setFormErrors(
         `Provider with name ${formValues.provider_name} already exists`
       );
-    if (response.status === 412) setProviderValidatedScopes(error);
+    if (status === 412) setProviderValidatedScopes(error);
   }
 
   async function handleUpdateClick() {

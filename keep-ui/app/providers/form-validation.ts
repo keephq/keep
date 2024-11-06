@@ -30,24 +30,23 @@ function mergeOptions<T extends Record<string, unknown>>(
 }
 
 const error = (msg: string) => ({ success: false, msg });
-const urlError = error("Please provide a valid URL.");
-const protocolError = error("A valid URL protocol is required.");
-const relProtocolError = error("A protocol-relavie URL is not allowed.");
-const missingPortError = error("A URL with a port number is required.");
-const portError = error("Invalid port number.");
-const hostError = error("Invalid URL host.");
+const urlError = error("Please provide a valid URL");
+const protocolError = error("A valid URL protocol is required");
+const relProtocolError = error("A protocol-relavie URL is not allowed");
+const missingPortError = error("A URL with a port number is required");
+const portError = error("Invalid port number");
+const hostError = error("Invalid URL host");
 const hostWildcardError = error("Wildcard in URL host is not allowed");
 const tldError = error(
   "URL must contain a valid TLD e.g .com, .io, .dev, .net"
 );
 
 function getProtocolError(opts: URLOptions["protocols"]) {
-  if (opts.length === 0) return protocolError;
   if (opts.length === 1)
-    return error(`A URL with \`${opts[0]}\` protocol is required.`);
+    return error(`A URL with \`${opts[0]}\` protocol is required`);
   if (opts.length === 2)
     return error(
-      `A URL with \`${opts[0]}\` or \`${opts[1]}\` protocol is required.`
+      `A URL with \`${opts[0]}\` or \`${opts[1]}\` protocol is required`
     );
   const lst = opts.length - 1;
   const wrap = (acc: string, p: string) => acc + `\`${p}\``;
@@ -60,7 +59,7 @@ function getProtocolError(opts: URLOptions["protocols"]) {
           : wrap(acc, p) + ", ",
     ""
   );
-  return error(`A URL with one of ${optsStr} protocols is required.`);
+  return error(`A URL with one of ${optsStr} protocols is required`);
 }
 
 function isFQDN(str: string, options?: Partial<URLOptions>): ValidatorRes {
@@ -128,16 +127,20 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
 
   if (url.slice(0, 2) === "//") return relProtocolError;
 
+  // extract protocol & validate
   split = url.split("://");
-  const protocol = split?.shift()?.toLowerCase() ?? "";
-  if (opts.requireProtocol && opts.protocols.indexOf(protocol) === -1)
-    return getProtocolError(opts.protocols);
+  if (split.length > 1) {
+    const protocol = split?.shift()?.toLowerCase() ?? "";
+    if (opts.protocols.length && opts.protocols.indexOf(protocol) === -1)
+      return getProtocolError(opts.protocols);
+  } else if (split.length > 2 || opts.requireProtocol) return protocolError;
   url = split.join("://");
 
   split = url.split("/");
   url = split.shift() ?? "";
   if (!url.length) return urlError;
 
+  // extract auth details & validate
   split = url.split("@");
   if (split.length > 1 && !split[0]) return urlError;
   if (split.length > 1) {
@@ -146,8 +149,9 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
     const [user, pass] = auth.split(":");
     if (!user && !pass) return urlError;
   }
-
   const hostname = split.join("@");
+
+  // extract ipv6 & port
   const wrapped_ipv6 = /^\[([^\]]+)\](?::([0-9]+))?$/;
   const ipv6Match = hostname.match(wrapped_ipv6);
   if (ipv6Match) {
@@ -161,7 +165,7 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
 
   if (portStr.length) {
     port = parseInt(portStr, 10);
-    if (Number.isNaN(port)) return missingPortError;
+    if (Number.isNaN(port)) return urlError;
     if (port <= 0 || port > 65_535) return portError;
   } else if (opts.requirePort) return missingPortError;
 
@@ -170,35 +174,37 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
   return isFQDN(host, opts);
 }
 
-function addZodErr(valdn: ValidatorRes, ctx: z.RefinementCtx) {
-  if (valdn.success) return;
-  ctx.addIssue({
-    code: z.ZodIssueCode.custom,
-    message: valdn.msg,
+const required_error = "This field is required";
+
+function getBaseUrlSchema(options?: Partial<URLOptions>) {
+  const urlStr = z.string({ required_error });
+  const schema = urlStr.superRefine((url, ctx) => {
+    const valdn = isURL(url, options);
+    if (valdn.success) return;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: valdn.msg,
+    });
   });
+  return schema;
 }
 
 export function getZodSchema(fields: Provider["config"]) {
-  const required_error = "This field is required";
   const portError = "Invalid port number";
-  const emptyStringToNull = z
-    .string()
-    .optional()
-    .transform((val) => (val?.length === 0 ? null : val));
 
   const kvPairs = Object.entries(fields).map(([field, config]) => {
     if (config.type === "form") {
-      const baseFormSchema = z.record(z.string(), z.string()).array();
-      const formSchema = config.required
-        ? baseFormSchema.nonempty({
+      const baseSchema = z.record(z.string(), z.string()).array();
+      const schema = config.required
+        ? baseSchema.nonempty({
             message: "At least one key-value entry should be provided.",
           })
-        : baseFormSchema.optional();
-      return [field, formSchema];
+        : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.type === "file") {
-      const baseFileSchema = z
+      const baseSchema = z
         .instanceof(File, { message: "Please upload a file here." })
         .refine(
           (file) => {
@@ -213,86 +219,60 @@ export function getZodSchema(fields: Provider["config"]) {
                 : `File should be of type ${config.file_type}.`,
           }
         );
-      const fileSchema = config.required
-        ? baseFileSchema
-        : baseFileSchema.optional();
-      return [field, fileSchema];
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.type === "switch") {
-      const switchSchema = config.required
-        ? z.boolean()
-        : z.boolean().optional();
-      return [field, switchSchema];
+      const schema = config.required ? z.boolean() : z.boolean().optional();
+      return [field, schema];
     }
 
-    const urlStr = z.string({ required_error });
-
     if (config.validation === "any_url") {
-      const urlSchema = urlStr.superRefine((url, ctx) => {
-        const valdn = isURL(url);
-        addZodErr(valdn, ctx);
-      });
-      const anyUrlSchema = config.required
-        ? urlSchema
-        : emptyStringToNull.pipe(urlSchema.nullish());
-      return [field, anyUrlSchema];
+      const baseSchema = getBaseUrlSchema();
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.validation === "any_http_url") {
-      const baseAnyHttpSchema = urlStr.superRefine((url, ctx) => {
-        const valdn = isURL(url, { protocols: ["http", "https"] });
-        addZodErr(valdn, ctx);
-      });
-      const anyHttpSchema = config.required
-        ? baseAnyHttpSchema
-        : emptyStringToNull.pipe(baseAnyHttpSchema.nullish());
-      return [field, anyHttpSchema];
+      const baseSchema = getBaseUrlSchema({ protocols: ["http", "https"] });
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.validation === "https_url") {
-      const baseHttpsSchema = urlStr.superRefine((url, ctx) => {
-        const valdn = isURL(url, { requireTld: true, protocols: ["https"] });
-        addZodErr(valdn, ctx);
+      const baseSchema = getBaseUrlSchema({
+        protocols: ["https"],
+        requireTld: true,
+        maxLength: 2083,
       });
-      const httpsSchema = config.required
-        ? baseHttpsSchema
-        : emptyStringToNull.pipe(baseHttpsSchema.nullish());
-      return [field, httpsSchema];
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.validation === "no_scheme_url") {
-      const baseNoSchemeSchema = urlStr.superRefine((url, ctx) => {
-        const valdn = isURL(url, { requireProtocol: false });
-        addZodErr(valdn, ctx);
-      });
-      const noSchemeSchema = config.required
-        ? baseNoSchemeSchema
-        : emptyStringToNull.pipe(baseNoSchemeSchema.nullish());
-      return [field, noSchemeSchema];
+      const baseSchema = getBaseUrlSchema({ requireProtocol: false });
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.validation === "tld") {
-      const baseTldSchema = z
+      const baseSchema = z
         .string({ required_error })
         .regex(new RegExp(/\.[a-z]{2,63}$/), {
           message: "Please provide a valid TLD e.g .com, .io, .dev, .net",
         });
-      const tldSchema = config.required
-        ? baseTldSchema
-        : baseTldSchema.optional();
-      return [field, tldSchema];
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
 
     if (config.validation === "port") {
-      const basePortSchema = z.coerce
+      const baseSchema = z.coerce
         .number({ required_error, invalid_type_error: portError })
         .min(1, { message: portError })
         .max(65_535, { message: portError });
-      const portSchema = config.required
-        ? basePortSchema
-        : emptyStringToNull.pipe(basePortSchema.nullish());
-      return [field, portSchema];
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
     }
     return [
       field,

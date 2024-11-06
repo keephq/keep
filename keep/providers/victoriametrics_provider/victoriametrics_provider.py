@@ -26,11 +26,12 @@ class VictoriametricsProviderAuthConfig:
     vmalert authentication configuration.
     """
 
-    VMAlertHost: str = dataclasses.field(
+    VMAlertHost: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "The hostname or IP address where VMAlert is running. This can be a local or remote server address.",
-            "hint": "Example: 'localhost', '192.168.1.100', or 'vmalert.mydomain.com'",
+            "hint": "Example: 'http://localhost', 'http://192.168.1.100', or 'https://vmalert.mydomain.com'",
+            "validation": "any_http_url",
         },
     )
 
@@ -39,7 +40,7 @@ class VictoriametricsProviderAuthConfig:
             "required": True,
             "description": "The port number on which VMAlert is listening. This should match the port configured in your VMAlert setup.",
             "hint": "Example: 8880 (if VMAlert is set to listen on port 8880)",
-            "validation": "port"
+            "validation": "port",
         },
     )
 

@@ -3,6 +3,8 @@ from typing import Optional
 from pydantic import AnyUrl, HttpUrl, conint, errors
 from pydantic.networks import Parts
 
+UrlPort = conint(ge=1, le=65_535)
+
 
 class HttpsUrl(HttpUrl):
     scheme = {"https"}
@@ -10,9 +12,6 @@ class HttpsUrl(HttpUrl):
     @staticmethod
     def get_default_parts(parts):
         return {"port": "443"}
-
-
-UrlPort = conint(ge=1, le=65_535)
 
 
 class NoSchemeUrl(AnyUrl):
@@ -51,7 +50,8 @@ class NoSchemeUrl(AnyUrl):
         In this override, we removed validation for url scheme.
         """
 
-        parts["scheme"] = "foo"
+        scheme = parts["scheme"]
+        parts["scheme"] = "foo" if scheme is None else scheme
 
         if validate_port:
             cls._validate_port(parts["port"])

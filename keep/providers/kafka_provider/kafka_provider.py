@@ -22,11 +22,12 @@ class KafkaProviderAuthConfig:
     Kafka authentication configuration.
     """
 
-    host: str = dataclasses.field(
+    host: pydantic.AnyUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Kafka host",
             "hint": "e.g. https://kafka:9092",
+            "validation": "any_url"
         },
     )
     topic: str = dataclasses.field(
