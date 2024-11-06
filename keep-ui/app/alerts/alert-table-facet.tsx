@@ -153,7 +153,7 @@ const FacetValue: React.FC<FacetValueProps> = ({
           />
         )}
         {showIcon && facetKey === "severity" && (
-          <AlertSeverity severity={label as Severity} marginLeft={false} />
+          <AlertSeverity severity={label as Severity} />
         )}
         {showIcon && facetKey === "status" && (
           <Icon
