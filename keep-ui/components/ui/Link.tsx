@@ -16,7 +16,7 @@ export function Link({ icon, iconPosition = "left", ...props }: LinkProps) {
       <NextLink
         {...props}
         className={clsx(
-          "text-tremor-default text-black font-semibold border-b border-tremor-brand-subtle hover:border-b-2",
+          "text-tremor-default transition-colors text-black hover:text-tremor-brand font-semibold border-b hover:border-b-tremor-brand/50",
           props.className
         )}
       >
@@ -26,7 +26,7 @@ export function Link({ icon, iconPosition = "left", ...props }: LinkProps) {
   }
 
   const Icon = icon;
-  const iconClassName = "size-4";
+  const iconClassName = "size-4 shrink-0";
   return (
     <NextLink
       {...props}
@@ -36,7 +36,7 @@ export function Link({ icon, iconPosition = "left", ...props }: LinkProps) {
       )}
     >
       {iconPosition === "left" && <Icon className={iconClassName} />}
-      <span className="transition-[border] border-b group-hover:border-b-tremor-brand/50">
+      <span className="inline-block transition-[border] border-b group-hover:border-b-tremor-brand/50">
         {props.children}
       </span>
       {iconPosition === "right" && <Icon className={iconClassName} />}

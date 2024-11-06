@@ -20,9 +20,7 @@ function FollowingIncident({ incidentId }: { incidentId: string }) {
   return (
     <div>
       <Link
-        icon={() => (
-          <StatusIcon size="sm" className="!p-0" status={incident.status} />
-        )}
+        icon={() => <StatusIcon className="!p-0" status={incident.status} />}
         href={"/incidents/" + incidentId}
       >
         {getIncidentName(incident)}

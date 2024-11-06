@@ -83,15 +83,11 @@ function MergedCallout({
     <Callout
       // @ts-ignore
       title={
-        <div className="flex items-center gap-2">
+        <div>
           <p>This incident was merged into</p>
           <Link
             icon={() => (
-              <StatusIcon
-                size="sm"
-                className="!p-0"
-                status={merged_incident.status}
-              />
+              <StatusIcon className="!p-0" status={merged_incident.status} />
             )}
             href={`/incidents/${merged_incident?.id}`}
           >

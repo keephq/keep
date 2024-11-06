@@ -7,6 +7,7 @@ import { useIncident } from "@/utils/hooks/useIncidents";
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { ChangeSameIncidentInThePastForm } from "./change-same-incident-in-the-past-form";
+import { StatusIcon } from "@/entities/incidents/ui/statuses";
 
 export function SameIncidentField({ incident }: { incident: IncidentDto }) {
   const { data: same_incident_in_the_past } = useIncident(
@@ -29,8 +30,16 @@ export function SameIncidentField({ incident }: { incident: IncidentDto }) {
     <>
       <FieldHeader>Same in the past</FieldHeader>
       {same_incident_in_the_past ? (
-        <p className="flex items-baseline gap-2">
-          <Link href={"/incidents/" + same_incident_in_the_past.id}>
+        <p className="flex gap-2">
+          <Link
+            icon={() => (
+              <StatusIcon
+                className="!p-0 -mb-0.5"
+                status={same_incident_in_the_past.status}
+              />
+            )}
+            href={"/incidents/" + same_incident_in_the_past.id}
+          >
             {getIncidentName(same_incident_in_the_past)}
           </Link>
           <Button
