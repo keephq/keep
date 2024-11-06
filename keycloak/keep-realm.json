@@ -18,7 +18,11 @@
       },
       "realmRoles": ["offline_access", "uma_authorization", "admin"],
       "clientRoles": {
-        "realm-management": ["manage-users", "manage-identity-providers"]
+        "realm-management": [
+          "manage-users",
+          "manage-identity-providers",
+          "realm-admin"
+        ]
       }
     }
   ],
@@ -28,9 +32,7 @@
       "name": "Keep Application",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "redirectUris": [
-        "${KEEP_AUTH_REDICERT_URL}"
-      ],
+      "redirectUris": ["${KEEP_AUTH_REDICERT_URL}"],
       "webOrigins": [],
       "protocol": "openid-connect",
       "attributes": {
@@ -44,8 +46,19 @@
       "fullScopeAllowed": true,
       "authorizationServicesEnabled": true,
       "serviceAccountsEnabled": true,
-      "defaultClientScopes": ["email", "roles", "web-origins", "profile", "active_organization"],
-      "optionalClientScopes": ["offline_access", "microprofile-jwt", "phone", "address"],
+      "defaultClientScopes": [
+        "email",
+        "roles",
+        "web-origins",
+        "profile",
+        "active_organization"
+      ],
+      "optionalClientScopes": [
+        "offline_access",
+        "microprofile-jwt",
+        "phone",
+        "address"
+      ],
       "access": {
         "view": true,
         "configure": true,

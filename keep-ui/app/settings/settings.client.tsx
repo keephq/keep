@@ -1,5 +1,5 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import {
   GlobeAltIcon,
@@ -26,6 +26,7 @@ import APIKeysTab from "./auth/api-key-tab";
 import SSOTab from "./auth/sso-tab";
 import WebhookSettings from "./webhook-settings";
 import SmtpSettings from "./smtp-settings";
+import PermissionsTab from "./auth/permissions-tab";
 
 import { UsersTable } from "./auth/users-table";
 import { GroupsTable } from "./auth/groups-table";
@@ -105,24 +106,46 @@ export default function SettingsPage() {
     switch (subTabName) {
       case "users":
         if (usersAllowed) {
-          return <UsersTab accessToken={session?.accessToken!} currentUser={session?.user} groupsAllowed={groupsAllowed}/>;
+          return (
+            <UsersTab
+              accessToken={session?.accessToken!}
+              currentUser={session?.user}
+              groupsAllowed={groupsAllowed}
+            />
+          );
         } else {
           const mockUsers: User[] = [
             {
               email: "john@example.com",
               name: "John Doe",
               role: "Admin",
-              groups: [{ id: "1", name: "Admins", memberCount: 1, members: ["john@example.com"], roles: ["Admin"] }],
+              groups: [
+                {
+                  id: "1",
+                  name: "Admins",
+                  memberCount: 1,
+                  members: ["john@example.com"],
+                  roles: ["Admin"],
+                },
+              ],
               last_login: new Date().toISOString(),
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
             },
             {
               email: "jane@example.com",
               name: "Jane Smith",
               role: "User",
-              groups: [{ id: "2", name: "Users", memberCount: 1, members: ["jane@example.com"], roles: ["User"] }],
+              groups: [
+                {
+                  id: "2",
+                  name: "Users",
+                  memberCount: 1,
+                  members: ["jane@example.com"],
+                  roles: ["User"],
+                },
+              ],
               last_login: new Date().toISOString(),
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
             },
           ];
           return (
@@ -131,7 +154,12 @@ export default function SettingsPage() {
               documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
               icon={UsersIcon}
             >
-              <UsersTable users={mockUsers} currentUserEmail={session?.user?.email} authType={authType} isDisabled={true} />
+              <UsersTable
+                users={mockUsers}
+                currentUserEmail={session?.user?.email}
+                authType={authType}
+                isDisabled={true}
+              />
             </EmptyStateTable>
           );
         }
@@ -140,10 +168,40 @@ export default function SettingsPage() {
           return <GroupsTab accessToken={session?.accessToken!} />;
         } else {
           const mockGroups = [
-            { id: "1", name: "Admins", members: ["john@example.com", "doe@example.com", "keep@example.com", "noc@example.com"], roles: ["Admin"] },
-            { id: "2", name: "Operators", members: ["john@example.com", "doe@example.com", "keep@example.com", "noc@example.com"], roles: ["Operator"] },
-            { id: "3", name: "NOC", members: ["jane@example.com"], roles: ["NOC"] },
-            { id: "4", name: "Managers", members: ["boss1@example.com", "boss2@example.com"], roles: ["Viewer"] },
+            {
+              id: "1",
+              name: "Admins",
+              members: [
+                "john@example.com",
+                "doe@example.com",
+                "keep@example.com",
+                "noc@example.com",
+              ],
+              roles: ["Admin"],
+            },
+            {
+              id: "2",
+              name: "Operators",
+              members: [
+                "john@example.com",
+                "doe@example.com",
+                "keep@example.com",
+                "noc@example.com",
+              ],
+              roles: ["Operator"],
+            },
+            {
+              id: "3",
+              name: "NOC",
+              members: ["jane@example.com"],
+              roles: ["NOC"],
+            },
+            {
+              id: "4",
+              name: "Managers",
+              members: ["boss1@example.com", "boss2@example.com"],
+              roles: ["Viewer"],
+            },
           ];
           return (
             <EmptyStateTable
@@ -151,17 +209,39 @@ export default function SettingsPage() {
               message={`Groups management is disabled with. See documentation on how to enabled it.`}
               documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
             >
-              <GroupsTable groups={mockGroups} onRowClick={() => {}} onDeleteGroup={() => {}} isDisabled={true} />
+              <GroupsTable
+                groups={mockGroups}
+                onRowClick={() => {}}
+                onDeleteGroup={() => {}}
+                isDisabled={true}
+              />
             </EmptyStateTable>
           );
         }
       case "roles":
         if (rolesAllowed) {
-          return <RolesTab accessToken={session?.accessToken!} customRolesAllowed={customRolesAllowed}/>;
+          return (
+            <RolesTab
+              accessToken={session?.accessToken!}
+              customRolesAllowed={customRolesAllowed}
+            />
+          );
         } else {
           const mockRoles = [
-            { id: "1", name: "Admin", description: "Full access", scopes: ["*"], predefined: true },
-            { id: "2", name: "User", description: "Limited access", scopes: ["read:*"], predefined: false },
+            {
+              id: "1",
+              name: "Admin",
+              description: "Full access",
+              scopes: ["*"],
+              predefined: true,
+            },
+            {
+              id: "2",
+              name: "User",
+              description: "Limited access",
+              scopes: ["read:*"],
+              predefined: false,
+            },
           ];
           return (
             <EmptyStateTable
@@ -169,7 +249,12 @@ export default function SettingsPage() {
               message={`Roles management is disabled with. See documentation on how to enabled it.`}
               documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
             >
-              <RolesTable roles={mockRoles} onRowClick={() => {}} onDeleteRole={() => {}} isDisabled={true} />
+              <RolesTable
+                roles={mockRoles}
+                onRowClick={() => {}}
+                onDeleteRole={() => {}}
+                isDisabled={true}
+              />
             </EmptyStateTable>
           );
         }
@@ -184,7 +269,7 @@ export default function SettingsPage() {
               role: "Admin",
               created_by: "john@example.com",
               created_at: "2023-05-01T12:00:00Z",
-              last_used: "2023-06-15T15:30:00Z"
+              last_used: "2023-06-15T15:30:00Z",
             },
             {
               reference_id: "ViewerKey",
@@ -192,7 +277,7 @@ export default function SettingsPage() {
               role: "Viewer",
               created_by: "jane@example.com",
               created_at: "2023-06-01T09:00:00Z",
-              last_used: "2023-06-20T10:45:00Z"
+              last_used: "2023-06-20T10:45:00Z",
             },
           ];
           return (
@@ -216,10 +301,10 @@ export default function SettingsPage() {
         } else {
           return (
             <EmptyStateImage
-            message={`SSO management is disabled with. See documentation on how to enabled it.`}
+              message={`SSO management is disabled with. See documentation on how to enabled it.`}
               documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
               icon={LockClosedIcon}
-              imageURL='/sso.png'
+              imageURL="/sso.png"
             />
           );
         }
@@ -246,19 +331,34 @@ export default function SettingsPage() {
           <TabPanel className="h-full">
             <TabGroup index={userSubTabIndex} className="h-full flex flex-col">
               <TabList color="orange">
-                <Tab icon={UsersIcon} onClick={() => handleUserSubTabChange("users")}>
+                <Tab
+                  icon={UsersIcon}
+                  onClick={() => handleUserSubTabChange("users")}
+                >
                   Users
                 </Tab>
-                <Tab icon={UserGroupIcon} onClick={() => handleUserSubTabChange("groups")}>
+                <Tab
+                  icon={UserGroupIcon}
+                  onClick={() => handleUserSubTabChange("groups")}
+                >
                   Groups
                 </Tab>
-                <Tab icon={ShieldCheckIcon} onClick={() => handleUserSubTabChange("roles")}>
+                <Tab
+                  icon={ShieldCheckIcon}
+                  onClick={() => handleUserSubTabChange("roles")}
+                >
                   Roles
                 </Tab>
-                <Tab icon={KeyIcon} onClick={() => handleUserSubTabChange("api-keys")}>
+                <Tab
+                  icon={KeyIcon}
+                  onClick={() => handleUserSubTabChange("api-keys")}
+                >
                   API Keys
                 </Tab>
-                <Tab icon={MdOutlineSecurity} onClick={() => handleUserSubTabChange("sso")}>
+                <Tab
+                  icon={MdOutlineSecurity}
+                  onClick={() => handleUserSubTabChange("sso")}
+                >
                   SSO
                 </Tab>
               </TabList>
