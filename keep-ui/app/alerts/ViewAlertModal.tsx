@@ -3,7 +3,7 @@ import Modal from "@/components/ui/Modal"; // Ensure this path matches your proj
 import { Button, Icon, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";

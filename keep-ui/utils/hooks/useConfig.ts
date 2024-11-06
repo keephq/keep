@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWRImmutable from "swr/immutable";
 import { InternalConfig } from "types/internal-config";
 import { fetcher } from "utils/fetcher";

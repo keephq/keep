@@ -11,7 +11,7 @@ import {
   usePollIncidentComments,
 } from "@/utils/hooks/useIncidents";
 import { useAlerts } from "@/utils/hooks/useAlerts";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { IncidentActivityItem } from "./ui/IncidentActivityItem";
 import { IncidentActivityComment } from "./ui/IncidentActivityComment";
 import { useMemo } from "react";

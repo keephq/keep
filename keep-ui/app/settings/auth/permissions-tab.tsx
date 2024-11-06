@@ -14,7 +14,7 @@ import {
 } from "@tremor/react";
 import Loading from "app/loading";
 import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "utils/hooks/usePresets";
 import { useGroups } from "utils/hooks/useGroups";
 import { useUsers } from "utils/hooks/useUsers";

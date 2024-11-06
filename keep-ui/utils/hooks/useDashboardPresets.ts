@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "./usePresets";
 import { Preset } from "app/alerts/models";
 import { useMemo } from "react";
@@ -7,10 +7,12 @@ import { useSearchParams } from "next/navigation";
 export const useDashboardPreset = () => {
   const { data: session } = useSession();
 
-  const { useAllPresets, useStaticPresets, presetsOrderFromLS, staticPresetsOrderFromLS } = usePresets(
-    "dashboard",
-    true
-  );
+  const {
+    useAllPresets,
+    useStaticPresets,
+    presetsOrderFromLS,
+    staticPresetsOrderFromLS,
+  } = usePresets("dashboard", true);
   const { data: presets = [] } = useAllPresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -19,7 +21,6 @@ export const useDashboardPreset = () => {
     revalidateIfStale: false,
   });
   const searchParams = useSearchParams();
-
 
   const checkValidPreset = (preset: Preset) => {
     if (!preset.is_private) {
@@ -31,7 +32,9 @@ export const useDashboardPreset = () => {
   let allPreset = useMemo(() => {
     /*If any filters are applied on the dashboard, we will fetch live data; otherwise, 
     we will use data from localStorage to sync values between the navbar and the dashboard.*/
-    let combinedPresets = searchParams?.toString() ? [...presets, ...fetchedPresets]: [...presetsOrderFromLS, ...staticPresetsOrderFromLS];
+    let combinedPresets = searchParams?.toString()
+      ? [...presets, ...fetchedPresets]
+      : [...presetsOrderFromLS, ...staticPresetsOrderFromLS];
     //private preset checks
     combinedPresets = combinedPresets.filter((preset) =>
       checkValidPreset(preset)
@@ -39,5 +42,5 @@ export const useDashboardPreset = () => {
     return combinedPresets;
   }, [presets, fetchedPresets, searchParams, presets, fetchedPresets]);
 
-  return  allPreset;
+  return allPreset;
 };

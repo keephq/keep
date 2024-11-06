@@ -24,7 +24,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { KeyedMutator } from "swr";
 
 interface ProviderOption {

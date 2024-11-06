@@ -7,7 +7,7 @@ const ReactQuill =
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@tremor/react";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 

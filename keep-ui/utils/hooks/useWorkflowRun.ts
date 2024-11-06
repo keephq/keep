@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "./useConfig";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";

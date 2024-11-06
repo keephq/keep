@@ -1,7 +1,7 @@
 "use client";
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
 import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useEffect, useState, useRef, FormEvent } from "react";

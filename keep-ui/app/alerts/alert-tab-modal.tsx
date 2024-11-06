@@ -2,7 +2,7 @@ import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, TextInput } from "@tremor/react";
 import { AlertsRulesBuilder } from "app/alerts/alerts-rules-builder";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
 
 interface AlertTabModalProps {
@@ -114,8 +114,8 @@ const AlertTabModal = ({
             !newTabName
               ? "Tab name is required"
               : !newTabFilter
-              ? "Tab filter is required (notice you need to click 'enter' to apply the filter)"
-              : ""
+                ? "Tab filter is required (notice you need to click 'enter' to apply the filter)"
+                : ""
           }
         >
           Add Tab

@@ -1,7 +1,7 @@
 "use client";
 
 import * as Frigade from "@frigade/react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 export const FrigadeProvider = ({
   children,
 }: {
@@ -14,7 +14,7 @@ export const FrigadeProvider = ({
       userId={
         session?.user.email === "keep"
           ? undefined
-          : session?.user.email ?? session?.user.name
+          : (session?.user.email ?? session?.user.name)
       }
       theme={{
         colors: {

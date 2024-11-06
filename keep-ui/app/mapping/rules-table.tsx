@@ -18,7 +18,7 @@ import {
   ExpandedState,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";

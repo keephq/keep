@@ -1,6 +1,6 @@
 import { TrashIcon } from "@radix-ui/react-icons";
 import { Button } from "@tremor/react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { MouseEvent } from "react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useRules } from "utils/hooks/useRules";
