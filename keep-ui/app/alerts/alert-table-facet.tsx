@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { AlertDto, Severity } from "./models";
 import AlertSeverity from "./alert-severity";
+import clsx from "clsx";
 
 interface FacetValue {
   label: string;
@@ -160,12 +161,17 @@ const FacetValue: React.FC<FacetValueProps> = ({
             icon={getStatusIcon(label)}
             size="sm"
             color={getStatusColor(label)}
+            className="!p-0"
           />
         )}
         {showIcon && facetKey === "assignee" && (
-          <Icon icon={UserCircleIcon} size="sm" className="text-gray-600" />
+          <Icon
+            icon={UserCircleIcon}
+            size="sm"
+            className="text-gray-600 !p-0"
+          />
         )}
-        <Text>{label}</Text>
+        <Text className="capitalize">{label}</Text>
       </div>
       <div className="min-w-[32px] flex justify-end">
         {isHovered ? (
@@ -206,7 +212,7 @@ const Facet: React.FC<FacetProps> = ({
   );
 
   return (
-    <div className="border-b border-gray-200">
+    <div className="pb-2 border-b border-gray-200">
       <div
         className="flex items-center justify-between px-2 py-2 cursor-pointer hover:bg-gray-50"
         onClick={() => setIsOpen(!isOpen)}
@@ -215,7 +221,7 @@ const Facet: React.FC<FacetProps> = ({
           <Icon
             icon={isOpen ? ChevronDownIcon : ChevronRightIcon}
             size="sm"
-            className="text-gray-600"
+            className="text-gray-600 !p-0"
           />
           <Title className="text-sm">{name}</Title>
         </div>
@@ -273,12 +279,14 @@ interface AlertFacetsProps {
     exclusive: boolean,
     isAllOnly: boolean
   ) => void;
+  className?: string;
 }
 
 const AlertFacets: React.FC<AlertFacetsProps> = ({
   alerts,
   facetFilters,
   onSelect,
+  className,
 }) => {
   const getFacetValues = (key: keyof AlertDto): FacetValue[] => {
     const valueMap = new Map<string, number>();
@@ -373,7 +381,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
   };
 
   return (
-    <div className="h-full">
+    <div className={className}>
       <div className="space-y-2">
         <Facet
           facetKey="severity"

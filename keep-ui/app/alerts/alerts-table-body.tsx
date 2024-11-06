@@ -7,8 +7,7 @@ import { Table, flexRender } from "@tanstack/react-table";
 import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
-import { getSeverityBorderStyle } from "@/utils/getSeverityBorderStyle";
-import classnames from "classnames";
+import clsx from "clsx";
 
 interface Props {
   table: Table<AlertDto>;
@@ -77,21 +76,20 @@ export function AlertsTableBody({
         // Assuming the severity can be accessed like this, adjust if needed
         const severity = row.original.severity || "info";
         const rowBgColor = theme[severity] || "bg-white"; // Fallback to 'bg-white' if no theme color
-        const severityBorderClass = getSeverityBorderStyle(
-          row.original.severity
-        );
-
         return (
           <TableRow
             id={`alert-row-${row.original.fingerprint}`}
             key={row.id}
-            className={`${rowBgColor} ${severityBorderClass} hover:bg-orange-100 cursor-pointer`}
+            className={clsx(
+              "hover:bg-orange-100 cursor-pointer relative",
+              rowBgColor
+            )}
             onClick={(e) => handleRowClick(e, row.original)}
           >
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}
-                className={classnames(
+                className={clsx(
                   cell.column.columnDef.meta?.tdClassName || "",
                   "relative z-10" // Ensure cell content is above the border
                 )}

@@ -243,7 +243,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: ["noise", "checkbox"],
+        left: ["severity", "checkbox", "noise"],
         right: ["alertMenu"],
       },
       sorting: sorting,
@@ -295,16 +295,19 @@ export function AlertTable({
         presetName={presetName}
         onThemeChange={handleThemeChange}
       />
-      <div className="flex flex-grow mt-4">
-        <div className="w-32 min-w-[12rem] border-r border-gray-200">
+      <div className="flex flex-grow gap-6">
+        <div className="w-32 min-w-[12rem] mt-16">
           <AlertFacets
+            className="sticky top-0"
             alerts={alerts}
             facetFilters={facetFilters}
             onSelect={handleFacetSelect}
           />
         </div>
-        <Card className="flex-grow h-full flex flex-col px-4 pt-6 overflow-hidden ml-4">
-          <div className="flex-grow">
+        {/* Using p-4 -m-4 to set overflow-hidden without affecting shadow */}
+        <div className="flex flex-col gap-4 overflow-hidden p-4 -m-4">
+          <div className="min-h-10">
+            {/* Setting min-h-10 to avoid jumping when actions are shown */}
             {selectedRowIds.length ? (
               <AlertActions
                 selectedRowIds={selectedRowIds}
@@ -322,45 +325,49 @@ export function AlertTable({
                 presetNoisy={presetNoisy}
               />
             )}
-            {isAsyncLoading && (
-              <Callout
-                title="Getting your alerts..."
-                icon={CircleStackIcon}
-                color="gray"
-                className="mt-5"
-              >
-                Alerts will show up in this table as they are added to Keep...
-              </Callout>
-            )}
-            {/* For dynamic preset, add alert tabs*/}
-            {!presetStatic && (
-              <AlertTabs
-                presetId={presetId}
-                tabs={tabs}
-                setTabs={setTabs}
-                selectedTab={selectedTab}
-                setSelectedTab={setSelectedTab}
-              />
-            )}
-            <Table className="flex-grow mt-4 overflow-auto [&>table]:table-fixed [&>table]:w-full">
-              <AlertsTableHeaders
-                columns={columns}
-                table={table}
-                presetName={presetName}
-              />
-              <AlertsTableBody
-                table={table}
-                showSkeleton={showSkeleton}
-                showEmptyState={showEmptyState}
-                theme={theme}
-                onRowClick={handleRowClick}
-                presetName={presetName}
-              />
-            </Table>
           </div>
-        </Card>
+          <Card className="flex-grow h-full flex flex-col p-0">
+            <div className="flex-grow">
+              {isAsyncLoading && (
+                <Callout
+                  title="Getting your alerts..."
+                  icon={CircleStackIcon}
+                  color="gray"
+                  className="m-5"
+                >
+                  Alerts will show up in this table as they are added to Keep...
+                </Callout>
+              )}
+              {/* For dynamic preset, add alert tabs*/}
+              {!presetStatic && (
+                <AlertTabs
+                  presetId={presetId}
+                  tabs={tabs}
+                  setTabs={setTabs}
+                  selectedTab={selectedTab}
+                  setSelectedTab={setSelectedTab}
+                />
+              )}
+              <Table className="flex-grow overflow-auto [&>table]:table-fixed [&>table]:w-full">
+                <AlertsTableHeaders
+                  columns={columns}
+                  table={table}
+                  presetName={presetName}
+                />
+                <AlertsTableBody
+                  table={table}
+                  showSkeleton={showSkeleton}
+                  showEmptyState={showEmptyState}
+                  theme={theme}
+                  onRowClick={handleRowClick}
+                  presetName={presetName}
+                />
+              </Table>
+            </div>
+          </Card>
+        </div>
       </div>
-      <div className="mt-2 mb-8 pl-[12rem] ml-4">
+      <div className="mt-2 mb-8 pl-[12rem]">
         <AlertPagination
           table={table}
           presetName={presetName}

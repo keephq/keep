@@ -93,27 +93,3 @@
     @apply bg-slate-100;
   }
 }
-
-.tremor-TableRow-row.border-yellow-500 {
-  border-left-color: rgb(234 179 8) !important;
-}
-
-.tremor-TableRow-row.border-red-500 {
-  border-left-color: rgb(239 68 68) !important;
-}
-
-.tremor-TableRow-row.border-orange-500 {
-  border-left-color: rgb(249 115 22) !important;
-}
-
-.tremor-TableRow-row.border-green-500 {
-  border-left-color: rgb(34 197 94) !important;
-}
-
-.tremor-TableRow-row.border-emerald-500 {
-  border-left-color: rgb(16 185 129) !important;
-}
-
-.tremor-TableRow-row.border-blue-500 {
-  border-left-color: rgb(59 130 246) !important;
-}

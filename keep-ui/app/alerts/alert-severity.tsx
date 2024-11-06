@@ -54,6 +54,7 @@ export default function AlertSeverity({ severity }: Props) {
       icon={icon}
       tooltip={capitalize(severityText)}
       size="sm"
+      className="!p-0"
     />
   );
 }
