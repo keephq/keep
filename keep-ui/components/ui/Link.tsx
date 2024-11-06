@@ -10,7 +10,7 @@ type LinkProps = {
 } & NextLinkProps &
   React.AnchorHTMLAttributes<HTMLAnchorElement>;
 
-export function Link({ icon, ...props }: LinkProps) {
+export function Link({ icon, iconPosition = "left", ...props }: LinkProps) {
   if (!icon) {
     return (
       <NextLink
@@ -35,11 +35,11 @@ export function Link({ icon, ...props }: LinkProps) {
         props.className
       )}
     >
-      {props.iconPosition === "left" && <Icon className={iconClassName} />}
+      {iconPosition === "left" && <Icon className={iconClassName} />}
       <span className="transition-[border] border-b group-hover:border-b-tremor-brand/50">
         {props.children}
       </span>
-      {props.iconPosition === "right" && <Icon className={iconClassName} />}
+      {iconPosition === "right" && <Icon className={iconClassName} />}
     </NextLink>
   );
 }

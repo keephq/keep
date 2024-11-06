@@ -17,7 +17,7 @@ export default async function Layout({
     return (
       <div className="flex flex-col gap-4">
         <IncidentHeader incident={incident} />
-        <IncidentTabsNavigation />
+        <IncidentTabsNavigation incident={incident} />
         {children}
       </div>
     );

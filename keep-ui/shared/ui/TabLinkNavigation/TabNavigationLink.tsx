@@ -1,6 +1,7 @@
 import { type ElementType, type ReactNode } from "react";
 import Link from "next/link";
 import { twMerge } from "tailwind-merge";
+import { Badge } from "@tremor/react";
 
 interface TabNavigationLinkProps {
   href: string;
@@ -9,6 +10,7 @@ interface TabNavigationLinkProps {
   isActive?: boolean;
   icon?: ElementType;
   prefetch?: boolean;
+  count?: number;
 }
 
 export function TabNavigationLink({
@@ -18,6 +20,7 @@ export function TabNavigationLink({
   isActive,
   icon: Icon,
   prefetch,
+  count,
 }: TabNavigationLinkProps) {
   return (
     <Link
@@ -52,6 +55,11 @@ export function TabNavigationLink({
     >
       {Icon && <Icon className="!size-5 flex-shrink-0" />}
       <span className="truncate">{children}</span>
+      {count && (
+        <Badge size="xs" color="orange">
+          {count}
+        </Badge>
+      )}
     </Link>
   );
 }

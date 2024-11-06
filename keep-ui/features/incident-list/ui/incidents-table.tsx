@@ -34,7 +34,7 @@ import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { TablePagination } from "@/shared/ui";
+import { DateTimeField, TablePagination } from "@/shared/ui";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -233,8 +233,7 @@ export default function IncidentsTable({
     columnHelper.accessor("creation_time", {
       id: "creation_time",
       header: "Created At",
-      cell: ({ row }) =>
-        new Date(row.original.creation_time + "Z").toLocaleString(),
+      cell: ({ row }) => <DateTimeField date={row.original.creation_time} />,
     }),
     columnHelper.display({
       id: "rule_fingerprint",

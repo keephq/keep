@@ -7,10 +7,10 @@ import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
 import {
   BellAlertIcon,
   BoltIcon,
-  RectangleStackIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
+import { IncidentDto } from "@/entities/incidents/model";
 
 export const tabs = [
   { icon: BellAlertIcon, label: "Alerts", path: "alerts" },
@@ -22,11 +22,14 @@ export const tabs = [
     path: "topology",
   },
   { icon: Workflows, label: "Workflows", path: "workflows" },
-  { icon: RectangleStackIcon, label: "Similar incidents", path: "similar" },
   { icon: SparklesIcon, label: "Chat with AI", path: "chat" },
 ];
 
-export function IncidentTabsNavigation() {
+export function IncidentTabsNavigation({
+  incident,
+}: {
+  incident?: IncidentDto;
+}) {
   // Using type assertion because this component only renders on the /incidents/[id] routes
   const { id } = useParams<{ id: string }>() as { id: string };
   const pathname = usePathname();
@@ -39,6 +42,7 @@ export function IncidentTabsNavigation() {
           isActive={pathname?.endsWith(tab.path)}
           href={`/incidents/${id}/${tab.path}`}
           prefetch={!!tab.prefetch}
+          count={tab.path === "alerts" ? incident?.alerts_count : undefined}
         >
           {tab.label}
         </TabNavigationLink>

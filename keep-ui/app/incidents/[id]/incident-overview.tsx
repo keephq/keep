@@ -3,7 +3,6 @@
 import type { IncidentDto } from "@/entities/incidents/model";
 import React from "react";
 import { useIncident } from "@/utils/hooks/useIncidents";
-import { format } from "date-fns";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { IoChevronDown } from "react-icons/io5";
@@ -14,29 +13,14 @@ import { Badge, Callout } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import TimeAgo from "react-timeago";
+import { DateTimeField, FieldHeader } from "@/shared/ui";
+import { SameIncidentField } from "@/features/same-incidents-in-the-past/ui";
+import { FollowingIncidents } from "@/features/same-incidents-in-the-past/ui";
+import { StatusIcon } from "@/entities/incidents/ui/statuses";
 
 interface Props {
   incident: IncidentDto;
 }
-
-const FieldHeader = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-sm text-gray-500 font-semibold">{children}</h3>
-);
-
-const TimeField = ({ date }: { date: Date }) => {
-  const formatString = "dd MMM yy, HH:mm.ss 'UTC'";
-  return (
-    <div>
-      <p className="">
-        <TimeAgo date={date + "Z"} />
-      </p>
-      <p className="text-gray-500 text-xs">
-        {format(new Date(date), formatString)}
-      </p>
-    </div>
-  );
-};
 
 function Summary({
   title,
@@ -77,18 +61,17 @@ function Summary({
   }
 
   return (
-    <div className={className}>
-      <FieldHeader>{title}</FieldHeader>
-      {/*TODO: suggest generate summary if it's empty*/}
-      {summary ? <div>{formatedSummary}</div> : <p>No summary yet</p>}
-    </div>
+    //TODO: suggest generate summary if it's empty
+    summary ? <div>{formatedSummary}</div> : <p>No summary yet</p>
   );
 }
 
 function MergedCallout({
   merged_into_incident_id,
+  className,
 }: {
   merged_into_incident_id: string;
+  className?: string;
 }) {
   const { data: merged_incident } = useIncident(merged_into_incident_id);
 
@@ -97,14 +80,28 @@ function MergedCallout({
   }
 
   return (
-    <Callout title="This incident was merged" color="purple" className="mb-2">
-      <p>
-        This incident was merged into{" "}
-        <Link href={`/incidents/${merged_incident?.id}`}>
-          {getIncidentName(merged_incident)}
-        </Link>
-      </p>
-    </Callout>
+    <Callout
+      // @ts-ignore
+      title={
+        <div className="flex items-center gap-2">
+          <p>This incident was merged into</p>
+          <Link
+            icon={() => (
+              <StatusIcon
+                size="sm"
+                className="!p-0"
+                status={merged_incident.status}
+              />
+            )}
+            href={`/incidents/${merged_incident?.id}`}
+          >
+            {getIncidentName(merged_incident)}
+          </Link>
+        </div>
+      }
+      color="purple"
+      className={className}
+    />
   );
 }
 
@@ -122,33 +119,45 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
 
   return (
     // Adding padding bottom to visually separate from the tabs
-    <div className="flex gap-6 items-start w-full pb-4">
+    <div className="flex gap-6 items-start w-full pb-4 text-tremor-default">
       <div className="basis-2/3 grow">
-        <div className="max-w-3xl flex flex-col gap-4">
-          {incident.merged_into_incident_id && (
-            <MergedCallout
-              merged_into_incident_id={incident.merged_into_incident_id}
-            />
-          )}
-          <Summary title="Summary" summary={summary} />
-          {incident.user_summary && incident.generated_summary ? (
-            <Summary
-              title="AI version"
-              summary={incident.generated_summary}
-              collapsable={true}
-            />
-          ) : null}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="max-w-2xl">
+            <FieldHeader>Summary</FieldHeader>
+            <Summary title="Summary" summary={summary} />
+            {incident.user_summary && incident.generated_summary ? (
+              <Summary
+                title="AI version"
+                summary={incident.generated_summary}
+                collapsable={true}
+              />
+            ) : null}
+            {incident.merged_into_incident_id && (
+              <MergedCallout
+                className="inline-block mt-2"
+                merged_into_incident_id={incident.merged_into_incident_id}
+              />
+            )}
+          </div>
           <div className="flex flex-col gap-2">
             <FieldHeader>Involved services</FieldHeader>
-            <div className="flex flex-wrap gap-1">
-              {notNullServices.length > 0
-                ? notNullServices.map((service) => (
-                    <Badge key={service} size="sm">
-                      {service}
-                    </Badge>
-                  ))
-                : "No services involved"}
-            </div>
+            {notNullServices.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {notNullServices.map((service) => (
+                  <Badge key={service} size="sm">
+                    {service}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              "No services involved"
+            )}
+          </div>
+          <div>
+            <SameIncidentField incident={incident} />
+          </div>
+          <div>
+            <FollowingIncidents incident={incident} />
           </div>
         </div>
       </div>
@@ -163,13 +172,13 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
         {!!incident.last_seen_time && (
           <div>
             <FieldHeader>Last seen at</FieldHeader>
-            <TimeField date={incident.last_seen_time} />
+            <DateTimeField date={incident.last_seen_time} />
           </div>
         )}
         {!!incident.start_time && (
           <div>
             <FieldHeader>Started at</FieldHeader>
-            <TimeField date={incident.start_time} />
+            <DateTimeField date={incident.start_time} />
           </div>
         )}
         <div>
