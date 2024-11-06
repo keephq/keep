@@ -91,8 +91,7 @@ export const useAlerts = () => {
   const useMultipleFingerprintsAlertAudit = (
     fingerprints: string[] | undefined,
     options: SWRConfiguration = {
-      revalidateOnFocus: true,
-      revalidateOnMount: false,
+      revalidateOnFocus: false,
     }
   ) => {
     return useSWR<AuditEvent[]>(

@@ -11,7 +11,7 @@ export function EmptyStateCard({
   title: string;
   description: string;
   buttonText: string;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   className?: string;
 }) {
   return (

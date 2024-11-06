@@ -28,8 +28,7 @@ import { AlertDto } from "./models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
 import classnames from "classnames";
-import { FaArrowUp, FaArrowDown, FaArrowRight } from 'react-icons/fa';
-
+import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -63,67 +62,69 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
-
 
   return (
     <TableHeaderCell
-  className={`relative ${
-    column.getIsPinned() === false ? "hover:bg-slate-100" : ""
-  } group`}
-  style={dragStyle}
-  ref={setNodeRef}
->
-  <div className="flex items-center" {...listeners}> {/* Flex container */}
-    {column.getCanSort() && ( // Sorting icon to the left
-      <>
-        <span
-          className="cursor-pointer" // Ensures clickability of the icon
-          onClick={(event) => {
-            console.log("clicked for sorting");
-            event.stopPropagation();
-            const toggleSorting = header.column.getToggleSortingHandler();
-            if (toggleSorting) toggleSorting(event);
-          }}
-          title={
-            column.getNextSortingOrder() === "asc"
-              ? "Sort ascending"
-              : column.getNextSortingOrder() === "desc"
-              ? "Sort descending"
-              : "Clear sort"
-          }
-        >
-          {/* Icon logic */}
-          {column.getIsSorted() ? (
-            column.getIsSorted() === "asc" ? <FaArrowDown /> : <FaArrowUp />
-          ) : (
-            <FaArrowRight />
+      className={`relative ${
+        column.getIsPinned() === false ? "hover:bg-slate-100" : ""
+      } group`}
+      style={dragStyle}
+      ref={setNodeRef}
+    >
+      <div className="flex items-center" {...listeners}>
+        {/* Flex container */}
+        {column.getCanSort() && ( // Sorting icon to the left
+          <>
+            <span
+              className="cursor-pointer" // Ensures clickability of the icon
+              onClick={(event) => {
+                console.log("clicked for sorting");
+                event.stopPropagation();
+                const toggleSorting = header.column.getToggleSortingHandler();
+                if (toggleSorting) toggleSorting(event);
+              }}
+              title={
+                column.getNextSortingOrder() === "asc"
+                  ? "Sort ascending"
+                  : column.getNextSortingOrder() === "desc"
+                    ? "Sort descending"
+                    : "Clear sort"
+              }
+            >
+              {/* Icon logic */}
+              {column.getIsSorted() ? (
+                column.getIsSorted() === "asc" ? (
+                  <FaArrowDown />
+                ) : (
+                  <FaArrowUp />
+                )
+              ) : (
+                <FaArrowRight />
+              )}
+            </span>
+            {/* Custom styled vertical line separator */}
+            <div className="w-px h-5 mx-2 bg-gray-400"></div>
+          </>
+        )}
+        {children} {/* Column name or text */}
+      </div>
+
+      {column.getIsPinned() === false && (
+        <div
+          className={classnames(
+            "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
+            {
+              "hover:w-2 bg-blue-100": column.getIsResizing() === false,
+              "w-2 bg-blue-400": column.getIsResizing(),
+            }
           )}
-        </span>
-        {/* Custom styled vertical line separator */}
-        <div className="w-px h-5 mx-2 bg-gray-400"></div>
-      </>
-    )}
-
-    {children} {/* Column name or text */}
-  </div>
-
-  {column.getIsPinned() === false && (
-    <div
-      className={classnames(
-        "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
-        {
-          "hover:w-2 bg-blue-100": column.getIsResizing() === false,
-          "w-2 bg-blue-400": column.getIsResizing(),
-        }
+          onMouseDown={getResizeHandler()}
+        />
       )}
-      onMouseDown={getResizeHandler()}
-    />
-  )}
-</TableHeaderCell>
-
+    </TableHeaderCell>
   );
 };
 interface Props {
@@ -137,15 +138,13 @@ export default function AlertsTableHeaders({
   table,
   presetName,
 }: Props) {
-
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
     getColumnsIds(columns)
   );
 
-
   const sensors = useSensors(
-      useSensor(PointerSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
         delay: 250, // Adjust delay to prevent drag on quick clicks
         tolerance: 5, // Adjust tolerance based on needs
@@ -198,7 +197,6 @@ export default function AlertsTableHeaders({
                   <DraggableHeaderCell
                     key={header.column.columnDef.id}
                     header={header}
-
                   >
                     {header.isPlaceholder ? null : (
                       <div>

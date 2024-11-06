@@ -15,7 +15,9 @@ type LinkWithIconProps = {
   onDelete?: () => void;
   className?: string;
   testId?: string;
-} & LinkProps & AnchorHTMLAttributes<HTMLAnchorElement>;
+  isExact?: boolean;
+} & LinkProps &
+  AnchorHTMLAttributes<HTMLAnchorElement>;
 
 export const LinkWithIcon = ({
   icon,
@@ -27,16 +29,20 @@ export const LinkWithIcon = ({
   onDelete,
   className,
   testId,
+  isExact = false,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
-  const isActive = decodeURIComponent(pathname || "") === restOfLinkProps.href?.toString();
+  const isActive = isExact
+    ? decodeURIComponent(pathname || "") === restOfLinkProps.href?.toString()
+    : decodeURIComponent(pathname || "").startsWith(
+        restOfLinkProps.href?.toString() || ""
+      );
 
   const iconClasses = classNames("group-hover:text-orange-400", {
     "text-orange-400": isActive,
     "text-black": !isActive,
-
   });
 
   const textClasses = classNames("truncate", {
@@ -51,7 +57,7 @@ export const LinkWithIcon = ({
     if (restOfLinkProps.onClick) {
       restOfLinkProps.onClick(e);
     }
-  }
+  };
 
   return (
     <div
@@ -78,11 +84,7 @@ export const LinkWithIcon = ({
       </Link>
       <div className="flex items-center">
         {count !== undefined && count !== null && (
-          <Badge
-            size="xs"
-            color="orange"
-            data-testid={`${testId}-badge`}
-          >
+          <Badge size="xs" color="orange" data-testid={`${testId}-badge`}>
             {count}
           </Badge>
         )}
@@ -95,7 +97,7 @@ export const LinkWithIcon = ({
           <button
             onClick={onDelete}
             className={`flex items-center text-slate-400 hover:text-red-500 p-0 ${
-              isHovered ? 'ml-2' : ''
+              isHovered ? "ml-2" : ""
             }`}
           >
             <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
