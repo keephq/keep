@@ -3,7 +3,7 @@ import {
   IncidentsMetaDto,
   PaginatedIncidentAlertsDto,
   PaginatedIncidentsDto,
-} from "../../app/incidents/models";
+} from "@/entities/incidents/model";
 import { PaginatedWorkflowExecutionDto } from "app/workflows/builder/types";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";

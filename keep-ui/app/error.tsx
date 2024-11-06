@@ -63,9 +63,8 @@ export default function ErrorComponent({
           }}
           color="orange"
           variant="secondary"
-          className="mt-4 border border-orange-500 text-orange-500"
         >
-          <Text>Try Again!</Text>
+          Try again
         </Button>
       )}
     </div>
