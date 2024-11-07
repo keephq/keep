@@ -17,18 +17,16 @@ import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPol
 import { FrigadeProvider } from "./frigade-provider";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
-import { getConfig } from "@/pages/api/config";
 import { ConfigProvider } from "./config-provider";
+import { getConfig } from "@/utils/server/getConfig";
 
 type RootLayoutProps = {
   children: ReactNode;
 };
 
 export default async function RootLayout({ children }: RootLayoutProps) {
-  const [config, session] = await Promise.all([
-    getConfig(),
-    getServerSession(authOptions),
-  ]);
+  const config = getConfig();
+  const session = await getServerSession(authOptions);
   return (
     <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
