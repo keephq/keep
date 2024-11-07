@@ -1,4 +1,4 @@
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useApiUrl } from "./useConfig";
 import { SWRConfiguration } from "swr";
 import { ProvidersResponse } from "app/providers/providers";

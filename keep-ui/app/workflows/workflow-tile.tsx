@@ -1,6 +1,6 @@
 "use client";
 
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { Workflow, Filter } from "./models";
 import { useApiUrl } from "utils/hooks/useConfig";
 import Image from "next/image";

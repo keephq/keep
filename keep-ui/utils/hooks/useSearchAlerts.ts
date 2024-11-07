@@ -1,6 +1,6 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { AlertDto } from "app/alerts/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 import { useDebouncedValue } from "./useDebouncedValue";

@@ -21,7 +21,7 @@ import {
 import { useRoles } from "utils/hooks/useRoles";
 import { useGroups } from "utils/hooks/useGroups";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { User, Group } from "app/settings/models";
 import { AuthenticationType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
@@ -366,8 +366,8 @@ const UsersSidebar = ({
                   {isSubmitting
                     ? "Saving..."
                     : isNewUser
-                      ? "Create User"
-                      : "Save"}
+                    ? "Create User"
+                    : "Save"}
                 </Button>
               </div>
             </form>

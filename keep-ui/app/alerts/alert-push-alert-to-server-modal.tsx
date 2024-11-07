@@ -8,7 +8,7 @@ import {
   Callout,
 } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useProviders } from "utils/hooks/useProviders";
 import ImageWithFallback from "@/components/ImageWithFallback";

@@ -4,7 +4,7 @@ import { Button, TextInput, Text } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "./../providers/providers";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";

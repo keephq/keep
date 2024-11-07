@@ -17,7 +17,7 @@ import {
   TabPanels,
   TabPanel,
 } from "@tremor/react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import {
   ChangeEvent,
   FormEvent,

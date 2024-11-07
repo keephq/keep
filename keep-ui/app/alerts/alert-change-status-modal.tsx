@@ -9,7 +9,7 @@ import Select, {
 import { useState } from "react";
 import { AlertDto, Status } from "./models";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,

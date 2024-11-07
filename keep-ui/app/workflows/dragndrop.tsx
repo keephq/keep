@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 
 const FileUpload: React.FC = () => {
   const apiUrl = useApiUrl();

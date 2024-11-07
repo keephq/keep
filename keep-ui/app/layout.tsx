@@ -15,8 +15,6 @@ import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
 import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPollingContext";
 import { FrigadeProvider } from "./frigade-provider";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import { ConfigProvider } from "./config-provider";
 import { getConfig } from "@/utils/server/getConfig";
 
@@ -26,11 +24,10 @@ type RootLayoutProps = {
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const config = getConfig();
-  const session = await getServerSession(authOptions);
   return (
     <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
-        <NextAuthProvider session={session}>
+        <NextAuthProvider>
           <ConfigProvider config={config}>
             <TopologyPollingContextProvider>
               <FrigadeProvider>

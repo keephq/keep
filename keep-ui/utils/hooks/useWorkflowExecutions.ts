@@ -3,7 +3,7 @@ import {
   PaginatedWorkflowExecutionDto,
   WorkflowExecution,
 } from "app/workflows/builder/types";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";

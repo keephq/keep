@@ -8,7 +8,7 @@ import {
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { fetcher } from "../../utils/fetcher";
 import { Workflow, MockWorkflow } from "./models";
 import { useApiUrl } from "utils/hooks/useConfig";

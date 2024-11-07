@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 

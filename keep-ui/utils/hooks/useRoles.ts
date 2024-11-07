@@ -1,5 +1,5 @@
 import { Role } from "app/settings/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
 import { useApiUrl } from "./useConfig";

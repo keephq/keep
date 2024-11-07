@@ -9,7 +9,7 @@ import {
   ArrowUpOnSquareIcon,
   PlayIcon,
 } from "@heroicons/react/20/solid";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { BuilderCard } from "./builder-card";
 import Loading from "../../loading";
 

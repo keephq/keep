@@ -2,7 +2,7 @@ import Modal from "@/components/ui/Modal";
 import { Button, Divider, Title } from "@tremor/react";
 import Select from "@/components/ui/Select";
 import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";

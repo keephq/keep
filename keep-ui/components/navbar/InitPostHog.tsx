@@ -3,7 +3,7 @@
 "use client";
 import posthog from "posthog-js";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { NoAuthUserEmail } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
 

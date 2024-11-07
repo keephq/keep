@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
 
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import Link from "next/link";
 import { ProviderMethod } from "app/providers/providers";
