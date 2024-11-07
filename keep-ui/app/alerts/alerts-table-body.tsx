@@ -1,4 +1,4 @@
-import { TableBody, TableRow, TableCell, Card, Button } from "@tremor/react";
+import { TableBody, TableRow, TableCell } from "@tremor/react";
 import { AlertDto } from "./models";
 import "./alerts-table-body.css";
 import Skeleton from "react-loading-skeleton";
@@ -69,6 +69,24 @@ export function AlertsTableBody({
 
     onRowClick(alert);
   };
+
+  if (showSkeleton) {
+    return (
+      <TableBody>
+        {Array(20)
+          .fill("")
+          .map((index, rowIndex) => (
+            <TableRow key={`row-${index}-${rowIndex}`}>
+              {table.getAllColumns().map((c, cellIndex) => (
+                <TableCell key={`cell-${c.id}-${cellIndex}`}>
+                  <Skeleton />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+      </TableBody>
+    );
+  }
 
   return (
     <TableBody>
