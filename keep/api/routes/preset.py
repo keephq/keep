@@ -1,16 +1,13 @@
-import json
 import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
     HTTPException,
-    Query,
     Request,
     Response,
 )
@@ -34,10 +31,9 @@ from keep.api.models.db.preset import (
     Tag,
     TagDto,
 )
-from keep.api.models.time_stamp import TimeStampFilter
+from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.api.tasks.process_event_task import process_event
 from keep.api.tasks.process_topology_task import process_topology
-from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
@@ -63,12 +59,9 @@ def pull_data_from_providers(
         logger.debug("Pull data from providers is disabled")
         return
 
-    context_manager = ContextManager(
-        tenant_id=tenant_id,
-        workflow_id=None,
+    providers = ProvidersFactory.get_installed_providers(
+        tenant_id=tenant_id, include_details=False
     )
-
-    providers = ProvidersFactory.get_installed_providers(tenant_id=tenant_id)
 
     logger.info(
         "Pulling data from providers",
@@ -113,11 +106,10 @@ def pull_data_from_providers(
             # Even if we failed at processing some event, lets save the last pull time to not iterate this process over and over again.
             update_provider_last_pull_time(tenant_id=tenant_id, provider_id=provider.id)
 
-            provider_class = ProvidersFactory.get_provider(
-                context_manager=context_manager,
+            provider_class = ProvidersFactory.get_installed_provider(
+                tenant_id=tenant_id,
                 provider_id=provider.id,
                 provider_type=provider.type,
-                provider_config=provider.details,
             )
             sorted_provider_alerts_by_fingerprint = (
                 provider_class.get_alerts_by_fingerprint(tenant_id=tenant_id)
@@ -175,19 +167,6 @@ def pull_data_from_providers(
             "providers_len": len(providers),
         },
     )
-
-
-# Function to handle the time_stamp query parameter and parse it
-def _get_time_stamp_filter(time_stamp: Optional[str] = Query(None)) -> TimeStampFilter:
-    if time_stamp:
-        try:
-            # Parse the JSON string
-            time_stamp_dict = json.loads(time_stamp)
-            # Return the TimeStampFilter object, Pydantic will map 'from' -> lower_timestamp and 'to' -> upper_timestamp
-            return TimeStampFilter(**time_stamp_dict)
-        except (json.JSONDecodeError, TypeError):
-            raise HTTPException(status_code=400, detail="Invalid time_stamp format")
-    return TimeStampFilter()
 
 
 @router.get(

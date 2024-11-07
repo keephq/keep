@@ -3,7 +3,6 @@ import logging
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from functools import partial
 from unittest.mock import patch
 
 import pytest
@@ -847,11 +846,12 @@ def test_workflow_incident_triggers(
     ]
 
 
-
 logs_counter = {}
+
 
 def count_logs(instance, original_method):
     log_levels = logging.getLevelNamesMapping()
+
     def wrapper(*args, **kwargs):
         level_name = original_method.__name__.upper()
         max_level = instance.getEffectiveLevel()
@@ -865,8 +865,13 @@ def count_logs(instance, original_method):
 
     return wrapper
 
-def fake_workflow_adapter(logger, context_manager, tenant_id, workflow_id, workflow_execution_id):
-    adapter = WorkflowLoggerAdapter(logger, context_manager, tenant_id, workflow_id, workflow_execution_id)
+
+def fake_workflow_adapter(
+    logger, context_manager, tenant_id, workflow_id, workflow_execution_id
+):
+    adapter = WorkflowLoggerAdapter(
+        logger, context_manager, tenant_id, workflow_id, workflow_execution_id
+    )
 
     adapter.info = count_logs(adapter, adapter.info)
     adapter.debug = count_logs(adapter, adapter.debug)
@@ -893,9 +898,10 @@ def test_workflow_execution_logs(
     alert_statuses,
     expected_tier,
 ):
-    with patch('keep.contextmanager.contextmanager.WorkflowLoggerAdapter',
-               side_effect=fake_workflow_adapter),\
-            patch('keep.api.logging.RUNNING_IN_CLOUD_RUN', value=True):
+    with patch(
+        "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
+        side_effect=fake_workflow_adapter,
+    ), patch("keep.api.logging.RUNNING_IN_CLOUD_RUN", value=True):
         base_time = datetime.now(tz=pytz.utc)
 
         # Create alerts with specified statuses and timestamps
@@ -969,9 +975,10 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
     logs_level_counts = {}
     for level in ["INFO", "DEBUG"]:
         monkeypatch.setenv("KEEP_CONSOLE_PROVIDER_LOG_LEVEL", level)
-        with patch('keep.contextmanager.contextmanager.WorkflowLoggerAdapter',
-                   side_effect=fake_workflow_adapter), \
-            patch('keep.api.logging.RUNNING_IN_CLOUD_RUN', value=True):
+        with patch(
+            "keep.contextmanager.contextmanager.WorkflowLoggerAdapter",
+            side_effect=fake_workflow_adapter,
+        ), patch("keep.api.logging.RUNNING_IN_CLOUD_RUN", value=True):
             base_time = datetime.now(tz=pytz.utc)
 
             # Create alerts with specified statuses and timestamps
@@ -980,7 +987,9 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
                 alert_status = (
                     AlertStatus.FIRING if status == "firing" else AlertStatus.RESOLVED
                 )
-                create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
+                create_alert(
+                    "fp1", alert_status, base_time - timedelta(minutes=time_diff)
+                )
 
             time.sleep(1)
             # Create the current alert
@@ -1014,7 +1023,9 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
             assert workflow_execution is not None
             assert workflow_execution.status == "success"
 
-            logs_counts[workflow_execution.id] = logs_counter[workflow_execution.id]["all"]
+            logs_counts[workflow_execution.id] = logs_counter[workflow_execution.id][
+                "all"
+            ]
             logs_level_counts[level] = logs_counter[workflow_execution.id]["all"]
 
     for workflow_execution_id in logs_counts:

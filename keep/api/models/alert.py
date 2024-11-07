@@ -4,7 +4,7 @@ import json
 import logging
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import UUID
 
 import pytz
@@ -12,9 +12,10 @@ from pydantic import (
     AnyHttpUrl,
     BaseModel,
     Extra,
+    Field,
     PrivateAttr,
     root_validator,
-    validator
+    validator,
 )
 from sqlalchemy import desc
 from sqlmodel import col
@@ -310,20 +311,24 @@ class AlertDto(BaseModel):
             "examples": [
                 {
                     "id": "1234",
-                    "name": "Alert name",
+                    "name": "Pod 'api-service-production' lacks memory",
                     "status": "firing",
                     "lastReceived": "2021-01-01T00:00:00.000Z",
                     "environment": "production",
                     "duplicateReason": None,
                     "service": "backend",
-                    "source": ["keep"],
-                    "message": "Keep: Alert message",
-                    "description": "Keep: Alert description",
+                    "source": ["prometheus"],
+                    "message": "The pod 'api-service-production' lacks memory causing high error rate",
+                    "description": "Due to the lack of memory, the pod 'api-service-production' is experiencing high error rate",
                     "severity": "critical",
                     "pushed": True,
-                    "event_id": "1234",
                     "url": "https://www.keephq.dev?alertId=1234",
-                    "labels": {"key": "value"},
+                    "labels": {
+                        "pod": "api-service-production",
+                        "region": "us-east-1",
+                        "cpu": "88",
+                        "memory": "100Mi",
+                    },
                     "ticket_url": "https://www.keephq.dev?enrichedTicketId=456",
                     "fingerprint": "1234",
                 }
@@ -419,6 +424,12 @@ class IncidentDto(IncidentDtoIn):
     merged_at: datetime.datetime | None
 
     _tenant_id: str = PrivateAttr()
+    _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if "alerts" in data:
+            self._alerts = data["alerts"]
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -441,6 +452,9 @@ class IncidentDto(IncidentDtoIn):
 
     @property
     def alerts(self) -> List["AlertDto"]:
+        if self._alerts is not None:
+            return self._alerts
+
         from keep.api.core.db import get_incident_alerts_by_incident_id
         from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
@@ -578,3 +592,38 @@ class IncidentListFilterParamsDto(BaseModel):
     assignees: List[str]
     services: List[str]
     sources: List[str]
+
+
+class IncidentCandidate(BaseModel):
+    incident_name: str
+    alerts: List[int] = Field(
+        description="List of alert numbers (1-based index) included in this incident"
+    )
+    reasoning: str
+    severity: str = Field(
+        description="Assessed severity level",
+        enum=["Low", "Medium", "High", "Critical"],
+    )
+    recommended_actions: List[str]
+    confidence_score: float = Field(
+        description="Confidence score of the incident clustering (0.0 to 1.0)"
+    )
+    confidence_explanation: str = Field(
+        description="Explanation of how the confidence score was calculated"
+    )
+
+
+class IncidentClustering(BaseModel):
+    incidents: List[IncidentCandidate]
+
+
+class IncidentCommit(BaseModel):
+    accepted: bool
+    original_suggestion: dict
+    changes: dict = Field(default_factory=dict)
+    incident: IncidentDto
+
+
+class IncidentsClusteringSuggestion(BaseModel):
+    incident_suggestion: list[IncidentDto]
+    suggestion_id: str

@@ -1,13 +1,41 @@
-"""
-PrometheusProvider is a class that provides a way to read data from Prometheus.
-"""
-
+import dataclasses
 import datetime
+import json
+import logging
+
+import google.api_core
+import google.api_core.exceptions
+import google.cloud.logging
+import pydantic
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
-from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.providers_factory import ProvidersFactory
+
+
+class LogEntry(pydantic.BaseModel):
+    timestamp: datetime.datetime
+    severity: str
+    payload: dict | None
+    http_request: dict | None
+    payload_exists: bool = False
+    http_request_exists: bool = False
+
+
+@pydantic.dataclasses.dataclass
+class GcpmonitoringProviderAuthConfig:
+    service_account_json: str = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "A service account JSON with logging viewer role",
+            "sensitive": True,
+            "type": "file",
+            "name": "service_account_json",
+            "file_type": ".json",  # this is used to filter the file type in the UI
+        }
+    )
 
 
 class GcpmonitoringProvider(BaseProvider):
@@ -49,18 +77,94 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
 
     PROVIDER_DISPLAY_NAME = "GCP Monitoring"
     FINGERPRINT_FIELDS = ["incident_id"]
+    PROVIDER_SCOPES = [
+        ProviderScope(
+            name="roles/logs.viewer",
+            description="Read access to GCP logging",
+            mandatory=True,
+            alias="Logs Viewer",
+        ),
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+        self._service_account_data = json.loads(
+            self.authentication_config.service_account_json
+        )
+        self._client = None
 
     def validate_config(self):
-        """
-        Validates required configuration for Prometheus's provider.
-        """
-        # no config
+        self.authentication_config = GcpmonitoringProviderAuthConfig(
+            **self.config.authentication
+        )
+
+    def dispose(self):
         pass
+
+    def validate_scopes(self) -> dict[str, bool | str]:
+        scopes = {}
+        # try initializing the client to validate the scopes
+        try:
+            self.client.list_entries(max_results=1)
+            scopes["roles/logs.viewer"] = True
+        except google.api_core.exceptions.PermissionDenied:
+            scopes["roles/logs.viewer"] = (
+                "Permission denied, make sure IAM permissions are set correctly"
+            )
+        except Exception as e:
+            scopes["roles/logs.viewer"] = str(e)
+        return scopes
+
+    @property
+    def client(self) -> google.cloud.logging.Client:
+        if self._client is None:
+            self._client = self.__generate_client()
+        return self._client
+
+    def __generate_client(self) -> google.cloud.logging.Client:
+        if not self._client:
+            self._client = google.cloud.logging.Client.from_service_account_info(
+                self._service_account_data
+            )
+        return self._client
+
+    def _query(
+        self, filter: str, timedelta_in_days=1, page_size=1000, raw="true", **kwargs
+    ):
+        raw = raw == "true"
+        self.logger.info(
+            f"Querying GCP Monitoring with filter: {filter} and timedelta_in_days: {timedelta_in_days}"
+        )
+        if "timestamp" not in filter:
+            start_time = (
+                datetime.datetime.now(tz=datetime.timezone.utc)
+                - datetime.timedelta(days=timedelta_in_days)
+            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            filter = f'{filter} timestamp>="{start_time}"'
+        entries_iterator = self.client.list_entries(filter_=filter, page_size=page_size)
+        entries = []
+        for entry in entries_iterator:
+            if raw:
+                entries.append(entry)
+            else:
+                try:
+                    log_entry = LogEntry(
+                        timestamp=entry.timestamp,
+                        severity=entry.severity,
+                        payload=entry.payload,
+                        http_request=entry.http_request,
+                        payload_exists=entry.payload is not None,
+                        http_request_exists=entry.http_request is not None,
+                    )
+                    entries.append(log_entry)
+                except Exception:
+                    self.logger.error("Error parsing log entry")
+                    continue
+
+        self.logger.info(f"Found {len(entries)} entries")
+        return entries
 
     @staticmethod
     def _format_alert(
@@ -126,4 +230,27 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
 
 
 if __name__ == "__main__":
-    pass
+    logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
+    context_manager = ContextManager(
+        tenant_id="singletenant",
+        workflow_id="test",
+    )
+
+    # Get these from a secure source or environment variables
+    with open("sa.json") as f:
+        service_account_data = f.read()
+
+    config = {
+        "authentication": {
+            "service_account_json": service_account_data,
+        }
+    }
+
+    provider = ProvidersFactory.get_provider(
+        context_manager,
+        provider_id="gcp-demo",
+        provider_type="gcpmonitoring",
+        provider_config=config,
+    )
+    entries = provider._query(filter='resource.type = "cloud_run_revision"')
+    print(entries)

@@ -32,6 +32,16 @@ export interface IncidentDto {
   merged_at: Date;
 }
 
+export interface IncidentCandidateDto {
+  id: string;
+  name: string;
+  description: string;
+  severity: string;
+  confidence_score: number;
+  confidence_explanation: string;
+  alerts: AlertDto[];
+}
+
 export interface PaginatedIncidentsDto {
   limit: number;
   offset: number;
