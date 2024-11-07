@@ -103,3 +103,21 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         except Exception:
             raise HTTPException(status_code=401, detail="Permission check failed")
         return allowed
+
+    def authorize_resource(
+        self, resource_type, resource_id, authenticated_entity: AuthenticatedEntity
+    ) -> None:
+        # use Keycloak's UMA to authorize
+        try:
+            permission = UMAPermission(
+                resource=resource_id,
+            )
+            allowed = self.keycloak_uma.permissions_check(
+                token=authenticated_entity.token, permissions=[permission]
+            )
+            if not allowed:
+                raise HTTPException(status_code=401, detail="Permission check failed")
+        # secure fallback
+        except Exception:
+            raise HTTPException(status_code=401, detail="Permission check failed")
+        return allowed

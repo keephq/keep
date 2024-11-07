@@ -5,13 +5,14 @@ import { Title, Button, Subtitle } from "@tremor/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-export default function NotFound() {
+export default function NotAuthorized() {
   const router = useRouter();
   return (
     <div className="flex flex-col items-center justify-center h-full">
-      <Title>404 Page not found</Title>
+      <Title>403 Not Authorized</Title>
       <Subtitle>
-        If you believe this is an error, please contact us on{" "}
+        You do not have permission to access this page. If you believe this is
+        an error, please contact us on{" "}
         <Link
           href="https://slack.keephq.dev/"
           target="_blank"

@@ -391,7 +391,7 @@ def update_preset(
 
 @router.get(
     "/{preset_name}/alerts",
-    description="Get a preset for tenant",
+    description="Get the alerts of a preset",
 )
 def get_preset_alerts(
     request: Request,
@@ -429,6 +429,19 @@ def get_preset_alerts(
         preset_dto = PresetDto(**preset.to_dict())
     else:
         preset_dto = PresetDto(**preset.dict())
+
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="preset",
+        authenticated_entity=authenticated_entity,
+    )
+    if allowed_preset_ids and str(preset_dto.id) not in allowed_preset_ids:
+        raise HTTPException(403, "Not authorized to access this preset")
+
     search_engine = SearchEngine(tenant_id=tenant_id)
     preset_alerts = search_engine.search_alerts(preset_dto.query)
     logger.info("Got preset alerts", extra={"preset_name": preset_name})
