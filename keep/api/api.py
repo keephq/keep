@@ -1,6 +1,6 @@
-import os
 import asyncio
 import logging
+import os
 from importlib import metadata
 
 import requests
@@ -27,6 +27,7 @@ from keep.api.consts import (
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
+from keep.api.middlewares import LoggingMiddleware
 from keep.api.routes import (
     actions,
     ai,
@@ -65,8 +66,6 @@ from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
 
-from keep.api.middlewares import LoggingMiddleware
-
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
@@ -99,8 +98,19 @@ def get_app(
     auth_type: IdentityManagerTypes = IdentityManagerTypes.NOAUTH.value,
 ) -> FastAPI:
     if not os.environ.get("KEEP_API_URL", None):
+        logger.info(
+            "KEEP_API_URL is not set, setting it to default",
+            extra={"keep_api_url": f"http://{HOST}:{PORT}"},
+        )
         os.environ["KEEP_API_URL"] = f"http://{HOST}:{PORT}"
-        logger.info(f"Starting Keep with {os.environ['KEEP_API_URL']} as URL")
+
+    logger.info(
+        f"Starting Keep with {os.environ['KEEP_API_URL']} as URL and version {KEEP_VERSION}",
+        extra={
+            "keep_version": KEEP_VERSION,
+            "keep_api_url": os.environ.get("KEEP_API_URL"),
+        },
+    )
 
     app = FastAPI(
         title="Keep API",
