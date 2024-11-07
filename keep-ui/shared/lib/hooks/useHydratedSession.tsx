@@ -19,7 +19,7 @@ export function useHydratedSession() {
 
   // On first render, return hydrated session if available
   if (
-    !isHydrated &&
+    (!isHydrated || session.status === "loading") &&
     typeof window !== "undefined" &&
     window.__NEXT_AUTH_SESSION__
   ) {
