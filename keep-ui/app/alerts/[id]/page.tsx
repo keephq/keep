@@ -1,4 +1,4 @@
-import AlertsPage from "../alerts.client";
+import Alerts from "../alerts";
 
 type PageProps = {
   params: { id: string };
@@ -6,7 +6,7 @@ type PageProps = {
 };
 
 export default function Page({ params }: PageProps) {
-  return <AlertsPage presetName={params.id} />;
+  return <Alerts presetName={params.id} />;
 }
 
 export const metadata = {
