@@ -27,6 +27,7 @@ import SSOTab from "./auth/sso-tab";
 import WebhookSettings from "./webhook-settings";
 import SmtpSettings from "./smtp-settings";
 import PermissionsTab from "./auth/permissions-tab";
+import { PermissionsTable } from "./auth/permissions-table";
 
 import { UsersTable } from "./auth/users-table";
 import { GroupsTable } from "./auth/groups-table";
@@ -78,10 +79,12 @@ export default function SettingsPage() {
         ? 1
         : newUserSubTab === "roles"
         ? 2
-        : newUserSubTab === "api-keys"
+        : newUserSubTab === "permissions"
         ? 3
-        : newUserSubTab === "sso"
+        : newUserSubTab === "api-keys"
         ? 4
+        : newUserSubTab === "sso"
+        ? 5
         : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
@@ -258,6 +261,35 @@ export default function SettingsPage() {
             </EmptyStateTable>
           );
         }
+      case "permissions":
+        if (rolesAllowed) {
+          return <PermissionsTab accessToken={session?.accessToken!} />;
+        } else {
+          const mockPresets = [
+            { id: "1", name: "Preset 1", permissions: ["read:users"] },
+            {
+              id: "2",
+              name: "Preset 2",
+              permissions: ["read:users", "write:users"],
+            },
+          ];
+          return (
+            <EmptyStateTable
+              icon={MdOutlineSecurity}
+              message={`Permissions management is disabled with. See documentation on how to enabled it.`}
+              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+            >
+              <PermissionsTable
+                presets={mockPresets}
+                selectedPermissions={{}}
+                onDeletePermission={() => {}}
+                isDisabled={true}
+                onRowClick={() => {}}
+                displayPermissions={[]}
+              />
+            </EmptyStateTable>
+          );
+        }
       case "api-keys":
         if (apiKeysAllowed) {
           return <APIKeysTab accessToken={session?.accessToken!} />;
@@ -350,6 +382,12 @@ export default function SettingsPage() {
                   Roles
                 </Tab>
                 <Tab
+                  icon={LockClosedIcon}
+                  onClick={() => handleUserSubTabChange("permissions")}
+                >
+                  Permissions
+                </Tab>
+                <Tab
                   icon={KeyIcon}
                   onClick={() => handleUserSubTabChange("api-keys")}
                 >
@@ -371,6 +409,9 @@ export default function SettingsPage() {
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   {renderUserSubTabContent("roles")}
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  {renderUserSubTabContent("permissions")}
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   {renderUserSubTabContent("api-keys")}

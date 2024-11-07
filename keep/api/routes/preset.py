@@ -187,6 +187,7 @@ def get_presets(
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
     allowed_preset_ids = identity_manager.get_user_permission_on_resource_type(
         resource_type="preset",
         authenticated_entity=authenticated_entity,
@@ -198,10 +199,11 @@ def get_presets(
         preset_ids=allowed_preset_ids,
     )
     presets_dto = [PresetDto(**preset.to_dict()) for preset in presets]
-    # add static presets
-    presets_dto.append(STATIC_PRESETS["feed"])
-    presets_dto.append(STATIC_PRESETS["dismissed"])
-    presets_dto.append(STATIC_PRESETS["without-incident"])
+    # add static presets (unless allowed_preset_ids is set)
+    if not allowed_preset_ids:
+        presets_dto.append(STATIC_PRESETS["feed"])
+        presets_dto.append(STATIC_PRESETS["dismissed"])
+        presets_dto.append(STATIC_PRESETS["without-incident"])
     logger.info("Got all presets")
 
     # get the number of alerts + noisy alerts for each preset

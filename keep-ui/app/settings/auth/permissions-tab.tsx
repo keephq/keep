@@ -1,17 +1,4 @@
-import {
-  Title,
-  Subtitle,
-  Card,
-  Table,
-  TableHead,
-  TableRow,
-  TableHeaderCell,
-  TableBody,
-  TableCell,
-  TextInput,
-  Badge,
-  Button,
-} from "@tremor/react";
+import { Title, Subtitle, Card, TextInput, Button } from "@tremor/react";
 import Loading from "app/loading";
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
@@ -20,16 +7,20 @@ import { useGroups } from "utils/hooks/useGroups";
 import { useUsers } from "utils/hooks/useUsers";
 import { usePermissions } from "utils/hooks/usePermissions";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { TrashIcon } from "@heroicons/react/24/outline";
 import PermissionSidebar from "./permissions-sidebar";
 import { Permission } from "app/settings/models";
+import { PermissionsTable } from "./permissions-table";
 import "./multiselect.css";
 
 interface Props {
   accessToken: string;
+  isDisabled?: boolean;
 }
 
-export default function PermissionsTab({ accessToken }: Props) {
+export default function PermissionsTab({
+  accessToken,
+  isDisabled = false,
+}: Props) {
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
   const [selectedPermissions, setSelectedPermissions] = useState<{
@@ -43,28 +34,12 @@ export default function PermissionsTab({ accessToken }: Props) {
   const [selectedPreset, setSelectedPreset] = useState<any>(null);
 
   const { useAllPresets } = usePresets();
-  const {
-    data: presets = [],
-    error: presetsError,
-    isValidating: presetsLoading,
-  } = useAllPresets();
-  const {
-    data: groups = [],
-    error: groupsError,
-    isValidating: groupsLoading,
-  } = useGroups();
-  const {
-    data: users = [],
-    error: usersError,
-    isValidating: usersLoading,
-  } = useUsers();
-  const {
-    data: permissions = [],
-    error: permissionsError,
-    isValidating: permissionsLoading,
-  } = usePermissions();
+  const { data: presets = [], isValidating: presetsLoading } = useAllPresets();
+  const { data: groups = [], isValidating: groupsLoading } = useGroups();
+  const { data: users = [], isValidating: usersLoading } = useUsers();
+  const { data: permissions = [], isValidating: permissionsLoading } =
+    usePermissions();
 
-  // SHAHAR: TODO: fix when needed
   const displayPermissions = useMemo<Permission[]>(() => {
     const groupPermissions: Permission[] = (groups || []).map((group) => ({
       id: group.id,
@@ -98,13 +73,11 @@ export default function PermissionsTab({ accessToken }: Props) {
   useEffect(() => {
     if (permissions) {
       const initialPerms: { [key: string]: string[] } = {};
-
       permissions.forEach((permission) => {
         initialPerms[permission.resource_id] = permission.permissions.map(
           (p) => p.id
         );
       });
-
       setInitialPermissions(initialPerms);
       setSelectedPermissions(initialPerms);
     }
@@ -162,21 +135,18 @@ export default function PermissionsTab({ accessToken }: Props) {
 
       if (response.ok) {
         setInitialPermissions(selectedPermissions);
-        // You might want to show a success message here
       } else {
         const errorData = await response.json();
         console.error(
           "Failed to save permissions:",
           errorData.detail || errorData.message || "Unknown error"
         );
-        // You might want to show an error message to the user here
       }
     } catch (error) {
       console.error(
         "An unexpected error occurred while saving permissions:",
         error
       );
-      // You might want to show an error message to the user here
     }
   };
 
@@ -206,9 +176,7 @@ export default function PermissionsTab({ accessToken }: Props) {
           },
         });
 
-        if (response.ok) {
-          // Reload permissions
-        } else {
+        if (!response.ok) {
           console.error("Failed to delete permission");
         }
       } catch (error) {
@@ -224,7 +192,11 @@ export default function PermissionsTab({ accessToken }: Props) {
           <Title>Permissions Management</Title>
           <Subtitle>Manage permissions for Keep resources</Subtitle>
         </div>
-        <Button color="orange" onClick={savePermissions} disabled={!hasChanges}>
+        <Button
+          color="orange"
+          onClick={savePermissions}
+          disabled={!hasChanges || isDisabled}
+        >
           Save Permissions
         </Button>
       </div>
@@ -233,69 +205,17 @@ export default function PermissionsTab({ accessToken }: Props) {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
+        disabled={isDisabled}
       />
       <Card className="flex-grow overflow-hidden flex flex-col">
-        <Table className="h-full">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell className="w-6/24">
-                Resource Name
-              </TableHeaderCell>
-              <TableHeaderCell className="w-6/24">
-                Resource Type
-              </TableHeaderCell>
-              <TableHeaderCell className="w-11/24">Permissions</TableHeaderCell>
-              <TableHeaderCell className="w-1/24"></TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody className="overflow-auto">
-            {filteredPresets.map((preset) => (
-              <TableRow
-                key={preset.id}
-                className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
-                onClick={() => handleRowClick(preset)}
-              >
-                <TableCell className="w-6/24">{preset.name}</TableCell>
-                <TableCell className="w-6/24">
-                  {" "}
-                  <Badge color="orange" className="text-xs">
-                    preset
-                  </Badge>
-                </TableCell>
-                <TableCell className="w-11/24">
-                  <div className="flex flex-wrap gap-1">
-                    {selectedPermissions[preset.id]
-                      ?.slice(0, 5)
-                      .map((permId, index) => (
-                        <Badge key={index} color="orange" className="text-xs">
-                          {
-                            displayPermissions.find((p) => p.id === permId)
-                              ?.name
-                          }
-                        </Badge>
-                      ))}
-                    {selectedPermissions[preset.id]?.length > 5 && (
-                      <Badge color="orange" className="text-xs">
-                        +{selectedPermissions[preset.id].length - 5} more
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="w-1/24">
-                  <div className="flex justify-end">
-                    <Button
-                      icon={TrashIcon}
-                      variant="light"
-                      color="orange"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleDeletePermission(preset.id, e)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <PermissionsTable
+          presets={filteredPresets}
+          displayPermissions={displayPermissions}
+          selectedPermissions={selectedPermissions}
+          onRowClick={handleRowClick}
+          onDeletePermission={handleDeletePermission}
+          isDisabled={isDisabled}
+        />
       </Card>
       <PermissionSidebar
         isOpen={isSidebarOpen}
@@ -305,6 +225,7 @@ export default function PermissionsTab({ accessToken }: Props) {
         permissions={displayPermissions}
         selectedPermissions={selectedPermissions}
         onPermissionChange={handlePermissionChange}
+        isDisabled={isDisabled}
       />
     </div>
   );
