@@ -17,6 +17,7 @@ import Select from "react-select";
 import { AlertDto } from "./models";
 import { Table } from "@tanstack/react-table";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 interface Props {
   presetName: string;
@@ -71,6 +72,7 @@ export default function AlertPagination({
 }: Props) {
   const { usePresetAlerts } = useAlerts();
   const { mutate, isLoading: isValidating } = usePresetAlerts(presetName);
+  const isMounted = useMounted();
 
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
@@ -142,8 +144,8 @@ export default function AlertPagination({
             icon={ArrowPathIcon}
             color="orange"
             size="xs"
-            disabled={isValidating}
-            loading={isValidating}
+            disabled={isValidating || !isMounted}
+            loading={isValidating || !isMounted}
             onClick={async () => await mutate()}
             title="Refresh"
           />
