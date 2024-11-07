@@ -34,6 +34,7 @@ import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import AlertFacets from "./alert-table-facet";
 import { FacetFilters } from "./alert-table-facet";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 interface PresetTab {
   name: string;
@@ -273,10 +274,12 @@ export function AlertTable({
     return acc.concat(alertId);
   }, []);
 
+  const isMounted = useMounted();
+
   // show skeleton if no alerts are loaded
   let showSkeleton = table.getFilteredRowModel().rows.length === 0;
   // if showSkeleton and not loading, show empty state
-  let showEmptyState = !isAsyncLoading && showSkeleton;
+  let showEmptyState = !isAsyncLoading && showSkeleton && isMounted;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -300,6 +303,7 @@ export function AlertTable({
           <AlertFacets
             className="sticky top-0"
             alerts={alerts}
+            showSkeleton={showSkeleton}
             facetFilters={facetFilters}
             onSelect={handleFacetSelect}
           />
