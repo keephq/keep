@@ -145,8 +145,6 @@ class EnrichmentsBl:
                         "fingerprint": fingerprint,
                     },
                 )
-                # Stop after the first match
-                break
             else:
                 self.logger.info(
                     "Regex did not match, skipping extraction",

@@ -9,7 +9,7 @@ import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
 import { AlertDto } from "./models";
 import { AlertMethodModal } from "./alert-method-modal";
-import AlertRunWorkflowModal from "./alert-run-workflow-modal";
+import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -151,7 +151,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         alert={noteModalAlert ?? null}
       />
       {selectedPreset && <AlertMethodModal presetName={selectedPreset.name} />}
-      <AlertRunWorkflowModal
+      <ManualRunWorkflowModal
         alert={runWorkflowModalAlert}
         handleClose={() => setRunWorkflowModalAlert(null)}
       />

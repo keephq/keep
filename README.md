@@ -115,6 +115,8 @@ Workflow triggers can either be executed manually when an alert is activated or 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/graylog-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/prometheus-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/sumologic-icon.png?raw=true"/>
@@ -209,6 +211,8 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana_incident-icon.png?raw=true"/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/webhook-icon.png?raw=true"/>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/checkmk-icon.png?raw=true"/>
 </p>
 <h3 align="center">Ticketing tools</h2>
 <p align="center">
@@ -239,7 +243,7 @@ Keep composed of three main components:
 3. [Keep CLI](https://github.com/keephq/keep/blob/main/keep/cli/cli.py) - A CLI that lets you control and manage Keep via CLI.
 
 >**Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for CLI commands)
-To turn PostHog off, set the `DISABLE_POSTHOG=true` environment variable and remove the `NEXT_PUBLIC_POSTHOG_KEY` environment variable.
+To turn PostHog off, set the `POSTHOG_DISABLED=true` environment variable and remove the `NEXT_PUBLIC_POSTHOG_KEY` environment variable.
 
 ### Quickstart
 #### Spinning up Keep with docker-compose

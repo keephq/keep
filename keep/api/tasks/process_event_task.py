@@ -79,6 +79,9 @@ def __save_to_db(
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
         if KEEP_STORE_RAW_ALERTS:
+            if isinstance(raw_events, dict):
+                raw_events = [raw_events]
+
             for raw_event in raw_events:
                 alert = AlertRaw(
                     tenant_id=tenant_id,
@@ -317,7 +320,7 @@ def __handle_formatted_events(
         for key, value in enriched_formatted_event.dict().items():
             if isinstance(value, dict):
                 for nested_key in value.keys():
-                    fields.append(f"{key}_{nested_key}")
+                    fields.append(f"{key}.{nested_key}")
             else:
                 fields.append(key)
 
@@ -326,7 +329,7 @@ def __handle_formatted_events(
             fields=fields,
             provider_id=enriched_formatted_event.providerId,
             provider_type=enriched_formatted_event.providerType,
-            session=session
+            session=session,
         )
 
         logger.debug(
@@ -386,7 +389,9 @@ def __handle_formatted_events(
     # Now we need to run the rules engine
     try:
         rules_engine = RulesEngine(tenant_id=tenant_id)
-        incidents: List[IncidentDto] = rules_engine.run_rules(enriched_formatted_events, session=session)
+        incidents: List[IncidentDto] = rules_engine.run_rules(
+            enriched_formatted_events, session=session
+        )
 
         # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
         # if new grouped incidents were created, we need to push them to the client
@@ -522,7 +527,10 @@ def process_event(
             and isinstance(event, dict)
             or isinstance(event, FormData)
         ):
-            provider_class = ProvidersFactory.get_provider_class(provider_type)
+            try:
+                provider_class = ProvidersFactory.get_provider_class(provider_type)
+            except Exception:
+                provider_class = ProvidersFactory.get_provider_class("keep")
             event = provider_class.format_alert(
                 tenant_id=tenant_id,
                 event=event,

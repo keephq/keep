@@ -31,7 +31,7 @@ const nextConfig = {
         ? {
             exclude: ["error"],
           }
-        : false,
+        : process.env.REMOVE_CONSOLE === "true",
   },
   output: "standalone",
   productionBrowserSourceMaps: process.env.ENV === "development",

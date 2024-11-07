@@ -13,6 +13,9 @@ steps:
         previous_stars_count:
           default: 0
           key: "{{ last_workflow_results.get-github-stars.0.stars }}"
+        last_stargazer:
+          default: ""
+          key: "{{ last_workflow_results.get-github-stars.0.last_stargazer }}"
         repository: keephq/keep
 actions:
   - condition:

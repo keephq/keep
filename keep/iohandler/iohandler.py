@@ -1,5 +1,6 @@
 import ast
 import copy
+import html
 
 # TODO: fix this! It screws up the eval statement if these are not imported
 import inspect
@@ -205,14 +206,20 @@ class IOHandler:
             parsed_string = parsed_string.replace(token_to_replace, val)
             return parsed_string
         # this basically for complex expressions with functions and operators
+        tokens_handled = set()
         for token in tokens:
             token, escapes = token
+            # imagine " keep.f(..) > 1 and keep.f(..) <2"
+            # so keep.f already handled, we don't want to handle it again
+            if token in tokens_handled:
+                continue
             token_to_replace = token
             try:
                 if escapes:
                     for escape in escapes:
                         token = token[:escape] + "\\" + token[escape:]
                 val = self._parse_token(token)
+
             except Exception as e:
                 trimmed_token = self._trim_token_error(token)
                 err_message = str(e).splitlines()[-1]
@@ -220,6 +227,7 @@ class IOHandler:
                     f"Got {e.__class__.__name__} while parsing token '{trimmed_token}': {err_message}"
                 )
             parsed_string = parsed_string.replace(token_to_replace, str(val))
+            tokens_handled.add(token_to_replace)
 
         return parsed_string
 
@@ -283,7 +291,17 @@ class IOHandler:
                 if "kwargs" in func_signature.parameters:
                     kwargs["tenant_id"] = self.context_manager.tenant_id
 
-                val = keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                try:
+                    val = (
+                        keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                    )
+                # try again but with replacing \n with \\n
+                # again - best effort see test_openobserve_rows_bug test
+                except ValueError:
+                    _args = [arg.replace("\n", "\\n") for arg in _args]
+                    val = (
+                        keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
+                    )
                 return val
 
         try:
@@ -294,11 +312,24 @@ class IOHandler:
                 # this is happens when libraries such as datadog api client
                 # HTML escapes the string and then ast.parse fails ()
                 # https://github.com/keephq/keep/issues/137
-                import html
-
-                tree = ast.parse(
-                    html.unescape(token.replace("\r\n", "").replace("\n", ""))
-                )
+                try:
+                    unescaped_token = html.unescape(
+                        token.replace("\r\n", "").replace("\n", "")
+                    )
+                    tree = ast.parse(unescaped_token)
+                # try best effort to parse the string
+                # this is some nasty bug. see test test_openobserve_rows_bug on test_iohandler
+                # and this ticket -
+                except Exception as e:
+                    # for strings such as "45%\n", we need to escape
+                    t = (
+                        html.unescape(token.replace("\r\n", "").replace("\n", ""))
+                        .replace("\\n", "\n")
+                        .replace("\\", "")
+                        .replace("\n", "\\n")
+                    )
+                    t = self._encode_single_quotes_in_double_quotes(t)
+                    tree = ast.parse(t)
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
@@ -344,8 +375,29 @@ class IOHandler:
             return default
 
         if const_rendering:
+            # https://github.com/keephq/keep/issues/2326
+            rendered = html.unescape(rendered)
             return self._render(rendered, safe, default)
         return rendered
+
+    def _encode_single_quotes_in_double_quotes(self, s):
+        result = []
+        in_double_quotes = False
+        i = 0
+        while i < len(s):
+            if s[i] == '"':
+                in_double_quotes = not in_double_quotes
+            elif s[i] == "'" and in_double_quotes:
+                if i > 0 and s[i - 1] == "\\":
+                    # If the single quote is already escaped, don't add another backslash
+                    result.append(s[i])
+                else:
+                    result.append("\\" + s[i])
+                i += 1
+                continue
+            result.append(s[i])
+            i += 1
+        return "".join(result)
 
     def render_context(self, context_to_render: dict):
         """

@@ -105,7 +105,13 @@ class SlackProvider(BaseProvider):
         return new_provider_info
 
     def _notify(
-        self, message="", blocks=[], channel="", slack_timestamp="", **kwargs: dict
+        self,
+        message="",
+        blocks=[],
+        channel="",
+        slack_timestamp="",
+        thread_timestamp="",
+        **kwargs: dict,
     ):
         """
         Notify alert message to Slack using the Slack Incoming Webhook API
@@ -141,7 +147,7 @@ class SlackProvider(BaseProvider):
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
-            if slack_timestamp == "":
+            if slack_timestamp == "" and thread_timestamp == "":
                 self.logger.info("Sending a new message to Slack")
                 payload = {
                     "channel": channel,
@@ -165,9 +171,13 @@ class SlackProvider(BaseProvider):
                         else blocks
                     ),
                     "token": self.authentication_config.access_token,
-                    "ts": slack_timestamp,
                 }
-                method = "chat.update"
+                if slack_timestamp:
+                    payload["ts"] = slack_timestamp
+                    method = "chat.update"
+                else:
+                    method = "chat.postMessage"
+                    payload["thread_ts"] = thread_timestamp
 
             response = requests.post(
                 f"{SlackProvider.SLACK_API}/{method}", data=payload

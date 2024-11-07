@@ -6,7 +6,6 @@ import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthenticationType } from "utils/authenticationType";
-import Image from "next/image";
 import Link from "next/link";
 import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
@@ -14,11 +13,10 @@ import { VscDebugDisconnect } from "react-icons/vsc";
 import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
 import { Icon, Subtitle } from "@tremor/react";
-
-export const getInitials = (name: string) =>
-  ((name.match(/(^\S\S?|\b\S)?/g) ?? []).join("").match(/(^\S|\S$)?/g) ?? [])
-    .join("")
-    .toUpperCase();
+import UserAvatar from "./UserAvatar";
+import * as Frigade from "@frigade/react";
+import { useState } from "react";
+import Onboarding from "./Onboarding";
 
 type UserDropdownProps = {
   session: Session;
@@ -38,21 +36,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
     <Menu as="li" ref={refs.setReference}>
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
-          {image ? (
-            <Image
-              className="rounded-full w-7 h-7 inline"
-              src={image}
-              alt="user avatar"
-              width={28}
-              height={28}
-            />
-          ) : (
-            <span className="relative inline-flex items-center justify-center w-7 h-7 overflow-hidden bg-orange-400 rounded-full dark:bg-gray-600">
-              <span className="font-medium text-white text-xs">
-                {getInitials(name ?? email)}
-              </span>
-            </span>
-          )}{" "}
+          <UserAvatar image={image} name={name ?? email} />{" "}
           <Subtitle className="truncate">{name ?? email}</Subtitle>
         </span>
 
@@ -103,28 +87,49 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
-  return (
-    <ul className="space-y-2 p-2">
-      <li>
-        <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-          Providers
-        </LinkWithIcon>
-      </li>
-      <li>
-        {/* TODO: slows everything down. needs to be replaced */}
-        <DarkModeToggle />
-      </li>
-      <li>
-        <LinkWithIcon
-          icon={LuSlack}
-          href="https://slack.keephq.dev/"
-          target="_blank"
-        >
-          Join our Slack
-        </LinkWithIcon>
-      </li>
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
-      {session && <UserDropdown session={session} />}
-    </ul>
+  return (
+    <>
+      <ul className="space-y-2 p-2">
+        <li>
+          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
+            Providers
+          </LinkWithIcon>
+        </li>
+        <li>
+          {/* TODO: slows everything down. needs to be replaced */}
+          <DarkModeToggle />
+        </li>
+        <li>
+          <LinkWithIcon
+            icon={LuSlack}
+            href="https://slack.keephq.dev/"
+            target="_blank"
+          >
+            Join our Slack
+          </LinkWithIcon>
+        </li>
+        {session && <UserDropdown session={session} />}
+        {isOnboardingComplete === false && (
+          <li>
+            <Frigade.ProgressBadge
+              flowId="flow_FHDz1hit"
+              onComplete={() => setIsOnboardingComplete(true)}
+              onClick={() => setIsOnboardingOpen(true)}
+              // css={{ backgroundColor: "#F9FAFB" }}
+            />
+            <Onboarding
+              isOpen={isOnboardingOpen}
+              toggle={() => setIsOnboardingOpen(false)}
+              variables={{
+                name: session?.user.name ?? session?.user.email,
+              }}
+            />
+          </li>
+        )}
+      </ul>
+    </>
   );
 };

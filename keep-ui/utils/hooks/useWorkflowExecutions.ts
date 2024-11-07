@@ -6,11 +6,15 @@ import {
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
 
-export const useWorkflowExecutions = (options?: SWRConfiguration) => {
-  const apiUrl = getApiURL();
+export const useWorkflowExecutions = (
+  options: SWRConfiguration = {
+    revalidateOnFocus: false,
+  }
+) => {
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<AlertToWorkflowExecution[]>(
@@ -26,7 +30,7 @@ export const useWorkflowExecutionsV2 = (
   limit: number = 25,
   offset: number = 0
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   limit = searchParams?.get("limit")
@@ -45,7 +49,7 @@ export const useWorkflowExecutionsV2 = (
   return useSWR<PaginatedWorkflowExecutionDto>(
     () =>
       session
-        ? `${apiUrl}/workflows/${workflowId}?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
+        ? `${apiUrl}/workflows/${workflowId}/runs?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
             searchParams ? `&${searchParams.toString()}` : ""
           }`
         : null,
@@ -57,7 +61,7 @@ export const useWorkflowExecution = (
   workflowId: string,
   workflowExecutionId: string
 ) => {
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
   return useSWR<WorkflowExecution>(

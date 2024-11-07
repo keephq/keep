@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "components/ui/Modal";
 import { Button, Textarea, Badge } from "@tremor/react";
 import QueryBuilder, {
@@ -12,7 +12,12 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
-import { AlertDto, Preset, severityMapping, reverseSeverityMapping } from "./models";
+import {
+  AlertDto,
+  Preset,
+  severityMapping,
+  reverseSeverityMapping,
+} from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
@@ -21,6 +26,7 @@ import Select, { components, MenuListProps } from "react-select";
 import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -127,68 +133,68 @@ const getAllMatches = (pattern: RegExp, string: string) =>
   // make sure string is a String, and make sure pattern has the /g flag
   String(string).match(new RegExp(pattern, "g"));
 
-  const sanitizeCELIntoJS = (celExpression: string): string => {
-    // First, replace "contains" with "includes"
-    let jsExpression = celExpression.replace(/contains/g, "includes");
+const sanitizeCELIntoJS = (celExpression: string): string => {
+  // First, replace "contains" with "includes"
+  let jsExpression = celExpression.replace(/contains/g, "includes");
 
-    // Replace severity comparisons with mapped values
-    jsExpression = jsExpression.replace(
-      /severity\s*([<>]=?|==)\s*(\d+|"[^"]*")/g,
-      (match, operator, value) => {
-        let severityKey;
+  // Replace severity comparisons with mapped values
+  jsExpression = jsExpression.replace(
+    /severity\s*([<>]=?|==)\s*(\d+|"[^"]*")/g,
+    (match, operator, value) => {
+      let severityKey;
 
-        if (/^\d+$/.test(value)) {
-          // If the value is a number
-          severityKey = severityMapping[Number(value)];
-        } else {
-          // If the value is a string
-          severityKey = value.replace(/"/g, '').toLowerCase(); // Remove quotes from the string value and convert to lowercase
-        }
-
-        const severityValue = reverseSeverityMapping[severityKey];
-
-        if (severityValue === undefined) {
-          return match; // If no mapping found, return the original match
-        }
-
-        // For equality, directly replace with the severity level
-        if (operator === "==") {
-          return `severity == "${severityKey}"`;
-        }
-
-        // For greater than or less than, include multiple levels based on the mapping
-        const levels = Object.entries(reverseSeverityMapping);
-        let replacement = "";
-        if (operator === ">") {
-          const filteredLevels = levels
-            .filter(([, level]) => level > severityValue)
-            .map(([key]) => `severity == "${key}"`);
-          replacement = filteredLevels.join(" || ");
-        } else if (operator === "<") {
-          const filteredLevels = levels
-            .filter(([, level]) => level < severityValue)
-            .map(([key]) => `severity == "${key}"`);
-          replacement = filteredLevels.join(" || ");
-        }
-
-        return `(${replacement})`;
+      if (/^\d+$/.test(value)) {
+        // If the value is a number
+        severityKey = severityMapping[Number(value)];
+      } else {
+        // If the value is a string
+        severityKey = value.replace(/"/g, "").toLowerCase(); // Remove quotes from the string value and convert to lowercase
       }
-    );
 
-    // Convert 'in' syntax to '.includes()'
-    jsExpression = jsExpression.replace(
-      /(\w+)\s+in\s+\[([^\]]+)\]/g,
-      (match, variable, list) => {
-        // Split the list by commas, trim spaces, and wrap items in quotes if not already done
-        const items = list
-          .split(",")
-          .map((item: string) => item.trim().replace(/^([^"]*)$/, '"$1"'));
-        return `[${items.join(", ")}].includes(${variable})`;
+      const severityValue = reverseSeverityMapping[severityKey];
+
+      if (severityValue === undefined) {
+        return match; // If no mapping found, return the original match
       }
-    );
 
-    return jsExpression;
-  };
+      // For equality, directly replace with the severity level
+      if (operator === "==") {
+        return `severity == "${severityKey}"`;
+      }
+
+      // For greater than or less than, include multiple levels based on the mapping
+      const levels = Object.entries(reverseSeverityMapping);
+      let replacement = "";
+      if (operator === ">") {
+        const filteredLevels = levels
+          .filter(([, level]) => level > severityValue)
+          .map(([key]) => `severity == "${key}"`);
+        replacement = filteredLevels.join(" || ");
+      } else if (operator === "<") {
+        const filteredLevels = levels
+          .filter(([, level]) => level < severityValue)
+          .map(([key]) => `severity == "${key}"`);
+        replacement = filteredLevels.join(" || ");
+      }
+
+      return `(${replacement})`;
+    }
+  );
+
+  // Convert 'in' syntax to '.includes()'
+  jsExpression = jsExpression.replace(
+    /(\w+)\s+in\s+\[([^\]]+)\]/g,
+    (match, variable, list) => {
+      // Split the list by commas, trim spaces, and wrap items in quotes if not already done
+      const items = list
+        .split(",")
+        .map((item: string) => item.trim().replace(/^([^"]*)$/, '"$1"'));
+      return `[${items.join(", ")}].includes(${variable})`;
+    }
+  );
+
+  return jsExpression;
+};
 
 // this pattern is far from robust
 const variablePattern = /[a-zA-Z$_][0-9a-zA-Z$_]*/;
@@ -278,6 +284,8 @@ type AlertsRulesBuilderProps = {
   customFields?: Field[];
   showSave?: boolean;
   minimal?: boolean;
+  showToast?: boolean;
+  shouldSetQueryParam?: boolean;
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -296,6 +304,8 @@ export const AlertsRulesBuilder = ({
   showSqlImport = true,
   showSave = true,
   minimal = false,
+  showToast = false,
+  shouldSetQueryParam = true,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -335,6 +345,12 @@ export const AlertsRulesBuilder = ({
   const isFirstRender = useRef(true);
 
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleClearInput = useCallback(() => {
+    setCELRules("");
+    table?.resetGlobalFilter();
+    setIsValidCEL(true);
+  }, [table]);
 
   const toggleSuggestions = () => {
     setShowSuggestions(!showSuggestions);
@@ -386,6 +402,14 @@ export const AlertsRulesBuilder = ({
   }, []);
 
   useEffect(() => {
+    if (defaultQuery === "") {
+      handleClearInput();
+    } else {
+      setCELRules(defaultQuery);
+    }
+  }, [defaultQuery, handleClearInput]);
+
+  useEffect(() => {
     // Use the constructCELRules function to set the initial value of celRules
     const initialCELRules = constructCELRules(selectedPreset);
     if (
@@ -422,12 +446,6 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
-  const handleClearInput = () => {
-    setCELRules("");
-    table?.resetGlobalFilter();
-    setIsValidCEL(true);
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
@@ -443,9 +461,11 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
-        setQueryParam("cel", celRules);
+        if (shouldSetQueryParam) setQueryParam("cel", celRules);
         onApplyFilter();
         updateOutputCEL?.(celRules);
+        if (showToast)
+          toast.success("Condition applied", { position: "top-right" });
       }
     }
   };
@@ -629,7 +649,7 @@ export const AlertsRulesBuilder = ({
                   options={staticOptions}
                   onChange={handleSelectChange}
                   menuIsOpen={true}
-                  components={minimal? undefined: customComponents}
+                  components={minimal ? undefined : customComponents}
                   onBlur={() => setShowSuggestions(false)}
                   styles={customStyles}
                 />

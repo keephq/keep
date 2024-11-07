@@ -1,8 +1,7 @@
 import enum
 import logging
-from typing import Optional
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, UniqueConstraint
@@ -44,16 +43,33 @@ else:
         datetime_column_type = DateTime
 
 
+# We want to include the deleted_at field in the primary key,
+# but we also want to allow it to be nullable. MySQL doesn't allow nullable fields in primary keys, so:
+NULL_FOR_DELETED_AT = datetime(1000, 1, 1, 0, 0)
+
+
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
-    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    alert_id: UUID = Field(foreign_key="alert.id", primary_key=True)
     incident_id: UUID = Field(
         sa_column=Column(
             UUIDType(binary=False),
             ForeignKey("incident.id", ondelete="CASCADE"),
             primary_key=True,
         )
+    )
+    alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
+    incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
+
+    is_created_by_ai: bool = Field(default=False)
+
+    deleted_at: datetime = Field(
+        default_factory=None,
+        nullable=True,
+        primary_key=True,
+        default=NULL_FOR_DELETED_AT,
     )
 
 
@@ -82,7 +98,22 @@ class Incident(SQLModel, table=True):
 
     # map of attributes to values
     alerts: List["Alert"] = Relationship(
-        back_populates="incidents", link_model=AlertToIncident
+        back_populates="incidents",
+        link_model=AlertToIncident,
+        # primaryjoin is used to filter out deleted links for various DB dialects
+        sa_relationship_kwargs={
+            "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
+                or_(
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
+                ))""",
+            "uselist": True,
+            "overlaps": "alert,incident",
+        },
+    )
+    alert_to_incident_link: List[AlertToIncident] = Relationship(
+        back_populates="incident",
+        sa_relationship_kwargs={"overlaps": "alerts,incidents"},
     )
 
     is_predicted: bool = Field(default=False)
@@ -95,7 +126,7 @@ class Incident(SQLModel, table=True):
     rule_id: UUID | None = Field(
         sa_column=Column(
             UUIDType(binary=False),
-            ForeignKey("rule.id", use_alter=False, ondelete="CASCADE"),
+            ForeignKey("rule.id", ondelete="CASCADE"),
             nullable=True,
         ),
     )
@@ -106,20 +137,47 @@ class Incident(SQLModel, table=True):
     same_incident_in_the_past_id: UUID | None = Field(
         sa_column=Column(
             UUIDType(binary=False),
-            ForeignKey("incident.id", use_alter=False, ondelete="SET NULL"),
+            ForeignKey("incident.id", ondelete="SET NULL"),
             nullable=True,
         ),
     )
 
-    same_incident_in_the_past: Optional['Incident'] = Relationship(
+    same_incident_in_the_past: Optional["Incident"] = Relationship(
         back_populates="same_incidents_in_the_future",
         sa_relationship_kwargs=dict(
-            remote_side='Incident.id',
-        )
+            remote_side="Incident.id",
+            foreign_keys="[Incident.same_incident_in_the_past_id]",
+        ),
     )
 
-    same_incidents_in_the_future: list['Incident'] = Relationship(
+    same_incidents_in_the_future: List["Incident"] = Relationship(
         back_populates="same_incident_in_the_past",
+        sa_relationship_kwargs=dict(
+            foreign_keys="[Incident.same_incident_in_the_past_id]",
+        ),
+    )
+
+    merged_into_incident_id: UUID | None = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
+    merged_at: datetime | None = Field(default=None)
+    merged_by: str | None = Field(default=None)
+    merged_into: Optional["Incident"] = Relationship(
+        back_populates="merged_incidents",
+        sa_relationship_kwargs=dict(
+            remote_side="Incident.id",
+            foreign_keys="[Incident.merged_into_incident_id]",
+        ),
+    )
+    merged_incidents: List["Incident"] = Relationship(
+        back_populates="merged_into",
+        sa_relationship_kwargs=dict(
+            foreign_keys="[Incident.merged_into_incident_id]",
+        ),
     )
 
     def __init__(self, **kwargs):
@@ -150,9 +208,6 @@ class Alert(SQLModel, table=True):
     event: dict = Field(sa_column=Column(JSON))
     fingerprint: str = Field(index=True)  # Add the fingerprint field with an index
 
-    incidents: List["Incident"] = Relationship(
-        back_populates="alerts", link_model=AlertToIncident
-    )
     # alert_hash is different than fingerprint, it is a hash of the alert itself
     #            and it is used for deduplication.
     #            alert can be different but have the same fingerprint (e.g. different "firing" and "resolved" will have the same fingerprint but not the same alert_hash)
@@ -164,6 +219,33 @@ class Alert(SQLModel, table=True):
             "primaryjoin": "and_(Alert.fingerprint == foreign(AlertEnrichment.alert_fingerprint), Alert.tenant_id == AlertEnrichment.tenant_id)",
             "uselist": False,
         }
+    )
+
+    incidents: List["Incident"] = Relationship(
+        back_populates="alerts",
+        link_model=AlertToIncident,
+        sa_relationship_kwargs={
+            # primaryjoin is used to filter out deleted links for various DB dialects
+            "primaryjoin": f"""and_(AlertToIncident.alert_id == Alert.id,
+                or_(
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
+                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
+                ))""",
+            "uselist": True,
+            "overlaps": "alert,incident",
+        },
+    )
+    alert_to_incident_link: List[AlertToIncident] = Relationship(
+        back_populates="alert", sa_relationship_kwargs={"overlaps": "alerts,incidents"}
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_alert_tenant_fingerprint_timestamp",
+            "tenant_id",
+            "fingerprint",
+            "timestamp",
+        ),
     )
 
     class Config:
@@ -338,3 +420,4 @@ class AlertActionType(enum.Enum):
     COMMENT = "a comment was added to the alert"
     UNCOMMENT = "a comment was removed from the alert"
     MAINTENANCE = "Alert is in maintenance window"
+    INCIDENT_COMMENT = "A comment was added to the incident"

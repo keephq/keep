@@ -211,20 +211,30 @@ class WorkflowScheduler:
         }
 
     def handle_manual_event_workflow(
-        self, workflow_id, tenant_id, triggered_by_user, alert: AlertDto
+        self, workflow_id, tenant_id, triggered_by_user, event: [AlertDto | IncidentDto]
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
             unique_execution_number = self._get_unique_execution_number()
             self.logger.info(f"Unique execution number: {unique_execution_number}")
+
+            if isinstance(event, IncidentDto):
+                event_id = str(event.id)
+                event_type = "incident"
+                fingerprint = "incident:{}".format(event_id)
+            else:
+                event_id = event.event_id
+                event_type = "alert"
+                fingerprint = event.fingerprint
+
             workflow_execution_id = create_workflow_execution(
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
                 execution_number=unique_execution_number,
-                fingerprint=alert.fingerprint,
-                event_id=alert.event_id,
-                event_type="alert",
+                fingerprint=fingerprint,
+                event_id=event_id,
+                event_type=event_type,
             )
             self.logger.info(f"Workflow execution id: {workflow_execution_id}")
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
@@ -242,7 +252,7 @@ class WorkflowScheduler:
             },
         )
         with self.lock:
-            alert.trigger = "manual"
+            event.trigger = "manual"
             self.workflows_to_run.append(
                 {
                     "workflow_id": workflow_id,
@@ -250,7 +260,8 @@ class WorkflowScheduler:
                     "tenant_id": tenant_id,
                     "triggered_by": "manual",
                     "triggered_by_user": triggered_by_user,
-                    "event": alert,
+                    "event": event,
+                    "retry": True,
                 }
             )
         return workflow_execution_id

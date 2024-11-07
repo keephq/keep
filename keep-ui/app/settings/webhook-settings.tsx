@@ -12,18 +12,18 @@ import {
   Title,
   TabPanels,
   TabPanel,
-  Callout
-
+  Callout,
 } from "@tremor/react";
 import Loading from "app/loading";
 import { useRouter } from "next/navigation";
 import { CodeBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import * as Frigade from "@frigade/react";
 
 interface Webhook {
   webhookApi: string;
@@ -39,7 +39,7 @@ interface Props {
 export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
 
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const { data, error, isLoading } = useSWR<Webhook>(
     selectedTab === "webhook" ? `${apiUrl}/settings/webhook` : null,
@@ -48,19 +48,22 @@ export default function WebhookSettings({ accessToken, selectedTab }: Props) {
   );
   const router = useRouter();
 
-  if (error) return <Callout
+  if (error)
+    return (
+      <Callout
         className="mt-4"
         title="Error"
         icon={ExclamationCircleIcon}
         color="rose"
       >
         Failed to load webhook settings.
-        <br></br><br></br>
+        <br></br>
+        <br></br>
         {error.message}
       </Callout>
+    );
 
   if (!data || isLoading) return <Loading />;
-
 
   const [example] = data.modelSchema.examples;
 
@@ -179,9 +182,15 @@ req.end();
             <Title>URL: {data.webhookApi}</Title>
             <Subtitle>API Key: {data.apiKey}</Subtitle>
             <div>
-              <Button icon={PlayIcon} color="orange" onClick={tryNow}>
+              <Button
+                icon={PlayIcon}
+                color="orange"
+                onClick={tryNow}
+                id="tooltip-select-0"
+              >
                 Click to create an example Alert
               </Button>
+              <Frigade.Tour flowId="flow_4iLdns11" />
             </div>
           </div>
           <TabGroup

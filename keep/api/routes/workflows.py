@@ -27,7 +27,7 @@ from keep.api.core.db import (
     get_workflow_by_name,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.models.workflow import (
     WorkflowCreateOrUpdateDTO,
     WorkflowDTO,
@@ -181,25 +181,33 @@ def run_workflow(
 
     # Finally, run it
     try:
+
+        if body.get("type", "alert") == "alert":
+            event_class = AlertDto
+        else:
+            event_class = IncidentDto
+
+        event_body = body.get("body", {}) or body
+
         # if its event that was triggered by the UI with the Modal
-        if "test-workflow" in body.get("fingerprint", "") or not body:
+        if "test-workflow" in event_body.get("fingerprint", "") or not body:
             # some random
-            body["id"] = body.get("fingerprint", "manual-run")
-            body["name"] = body.get("fingerprint", "manual-run")
-            body["lastReceived"] = datetime.datetime.now(
+            event_body["id"] = event_body.get("fingerprint", "manual-run")
+            event_body["name"] = event_body.get("fingerprint", "manual-run")
+            event_body["lastReceived"] = datetime.datetime.now(
                 tz=datetime.timezone.utc
             ).isoformat()
-            if "source" in body and not isinstance(body["source"], list):
-                body["source"] = [body["source"]]
+            if "source" in event_body and not isinstance(event_body["source"], list):
+                event_body["source"] = [event_body["source"]]
         try:
-            alert = AlertDto(**body)
+            event = event_class(**event_body)
         except TypeError:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid alert format",
+                detail="Invalid event format",
             )
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
-            workflow_id, tenant_id, created_by, alert
+            workflow_id, tenant_id, created_by, event
         )
     except Exception as e:
         logger.exception(
@@ -483,6 +491,50 @@ def get_raw_workflow_by_id(
             )
         },
     )
+    
+@router.get("/{workflow_id}", description="Get workflow by ID")
+def get_workflow_by_id(
+    workflow_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    # get all workflow
+    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    
+    if not workflow:
+        logger.warning(
+            f"Tenant tried to get workflow {workflow_id} that does not exist",
+            extra={"tenant_id": tenant_id},
+        )
+        raise HTTPException(404, "Workflow not found")
+    
+    try: 
+        workflow_yaml = yaml.safe_load(workflow.workflow_raw)
+        valid_workflow_yaml = {"workflow": workflow_yaml}
+        final_workflow_raw = yaml.dump(valid_workflow_yaml)
+        workflow_dto = WorkflowDTO(
+            id=workflow.id,
+            name=workflow.name,
+            description=workflow.description
+            or "[This workflow has no description]",
+            created_by=workflow.created_by,
+            creation_time=workflow.creation_time,
+            interval=workflow.interval,
+            providers=[],
+            triggers=[],
+            workflow_raw=final_workflow_raw,
+            revision=workflow.revision,
+            last_updated=workflow.last_updated,
+            disabled=workflow.is_disabled,
+            provisioned=workflow.provisioned,
+        )
+        return workflow_dto
+    except yaml.YAMLError:
+        logger.exception("Invalid YAML format")
+        raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
+ 
 
 
 @router.get("/executions", description="Get workflow executions by alert fingerprint")
@@ -511,7 +563,7 @@ def get_workflow_executions_by_alert_fingerprint(
     ]
 
 
-@router.get("/{workflow_id}", description="Get workflow executions by ID")
+@router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
 def get_workflow_by_id(
     workflow_id: str,
     tab: int = 1,

@@ -1,0 +1,107 @@
+name: Celebrating Contributions
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  comment_on_merged_pull_request:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Environment Variables
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.event.repository.name }}
+          OWNER: ${{ github.event.repository.owner.login }}
+        run: |
+          echo "AUTHOR=${AUTHOR}" >> $GITHUB_ENV
+          echo "REPO=${REPO}" >> $GITHUB_ENV
+          echo "OWNER=${OWNER}" >> $GITHUB_ENV
+
+      - name: Count Merged Pull Requests
+        id: count_merged_pull_requests
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              const author = process.env.AUTHOR;
+              const repo = process.env.REPO;
+              const owner = process.env.OWNER;
+              const { data } = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${owner}/${repo} type:pr state:closed author:${author}`
+              });
+              const prCount = data.items.filter(pr => pr.pull_request.merged_at).length;
+              core.exportVariable('PR_COUNT', prCount);
+            } catch (error) {
+              core.setFailed(`Error counting merged pull requests: ${error.message}`);
+            }
+
+      - name: Comment on the Merged Pull Request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              const prCount = parseInt(process.env.PR_COUNT);
+              const author = process.env.AUTHOR;
+              const prNumber = context.payload.pull_request.number;
+              const repo = process.env.REPO;
+
+              function getRandomEmoji() {
+                const emojis = ['🎉', '🚀', '💪', '🌟', '🏆', '🎊', '🔥', '👏', '🌈', '🚂'];
+                return emojis[Math.floor(Math.random() * emojis.length)];
+              }
+
+              function getMessage(count) {
+                const emoji = getRandomEmoji();
+                switch(count) {
+                  case 1:
+                    return `${emoji} **Fantastic work @${author}!** Your very first PR to ${repo} has been merged! 🎉🥳\n\n` +
+                           `You've just taken your first step into open-source, and we couldn't be happier to have you onboard. 🙌\n` +
+                           `If you're feeling adventurous, why not dive into another issue and keep contributing? The community would love to see more from you! 🚀\n\n` +
+                           `For any support, feel free to reach out on the community: https://slack.keephq.dev. Happy coding! 👩‍💻👨‍💻`;
+                  case 2:
+                    return `${emoji} **Well done @${author}!** Two PRs merged already! 🎉🥳\n\n` +
+                           `With your second PR, you're on a roll, and your contributions are already making a difference. 🌟\n` +
+                           `Looking forward to seeing even more contributions from you. See you in Slack https://slack.keephq.dev 🚀`;
+                  case 3:
+                    return `${emoji} **You're on fire, @${author}!** Three PRs merged and counting! 🔥🎉\n\n` +
+                           `Your consistent contributions are truly impressive. You're becoming a valued member of our community! 💖\n` +
+                           `Have you considered taking on some more challenging issues? We'd love to see what you can do! 💪\n\n` +
+                           `Remember, the team is always here to support you. Keep blazing that trail! 🚀`;
+                  case 5:
+                    return `${emoji} **High five, @${author}!** You've hit the incredible milestone of 5 merged PRs! 🖐️✨\n\n` +
+                           `Your dedication to ${repo} is outstanding. You're not just contributing code; you're shaping the future of this project! 🌠\n` +
+                           `We'd love to hear your thoughts on the project. Any ideas for new features or improvements? 🤔\n\n` +
+                           `The whole team applaud your efforts. You're a superstar! 🌟`;
+                  case 10:
+                    return `${emoji} **Double digits, @${author}!** 10 merged PRs is a massive achievement! 🏆🎊\n\n` +
+                           `Your impact on ${repo} is undeniable. You've become a pillar of our community! 🏛️\n` +
+                           `We'd be thrilled to have you take on a mentorship role for newer contributors. Interested? 🧑‍🏫\n\n` +
+                           `Everyone here are in awe of your contributions. You're an open source hero! 🦸‍♀️🦸‍♂️`;
+                  default:
+                    return "";
+                }
+              }
+
+              const message = getMessage(prCount);
+
+              if (message) {
+                await github.rest.issues.createComment({
+                  owner: process.env.OWNER,
+                  repo: process.env.REPO,
+                  issue_number: prNumber,
+                  body: message
+                });
+            }
+            } catch (error) {
+              core.setFailed(`Error creating comment: ${error.message}`);
+            }

@@ -20,7 +20,7 @@ import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (get_custom_deduplication_rule, get_enrichments,
-                              get_provider_by_name)
+                              get_provider_by_name, is_linked_provider)
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -68,10 +68,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
-        self.logger = context_manager.get_logger()
+        self.logger = context_manager.get_logger(self.provider_id)
+        self.logger.setLevel(
+            os.environ.get(
+                "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
+                os.environ.get("LOG_LEVEL", "INFO"),
+            )
+        )
         self.validate_config()
         self.logger.debug(
-            "Base provider initalized", extra={"provider": self.__class__.__name__}
+            "Base provider initialized", extra={"provider": self.__class__.__name__}
         )
         self.provider_type = self._extract_type()
         self.results = []
@@ -317,14 +323,21 @@ class BaseProvider(metaclass=abc.ABCMeta):
         provider_instance: BaseProvider | None = None
         if provider_id and provider_type and tenant_id:
             try:
-                # To prevent circular imports
-                from keep.providers.providers_factory import ProvidersFactory
-
-                provider_instance: BaseProvider = (
-                    ProvidersFactory.get_installed_provider(
-                        tenant_id, provider_id, provider_type
+                if is_linked_provider(tenant_id, provider_id):
+                    logger.debug(
+                        "Provider is linked, skipping loading provider instance"
                     )
-                )
+                    provider_instance = None
+                else:
+                    # To prevent circular imports
+                    from keep.providers.providers_factory import \
+                        ProvidersFactory
+
+                    provider_instance: BaseProvider = (
+                        ProvidersFactory.get_installed_provider(
+                            tenant_id, provider_id, provider_type
+                        )
+                    )
             except Exception:
                 logger.exception(
                     "Failed loading provider instance although all parameters were given",
@@ -391,10 +404,17 @@ class BaseProvider(metaclass=abc.ABCMeta):
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
         for fingerprint_field in fingerprint_fields:
-            fingerprint_field_value = event_dict.get(fingerprint_field, None)
+            keys = fingerprint_field.split(".")
+            fingerprint_field_value = event_dict
+            for key in keys:
+                if isinstance(fingerprint_field_value, dict):
+                    fingerprint_field_value = fingerprint_field_value.get(key, None)
+                else:
+                    fingerprint_field_value = None
+                    break
             if isinstance(fingerprint_field_value, (list, dict)):
                 fingerprint_field_value = json.dumps(fingerprint_field_value)
-            if fingerprint_field_value:
+            if fingerprint_field_value is not None:
                 fingerprint.update(str(fingerprint_field_value).encode())
         return fingerprint.hexdigest()
 

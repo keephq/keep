@@ -69,16 +69,15 @@ Resource provisioning settings control how Keep sets up initial resources. This 
 <Info>
 Authentication configuration determines how Keep verifies user identities and manages access control. These settings are essential for securing your Keep instance and integrating with various authentication providers.
 </Info>
-<Tip>For specifc authentication type configuration, please see [authentication docs](/deployment/authentication/overview).</Tip>
+<Tip>For specific authentication type configuration, please see [authentication docs](/deployment/authentication/overview).</Tip>
 
 
 | Env var | Purpose | Required | Default Value | Valid options |
 |:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
 | **AUTH_TYPE** | Specifies the authentication type | No | "noauth" | "auth0", "keycloak", "db", "noauth", "oauth2proxy" |
-| **JWT_SECRET** | Secret key for JWT token generation and validation | Yes | None | Any strong secret string |
-| **JWT_ALGORITHM** | Algorithm used for JWT | No | "HS256" | Any valid JWT algorithm |
-| **KEEP_DEFAULT_USERNAME** | Default username for the admin user | No | "keep" | Any valid username string |
-| **KEEP_DEFAULT_PASSWORD** | Default password for the admin user | No | "keep" | Any strong password string |
+| **KEEP_JWT_SECRET** | Secret key for JWT token generation and validation (DB auth only) | Yes | None | Any strong secret string |
+| **KEEP_DEFAULT_USERNAME** | Default username for the admin user (DB auth only) | No | "keep" | Any valid username string |
+| **KEEP_DEFAULT_PASSWORD** | Default password for the admin user (DB auth only)| No | "keep" | Any strong password string |
 | **KEEP_FORCE_RESET_DEFAULT_PASSWORD** | Forces reset of default user password | No | "false" | "true" or "false" |
 | **KEEP_DEFAULT_API_KEYS** | Comma-separated list of default API keys to provision | No | "" | Format: "name:role:secret,name:role:secret" |
 
@@ -146,8 +145,7 @@ Posthog configuration controls Keep's integration with the Posthog analytics pla
 | Env var | Purpose | Required | Default Value | Valid options |
 |:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
 | **POSTHOG_API_KEY** | API key for PostHog analytics | No | "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ" | Valid PostHog API key |
-| **ENABLE_POSTHOG_API** | Enables or disables PostHog API | No | "false" | "true" or "false" |
-| **DISABLE_POSTHOG** | Disables PostHog integration | No | "false" | "true" or "false" |
+| **POSTHOG_DISABLED** | Disables PostHog integration | No | "false" | "true" or "false" |
 
 ### Ngrok
 <Info>

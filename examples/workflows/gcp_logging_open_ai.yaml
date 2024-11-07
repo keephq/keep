@@ -1,0 +1,41 @@
+id: enrich-gcp-alert
+description: Enriched GCP Alert
+disabled: false
+triggers:
+  - type: manual
+  - filters:
+      - key: source
+        value: gcpmonitoring
+    type: alert
+consts: {}
+name: 5a76aa52-4e0f-43c3-85ff-5603229c5d7e
+owners: []
+services: []
+steps:
+  - name: gcpmonitoring-step
+    provider:
+      config: "{{ providers.gcp }}"
+      type: gcpmonitoring
+      with:
+        as_json: false
+        filter: resource.type = "cloud_run_revision" {{alert.traceId}}
+        page_size: 1000
+        raw: false
+        timedelta_in_days: 1
+  - name: openai-step
+    provider:
+      config: "{{ providers.openai }}"
+      type: openai
+      with:
+        prompt:
+          "You are a very talented engineer that receives context from GCP logs
+          about an endpoint that returned 500 status code and reports back the root
+          cause analysis. Here is the context: keep.json_dumps({{steps.gcpmonitoring-step.results}}) (it is a JSON list of log entries from GCP Logging).
+          In your answer, also provide the log entry that made you conclude the root cause and specify what your certainty level is that it is the root cause. (between 1-10, where 1 is low and 10 is high)"
+actions:
+  - name: slack-action
+    provider:
+      config: "{{ providers.slack }}"
+      type: slack
+      with:
+        message: "{{steps.openai-step.results}}"

@@ -4,7 +4,7 @@ import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { getApiURL } from "utils/apiUrl";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
@@ -23,7 +23,7 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
   const { data: workflows } = useWorkflows({});
   const { data: session } = useSession();
   const router = useRouter();
-  const apiUrl = getApiURL();
+  const apiUrl = useApiUrl();
 
   const isOpen = !!alert;
 

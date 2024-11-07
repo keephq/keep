@@ -18,23 +18,6 @@ from keep.validation.fields import NoSchemeUrl, UrlPort
 
 @pydantic.dataclasses.dataclass
 class SmtpProviderAuthConfig:
-    smtp_username: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "SMTP username",
-            "config_main_group": "authentication",
-        }
-    )
-
-    smtp_password: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "sensitive": True,
-            "description": "SMTP password",
-            "config_main_group": "authentication",
-        }
-    )
-
     smtp_server: NoSchemeUrl = dataclasses.field(
         metadata={
             "required": True,
@@ -50,7 +33,8 @@ class SmtpProviderAuthConfig:
             "description": "SMTP port",
             "config_main_group": "authentication",
             "validation": "port",
-        }
+        },
+        default=587,
     )
 
     encryption: typing.Literal["SSL", "TLS"] = dataclasses.field(
@@ -62,6 +46,25 @@ class SmtpProviderAuthConfig:
             "options": ["SSL", "TLS"],
             "config_main_group": "authentication",
         },
+    )
+
+    smtp_username: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "SMTP username",
+            "config_main_group": "authentication",
+        },
+        default="",
+    )
+
+    smtp_password: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "sensitive": True,
+            "description": "SMTP password",
+            "config_main_group": "authentication",
+        },
+        default="",
     )
 
 
@@ -113,14 +116,14 @@ class SmtpProvider(BaseProvider):
 
         if encryption == "SSL":
             smtp = SMTP_SSL(smtp_server, smtp_port)
-            smtp.login(smtp_username, smtp_password)
-            return smtp
-
         elif encryption == "TLS":
             smtp = SMTP(smtp_server, smtp_port)
             smtp.starttls()
+
+        if smtp_username and smtp_password:
             smtp.login(smtp_username, smtp_password)
-            return smtp
+
+        return smtp
 
     def send_email(
         self, from_email: str, from_name: str, to_email: str, subject: str, body: str
