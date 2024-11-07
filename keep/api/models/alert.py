@@ -42,7 +42,6 @@ def get_fingerprint(fingerprint, values):
 
 
 class SeverityBaseInterface(Enum):
-
     def __new__(cls, severity_name, severity_order):
         obj = object.__new__(cls)
         obj._value_ = severity_name
@@ -202,6 +201,14 @@ class AlertDto(BaseModel):
             return deleted
         if isinstance(deleted, list):
             return values.get("lastReceived") in deleted
+
+    @validator("url", pre=True)
+    def prepend_https(cls, url):
+        if isinstance(url, str) and not url.startswith("http"):
+            # @tb: in some cases we drop the event because of invalid url with no scheme
+            # invalid or missing URL scheme (type=value_error.url.scheme)
+            return f"https://{url}"
+        return url
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
@@ -519,6 +526,7 @@ class IncidentDto(IncidentDtoIn):
     def to_db_incident(self) -> "Incident":
         """Converts an IncidentDto instance to an Incident database model."""
         from keep.api.models.db.alert import Incident
+
         db_incident = Incident(
             id=self.id,
             user_generated_name=self.user_generated_name,

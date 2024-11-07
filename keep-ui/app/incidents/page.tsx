@@ -1,12 +1,12 @@
 import { getServerSession } from "next-auth/next";
-import IncidentList from "./incident-list";
 import { getApiURL } from "@/utils/apiUrl";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import { IncidentList } from "@/features/incident-list";
 import {
   getIncidents,
   GetIncidentsParams,
 } from "@/entities/incidents/api/incidents";
-import { PaginatedIncidentsDto } from "./models";
+import { PaginatedIncidentsDto } from "@/entities/incidents/model";
 
 const defaultIncidentsParams: GetIncidentsParams = {
   confirmed: true,

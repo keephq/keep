@@ -9,7 +9,6 @@ import {
 import { AlertDto } from "./models";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
 import AlertTableCheckbox from "./alert-table-checkbox";
-import AlertSeverity from "./alert-severity";
 import AlertName from "./alert-name";
 import { getAlertLastReceieved } from "utils/helpers";
 import Image from "next/image";
@@ -22,11 +21,12 @@ import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
 } from "react-icons/md";
+import { AlertSeverityBorder } from "./alert-severity-border";
 
 export const DEFAULT_COLS = [
-  "noise",
-  "checkbox",
   "severity",
+  "checkbox",
+  "noise",
   "name",
   "description",
   "status",
@@ -177,6 +177,40 @@ export const useAlertTableCols = (
   ) as ColumnDef<AlertDto>[];
 
   return [
+    columnHelper.display({
+      id: "severity",
+      maxSize: 4,
+      header: () => <></>,
+      cell: (context) => (
+        <AlertSeverityBorder severity={context.row.original.severity} />
+      ),
+      meta: {
+        tdClassName: "p-0",
+        thClassName: "p-0",
+      },
+    }),
+    ...(isCheckboxDisplayed
+      ? [
+          columnHelper.display({
+            id: "checkbox",
+            size: 10,
+            header: (context) => (
+              <AlertTableCheckbox
+                checked={context.table.getIsAllRowsSelected()}
+                indeterminate={context.table.getIsSomeRowsSelected()}
+                onChange={context.table.getToggleAllRowsSelectedHandler()}
+              />
+            ),
+            cell: (context) => (
+              <AlertTableCheckbox
+                checked={context.row.getIsSelected()}
+                indeterminate={context.row.getIsSomeSelected()}
+                onChange={context.row.getToggleSelectedHandler()}
+              />
+            ),
+          }),
+        ]
+      : ([] as ColumnDef<AlertDto>[])),
     // noisy column
     columnHelper.display({
       id: "noise",
@@ -207,37 +241,11 @@ export const useAlertTableCols = (
           }
         }
       },
+      meta: {
+        tdClassName: "p-0",
+        thClassName: "p-0",
+      },
       enableSorting: false,
-    }),
-    ,
-    ...(isCheckboxDisplayed
-      ? [
-          columnHelper.display({
-            id: "checkbox",
-            size: 10,
-            header: (context) => (
-              <AlertTableCheckbox
-                checked={context.table.getIsAllRowsSelected()}
-                indeterminate={context.table.getIsSomeRowsSelected()}
-                onChange={context.table.getToggleAllRowsSelectedHandler()}
-              />
-            ),
-            cell: (context) => (
-              <AlertTableCheckbox
-                checked={context.row.getIsSelected()}
-                indeterminate={context.row.getIsSomeSelected()}
-                onChange={context.row.getToggleSelectedHandler()}
-              />
-            ),
-          }),
-        ]
-      : ([] as ColumnDef<AlertDto>[])),
-    columnHelper.accessor("severity", {
-      id: "severity",
-      header: "Severity",
-      minSize: 100,
-      cell: (context) => <AlertSeverity severity={context.getValue()} />,
-      sortingFn: customSeveritySortFn,
     }),
     columnHelper.display({
       id: "name",

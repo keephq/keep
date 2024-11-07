@@ -1,63 +1,60 @@
 import { Icon } from "@tremor/react";
 import { Severity } from "./models";
 import {
-  ArrowDownIcon,
-  ArrowDownRightIcon,
-  ArrowRightIcon,
-  ArrowUpIcon,
-  ArrowUpRightIcon,
-} from "@heroicons/react/24/outline";
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/20/solid";
+import { capitalize } from "@/utils/helpers";
 
 interface Props {
   severity: Severity | undefined;
-  marginLeft?: boolean;
 }
 
-export default function AlertSeverity({ severity, marginLeft = true }: Props) {
+export default function AlertSeverity({ severity }: Props) {
   let icon: any;
   let color: any;
   let severityText: string;
   switch (severity) {
     case "critical":
-      icon = ArrowUpIcon;
+      icon = ExclamationCircleIcon;
       color = "red";
       severityText = Severity.Critical.toString();
       break;
     case "high":
-      icon = ArrowRightIcon;
+      icon = ExclamationCircleIcon;
       color = "orange";
       severityText = Severity.High.toString();
       break;
     case "error":
-      icon = ArrowUpRightIcon;
+      icon = ExclamationTriangleIcon;
       color = "orange";
       severityText = Severity.High.toString();
       break;
     case "warning":
       color = "yellow";
-      icon = ArrowRightIcon;
+      icon = ExclamationTriangleIcon;
       severityText = Severity.Warning.toString();
       break;
     case "low":
-      icon = ArrowDownRightIcon;
+      icon = InformationCircleIcon;
       color = "green";
       severityText = Severity.Low.toString();
       break;
     default:
-      icon = ArrowDownIcon;
-      color = "emerald";
+      icon = InformationCircleIcon;
+      color = "blue";
       severityText = Severity.Info.toString();
       break;
   }
 
   return (
     <Icon
-      //deltaType={deltaType as DeltaType}
       color={color}
       icon={icon}
-      tooltip={severityText}
+      tooltip={capitalize(severityText)}
       size="sm"
-      className={marginLeft ? "ml-2.5" : ""}
+      className="!p-0"
     />
   );
 }

@@ -7,32 +7,27 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { MdDone, MdBlock } from "react-icons/md";
-import { useSession } from "next-auth/react";
-import { IncidentDto, PaginatedIncidentsDto } from "./models";
+import {
+  IncidentDto,
+  PaginatedIncidentsDto,
+  useIncidentActions,
+} from "@/entities/incidents/model";
 import React, { useState } from "react";
 import Image from "next/image";
-import { IncidentTableComponent } from "./incident-table-component";
-import {
-  deleteIncident,
-  handleConfirmPredictedIncident,
-} from "./incident-candidate-actions";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { IncidentTableComponent } from "@/features/incident-list/ui/incident-table-component";
 
 const columnHelper = createColumnHelper<IncidentDto>();
 
 interface Props {
   incidents: PaginatedIncidentsDto;
-  mutate: () => void;
   editCallback: (rule: IncidentDto) => void;
 }
 
+// Depricated?
 export default function PredictedIncidentsTable({
   incidents: incidents,
-  mutate,
-  editCallback,
 }: Props) {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
@@ -99,12 +94,7 @@ export default function PredictedIncidentsTable({
             onClick={async (e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              await handleConfirmPredictedIncident({
-                incidentId: context.row.original.id!,
-                mutate,
-                session,
-                apiUrl: apiUrl!,
-              });
+              confirmPredictedIncident(context.row.original.id!);
             }}
           />
           <Button
@@ -116,12 +106,7 @@ export default function PredictedIncidentsTable({
             onClick={async (e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              await deleteIncident({
-                incidentId: context.row.original.id!,
-                mutate,
-                session,
-                apiUrl: apiUrl!,
-              });
+              deleteIncident(context.row.original.id!);
             }}
           />
         </div>
