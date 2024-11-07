@@ -775,10 +775,9 @@ class BaseIncidentProvider(BaseProvider):
 
         Args:
             tenant_id (str): _description_
-            keep_alerts_api_url (str): _description_
+            keep_api_url (str): _description_
             api_key (str): _description_
             setup_alerts (bool, optional): _description_. Defaults to True.
-            keep_incidents_api_url (str, optional): _description_. Defaults to None.
 
         Returns:
             dict | None: If some secrets needs to be saved, return them in a dict.

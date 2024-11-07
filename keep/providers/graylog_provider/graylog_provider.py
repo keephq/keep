@@ -526,7 +526,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         return alert
 
     @staticmethod
-    def _format_alert(event: dict, provider_instance: BaseProvider = None) -> AlertDto:
+    def _format_alert(event: dict, provider_instance: BaseProvider | None = None) -> AlertDto:
         return GraylogProvider.__map_event_to_alert(event=event)
 
     @classmethod
