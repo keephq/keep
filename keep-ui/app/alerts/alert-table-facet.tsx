@@ -14,6 +14,8 @@ import {
 import { AlertDto, Severity } from "./models";
 import AlertSeverity from "./alert-severity";
 import clsx from "clsx";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 interface FacetValue {
   label: string;
@@ -195,6 +197,7 @@ interface FacetProps {
   onSelect: (value: string, exclusive: boolean, isAllOnly: boolean) => void;
   facetKey: string;
   facetFilters: FacetFilters;
+  showSkeleton?: boolean;
 }
 
 const Facet: React.FC<FacetProps> = ({
@@ -203,6 +206,7 @@ const Facet: React.FC<FacetProps> = ({
   onSelect,
   facetKey,
   facetFilters,
+  showSkeleton = false,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [filter, setFilter] = useState("");
@@ -258,6 +262,10 @@ const Facet: React.FC<FacetProps> = ({
                   facetFilters={facetFilters}
                 />
               ))
+            ) : showSkeleton ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={`skeleton-${index}`} />
+              ))
             ) : (
               <div className="px-2 py-1 text-sm text-gray-500 italic">
                 No matching values found
@@ -280,6 +288,7 @@ interface AlertFacetsProps {
     isAllOnly: boolean
   ) => void;
   className?: string;
+  showSkeleton?: boolean;
 }
 
 const AlertFacets: React.FC<AlertFacetsProps> = ({
@@ -287,6 +296,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
   facetFilters,
   onSelect,
   className,
+  showSkeleton = false,
 }) => {
   const getFacetValues = (key: keyof AlertDto): FacetValue[] => {
     const valueMap = new Map<string, number>();
@@ -391,6 +401,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
             onSelect("severity", value, exclusive, isAllOnly)
           }
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           facetKey="status"
@@ -400,6 +411,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
             onSelect("status", value, exclusive, isAllOnly)
           }
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           facetKey="source"
@@ -409,6 +421,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
             onSelect("source", value, exclusive, isAllOnly)
           }
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           facetKey="assignee"
@@ -418,6 +431,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
             onSelect("assignee", value, exclusive, isAllOnly)
           }
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
       </div>
     </div>
