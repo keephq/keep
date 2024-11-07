@@ -52,6 +52,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!keep_big\\.svg$|gnip\\.webp|signin$|api/aws-marketplace$|monitoring-tunnel).*)",
+    "/((?!keep_big\\.svg$|gnip\\.webp|signin$|api/aws-marketplace$|monitoring).*)",
   ], // Adjust as needed
 };
