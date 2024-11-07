@@ -6,7 +6,7 @@ export function getApiURL(): string {
   if (
     gitBranchName === "main" ||
     gitBranchName === "notvercel" ||
-    gitBranchName === "refactor/2406-hydrated-session"
+    gitBranchName === "refactor/2413-alerts-feed-ui-loading"
   ) {
     return process.env.API_URL!;
   } else {
