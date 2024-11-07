@@ -43,7 +43,11 @@ from sqlmodel import Session, col, or_, select, text
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.ai_external import ExternalAIConfigAndMetadata, ExternalAIConfigAndMetadataDto
+from keep.api.models.ai_external import (
+    ExternalAIConfigAndMetadata, 
+    ExternalAIConfigAndMetadataDto, 
+    ExternalAITransformers,
+)
 from keep.api.models.alert import (
     AlertStatus,
     IncidentDto,
@@ -62,6 +66,7 @@ from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.ai_external import *  # pylint: disable=unused-wildcard-import
 
 logger = logging.getLogger(__name__)
 
