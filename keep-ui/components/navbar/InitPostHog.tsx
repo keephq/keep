@@ -26,6 +26,7 @@ export const InitPostHog = () => {
   }
 
   if (
+    typeof window !== "undefined" &&
     pathname &&
     configData &&
     configData.POSTHOG_KEY &&

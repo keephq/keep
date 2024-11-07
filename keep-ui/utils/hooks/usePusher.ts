@@ -17,6 +17,7 @@ export const useWebsocket = () => {
   console.log("useWebsocket: Session:", session);
 
   if (
+    typeof window !== "undefined" &&
     PUSHER === null &&
     configData !== undefined &&
     session !== undefined &&
