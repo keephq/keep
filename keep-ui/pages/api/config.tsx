@@ -1,3 +1,5 @@
+"use server";
+
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   AuthenticationType,
@@ -6,12 +8,8 @@ import {
   NO_AUTH,
 } from "utils/authenticationType";
 import { getApiURL } from "utils/apiUrl";
-import { get } from "http";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export async function getConfig() {
   let authType = process.env.AUTH_TYPE;
 
   // Backward compatibility
@@ -32,7 +30,7 @@ export default async function handler(
   } else {
     API_URL_CLIENT = process.env.API_URL_CLIENT;
   }
-  res.status(200).json({
+  return {
     AUTH_TYPE: authType,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
     // could be relative (for ingress) or absolute (e.g. Pusher)
@@ -52,5 +50,13 @@ export default async function handler(
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
-  });
+  };
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const config = await getConfig();
+  res.status(200).json(config);
 }
