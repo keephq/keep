@@ -11,4 +11,4 @@ export async function register() {
 }
 
 // We need NextJS 15 to use this
-// export const onRequestError = Sentry.captureRequestError;
+export const onRequestError = Sentry.captureRequestError;
