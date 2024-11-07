@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -15,6 +17,7 @@ import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 const defaultPresets: Preset[] = [
   {
@@ -25,7 +28,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "dismissed",
@@ -35,7 +38,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "groups",
@@ -45,7 +48,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "without-incident",
@@ -55,7 +58,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
 ];
 
@@ -100,9 +103,14 @@ export default function Alerts({ presetName }: AlertsProps) {
   const { data: pollAlerts } = useAlertPolling();
   const {
     data: alerts = [],
-    isLoading: isAsyncLoading,
+    isLoading,
     mutate: mutateAlerts,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+
+  const isMounted = useMounted();
+
+  const isAsyncLoading = isLoading || !isMounted;
+
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     if (fingerprint) {
@@ -137,7 +145,6 @@ export default function Alerts({ presetName }: AlertsProps) {
         setChangeStatusAlert={setChangeStatusAlert}
         mutateAlerts={mutateAlerts}
       />
-
       {selectedPreset && (
         <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       )}
