@@ -43,3 +43,6 @@ jspm_packages
 
 app/topology/mock-topology-data.tsx
 .vercel
+
+# Sentry Config File
+.env.sentry-build-plugin

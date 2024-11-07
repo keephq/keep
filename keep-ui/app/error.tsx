@@ -11,6 +11,7 @@ import { Title, Subtitle } from "@tremor/react";
 import { Button, Text } from "@tremor/react";
 import { signOut } from "next-auth/react";
 import { KeepApiError } from "@/shared/lib/KeepApiError";
+import * as Sentry from "@sentry/nextjs";
 
 export default function ErrorComponent({
   error,
@@ -20,7 +21,7 @@ export default function ErrorComponent({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
