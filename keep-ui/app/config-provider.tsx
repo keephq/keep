@@ -1,7 +1,11 @@
 "use client";
 
-import { SWRConfig } from "swr";
+import { createContext } from "react";
 
+// Create the context with undefined as initial value
+export const ConfigContext = createContext<any | undefined>(undefined);
+
+// Create a provider component
 export function ConfigProvider({
   children,
   config,
@@ -10,14 +14,6 @@ export function ConfigProvider({
   config: any;
 }) {
   return (
-    <SWRConfig
-      value={{
-        fallback: {
-          "/api/config": config,
-        },
-      }}
-    >
-      {children}
-    </SWRConfig>
+    <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>
   );
 }
