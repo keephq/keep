@@ -32,7 +32,7 @@ def get_stats(
         "alerts_count": get_alerts_count(tenant_id),
         "first_alert_datetime": get_first_alert_datetime(tenant_id),
         "incidents_count": get_incidents_count(tenant_id),
-        "algorithms": get_or_create_external_ai_settings(tenant_id),
+        "algorithm_configs": get_or_create_external_ai_settings(tenant_id),
     }
 
 @router.put(

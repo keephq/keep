@@ -28,7 +28,7 @@ export const useUpdateAISettings = () => {
 
   return async (settings: Record<string, any>) => {
     const response = await fetch(`${apiUrl}/ai/settings`, {
-      method: "POST",
+      method: "PUT",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
         "Content-Type": "application/json",

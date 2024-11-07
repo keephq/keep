@@ -29,6 +29,7 @@ class ExternalAI(BaseModel):
     Base model for external algorithms.
     """
     name: str = None
+    description: str = None
     version: int = None
     api_url: str = None
     config_default: Json = None
@@ -41,11 +42,19 @@ class ExternalAI(BaseModel):
 # Not sure if we'll need to move algorithm objects to the DB, 
 # for now, it's ok to keep them as code.
 ExternalAITransformers = ExternalAI(
-    name="Transformers",
-    description="Transformers-based alert-to-incident correlation algorithm. Trained per tenant and taking into account the tenant's alert and incident data.",
+    name="Transformers Correlation",
+    description="""Transformers-based alert-to-incident correlation algorithm. 
+Trained per tenant and taking into account the tenant's alert and incident data.
+Will automatically attach new alerts to existing incidents if they are similar enough, otherwise will raise new incidents.\n\n
+In other words, will act as a person looking at your alert feed and making a decision about each new alert.""",
     version=1,
     api_url=os.environ.get("AI_TRANSFORMERS_API_HOST", None),
-    config_default=json.dumps({"threshold": {"min": 0.3, "max": 0.99, "value": 0.8, "type": "float"}})
+    config_default=json.dumps(
+        [
+            {"min": 0.3, "max": 0.99, "value": 0.8, "type": "float", "name": "Correlation Threshold", "description": "The minimum correlation value to consider two alerts belonging to an ancident."},
+            {"value": True, "type": "bool", "name": "Enabled", "description": "Enable or disable the algorithm."},
+        ]
+    )
 )
 
 EXTERNAL_AIS = [
@@ -64,15 +73,8 @@ class ExternalAIConfigAndMetadata(SQLModel, table=True):
 
     @property
     def algorithm(self) -> ExternalAI:
-        return [algo for algo in EXTERNAL_AIS if algo.unique_id == self.algorithm_id][0]
-    
-    @property
-    def name(self) -> str:
-        return self.algorithm.name
-    
-    @property
-    def description(self) -> str:
-        return self.algorithm.description
+        matching_algos = [algo for algo in EXTERNAL_AIS if algo.unique_id == self.algorithm_id]
+        return matching_algos[0] if len(matching_algos) > 0 else None
     
     def from_external_ai(tenant_id: str, algorithm: ExternalAI):
         external_ai = ExternalAIConfigAndMetadata(

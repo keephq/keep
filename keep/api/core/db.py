@@ -31,7 +31,7 @@ from sqlmodel import Session, col, or_, select, text
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
-from keep.api.models.ai_external import ExternalAIConfigAndMetadataDTO
+from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto, ExternalAIDto
 from keep.api.models.alert import AlertStatus, IncidentDtoIn, IncidentSorting
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
@@ -3883,7 +3883,7 @@ def get_alerts_metrics_by_provider(
         for row in results
     }
 
-def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigAndMetadataDTO]:
+def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigAndMetadataDto]:
     with Session(engine) as session:
         algorithm_configs = session.exec(
             select(ExternalAIConfigAndMetadata).where(ExternalAIConfigAndMetadata.tenant_id == tenant_id)
@@ -3897,9 +3897,9 @@ def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigA
             session.add(algorithm_config)
             session.commit()
             algorithm_configs = [algorithm_config]
-    return algorithm_configs
+    return [ExternalAIConfigAndMetadataDto.from_orm(algorithm_config) for algorithm_config in algorithm_configs]
 
-def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDTO:
+def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDto:
     with Session(engine) as session:
         session.query(ExternalAIConfigAndMetadata).filter(
             ExternalAIConfigAndMetadata.tenant_id == tenant_id,
