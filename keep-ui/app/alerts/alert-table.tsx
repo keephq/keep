@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { Table, Callout, Card, Icon } from "@tremor/react";
+import { useState } from "react";
+import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
-import { CircleStackIcon } from "@heroicons/react/24/outline";
 import {
   getCoreRowModel,
   useReactTable,
@@ -332,16 +331,6 @@ export function AlertTable({
           </div>
           <Card className="flex-grow h-full flex flex-col p-0">
             <div className="flex-grow">
-              {isAsyncLoading && (
-                <Callout
-                  title="Getting your alerts..."
-                  icon={CircleStackIcon}
-                  color="gray"
-                  className="m-5"
-                >
-                  Alerts will show up in this table as they are added to Keep...
-                </Callout>
-              )}
               {/* For dynamic preset, add alert tabs*/}
               {!presetStatic && (
                 <AlertTabs
