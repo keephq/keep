@@ -14,6 +14,9 @@
     <a href="https://codecov.io/gh/keephq/keep" >
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
+    <a href="https://gurubase.io/g/keep">
+        <img src="https://img.shields.io/badge/Gurubase-Ask%20Keep%20Guru-006BFF" alt="Gurubase" />
+    </a>
 </div>
 <p align="center">
     <a href="#why-keep">Why Keep?</a>
