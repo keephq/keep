@@ -570,7 +570,7 @@ def process_event(
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
         # In case of exception, add the alerts to the defect table
-        __save_error_alerts(provider_type, raw_event)
+        __save_error_alerts(tenant_id, provider_type, raw_event)
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
@@ -580,7 +580,7 @@ def process_event(
 
 
 def __save_error_alerts(
-    provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
+    tenant_id, provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
 ):
     if not raw_events:
         logger.info("No raw events to save as errors")
@@ -603,7 +603,7 @@ def __save_error_alerts(
                 raw_event = raw_event.dict()
 
             alert = AlertRaw(
-                tenant_id="error", raw_alert=raw_event, provider_type=provider_type
+                tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
             )
             session.add(alert)
         session.commit()
