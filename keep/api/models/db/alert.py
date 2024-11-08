@@ -361,6 +361,8 @@ class AlertRaw(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     raw_alert: dict = Field(sa_column=Column(JSON))
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    provider_type: str | None = Field(default=None)
 
     class Config:
         arbitrary_types_allowed = True
