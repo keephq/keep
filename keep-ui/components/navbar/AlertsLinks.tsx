@@ -1,56 +1,42 @@
 "use client";
-
+import { useState } from "react";
 import { Button, Subtitle, Callout } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
 import { AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
 import { Disclosure } from "@headlessui/react";
-import classNames from "classnames";
+import { IoChevronUp } from "react-icons/io5";
 import { Session } from "next-auth";
-import { useState, useEffect } from "react";
-import { useTags } from "utils/hooks/useTags";
 import Modal from "@/components/ui/Modal";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
-import { IoChevronUp } from "react-icons/io5";
+import { useTags } from "utils/hooks/useTags";
+import { usePresets } from "utils/hooks/usePresets";
+import classNames from "classnames";
 
 type AlertsLinksProps = {
   session: Session | null;
 };
 
-type FeedPreset = {
-  id: string;
-  name: string;
-  alerts_count: number;
-};
-
-const DEFAULT_FEED_PRESET: FeedPreset = {
-  id: "feed",
-  name: "feed",
-  alerts_count: 0,
-};
-
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([]);
-  const { data: tags = [] } = useTags();
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
     []
   );
-  const [feedPreset, setFeedPreset] = useLocalStorage<FeedPreset>(
-    "feedPreset",
-    DEFAULT_FEED_PRESET
-  );
+  const [tempSelectedTags, setTempSelectedTags] =
+    useState<string[]>(storedTags);
 
-  useEffect(() => {
-    if (JSON.stringify(selectedTags) !== JSON.stringify(storedTags)) {
-      setSelectedTags(storedTags);
-    }
-  }, []);
+  const { data: tags = [] } = useTags();
+
+  // Get all presets including feed preset and localStorage state
+  const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
+  const { data: staticPresets = [] } = useStaticPresets({
+    revalidateIfStale: true,
+    revalidateOnFocus: true,
+  });
 
   const handleTagSelect = (
     newValue: MultiValue<{ value: string; label: string }>,
@@ -60,15 +46,31 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   };
 
   const handleApplyTags = () => {
-    setSelectedTags(tempSelectedTags);
     setStoredTags(tempSelectedTags);
     setIsTagModalOpen(false);
   };
 
   const handleOpenModal = () => {
-    setTempSelectedTags(selectedTags);
+    setTempSelectedTags(storedTags);
     setIsTagModalOpen(true);
   };
+
+  // Get the current alerts count from either the server data or localStorage
+  const currentAlertsCount = (() => {
+    // First try to get from server data
+    const serverPreset = staticPresets?.find(
+      (preset) => preset.name === "feed"
+    );
+    if (serverPreset) {
+      return serverPreset.alerts_count;
+    }
+
+    // If no server data, get from localStorage
+    const cachedPreset = staticPresetsOrderFromLS?.find(
+      (preset) => preset.name === "feed"
+    );
+    return cachedPreset?.alerts_count ?? 0;
+  })();
 
   return (
     <>
@@ -84,9 +86,9 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   className={classNames(
                     "absolute left-full ml-2 cursor-pointer text-gray-400 transition-opacity",
                     {
-                      "opacity-100 text-orange-500": selectedTags.length > 0,
+                      "opacity-100 text-orange-500": storedTags.length > 0,
                       "opacity-0 group-hover:opacity-100 group-hover:text-orange-500":
-                        selectedTags.length === 0,
+                        storedTags.length === 0,
                     }
                   )}
                   size={16}
@@ -97,12 +99,12 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                 />
               </div>
               <IoChevronUp
-                className={classNames(
-                  { "rotate-180": open },
-                  "mr-2 text-slate-400"
-                )}
+                className={classNames("mr-2 text-slate-400", {
+                  "rotate-180": open,
+                })}
               />
             </Disclosure.Button>
+
             <Disclosure.Panel
               as="ul"
               className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
@@ -111,7 +113,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                 <LinkWithIcon
                   href="/alerts/feed"
                   icon={AiOutlineSwap}
-                  count={feedPreset.alerts_count}
+                  count={currentAlertsCount}
                   testId="menu-alerts-feed"
                 >
                   <Subtitle>Feed</Subtitle>
@@ -120,13 +122,14 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               {session && (
                 <CustomPresetAlertLinks
                   session={session}
-                  selectedTags={selectedTags}
+                  selectedTags={storedTags}
                 />
               )}
             </Disclosure.Panel>
           </>
         )}
       </Disclosure>
+
       <Modal
         isOpen={isTagModalOpen}
         onClose={() => setIsTagModalOpen(false)}
