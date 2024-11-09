@@ -8,6 +8,7 @@ import {
   CircleStackIcon,
   CheckCircleIcon,
   XCircleIcon,
+  BellIcon,
   ExclamationCircleIcon,
   UserCircleIcon,
   BellSlashIcon,
@@ -207,7 +208,7 @@ const FacetValue: React.FC<FacetValueProps> = ({
           )}
           {facetKey === "dismissed" && (
             <Icon
-              icon={BellSlashIcon}
+              icon={label === "true" ? BellSlashIcon : BellIcon}
               size="sm"
               className="text-gray-600 !p-0"
             />

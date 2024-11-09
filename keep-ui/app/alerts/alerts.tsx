@@ -126,8 +126,11 @@ export default function Alerts({ presetName }: AlertsProps) {
   if (!selectedPreset) {
     return <NotFound />;
   }
-
   if (alertsError) {
+    if (alertsError.statusCode === 401) {
+      window.location.href = "/signin";
+      return null;
+    }
     return <NotAuthorized />;
   }
 
