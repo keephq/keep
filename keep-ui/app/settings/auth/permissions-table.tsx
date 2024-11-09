@@ -8,23 +8,20 @@ import {
   TableCell,
   Badge,
   Button,
+  Text,
 } from "@tremor/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { Permission } from "app/settings/models";
 
 interface PermissionsTableProps {
-  presets: any[];
-  displayPermissions: Permission[];
-  selectedPermissions: { [key: string]: string[] };
-  onRowClick: (preset: any) => void;
-  onDeletePermission: (presetId: string, event: React.MouseEvent) => void;
+  permissions: Permission[];
+  onRowClick: (permission: Permission) => void;
+  onDeletePermission: (resourceId: string, event: React.MouseEvent) => void;
   isDisabled?: boolean;
 }
 
 export function PermissionsTable({
-  presets,
-  displayPermissions,
-  selectedPermissions,
+  permissions,
   onRowClick,
   onDeletePermission,
   isDisabled = false,
@@ -35,53 +32,53 @@ export function PermissionsTable({
         <TableRow>
           <TableHeaderCell className="w-6/24">Resource Name</TableHeaderCell>
           <TableHeaderCell className="w-6/24">Resource Type</TableHeaderCell>
-          <TableHeaderCell className="w-11/24">Permissions</TableHeaderCell>
+          <TableHeaderCell className="w-11/24">Assigned To</TableHeaderCell>
           <TableHeaderCell className="w-1/24"></TableHeaderCell>
         </TableRow>
       </TableHead>
       <TableBody className="overflow-auto">
-        {presets.map((preset) => (
+        {permissions.map((permission) => (
           <TableRow
-            key={preset.id}
+            key={permission.resource_id}
             className={`
               ${isDisabled ? "opacity-50" : "hover:bg-gray-50 cursor-pointer"}
               transition-colors duration-200 group
             `}
-            onClick={() => !isDisabled && onRowClick(preset)}
+            onClick={() => !isDisabled && onRowClick(permission)}
           >
-            <TableCell className="w-6/24">{preset.name}</TableCell>
+            <TableCell className="w-6/24">
+              <div className="flex items-center justify-between">
+                <Text className="truncate">{permission.name}</Text>
+              </div>
+            </TableCell>
             <TableCell className="w-6/24">
               <Badge color="orange" className="text-xs">
-                preset
+                {permission.type}
               </Badge>
             </TableCell>
             <TableCell className="w-11/24">
               <div className="flex flex-wrap gap-1">
-                {selectedPermissions[preset.id]
-                  ?.slice(0, 5)
-                  .map((permId, index) => (
-                    <Badge key={index} color="orange" className="text-xs">
-                      {displayPermissions.find((p) => p.id === permId)?.name}
-                    </Badge>
-                  ))}
-                {selectedPermissions[preset.id]?.length > 5 && (
+                {permission.permissions?.slice(0, 5).map((perm, index) => (
+                  <Badge key={index} color="orange" className="text-xs">
+                    {perm.id}
+                  </Badge>
+                ))}
+                {permission.permissions?.length > 5 && (
                   <Badge color="orange" className="text-xs">
-                    +{selectedPermissions[preset.id].length - 5} more
+                    +{permission.permissions.length - 5} more
                   </Badge>
                 )}
               </div>
             </TableCell>
             <TableCell className="w-1/24">
               {!isDisabled && (
-                <div className="flex justify-end">
-                  <Button
-                    icon={TrashIcon}
-                    variant="light"
-                    color="orange"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => onDeletePermission(preset.id, e)}
-                  />
-                </div>
+                <Button
+                  icon={TrashIcon}
+                  variant="light"
+                  color="orange"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => onDeletePermission(permission.resource_id, e)}
+                />
               )}
             </TableCell>
           </TableRow>

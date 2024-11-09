@@ -33,10 +33,11 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   // Get all presets including feed preset and localStorage state
   const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
-  const { data: staticPresets = [] } = useStaticPresets({
-    revalidateIfStale: true,
-    revalidateOnFocus: true,
-  });
+  const { data: staticPresets = [], error: staticPresetsError } =
+    useStaticPresets({
+      revalidateIfStale: true,
+      revalidateOnFocus: true,
+    });
 
   const handleTagSelect = (
     newValue: MultiValue<{ value: string; label: string }>,
@@ -55,8 +56,27 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     setIsTagModalOpen(true);
   };
 
-  // Get the current alerts count from either the server data or localStorage
+  // Determine if we should show the feed link
+  const shouldShowFeed = (() => {
+    // If we have server data, check if feed preset exists
+    if (staticPresets) {
+      return staticPresets.some((preset) => preset.name === "feed");
+    }
+
+    // If there's a server error but we have a cached feed preset, show it
+    // This handles temporary API issues while maintaining functionality
+    if (staticPresetsError) {
+      return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
+    }
+
+    // If we're still loading (no data and no error), show based on cache
+    return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
+  })();
+
+  // Get the current alerts count only if we should show feed
   const currentAlertsCount = (() => {
+    if (!shouldShowFeed) return 0;
+
     // First try to get from server data
     const serverPreset = staticPresets?.find(
       (preset) => preset.name === "feed"
@@ -109,16 +129,18 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               as="ul"
               className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
             >
-              <li>
-                <LinkWithIcon
-                  href="/alerts/feed"
-                  icon={AiOutlineSwap}
-                  count={currentAlertsCount}
-                  testId="menu-alerts-feed"
-                >
-                  <Subtitle>Feed</Subtitle>
-                </LinkWithIcon>
-              </li>
+              {shouldShowFeed && (
+                <li>
+                  <LinkWithIcon
+                    href="/alerts/feed"
+                    icon={AiOutlineSwap}
+                    count={currentAlertsCount}
+                    testId="menu-alerts-feed"
+                  >
+                    <Subtitle>Feed</Subtitle>
+                  </LinkWithIcon>
+                </li>
+              )}
               {session && (
                 <CustomPresetAlertLinks
                   session={session}
