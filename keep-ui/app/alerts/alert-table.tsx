@@ -86,6 +86,8 @@ export function AlertTable({
     status: [],
     source: [],
     assignee: [],
+    dismissed: [],
+    incident: [],
   });
 
   const columnsIds = getColumnsIds(columns);

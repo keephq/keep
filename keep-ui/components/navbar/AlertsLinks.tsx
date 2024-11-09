@@ -3,48 +3,33 @@
 import { Button, Subtitle, Callout } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { CustomPresetAlertLinks } from "components/navbar/CustomPresetAlertLinks";
-import { SilencedDoorbellNotification } from "components/icons";
-import { IoChevronUp } from "react-icons/io5";
 import { AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
 import { Disclosure } from "@headlessui/react";
 import classNames from "classnames";
 import { Session } from "next-auth";
-import { usePresets } from "utils/hooks/usePresets";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useTags } from "utils/hooks/useTags";
 import Modal from "@/components/ui/Modal";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
-import { MdFlashOff } from "react-icons/md";
+import { IoChevronUp } from "react-icons/io5";
 
 type AlertsLinksProps = {
   session: Session | null;
 };
 
-type PresetConfig = {
-  path: string;
-  icon: any;
-  label: string;
+type FeedPreset = {
+  id: string;
+  name: string;
+  alerts_count: number;
 };
 
-const PRESET_CONFIGS: Record<string, PresetConfig> = {
-  feed: {
-    path: "/alerts/feed",
-    icon: AiOutlineSwap,
-    label: "Feed",
-  },
-  "without-incident": {
-    path: "/alerts/without-incident",
-    icon: MdFlashOff,
-    label: "Without Incident",
-  },
-  dismissed: {
-    path: "/alerts/dismissed",
-    icon: SilencedDoorbellNotification,
-    label: "Dismissed",
-  },
+const DEFAULT_FEED_PRESET: FeedPreset = {
+  id: "feed",
+  name: "feed",
+  alerts_count: 0,
 };
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
@@ -52,25 +37,14 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([]);
   const { data: tags = [] } = useTags();
-  const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
-  const { data: fetchedPresets = [] } = useStaticPresets({
-    revalidateIfStale: false,
-  });
-
-  const [staticPresets, setStaticPresets] = useState(staticPresetsOrderFromLS);
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
     []
   );
-
-  useEffect(() => {
-    if (
-      fetchedPresets.length > 0 &&
-      JSON.stringify(staticPresets) !== JSON.stringify(staticPresetsOrderFromLS)
-    ) {
-      setStaticPresets(staticPresetsOrderFromLS);
-    }
-  }, [fetchedPresets, staticPresetsOrderFromLS]);
+  const [feedPreset, setFeedPreset] = useLocalStorage<FeedPreset>(
+    "feedPreset",
+    DEFAULT_FEED_PRESET
+  );
 
   useEffect(() => {
     if (JSON.stringify(selectedTags) !== JSON.stringify(storedTags)) {
@@ -94,26 +68,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const handleOpenModal = () => {
     setTempSelectedTags(selectedTags);
     setIsTagModalOpen(true);
-  };
-
-  const renderPresetLink = (presetName: string) => {
-    const preset = staticPresets.find((p) => p.name === presetName);
-    const config = PRESET_CONFIGS[presetName];
-
-    if (!preset || !config) return null;
-
-    return (
-      <li key={presetName}>
-        <LinkWithIcon
-          href={config.path}
-          icon={config.icon}
-          count={preset.alerts_count}
-          testId={`menu-alerts-${presetName}`}
-        >
-          <Subtitle>{config.label}</Subtitle>
-        </LinkWithIcon>
-      </li>
-    );
   };
 
   return (
@@ -153,15 +107,22 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
               as="ul"
               className="space-y-2 overflow-auto min-w-[max-content] p-2 pr-4"
             >
-              {renderPresetLink("feed")}
-              {renderPresetLink("without-incident")}
+              <li>
+                <LinkWithIcon
+                  href="/alerts/feed"
+                  icon={AiOutlineSwap}
+                  count={feedPreset.alerts_count}
+                  testId="menu-alerts-feed"
+                >
+                  <Subtitle>Feed</Subtitle>
+                </LinkWithIcon>
+              </li>
               {session && (
                 <CustomPresetAlertLinks
                   session={session}
                   selectedTags={selectedTags}
                 />
               )}
-              {renderPresetLink("dismissed")}
             </Disclosure.Panel>
           </>
         )}
