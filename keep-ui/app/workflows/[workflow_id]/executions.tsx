@@ -36,7 +36,6 @@ export default function WorkflowDetailPage({
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      debugger;
       router.push("/signin");
     }
   }, [status, router]);

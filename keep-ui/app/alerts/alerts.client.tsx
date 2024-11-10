@@ -20,13 +20,11 @@ export default function AlertsPage({ presetName }: AlertsPageProps) {
 
   if (status === "unauthenticated") {
     console.log("unauthenticated");
-    debugger;
     router.push("/signin");
   }
 
   if (session && !session.tenantId) {
     console.log("no tenantId");
-    debugger;
     router.push("/signin");
   }
 

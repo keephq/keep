@@ -135,7 +135,6 @@ export default function ProvidersPage({
   }
   if (status === "loading") return <Loading />;
   if (status === "unauthenticated") {
-    debugger;
     router.push("/signin");
   }
   if (!providers || !installedProviders || providers.length <= 0)
