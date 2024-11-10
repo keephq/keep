@@ -100,8 +100,10 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             if not allowed:
                 raise HTTPException(status_code=401, detail="Permission check failed")
         # secure fallback
-        except Exception:
-            raise HTTPException(status_code=401, detail="Permission check failed")
+        except Exception as e:
+            raise HTTPException(
+                status_code=401, detail="Permission check failed - " + str(e)
+            )
         return allowed
 
     def authorize_resource(

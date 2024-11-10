@@ -22,7 +22,8 @@
           "manage-users",
           "manage-identity-providers",
           "realm-admin"
-        ]
+        ],
+        "keep": ["admin"]
       }
     }
   ],
@@ -45,6 +46,13 @@
       "implicitFlowEnabled": false,
       "fullScopeAllowed": true,
       "authorizationServicesEnabled": true,
+      "authorizationSettings": {
+        "policyEnforcementMode": "ENFORCING",
+        "decisionStrategy": "AFFIRMATIVE",
+        "allowRemoteResourceManagement": true,
+        "resources": [],
+        "policies": []
+      },
       "serviceAccountsEnabled": true,
       "defaultClientScopes": [
         "email",
