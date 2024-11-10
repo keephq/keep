@@ -4,16 +4,24 @@ from datetime import datetime
 from typing import List
 
 from arq import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, BackgroundTasks, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from pusher import Pusher
 from pydantic import BaseModel, Field  # noqa
 from pydantic.types import UUID
 from sqlmodel import Session
 
+from keep.api.arq_pool import get_pool
 from keep.api.bl.ai_suggestion_bl import AISuggestionBl
 from keep.api.bl.incidents_bl import IncidentBl
-from keep.api.arq_pool import get_pool
-from keep.api.consts import REDIS, KEEP_ARQ_QUEUE_BASIC
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, REDIS
 from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
@@ -29,7 +37,7 @@ from keep.api.core.db import (
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
 )
-from keep.api.core.dependencies import get_pusher_client, extract_generic_body
+from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.models.alert import (
     AlertDto,
     EnrichAlertRequestBody,
@@ -47,7 +55,7 @@ from keep.api.models.alert import (
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
-from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
@@ -492,9 +500,17 @@ async def receive_event(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
+    logger.info(
+        "Received event",
+        extra={
+            "trace_id": trace_id,
+            "tenant_id": authenticated_entity.tenant_id,
+            "provider_type": provider_type,
+            "provider_id": provider_id,
+        },
+    )
 
     provider_class = None
     try:
@@ -509,23 +525,20 @@ async def receive_event(
         )
 
     # Parse the raw body
-    event = provider_class.parse_event_raw_body(event)
+    event = provider_class.format_incident(
+        event, authenticated_entity.tenant_id, provider_type, provider_id
+    )
 
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
-            "async_process_event",
+            "async_process_incident",
+            {},
             authenticated_entity.tenant_id,
-            provider_type,
             provider_id,
-            None,
-            authenticated_entity.api_key_name,
-            trace_id,
+            provider_type,
             event,
-            True,
-            None,
-            "incident",
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+            trace_id,
         )
         logger.info(
             "Enqueued job",
@@ -536,19 +549,15 @@ async def receive_event(
             },
         )
     else:
+        logger.info("Processing incident in the background")
         bg_tasks.add_task(
-            process_event,
+            process_incident,
             {},
             authenticated_entity.tenant_id,
-            provider_type,
             provider_id,
-            None,
-            authenticated_entity.api_key_name,
-            trace_id,
+            provider_type,
             event,
-            True,
-            None,
-            "incident"
+            trace_id,
         )
     return Response(status_code=202)
 

@@ -93,3 +93,7 @@ def process_incident(
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
+
+
+async def async_process_incident(*args, **kwargs):
+    return process_incident(*args, **kwargs)
