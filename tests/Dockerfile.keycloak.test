@@ -1,5 +1,5 @@
 # Use the Phase Two Keycloak image as the base
-FROM us-central1-docker.pkg.dev/keephq/keep/keep-keycloak-test
+FROM quay.io/phasetwo/phasetwo-keycloak:25.0.4
 
 # Set the working directory
 WORKDIR /opt/keycloak
