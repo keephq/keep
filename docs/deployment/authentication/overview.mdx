@@ -13,6 +13,7 @@ Keep supports various authentication providers and architectures to accommodate 
 - [**DB**](/deployment/authentication/db-auth) - Simple username/password authentication. Works well for small teams or for dev/stage environments. Users and hashed password are stored on DB.
 - [**Auth0**](/deployment/authentication/auth0-auth) - Utilize Auth0 for scalable, auth0-based authentication.
 - [**Keycloak**](/deployment/authentication/keycloak-auth) - Utilize Keycloak for enterprise authentication methods such as SSO/SAML/OIDC, advanced RBAC with custom roles, resource-level permissions, and integration with user directories (LDAP).
+- [**AzureAD**](/deployment/authentication/azuread-auth) - Utilize Azure AD for SSO/SAML/OIDC nterprise authentication.
 
 Choosing the right authentication strategy depends on your specific use case, security requirements, and deployment environment. You can read more about each authentication provider.
 
@@ -27,6 +28,7 @@ Choosing the right authentication strategy depends on your specific use case, se
 | **Auth0**             |  ✅ <br />(Predefiend roles)  |     ✅     |  🚧  |             🚧            |        ✅        |         🚧        |    ❌    |   **EE**   |
 | **Keycloak**          |  ✅ <br />(Custom roles)  |     ✅     |  ✅   |             ✅            |        ✅        |         ✅         |    ✅    |   **EE**    |
 | **Oauth2Proxy**       |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ❌            |        N/A        |         N/A         |    ✅    |   **OSS**   |
+| **Azure AD**       |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ❌            |        By Azure AD        |         By Azure AD         |    ✅    |   **EE**   |
 ### How To Configure
 <Tip>
 Some authentication providers require additional environment variables. These will be covered in detail on the specific authentication provider pages.
@@ -41,5 +43,6 @@ The authentication scheme on Keep is controlled with environment variables both 
 | **Auth0**                           |  `AUTH_TYPE=AUTH0`  | `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET` |
 | **Keycloak** | `AUTH_TYPE=KEYCLOAK` | `KEYCLOAK_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`, `KEYCLOAK_CLIENT_SECRET` |
 | **Oauth2Proxy** | `AUTH_TYPE=OAUTH2PROXY` | `OAUTH2_PROXY_USER_HEADER`, `OAUTH2_PROXY_ROLE_HEADER`, `OAUTH2_PROXY_AUTO_CREATE_USER` |
+| **AzureAD** | `AUTH_TYPE=AZUREAD` | See [AzureAD Configuration](/deployment/authentication/azuread-auth) |
 
 For more details on each authentication strategy, including setup instructions and implications, refer to the respective sections.
