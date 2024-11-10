@@ -133,6 +133,8 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
     const protocol = split?.shift()?.toLowerCase() ?? "";
     if (opts.protocols.length && opts.protocols.indexOf(protocol) === -1)
       return getProtocolError(opts.protocols);
+  } else if (opts.requireProtocol && opts.protocols.length) {
+    return getProtocolError(opts.protocols);
   } else if (split.length > 2 || opts.requireProtocol) return protocolError;
   url = split.join("://");
 
@@ -271,10 +273,14 @@ export function getZodSchema(fields: Provider["config"], installed: boolean) {
     }
 
     if (config.validation === "port") {
-      const baseSchema = z.coerce
-        .number({ required_error, invalid_type_error: portError })
-        .min(1, { message: portError })
-        .max(65_535, { message: portError });
+      const baseSchema = z
+        .string({ required_error })
+        .pipe(
+          z.coerce
+            .number({ invalid_type_error: portError })
+            .min(1, { message: portError })
+            .max(65_535, { message: portError })
+        );
       const schema = config.required ? baseSchema : baseSchema.optional();
       return [field, schema];
     }

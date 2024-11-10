@@ -5,7 +5,7 @@ Graylog Provider is a class that allows to install webhooks in Graylog.
 import dataclasses
 import math
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from urllib.parse import urlencode, urljoin, urlparse
 
@@ -44,11 +44,12 @@ class GraylogProviderAuthConfig:
             "sensitive": True,
         },
     )
-    deployment_url: str = dataclasses.field(
+    deployment_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Deployment Url",
             "hint": "Example: http://127.0.0.1:9000",
+            "validation": "any_http_url"
         },
     )
 
@@ -531,9 +532,10 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 
     @classmethod
     def simulate_alert(cls) -> dict:
-        from keep.providers.graylog_provider.alerts_mock import ALERTS
         import random
         import string
+
+        from keep.providers.graylog_provider.alerts_mock import ALERTS
 
         # Use the provided ALERTS structure
         alert_data = ALERTS.copy()

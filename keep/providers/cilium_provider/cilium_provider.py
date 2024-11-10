@@ -7,7 +7,8 @@ import pydantic
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseTopologyProvider
-from keep.providers.cilium_provider.grpc.observer_pb2 import FlowFilter, GetFlowsRequest
+from keep.providers.cilium_provider.grpc.observer_pb2 import (FlowFilter,
+                                                              GetFlowsRequest)
 from keep.providers.cilium_provider.grpc.observer_pb2_grpc import ObserverStub
 from keep.providers.models.provider_config import ProviderConfig
 
@@ -21,7 +22,8 @@ class CiliumProviderAuthConfig:
             "required": True,
             "description": "The base endpoint of the cilium hubble relay",
             "sensitive": False,
-            "hint": "localhost:4245",
+            "hint": "http://localhost:4245",
+            "validation": "any_http_url"
         }
     )
 
