@@ -6,7 +6,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import Loading from "../../loading";
+import Loading from "app/loading";
 import { useRouter } from "next/navigation";
 import { Workflow } from "../models";
 import SideNavBar from "./side-nav-bar";
