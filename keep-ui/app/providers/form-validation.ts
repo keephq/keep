@@ -189,7 +189,7 @@ function getBaseUrlSchema(options?: Partial<URLOptions>) {
   return schema;
 }
 
-export function getZodSchema(fields: Provider["config"]) {
+export function getZodSchema(fields: Provider["config"], installed: boolean) {
   const portError = "Invalid port number";
 
   const kvPairs = Object.entries(fields).map(([field, config]) => {
@@ -206,11 +206,15 @@ export function getZodSchema(fields: Provider["config"]) {
     if (config.type === "file") {
       const baseSchema = z
         .instanceof(File, { message: "Please upload a file here." })
+        .or(z.string())
         .refine(
           (file) => {
             if (config.file_type == undefined) return true;
             if (config.file_type.length <= 1) return true;
-            return config.file_type.includes(file.type);
+            if (typeof file === "string" && installed) return true;
+            return (
+              typeof file !== "string" && config.file_type.includes(file.type)
+            );
           },
           {
             message:

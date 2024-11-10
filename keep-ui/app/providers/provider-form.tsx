@@ -199,7 +199,10 @@ const ProviderForm = ({
     () => getConfigByMainGroup(provider.config),
     [provider]
   );
-  const zodSchema = useMemo(() => getZodSchema(provider.config), [provider]);
+  const zodSchema = useMemo(
+    () => getZodSchema(provider.config, provider.installed),
+    [provider]
+  );
 
   const apiUrl = useApiUrl();
 
@@ -373,6 +376,9 @@ const ProviderForm = ({
       );
     } else if (status === 412) {
       setProviderValidatedScopes(error);
+      setFormErrors(
+        `Provider scopes validation failed: ${JSON.stringify(error, null, 4)}`
+      );
     } else {
       setFormErrors(error);
     }

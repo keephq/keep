@@ -162,7 +162,7 @@ class NewrelicProvider(BaseProvider):
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
+        scopes = {scope.name: "Invalid" for scope in self.PROVIDER_SCOPES}
         read_scopes = [key for key in scopes.keys() if "read" in key]
 
         try:
