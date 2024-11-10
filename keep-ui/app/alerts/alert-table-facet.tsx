@@ -327,7 +327,6 @@ interface AlertFacetsProps {
   ) => void;
   className?: string;
 }
-
 const AlertFacets: React.FC<AlertFacetsProps> = ({
   alerts,
   facetFilters,
@@ -400,7 +399,7 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
   };
 
   const shouldShowNAValue = (key: keyof AlertDto): boolean => {
-    return ["assignee"].includes(key as string);
+    return ["assignee", "incident"].includes(key as string);
   };
 
   return (
