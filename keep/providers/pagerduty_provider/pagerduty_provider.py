@@ -624,13 +624,16 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         # Creating an uuid from incident id.
         m = hashlib.md5()
         event = event["event"]["data"]
+
+        # This will be the same for the same incident
         seed = event["id"]
         m.update(seed.encode("utf-8"))
         incident_id = uuid.UUID(m.hexdigest())
+
         status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
-            event["status"], IncidentStatus.FIRING
+            event.get("status", "firing"), IncidentStatus.FIRING
         )
-        priority_summary = (event.get("priority", {}) or {}).get("summary")
+        priority_summary = (event.get("priority", {}) or {}).get("summary", "P4")
         severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
             priority_summary, IncidentSeverity.INFO
         )
@@ -648,6 +651,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             services=[service],
             is_predicted=False,
             is_confirmed=True,
+            # This is the reference to the incident in PagerDuty
+            fingerprint=seed,
         )
 
 

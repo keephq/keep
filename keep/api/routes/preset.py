@@ -33,10 +33,11 @@ from keep.api.models.db.preset import (
 )
 from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_incident_task import process_incident
 from keep.api.tasks.process_topology_task import process_topology
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseTopologyProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -119,21 +120,17 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
+            # TODO: this should be moved somewhere else (@tb: too much logic in this function, wil handle it another time.)
             if isinstance(provider_class, BaseIncidentProvider):
                 try:
                     incidents = provider_class.get_incidents()
-                    process_event(
+                    process_incident(
                         {},
-                        tenant_id,
-                        provider.type,
-                        provider.id,
-                        None,
-                        None,
-                        trace_id,
-                        incidents,
-                        notify_client=False,
-                        timestamp_forced=None,
-                        process_event_as="incident"
+                        tenant_id=tenant_id,
+                        provider_id=provider.id,
+                        provider_type=provider.type,
+                        incidents=incidents,
+                        trace_id=trace_id,
                     )
                 except NotImplementedError:
                     logger.debug(

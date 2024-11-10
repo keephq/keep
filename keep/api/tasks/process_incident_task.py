@@ -5,6 +5,7 @@ from arq import Retry
 from keep.api.core.db import (
     create_incident_from_dto,
     get_incident_by_fingerprint,
+    get_incident_by_id,
     update_incident_from_dto_by_id,
 )
 from keep.api.models.alert import IncidentDto
@@ -43,11 +44,17 @@ def process_incident(
                 f"Processing incident: {incident.id}",
                 extra={**extra, "fingerprint": incident.fingerprint},
             )
-            incident_from_db = None
-            if incident.fingerprint:
+
+            incident_from_db = get_incident_by_id(
+                tenant_id=tenant_id, incident_id=incident.id
+            )
+
+            # Try to get by fingerprint if no incident was found by id
+            if incident_from_db is None and incident.fingerprint:
                 incident_from_db = get_incident_by_fingerprint(
                     tenant_id=tenant_id, fingerprint=incident.fingerprint
                 )
+
             if incident_from_db:
                 logger.info(
                     f"Updating incident: {incident.id}",
