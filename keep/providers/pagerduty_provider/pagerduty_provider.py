@@ -11,6 +11,7 @@ import pydantic
 import requests
 
 from keep.api.models.alert import (
+    AlertDto,
     AlertSeverity,
     AlertStatus,
     IncidentDto,
@@ -490,7 +491,38 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             )
 
     def _query(self, incident_id: str = None):
-        return self.__get_all_incidents_or_alerts(incident_id=incident_id)
+        incidents = self.__get_all_incidents_or_alerts()
+        return (
+            next(
+                [incident for incident in incidents if incident.id == incident_id],
+                None,
+            )
+            if incident_id
+            else incidents
+        )
+
+    def _format_alert(
+        self, event: dict, provider_instance: "BaseProvider" = None
+    ) -> AlertDto:
+        status = self.ALERT_STATUS_MAP.get(event.get("status", "firing"))
+        severity = self.ALERT_SEVERITIES_MAP.get(event.get("severity", "info"))
+        source = ["pagerduty"]
+        origin = event.get("body", {}).get("cef_details", {}).get("source_origin")
+        fingerprint = event.get("alert_key", event.get("id"))
+        if origin:
+            source.append(origin)
+        return AlertDto(
+            id=event.get("id"),
+            name=event.get("summary"),
+            url=event.get("html_url"),
+            service=event.get("service", {}).get("name"),
+            lastReceived=event.get("created_at"),
+            status=status,
+            severity=severity,
+            source=source,
+            original_alert=event,
+            fingerprint=fingerprint,
+        )
 
     def __get_all_incidents_or_alerts(self, incident_id: str = None):
         self.logger.info(
@@ -504,7 +536,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 include = []
                 resource = "incidents"
                 if incident_id is not None:
-                    url += f"/{incident_id}"
+                    url += f"/{incident_id}/alerts"
                     include = ["teams", "services"]
                     resource = "alerts"
                 response = requests.get(
@@ -609,26 +641,44 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return list(service_topology.values())
 
     def _get_incidents(self) -> list[IncidentDto]:
-        incidents = self.__get_all_incidents_or_alerts()
-        incidents = [
-            self._format_incident({"event": {"data": incident}})
-            for incident in incidents
-        ]
+        raw_incidents = self.__get_all_incidents_or_alerts()
+        incidents = []
+        for incident in raw_incidents:
+            incident_dto = self._format_incident({"event": {"data": incident}})
+            incident_alerts = self.__get_all_incidents_or_alerts(
+                incident_id=incident_dto.fingerprint
+            )
+            incident_alerts = [self._format_alert(alert) for alert in incident_alerts]
+            incident_dto._alerts = incident_alerts
+            incidents.append(incident_dto)
         return incidents
+
+    @staticmethod
+    def _get_incident_id(incident_id: str) -> str:
+        """
+        Create a UUID from the incident id.
+
+        Args:
+            incident_id (str): The original incident id
+
+        Returns:
+            str: The UUID
+        """
+        md5 = hashlib.md5()
+        md5.update(incident_id.encode("utf-8"))
+        return uuid.UUID(md5.hexdigest())
 
     @staticmethod
     def _format_incident(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> IncidentDto | list[IncidentDto]:
 
-        # Creating an uuid from incident id.
-        m = hashlib.md5()
         event = event["event"]["data"]
 
         # This will be the same for the same incident
-        event_id = event.get("id", "ping")
-        m.update(event_id.encode("utf-8"))
-        incident_id = uuid.UUID(m.hexdigest())
+        original_incident_id = event.get("id", "ping")
+
+        incident_id = PagerdutyProvider._get_incident_id(original_incident_id)
 
         status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
             event.get("status", "firing"), IncidentStatus.FIRING
@@ -648,7 +698,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return IncidentDto(
             id=incident_id,
             creation_time=created_at,
-            user_generated_name=f'PD-{event.get("title", "unknown")}-{event_id}',
+            user_generated_name=f'PD-{event.get("title", "unknown")}-{original_incident_id}',
             status=status,
             severity=severity,
             alert_sources=["pagerduty"],
@@ -657,7 +707,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             is_predicted=False,
             is_confirmed=True,
             # This is the reference to the incident in PagerDuty
-            fingerprint=event_id,
+            fingerprint=original_incident_id,
         )
 
 

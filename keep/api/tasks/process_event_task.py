@@ -414,7 +414,7 @@ def __handle_formatted_events(
     if notify_client and incidents:
         pusher_client = get_pusher_client()
         if not pusher_client:
-            return
+            pass
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -483,6 +483,7 @@ def __handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+    return enriched_formatted_events
 
 
 def process_event(
@@ -498,7 +499,7 @@ def process_event(
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
-):
+) -> list[Alert]:
     extra_dict = {
         "tenant_id": tenant_id,
         "provider_type": provider_type,
@@ -557,7 +558,7 @@ def process_event(
             raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
-        __handle_formatted_events(
+        return __handle_formatted_events(
             tenant_id,
             provider_type,
             session,

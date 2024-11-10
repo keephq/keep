@@ -3524,6 +3524,7 @@ def add_alerts_to_incident(
     alert_ids: List[UUID],
     is_created_by_ai: bool = False,
     session: Optional[Session] = None,
+    override_count: bool = False,
 ) -> Optional[Incident]:
     logger.info(
         f"Adding alerts to incident {incident.id} in database, total {len(alert_ids)} alerts",
@@ -3585,8 +3586,10 @@ def add_alerts_to_incident(
                 if incident.alerts_count
                 else alerts_data_for_incident["max_severity"].order
             )
-            incident.alerts_count += alerts_data_for_incident["count"]
-
+            if not override_count:
+                incident.alerts_count += alerts_data_for_incident["count"]
+            else:
+                incident.alerts_count = alerts_data_for_incident["count"]
             alert_to_incident_entries = [
                 AlertToIncident(
                     alert_id=alert_id,

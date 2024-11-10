@@ -3,12 +3,15 @@ import logging
 from arq import Retry
 
 from keep.api.core.db import (
+    add_alerts_to_incident,
     create_incident_from_dto,
     get_incident_by_fingerprint,
     get_incident_by_id,
     update_incident_from_dto_by_id,
 )
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import IncidentDto
+from keep.api.tasks.process_event_task import process_event
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 logger = logging.getLogger(__name__)
@@ -60,7 +63,7 @@ def process_incident(
                     f"Updating incident: {incident.id}",
                     extra={**extra, "fingerprint": incident.fingerprint},
                 )
-                update_incident_from_dto_by_id(
+                incident_from_db = update_incident_from_dto_by_id(
                     tenant_id=tenant_id,
                     incident_id=incident_from_db.id,
                     updated_incident_dto=incident,
@@ -74,7 +77,7 @@ def process_incident(
                     f"Creating incident: {incident.id}",
                     extra={**extra, "fingerprint": incident.fingerprint},
                 )
-                create_incident_from_dto(
+                incident_from_db = create_incident_from_dto(
                     tenant_id=tenant_id,
                     incident_dto=incident,
                 )
@@ -82,7 +85,54 @@ def process_incident(
                     f"Created incident: {incident.id}",
                     extra={**extra, "fingerprint": incident.fingerprint},
                 )
+
+            try:
+                if incident.alerts:
+                    logger.info("Adding incident alerts", extra=extra)
+                    processed_alerts = process_event(
+                        {},
+                        tenant_id,
+                        provider_type,
+                        provider_id,
+                        None,
+                        None,
+                        trace_id,
+                        incident.alerts,
+                    )
+                    if processed_alerts:
+                        add_alerts_to_incident(
+                            tenant_id,
+                            incident_from_db,
+                            [
+                                processed_alert.event_id
+                                for processed_alert in processed_alerts
+                            ],
+                            # Because the incident was created with the alerts count, we need to override it
+                            # otherwise it will be the sum of the previous count + the newly attached alerts count
+                            override_count=True,
+                        )
+                        logger.info("Added incident alerts", extra=extra)
+                    else:
+                        logger.info(
+                            "No alerts to add to incident, probably deduplicated",
+                            extra=extra,
+                        )
+            except Exception:
+                logger.exception("Error adding incident alerts", extra=extra)
             logger.info("Processed incident", extra=extra)
+
+        pusher_client = get_pusher_client()
+        if not pusher_client:
+            pass
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "incident-change",
+                {},
+            )
+        except Exception:
+            logger.exception("Failed to push incidents to the client")
+
         logger.info("Processed all incidents", extra=extra)
     except Exception:
         logger.exception(
