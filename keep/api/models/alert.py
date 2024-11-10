@@ -294,7 +294,8 @@ class AlertDto(BaseModel):
             values["lastReceived"] = lastReceived
 
         assignees = values.pop("assignees", None)
-        if assignees:
+        # In some cases (for example PagerDuty) the assignees is list of dicts and we don't handle it atm.
+        if assignees and isinstance(assignees, dict):
             dt = datetime.datetime.fromisoformat(lastReceived)
             dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
             assignee = assignees.get(lastReceived) or assignees.get(dt)

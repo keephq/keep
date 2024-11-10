@@ -228,7 +228,7 @@ class AuthVerifierBase:
             if (
                 not authorization
                 and "Amazon Simple Notification Service Agent"
-                in request.headers.get("user-agent")
+                in request.headers.get("user-agent", "")
             ):
                 self.logger.warning("Got an SNS request without any auth")
                 raise HTTPException(

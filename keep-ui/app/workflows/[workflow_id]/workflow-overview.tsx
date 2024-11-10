@@ -4,14 +4,15 @@ import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 import { Callout, Button, Title, Card, Tab, TabGroup, TabList } from "@tremor/react";
 import { load, JSON_SCHEMA } from "js-yaml";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import Loading from "react-loading";
+import { useState, useEffect, Dispatch, SetStateAction, useLayoutEffect } from "react";
+import Loading from "app/loading";
 import { WorkflowSteps } from "../mockworkflows";
 import { Workflow } from "../models";
 import WorkflowGraph from "../workflow-graph";
 import AlertTriggerModal from "../workflow-run-with-alert-modal";
 import { TableFilters } from "./table-filters";
 import { ExecutionTable } from "./workflow-execution-table";
+import { PaginatedWorkflowExecutionDto } from "../builder/types";
 
 interface Pagination {
   limit: number;
@@ -89,7 +90,7 @@ export default function WorkflowOverview({
     });
   }, [tab, searchParams]);
 
-  const { data, isLoading, error } = useWorkflowExecutionsV2(
+  const { data, isLoading, error, isValidating } = useWorkflowExecutionsV2(
     workflow_id,
     tab,
     executionPagination.limit,
@@ -104,7 +105,6 @@ export default function WorkflowOverview({
     message,
   } = useWorkflowRun(data?.workflow!);
 
-  if (isLoading) return <Loading />;
 
   if (error) {
     return (
@@ -157,6 +157,7 @@ export default function WorkflowOverview({
           </Button>
         )}
       </div>
+      {!data || isLoading || isValidating && <Loading />}
       {data?.items && (
         <div className="mt-2 flex flex-col gap-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
