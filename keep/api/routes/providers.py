@@ -19,7 +19,6 @@ from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseProvider, BaseIncidentProvider
 from keep.providers.base.provider_exceptions import (
     GetAlertException,
     ProviderMethodException,
