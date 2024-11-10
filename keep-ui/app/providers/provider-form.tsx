@@ -1,5 +1,3 @@
-// TODO: refactor this file and separate in to smaller components
-//  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 import React, { useState, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { Provider, ProviderAuthConfig } from "./providers";
@@ -276,6 +274,7 @@ const ProviderForm = ({
 
   function handleFormChange(key: string, value: ProviderFormValue) {
     if (typeof value === "string" && value.trim().length === 0) {
+      // remove fields with empty string value
       setFormValues((prev) => {
         const updated = structuredClone(prev);
         delete updated[key];
@@ -334,9 +333,8 @@ const ProviderForm = ({
   };
 
   async function submit(requestUrl: string, method: string = "POST") {
-    let headers = {
+    const headers = {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     };
 
     let body;
@@ -351,9 +349,9 @@ const ProviderForm = ({
           : formData.append(key, value.toString());
       }
       body = formData;
-      headers["Content-Type"] = "multipart/form-data";
     } else {
       // Standard JSON for non-file submissions
+      Object.assign(headers, { "Content-Type": "application/json" });
       body = JSON.stringify(formValues);
     }
 
@@ -369,12 +367,15 @@ const ProviderForm = ({
     const data = await response.json();
     const error =
       "detail" in data ? data.detail : "message" in data ? data.message : data;
-    if (status === 400) setFormErrors(error);
-    if (status === 409)
+    if (status === 409) {
       setFormErrors(
         `Provider with name ${formValues.provider_name} already exists`
       );
-    if (status === 412) setProviderValidatedScopes(error);
+    } else if (status === 412) {
+      setProviderValidatedScopes(error);
+    } else {
+      setFormErrors(error);
+    }
   }
 
   async function handleUpdateClick() {
@@ -704,6 +705,7 @@ const ProviderForm = ({
                 </label>
               </div>
               <Button
+                type="button"
                 icon={GlobeAltIcon}
                 onClick={callInstallWebhook}
                 variant="secondary"
@@ -1048,6 +1050,14 @@ function FileField({
     e.preventDefault();
     if (ref.current) ref.current.click();
   }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      setSelected(e.target.files[0].name);
+    }
+    onChange(e);
+  }
+
   return (
     <>
       <FieldLabel id={id} config={config} />
@@ -1068,12 +1078,7 @@ function FileField({
         name={id}
         accept={config.file_type}
         style={{ display: "none" }}
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0]) {
-            setSelected(e.target.files[0].name);
-          }
-          onChange(e);
-        }}
+        onChange={handleChange}
         disabled={disabled}
       />
       {error && error?.length > 0 && (
@@ -1124,9 +1129,7 @@ function KVForm({
           Add Entry
         </Button>
       </div>
-      {Array.isArray(value) && (
-        <KVInput name={id} data={value} onChange={onChange} error={error} />
-      )}
+      {Array.isArray(value) && <KVInput data={value} onChange={onChange} />}
       {error && error?.length > 0 && (
         <p className="text-sm text-red-500 mt-1">{error}</p>
       )}
@@ -1135,15 +1138,11 @@ function KVForm({
 }
 
 const KVInput = ({
-  name,
   data,
   onChange,
-  error,
 }: {
-  name: string;
   data: KVFormData;
   onChange: (entries: KVFormData) => void;
-  error?: string;
 }) => {
   const handleEntryChange = (index: number, name: string, value: string) => {
     const newEntries = data.map((entry, i) =>

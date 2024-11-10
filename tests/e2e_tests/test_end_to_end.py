@@ -246,3 +246,22 @@ def test_provider_validation(browser):
     browser.get_by_placeholder("Enter host").fill("mongodb://host.com:3000")
     connect_btn.click()
     expect(error_msg).to_be_hidden()
+
+    # using Postgres provider
+    browser.goto("http://localhost:3000/providers")
+    browser.locator("button:has-text('PostgreSQL'):has-text('data')").click()
+    # test `no_scheme_url` field validation
+    # - on the frontend: url with/without scheme validates.
+    # - on the backend: scheme is removed during validation.
+    browser.get_by_placeholder("Enter provider name").fill("random name")
+    browser.get_by_placeholder("Enter username").fill("username")
+    browser.get_by_placeholder("Enter password").fill("password")
+    browser.get_by_placeholder("Enter host").fill("*.")
+    connect_btn.click()
+    expect(error_msg).to_have_count(1)
+    browser.get_by_placeholder("Enter host").fill("localhost:5000")
+    connect_btn.click()
+    expect(error_msg).to_be_hidden()
+    browser.get_by_placeholder("Enter host").fill("https://host.com:3000")
+    connect_btn.click()
+    expect(error_msg).to_be_hidden()
