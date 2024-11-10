@@ -46,7 +46,6 @@ from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.models.ai_external import (
     ExternalAIConfigAndMetadata, 
     ExternalAIConfigAndMetadataDto, 
-    ExternalAITransformers,
 )
 from keep.api.models.alert import (
     AlertStatus,
@@ -54,6 +53,7 @@ from keep.api.models.alert import (
     IncidentDtoIn,
     IncidentSorting,
 )
+from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.models.db.action import Action
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -4385,10 +4385,11 @@ def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigA
 
 def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDto:
     with Session(engine) as session:
-        session.query(ExternalAIConfigAndMetadata).filter(
+        setting = session.query(ExternalAIConfigAndMetadata).filter(
             ExternalAIConfigAndMetadata.tenant_id == tenant_id,
-            ExternalAIConfigAndMetadata.id == ai_settings.id
-        ).update(ai_settings.dict())
+            ExternalAIConfigAndMetadata.id == ai_settings.id,
+        ).first()
+        setting.settings = json.dumps(ai_settings.settings)
+        session.add(setting)
         session.commit()
-        session.refresh(ai_settings)
-    return ai_settings
+    return setting

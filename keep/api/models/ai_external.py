@@ -24,7 +24,7 @@ class ExternalAIConfigAndMetadataDto(BaseModel):
     id: str
     algorithm_id: str
     tenant_id: str
-    settings: Json[Any]
+    settings: list[Any] | Json[Any]
     feedback_logs: str | None
     algorithm: ExternalAIDto
 
@@ -38,4 +38,3 @@ class ExternalAIConfigAndMetadataDto(BaseModel):
             feedback_logs=_object.feedback_logs,
             algorithm=ExternalAIDto.from_orm(_object.algorithm)
         )
-

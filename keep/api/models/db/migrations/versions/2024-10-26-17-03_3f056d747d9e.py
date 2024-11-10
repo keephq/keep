@@ -1,7 +1,7 @@
 """AI config
 
 Revision ID: 3f056d747d9e
-Revises: 991b30bcf0b9
+Revises: ef0b5b0df41c
 Create Date: 2024-10-26 17:03:02.383942
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "3f056d747d9e"
-down_revision = "991b30bcf0b9"
+down_revision = "ef0b5b0df41c"
 branch_labels = None
 depends_on = None
 

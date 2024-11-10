@@ -1,20 +1,13 @@
 "use client";
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
-import { useAIStats, usePollAILogs, useUpdateAISettings } from "utils/hooks/useAI";
+import { useAIStats, usePollAILogs, UseAIActions } from "utils/hooks/useAI";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { AILogs } from "./model";
 
 export default function Ai() {
-  const { data: aistats, isLoading } = useAIStats();
-  const { data: session } = useSession();
-  const [text, setText] = useState("");
-  const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
-
-  const mutateAILogs = (logs: AILogs) => {
-    setBasicAlgorithmLog(logs.log);
-  };
-  usePollAILogs(mutateAILogs);
+  const { data: aistats, isLoading, refetch: refetchAIStats } = useAIStats();
+  const { updateAISettings } = UseAIActions();
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
@@ -30,7 +23,8 @@ export default function Ai() {
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
           <div>
-            <div className="grid grid-cols-2 gap-4 mt-6">
+            <div className="grid grid-cols-1 gap-4 mt-6">
+              {isLoading ? <p>Loading algorithms and settings...</p> : null}
               {aistats?.algorithm_configs?.map((algorithm_config, index) => (
                 <Card
                   key={index}
@@ -43,46 +37,70 @@ export default function Ai() {
                     {algorithm_config.algorithm.description}
                     {/* {algorithm_config.settings} */}
                   </p>
-                  {algorithm_config.settings.map(
-                    (setting: any) => (
-                      <div key={setting} className="mt-2">
-                        {setting.name}
-                        <p className="text-sm text-gray-500">{setting.description}</p>
-                        {setting.type === "bool" ? (
-                          <input
-                            type="checkbox"
-                            id={`checkbox-${index}`}
-                            name={`checkbox-${index}`}
-                            checked={setting.value}
-                            onChange={(e) => {
-                              const newValue = e.target.checked;
-                              setting.value = newValue;
-                              console.log(setting);
-                              updateAISettings({
-                                [algorithm_config.algorithm.name]: algorithm_config.settings,
-                              });
-                            }}
-                            className="mt-2"
-                          />
-                        ) : null}
-                        {setting.type === "float" ? (
+                  {algorithm_config.settings.map((setting: any) => (
+                    <div key={setting} className="mt-2">
+                      {setting.name}
+                      <p className="text-sm text-gray-500">
+                        {setting.description}
+                      </p>
+                      {setting.type === "bool" ? (
+                        <input
+                          type="checkbox"
+                          id={`checkbox-${index}`}
+                          name={`checkbox-${index}`}
+                          checked={setting.value}
+                          onChange={(e) => {
+                            const newValue = e.target.checked;
+                            setting.value = newValue;
+                            updateAISettings(
+                              algorithm_config.algorithm_id,
+                              algorithm_config
+                            );
+                            refetchAIStats();
+                          }}
+                          className="mt-2"
+                        />
+                      ) : null}
+                      {setting.type === "float" ? (
+                        <div>
+                          <p>Value: {setting.value}</p>
                           <input
                             type="range"
-                            id={`slider-${index}`}
-                            name={`slider-${index}`}
+                            className=""
+                            step={(setting.max - setting.min) / 100}
                             min={setting.min}
                             max={setting.max}
-                            value={setting.value}
+                            // value={setting.value}
                             onChange={(e) => {
-                              const newValue = e.target.value;
+                              const newValue = parseFloat(e.target.value);
                               setting.value = newValue;
+                              updateAISettings(
+                                algorithm_config.algorithm_id,
+                                algorithm_config
+                              );
+                              refetchAIStats();
                             }}
-                            className="mt-2 w-full"
                           />
-                        ) : null}
-                      </div>
-                    )
-                  )}
+                          {/* <p>Value: {setting.value}</p>
+                            <input
+                              type="range"
+                              id={`slider-${index}`}
+                              name={`slider-${index}`}
+                              // min={setting.min}
+                              // max={setting.max}
+                              value={setting.value}
+                              // onChange={(e) => {
+                              //   const newValue = parseFloat(e.target.value);
+                              //   setting.value = newValue;
+                              //   updateAISettings(algorithm_config.algorithm_id, algorithm_config);
+                              //   refetchAIStats();
+                              // }}
+                              className="mt-2 w-full"
+                            /> */}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
                   <h4 className="text-md font-medium mt-4">Execution logs:</h4>
                   <pre className="text-sm bg-gray-100 p-2 rounded">
                     {algorithm_config.feedback_log

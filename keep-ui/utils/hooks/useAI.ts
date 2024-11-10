@@ -1,4 +1,4 @@
-import { AILogs, AIStats } from "app/ai/model";
+import { AIConfig, AILogs, AIStats } from "app/ai/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
@@ -15,30 +15,19 @@ export const useAIStats = (
   const apiUrl = useApiUrl();
   const { data: session } = useSession();
 
-  return useSWR<AIStats>(
+  const { data, error, mutate } = useSWR<AIStats>(
     () => (session ? `${apiUrl}/ai/stats` : null),
     (url) => fetcher(url, session?.accessToken),
     options
   );
-};
 
-export const useUpdateAISettings = () => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
-
-  return async (settings: Record<string, any>) => {
-    const response = await fetch(`${apiUrl}/ai/settings`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(settings),
-    });
-
-    return response.ok;
+  return {
+    data,
+    isLoading: !data && !error,
+    error,
+    refetch: mutate,
   };
-}
+};
 
 export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
   const { bind, unbind } = useWebsocket();
@@ -56,3 +45,34 @@ export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
     };
   }, [bind, unbind, handleIncoming]);
 };
+
+type UseAIActionsValue = {
+  updateAISettings: (algorithm_id: string, settings: AIConfig) => Promise<AIStats>;
+};
+
+export function UseAIActions(): UseAIActionsValue {
+
+  const apiUrl = useApiUrl();
+  const { data: session } = useSession();
+
+  const updateAISettings = async (algorithm_id:string, settings: AIConfig): Promise<AIStats> => {
+    const response = await fetch(`${apiUrl}/ai/${algorithm_id}/settings`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(settings),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update AI settings');
+    }
+
+    return response.json();
+  };
+  
+  return {
+    updateAISettings: updateAISettings,
+  };
+}

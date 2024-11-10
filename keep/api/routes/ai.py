@@ -1,6 +1,9 @@
 import logging
+from typing import List
+from typing import Any
+from pydantic import BaseModel, Json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends, Request
 
 from keep.api.core.db import (
     get_alerts_count,
@@ -9,6 +12,7 @@ from keep.api.core.db import (
     get_or_create_external_ai_settings,
     update_extrnal_ai_settings,
 )
+from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto
 from keep.api.utils.import_ee import ALGORITHM_VERBOSE_NAME
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -35,6 +39,7 @@ def get_stats(
         "algorithm_configs": get_or_create_external_ai_settings(tenant_id),
     }
 
+
 @router.put(
     "/{algorithm_id}/settings",
     description="Update settings for an external AI",
@@ -42,10 +47,10 @@ def get_stats(
 )
 def update_settings(
     algorithm_id: str,
-    settings: dict,
+    body: ExternalAIConfigAndMetadataDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
-    return update_extrnal_ai_settings(tenant_id, settings)
+    return update_extrnal_ai_settings(tenant_id, body)
