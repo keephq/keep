@@ -500,6 +500,8 @@ async def install_provider_oauth2(
     )
     try:
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        install_webhook = provider_info.pop("install_webhook", "true") == "true"
+        pulling_enabled = provider_info.pop("pulling_enabled", "true") == "true"
         provider_info = provider_class.oauth2_logic(**provider_info)
         provider_name = provider_info.pop(
             "provider_name", f"{provider_unique_id}-oauth2"
@@ -533,9 +535,16 @@ async def install_provider_oauth2(
             installation_time=time.time(),
             configuration_key=secret_name,
             validatedScopes=validated_scopes,
+            pulling_enabled=pulling_enabled,
         )
         session.add(provider)
         session.commit()
+
+        if install_webhook:
+            install_provider_webhook(
+                provider_type, provider.id, authenticated_entity, session
+            )
+
         return JSONResponse(
             status_code=200,
             content={

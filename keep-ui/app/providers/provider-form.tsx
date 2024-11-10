@@ -220,6 +220,8 @@ const ProviderForm = ({
     e.preventDefault();
     const verifier = generateRandomString();
     cookieCutter.set("verifier", verifier);
+    cookieCutter.set("oauth2_install_webhook", formValues.install_webhook);
+    cookieCutter.set("oauth2_pulling_enabled", formValues.pulling_enabled);
     const verifierChallenge = base64urlencode(await sha256(verifier));
 
     let oauth2Url = provider.oauth2_url;
