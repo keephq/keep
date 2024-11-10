@@ -313,9 +313,7 @@ class PagerdutyProvider(BaseProvider):
         data = actual_event.get("data", {})
         url = data.pop("self", data.pop("html_url", None))
         # format status and severity to Keep format
-        status = PagerdutyProvider.STATUS_MAP.get(
-            data.pop("status"), AlertStatus.FIRING
-        )
+        status = PagerdutyProvider.STATUS_MAP.get(data.pop("status", "firing"))
         priority_summary = (data.get("priority", {}) or {}).get("summary")
         priority = PagerdutyProvider.SEVERITIES_MAP.get(
             priority_summary, AlertSeverity.INFO
