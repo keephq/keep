@@ -626,8 +626,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         event = event["event"]["data"]
 
         # This will be the same for the same incident
-        seed = event["id"]
-        m.update(seed.encode("utf-8"))
+        event_id = event.get("id", "ping")
+        m.update(event_id.encode("utf-8"))
         incident_id = uuid.UUID(m.hexdigest())
 
         status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
@@ -638,12 +638,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             priority_summary, IncidentSeverity.INFO
         )
         service = event.pop("service", {}).get("summary", "unknown")
+
+        created_at = event.get("created_at")
+        if created_at:
+            created_at = datetime.datetime.fromisoformat(created_at)
+        else:
+            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+
         return IncidentDto(
             id=incident_id,
-            creation_time=datetime.datetime.fromisoformat(event["created_at"])
-            .astimezone(datetime.timezone.utc)
-            .replace(tzinfo=None),
-            user_generated_name=f'PD-{event["title"]}-{event["id"]}',
+            creation_time=created_at,
+            user_generated_name=f'PD-{event.get("title", "unknown")}-{event_id}',
             status=status,
             severity=severity,
             alert_sources=["pagerduty"],
@@ -652,7 +657,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             is_predicted=False,
             is_confirmed=True,
             # This is the reference to the incident in PagerDuty
-            fingerprint=seed,
+            fingerprint=event_id,
         )
 
 
