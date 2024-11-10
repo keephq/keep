@@ -55,10 +55,15 @@ export default function SettingsPage() {
 
   // future: feature flags
   const usersAllowed = authType !== AuthenticationType.NOAUTH;
+  // azure and noauth do not allow user creation
+  const userCreationAllowed =
+    authType !== AuthenticationType.NOAUTH &&
+    authType !== AuthenticationType.AZUREAD;
   const rolesAllowed = authType !== AuthenticationType.NOAUTH;
   const customRolesAllowed = authType === AuthenticationType.KEYCLOAK;
   const ssoAllowed = authType === AuthenticationType.KEYCLOAK;
   const groupsAllowed = authType === AuthenticationType.KEYCLOAK;
+  const permissionsAllowed = authType === AuthenticationType.KEYCLOAK;
   const apiKeysAllowed = true; // Assuming API keys are always allowed
 
   useEffect(() => {
@@ -114,6 +119,7 @@ export default function SettingsPage() {
               accessToken={session?.accessToken!}
               currentUser={session?.user}
               groupsAllowed={groupsAllowed}
+              userCreationAllowed={userCreationAllowed}
             />
           );
         } else {
@@ -262,15 +268,28 @@ export default function SettingsPage() {
           );
         }
       case "permissions":
-        if (rolesAllowed) {
+        if (permissionsAllowed) {
           return <PermissionsTab accessToken={session?.accessToken!} />;
         } else {
           const mockPresets = [
-            { id: "1", name: "Preset 1", permissions: ["read:users"] },
+            {
+              id: "1",
+              name: "NOC Preset",
+              permissions: [{ id: "noc@keephq.dev" }],
+              resource_id: "users",
+              entity_id: "noc",
+              type: "preset",
+            },
             {
               id: "2",
-              name: "Preset 2",
-              permissions: ["read:users", "write:users"],
+              name: "Dev Preset",
+              permissions: [
+                { id: "noc@keephq.dev" },
+                { id: "admin@keephq.dev" },
+              ],
+              resource_id: "users",
+              entity_id: "dev",
+              type: "preset",
             },
           ];
           return (
@@ -280,12 +299,10 @@ export default function SettingsPage() {
               documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
             >
               <PermissionsTable
-                presets={mockPresets}
-                selectedPermissions={{}}
+                permissions={mockPresets}
                 onDeletePermission={() => {}}
                 isDisabled={true}
                 onRowClick={() => {}}
-                displayPermissions={[]}
               />
             </EmptyStateTable>
           );

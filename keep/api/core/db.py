@@ -1466,14 +1466,14 @@ def get_user(username, password, update_sign_in=True):
     return user
 
 
-def get_users():
+def get_users(tenant_id=None):
     from keep.api.core.dependencies import SINGLE_TENANT_UUID
     from keep.api.models.db.user import User
 
+    tenant_id = tenant_id or SINGLE_TENANT_UUID
+
     with Session(engine) as session:
-        users = session.exec(
-            select(User).where(User.tenant_id == SINGLE_TENANT_UUID)
-        ).all()
+        users = session.exec(select(User).where(User.tenant_id == tenant_id)).all()
     return users
 
 

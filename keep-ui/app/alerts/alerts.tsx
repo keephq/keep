@@ -128,6 +128,8 @@ export default function Alerts({ presetName }: AlertsProps) {
   }
   if (alertsError) {
     if (alertsError.statusCode === 401) {
+      console.log("unauthenticated 401");
+      debugger;
       window.location.href = "/signin";
       return null;
     }

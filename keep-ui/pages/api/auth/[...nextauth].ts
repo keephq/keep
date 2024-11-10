@@ -5,6 +5,9 @@ import KeycloakProvider, {
 } from "next-auth/providers/keycloak";
 import Auth0Provider from "next-auth/providers/auth0";
 import AzureADProvider from "next-auth/providers/azure-ad";
+import SHA256 from "crypto-js/sha256";
+import Base64 from "crypto-js/enc-base64";
+
 import { getApiURL } from "utils/apiUrl";
 import {
   AuthenticationType,
@@ -29,7 +32,6 @@ if (authTypeEnv === MULTI_TENANT) {
 } else {
   authType = authTypeEnv;
 }
-
 /*
 
 This file implements different authentication flows:
@@ -335,24 +337,52 @@ const keycloakAuthOptions = {
 const azureADAuthOptions = {
   providers: [
     AzureADProvider({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      tenantId: process.env.AZURE_AD_TENANT_ID!,
-      authorization: { params: { scope: "openid email profile User.Read" } },
+      clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
+      clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
+      tenantId: process.env.KEEP_AZUREAD_TENANT_ID!,
+      authorization: {
+        params: {
+          scope:
+            "api://d6cc6406-9de5-4a9f-bcf1-79e35e14cd2f/default openid profile email",
+        },
+      },
+      checks: ["pkce"],
+      client: {
+        token_endpoint_auth_method: "client_secret_post",
+      },
     }),
   ],
   pages: {
     signIn: "/signin",
+  },
+  debug: true,
+  cookies: {
+    pkceCodeVerifier: {
+      name: "next-auth.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+        maxAge: 900, // 15 minutes
+      },
+    },
   },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      console.log("Redirecting to: ", url);
+      return baseUrl;
+    },
     async jwt({ token, account, profile }) {
       if (account) {
+        console.log("Account: ", account);
+        console.log("access_token: ", account.access_token);
         token.accessToken = account.access_token;
-        token.keep_tenant_id = process.env.AZURE_AD_TENANT_ID;
+        token.keep_tenant_id = process.env.KEEP_AZUREAD_TENANT_ID;
         token.keep_role = "user"; // Default role - adjust as needed
       }
       return token;
