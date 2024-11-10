@@ -384,10 +384,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         }
 
         r = requests.post(url, headers=headers, data=json.dumps(payload))
-
-        print(f"Status Code: {r.status_code}")
-        print(r.json())
-        return r.json()
+        r.raise_for_status()
+        response = r.json()
+        self.logger.info("Incident triggered")
+        return response
 
     def dispose(self):
         """
@@ -484,10 +484,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             kwargs (dict): The providers with context
         """
         if self.authentication_config.routing_key:
-            return self._send_alert(title, alert_body, dedup=dedup, **kwargs)
+            return self._send_alert(title, alert_body, dedup=dedup)
         else:
             return self._trigger_incident(
-                service_id, title, alert_body, requester, incident_id, **kwargs
+                service_id, title, alert_body, requester, incident_id
             )
 
     def _query(self, incident_id: str = None):
