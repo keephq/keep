@@ -71,9 +71,9 @@ const PermissionSidebar = ({
 
     for (const user of entityOptions.user) {
       options.push({
-        id: `user-${user.id}`,
+        id: `user-${user.name || user.email}`,
         label: `${user.name || user.email} (User)`,
-        value: `user_${user.id}`,
+        value: `user_${user.name || user.email}`,
       });
     }
 

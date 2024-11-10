@@ -174,8 +174,10 @@ export default function PermissionsTab({
         accessToken={accessToken}
         selectedPermission={selectedPermission}
         resourceTypes={resourceTypes}
-        resources={resources}
-        entityTypes={entityTypes}
+        resources={{
+          preset: resources.preset,
+          incident: Array.isArray(resources.incident) ? resources.incident : [],
+        }}
         entityOptions={entityOptions}
         onSavePermission={handleSavePermission}
         isDisabled={isDisabled}
