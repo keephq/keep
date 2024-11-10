@@ -11,7 +11,6 @@ import pydantic
 import requests
 
 from keep.api.models.alert import (
-    AlertDto,
     AlertSeverity,
     AlertStatus,
     IncidentDto,
@@ -464,43 +463,6 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             self.logger.error("Failed to add webhook", extra=request.json())
             raise Exception("Could not create webhook")
         self.logger.info("Webhook created")
-
-    def _get_alerts(self) -> list[AlertDto]:
-        incidents = self.__get_all_incidents_or_alerts()
-        all_alerts = []
-        for incident in incidents:
-            all_alerts.extend(
-                self.__get_all_incidents_or_alerts(incident_id=incident["id"])
-            )
-        try:
-            alerts = [self.__map_alert_to_dto(alert) for alert in all_alerts]
-            return alerts
-        except Exception as e:
-            self.logger.error(
-                "Error while mapping alert to dtos", extra={"exception": str(e)}
-            )
-            raise e
-
-    def __map_alert_to_dto(self, alert) -> AlertDto:
-        alert_dto = AlertDto(
-            id=alert.get("id", ""),
-            name=alert.get("summary", ""),
-            lastReceived=alert.get("created_at"),
-            severity=PagerdutyProvider.ALERT_SEVERITIES_MAP.get(
-                alert.get("severity", "info")
-            ),
-            status=PagerdutyProvider.ALERT_STATUS_MAP.get(
-                alert.get("status", "triggered")
-            ),
-            service=alert.get("service", {}).get("summary", "unknown"),
-            url=alert.get("self", alert.get("html_url")),
-            alert_key=alert.get("alert_key"),
-            source=["pagerduty"],
-        )
-        alert_dto.fingerprint = self.get_alert_fingerprint(
-            alert_dto, self.FINGERPRINT_FIELDS
-        )
-        return alert_dto
 
     def _notify(
         self,

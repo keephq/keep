@@ -3175,7 +3175,9 @@ def get_incident_by_id(
 
 
 def create_incident_from_dto(
-    tenant_id: str, incident_dto: IncidentDtoIn | IncidentDto, generated_from_ai: bool = False
+    tenant_id: str,
+    incident_dto: IncidentDtoIn | IncidentDto,
+    generated_from_ai: bool = False,
 ) -> Optional[Incident]:
     """
     Creates an incident for a specified tenant based on the provided incident data transfer object (DTO).
@@ -3274,6 +3276,15 @@ def update_incident_from_dto_by_id(
         session.refresh(incident)
 
         return incident
+
+
+def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[Incident]:
+    with Session(engine) as session:
+        return session.exec(
+            select(Incident).where(
+                Incident.tenant_id == tenant_id, Incident.fingerprint == fingerprint
+            )
+        ).one_or_none()
 
 
 def delete_incident_by_id(

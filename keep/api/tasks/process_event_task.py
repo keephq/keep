@@ -4,7 +4,7 @@ import datetime
 import json
 import logging
 import os
-from typing import List, Literal
+from typing import List
 
 import dateutil
 
@@ -22,7 +22,7 @@ from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_all_presets,
     get_enrichment_with_session,
-    get_session_sync, update_incident_from_dto_by_id, create_incident_from_dto,
+    get_session_sync,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -498,7 +498,6 @@ def process_event(
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
-    process_event_as: Literal["alert", "incident"] = "alert"
 ):
     extra_dict = {
         "tenant_id": tenant_id,
@@ -533,21 +532,12 @@ def process_event(
             except Exception:
                 provider_class = ProvidersFactory.get_provider_class("keep")
 
-            if process_event_as == "incident":
-                event = provider_class.format_incident(
-                    tenant_id=tenant_id,
-                    event=event,
-                    provider_id=provider_id,
-                    provider_type=provider_type,
-                )
-
-            elif process_event_as == "alert":
-                event = provider_class.format_alert(
-                    tenant_id=tenant_id,
-                    event=event,
-                    provider_id=provider_id,
-                    provider_type=provider_type,
-                )
+            event = provider_class.format_alert(
+                tenant_id=tenant_id,
+                event=event,
+                provider_id=provider_id,
+                provider_type=provider_type,
+            )
             # SHAHAR: for aws cloudwatch, we get a subscription notification message that we should skip
             #         todo: move it to be generic
             if event is None and provider_type == "cloudwatch":
@@ -556,45 +546,38 @@ def process_event(
                 )
                 return
 
-        if process_event_as == "incident":
-            if isinstance(event, IncidentDto):
-                event = [event]
-            for incident in event:
-                if not update_incident_from_dto_by_id(tenant_id=tenant_id, incident_id=str(incident.id),
-                                                      updated_incident_dto=incident):
-                    create_incident_from_dto(tenant_id=tenant_id, incident_dto=incident)
-                    logger.info(f"Created an Incident: {incident.id}")
+        # In case when provider_type is not set
+        if isinstance(event, dict):
+            event = [AlertDto(**event)]
+            raw_event = [raw_event]
 
-        elif process_event_as == "alert":
-            # In case when provider_type is not set
-            if isinstance(event, dict):
-                event = [AlertDto(**event)]
-                raw_event = [raw_event]
+        # Prepare the event for the digest
+        if isinstance(event, AlertDto):
+            event = [event]
+            raw_event = [raw_event]
 
-            # Prepare the event for the digest
-            if isinstance(event, AlertDto):
-                event = [event]
-                raw_event = [raw_event]
-
-            __internal_prepartion(event, fingerprint, api_key_name)
-            __handle_formatted_events(
-                tenant_id,
-                provider_type,
-                session,
-                raw_event,
-                event,
-                provider_id,
-                notify_client,
-                timestamp_forced,
-            )
-    except Exception as e:
-        logger.exception(f"Error processing event:{process_event_as}", extra={**extra_dict, "exception": str(e)})
+        __internal_prepartion(event, fingerprint, api_key_name)
+        __handle_formatted_events(
+            tenant_id,
+            provider_type,
+            session,
+            raw_event,
+            event,
+            provider_id,
+            notify_client,
+            timestamp_forced,
+        )
+    except Exception:
+        logger.exception(
+            "Error processing event",
+            extra=extra_dict,
+        )
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
-    logger.info(f"Event:{process_event_as} processed", extra=extra_dict)
+    logger.info("Event processed", extra=extra_dict)
 
 
 async def async_process_event(*args, **kwargs):
