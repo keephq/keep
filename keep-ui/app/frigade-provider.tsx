@@ -10,7 +10,7 @@ export const FrigadeProvider = ({
   const { data: session } = useSession();
   return (
     <Frigade.Provider
-      apiKey={process.env.NEXT_PUBLIC_FRIGADE_KEY!}
+      apiKey="api_public_6BKR7bUv0YZ5dqnjLGeHpRWCHaDWeb5cVobG3A9YkW0gOgafOEBvtJGZgvhp8PGb"
       userId={
         session?.user.email === "keep"
           ? undefined
