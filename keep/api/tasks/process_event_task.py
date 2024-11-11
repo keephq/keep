@@ -86,6 +86,7 @@ def __save_to_db(
                 alert = AlertRaw(
                     tenant_id=tenant_id,
                     raw_alert=raw_event,
+                    provider_type=provider_type,
                 )
                 session.add(alert)
         # add audit to the deduplicated events
@@ -568,12 +569,49 @@ def process_event(
         )
     except Exception:
         logger.exception("Error processing event", extra=extra_dict)
+        # In case of exception, add the alerts to the defect table
+        __save_error_alerts(tenant_id, provider_type, raw_event)
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
+
+
+def __save_error_alerts(
+    tenant_id, provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
+):
+    if not raw_events:
+        logger.info("No raw events to save as errors")
+        return
+
+    try:
+        logger.info("Getting database session")
+        session = get_session_sync()
+
+        # Convert to list if single dict
+        if isinstance(raw_events, dict):
+            logger.info("Converting single dict to list")
+            raw_events = [raw_events]
+
+        logger.info(f"Saving {len(raw_events)} error alerts")
+        for raw_event in raw_events:
+            # Convert AlertDto to dict if needed
+            if isinstance(raw_event, AlertDto):
+                logger.info("Converting AlertDto to dict")
+                raw_event = raw_event.dict()
+
+            alert = AlertRaw(
+                tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
+            )
+            session.add(alert)
+        session.commit()
+        logger.info("Successfully saved error alerts")
+    except Exception:
+        logger.exception("Failed to save error alerts")
+    finally:
+        session.close()
 
 
 async def async_process_event(*args, **kwargs):
