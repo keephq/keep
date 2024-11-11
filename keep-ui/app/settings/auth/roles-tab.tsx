@@ -23,6 +23,7 @@ import Loading from "../../loading";
 import { Role } from "app/settings/models";
 import "./multiselect.css";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { MdAddModerator } from "react-icons/md";
 
 interface RolesTabProps {
   accessToken: string;
@@ -104,12 +105,11 @@ export default function RolesTab({
         <div className="flex space-x-2">
           <Button
             color="orange"
-            size="md"
-            variant="secondary"
             onClick={() => {
               setSelectedRole(null);
               setIsSidebarOpen(true);
             }}
+            icon={MdAddModerator}
             disabled={!customRolesAllowed}
             tooltip={
               customRolesAllowed

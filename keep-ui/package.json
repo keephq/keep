@@ -80,6 +80,7 @@
     "cookie": "^0.7.0",
     "cosmiconfig": "^7.1.0",
     "cross-spawn": "^7.0.3",
+    "crypto-js": "^4.2.0",
     "css-unit-converter": "^1.1.2",
     "cssesc": "^3.0.0",
     "csstype": "^3.1.2",
@@ -268,6 +269,7 @@
     "picomatch": "^2.3.1",
     "pify": "^2.3.0",
     "pirates": "^4.0.5",
+    "pkce-challenge": "^4.1.0",
     "plotly.js": "^2.32.0",
     "postcss": "^8.4.31",
     "postcss-import": "^15.1.0",
@@ -378,6 +380,7 @@
   "devDependencies": {
     "@next/bundle-analyzer": "^14.2.15",
     "@tailwindcss/typography": "^0.5.12",
+    "@types/crypto-js": "^4.2.2",
     "@types/d3-time-format": "^4.0.3",
     "@types/js-cookie": "^3.0.3",
     "@types/js-yaml": "^4.0.5",
