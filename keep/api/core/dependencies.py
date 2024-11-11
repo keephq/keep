@@ -43,7 +43,6 @@ def get_pusher_client() -> Pusher | None:
     pusher_app_secret = os.environ.get("PUSHER_APP_SECRET")
     if (
         PUSHER_DISABLED
-        or pusher_host is None
         or pusher_app_id is None
         or pusher_app_key is None
         or pusher_app_secret is None
