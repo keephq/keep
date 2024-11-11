@@ -28,7 +28,7 @@ def upgrade() -> None:
                 server_default=sa.text("CURRENT_TIMESTAMP"),
             )
         )
-        batch_op.add_column(sa.Column("provider_type", sa.String(), nullable=True))
+        batch_op.add_column(sa.Column("provider_type", sa.String(255), nullable=True))
 
     # ### end Alembic commands ###
 
