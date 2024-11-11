@@ -5,14 +5,21 @@ interface Props {
   accessToken: string;
   currentUser?: AuthUser;
   groupsAllowed: boolean;
+  userCreationAllowed: boolean;
 }
 
-export default function UserTab({ accessToken, currentUser, groupsAllowed }: Props) {
+export default function UserTab({
+  accessToken,
+  currentUser,
+  groupsAllowed,
+  userCreationAllowed,
+}: Props) {
   return (
     <UsersSettings
       accessToken={accessToken}
       currentUser={currentUser}
       groupsAllowed={groupsAllowed}
+      userCreationAllowed={userCreationAllowed}
       selectedTab="users"
     />
   );

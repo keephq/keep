@@ -1,7 +1,13 @@
-version: '3.8'
+version: "3.8"
 
 services:
   keycloak:
     image: us-central1-docker.pkg.dev/keephq/keep/keep-keycloak-test
+    # image: keep-keycloak-test
     ports:
       - "8787:8080"
+    environment:
+      KEYCLOAK_DEBUG: false # used in entrypoint
+    # entrypoint: ["sleep", "7200"]
+    # volumes:
+    #  - ./keycloak-test-realm-export.json:/opt/keycloak/data/import/keep-realm.json

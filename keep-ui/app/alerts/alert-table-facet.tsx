@@ -8,12 +8,14 @@ import {
   CircleStackIcon,
   CheckCircleIcon,
   XCircleIcon,
+  BellIcon,
   ExclamationCircleIcon,
   UserCircleIcon,
+  BellSlashIcon,
+  FireIcon,
 } from "@heroicons/react/24/outline";
 import { AlertDto, Severity } from "./models";
 import AlertSeverity from "./alert-severity";
-import clsx from "clsx";
 
 interface FacetValue {
   label: string;
@@ -24,6 +26,44 @@ interface FacetValue {
 export interface FacetFilters {
   [key: string]: string[];
 }
+
+const getFilteredAlertsForFacet = (
+  alerts: AlertDto[],
+  facetFilters: FacetFilters,
+  excludeFacet: string
+): AlertDto[] => {
+  return alerts.filter((alert) => {
+    return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
+      // Skip the current facet when filtering
+      if (facetKey === excludeFacet || includedValues.length === 0) {
+        return true;
+      }
+
+      const value = alert[facetKey as keyof AlertDto];
+
+      if (facetKey === "source") {
+        const sources = value as string[];
+        if (includedValues.includes("n/a")) {
+          return !sources || sources.length === 0;
+        }
+        return (
+          Array.isArray(sources) &&
+          sources.some((source) => includedValues.includes(source))
+        );
+      }
+
+      if (includedValues.includes("n/a")) {
+        return value === null || value === undefined || value === "";
+      }
+
+      if (value === null || value === undefined || value === "") {
+        return false;
+      }
+
+      return includedValues.includes(String(value));
+    });
+  });
+};
 
 interface FacetValueProps {
   label: string;
@@ -103,81 +143,91 @@ const FacetValue: React.FC<FacetValueProps> = ({
 
   const handleActionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-
     if (isExclusivelySelected()) {
-      // When clicking "All", reset to include all values (empty included array)
       onSelect("", false, true);
     } else {
-      // When clicking "Only", set to only include this value
       onSelect(label, true, true);
     }
   };
 
-  // Initialize the filter if it doesn't exist
-  const currentFilter = facetFilters[facetKey] || {
-    included: [],
-    excluded: [],
-  };
-
-  // Calculate whether this value is actually selected
+  const currentFilter = facetFilters[facetKey] || [];
   const isValueSelected =
     !currentFilter?.length || currentFilter.includes(label);
 
   return (
     <div
-      className="flex items-center justify-between px-2 py-1 hover:bg-gray-100 rounded-sm cursor-pointer group"
+      className="flex items-center px-2 py-1 hover:bg-gray-100 rounded-sm cursor-pointer group"
       onClick={handleCheckboxClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center min-w-[24px]">
         <input
           type="checkbox"
           checked={isValueSelected}
           onClick={handleCheckboxClick}
           onChange={() => {}}
-          style={{ accentColor: "#eb6221" }} // orange-500 color code
+          style={{ accentColor: "#eb6221" }}
           className="h-4 w-4 rounded border-gray-300 cursor-pointer"
         />
-        {showIcon && facetKey === "source" && (
-          <Image
-            className="inline-block"
-            alt={label}
-            height={16}
-            width={16}
-            title={label}
-            src={
-              label.includes("@")
-                ? "/icons/mailgun-icon.png"
-                : `/icons/${label}-icon.png`
-            }
-          />
-        )}
-        {showIcon && facetKey === "severity" && (
-          <AlertSeverity severity={label as Severity} />
-        )}
-        {showIcon && facetKey === "status" && (
-          <Icon
-            icon={getStatusIcon(label)}
-            size="sm"
-            color={getStatusColor(label)}
-            className="!p-0"
-          />
-        )}
-        {showIcon && facetKey === "assignee" && (
-          <Icon
-            icon={UserCircleIcon}
-            size="sm"
-            className="text-gray-600 !p-0"
-          />
-        )}
-        <Text className="capitalize">{label}</Text>
       </div>
-      <div className="min-w-[32px] flex justify-end">
+
+      {showIcon && (
+        <div className="flex items-center min-w-[24px] ml-2">
+          {facetKey === "source" && (
+            <Image
+              className="inline-block"
+              alt={label}
+              height={16}
+              width={16}
+              title={label}
+              src={
+                label.includes("@")
+                  ? "/icons/mailgun-icon.png"
+                  : `/icons/${label}-icon.png`
+              }
+            />
+          )}
+          {facetKey === "severity" && (
+            <AlertSeverity severity={label as Severity} />
+          )}
+          {facetKey === "assignee" && (
+            <Icon
+              icon={UserCircleIcon}
+              size="sm"
+              className="text-gray-600 !p-0"
+            />
+          )}
+          {facetKey === "status" && (
+            <Icon
+              icon={getStatusIcon(label)}
+              size="sm"
+              color={getStatusColor(label)}
+              className="!p-0"
+            />
+          )}
+          {facetKey === "dismissed" && (
+            <Icon
+              icon={label === "true" ? BellSlashIcon : BellIcon}
+              size="sm"
+              className="text-gray-600 !p-0"
+            />
+          )}
+          {facetKey === "incident" && (
+            <Icon icon={FireIcon} size="sm" className="text-gray-600 !p-0" />
+          )}
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0 mx-2" title={label}>
+        <Text className="capitalize truncate">{label}</Text>
+      </div>
+
+      <div className="flex-shrink-0 w-8 text-right">
         {isHovered ? (
           <button
             onClick={handleActionClick}
-            className="text-xs text-orange-600 hover:text-orange-800 w-8"
+            className="text-xs text-orange-600 hover:text-orange-800 w-full"
           >
             {isExclusivelySelected() ? "All" : "Only"}
           </button>
@@ -251,10 +301,6 @@ const Facet: React.FC<FacetProps> = ({
                   onSelect={onSelect}
                   facetKey={facetKey}
                   showIcon={true}
-                  isOnlySelected={
-                    facetFilters[facetKey]?.length === 1 &&
-                    facetFilters[facetKey][0] === value.label
-                  }
                   facetFilters={facetFilters}
                 />
               ))
@@ -281,7 +327,6 @@ interface AlertFacetsProps {
   ) => void;
   className?: string;
 }
-
 const AlertFacets: React.FC<AlertFacetsProps> = ({
   alerts,
   facetFilters,
@@ -289,10 +334,17 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
   className,
 }) => {
   const getFacetValues = (key: keyof AlertDto): FacetValue[] => {
+    // Get alerts filtered by all other facets except the current one
+    const filteredAlerts = getFilteredAlertsForFacet(
+      alerts,
+      facetFilters,
+      key as string
+    );
+
     const valueMap = new Map<string, number>();
     let nullCount = 0;
 
-    alerts.forEach((alert) => {
+    filteredAlerts.forEach((alert) => {
       let value = alert[key];
 
       if (Array.isArray(value)) {
@@ -318,7 +370,6 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
         facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
     }));
 
-    // Add n/a value for facets that support it
     if (shouldShowNAValue(key) && nullCount > 0) {
       values.push({
         label: "n/a",
@@ -328,17 +379,15 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
       });
     }
 
-    // Apply special sorting for severity facet
     if (key === "severity") {
       values.sort((a, b) => {
-        if (a.label === "n/a") return 1; // Always put n/a last
+        if (a.label === "n/a") return 1;
         if (b.label === "n/a") return -1;
         const orderDiff = getSeverityOrder(a.label) - getSeverityOrder(b.label);
         if (orderDiff !== 0) return orderDiff;
         return b.count - a.count;
       });
     } else {
-      // Other facets: sort by count but always keep n/a last
       values.sort((a, b) => {
         if (a.label === "n/a") return 1;
         if (b.label === "n/a") return -1;
@@ -349,35 +398,8 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
     return values;
   };
 
-  // Helper function to determine which facets should show n/a values
   const shouldShowNAValue = (key: keyof AlertDto): boolean => {
-    // Add facet keys that should show n/a values
-    return ["assignee"].includes(key as string);
-  };
-
-  // Modify FacetValue component to handle n/a value display
-  const getIconForValue = (facetKey: string, label: string) => {
-    if (label === "n/a") {
-      return XCircleIcon;
-    }
-
-    if (facetKey === "source") {
-      return null; // Will use Image component instead
-    }
-
-    if (facetKey === "severity") {
-      return null; // Will use AlertSeverity component
-    }
-
-    if (facetKey === "status") {
-      return getStatusIcon(label);
-    }
-
-    if (facetKey === "assignee") {
-      return UserCircleIcon;
-    }
-
-    return null;
+    return ["assignee", "incident"].includes(key as string);
   };
 
   return (
@@ -416,6 +438,24 @@ const AlertFacets: React.FC<AlertFacetsProps> = ({
           values={getFacetValues("assignee")}
           onSelect={(value, exclusive, isAllOnly) =>
             onSelect("assignee", value, exclusive, isAllOnly)
+          }
+          facetFilters={facetFilters}
+        />
+        <Facet
+          facetKey="dismissed"
+          name="Dismissed"
+          values={getFacetValues("dismissed")}
+          onSelect={(value, exclusive, isAllOnly) =>
+            onSelect("dismissed", value, exclusive, isAllOnly)
+          }
+          facetFilters={facetFilters}
+        />
+        <Facet
+          facetKey="incident"
+          name="Incident Related"
+          values={getFacetValues("incident")}
+          onSelect={(value, exclusive, isAllOnly) =>
+            onSelect("incident", value, exclusive, isAllOnly)
           }
           facetFilters={facetFilters}
         />
