@@ -311,15 +311,11 @@ class PagerdutyProvider(BaseProvider):
     ) -> AlertDto:
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})
-        url = data.pop("self", data.pop("html_url"))
+        url = data.pop("self", data.pop("html_url", None))
         # format status and severity to Keep format
-        status = PagerdutyProvider.STATUS_MAP.get(
-            data.pop("status"), AlertStatus.FIRING
-        )
+        status = PagerdutyProvider.STATUS_MAP.get(data.pop("status", "firing"))
         priority_summary = (data.get("priority", {}) or {}).get("summary")
-        priority = PagerdutyProvider.SEVERITIES_MAP.get(
-            priority_summary, AlertSeverity.INFO
-        )
+        priority = PagerdutyProvider.SEVERITIES_MAP.get(priority_summary, "P4")
         last_received = data.pop("created_at")
         name = data.pop("title")
         service = data.pop("service", {}).get("summary", "unknown")
@@ -336,7 +332,9 @@ class PagerdutyProvider(BaseProvider):
 
         last_status_change_by = data.get("last_status_change_by", {}).get("summary")
         acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
-        conference_bridge = data.get("conference_bridge", {}).get("summary")
+        conference_bridge = data.get("conference_bridge", {})
+        if isinstance(conference_bridge, dict):
+            conference_bridge = conference_bridge.get("summary")
         urgency = data.get("urgency")
 
         # Additional metadata

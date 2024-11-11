@@ -63,7 +63,7 @@ class Preset(SQLModel, table=True):
 
 # datatype represents a query with CEL (str) and SQL (dict)
 class PresetSearchQuery(BaseModel):
-    cel_query: constr(min_length=1)
+    cel_query: constr(min_length=0)
     sql_query: Dict[str, Any]
     limit: conint(ge=0) = 1000
     timeframe: conint(ge=0) = 0

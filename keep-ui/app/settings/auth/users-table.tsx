@@ -24,6 +24,7 @@ interface UsersTableProps {
   onDeleteUser?: (email: string, event: React.MouseEvent) => void;
   isDisabled?: boolean;
   groupsAllowed?: boolean;
+  userCreationAllowed?: boolean;
 }
 
 export function UsersTable({
@@ -34,6 +35,7 @@ export function UsersTable({
   onDeleteUser,
   isDisabled = false,
   groupsAllowed = true,
+  userCreationAllowed = true,
 }: UsersTableProps) {
   return (
     <Table>
@@ -127,17 +129,22 @@ export function UsersTable({
               </Text>
             </TableCell>
             <TableCell className="w-1/12">
-              {!isDisabled && user.email !== currentUserEmail && !user.ldap && (
-                <div className="flex justify-end">
-                  <Button
-                    icon={TrashIcon}
-                    variant="light"
-                    color="orange"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => onDeleteUser && onDeleteUser(user.email, e)}
-                  />
-                </div>
-              )}
+              {!isDisabled &&
+                user.email !== currentUserEmail &&
+                !user.ldap &&
+                userCreationAllowed && (
+                  <div className="flex justify-end">
+                    <Button
+                      icon={TrashIcon}
+                      variant="light"
+                      color="orange"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) =>
+                        onDeleteUser && onDeleteUser(user.email, e)
+                      }
+                    />
+                  </div>
+                )}
             </TableCell>
           </TableRow>
         ))}

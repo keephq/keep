@@ -1,12 +1,12 @@
-import React, { useState, useEffect, use } from "react";
+import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
-import { Callout, Button, Title, Card, Text } from "@tremor/react";
+import { Callout, Button, Title, Card } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import Loading from "../loading";
 import { AlertDto } from "./models";
-import { IncidentDto, IncidentCandidateDto } from "../incidents/models";
-import { useApiUrl, useConfig } from "utils/hooks/useConfig";
+import { IncidentDto, IncidentCandidateDto } from "@/entities/incidents/model";
+import { useApiUrl } from "utils/hooks/useConfig";
 import { DragDropContext } from "react-beautiful-dnd";
 import IncidentCard from "./alert-create-incident-ai-card";
 import { useIncidents } from "utils/hooks/useIncidents";
@@ -47,7 +47,6 @@ const CreateIncidentWithAIModal = ({
   >([]);
   const [suggestionId, setSuggestionId] = useState<string>("");
   const { data: session } = useSession();
-  const { data: configData } = useConfig();
   const apiUrl = useApiUrl();
   const router = useRouter();
   const { mutate: mutateIncidents } = useIncidents(

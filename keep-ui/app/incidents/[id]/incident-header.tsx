@@ -1,47 +1,36 @@
-import { IncidentDto } from "@/app/incidents/models";
-import { Badge, Button, Icon, Subtitle, Title } from "@tremor/react";
+"use client";
+
+import {
+  useIncidentActions,
+  type IncidentDto,
+} from "@/entities/incidents/model";
+import { Button, Icon, Subtitle, Title } from "@tremor/react";
 import { Link } from "@/components/ui";
 import { ArrowRightIcon } from "@heroicons/react/16/solid";
 import { MdBlock, MdDone, MdModeEdit, MdPlayArrow } from "react-icons/md";
 import React, { useState } from "react";
-import {
-  deleteIncident,
-  handleConfirmPredictedIncident,
-} from "@/app/incidents/incident-candidate-actions";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
-import CreateOrUpdateIncident from "@/app/incidents/create-or-update-incident";
+import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import Modal from "@/components/ui/Modal";
-import { KeyedMutator } from "swr";
-
-function SeverityBadge({ severity }: { severity: IncidentDto["severity"] }) {
-  let severityColor;
-  if (severity === "critical") {
-    severityColor = "red";
-  } else if (severity === "info") {
-    severityColor = "blue";
-  } else if (severity === "warning") {
-    severityColor = "yellow";
-  }
-  return (
-    <Badge color={severityColor} className="capitalize" size="xs">
-      {severity}
-    </Badge>
-  );
-}
+import { IncidentSeverityBadge } from "@/entities/incidents/ui";
+import { getIncidentName } from "@/entities/incidents/lib/utils";
+import { useIncident } from "@/utils/hooks/useIncidents";
+import { IncidentOverview } from "./incident-overview";
 
 export function IncidentHeader({
-  incident,
-  mutate,
+  incident: initialIncidentData,
 }: {
   incident: IncidentDto;
-  mutate: KeyedMutator<IncidentDto>;
 }) {
+  const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
+    fallbackData: initialIncidentData,
+    revalidateOnMount: false,
+  });
+  const { deleteIncident, confirmPredictedIncident } = useIncidentActions();
+  const incident = fetchedIncident || initialIncidentData;
+
   const router = useRouter();
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
 
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
@@ -54,11 +43,9 @@ export function IncidentHeader({
 
   const handleFinishEdit = () => {
     setIsFormOpen(false);
-    mutate();
   };
   const handleRunWorkflow = () => {
     setRunWorkflowModalIncident(incident);
-    mutate();
   };
 
   const handleStartEdit = () => {
@@ -73,12 +60,10 @@ export function IncidentHeader({
           <Icon icon={ArrowRightIcon} color="gray" size="xs" />{" "}
           {incident.is_confirmed ? "⚔️ " : "Possible "}Incident Details
         </Subtitle>
-        <div className="flex justify-between items-end text-sm gap-1">
+        <div className="flex justify-between items-end text-sm gap-2">
           <Title className="prose-2xl flex-grow flex flex-col gap-1">
-            <SeverityBadge severity={incident.severity} />
-            <span>
-              {incident.user_generated_name || incident.ai_generated_name}
-            </span>
+            <IncidentSeverityBadge severity={incident.severity} />
+            <span>{getIncidentName(incident)}</span>
           </Title>
           <Button
             color="orange"
@@ -118,12 +103,7 @@ export function IncidentHeader({
                 onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleConfirmPredictedIncident({
-                    apiUrl: apiUrl!,
-                    incidentId: incident.id!,
-                    mutate,
-                    session,
-                  });
+                  confirmPredictedIncident(incident.id!);
                 }}
               >
                 Confirm
@@ -137,12 +117,7 @@ export function IncidentHeader({
                 onClick={async (e: React.MouseEvent) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const success = await deleteIncident({
-                    apiUrl: apiUrl!,
-                    incidentId: incident.id!,
-                    mutate,
-                    session,
-                  });
+                  const success = await deleteIncident(incident.id);
                   if (success) {
                     router.push("/incidents");
                   }
@@ -152,13 +127,14 @@ export function IncidentHeader({
           )}
         </div>
       </header>
+      <IncidentOverview incident={incident} />
       <Modal
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         className="w-[600px]"
         title="Edit Incident"
       >
-        <CreateOrUpdateIncident
+        <CreateOrUpdateIncidentForm
           incidentToEdit={incident}
           exitCallback={handleFinishEdit}
         />

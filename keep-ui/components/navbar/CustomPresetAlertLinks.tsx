@@ -67,6 +67,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
         count={preset.alerts_count}
         isDeletable={true}
         onDelete={() => deletePreset(preset.id, preset.name)}
+        isExact={true}
         className={classNames(
           "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
           {

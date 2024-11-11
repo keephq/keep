@@ -12,7 +12,7 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import uuid4
 
 import numpy as np
@@ -38,7 +38,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import exists, expression
-from sqlmodel import Session, col, or_, select, text
+from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
@@ -1466,14 +1466,14 @@ def get_user(username, password, update_sign_in=True):
     return user
 
 
-def get_users():
+def get_users(tenant_id=None):
     from keep.api.core.dependencies import SINGLE_TENANT_UUID
     from keep.api.models.db.user import User
 
+    tenant_id = tenant_id or SINGLE_TENANT_UUID
+
     with Session(engine) as session:
-        users = session.exec(
-            select(User).where(User.tenant_id == SINGLE_TENANT_UUID)
-        ).all()
+        users = session.exec(select(User).where(User.tenant_id == tenant_id)).all()
     return users
 
 
@@ -4361,3 +4361,67 @@ def get_alerts_metrics_by_provider(
         }
         for row in results
     }
+
+
+def get_table_class(table_name: str) -> Type[SQLModel]:
+    """
+    Get the SQLModel table class dynamically based on table name.
+    Assumes table classes follow PascalCase naming convention.
+
+    Args:
+        table_name (str): Name of the table in snake_case (e.g. "alerts", "rules")
+
+    Returns:
+        Type[SQLModel]: The corresponding SQLModel table class
+    """
+    # Convert snake_case to PascalCase and remove trailing 's' if exists
+    class_name = "".join(
+        word.capitalize() for word in table_name.rstrip("s").split("_")
+    )
+
+    # Get all SQLModel subclasses from the imported modules
+    model_classes = {
+        cls.__name__: cls
+        for cls in SQLModel.__subclasses__()
+        if hasattr(cls, "__tablename__")
+    }
+
+    if class_name not in model_classes:
+        raise ValueError(f"No table class found for table name: {table_name}")
+
+    return model_classes[class_name]
+
+
+def get_resource_ids_by_resource_type(
+    tenant_id: str, table_name: str, uid: str, session: Optional[Session] = None
+) -> List[str]:
+    """
+    Get all unique IDs from a table grouped by a specified UID column.
+
+    Args:
+        tenant_id (str): The tenant ID to filter by
+        table_name (str): Name of the table (e.g. "alerts", "rules")
+        uid (str): Name of the column to group by
+        session (Optional[Session]): SQLModel session
+
+    Returns:
+        List[str]: List of unique IDs
+
+    Example:
+        >>> get_resource_ids_by_resource_type("tenant123", "alerts", "alert_id")
+        ['id1', 'id2', 'id3']
+    """
+    with existed_or_new_session(session) as session:
+        # Get the table class dynamically
+        table_class = get_table_class(table_name)
+
+        # Create the query using SQLModel's select
+        query = (
+            select(getattr(table_class, uid))
+            .distinct()
+            .where(getattr(table_class, "tenant_id") == tenant_id)
+        )
+
+        # Execute the query and return results
+        result = session.exec(query)
+        return result.all()

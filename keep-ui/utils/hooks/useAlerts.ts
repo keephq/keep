@@ -61,6 +61,7 @@ export const useAlerts = () => {
       data: alertsFromEndpoint = [],
       mutate,
       isLoading,
+      error,
     } = useAllAlerts(presetName, options);
 
     useEffect(() => {
@@ -85,14 +86,14 @@ export const useAlerts = () => {
       data: Array.from(alertsMap.values()),
       mutate: mutate,
       isLoading: isLoading,
+      error: error,
     };
   };
 
   const useMultipleFingerprintsAlertAudit = (
     fingerprints: string[] | undefined,
     options: SWRConfiguration = {
-      revalidateOnFocus: true,
-      revalidateOnMount: false,
+      revalidateOnFocus: false,
     }
   ) => {
     return useSWR<AuditEvent[]>(
