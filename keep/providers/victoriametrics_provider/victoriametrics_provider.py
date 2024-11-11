@@ -34,7 +34,7 @@ class VictoriametricsProviderAuthConfig:
         default=None,
     )
 
-    VMAlertPort: int | None = dataclasses.field(
+    VMAlertPort: int = dataclasses.field(
         metadata={
             "required": False,
             "description": "The port number on which VMAlert is listening. This should match the port configured in your VMAlert setup.",
