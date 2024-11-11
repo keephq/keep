@@ -30,6 +30,8 @@ class VictoriametricsProviderAuthConfig:
             "required": False,
             "description": "The hostname or IP address where VMAlert is running. This can be a local or remote server address.",
             "hint": "Example: 'localhost', '192.168.1.100', or 'vmalert.mydomain.com'",
+            "config_sub_group": "host",
+            "config_main_group": "address",
         },
         default=None,
     )
@@ -39,6 +41,8 @@ class VictoriametricsProviderAuthConfig:
             "required": False,
             "description": "The port number on which VMAlert is listening. This should match the port configured in your VMAlert setup.",
             "hint": "Example: 8880 (if VMAlert is set to listen on port 8880), defaults to 8880",
+            "config_sub_group": "host",
+            "config_main_group": "address",
         },
         default=8880,
     )
@@ -47,6 +51,8 @@ class VictoriametricsProviderAuthConfig:
         metadata={
             "required": False,
             "description": "The full URL to the VMAlert instance. For example: http://vmalert.mydomain.com:8880",
+            "config_sub_group": "url",
+            "config_main_group": "address",
         },
         default=None,
     )
