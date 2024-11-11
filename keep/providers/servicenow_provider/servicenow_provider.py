@@ -87,7 +87,7 @@ class ServicenowProvider(BaseTopologyProvider):
                     self.authentication_config.password,
                 ),
                 verify=False,
-                timeout=3,
+                timeout=10,
             )
             if response.status_code == 200:
                 roles = response.json()
