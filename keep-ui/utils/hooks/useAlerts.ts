@@ -61,6 +61,7 @@ export const useAlerts = () => {
       data: alertsFromEndpoint = [],
       mutate,
       isLoading,
+      error,
     } = useAllAlerts(presetName, options);
 
     useEffect(() => {
@@ -85,6 +86,7 @@ export const useAlerts = () => {
       data: Array.from(alertsMap.values()),
       mutate: mutate,
       isLoading: isLoading,
+      error: error,
     };
   };
 

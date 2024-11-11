@@ -2,30 +2,6 @@ import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
 import { AlertDto, AlertKnownKeys, Preset, getTabsFromPreset } from "./models";
 
-const getPresetAlerts = (alert: AlertDto, presetName: string): boolean => {
-  if (presetName === "deleted") {
-    return alert.deleted === true;
-  }
-
-  if (presetName === "groups") {
-    return alert.group === true;
-  }
-
-  if (presetName === "feed") {
-    return alert.deleted === false && alert.dismissed === false;
-  }
-
-  if (presetName === "dismissed") {
-    return alert.dismissed === true;
-  }
-
-  if (presetName === "without-incident") {
-    return alert.incident === null;
-  }
-
-  return true;
-};
-
 interface Props {
   alerts: AlertDto[];
   preset: Preset;
@@ -49,21 +25,19 @@ export default function AlertTableTabPanel({
   setChangeStatusAlert,
   mutateAlerts,
 }: Props) {
-  const sortedPresetAlerts = alerts
-    .filter((alert) => getPresetAlerts(alert, preset.name))
-    .sort((a, b) => {
-      // Shahar: we want noise alert first. If no noisy (most of the cases) we want the most recent first.
-      const noisyA = a.isNoisy && a.status == "firing" ? 1 : 0;
-      const noisyB = b.isNoisy && b.status == "firing" ? 1 : 0;
+  const sortedPresetAlerts = alerts.sort((a, b) => {
+    // Shahar: we want noise alert first. If no noisy (most of the cases) we want the most recent first.
+    const noisyA = a.isNoisy && a.status == "firing" ? 1 : 0;
+    const noisyB = b.isNoisy && b.status == "firing" ? 1 : 0;
 
-      // Primary sort based on noisy flag (true first)
-      if (noisyA !== noisyB) {
-        return noisyB - noisyA;
-      }
+    // Primary sort based on noisy flag (true first)
+    if (noisyA !== noisyB) {
+      return noisyB - noisyA;
+    }
 
-      // Secondary sort based on time (most recent first)
-      return b.lastReceived.getTime() - a.lastReceived.getTime();
-    });
+    // Secondary sort based on time (most recent first)
+    return b.lastReceived.getTime() - a.lastReceived.getTime();
+  });
 
   const additionalColsToGenerate = [
     ...new Set(
@@ -111,12 +85,7 @@ export default function AlertTableTabPanel({
       presetName={preset.name}
       presetPrivate={preset.is_private}
       presetNoisy={preset.is_noisy}
-      presetStatic={
-        preset.name === "feed" ||
-        preset.name === "groups" ||
-        preset.name === "dismissed" ||
-        preset.name === "without-incident"
-      }
+      presetStatic={preset.name === "feed"}
       presetId={preset.id}
       presetTabs={presetTabs}
       mutateAlerts={mutateAlerts}

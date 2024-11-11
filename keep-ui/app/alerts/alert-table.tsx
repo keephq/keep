@@ -86,6 +86,8 @@ export function AlertTable({
     status: [],
     source: [],
     assignee: [],
+    dismissed: [],
+    incident: [],
   });
 
   const columnsIds = getColumnsIds(columns);
@@ -367,7 +369,7 @@ export function AlertTable({
           </Card>
         </div>
       </div>
-      <div className="mt-2 mb-8 pl-[12rem]">
+      <div className="mt-2 mb-8 pl-[14rem]">
         <AlertPagination
           table={table}
           presetName={presetName}
