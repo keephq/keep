@@ -38,7 +38,7 @@ class PagerdutyProviderAuthConfig:
     routing_key: str | None = dataclasses.field(
         metadata={
             "required": False,
-            "description": "Routing Key(s), seperated by a comma (an integration or ruleset key)",
+            "description": "Routing Key (an integration or ruleset key)",
         },
         default=None,
     )
