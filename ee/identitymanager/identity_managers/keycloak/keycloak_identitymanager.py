@@ -412,6 +412,8 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 "email": user_email,
                 "enabled": True,
                 "firstName": user_name,
+                "lastName": user_name,
+                "emailVerified": True,
             }
             if password:
                 user_data["credentials"] = [
@@ -631,7 +633,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         # TODO: this is not efficient, we should cache this
         users = self.keycloak_admin.get_users({})
         user = next(
-            (user for user in users if user["email"] == perm.id),
+            (user for user in users if user.get("email") == perm.id),
             None,
         )
         if not user:
@@ -666,8 +668,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return policy_id
 
     def create_group_policy(self, perm, permission: ResourcePermission) -> None:
-        group = self.keycloak_admin.get_group(perm.id)
-        group_name = group.get("name")
+        group_name = perm.id
+        group = self.keycloak_admin.get_groups(query={"search": perm.id})
+        if not group or len(group) > 1:
+            self.logger.error("Problem with group - should be 1 but got %s", len(group))
+            raise HTTPException(status_code=400, detail="Problem with group")
+        group = group[0]
+        group_id = group["id"]
         resp = self.keycloak_admin.connection.raw_post(
             f"{self.admin_url}/authz/resource-server/policy/group",
             data=json.dumps(
@@ -676,12 +683,12 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     "description": json.dumps(
                         {
                             "group_name": group_name,
-                            "group_id": perm.id,
+                            "group_id": group_id,
                             "resource_id": permission.resource_id,
                         }
                     ),
                     "logic": "POSITIVE",
-                    "groups": [{"id": perm.id, "extendChildren": False}],
+                    "groups": [{"id": group_id, "extendChildren": False}],
                     "groupsClaim": "",
                 }
             ),

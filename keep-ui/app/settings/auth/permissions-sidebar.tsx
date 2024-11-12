@@ -80,7 +80,7 @@ const PermissionSidebar = ({
       options.push({
         id: `group-${group.id}`,
         label: `${group.name} (Group)`,
-        value: `group_${group.id}`, // Format: type_id
+        value: `group_${group.name}`, // Format: type_id
       });
     }
     /* Support roles in the future
