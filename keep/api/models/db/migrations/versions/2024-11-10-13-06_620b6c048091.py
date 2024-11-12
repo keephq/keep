@@ -1,7 +1,7 @@
 """incident fingerprint
 
 Revision ID: 620b6c048091
-Revises: ef0b5b0df41c
+Revises: 895fe80117aa
 Create Date: 2024-11-10 13:06:09.620665
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "620b6c048091"
-down_revision = "ef0b5b0df41c"
+down_revision = "895fe80117aa"
 branch_labels = None
 depends_on = None
 
