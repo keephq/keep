@@ -9,22 +9,32 @@ export default function Ai() {
   const { data: aistats, isLoading, refetch: refetchAIStats } = useAIStats();
   const { updateAISettings } = UseAIActions();
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchAIStats();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [refetchAIStats]);
+
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
       <div className="flex justify-between items-center">
         <div>
-          <Title>AI Correlation</Title>
+          <Title>Pluggable AI</Title>
           <Subtitle>
-            Correlating alerts to incidents based on past alerts, incidents, and
-            the other data.
+            External AI engines can be plugged in and configured here.
           </Subtitle>
         </div>
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
           <div>
-            <div className="grid grid-cols-1 gap-4 mt-6">
-              {isLoading ? <p>Loading algorithms and settings...</p> : null}
+            <div className="grid grid-cols-1 gap-4">
+              {isLoading ? <p>Loading algorithms and their settings...</p> : null}
+              {aistats?.algorithm_configs?.length === 0 && (
+                <p>No AI plugged in yet. Please reach out to us!</p>
+              )}
               {aistats?.algorithm_configs?.map((algorithm_config, index) => (
                 <Card
                   key={index}

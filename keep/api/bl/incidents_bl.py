@@ -80,7 +80,7 @@ class IncidentBl:
         return new_incident_dto
 
     async def add_alerts_to_incident(
-        self, incident_id: UUID, alert_ids: List[UUID]
+        self, incident_id: UUID, alert_ids: List[UUID], is_created_by_ai: bool = False
     ) -> None:
         self.logger.info(
             "Adding alerts to incident",
@@ -90,7 +90,7 @@ class IncidentBl:
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
-        add_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_ids)
+        add_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_ids, is_created_by_ai)
         self.logger.info(
             "Alerts added to incident",
             extra={"incident_id": incident_id, "alert_ids": alert_ids},
