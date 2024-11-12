@@ -1,6 +1,6 @@
 # Instructions for a quick setup
 
-## Setting up Graylog
+## Setting up Graylog (v6)
 
 ### Installation
 

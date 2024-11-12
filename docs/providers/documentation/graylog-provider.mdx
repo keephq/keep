@@ -13,6 +13,7 @@ The **Graylog Provider** facilitates receiving alerts from Graylog by setting up
 - **Username** (required): Username for authenticating with Graylog's API.
 - **Graylog Access Token** (required): Access token for authenticating with Graylog's API.
 - **Deployment Url** (required): Deployment URL for connecting to the Graylog instance (e.g., `http://localhost:9000`).
+- **Graylog Version** (optional): Version of the Graylog deployment you're using. (e.g `v4`, `v5.0`, `v6.0.1+eb75d`)
 
 ## Scopes
 
@@ -46,11 +47,13 @@ Example:
 ```
 - You can modify this to fetch either alerts, events or both.
 
----
+<Note>
+Ensure that the product of `page` and `per_page` does not exceed 10,000.
+</Note>
 
-**Note**: Ensure that the product of `page` and `per_page` does not exceed 10,000.
-
----
+<Note>
+The notification URL for Graylog v4.x has the api_key as a query param, this is the default behaviour.
+</Note>
 
 ## Useful Links
 
