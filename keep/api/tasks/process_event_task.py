@@ -410,7 +410,7 @@ def __handle_formatted_events(
             #     logger.info("Adding group alerts to the workflow manager queue")
             #     workflow_manager.insert_events(tenant_id, grouped_alerts)
             #     logger.info("Added group alerts to the workflow manager queue")
-        except Exception:
+        except Exception as ex:
             logger.exception(
                 "Failed to run rules engine",
                 extra={
