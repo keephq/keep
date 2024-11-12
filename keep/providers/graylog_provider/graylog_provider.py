@@ -52,14 +52,6 @@ class GraylogProviderAuthConfig:
             "hint": "Example: http://127.0.0.1:9000",
         },
     )
-    graylog_version: str = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Graylog version (v6.0.1)",
-            "hint": "Example: v4.0.6 or v6.0 or v5",
-        },
-        default="v6",
-    )
 
 
 class GraylogProvider(BaseProvider):
@@ -116,7 +108,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     ):
         super().__init__(context_manager, provider_id, config)
         self._host = None
-        self.is_v4 = self.authentication_config.graylog_version.startswith("v4")
+        self.is_v4 = self.__get_graylog_version().startswith("4")
 
     def dispose(self):
         """
@@ -235,6 +227,22 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             "authenticated": authenticated,
             "authorized": authorized,
         }
+
+    def __get_graylog_version(self) -> str:
+        self.logger.info("Getting graylog version info")
+        try:
+            version_response = requests.get(
+                url=self.__get_url(),
+                headers=self._headers
+            )
+            if version_response.status_code != 200:
+                raise Exception(version_response.text)
+            version = version_response.json()["version"].strip()
+            self.logger.info(f"We are working with Graylog version: {version}")
+            return version
+        except Exception as e:
+            self.logger.error("Error while getting Graylog Version", extra={"exception": str(e)})
+
 
     def __get_url_whitelist(self):
         try:
