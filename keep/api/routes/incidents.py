@@ -611,7 +611,7 @@ def change_incident_status(
         # TODO: same this change to audit table with the comment
 
         if change.status == IncidentStatus.RESOLVED:
-            for alert in incident.alerts:
+            for alert in incident._alerts:
                 _enrich_alert(
                     EnrichAlertRequestBody(
                         enrichments={"status": "resolved"},

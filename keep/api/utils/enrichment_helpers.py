@@ -1,8 +1,12 @@
 import logging
 from datetime import datetime
+from optparse import Option
+from typing import Optional
 
 from opentelemetry import trace
+from sqlmodel import Session
 
+from keep.api.core.db import existed_or_new_session
 from keep.api.models.alert import AlertDto, AlertStatus, AlertWithIncidentLinkMetadataDto
 from keep.api.models.db.alert import Alert, AlertToIncident
 
@@ -78,7 +82,8 @@ def calculated_start_firing_time(
 
 def convert_db_alerts_to_dto_alerts(
         alerts: list[Alert | tuple[Alert, AlertToIncident]],
-        with_incidents: bool = False
+        with_incidents: bool = False,
+        session: Optional[Session] = None,
     ) -> list[AlertDto | AlertWithIncidentLinkMetadataDto]:
     """
     Enriches the alerts with the enrichment data.
@@ -90,46 +95,47 @@ def convert_db_alerts_to_dto_alerts(
     Returns:
         list[AlertDto | AlertWithIncidentLinkMetadataDto]: The enriched alerts.
     """
-    alerts_dto = []
-    with tracer.start_as_current_span("alerts_enrichment"):
-        # enrich the alerts with the enrichment data
-        for _object in alerts:
+    with existed_or_new_session(session) as session:
+        alerts_dto = []
+        with tracer.start_as_current_span("alerts_enrichment"):
+            # enrich the alerts with the enrichment data
+            for _object in alerts:
 
-            # We may have an Alert only or and Alert with an AlertToIncident
-            if isinstance(_object, Alert):
-                alert, alert_to_incident = _object, None
-            else:
-                alert, alert_to_incident = _object
-
-            if alert.alert_enrichment:
-                alert.event.update(alert.alert_enrichment.enrichments)
-            if with_incidents:
-                if alert.incidents:
-                    alert.event["incident"] = ",".join(str(incident.id) for incident in alert.incidents)
-            try:
-                if alert_to_incident is not None:
-                    alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(alert, alert_to_incident)
+                # We may have an Alert only or and Alert with an AlertToIncident
+                if isinstance(_object, Alert):
+                    alert, alert_to_incident = _object, None
                 else:
-                    alert_dto = AlertDto(**alert.event)
+                    alert, alert_to_incident = _object
+
                 if alert.alert_enrichment:
-                    parse_and_enrich_deleted_and_assignees(
-                        alert_dto, alert.alert_enrichment.enrichments
+                    alert.event.update(alert.alert_enrichment.enrichments)
+                if with_incidents:
+                    if alert.incidents:
+                        alert.event["incident"] = ",".join(str(incident.id) for incident in alert.incidents)
+                try:
+                    if alert_to_incident is not None:
+                        alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(alert, alert_to_incident)
+                    else:
+                        alert_dto = AlertDto(**alert.event)
+                    if alert.alert_enrichment:
+                        parse_and_enrich_deleted_and_assignees(
+                            alert_dto, alert.alert_enrichment.enrichments
+                        )
+                except Exception:
+                    # should never happen but just in case
+                    logger.exception(
+                        "Failed to parse alert",
+                        extra={
+                            "alert": alert,
+                        },
                     )
-            except Exception:
-                # should never happen but just in case
-                logger.exception(
-                    "Failed to parse alert",
-                    extra={
-                        "alert": alert,
-                    },
-                )
-                continue
+                    continue
 
-            alert_dto.event_id = str(alert.id)
+                alert_dto.event_id = str(alert.id)
 
-            # enrich provider id when it's possible
-            if alert_dto.providerId is None:
-                alert_dto.providerId = alert.provider_id
-                alert_dto.providerType = alert.provider_type
-            alerts_dto.append(alert_dto)
+                # enrich provider id when it's possible
+                if alert_dto.providerId is None:
+                    alert_dto.providerId = alert.provider_id
+                    alert_dto.providerType = alert.provider_type
+                alerts_dto.append(alert_dto)
     return alerts_dto

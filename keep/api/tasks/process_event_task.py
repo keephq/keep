@@ -23,6 +23,7 @@ from keep.api.core.db import (
     get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
+    set_last_alert,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -188,6 +189,9 @@ def __save_to_db(
             )
             session.add(audit)
             alert_dto = AlertDto(**formatted_event.dict())
+
+            set_last_alert(tenant_id, alert, session=session)
+
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
@@ -406,7 +410,7 @@ def __handle_formatted_events(
             #     logger.info("Adding group alerts to the workflow manager queue")
             #     workflow_manager.insert_events(tenant_id, grouped_alerts)
             #     logger.info("Added group alerts to the workflow manager queue")
-        except Exception:
+        except Exception as ex:
             logger.exception(
                 "Failed to run rules engine",
                 extra={
