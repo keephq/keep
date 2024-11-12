@@ -6,7 +6,6 @@ import {
   NO_AUTH,
 } from "utils/authenticationType";
 import { getApiURL } from "utils/apiUrl";
-import { get } from "http";
 
 export default async function handler(
   req: NextApiRequest,
@@ -52,5 +51,6 @@ export default async function handler(
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
+    SENTRY_DISABLED: process.env.SENTRY_DISABLED,
   });
 }

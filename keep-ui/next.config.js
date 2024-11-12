@@ -72,12 +72,20 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
 
+if (
+  process.env.SENTRY_DISABLED === "true" ||
+  process.env.NODE_ENV === "development"
+) {
+  module.exports = withBundleAnalyzer(nextConfig);
+  return;
+}
+
 module.exports = withBundleAnalyzer(
   withSentryConfig(nextConfig, {
     // For all available options, see:
     // https://github.com/getsentry/sentry-webpack-plugin#options
 
-    org: "keep-l7",
+    org: "keep-hq",
     project: "keep-ui",
 
     // Only print logs for uploading source maps in CI
@@ -85,9 +93,6 @@ module.exports = withBundleAnalyzer(
 
     // For all available options, see:
     // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-    // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: true,
 
     // Automatically annotate React components to show their full name in breadcrumbs and session replay
     reactComponentAnnotation: {

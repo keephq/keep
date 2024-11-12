@@ -9,10 +9,12 @@ import { MinimizeMenuButton } from "components/navbar/MinimizeMenuButton";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import { DashboardLinks } from "@/components/navbar/DashboardLinks";
 import { IncidentsLinks } from "@/components/navbar/IncidentLinks";
+import { setSentryUserServer } from "@/shared/lib/setSentryUserServer";
 import "./Navbar.css";
 
 export default async function NavbarInner() {
   const session = await getServerSession(authOptions);
+  setSentryUserServer(session);
 
   return (
     <>

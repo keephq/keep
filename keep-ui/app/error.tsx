@@ -9,9 +9,9 @@ import "./error.css";
 import { useEffect } from "react";
 import { Title, Subtitle } from "@tremor/react";
 import { Button, Text } from "@tremor/react";
-import { signOut } from "next-auth/react";
 import { KeepApiError } from "@/shared/lib/KeepApiError";
 import * as Sentry from "@sentry/nextjs";
+import { useSignOut } from "@/shared/lib/useSignOut";
 
 export default function ErrorComponent({
   error,
@@ -20,6 +20,8 @@ export default function ErrorComponent({
   error: Error | KeepApiError;
   reset: () => void;
 }) {
+  const signOut = useSignOut();
+
   useEffect(() => {
     Sentry.captureException(error);
   }, [error]);
@@ -49,7 +51,7 @@ export default function ErrorComponent({
       </div>
       {error instanceof KeepApiError && error.statusCode === 401 ? (
         <Button
-          onClick={() => signOut()}
+          onClick={signOut}
           color="orange"
           variant="secondary"
           className="mt-4 border border-orange-500 text-orange-500"
