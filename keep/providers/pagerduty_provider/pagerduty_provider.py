@@ -536,9 +536,9 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         data = actual_event.get("data", {})
         url = data.pop("self", data.pop("html_url", None))
         # format status and severity to Keep format
-        status = PagerdutyProvider.STATUS_MAP.get(data.pop("status", "firing"))
+        status = PagerdutyProvider.ALERT_STATUS_MAP.get(data.pop("status", "firing"))
         priority_summary = (data.get("priority", {}) or {}).get("summary")
-        priority = PagerdutyProvider.SEVERITIES_MAP.get(priority_summary, "P4")
+        priority = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(priority_summary, "P4")
         last_received = data.pop(
             "created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         )
