@@ -480,7 +480,18 @@ const ProviderForm = ({
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
-          setFormErrors(updatedFormErrors);
+
+          if (updatedFormErrors.includes("SyntaxError")) {
+            setFormErrors(
+              "Bad response from API: Check the backend logs for more details"
+            );
+          } else if (updatedFormErrors.includes("Failed to fetch")) {
+            setFormErrors(
+              "Failed to connect to API: Check your internet connection"
+            );
+          } else {
+            setFormErrors(updatedFormErrors);
+          }
           onFormChange(formValues, updatedFormErrors);
           setIsLoading(false);
           onConnectChange(false, false);

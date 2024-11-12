@@ -316,7 +316,9 @@ class PagerdutyProvider(BaseProvider):
         status = PagerdutyProvider.STATUS_MAP.get(data.pop("status", "firing"))
         priority_summary = (data.get("priority", {}) or {}).get("summary")
         priority = PagerdutyProvider.SEVERITIES_MAP.get(priority_summary, "P4")
-        last_received = data.pop("created_at")
+        last_received = data.pop(
+            "created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        )
         name = data.pop("title")
         service = data.pop("service", {}).get("summary", "unknown")
         environment = next(
