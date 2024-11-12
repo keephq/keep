@@ -17,6 +17,7 @@ import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/useSignOut";
+import { useSetSentryUser } from "@/shared/lib/useSetSentryUser";
 
 type UserDropdownProps = {
   session: Session;

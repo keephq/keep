@@ -9,16 +9,13 @@ import { MinimizeMenuButton } from "components/navbar/MinimizeMenuButton";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import { DashboardLinks } from "@/components/navbar/DashboardLinks";
 import { IncidentsLinks } from "@/components/navbar/IncidentLinks";
-import { setSentryUserServer } from "@/shared/lib/setSentryUserServer";
+import { SetSentryUser } from "./SetSentryUser";
 import "./Navbar.css";
 
 export default async function NavbarInner() {
   const session = await getServerSession(authOptions);
-  setSentryUserServer(session);
-
   return (
     <>
-      <InitPostHog />
       <Menu>
         <Search />
         <div className="pt-6 space-y-4 flex-1 overflow-auto scrollable-menu-shadow">
@@ -30,6 +27,8 @@ export default async function NavbarInner() {
         <UserInfo session={session} />
       </Menu>
       <MinimizeMenuButton />
+      <InitPostHog session={session} />
+      <SetSentryUser session={session} />
     </>
   );
 }

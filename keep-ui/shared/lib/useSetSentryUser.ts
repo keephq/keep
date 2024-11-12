@@ -1,12 +1,11 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useConfig } from "utils/hooks/useConfig";
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { Session } from "next-auth";
 
-export const useSetSentryUser = () => {
-  const { data: session } = useSession();
+export function useSetSentryUser({ session }: { session: Session | null }) {
   const { data: configData } = useConfig();
 
   useEffect(() => {
@@ -18,6 +17,6 @@ export const useSetSentryUser = () => {
       return;
     }
 
-    Sentry.setUser(session.user);
+    Sentry.setUser({ ...session.user, tenant_id: session.tenantId });
   }, [session, configData]);
-};
+}

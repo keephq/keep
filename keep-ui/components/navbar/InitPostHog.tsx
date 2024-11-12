@@ -3,14 +3,13 @@
 "use client";
 import posthog from "posthog-js";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { NoAuthUserEmail } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
+import { Session } from "next-auth";
 
-export const InitPostHog = () => {
+export const InitPostHog = ({ session }: { session: Session | null }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const { data: configData } = useConfig();
 
   if (
