@@ -324,7 +324,7 @@ class AISuggestionBl:
             try:
                 # Create the incident
                 incident_dto = IncidentDto.parse_obj(incident_with_feedback["incident"])
-                created_incident = incident_bl.create_incident(incident_dto)
+                created_incident = incident_bl.create_incident(incident_dto, generated_from_ai=True)
 
                 # Add alerts to the created incident
                 alert_ids = [

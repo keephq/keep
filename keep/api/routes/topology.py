@@ -34,7 +34,7 @@ def get_topology_data(
     provider_ids: Optional[str] = None,
     services: Optional[str] = None,
     environment: Optional[str] = None,
-    include_empty_deps: Optional[bool] = False,
+    include_empty_deps: Optional[bool] = True,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:topology"])
     ),
