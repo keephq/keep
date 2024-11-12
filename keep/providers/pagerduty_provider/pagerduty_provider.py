@@ -502,10 +502,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         )
 
     def _format_alert(
-        self, event: dict, provider_instance: "BaseProvider" = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
-        status = self.ALERT_STATUS_MAP.get(event.get("status", "firing"))
-        severity = self.ALERT_SEVERITIES_MAP.get(event.get("severity", "info"))
+        # If somebody connected the provider before we refactored it
+        old_format_event = event.get("event", {})
+        if old_format_event is not None and isinstance(old_format_event, dict):
+            return PagerdutyProvider._format_alert_old(old_format_event)
+
+        status = PagerdutyProvider.ALERT_STATUS_MAP.get(event.get("status", "firing"))
+        severity = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(
+            event.get("severity", "info")
+        )
         source = ["pagerduty"]
         origin = event.get("body", {}).get("cef_details", {}).get("source_origin")
         fingerprint = event.get("alert_key", event.get("id"))
@@ -522,6 +529,59 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             source=source,
             original_alert=event,
             fingerprint=fingerprint,
+        )
+
+    def _format_alert_old(event: dict) -> AlertDto:
+        actual_event = event.get("event", {})
+        data = actual_event.get("data", {})
+        url = data.pop("self", data.pop("html_url", None))
+        # format status and severity to Keep format
+        status = PagerdutyProvider.ALERT_STATUS_MAP.get(data.pop("status", "firing"))
+        priority_summary = (data.get("priority", {}) or {}).get("summary")
+        priority = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(priority_summary, "P4")
+        last_received = data.pop(
+            "created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        )
+        name = data.pop("title")
+        service = data.pop("service", {}).get("summary", "unknown")
+        environment = next(
+            iter(
+                [
+                    x
+                    for x in data.pop("custom_fields", [])
+                    if x.get("name") == "environment"
+                ]
+            ),
+            {},
+        ).get("value", "unknown")
+
+        last_status_change_by = data.get("last_status_change_by", {}).get("summary")
+        acknowledgers = [x.get("summary") for x in data.get("acknowledgers", [])]
+        conference_bridge = data.get("conference_bridge", {})
+        if isinstance(conference_bridge, dict):
+            conference_bridge = conference_bridge.get("summary")
+        urgency = data.get("urgency")
+
+        # Additional metadata
+        metadata = {
+            "urgency": urgency,
+            "acknowledgers": acknowledgers,
+            "last_updated_by": last_status_change_by,
+            "conference_bridge": conference_bridge,
+            "impacted_services": service,
+        }
+
+        return AlertDto(
+            **data,
+            url=url,
+            status=status,
+            lastReceived=last_received,
+            name=name,
+            severity=priority,
+            environment=environment,
+            source=["pagerduty"],
+            service=service,
+            labels=metadata,
         )
 
     def __get_all_incidents_or_alerts(self, incident_id: str = None):
