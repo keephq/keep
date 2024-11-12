@@ -1,6 +1,7 @@
 """
 Graylog Provider is a class that allows to install webhooks in Graylog.
 """
+# Documentation for older versions of graylog: https://github.com/Graylog2/documentation
 
 import dataclasses
 import math
