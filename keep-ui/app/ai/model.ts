@@ -1,7 +1,7 @@
 export interface AIConfig {
   algorithm_id: string;
   settings: any;
-  feedback_log: string;
+  feedback_logs: string;
   algorithm: {
     name: string;
     description: string;

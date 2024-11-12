@@ -81,32 +81,38 @@ export default function Ai() {
                               refetchAIStats();
                             }}
                           />
-                          {/* <p>Value: {setting.value}</p>
-                            <input
-                              type="range"
-                              id={`slider-${index}`}
-                              name={`slider-${index}`}
-                              // min={setting.min}
-                              // max={setting.max}
-                              value={setting.value}
-                              // onChange={(e) => {
-                              //   const newValue = parseFloat(e.target.value);
-                              //   setting.value = newValue;
-                              //   updateAISettings(algorithm_config.algorithm_id, algorithm_config);
-                              //   refetchAIStats();
-                              // }}
-                              className="mt-2 w-full"
-                            /> */}
+                        </div>
+                      ) : null}
+                      {setting.type === "int" ? (
+                        <div>
+                          <p>Value: {setting.value}</p>
+                          <input
+                            type="range"
+                            className=""
+                            step={1}
+                            min={setting.min}
+                            max={setting.max}
+                            // value={setting.value}
+                            onChange={(e) => {
+                              const newValue = parseFloat(e.target.value);
+                              setting.value = newValue;
+                              updateAISettings(
+                                algorithm_config.algorithm_id,
+                                algorithm_config
+                              );
+                              refetchAIStats();
+                            }}
+                          />
                         </div>
                       ) : null}
                     </div>
                   ))}
                   <h4 className="text-md font-medium mt-4">Execution logs:</h4>
-                  <pre className="text-sm bg-gray-100 p-2 rounded">
-                    {algorithm_config.feedback_log
-                      ? algorithm_config.feedback_log
+                    <pre className="text-sm bg-gray-100 p-2 rounded break-words whitespace-pre-wrap">
+                    {algorithm_config.feedback_logs
+                      ? algorithm_config.feedback_logs
                       : "Algorithm not executed yet."}
-                  </pre>
+                    </pre>
                 </Card>
               ))}
             </div>

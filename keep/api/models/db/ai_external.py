@@ -52,6 +52,8 @@ In other words, will act as a person looking at your alert feed and making a dec
     config_default=json.dumps(
         [
             {"min": 0.3, "max": 0.99, "value": 0.8, "type": "float", "name": "Correlation Threshold", "description": "The minimum correlation value to consider two alerts belonging to an ancident."},
+            {"min": 0.3, "max": 0.99, "value": 0.8, "type": "float", "name": "Model Accuracy Threshold", "description": "The trained model accuracy will be evaluated using cross-validation. If the accuracy is below this threshold, the model will be retrained."},
+            {"min": 2, "max": 20, "value": 10, "type": "int", "name": "Train Epochs", "description": "The amount of epochs to train the model for. The less the better to avoid over-fitting."},
             {"value": True, "type": "bool", "name": "Enabled", "description": "Enable or disable the algorithm."},
         ]
     )

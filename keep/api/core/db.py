@@ -4390,6 +4390,7 @@ def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndM
             ExternalAIConfigAndMetadata.id == ai_settings.id,
         ).first()
         setting.settings = json.dumps(ai_settings.settings)
+        setting.feedback_logs = ai_settings.feedback_logs
         session.add(setting)
         session.commit()
     return setting
