@@ -50,6 +50,15 @@ class PagerdutyProviderAuthConfig:
         },
         default=None,
     )
+    oauth_data: dict = dataclasses.field(
+        metadata={
+            "description": "For oauth flow",
+            "required": False,
+            "sensitive": True,
+            "hidden": True,
+        },
+        default="",
+    )
 
     service_id: str | None = dataclasses.field(
         metadata={
@@ -505,6 +514,67 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             return self._trigger_incident(
                 service_id, title, alert_body, requester, incident_id
             )
+            incident_alerts = [self._format_alert(alert) for alert in incident_alerts]
+            incident_dto._alerts = incident_alerts
+            incidents.append(incident_dto)
+        return incidents
+
+    @staticmethod
+    def _get_incident_id(incident_id: str) -> str:
+        """
+        Create a UUID from the incident id.
+
+        Args:
+            incident_id (str): The original incident id
+
+        Returns:
+            str: The UUID
+        """
+        md5 = hashlib.md5()
+        md5.update(incident_id.encode("utf-8"))
+        return uuid.UUID(md5.hexdigest())
+
+    @staticmethod
+    def _format_incident(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> IncidentDto | list[IncidentDto]:
+
+        event = event["event"]["data"]
+
+        # This will be the same for the same incident
+        original_incident_id = event.get("id", "ping")
+
+        incident_id = PagerdutyProvider._get_incident_id(original_incident_id)
+
+        status = PagerdutyProvider.INCIDENT_STATUS_MAP.get(
+            event.get("status", "firing"), IncidentStatus.FIRING
+        )
+        priority_summary = (event.get("priority", {}) or {}).get("summary", "P4")
+        severity = PagerdutyProvider.INCIDENT_SEVERITIES_MAP.get(
+            priority_summary, IncidentSeverity.INFO
+        )
+        service = event.pop("service", {}).get("summary", "unknown")
+
+        created_at = event.get("created_at")
+        if created_at:
+            created_at = datetime.datetime.fromisoformat(created_at)
+        else:
+            created_at = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        return IncidentDto(
+            id=incident_id,
+            creation_time=created_at,
+            user_generated_name=f'PD-{event.get("title", "unknown")}-{original_incident_id}',
+            status=status,
+            severity=severity,
+            alert_sources=["pagerduty"],
+            alerts_count=event.get("alert_counts", {}).get("all", 0),
+            services=[service],
+            is_predicted=False,
+            is_confirmed=True,
+            # This is the reference to the incident in PagerDuty
+            fingerprint=original_incident_id,
+        )
 
     def _query(self, incident_id: str = None):
         incidents = self.__get_all_incidents_or_alerts()
