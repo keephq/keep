@@ -507,7 +507,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         # If somebody connected the provider before we refactored it
         old_format_event = event.get("event", {})
         if old_format_event is not None and isinstance(old_format_event, dict):
-            return PagerdutyProvider._format_alert_old(old_format_event)
+            return PagerdutyProvider._format_alert_old(event)
 
         status = PagerdutyProvider.ALERT_STATUS_MAP.get(event.get("status", "firing"))
         severity = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(
