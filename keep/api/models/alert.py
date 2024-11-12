@@ -559,6 +559,9 @@ class IncidentDto(IncidentDtoIn):
         return db_incident
 
 
+class SplitIncidentRequestDto(BaseModel):
+    alert_ids: list[UUID]
+    destination_incident_id: UUID
 class MergeIncidentsRequestDto(BaseModel):
     source_incident_ids: list[UUID]
     destination_incident_id: UUID

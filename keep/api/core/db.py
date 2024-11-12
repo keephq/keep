@@ -3836,7 +3836,7 @@ def merge_incidents_to_id(
                 )
             except OperationalError as e:
                 logger.error(
-                    f"Error removing alerts to incident {source_incident.id}: {e}"
+                    f"Error removing alerts from incident {source_incident.id}: {e}"
                 )
             try:
                 add_alerts_to_incident(
@@ -3855,7 +3855,6 @@ def merge_incidents_to_id(
         session.commit()
         session.refresh(destination_incident)
         return merged_incident_ids, skipped_incident_ids, failed_incident_ids
-
 
 def get_alerts_count(
     tenant_id: str,
