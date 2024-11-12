@@ -9,7 +9,7 @@ export default function NotFound() {
   const router = useRouter();
   return (
     <div className="flex flex-col items-center justify-center h-full">
-      <Title>Page not found</Title>
+      <Title>404 Page not found</Title>
       <Subtitle>
         If you believe this is an error, please contact us on{" "}
         <Link

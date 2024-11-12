@@ -58,7 +58,7 @@ class Admin(Role):
 # Webhook has write:alert permission to write alerts
 # this is internal role used by API keys
 class Webhook(Role):
-    SCOPES = ["write:alert"]
+    SCOPES = ["write:alert", "write:incident"]
     DESCRIPTION = "write alerts using API keys"
 
 

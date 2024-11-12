@@ -500,6 +500,8 @@ async def install_provider_oauth2(
     )
     try:
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        install_webhook = provider_info.pop("install_webhook", "true") == "true"
+        pulling_enabled = provider_info.pop("pulling_enabled", "true") == "true"
         provider_info = provider_class.oauth2_logic(**provider_info)
         provider_name = provider_info.pop(
             "provider_name", f"{provider_unique_id}-oauth2"
@@ -533,9 +535,16 @@ async def install_provider_oauth2(
             installation_time=time.time(),
             configuration_key=secret_name,
             validatedScopes=validated_scopes,
+            pulling_enabled=pulling_enabled,
         )
         session.add(provider)
         session.commit()
+
+        if install_webhook:
+            install_provider_webhook(
+                provider_type, provider.id, authenticated_entity, session
+            )
+
         return JSONResponse(
             status_code=200,
             content={
@@ -621,12 +630,16 @@ def install_provider_webhook(
     secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
     provider_secret_name = f"{tenant_id}_{provider_type}_{provider_id}"
     provider_config = secret_manager.read_secret(provider_secret_name, is_json=True)
+    provider_class = ProvidersFactory.get_provider_class(provider_type)
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config
     )
     api_url = config("KEEP_API_URL")
     keep_webhook_api_url = (
         f"{api_url}/alerts/event/{provider_type}?provider_id={provider_id}"
+    )
+    keep_webhook_incidents_api_url = (
+        f"{api_url}/incidents/event/{provider_type}?provider_id={provider_id}"
     )
     webhook_api_key = get_or_create_api_key(
         session=session,
@@ -635,22 +648,29 @@ def install_provider_webhook(
         unique_api_key_id="webhook",
         system_description="Webhooks API key",
     )
-
-    try:
-        extra_config = provider.setup_webhook(
-            tenant_id, keep_webhook_api_url, webhook_api_key, True
-        )
-        if extra_config:
-            provider_config["authentication"].update(extra_config)
-            secret_manager.write_secret(
-                secret_name=provider_secret_name,
-                secret_value=json.dumps(provider_config),
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+    if (
+        provider_class.__dict__.get("setup_incident_webhook") is not None
+        or provider_class.__dict__.get("setup_webhook") is not None
+    ):
+        try:
+            if provider_class.__dict__.get("setup_incident_webhook") is not None:
+                extra_config = provider.setup_incident_webhook(
+                    tenant_id, keep_webhook_incidents_api_url, webhook_api_key, True
+                )
+            if provider_class.__dict__.get("setup_webhook") is not None:
+                extra_config = provider.setup_webhook(
+                    tenant_id, keep_webhook_api_url, webhook_api_key, True
+                )
+            if extra_config:
+                provider_config["authentication"].update(extra_config)
+                secret_manager.write_secret(
+                    secret_name=provider_secret_name,
+                    secret_value=json.dumps(provider_config),
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
     return JSONResponse(status_code=200, content={"message": "webhook installed"})
 
 

@@ -1,12 +1,9 @@
 "use client";
-import {
-  Callout,
-  Card,
-} from "@tremor/react";
+import { Callout, Card } from "@tremor/react";
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import Loading from "../../loading";
+import Loading from "app/loading";
 import { useRouter } from "next/navigation";
 import { Workflow } from "../models";
 import SideNavBar from "./side-nav-bar";
@@ -16,8 +13,6 @@ import BuilderModalContent from "../builder/builder-modal";
 import PageClient from "../builder/page.client";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 import WorkflowOverview from "./workflow-overview";
-
-
 
 export default function WorkflowDetailPage({
   params,
@@ -48,7 +43,6 @@ export default function WorkflowDetailPage({
   // Render loading state if session is loading
   // If the user is unauthenticated, display a loading state until the side effect is processed; after that, it will automatically redirect.
   if (status === "loading" || status === "unauthenticated") return <Loading />;
-
 
   // Handle error state for fetching workflow data
   if (isLoading) return <Loading />;

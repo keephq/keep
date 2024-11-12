@@ -9,6 +9,7 @@ from starlette.routing import Route
 from ee.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
     KeycloakAuthVerifier,
 )
+from keep.api.core.db import get_resource_ids_by_resource_type
 from keep.api.models.user import Group, PermissionEntity, ResourcePermission, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -26,6 +27,21 @@ from keycloak.openid_connection import KeycloakOpenIDConnection
 
 
 class KeycloakIdentityManager(BaseIdentityManager):
+    """
+    RESOURCES = {
+        "preset": {
+            "table": "preset",
+            "uid": "id",
+        },
+        "incident": {
+            "table": "incident",
+            "uid": "id",
+        },
+    }
+    """
+
+    RESOURCES = {}
+
     def __init__(self, tenant_id, context_manager: ContextManager, **kwargs):
         super().__init__(tenant_id, context_manager, **kwargs)
         self.server_url = os.environ.get("KEYCLOAK_URL")
@@ -55,6 +71,11 @@ class KeycloakIdentityManager(BaseIdentityManager):
             self.keep_controlled_keycloak = (
                 os.environ.get("KEYCLOAK_KEEP_CONTROLLED", "false") == "true"
             )
+            # Does ABAC is enabled
+            self.abac_enabled = (
+                os.environ.get("KEYCLOAK_ABAC_ENABLED", "true") == "true"
+            )
+
         except Exception as e:
             self.logger.error(
                 "Failed to initialize Keycloak Identity Manager: %s", str(e)
@@ -89,14 +110,44 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 if not isinstance(dep.cache_key[0], KeycloakAuthVerifier):
                     continue
                 scopes = dep.cache_key[0].scopes
-                dep.cache_key[0].protected_resource = route.path
+                # this is the KeycloakAuthVerifier dependency :)
+                methods = list(route.methods)
+                if len(methods) > 1:
+                    self.logger.warning(
+                        "Keep does not support multiple methods for a single route",
+                    )
+                    continue
+                protected_resource = methods[0] + " " + route.path
+                dep.cache_key[0].protected_resource = protected_resource
+                break
 
             # protected route but without scopes
             if not scopes:
                 self.logger.warning("Route without scopes: %s", route.path)
 
-            self.create_resource(route.path, scopes=scopes, resource_type="keep_route")
+            self.create_resource(
+                protected_resource, scopes=scopes, resource_type="keep_route"
+            )
             self.logger.info("Resource created for route: %s", route.path)
+
+        # create resource for each object
+        if self.abac_enabled:
+            for resource_type, resource_type_data in self.RESOURCES.items():
+                self.logger.info("Creating resource for object %s", resource_type)
+                resources = get_resource_ids_by_resource_type(
+                    tenant_id=self.tenant_id,
+                    table_name=resource_type_data["table"],
+                    uid=resource_type_data["uid"],
+                )
+                for resource_id in resources:
+                    resource_name = f"{resource_type}_{resource_id}"
+                    resource_type_name = f"keep_{resource_type}"
+                    self.create_resource(
+                        resource_name=resource_name,
+                        scopes=[],
+                        resource_type=resource_type_name,
+                    )
+                self.logger.info("Resource created for object: %s", resource_type)
         for role in PREDEFINED_ROLES:
             self.logger.info("Creating role: %s", role)
             self.create_role(role, predefined=True)
@@ -361,6 +412,8 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 "email": user_email,
                 "enabled": True,
                 "firstName": user_name,
+                "lastName": user_name,
+                "emailVerified": True,
             }
             if password:
                 user_data["credentials"] = [
@@ -508,13 +561,18 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return KeycloakAuthVerifier(scopes)
 
     def create_resource(
-        self, resource_name: str, scopes: list[str] = [], resource_type="keep_generic"
+        self,
+        resource_name: str,
+        scopes: list[str] = [],
+        resource_type="keep_generic",
+        attributes={},
     ) -> None:
         resource = {
             "name": resource_name,
             "displayName": f"Resource for {resource_name}",
             "type": "urn:keep:resources:" + resource_type,
             "scopes": [{"name": scope} for scope in scopes],
+            "attributes": attributes,
         }
         try:
             self.keycloak_admin.create_client_authz_resource(self.client_id, resource)
@@ -575,7 +633,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         # TODO: this is not efficient, we should cache this
         users = self.keycloak_admin.get_users({})
         user = next(
-            (user for user in users if user["email"] == perm.id),
+            (user for user in users if user.get("email") == perm.id),
             None,
         )
         if not user:
@@ -610,6 +668,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return policy_id
 
     def create_group_policy(self, perm, permission: ResourcePermission) -> None:
+        group_name = perm.id
+        group = self.keycloak_admin.get_groups(query={"search": perm.id})
+        if not group or len(group) > 1:
+            self.logger.error("Problem with group - should be 1 but got %s", len(group))
+            raise HTTPException(status_code=400, detail="Problem with group")
+        group = group[0]
+        group_id = group["id"]
         resp = self.keycloak_admin.connection.raw_post(
             f"{self.admin_url}/authz/resource-server/policy/group",
             data=json.dumps(
@@ -617,12 +682,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     "name": f"Allow group {perm.id} to access resource type {permission.resource_type} with name {permission.resource_name}",
                     "description": json.dumps(
                         {
-                            "group_id": perm.id,
+                            "group_name": group_name,
+                            "group_id": group_id,
                             "resource_id": permission.resource_id,
                         }
                     ),
                     "logic": "POSITIVE",
-                    "groups": [{"id": perm.id, "extendChildren": False}],
+                    "groups": [{"id": group_id, "extendChildren": False}],
                     "groupsClaim": "",
                 }
             ),
@@ -655,7 +721,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     {
                         "name": permission.resource_id,
                         "displayName": permission.resource_name,
-                        "type": permission.resource_type,
+                        "type": "urn:keep:resources:keep_" + permission.resource_type,
                         "scopes": [],
                     },
                     skip_exists=True,
@@ -785,12 +851,14 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     if resource_id not in resources_to_policies:
                         resources_to_policies[resource_id] = []
                     if policy.get("type") == "user":
+                        user_email = details.get("user_email")
                         resources_to_policies[resource_id].append(
-                            {"id": details.get("user_email"), "type": "user"}
+                            {"id": user_email, "type": "user"}
                         )
                     else:
+                        group_name = details.get("group_name")
                         resources_to_policies[resource_id].append(
-                            {"id": details["group_id"], "type": "group"}
+                            {"id": group_name, "type": "group"}
                         )
             permissions_dto = []
             for resource in resources:
@@ -805,6 +873,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                         permissions=[
                             PermissionEntity(
                                 id=policy["id"],
+                                name=policy.get("name", ""),
                                 type=policy["type"],
                             )
                             for policy in resources_to_policies.get(resource_id, [])
@@ -813,6 +882,9 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 )
             return permissions_dto
         except KeycloakGetError as e:
+            self.logger.error("Failed to fetch permissions from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to fetch permissions")
+        except Exception as e:
             self.logger.error("Failed to fetch permissions from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch permissions")
 
@@ -840,6 +912,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         # also, we should see how it scale with many resources
         try:
             user_id = self.keycloak_admin.get_user_id(authenticated_entity.email)
+            resource_type = f"urn:keep:resources:keep_{resource_type}"
             resp = self.keycloak_admin.connection.raw_post(
                 f"{self.admin_url}/authz/resource-server/policy/evaluate",
                 data=json.dumps(
@@ -862,6 +935,10 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 for result in results
                 if result["status"] == "PERMIT"
             ]
+            # there is some bug/limitation in keycloak where if the resource_type does not exist, it returns
+            # all other objects, so lets handle it by checking if the word "with" is one of the results name
+            if any("with" in result for result in allowed_resources_ids):
+                return []
             return allowed_resources_ids
         except Exception as e:
             self.logger.error(

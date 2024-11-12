@@ -108,7 +108,7 @@ export function IncidentList({
     if (incidentsError) {
       return (
         <Card className="flex-grow">
-          <IncidentListError />
+          <IncidentListError incidentError={incidentsError} />
         </Card>
       );
     }

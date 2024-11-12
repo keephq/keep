@@ -414,7 +414,7 @@ class SumologicProvider(BaseProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict,
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         return AlertDto(
             id=event["id"],

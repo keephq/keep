@@ -1,32 +1,121 @@
 import { Fragment, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { Text, Button, Badge } from "@tremor/react";
+import {
+  Text,
+  Button,
+  Badge,
+  MultiSelect,
+  MultiSelectItem,
+  Callout,
+  Title,
+  Subtitle,
+} from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import { MultiSelect, MultiSelectItem } from "@tremor/react";
-import { Permission } from "app/settings/models";
+import { User, Group, Role } from "app/settings/models";
+import {
+  useForm,
+  Controller,
+  SubmitHandler,
+  FieldValues,
+} from "react-hook-form";
+import "./multiselect.css";
 
 interface PermissionSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  accessToken: string;
-  preset: any;
-  permissions: Permission[];
-  selectedPermissions: { [key: string]: string[] };
-  onPermissionChange: (presetId: string, newPermissions: string[]) => void;
+  selectedResource: any;
+  entityOptions: {
+    user: User[];
+    group: Group[];
+    role: Role[];
+  };
+  onSavePermissions: (
+    resourceId: string,
+    assignments: string[]
+  ) => Promise<void>;
+  isDisabled?: boolean;
 }
 
 const PermissionSidebar = ({
   isOpen,
   toggle,
-  accessToken,
-  preset,
-  permissions,
-  selectedPermissions,
-  onPermissionChange,
+  selectedResource,
+  entityOptions,
+  onSavePermissions,
+  isDisabled = false,
 }: PermissionSidebarProps) => {
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    reset,
+    formState: { errors, isDirty },
+    clearErrors,
+    setError,
+  } = useForm({
+    defaultValues: {
+      assignments: [],
+    },
+  });
+
+  useEffect(() => {
+    if (isOpen && selectedResource) {
+      setValue("assignments", selectedResource.assignments || []);
+      clearErrors();
+    }
+  }, [selectedResource, setValue, isOpen, clearErrors]);
+
+  const getAllEntityOptions = () => {
+    const options = [];
+
+    for (const user of entityOptions.user) {
+      options.push({
+        id: `user-${user.email}`,
+        label: `${user.email || user.name} (User)`,
+        value: `user_${user.email}`, // Format: type_id
+      });
+    }
+
+    for (const group of entityOptions.group) {
+      options.push({
+        id: `group-${group.id}`,
+        label: `${group.name} (Group)`,
+        value: `group_${group.name}`, // Format: type_id
+      });
+    }
+    /* Support roles in the future
+    for (const role of entityOptions.role) {
+      options.push({
+        id: `role-${role.id}`,
+        label: `${role.name} (Role)`,
+        value: `role_${role.id}`, // Format: type_id
+      });
+    }
+    */
+
+    return options;
+  };
+
+  const onSubmit: SubmitHandler<FieldValues> = async (data) => {
+    try {
+      await onSavePermissions(selectedResource.id, data.assignments);
+      handleClose();
+    } catch (error) {
+      setError("root.serverError", {
+        message: "Failed to save permissions",
+      });
+    }
+  };
+
+  const handleClose = () => {
+    clearErrors();
+    reset();
+    toggle();
+  };
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog onClose={toggle}>
+      <Dialog onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -50,38 +139,85 @@ const PermissionSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                Permissions Details
+                Manage Permissions
+                <Badge className="ml-4" color="orange">
+                  Beta
+                </Badge>
               </Dialog.Title>
-              <Button onClick={toggle} variant="light">
+              <Button onClick={handleClose} variant="light">
                 <IoMdClose className="h-6 w-6 text-gray-500" />
               </Button>
             </div>
-            {preset && (
-              <div className="flex flex-col space-y-4">
-                <div>
-                  <Text className="text-lg font-medium">Resource Name</Text>
-                  <Text>{preset.name}</Text>
+
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="mt-4 flex flex-col h-full"
+            >
+              <div className="flex-grow">
+                <div className="mt-8">
+                  <Title className="mb-2">Resource</Title>
+                  <Text className="text-gray-900">
+                    {selectedResource?.name}
+                  </Text>
                 </div>
-                <div>
-                  <Text className="text-lg font-medium">Resource Type</Text>
-                  <Text>{preset.type}</Text>
+
+                <div className="mt-6">
+                  <Title className="mb-2">Type</Title>
+                  <Badge color="orange" size="lg">
+                    {selectedResource?.type}
+                  </Badge>
                 </div>
-                <div>
-                  <Text className="text-lg font-medium">Permissions</Text>
-                  <MultiSelect
-                    placeholder="Select permissions"
-                    value={selectedPermissions[preset.id] || []}
-                    onValueChange={(value) => onPermissionChange(preset.id, value)}
-                  >
-                    {permissions.map((permission) => (
-                      <MultiSelectItem key={permission.id} value={permission.id}>
-                        {permission.name} ({permission.type})
-                      </MultiSelectItem>
-                    ))}
-                  </MultiSelect>
+
+                <div className="mt-6">
+                  <Title className="mb-2">Assign To</Title>
+                  <Controller
+                    name="assignments"
+                    control={control}
+                    render={({ field }) => (
+                      <MultiSelect
+                        {...field}
+                        onValueChange={(value) => field.onChange(value)}
+                        value={field.value as string[]}
+                        className="custom-multiselect"
+                        disabled={isDisabled}
+                      >
+                        {getAllEntityOptions().map((option) => (
+                          <MultiSelectItem key={option.id} value={option.value}>
+                            {option.label}
+                          </MultiSelectItem>
+                        ))}
+                      </MultiSelect>
+                    )}
+                  />
                 </div>
               </div>
-            )}
+
+              {errors.root?.serverError && (
+                <Callout
+                  className="mt-4"
+                  title="Error while saving permissions"
+                  color="rose"
+                >
+                  {errors.root.serverError.message}
+                </Callout>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  color="orange"
+                  variant="secondary"
+                  onClick={handleClose}
+                  className="border border-orange-500 text-orange-500"
+                >
+                  Cancel
+                </Button>
+                {!isDisabled && (
+                  <Button color="orange" type="submit" disabled={!isDirty}>
+                    Save Changes
+                  </Button>
+                )}
+              </div>
+            </form>
           </Dialog.Panel>
         </Transition.Child>
       </Dialog>

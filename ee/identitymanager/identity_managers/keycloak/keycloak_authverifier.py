@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from fastapi import Depends, HTTPException
 
@@ -52,7 +52,9 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         # verify keycloak token
         try:
             payload = self.keycloak_client.decode_token(token, validate=True)
-        except Exception:
+        except Exception as e:
+            if "Expired" in str(e):
+                raise HTTPException(status_code=401, detail="Expired Keycloak token")
             raise HTTPException(status_code=401, detail="Invalid Keycloak token")
         tenant_id = payload.get("keep_tenant_id")
         email = payload.get("preferred_username")
@@ -95,6 +97,28 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             allowed = self.keycloak_uma.permissions_check(
                 token=authenticated_entity.token, permissions=[permission]
             )
+            if not allowed:
+                raise HTTPException(status_code=401, detail="Permission check failed")
+        # secure fallback
+        except Exception as e:
+            raise HTTPException(
+                status_code=401, detail="Permission check failed - " + str(e)
+            )
+        return allowed
+
+    def authorize_resource(
+        self, resource_type, resource_id, authenticated_entity: AuthenticatedEntity
+    ) -> None:
+        # use Keycloak's UMA to authorize
+        try:
+            permission = UMAPermission(
+                resource=resource_id,
+            )
+            allowed = self.keycloak_uma.permissions_check(
+                token=authenticated_entity.token, permissions=[permission]
+            )
+            if not allowed:
+                raise HTTPException(status_code=401, detail="Permission check failed")
         # secure fallback
         except Exception:
             raise HTTPException(status_code=401, detail="Permission check failed")
