@@ -502,10 +502,12 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         )
 
     def _format_alert(
-        self, event: dict, provider_instance: "BaseProvider" = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
-        status = self.ALERT_STATUS_MAP.get(event.get("status", "firing"))
-        severity = self.ALERT_SEVERITIES_MAP.get(event.get("severity", "info"))
+        status = PagerdutyProvider.ALERT_STATUS_MAP.get(event.get("status", "firing"))
+        severity = PagerdutyProvider.ALERT_SEVERITIES_MAP.get(
+            event.get("severity", "info")
+        )
         source = ["pagerduty"]
         origin = event.get("body", {}).get("cef_details", {}).get("source_origin")
         fingerprint = event.get("alert_key", event.get("id"))
