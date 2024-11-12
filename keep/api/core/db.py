@@ -3096,6 +3096,7 @@ def get_last_incidents(
     with_alerts: bool = False,
     is_predicted: bool = None,
     filters: Optional[dict] = None,
+    allowed_incident_ids: Optional[List[str]] = None,
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -3120,6 +3121,9 @@ def get_last_incidents(
         query = session.query(
             Incident,
         ).filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == is_confirmed)
+
+        if allowed_incident_ids:
+            query = query.filter(Incident.id.in_(allowed_incident_ids))
 
         if with_alerts:
             query = query.options(joinedload(Incident.alerts))

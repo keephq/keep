@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { Title, Subtitle, Card, TextInput, Button } from "@tremor/react";
-import { FaUserLock } from "react-icons/fa";
-import { Permission, User, Group, Role } from "app/settings/models";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
-import Loading from "app/loading";
-import { PermissionsTable } from "./permissions-table";
-import PermissionSidebar from "./permissions-sidebar";
+import { Title, Subtitle, Card, TextInput } from "@tremor/react";
 import { usePermissions } from "utils/hooks/usePermissions";
 import { useUsers } from "utils/hooks/useUsers";
 import { useGroups } from "utils/hooks/useGroups";
 import { useRoles } from "utils/hooks/useRoles";
 import { usePresets } from "utils/hooks/usePresets";
 import { useIncidents } from "utils/hooks/useIncidents";
+import Loading from "app/loading";
+import { PermissionsTable } from "./permissions-table";
+import PermissionSidebar from "./permissions-sidebar";
+import { useApiUrl } from "utils/hooks/useConfig";
+import { useSession } from "next-auth/react";
 
 interface Props {
   accessToken: string;
   isDisabled?: boolean;
+}
+
+interface PermissionEntity {
+  id: string;
+  type: string; // 'user' or 'group' or 'role'
+}
+
+interface ResourcePermission {
+  resource_id: string;
+  resource_name: string;
+  resource_type: string;
+  permissions: PermissionEntity[];
 }
 
 export default function PermissionsTab({
@@ -26,8 +36,7 @@ export default function PermissionsTab({
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedPermission, setSelectedPermission] =
-    useState<Permission | null>(null);
+  const [selectedResource, setSelectedResource] = useState<any>(null);
   const [filter, setFilter] = useState("");
 
   // Fetch data using custom hooks
@@ -40,116 +49,113 @@ export default function PermissionsTab({
   const { data: incidents } = useIncidents();
 
   const [loading, setLoading] = useState(true);
+  const [resources, setResources] = useState<any[]>([]);
 
-  // Define available resource types and their corresponding resources
-  const resourceTypes = ["preset", "incident"];
-  const resources = {
-    preset: presets || [],
-    incident: incidents || [],
-  };
-
-  // Define entity types for permission assignment
-  const entityTypes = [
-    { id: "user", name: "User" },
-    { id: "group", name: "Group" },
-    { id: "role", name: "Role" },
-  ];
-
-  // Entity options for assignment
-  const entityOptions = {
-    user: users || [],
-    group: groups || [],
-    role: roles || [],
-  };
-
+  // Combine all resources and their permissions
   useEffect(() => {
-    if (permissions && users && groups && roles && presets && incidents) {
+    if (presets && incidents && permissions) {
+      const allResources = [
+        ...(presets?.map((preset) => ({
+          id: preset.id,
+          name: preset.name,
+          type: "preset",
+          assignments:
+            permissions
+              ?.filter((p) => p.resource_id === preset.id)
+              .flatMap((p) =>
+                p.permissions.map((perm) => `${perm.type}_${perm.id}`)
+              ) || [],
+        })) || []),
+        ...(incidents?.items.map((incident) => ({
+          id: incident.id,
+          name: incident.user_generated_name || incident.ai_generated_name,
+          type: "incident",
+          assignments:
+            permissions
+              ?.filter((p) => p.resource_id === incident.id)
+              .flatMap((p) =>
+                p.permissions.map((perm) => `${perm.type}_${perm.id}`)
+              ) || [],
+        })) || []),
+      ];
+      // Compare current and new resources to prevent unnecessary updates
+      const resourcesString = JSON.stringify(allResources);
+      const currentResourcesString = JSON.stringify(resources);
+
+      if (resourcesString !== currentResourcesString) {
+        setResources(allResources);
+      }
       setLoading(false);
     }
-  }, [permissions, users, groups, roles, presets, incidents]);
+  }, [presets, incidents, permissions]);
 
-  const handleSavePermission = async (permissionData: any) => {
+  const handleSavePermissions = async (
+    resourceId: string,
+    assignments: string[]
+  ) => {
     try {
-      const method = selectedPermission ? "PUT" : "POST";
-      const url = selectedPermission
-        ? `${apiUrl}/auth/permissions/${selectedPermission.id}`
-        : `${apiUrl}/auth/permissions`;
+      // Convert assignments array to PermissionEntity array
+      const permissions: PermissionEntity[] = assignments.map((assignment) => {
+        // Parse the assignment string to get type and id
+        const [type, ...idParts] = assignment.split("_");
+        return {
+          id: idParts.join("_"), // Rejoin in case the id itself contains underscores
+          type: type,
+        };
+      });
 
-      const response = await fetch(url, {
-        method,
+      // Find the resource details
+      const resource = resources.find((r) => r.id === resourceId);
+      if (!resource) {
+        throw new Error("Resource not found");
+      }
+
+      // Create the resource permission object
+      const resourcePermission: ResourcePermission[] = [
+        {
+          resource_id: resource.id,
+          resource_name: resource.name,
+          resource_type: resource.type,
+          permissions: permissions,
+        },
+      ];
+
+      // Send to the backend
+      const response = await fetch(`${apiUrl}/auth/permissions`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(permissionData),
+        body: JSON.stringify(resourcePermission),
       });
 
-      if (response.ok) {
-        await mutatePermissions();
-        setIsSidebarOpen(false);
+      if (!response.ok) {
+        throw new Error("Failed to save permissions");
       }
+
+      await mutatePermissions();
     } catch (error) {
-      console.error("Error saving permission:", error);
-    }
-  };
-
-  const handleDeletePermission = async (
-    permissionId: string,
-    event: React.MouseEvent
-  ) => {
-    event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this permission?")) {
-      try {
-        const response = await fetch(
-          `${apiUrl}/auth/permissions/${permissionId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${session?.accessToken}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          await mutatePermissions();
-        }
-      } catch (error) {
-        console.error("Error deleting permission:", error);
-      }
+      console.error("Error saving permissions:", error);
+      throw error;
     }
   };
 
   if (loading) return <Loading />;
 
-  const filteredPermissions =
-    permissions?.filter(
-      (permission) =>
-        permission.name?.toLowerCase().includes(filter.toLowerCase())
-    ) || [];
+  const filteredResources = resources.filter((resource) =>
+    resource.name.toLowerCase().includes(filter.toLowerCase())
+  );
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <Title>Permissions Management</Title>
-          <Subtitle>Manage permissions for resources</Subtitle>
-        </div>
-        <Button
-          color="orange"
-          size="md"
-          onClick={() => {
-            setSelectedPermission(null);
-            setIsSidebarOpen(true);
-          }}
-          icon={FaUserLock}
-          disabled={isDisabled}
-        >
-          Create Permission
-        </Button>
+      <div className="mb-4">
+        <Title>Permissions Management</Title>
+        <Subtitle>Manage permissions for resources</Subtitle>
       </div>
 
       <TextInput
-        placeholder="Search permissions"
+        placeholder="Search resources"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
@@ -158,12 +164,11 @@ export default function PermissionsTab({
 
       <Card className="flex-grow overflow-hidden flex flex-col">
         <PermissionsTable
-          permissions={filteredPermissions}
-          onRowClick={(permission) => {
-            setSelectedPermission(permission);
+          resources={filteredResources}
+          onRowClick={(resource) => {
+            setSelectedResource(resource);
             setIsSidebarOpen(true);
           }}
-          onDeletePermission={handleDeletePermission}
           isDisabled={isDisabled}
         />
       </Card>
@@ -171,15 +176,13 @@ export default function PermissionsTab({
       <PermissionSidebar
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
-        accessToken={accessToken}
-        selectedPermission={selectedPermission}
-        resourceTypes={resourceTypes}
-        resources={{
-          preset: resources.preset,
-          incident: Array.isArray(resources.incident) ? resources.incident : [],
+        selectedResource={selectedResource}
+        entityOptions={{
+          user: users || [],
+          group: groups || [],
+          role: roles || [],
         }}
-        entityOptions={entityOptions}
-        onSavePermission={handleSavePermission}
+        onSavePermissions={handleSavePermissions}
         isDisabled={isDisabled}
       />
     </div>
