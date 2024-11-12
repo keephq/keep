@@ -43,7 +43,7 @@ class Provider(BaseModel):
     last_pull_time: datetime | None = None
     docs: str | None = None
     tags: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+        Literal["alert", "ticketing", "messaging", "data", "queue", "topology", "incident"]
     ] = []
     alertsDistribution: dict[str, int] | None = None
     alertExample: dict | None = None
