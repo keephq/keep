@@ -32,8 +32,9 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
-import AlertFacets from "./alert-table-facet";
-import { FacetFilters } from "./alert-table-facet";
+import { AlertFacets } from "./alert-table-alert-facets";
+import { FacetFilters } from "./alert-table-facet-types";
+import { DynamicFacet } from "./alert-table-facet-dynamic";
 
 interface PresetTab {
   name: string;
@@ -81,14 +82,33 @@ export function AlertTable({
     )
   );
 
-  const [facetFilters, setFacetFilters] = useState<FacetFilters>({
-    severity: [],
-    status: [],
-    source: [],
-    assignee: [],
-    dismissed: [],
-    incident: [],
-  });
+  const [facetFilters, setFacetFilters] = useLocalStorage<FacetFilters>(
+    `alertFacetFilters-${presetName}`,
+    {
+      severity: [],
+      status: [],
+      source: [],
+      assignee: [],
+      dismissed: [],
+      incident: [],
+    }
+  );
+
+  const [dynamicFacets, setDynamicFacets] = useLocalStorage<DynamicFacet[]>(
+    `dynamicFacets-${presetName}`,
+    []
+  );
+
+  const handleFacetDelete = (facetKey: string) => {
+    setDynamicFacets((prevFacets) =>
+      prevFacets.filter((df) => df.key !== facetKey)
+    );
+    setFacetFilters((prevFilters) => {
+      const newFilters = { ...prevFilters };
+      delete newFilters[facetKey];
+      return newFilters;
+    });
+  };
 
   const columnsIds = getColumnsIds(columns);
 
@@ -142,7 +162,23 @@ export function AlertTable({
         return true;
       }
 
-      const value = alert[facetKey as keyof AlertDto];
+      let value;
+      if (facetKey.includes(".")) {
+        // Handle nested keys like "labels.job"
+        const [parentKey, childKey] = facetKey.split(".");
+        const parentValue = alert[parentKey as keyof AlertDto];
+
+        if (
+          typeof parentValue === "object" &&
+          parentValue !== null &&
+          !Array.isArray(parentValue) &&
+          !(parentValue instanceof Date)
+        ) {
+          value = (parentValue as Record<string, unknown>)[childKey];
+        }
+      } else {
+        value = alert[facetKey as keyof AlertDto];
+      }
 
       // Handle source array separately
       if (facetKey === "source") {
@@ -303,7 +339,11 @@ export function AlertTable({
             className="sticky top-0"
             alerts={alerts}
             facetFilters={facetFilters}
-            onSelect={handleFacetSelect}
+            setFacetFilters={setFacetFilters}
+            dynamicFacets={dynamicFacets}
+            setDynamicFacets={setDynamicFacets}
+            onDelete={handleFacetDelete}
+            table={table}
           />
         </div>
         {/* Using p-4 -m-4 to set overflow-hidden without affecting shadow */}
