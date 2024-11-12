@@ -16,6 +16,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
+from keep.api.core.db import set_last_alert
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -573,6 +574,10 @@ def setup_stress_alerts_no_elastic(db_session):
                 )
         db_session.add_all(last_alerts)
         db_session.commit()
+
+        last_alerts = []
+        for alert in alerts:
+            set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
 
         return alerts
 

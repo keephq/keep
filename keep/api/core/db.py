@@ -30,7 +30,7 @@ from sqlalchemy import (
     null,
     select,
     union,
-    update,
+    update, asc,
 )
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -4556,9 +4556,8 @@ def get_activity_report(
             .filter(Workflow.creation_time >= last_24_hours)
             .count()
         )
-        activity_report["last_24_hours_workflows_executed"] = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.started >= last_24_hours).count()
+        activity_report["last_24_hours_workflows_executed"] = (session.query(WorkflowExecution).filter(
+            WorkflowExecution.started >= last_24_hours).count()
 )
     return activity_report
 
