@@ -21,8 +21,8 @@ export interface Permission {
   id: string;
   resource_id: string; // id of the resource
   entity_id: string; // id of the entity
-  // list of objects with id
-  permissions: { id: string }[];
+  // list of objects with id and type
+  permissions: { id: string; type: string }[];
   name: string;
   type: string;
 }

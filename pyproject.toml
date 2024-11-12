@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.28.6"
+version = "0.28.7"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
