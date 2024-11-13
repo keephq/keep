@@ -319,7 +319,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return scopes
 
     def _build_alert(
-        self, title: str, alert_body: str, dedup: str
+        self,
+        title: str,
+        alert_body: str,
+        dedup: str,
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] = "trigger",
     ) -> typing.Dict[str, typing.Any]:
         """
         Builds the payload for an event alert.
@@ -328,13 +332,14 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             title: Title of alert
             alert_body: UTF-8 string of custom message for alert. Shown in incident body
             dedup: Any string, max 255, characters used to deduplicate alerts
+            event_type: The type of event to send to PagerDuty
 
         Returns:
             Dictionary of alert body for JSON serialization
         """
         return {
             "routing_key": self.authentication_config.routing_key,
-            "event_action": "trigger",
+            "event_action": event_type,
             "dedup_key": dedup,
             "payload": {
                 "summary": title,
@@ -346,7 +351,13 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             },
         }
 
-    def _send_alert(self, title: str, body: str, dedup: str | None = None):
+    def _send_alert(
+        self,
+        title: str,
+        body: str,
+        dedup: str | None = None,
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] = "trigger",
+    ):
         """
         Sends PagerDuty Alert
 
@@ -354,6 +365,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             title: Title of the alert.
             alert_body: UTF-8 string of custom message for alert. Shown in incident body
             dedup: Any string, max 255, characters used to deduplicate alerts
+            event_type: The type of event to send to PagerDuty
         """
         # If no dedup is given, use epoch timestamp
         if dedup is None:
@@ -361,7 +373,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         url = "https://events.pagerduty.com/v2/enqueue"
 
-        payload = self._build_alert(title, body, dedup)
+        payload = self._build_alert(title, body, dedup, event_type)
         result = requests.post(url, json=payload)
         result.raise_for_status()
 
@@ -496,6 +508,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         service_id: str = "",
         requester: str = "",
         incident_id: str = "",
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] = "trigger",
         **kwargs: dict,
     ):
         """
@@ -507,7 +520,9 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             kwargs (dict): The providers with context
         """
         if self.authentication_config.routing_key:
-            return self._send_alert(title, alert_body, dedup=dedup)
+            return self._send_alert(
+                title, alert_body, dedup=dedup, event_type=event_type
+            )
         else:
             return self._trigger_incident(
                 service_id, title, alert_body, requester, incident_id
