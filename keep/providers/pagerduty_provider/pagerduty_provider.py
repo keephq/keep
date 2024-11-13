@@ -421,6 +421,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         setup_alerts: bool = True,
     ):
         self.logger.info("Setting up Pagerduty webhook")
+
+        if self.authentication_config.routing_key:
+            self.logger.info("Skipping webhook setup due to routing key")
+            return
+
         headers = self.__get_headers()
         request = requests.get(self.SUBSCRIPTION_API_URL, headers=headers)
         if not request.ok:
