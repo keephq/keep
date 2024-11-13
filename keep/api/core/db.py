@@ -1343,7 +1343,7 @@ def get_last_alerts(
 
             query = query.add_columns(incidents_subquery.c.incidents)
             query = query.outerjoin(
-                incidents_subquery, Alert.id == incidents_subquery.c.alert_id
+                incidents_subquery, Alert.fingerptint == incidents_subquery.c.fingerptint
             )
 
         if provider_id:
