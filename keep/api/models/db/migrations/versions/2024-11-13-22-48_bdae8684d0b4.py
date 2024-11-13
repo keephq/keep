@@ -18,53 +18,19 @@ from sqlalchemy import exc as sa_exc
 
 # revision identifiers, used by Alembic.
 revision = "bdae8684d0b4"
-down_revision = "ef0b5b0df41c"
+down_revision = "620b6c048091"
 branch_labels = None
 depends_on = None
 
 migration_metadata = sa.MetaData()
-#
-# alert_to_incident_table = sa.Table(
-#     'alerttoincident',
-#     migration_metadata,
-#     sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-#     sa.Column('alert_id', UUID(as_uuid=False), sa.ForeignKey('alert.id', ondelete='CASCADE'), primary_key=True),
-#     sa.Column('incident_id', UUID(as_uuid=False), sa.ForeignKey('incident.id', ondelete='CASCADE'), primary_key=True),
-#     sa.Column("timestamp", sa.DateTime(), nullable=False, server_default=sa.func.current_timestamp()),
-#     sa.Column("is_created_by_ai", sa.Boolean(), nullable=False, server_default=expression.false()),
-#     sa.Column("deleted_at", sa.DateTime(), nullable=False, server_default="1000-01-01 00:00:00"),
-#
-# )
-#
-# # The following code will shoow SA warning about dialect, so we suppress it.
-# with warnings.catch_warnings():
-#     warnings.simplefilter("ignore", category=sa_exc.SAWarning)
-#     incident_table = sa.Table(
-#         'incident',
-#         migration_metadata,
-#         sa.Column('id', UUID(as_uuid=False), primary_key=True),
-#         sa.Column('alerts_count', sa.Integer, default=0),
-#         sa.Column('affected_services', sa.JSON, default_factory=list),
-#         sa.Column('sources', sa.JSON, default_factory=list)
-#     )
-#
-# alert_table = sa.Table(
-#     'alert',
-#     migration_metadata,
-#     sa.Column('id', UUID(as_uuid=False), primary_key=True),
-#     sa.Column('fingerprint', sa.String),
-#     sa.Column('provider_type', sa.String),
-#     sa.Column('event', sa.JSON)
-# )
 
-#
 def populate_db():
     session = Session(op.get_bind())
 
     if session.bind.dialect.name == "postgresql":
         migrate_lastalert_query = """
-            insert into lastalert (fingerprint, alert_id, timestamp)
-                select alert.fingerprint, alert.id as alert_id, alert.timestamp
+            insert into lastalert (tenant_id, fingerprint, alert_id, timestamp)
+                select alert.tenant_id, alert.fingerprint, alert.id as alert_id, alert.timestamp
                 from alert
                 join (
                     select
@@ -97,8 +63,8 @@ def populate_db():
 
     else:
         migrate_lastalert_query = """
-            replace into lastalert (fingerprint, alert_id, timestamp)
-                select alert.fingerprint, alert.id as alert_id, alert.timestamp
+            replace into lastalert (tenant_id, fingerprint, alert_id, timestamp)
+                select alert.tenant_id,  alert.fingerprint, alert.id as alert_id, alert.timestamp
                 from alert
                 join (
                     select
@@ -132,6 +98,7 @@ def populate_db():
 def upgrade() -> None:
     op.create_table(
         "lastalert",
+        sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("alert_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
         sa.Column("timestamp", sa.DateTime(), nullable=False),
