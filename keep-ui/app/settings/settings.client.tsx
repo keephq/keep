@@ -275,21 +275,14 @@ export default function SettingsPage() {
             {
               id: "1",
               name: "NOC Preset",
-              permissions: [{ id: "noc@keephq.dev" }],
-              resource_id: "users",
-              entity_id: "noc",
               type: "preset",
+              assignments: ["user_noc@keephq.dev"],
             },
             {
               id: "2",
               name: "Dev Preset",
-              permissions: [
-                { id: "noc@keephq.dev" },
-                { id: "admin@keephq.dev" },
-              ],
-              resource_id: "users",
-              entity_id: "dev",
               type: "preset",
+              assignments: ["user_noc@keephq.dev", "user_admin@keephq.dev"],
             },
           ];
           return (
@@ -299,10 +292,9 @@ export default function SettingsPage() {
               documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
             >
               <PermissionsTable
-                permissions={mockPresets}
-                onDeletePermission={() => {}}
-                isDisabled={true}
+                resources={mockPresets}
                 onRowClick={() => {}}
+                isDisabled={true}
               />
             </EmptyStateTable>
           );

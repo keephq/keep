@@ -489,7 +489,7 @@ const ProviderForm = ({
             );
           } else if (updatedFormErrors.includes("Failed to fetch")) {
             setFormErrors(
-              "Failed to connect to API: Check your internet connection"
+              "Failed to connect to API: Check provider settings and your internet connection"
             );
           } else {
             setFormErrors(updatedFormErrors);

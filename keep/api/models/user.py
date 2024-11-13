@@ -37,8 +37,9 @@ class CreateOrUpdateRole(BaseModel):
 
 
 class PermissionEntity(BaseModel):
-    id: str
+    id: str  # permission id
     type: str  # 'user' or 'group'
+    name: Optional[str]  # permission name
 
 
 class ResourcePermission(BaseModel):
