@@ -30,7 +30,7 @@ from sqlalchemy import (
     null,
     select,
     union,
-    update, asc,
+    update,
 )
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
