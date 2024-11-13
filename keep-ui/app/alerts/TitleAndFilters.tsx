@@ -3,6 +3,8 @@ import { DateRangePicker, DateRangePickerValue, Title } from "@tremor/react";
 import { AlertDto } from "./models";
 import ColumnSelection from "./ColumnSelection";
 import { ThemeSelection } from "./ThemeSelection";
+import EnhancedDateRangePicker from "@/components/ui/DateRangePicker";
+import { useState } from "react";
 
 type Theme = {
   [key: string]: string;
@@ -21,19 +23,27 @@ export const TitleAndFilters = ({
   table,
   onThemeChange,
 }: TableHeaderProps) => {
-  const onDateRangePickerChange = ({
-    from: start,
-    to: end,
-  }: DateRangePickerValue) => {
+  const [timeFrame, setTimeFrame] = useState({
+    start: new Date(Date.now() - 24 * 60 * 60 * 1000), // 24 hours ago
+    end: new Date(),
+    paused: true,
+  });
+
+  const handleTimeFrameChange = (newTimeFrame: {
+    start: Date;
+    end: Date;
+    paused?: boolean;
+  }) => {
+    setTimeFrame(newTimeFrame);
+
     table.setColumnFilters((existingFilters) => {
-      // remove any existing "lastReceived" filters
       const filteredArrayFromLastReceived = existingFilters.filter(
         ({ id }) => id !== "lastReceived"
       );
 
       return filteredArrayFromLastReceived.concat({
         id: "lastReceived",
-        value: { start, end },
+        value: { start: newTimeFrame.start, end: newTimeFrame.end },
       });
     });
 
@@ -46,8 +56,13 @@ export const TitleAndFilters = ({
         <Title className="capitalize inline">{presetName}</Title>
       </div>
       <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
-        <DateRangePicker
-          onValueChange={onDateRangePickerChange}
+        <EnhancedDateRangePicker
+          timeFrame={timeFrame}
+          setTimeFrame={handleTimeFrameChange}
+          hasPlay
+          hasRewind
+          hasForward
+          hasZoomOut
           enableYearNavigation
         />
         <div className="flex items-center">
