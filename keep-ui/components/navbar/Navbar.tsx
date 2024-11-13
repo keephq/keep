@@ -3,7 +3,6 @@ import { Search } from "components/navbar/Search";
 import { NoiseReductionLinks } from "components/navbar/NoiseReductionLinks";
 import { AlertsLinks } from "components/navbar/AlertsLinks";
 import { UserInfo } from "components/navbar/UserInfo";
-import { InitPostHog } from "components/navbar/InitPostHog";
 import { Menu } from "components/navbar/Menu";
 import { MinimizeMenuButton } from "components/navbar/MinimizeMenuButton";
 import { authOptions } from "pages/api/auth/[...nextauth]";
@@ -27,7 +26,6 @@ export default async function NavbarInner() {
         <UserInfo session={session} />
       </Menu>
       <MinimizeMenuButton />
-      <InitPostHog session={session} />
       <SetSentryUser session={session} />
     </>
   );

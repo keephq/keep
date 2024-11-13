@@ -496,7 +496,7 @@ def process_event(
     api_key_name: str | None,
     trace_id: str | None,  # so we can track the job from the request to the digest
     event: (
-        AlertDto | list[AlertDto] | IncidentDto | list[IncidentDto] | dict
+        AlertDto | list[AlertDto] | IncidentDto | list[IncidentDto] | dict | None
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
@@ -545,6 +545,11 @@ def process_event(
             if event is None and provider_type == "cloudwatch":
                 logger.info(
                     "This is a subscription notification message from AWS - skipping processing"
+                )
+                return
+            elif event is None:
+                logger.info(
+                    "Provider returned None (failed silently), skipping processing"
                 )
                 return
 
