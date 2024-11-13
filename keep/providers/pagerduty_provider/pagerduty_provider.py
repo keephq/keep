@@ -281,6 +281,16 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         headers = self.__get_headers()
         scopes = {}
         for scope in self.PROVIDER_SCOPES:
+
+            # If the provider is installed using a routing key, we skip scopes validation for now.
+            if self.authentication_config.routing_key:
+                if scope.name == "incidents_read":
+                    # This is because incidents_read is mandatory and will not let the provider install otherwise
+                    scopes[scope.name] = True
+                else:
+                    scopes[scope.name] = "Skipped due to routing key"
+                continue
+
             try:
                 # Todo: how to check validity for write scopes?
                 if scope.name.startswith("incidents"):
@@ -351,11 +361,19 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         url = "https://events.pagerduty.com/v2/enqueue"
 
-        result = requests.post(url, json=self._build_alert(title, body, dedup))
+        payload = self._build_alert(title, body, dedup)
+        result = requests.post(url, json=payload)
+        result.raise_for_status()
 
-        self.logger.debug("Alert status: %s", result.status_code)
-        self.logger.debug("Alert response: %s", result.text)
-        return result.text
+        self.logger.info(
+            "Sent alert to PagerDuty",
+            extra={
+                "status_code": result.status_code,
+                "response_text": result.text,
+                "routing_key": self.authentication_config.routing_key,
+            },
+        )
+        return result.json()
 
     def _trigger_incident(
         self,
@@ -403,6 +421,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         setup_alerts: bool = True,
     ):
         self.logger.info("Setting up Pagerduty webhook")
+
+        if self.authentication_config.routing_key:
+            self.logger.info("Skipping webhook setup due to routing key")
+            return
+
         headers = self.__get_headers()
         request = requests.get(self.SUBSCRIPTION_API_URL, headers=headers)
         if not request.ok:
@@ -534,6 +557,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     def _format_alert_old(event: dict) -> AlertDto:
         actual_event = event.get("event", {})
         data = actual_event.get("data", {})
+
+        event_type = data.get("type", "incident")
+        if event_type != "incident":
+            return None
+
         url = data.pop("self", data.pop("html_url", None))
         # format status and severity to Keep format
         status = PagerdutyProvider.ALERT_STATUS_MAP.get(data.pop("status", "firing"))
@@ -648,6 +676,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return all_services
 
     def pull_topology(self) -> list[TopologyServiceInDto]:
+        # Skipping topology pulling when we're installed with routing_key
+        if self.authentication_config.routing_key:
+            return []
+
         all_services = self.__get_all_services()
         all_business_services = self.__get_all_services(business_services=True)
         service_metadata = {}
@@ -701,6 +733,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return list(service_topology.values())
 
     def _get_incidents(self) -> list[IncidentDto]:
+        # Skipping incidents pulling when we're installed with routing_key
+        if self.authentication_config.routing_key:
+            return []
+
         raw_incidents = self.__get_all_incidents_or_alerts()
         incidents = []
         for incident in raw_incidents:
