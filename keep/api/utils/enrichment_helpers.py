@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from optparse import Option
 from typing import Optional
 
 from opentelemetry import trace
@@ -8,7 +7,7 @@ from sqlmodel import Session
 
 from keep.api.core.db import existed_or_new_session
 from keep.api.models.alert import AlertDto, AlertStatus, AlertWithIncidentLinkMetadataDto
-from keep.api.models.db.alert import Alert, AlertToIncident
+from keep.api.models.db.alert import Alert, LastAlertToIncident
 
 tracer = trace.get_tracer(__name__)
 logger = logging.getLogger(__name__)
@@ -81,7 +80,7 @@ def calculated_start_firing_time(
 
 
 def convert_db_alerts_to_dto_alerts(
-        alerts: list[Alert | tuple[Alert, AlertToIncident]],
+        alerts: list[Alert | tuple[Alert, LastAlertToIncident]],
         with_incidents: bool = False,
         session: Optional[Session] = None,
     ) -> list[AlertDto | AlertWithIncidentLinkMetadataDto]:
@@ -101,7 +100,7 @@ def convert_db_alerts_to_dto_alerts(
             # enrich the alerts with the enrichment data
             for _object in alerts:
 
-                # We may have an Alert only or and Alert with an AlertToIncident
+                # We may have an Alert only or and Alert with an LastAlertToIncident
                 if isinstance(_object, Alert):
                     alert, alert_to_incident = _object, None
                 else:

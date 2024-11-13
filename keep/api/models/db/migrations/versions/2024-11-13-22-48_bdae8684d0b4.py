@@ -5,16 +5,12 @@ Revises: ef0b5b0df41c
 Create Date: 2024-11-05 22:48:04.733192
 
 """
-import warnings
 
 import sqlalchemy as sa
 import sqlalchemy_utils
 import sqlmodel
 from alembic import op
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import expression
-from sqlalchemy import exc as sa_exc
 
 # revision identifiers, used by Alembic.
 revision = "bdae8684d0b4"
