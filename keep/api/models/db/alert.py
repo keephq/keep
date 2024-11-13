@@ -10,7 +10,7 @@ from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
 from sqlalchemy_utils import UUIDType
-from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, SQLModel, Session
+from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, SQLModel
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
