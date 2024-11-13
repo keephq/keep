@@ -562,10 +562,14 @@ class IncidentDto(IncidentDtoIn):
 class SplitIncidentRequestDto(BaseModel):
     alert_ids: list[UUID]
     destination_incident_id: UUID
+
+class SplitIncidentResponseDto(BaseModel):
+    destination_incident_id: UUID
+    moved_alert_ids: list[UUID]
+
 class MergeIncidentsRequestDto(BaseModel):
     source_incident_ids: list[UUID]
     destination_incident_id: UUID
-
 
 class MergeIncidentsResponseDto(BaseModel):
     merged_incident_ids: list[UUID]

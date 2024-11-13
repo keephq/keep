@@ -53,6 +53,7 @@ from keep.api.models.alert import (
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
     SplitIncidentRequestDto,
+    SplitIncidentResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
@@ -274,7 +275,7 @@ async def split_incident(
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
     session: Session = Depends(get_session),
-) -> IncidentDto:
+) -> SplitIncidentResponseDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Splitting incident",
@@ -285,18 +286,17 @@ async def split_incident(
         },
     )
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
-    incident_bl.delete_alerts_from_incident(
-        incident_id=incident_id, alert_ids=command.alert_ids
-    )
     await incident_bl.add_alerts_to_incident(
         incident_id=command.destination_incident_id, alert_ids=command.alert_ids
     )
-    destination_incident = get_incident_by_id(
-        tenant_id=tenant_id, incident_id=command.destination_incident_id
+    incident_bl.delete_alerts_from_incident(
+        incident_id=incident_id, alert_ids=command.alert_ids
     )
-    if not destination_incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    return IncidentDto.from_db_incident(destination_incident)
+    return SplitIncidentResponseDto(
+        destination_incident_id=command.destination_incident_id,
+        # TODO: get moved alert ids or moved count
+        moved_alert_ids=[],
+    )
 
 
 
