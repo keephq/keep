@@ -16,9 +16,10 @@ export const useWebsocket = () => {
   console.log("useWebsocket: Initializing with config:", configData);
   console.log("useWebsocket: Session:", session);
 
+  // TODO: should be in useMemo?
   if (
     PUSHER === null &&
-    configData !== undefined &&
+    configData !== null &&
     session !== undefined &&
     configData.PUSHER_DISABLED === false
   ) {

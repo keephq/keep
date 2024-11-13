@@ -322,7 +322,7 @@ function Builder({
         icon={CheckCircleIcon}
         color="teal"
       >
-        Alert can be generated successfully
+        Workflow can be generated successfully
       </Callout>
     );
   };
