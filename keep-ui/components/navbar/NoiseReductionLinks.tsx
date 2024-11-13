@@ -84,9 +84,6 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             <Subtitle>Maintenance Windows</Subtitle>
           </LinkWithIcon>
         </li>
-        <li>
-          <AILink></AILink>
-        </li>
       </Disclosure.Panel>
     </Disclosure>
   );
