@@ -190,7 +190,8 @@ def run_workflow(
         event_body = body.get("body", {}) or body
 
         # if its event that was triggered by the UI with the Modal
-        if "test-workflow" in event_body.get("fingerprint", "") or not body:
+        fingerprint = event_body.get("fingerprint", "")
+        if fingerprint and "test-workflow" in fingerprint or not body:
             # some random
             event_body["id"] = event_body.get("fingerprint", "manual-run")
             event_body["name"] = event_body.get("fingerprint", "manual-run")

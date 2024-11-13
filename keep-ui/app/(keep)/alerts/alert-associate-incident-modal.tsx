@@ -42,7 +42,7 @@ const AlertAssociateIncidentModal = ({
       try {
         const response = await api.post(
           `/incidents/${incidentId}/alerts`,
-          alerts.map(({ event_id }) => event_id)
+          alerts.map(({ fingerprint }) => fingerprint)
         );
         handleSuccess();
         await mutate();
