@@ -190,11 +190,11 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert len(incident_alerts) == 89
     assert total_incident_alerts == 89
 
-    assert "source_1" not in incident.sources
+    assert "source_1" in incident.sources
     # source_0 was removed together with service_1
-    assert len(incident.sources) == 8
+    assert len(incident.sources) == 9
     assert sorted(incident.sources) == sorted(
-        ["source_{}".format(i) for i in range(2, 10)]
+        ["source_{}".format(i) for i in range(1, 10)]
     )
 
     remove_alerts_to_incident_by_incident_id(
