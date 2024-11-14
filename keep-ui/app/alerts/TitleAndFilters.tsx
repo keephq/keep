@@ -34,7 +34,14 @@ export const TitleAndFilters = ({
     end: Date;
     paused?: boolean;
   }) => {
-    setTimeFrame(newTimeFrame);
+    // Create a new end date that includes the full day
+    const adjustedTimeFrame = {
+      ...newTimeFrame,
+      end: new Date(newTimeFrame.end.getTime()),
+    };
+    adjustedTimeFrame.end.setHours(23, 59, 59, 999);
+
+    setTimeFrame(adjustedTimeFrame);
 
     table.setColumnFilters((existingFilters) => {
       const filteredArrayFromLastReceived = existingFilters.filter(
@@ -43,10 +50,13 @@ export const TitleAndFilters = ({
 
       return filteredArrayFromLastReceived.concat({
         id: "lastReceived",
-        value: { start: newTimeFrame.start, end: newTimeFrame.end },
+        value: {
+          start: adjustedTimeFrame.start,
+          end: adjustedTimeFrame.end,
+        },
       });
     });
-    // Force a re-render of the table to update facets
+
     table.resetRowSelection();
     table.resetPagination();
   };

@@ -20,9 +20,21 @@ export const getFilteredAlertsForFacet = (
 ) => {
   return alerts.filter((alert) => {
     // First apply time range filter if exists
+
+    if (alert.name && alert.name.includes("Linux")) {
+      debugger;
+    }
+
+    // Apply time range filter if exists
     if (timeRange) {
       const lastReceived = new Date(alert.lastReceived);
-      if (lastReceived < timeRange.start || lastReceived > timeRange.end) {
+      const rangeStart = new Date(timeRange.start);
+      const rangeEnd = new Date(timeRange.end);
+
+      // Set the end date to the end of the day (23:59:59.999)
+      rangeEnd.setHours(23, 59, 59, 999);
+
+      if (lastReceived < rangeStart || lastReceived > rangeEnd) {
         return false;
       }
     }
