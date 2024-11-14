@@ -577,7 +577,16 @@ def setup_stress_alerts_no_elastic(db_session):
 
         last_alerts = []
         for alert in alerts:
-            set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+            last_alerts.append(
+                LastAlert(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    fingerprint=alert.fingerprint,
+                    timestamp=alert.timestamp,
+                    alert_id=alert.id,
+                )
+            )
+        db_session.add_all(last_alerts)
+        db_session.commit()
 
         return alerts
 
