@@ -334,6 +334,7 @@ def is_elastic_responsive(host, port, user, password):
             basic_auth=(user, password),
         )
         info = elastic_client._client.info()
+        print("Elastic still up now")
         return True if info else False
     except Exception:
         print("Elastic still not up")
@@ -550,7 +551,16 @@ def setup_stress_alerts_no_elastic(db_session):
 
         last_alerts = []
         for alert in alerts:
-            set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
+            last_alerts.append(
+                LastAlert(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    fingerprint=alert.fingerprint,
+                    timestamp=alert.timestamp,
+                    alert_id=alert.id,
+                )
+            )
+        db_session.add_all(last_alerts)
+        db_session.commit()
 
         return alerts
 
@@ -564,8 +574,10 @@ def setup_stress_alerts(
     num_alerts = request.param.get(
         "num_alerts", 1000
     )  # Default to 1000 alerts if not specified
-
+    start_time = time.time()
     alerts = setup_stress_alerts_no_elastic(num_alerts)
+    print(f"time taken to setup {num_alerts} alerts with db: ", time.time() - start_time)
+
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
