@@ -121,7 +121,7 @@ def get_app(
     @app.get("/")
     async def root():
         """
-        App desctiption and version.
+        App description and version.
         """
         return {"message": app.description, "version": KEEP_VERSION}
 
