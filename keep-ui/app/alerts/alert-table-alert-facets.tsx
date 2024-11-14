@@ -33,7 +33,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
     .columnFilters.find((filter) => filter.id === "lastReceived");
 
   const timeRange = timeRangeFilter?.value as
-    | { start: Date; end: Date }
+    | { start: Date; end: Date; isFromCalendar: boolean }
     | undefined;
 
   const presetName = window.location.pathname.split("/").pop() || "default";

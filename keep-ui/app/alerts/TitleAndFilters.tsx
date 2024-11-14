@@ -23,7 +23,12 @@ export const TitleAndFilters = ({
   table,
   onThemeChange,
 }: TableHeaderProps) => {
-  const [timeFrame, setTimeFrame] = useState({
+  const [timeFrame, setTimeFrame] = useState<{
+    start: Date | null;
+    end: Date | null;
+    paused: boolean;
+    isFromCalendar: boolean;
+  }>({
     start: null,
     end: null,
     paused: true,
@@ -36,7 +41,12 @@ export const TitleAndFilters = ({
     paused?: boolean;
     isFromCalendar?: boolean;
   }) => {
-    setTimeFrame(newTimeFrame);
+    setTimeFrame({
+      start: newTimeFrame.start,
+      end: newTimeFrame.end,
+      paused: newTimeFrame.paused ?? true,
+      isFromCalendar: newTimeFrame.isFromCalendar ?? false,
+    });
 
     // Only apply date filter if both start and end dates exist
     if (newTimeFrame.start && newTimeFrame.end) {
