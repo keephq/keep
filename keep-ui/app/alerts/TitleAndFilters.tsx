@@ -24,44 +24,52 @@ export const TitleAndFilters = ({
   onThemeChange,
 }: TableHeaderProps) => {
   const [timeFrame, setTimeFrame] = useState({
-    start: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 365 days ago
-    end: new Date(), // now
+    start: null,
+    end: null,
     paused: true,
     isFromCalendar: false,
   });
 
   const handleTimeFrameChange = (newTimeFrame: {
-    start: Date;
-    end: Date;
+    start: Date | null;
+    end: Date | null;
     paused?: boolean;
     isFromCalendar?: boolean;
   }) => {
-    // Create a new end date that includes the full day
-    const adjustedTimeFrame = {
-      ...newTimeFrame,
-      end: new Date(newTimeFrame.end.getTime()),
-      paused: newTimeFrame.paused ?? true, // Provide default value if undefined
-      isFromCalendar: newTimeFrame.isFromCalendar ?? false,
-    };
-    if (adjustedTimeFrame.isFromCalendar) {
-      adjustedTimeFrame.end.setHours(23, 59, 59, 999);
-    }
+    setTimeFrame(newTimeFrame);
 
-    setTimeFrame(adjustedTimeFrame);
+    // Only apply date filter if both start and end dates exist
+    if (newTimeFrame.start && newTimeFrame.end) {
+      const adjustedTimeFrame = {
+        ...newTimeFrame,
+        end: new Date(newTimeFrame.end.getTime()),
+        paused: newTimeFrame.paused ?? true,
+        isFromCalendar: newTimeFrame.isFromCalendar ?? false,
+      };
 
-    table.setColumnFilters((existingFilters) => {
-      const filteredArrayFromLastReceived = existingFilters.filter(
-        ({ id }) => id !== "lastReceived"
-      );
+      if (adjustedTimeFrame.isFromCalendar) {
+        adjustedTimeFrame.end.setHours(23, 59, 59, 999);
+      }
 
-      return filteredArrayFromLastReceived.concat({
-        id: "lastReceived",
-        value: {
-          start: adjustedTimeFrame.start,
-          end: adjustedTimeFrame.end,
-        },
+      table.setColumnFilters((existingFilters) => {
+        const filteredArrayFromLastReceived = existingFilters.filter(
+          ({ id }) => id !== "lastReceived"
+        );
+
+        return filteredArrayFromLastReceived.concat({
+          id: "lastReceived",
+          value: {
+            start: adjustedTimeFrame.start,
+            end: adjustedTimeFrame.end,
+          },
+        });
       });
-    });
+    } else {
+      // Remove date filter if no dates are selected
+      table.setColumnFilters((existingFilters) =>
+        existingFilters.filter(({ id }) => id !== "lastReceived")
+      );
+    }
 
     table.resetRowSelection();
     table.resetPagination();

@@ -20,15 +20,12 @@ export const getFilteredAlertsForFacet = (
   timeRange?: { start: Date; end: Date; isFromCalendar: boolean }
 ) => {
   return alerts.filter((alert) => {
-    // First apply time range filter if exists
-
-    // Apply time range filter if exists
-    if (timeRange) {
+    // Only apply time range filter if both start and end dates exist
+    if (timeRange?.start && timeRange?.end) {
       const lastReceived = new Date(alert.lastReceived);
       const rangeStart = new Date(timeRange.start);
       const rangeEnd = new Date(timeRange.end);
 
-      // Only set end time to 23:59:59.999 if it's not a quick preset range
       if (!isQuickPresetRange(timeRange)) {
         rangeEnd.setHours(23, 59, 59, 999);
       }

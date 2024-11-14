@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { Button, Badge, Subtitle } from "@tremor/react";
+import { Button, Badge, Subtitle, Text } from "@tremor/react";
 import { Calendar } from "./Calendar";
 import {
   Play,
@@ -20,12 +20,11 @@ const ONE_HOUR = 60 * 60 * 1000;
 const ONE_DAY = 24 * ONE_HOUR;
 
 interface TimeFrame {
-  start: Date;
-  end: Date;
+  start: Date | null;
+  end: Date | null;
   paused?: boolean;
   isFromCalendar?: boolean;
 }
-
 interface TimePreset {
   badge: string;
   label: string;
@@ -50,6 +49,9 @@ interface EnhancedDateRangePickerProps {
 }
 
 export function isQuickPresetRange(timeFrame: TimeFrame): boolean {
+  if (!timeFrame.start || !timeFrame.end) {
+    return false;
+  }
   // If it's explicitly marked as from calendar, return false
   if (timeFrame.isFromCalendar) {
     return false;
@@ -62,7 +64,6 @@ export function isQuickPresetRange(timeFrame: TimeFrame): boolean {
   const quickPresetDurations = [
     15 * ONE_MINUTE, // 15m
     45 * ONE_MINUTE, // 45m
-    90 * ONE_MINUTE, // 90m
     ONE_HOUR, // 1h
     4 * ONE_HOUR, // 4h
     ONE_DAY, // 1d
@@ -112,10 +113,14 @@ export default function EnhancedDateRangePicker({
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [calendarRange, setCalendarRange] = useState<DateRange | undefined>({
-    from: timeFrame.start,
-    to: timeFrame.end,
-  });
+  const [calendarRange, setCalendarRange] = useState<DateRange | undefined>(
+    timeFrame.start && timeFrame.end
+      ? {
+          from: timeFrame.start,
+          to: timeFrame.end,
+        }
+      : undefined
+  );
 
   const quickPresets = useMemo(
     () => [
@@ -191,6 +196,15 @@ export default function EnhancedDateRangePicker({
           end: new Date(),
         },
       },
+      {
+        badge: "all",
+        label: "All time",
+        value: {
+          start: null,
+          end: null,
+          paused: true,
+        },
+      },
     ],
     []
   );
@@ -201,6 +215,14 @@ export default function EnhancedDateRangePicker({
         title: "Relative Time",
         options: [
           {
+            badge: "30m",
+            label: "Past 30 minutes",
+            value: {
+              start: new Date(Date.now() - 30 * ONE_MINUTE),
+              end: new Date(),
+            },
+          },
+          {
             badge: "45m",
             label: "Past 45 minutes",
             value: {
@@ -209,26 +231,34 @@ export default function EnhancedDateRangePicker({
             },
           },
           {
-            badge: "90m",
-            label: "Past 90 minutes",
+            badge: "2h",
+            label: "Past 2 hours",
             value: {
-              start: new Date(Date.now() - 90 * ONE_MINUTE),
+              start: new Date(Date.now() - 2 * ONE_HOUR),
               end: new Date(),
             },
           },
           {
-            badge: "2d",
-            label: "Past 2 days",
+            badge: "6h",
+            label: "Past 6 hours",
             value: {
-              start: new Date(Date.now() - 2 * ONE_DAY),
+              start: new Date(Date.now() - 6 * ONE_HOUR),
               end: new Date(),
             },
           },
           {
-            badge: "3d",
-            label: "Past 3 days",
+            badge: "6d",
+            label: "Past 6 days",
             value: {
-              start: new Date(Date.now() - 3 * ONE_DAY),
+              start: new Date(Date.now() - 6 * ONE_DAY),
+              end: new Date(),
+            },
+          },
+          {
+            badge: "60d",
+            label: "Past 60 days",
+            value: {
+              start: new Date(Date.now() - 60 * ONE_DAY),
               end: new Date(),
             },
           },
@@ -252,27 +282,6 @@ export default function EnhancedDateRangePicker({
               start: new Date(
                 new Date().setDate(new Date().getDate() - new Date().getDay())
               ),
-              end: new Date(),
-            },
-          },
-        ],
-      },
-      {
-        title: "Timestamp",
-        options: [
-          {
-            badge: "1min",
-            label: "Last Minute",
-            value: {
-              start: new Date(Date.now() - ONE_MINUTE),
-              end: new Date(),
-            },
-          },
-          {
-            badge: "5min",
-            label: "Last 5 Minutes",
-            value: {
-              start: new Date(Date.now() - 5 * ONE_MINUTE),
               end: new Date(),
             },
           },
@@ -303,6 +312,9 @@ export default function EnhancedDateRangePicker({
   };
 
   const handleRewind = () => {
+    if (!timeFrame.start || !timeFrame.end) {
+      return;
+    }
     const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
     setTimeFrame({
       start: new Date(timeFrame.start.getTime() - duration),
@@ -313,6 +325,9 @@ export default function EnhancedDateRangePicker({
   };
 
   const handleForward = () => {
+    if (!timeFrame.start || !timeFrame.end) {
+      return;
+    }
     const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
     setTimeFrame({
       start: new Date(timeFrame.end.getTime()),
@@ -323,6 +338,9 @@ export default function EnhancedDateRangePicker({
   };
 
   const handleZoomOut = () => {
+    if (!timeFrame.start || !timeFrame.end) {
+      return;
+    }
     const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
     setTimeFrame({
       start: new Date(timeFrame.start.getTime() - duration / 2),
@@ -336,6 +354,9 @@ export default function EnhancedDateRangePicker({
     let interval: NodeJS.Timeout;
     if (!isPaused) {
       interval = setInterval(() => {
+        if (!timeFrame.start || !timeFrame.end) {
+          return;
+        }
         const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
         setTimeFrame({
           start: new Date(Date.now() - duration),
@@ -384,17 +405,23 @@ export default function EnhancedDateRangePicker({
           >
             <div className="flex items-center w-full">
               <Badge color="gray" className="mr-2 min-w-[4rem] justify-center">
-                {timeFrame.paused
+                {!timeFrame.start || !timeFrame.end
+                  ? "All"
+                  : timeFrame.paused
                   ? formatDuration(timeFrame.start, timeFrame.end)
                   : "Live"}
               </Badge>
-              <span className="text-gray-900 flex-grow translate-y-[1px]">
-                {`${format(timeFrame.start, "MMM d, yyyy HH:mm")} - ${format(
-                  timeFrame.end,
-                  "MMM d, yyyy HH:mm"
-                )}`}
+              <span className="text-gray-900 text-left translate-y-[1px] min-w-[300px]">
+                <Text>
+                  {!timeFrame.start || !timeFrame.end
+                    ? "All time"
+                    : `${format(
+                        timeFrame.start,
+                        "MMM d, yyyy HH:mm"
+                      )} - ${format(timeFrame.end, "MMM d, yyyy HH:mm")}`}
+                </Text>
               </span>
-              <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
+              <ChevronDown className="w-4 h-4 ml-auto text-gray-500" />
             </div>
           </Button>
         </Popover.Trigger>
@@ -511,7 +538,9 @@ export default function EnhancedDateRangePicker({
                   numberOfMonths={1}
                   disabled={{ after: new Date() }}
                   className="w-full bg-white"
-                  defaultMonth={timeFrame.start}
+                  defaultMonth={
+                    timeFrame.start ? new Date(timeFrame.start) : undefined
+                  }
                 />
               </div>
             )}
