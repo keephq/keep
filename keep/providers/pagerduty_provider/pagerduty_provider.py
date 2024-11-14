@@ -111,11 +111,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         "triggered": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
     }
+    ALERT_STATUS_TO_EVENT_TYPE_MAP = {
+        AlertStatus.FIRING.value: "trigger",
+        AlertStatus.RESOLVED.value: "resolve",
+        AlertStatus.ACKNOWLEDGED.value: "acknowledge",
+    }
     INCIDENT_STATUS_MAP = {
         "triggered": IncidentStatus.FIRING,
         "acknowledged": IncidentStatus.ACKNOWLEDGED,
         "resolved": IncidentStatus.RESOLVED,
     }
+
     BASE_OAUTH_URL = "https://identity.pagerduty.com"
     PAGERDUTY_CLIENT_ID = os.environ.get("PAGERDUTY_CLIENT_ID")
     PAGERDUTY_CLIENT_SECRET = os.environ.get("PAGERDUTY_CLIENT_SECRET")
@@ -319,7 +325,13 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return scopes
 
     def _build_alert(
-        self, title: str, alert_body: str, dedup: str
+        self,
+        title: str,
+        alert_body: str,
+        dedup: str | None = None,
+        severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
+        source: str = "custom_event",
     ) -> typing.Dict[str, typing.Any]:
         """
         Builds the payload for an event alert.
@@ -328,25 +340,57 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             title: Title of alert
             alert_body: UTF-8 string of custom message for alert. Shown in incident body
             dedup: Any string, max 255, characters used to deduplicate alerts
+            event_type: The type of event to send to PagerDuty
 
         Returns:
             Dictionary of alert body for JSON serialization
         """
+        if not severity:
+            # this is the default severity
+            severity = "critical"
+            # try to get it automatically from the context (if there's an alert, for example)
+            if self.context_manager.event_context:
+                severity = self.context_manager.event_context.severity
+
+        if not event_type:
+            event_type = "trigger"
+            # try to get it automatically from the context (if there's an alert, for example)
+            if self.context_manager.event_context:
+                status = self.context_manager.event_context.status
+                event_type = PagerdutyProvider.ALERT_STATUS_TO_EVENT_TYPE_MAP.get(
+                    status, "trigger"
+                )
+
+        if not dedup:
+            # If no dedup is given, use epoch timestamp
+            dedup = str(datetime.datetime.now().timestamp())
+            # Try to get it from the context (if there's an alert, for example)
+            if self.context_manager.event_context:
+                dedup = self.context_manager.event_context.fingerprint
+
         return {
             "routing_key": self.authentication_config.routing_key,
-            "event_action": "trigger",
+            "event_action": event_type,
             "dedup_key": dedup,
             "payload": {
                 "summary": title,
-                "source": "custom_event",
-                "severity": "critical",
+                "source": source,
+                "severity": severity,
                 "custom_details": {
                     "alert_body": alert_body,
                 },
             },
         }
 
-    def _send_alert(self, title: str, body: str, dedup: str | None = None):
+    def _send_alert(
+        self,
+        title: str,
+        body: str,
+        dedup: str | None = None,
+        severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
+        source: str = "custom_event",
+    ):
         """
         Sends PagerDuty Alert
 
@@ -354,14 +398,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             title: Title of the alert.
             alert_body: UTF-8 string of custom message for alert. Shown in incident body
             dedup: Any string, max 255, characters used to deduplicate alerts
+            event_type: The type of event to send to PagerDuty
         """
-        # If no dedup is given, use epoch timestamp
-        if dedup is None:
-            dedup = str(datetime.datetime.now().timestamp())
-
         url = "https://events.pagerduty.com/v2/enqueue"
 
-        payload = self._build_alert(title, body, dedup)
+        payload = self._build_alert(title, body, dedup, severity, event_type, source)
         result = requests.post(url, json=payload)
         result.raise_for_status()
 
@@ -496,6 +537,9 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         service_id: str = "",
         requester: str = "",
         incident_id: str = "",
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
+        severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
+        source: str = "custom_event",
         **kwargs: dict,
     ):
         """
@@ -507,7 +551,14 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             kwargs (dict): The providers with context
         """
         if self.authentication_config.routing_key:
-            return self._send_alert(title, alert_body, dedup=dedup)
+            return self._send_alert(
+                title,
+                alert_body,
+                dedup=dedup,
+                event_type=event_type,
+                source=source,
+                severity=severity,
+            )
         else:
             return self._trigger_incident(
                 service_id, title, alert_body, requester, incident_id

@@ -1717,6 +1717,7 @@ def get_incident_for_grouping_rule(
             .where(Incident.tenant_id == tenant_id)
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
+            .where(Incident.status != IncidentStatus.RESOLVED.value)
             .order_by(Incident.creation_time.desc())
         ).first()
 

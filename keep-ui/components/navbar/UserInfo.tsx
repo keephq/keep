@@ -3,7 +3,6 @@
 import { Menu } from "@headlessui/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
-import { signOut } from "next-auth/react";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthenticationType } from "utils/authenticationType";
 import Link from "next/link";
@@ -17,6 +16,8 @@ import UserAvatar from "./UserAvatar";
 import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
+import { useSignOut } from "@/shared/lib/useSignOut";
+import { useSetSentryUser } from "@/shared/lib/useSetSentryUser";
 
 type UserDropdownProps = {
   session: Session;
@@ -27,6 +28,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
   const { name, image, email } = user;
 
   const { data: configData } = useConfig();
+  const signOut = useSignOut();
   const { refs, floatingStyles } = useFloating({
     placement: "right-end",
     strategy: "fixed",
@@ -70,7 +72,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               <Menu.Item
                 as="button"
                 className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
-                onClick={() => signOut()}
+                onClick={signOut}
               >
                 Sign out
               </Menu.Item>
