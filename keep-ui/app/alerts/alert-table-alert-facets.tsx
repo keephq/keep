@@ -27,6 +27,14 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
   className,
   table,
 }) => {
+  const timeRangeFilter = table
+    .getState()
+    .columnFilters.find((filter) => filter.id === "lastReceived");
+
+  const timeRange = timeRangeFilter?.value as
+    | { start: Date; end: Date; isFromCalendar: boolean }
+    | undefined;
+
   const presetName = window.location.pathname.split("/").pop() || "default";
 
   const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
@@ -72,7 +80,8 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
       const filteredAlerts = getFilteredAlertsForFacet(
         alerts,
         facetFilters,
-        key
+        key,
+        timeRange
       );
       const valueMap = new Map<string, number>();
       let nullCount = 0;
@@ -150,7 +159,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
 
       return values;
     },
-    [alerts, facetFilters]
+    [alerts, facetFilters, timeRange]
   );
 
   const staticFacets = [
