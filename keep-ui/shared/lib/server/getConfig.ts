@@ -47,5 +47,6 @@ export function getConfig() {
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
+    SENTRY_DISABLED: process.env.SENTRY_DISABLED,
   };
 }

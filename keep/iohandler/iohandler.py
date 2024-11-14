@@ -281,7 +281,8 @@ class IOHandler:
                                 pass
                     else:
                         _arg = arg.id
-                    if _arg:
+                    # if the value is empty '', we still need to pass it to the function
+                    if _arg or _arg == "":
                         _args.append(_arg)
                 # check if we need to inject tenant_id
                 keep_func = getattr(keep_functions, func.attr)

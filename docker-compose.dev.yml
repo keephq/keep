@@ -5,6 +5,7 @@ services:
       service: keep-frontend-common
     environment:
       - API_URL=http://keep-backend-dev:8080
+      - SENTRY_DISABLED=true
     build:
       dockerfile: docker/Dockerfile.dev.ui
     volumes:
