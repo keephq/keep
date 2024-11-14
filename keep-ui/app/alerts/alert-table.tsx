@@ -210,69 +210,6 @@ export function AlertTable({
     });
   });
 
-  const handleFacetSelect = (
-    facetKey: string,
-    value: string,
-    exclusive: boolean,
-    isAllOnly: boolean = false
-  ) => {
-    setFacetFilters((prev) => {
-      // Handle All/Only button clicks
-      if (isAllOnly) {
-        if (value === "") {
-          // Reset to include all values (empty array)
-          return {
-            ...prev,
-            [facetKey]: [],
-          };
-        }
-
-        if (exclusive) {
-          // Only include this value
-          return {
-            ...prev,
-            [facetKey]: [value],
-          };
-        }
-      }
-
-      // Handle regular checkbox clicks
-      const currentValues = prev[facetKey] || [];
-
-      if (currentValues.length === 0) {
-        // If no filters, clicking one value means we want to exclude that value
-        // So we need to include all OTHER values
-        const allValues = new Set(
-          alerts
-            .map((alert) => {
-              const val = alert[facetKey as keyof AlertDto];
-              return Array.isArray(val) ? val : [String(val)];
-            })
-            .flat()
-        );
-        return {
-          ...prev,
-          [facetKey]: Array.from(allValues).filter((v) => v !== value),
-        };
-      }
-
-      if (currentValues.includes(value)) {
-        // Remove value if it's already included
-        const newValues = currentValues.filter((v) => v !== value);
-        return {
-          ...prev,
-          [facetKey]: newValues,
-        };
-      } else {
-        // Add value if it's not included
-        return {
-          ...prev,
-          [facetKey]: [...currentValues, value],
-        };
-      }
-    });
-  };
-
   const table = useReactTable({
     data: filteredAlerts,
     columns: columns,

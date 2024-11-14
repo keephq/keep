@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
+import { type DateRange } from "react-day-picker";
 
 const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * 60 * 1000;
@@ -63,6 +64,10 @@ export default function EnhancedDateRangePicker({
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [calendarRange, setCalendarRange] = useState<DateRange | undefined>({
+    from: timeFrame.start,
+    to: timeFrame.end,
+  });
 
   const quickPresets = useMemo(
     () => [
@@ -325,7 +330,7 @@ export default function EnhancedDateRangePicker({
           <Button
             size="xs"
             variant="secondary"
-            className="justify-start rounded-none first:rounded-t border-b border-gray-200"
+            className="justify-start rounded-none first:rounded-t border-b border-gray-200 hover:bg-gray-200"
             disabled={disabled}
           >
             <div className="flex items-center w-full">
@@ -357,7 +362,7 @@ export default function EnhancedDateRangePicker({
                     <Button
                       key={index}
                       variant="secondary"
-                      className="w-full justify-start rounded-none border-transparent first:rounded-t h-9 hover:bg-gray-50"
+                      className="w-full justify-start rounded-none border-transparent first:rounded-t h-8 hover:bg-gray-200"
                       onClick={() => handlePresetSelect(preset)}
                     >
                       <Badge
@@ -374,7 +379,7 @@ export default function EnhancedDateRangePicker({
 
                   <Button
                     variant="secondary"
-                    className="w-full justify-start rounded-none border-transparent h-9 hover:bg-gray-50"
+                    className="w-full justify-start rounded-none border-transparent h-8 hover:bg-gray-200"
                     onClick={() => setShowCalendar(true)}
                   >
                     <div className="flex items-center w-full">
@@ -392,7 +397,7 @@ export default function EnhancedDateRangePicker({
 
                   <Button
                     variant="secondary"
-                    className="w-full justify-start rounded-none border-transparent last:rounded-b h-9 hover:bg-gray-50"
+                    className="w-full justify-start rounded-none border-transparent last:rounded-b h-8 hover:bg-gray-200"
                     onClick={() => setShowMoreOptions(!showMoreOptions)}
                   >
                     <div className="flex items-center w-full">
@@ -410,7 +415,7 @@ export default function EnhancedDateRangePicker({
                 </div>
 
                 {showMoreOptions && (
-                  <div className="absolute left-full top-0 w-64 border bg-white shadow-md">
+                  <div className="absolute right-full top-0 w-64 border bg-white shadow-md">
                     {categories.map((category, index) => (
                       <div key={index} className="p-3">
                         <Subtitle className="text-xs text-gray-500 font-medium mb-2">
@@ -421,7 +426,7 @@ export default function EnhancedDateRangePicker({
                             <Badge
                               key={optionIndex}
                               color="gray"
-                              className="cursor-pointer hover:bg-gray-50 transition-colors text-sm"
+                              className="cursor-pointer hover:bg-gray-200 transition-colors text-sm"
                               onClick={() => handlePresetSelect(option)}
                             >
                               {option.badge}
@@ -434,27 +439,29 @@ export default function EnhancedDateRangePicker({
                 )}
               </div>
             ) : (
-              <div className="p-3">
+              <div className="p-3 z-50">
                 <Calendar
                   mode="range"
-                  selected={{
-                    from: timeFrame.start,
-                    to: timeFrame.end,
-                  }}
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      setTimeFrame({
-                        start: range.from,
-                        end: range.to,
-                        paused: true,
-                      });
-                      setIsPaused(true);
-                      setIsOpen(false);
+                  selected={calendarRange}
+                  onSelect={(date: DateRange | Date | undefined) => {
+                    if (date && "from" in date) {
+                      setCalendarRange(date);
+                      if (date.from && date.to) {
+                        setTimeFrame({
+                          start: date.from,
+                          end: date.to,
+                          paused: true,
+                        });
+                        setIsPaused(true);
+                        setIsOpen(false);
+                        setShowCalendar(false);
+                      }
                     }
                   }}
-                  numberOfMonths={2}
+                  numberOfMonths={1}
                   disabled={{ after: new Date() }}
-                  className="h-9"
+                  className="w-full bg-white"
+                  defaultMonth={timeFrame.start}
                 />
               </div>
             )}

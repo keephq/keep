@@ -15,17 +15,27 @@ import {
 export const getFilteredAlertsForFacet = (
   alerts: AlertDto[],
   facetFilters: FacetFilters,
-  excludeFacet: string
-): AlertDto[] => {
+  currentFacetKey: string,
+  timeRange?: { start: Date; end: Date }
+) => {
   return alerts.filter((alert) => {
+    // First apply time range filter if exists
+    if (timeRange) {
+      const lastReceived = new Date(alert.lastReceived);
+      if (lastReceived < timeRange.start || lastReceived > timeRange.end) {
+        return false;
+      }
+    }
+
+    // Then apply facet filters, excluding the current facet
     return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
-      if (facetKey === excludeFacet || includedValues.length === 0) {
+      // Skip filtering by current facet to avoid circular dependency
+      if (facetKey === currentFacetKey || includedValues.length === 0) {
         return true;
       }
 
       let value;
       if (facetKey.includes(".")) {
-        // Handle nested keys like "labels.job"
         const [parentKey, childKey] = facetKey.split(".");
         const parentValue = alert[parentKey as keyof AlertDto];
 

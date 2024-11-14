@@ -46,7 +46,8 @@ export const TitleAndFilters = ({
         value: { start: newTimeFrame.start, end: newTimeFrame.end },
       });
     });
-
+    // Force a re-render of the table to update facets
+    table.resetRowSelection();
     table.resetPagination();
   };
 
