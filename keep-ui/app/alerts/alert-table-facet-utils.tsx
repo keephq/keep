@@ -11,21 +11,39 @@ import {
   BellSlashIcon,
   FireIcon,
 } from "@heroicons/react/24/outline";
+import { isQuickPresetRange } from "@/components/ui/DateRangePicker";
 
 export const getFilteredAlertsForFacet = (
   alerts: AlertDto[],
   facetFilters: FacetFilters,
-  excludeFacet: string
-): AlertDto[] => {
+  currentFacetKey: string,
+  timeRange?: { start: Date; end: Date; isFromCalendar: boolean }
+) => {
   return alerts.filter((alert) => {
+    // Only apply time range filter if both start and end dates exist
+    if (timeRange?.start && timeRange?.end) {
+      const lastReceived = new Date(alert.lastReceived);
+      const rangeStart = new Date(timeRange.start);
+      const rangeEnd = new Date(timeRange.end);
+
+      if (!isQuickPresetRange(timeRange)) {
+        rangeEnd.setHours(23, 59, 59, 999);
+      }
+
+      if (lastReceived < rangeStart || lastReceived > rangeEnd) {
+        return false;
+      }
+    }
+
+    // Then apply facet filters, excluding the current facet
     return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
-      if (facetKey === excludeFacet || includedValues.length === 0) {
+      // Skip filtering by current facet to avoid circular dependency
+      if (facetKey === currentFacetKey || includedValues.length === 0) {
         return true;
       }
 
       let value;
       if (facetKey.includes(".")) {
-        // Handle nested keys like "labels.job"
         const [parentKey, childKey] = facetKey.split(".");
         const parentValue = alert[parentKey as keyof AlertDto];
 

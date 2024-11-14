@@ -84,7 +84,15 @@ class ServicenowProvider(BaseTopologyProvider):
                 verify=False,
                 timeout=10,
             )
-            if response.status_code == 200:
+
+            try:
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                self.logger.exception(f"Failed to get roles from ServiceNow: {e}")
+                scopes = {"itil": str(e)}
+                return scopes
+
+            if response.ok:
                 roles = response.json()
                 roles_names = [role.get("name") for role in roles.get("result")]
                 if "itil" in roles_names:
@@ -98,8 +106,14 @@ class ServicenowProvider(BaseTopologyProvider):
                         "itil": "This user does not have the ITIL role",
                     }
             else:
-                self.logger.info("Failed to get roles from ServiceNow")
-                scopes["itil"] = "Failed to get roles from ServiceNow"
+                self.logger.error(
+                    "Failed to get roles from ServiceNow",
+                    extra={
+                        "response": response.text,
+                        "status_code": response.status_code,
+                    },
+                )
+                scopes = {"itil": "Failed to get roles from ServiceNow"}
         except Exception as e:
             self.logger.exception("Error validating scopes")
             scopes = {
