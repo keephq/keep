@@ -343,7 +343,7 @@ const azureADAuthOptions = {
       authorization: {
         params: {
           scope:
-            "api://d6cc6406-9de5-4a9f-bcf1-79e35e14cd2f/default openid profile email",
+            "api://" + process.env.KEEP_AZUREAD_CLIENT_ID! + "/default openid profile email",
         },
       },
       checks: ["pkce"],

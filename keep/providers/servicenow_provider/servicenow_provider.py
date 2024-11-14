@@ -73,6 +73,7 @@ class ServicenowProvider(BaseTopologyProvider):
         Validates that the user has the required scopes to use the provider.
         """
         try:
+            self.logger.info("Validating ServiceNow scopes")
             url = f"{self.authentication_config.service_now_base_url}/api/now/table/sys_user_role?sysparm_query=user_name={self.authentication_config.username}"
             response = requests.get(
                 url,
@@ -81,19 +82,23 @@ class ServicenowProvider(BaseTopologyProvider):
                     self.authentication_config.password,
                 ),
                 verify=False,
+                timeout=10,
             )
             if response.status_code == 200:
                 roles = response.json()
                 roles_names = [role.get("name") for role in roles.get("result")]
                 if "itil" in roles_names:
+                    self.logger.info("User has ITIL role")
                     scopes = {
                         "itil": True,
                     }
                 else:
+                    self.logger.info("User does not have ITIL role")
                     scopes = {
                         "itil": "This user does not have the ITIL role",
                     }
             else:
+                self.logger.info("Failed to get roles from ServiceNow")
                 scopes["itil"] = "Failed to get roles from ServiceNow"
         except Exception as e:
             self.logger.exception("Error validating scopes")

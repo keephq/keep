@@ -216,6 +216,14 @@ const ProviderForm = ({
   async function handleOauth() {
     const verifier = generateRandomString();
     cookieCutter.set("verifier", verifier);
+    cookieCutter.set(
+      "oauth2_install_webhook",
+      formValues.install_webhook?.toString() ?? "false"
+    );
+    cookieCutter.set(
+      "oauth2_pulling_enabled",
+      formValues.pulling_enabled?.toString() ?? "false"
+    );
     const verifierChallenge = base64urlencode(await sha256(verifier));
 
     let oauth2Url = provider.oauth2_url;
@@ -378,6 +386,22 @@ const ProviderForm = ({
       setProviderValidatedScopes(error);
       setFormErrors(
         `Provider scopes validation failed: ${JSON.stringify(error, null, 4)}`
+      );
+    } else {
+      setCustomError(
+        typeof error === "object" ? JSON.stringify(error) : error.toString()
+      );
+    }
+  }
+
+  function setCustomError(error: string) {
+    if (error.includes("SyntaxError")) {
+      setFormErrors(
+        "Bad response from API: Check the backend logs for more details"
+      );
+    } else if (error.includes("Failed to fetch")) {
+      setFormErrors(
+        "Failed to connect to API: Check provider settings and your internet connection"
       );
     } else {
       setFormErrors(error);

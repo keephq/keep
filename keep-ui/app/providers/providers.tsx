@@ -62,6 +62,7 @@ interface AlertDistritbuionData {
 
 export type TProviderLabels =
   | "alert"
+  | "incident"
   | "topology"
   | "messaging"
   | "ticketing"

@@ -33,10 +33,11 @@ from keep.api.models.db.preset import (
 )
 from keep.api.models.time_stamp import TimeStampFilter, _get_time_stamp_filter
 from keep.api.tasks.process_event_task import process_event
+from keep.api.tasks.process_incident_task import process_incident
 from keep.api.tasks.process_topology_task import process_topology
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
-from keep.providers.base.base_provider import BaseTopologyProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.searchengine.searchengine import SearchEngine
 
@@ -119,6 +120,34 @@ def pull_data_from_providers(
                 extra=extra,
             )
 
+            # TODO: this should be moved somewhere else (@tb: too much logic in this function, wil handle it another time.)
+            if isinstance(provider_class, BaseIncidentProvider):
+                try:
+                    incidents = provider_class.get_incidents()
+                    process_incident(
+                        {},
+                        tenant_id=tenant_id,
+                        provider_id=provider.id,
+                        provider_type=provider.type,
+                        incidents=incidents,
+                        trace_id=trace_id,
+                    )
+                except NotImplementedError:
+                    logger.debug(
+                        f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
+                        extra=extra,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
+                        extra={**extra, "error": str(e)},
+                    )
+            else:
+                logger.debug(
+                    f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
+                    extra=extra,
+                )
+
             try:
                 if isinstance(provider_class, BaseTopologyProvider):
                     logger.info("Pulling topology data", extra=extra)
@@ -133,7 +162,7 @@ def pull_data_from_providers(
                     logger.info("Finished processing topology data", extra=extra)
             except NotImplementedError:
                 logger.debug(
-                    f"Provider {provider.type} ({provider.id}) does not implement puliing topology data",
+                    f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
                     extra=extra,
                 )
             except Exception as e:
@@ -154,10 +183,10 @@ def pull_data_from_providers(
                     alert,
                     notify_client=False,
                 )
-        except Exception:
+        except Exception as e:
             logger.exception(
                 f"Unknown error pulling from provider {provider.type} ({provider.id})",
-                extra=extra,
+                extra={**extra, "exception": str(e)},
             )
     logger.info(
         "Pulling data from providers completed",

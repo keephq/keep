@@ -28,7 +28,7 @@ export const useAlerts = () => {
         selectedAlert && session
           ? `${apiUrl}/alerts/${
               selectedAlert.fingerprint
-            }/history/?provider_id=${selectedAlert.providerId}&provider_type=${
+            }/history?provider_id=${selectedAlert.providerId}&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,

@@ -11,6 +11,7 @@ import {
   BellAlertIcon,
   ChatBubbleBottomCenterIcon,
   CircleStackIcon,
+  ExclamationTriangleIcon,
   QueueListIcon,
   TicketIcon,
   MapIcon,
@@ -101,6 +102,8 @@ function getIconForTag(tag: TProviderLabels) {
       return QueueListIcon;
     case "topology":
       return MapIcon;
+    case "incident":
+      return ExclamationTriangleIcon;
     default:
       return ChatBubbleBottomCenterIcon;
   }

@@ -1,7 +1,7 @@
 import { Fragment, useState } from "react";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import { CorrelationSidebar } from "./CorrelationSidebar";
-import { PlaceholderSankey } from "./PlaceholderSankey";
+import { PlaceholderSankey } from "./ui/PlaceholderSankey";
 
 export const CorrelationPlaceholder = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
