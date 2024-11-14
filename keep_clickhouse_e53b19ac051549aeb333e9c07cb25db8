@@ -1,0 +1,1 @@
+{"authentication": {"host": "http://localhost", "port": 1234, "username": "keep", "password": "keep", "database": "keep-db"}, "name": "keepClickhouse1"}
