@@ -61,6 +61,10 @@ export const useWebsocket = () => {
         console.error("useWebsocket: Pusher connection error:", err);
       });
 
+      PUSHER.connection.bind('state_change', function(states:any) {
+        console.log("useWebsocket: Connection state changed from", states.previous, "to", states.current);
+      });
+
       PUSHER.subscribe(channelName)
         .bind("pusher:subscription_succeeded", () => {
           console.log(

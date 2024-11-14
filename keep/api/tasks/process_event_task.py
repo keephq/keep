@@ -411,11 +411,23 @@ def __handle_formatted_events(
             },
         )
 
+    
+    pusher_client = get_pusher_client() if notify_client else None
+
     # Tell the client to poll alerts
-    if notify_client and incidents:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "poll-alerts",
+                "{}",
+            )
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
             pass
+    
+    if incidents and pusher_client:
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -423,14 +435,13 @@ def __handle_formatted_events(
                 {},
             )
         except Exception:
-            logger.exception("Failed to push alert to the client")
+            logger.exception("Failed to tell the client to pull incidents")
 
     # Now we need to update the presets
     # send with pusher
-    if notify_client:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
-            return
+    if not pusher_client:
+        return
+    
     try:
         presets = get_all_presets(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
