@@ -272,6 +272,7 @@
     {
       "group": "Keep API",
       "pages": [
+        "api-ref/root",
         {
           "group": "providers",
           "pages": [
@@ -376,7 +377,11 @@
             "api-ref/incidents/get-future-incidents-for-an-incident",
             "api-ref/incidents/get-incident-workflows",
             "api-ref/incidents/get-incidents-meta",
-            "api-ref/incidents/merge-incidents"
+            "api-ref/incidents/merge-incidents",
+            "api-ref/incidents/commit-with-ai",
+            "api-ref/incidents/create-incident",
+            "api-ref/incidents/create-with-ai",
+            "api-ref/incidents/receive-event"
           ]
         },
         {
@@ -408,6 +413,7 @@
             "api-ref/workflows/create-workflow-from-body",
             "api-ref/workflows/get-random-workflow-templates",
             "api-ref/workflows/get-workflow-by-id",
+            "api-ref/workflows/get-workflow-by-id-1",
             "api-ref/workflows/update-workflow-by-id",
             "api-ref/workflows/delete-workflow-by-id",
             "api-ref/workflows/get-raw-workflow-by-id",
@@ -513,7 +519,8 @@
             "api-ref/dashboard/read-dashboards",
             "api-ref/dashboard/create-dashboard",
             "api-ref/dashboard/update-dashboard",
-            "api-ref/dashboard/delete-dashboard"
+            "api-ref/dashboard/delete-dashboard",
+            "api-ref/dashboard/get-metric-widgets"
           ]
         },
         {

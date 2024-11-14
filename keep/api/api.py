@@ -120,6 +120,9 @@ def get_app(
 
     @app.get("/")
     async def root():
+        """
+        App desctiption and version.
+        """
         return {"message": app.description, "version": KEEP_VERSION}
 
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
