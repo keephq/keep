@@ -23,6 +23,7 @@ interface TimeFrame {
   start: Date;
   end: Date;
   paused?: boolean;
+  isFromCalendar?: boolean;
 }
 
 interface TimePreset {
@@ -46,6 +47,53 @@ interface EnhancedDateRangePickerProps {
   hasForward?: boolean;
   hasZoomOut?: boolean;
   enableYearNavigation?: boolean;
+}
+
+export function isQuickPresetRange(timeFrame: TimeFrame): boolean {
+  // If it's explicitly marked as from calendar, return false
+  if (timeFrame.isFromCalendar) {
+    return false;
+  }
+
+  const duration = timeFrame.end.getTime() - timeFrame.start.getTime();
+  const endDiff = Date.now() - timeFrame.end.getTime();
+
+  // Quick preset durations
+  const quickPresetDurations = [
+    15 * ONE_MINUTE, // 15m
+    45 * ONE_MINUTE, // 45m
+    90 * ONE_MINUTE, // 90m
+    ONE_HOUR, // 1h
+    4 * ONE_HOUR, // 4h
+    ONE_DAY, // 1d
+    2 * ONE_DAY, // 2d
+    3 * ONE_DAY, // 3d
+    7 * ONE_DAY, // 7d
+    15 * ONE_DAY, // 15d
+    30 * ONE_DAY, // 30d
+  ];
+
+  // Check if this is a "live" or relative time range
+  const isLiveRange = Math.abs(endDiff) < 1000; // End time within 1 second of now
+
+  if (isLiveRange) {
+    return quickPresetDurations.some(
+      (presetDuration) => Math.abs(duration - presetDuration) < 1000 // Allow 1 second tolerance
+    );
+  }
+
+  // Check if this is a fixed time range (today or this week)
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const startOfWeek = new Date();
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const isToday = timeFrame.start.getTime() === startOfToday.getTime();
+  const isThisWeek = timeFrame.start.getTime() === startOfWeek.getTime();
+
+  return isToday || isThisWeek;
 }
 
 export default function EnhancedDateRangePicker({
@@ -238,6 +286,7 @@ export default function EnhancedDateRangePicker({
     setTimeFrame({
       ...preset.value,
       paused: true,
+      isFromCalendar: false,
     });
     setIsPaused(true);
     setIsOpen(false);
@@ -451,6 +500,7 @@ export default function EnhancedDateRangePicker({
                           start: date.from,
                           end: date.to,
                           paused: true,
+                          isFromCalendar: true,
                         });
                         setIsPaused(true);
                         setIsOpen(false);

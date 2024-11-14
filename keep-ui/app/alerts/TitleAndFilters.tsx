@@ -24,22 +24,28 @@ export const TitleAndFilters = ({
   onThemeChange,
 }: TableHeaderProps) => {
   const [timeFrame, setTimeFrame] = useState({
-    start: new Date(Date.now() - 24 * 60 * 60 * 1000), // 24 hours ago
-    end: new Date(),
+    start: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), // 365 days ago
+    end: new Date(), // now
     paused: true,
+    isFromCalendar: false,
   });
 
   const handleTimeFrameChange = (newTimeFrame: {
     start: Date;
     end: Date;
     paused?: boolean;
+    isFromCalendar?: boolean;
   }) => {
     // Create a new end date that includes the full day
     const adjustedTimeFrame = {
       ...newTimeFrame,
       end: new Date(newTimeFrame.end.getTime()),
+      paused: newTimeFrame.paused ?? true, // Provide default value if undefined
+      isFromCalendar: newTimeFrame.isFromCalendar ?? false,
     };
-    adjustedTimeFrame.end.setHours(23, 59, 59, 999);
+    if (adjustedTimeFrame.isFromCalendar) {
+      adjustedTimeFrame.end.setHours(23, 59, 59, 999);
+    }
 
     setTimeFrame(adjustedTimeFrame);
 
@@ -70,10 +76,10 @@ export const TitleAndFilters = ({
         <EnhancedDateRangePicker
           timeFrame={timeFrame}
           setTimeFrame={handleTimeFrameChange}
-          hasPlay
-          hasRewind
-          hasForward
-          hasZoomOut
+          hasPlay={false}
+          hasRewind={false}
+          hasForward={false}
+          hasZoomOut={false}
           enableYearNavigation
         />
         <div className="flex items-center">

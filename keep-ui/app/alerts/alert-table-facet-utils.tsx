@@ -11,19 +11,16 @@ import {
   BellSlashIcon,
   FireIcon,
 } from "@heroicons/react/24/outline";
+import { isQuickPresetRange } from "@/components/ui/DateRangePicker";
 
 export const getFilteredAlertsForFacet = (
   alerts: AlertDto[],
   facetFilters: FacetFilters,
   currentFacetKey: string,
-  timeRange?: { start: Date; end: Date }
+  timeRange?: { start: Date; end: Date; isFromCalendar: boolean }
 ) => {
   return alerts.filter((alert) => {
     // First apply time range filter if exists
-
-    if (alert.name && alert.name.includes("Linux")) {
-      debugger;
-    }
 
     // Apply time range filter if exists
     if (timeRange) {
@@ -31,8 +28,10 @@ export const getFilteredAlertsForFacet = (
       const rangeStart = new Date(timeRange.start);
       const rangeEnd = new Date(timeRange.end);
 
-      // Set the end date to the end of the day (23:59:59.999)
-      rangeEnd.setHours(23, 59, 59, 999);
+      // Only set end time to 23:59:59.999 if it's not a quick preset range
+      if (!isQuickPresetRange(timeRange)) {
+        rangeEnd.setHours(23, 59, 59, 999);
+      }
 
       if (lastReceived < rangeStart || lastReceived > rangeEnd) {
         return false;
