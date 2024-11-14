@@ -549,16 +549,29 @@ def setup_stress_alerts_no_elastic(db_session):
         db_session.add_all(alerts)
         db_session.commit()
 
+        existed_last_alerts = db_session.query(LastAlert).all()
+        existed_last_alerts_dict = {
+            last_alert.fingerprint: last_alert
+            for last_alert in existed_last_alerts
+        }
         last_alerts = []
         for alert in alerts:
-            last_alerts.append(
-                LastAlert(
-                    tenant_id=SINGLE_TENANT_UUID,
-                    fingerprint=alert.fingerprint,
-                    timestamp=alert.timestamp,
-                    alert_id=alert.id,
+            if alert.fingerprint in existed_last_alerts_dict:
+                last_alert = existed_last_alerts_dict[alert.fingerprint]
+                last_alert.alert_id = alert.id
+                last_alert.timestamp=alert.timestamp
+                last_alerts.append(
+                    last_alert
                 )
-            )
+            else:
+                last_alerts.append(
+                    LastAlert(
+                        tenant_id=SINGLE_TENANT_UUID,
+                        fingerprint=alert.fingerprint,
+                        timestamp=alert.timestamp,
+                        alert_id=alert.id,
+                    )
+                )
         db_session.add_all(last_alerts)
         db_session.commit()
 
