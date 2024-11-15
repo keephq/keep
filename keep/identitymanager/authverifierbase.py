@@ -81,6 +81,8 @@ class AuthVerifierBase:
         # the key is the f{tenant_id}:{reference_id} and the value is the last time it was updated
         self.update_key_interval = config("KEEP_UPDATE_KEY_INTERVAL", default=60)
         self.key_last_used_updates = {}
+        # check if read only instance
+        self.read_only = config("KEEP_READ_ONLY", default="false") == "true"
 
     def __call__(
         self,
@@ -105,6 +107,15 @@ class AuthVerifierBase:
             HTTPException: If authentication or authorization fails.
         """
         self.logger.debug("Starting authentication process")
+        if self.read_only:
+            # check if the scopes have scopes other than only read
+            if any([scope.split(":")[0] != "read" for scope in self.scopes]):
+                self.logger.error("Read only instance, but non-read scopes requested")
+                raise HTTPException(
+                    status_code=403,
+                    detail="Read only instance, but non-read scopes requested",
+                )
+
         authenticated_entity = self.authenticate(request, api_key, authorization, token)
         self.logger.debug(
             f"Authentication successful for entity: {authenticated_entity}"
