@@ -63,7 +63,7 @@ class StatuscakeProvider(BaseProvider):
 
     def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
         """
-        Helper method to build the url for Graylog api requests.
+        Helper method to build the url for StatucCake api requests.
         """
         host = "https://api.statuscake.com/v1/"
         url = urljoin(
