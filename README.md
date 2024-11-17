@@ -2,7 +2,7 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<h1 align="center"></h1>
 
 <div align="center">
     <a href='http://makeapullrequest.com'>
@@ -24,7 +24,7 @@
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
 </p>
 
-<h1 align="center"></h1>
+<h1 align="center">The open-source alert management and AIOps platform</h1>
 
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
