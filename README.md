@@ -36,7 +36,7 @@
 
 <div style="width: 100%; max-width: 800px; margin: 0 auto;">
     <img
-        src="/assets/sneak.png?raw=true"
+        src="/assets/sneaknew.png?raw=true"
         style="width: 100%; height: auto; object-fit: contain;"
         alt="Sneak preview screenshot"
     >
