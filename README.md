@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="/assets/keep.png?raw=true" width="86">
+    <img src="/assets/keep.svg" width="86">
 </div>
 
 <h1 align="center">The open-source alert management and AIOps platform</h1>
@@ -100,6 +100,8 @@ workflow:
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ## Supported Integrations
+
+> Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
 ### Observability Tools
 
@@ -567,7 +569,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
   </td>
   <td align="center" width="150">
       <a href="https://docs.keephq.dev/providers/documentation/service-now-provider" target="_blank">
-          <img width="40" src="keep-ui/public/icons/service-now-icon.png" alt="ServiceNow"/><br/>
+          <img width="40" src="keep-ui/public/icons/servicenow-icon.png" alt="ServiceNow"/><br/>
           ServiceNow
       </a>
   </td>
@@ -615,6 +617,12 @@ Workflow triggers can either be executed manually when an alert is activated or 
 
 <table>
 <tr>
+<td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/bash-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/bash-icon.png" alt="Bash"/><br/>
+            Bash
+        </a>
+    </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/openai-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/openai-icon.png" alt="OpenAI"/><br/>
@@ -647,8 +655,6 @@ Workflow triggers can either be executed manually when an alert is activated or 
     </td>
 </tr>
 </table>
-
-> Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
 ## Getting Started
 
