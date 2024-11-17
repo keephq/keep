@@ -553,7 +553,7 @@ Workflow triggers can either be executed manually when an alert is activated or 
     </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/microsoft-planner-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/microsoft-planner-icon.png" alt="Microsoft Planner"/><br/>
+            <img width="40" src="keep-ui/public/icons/microsoft-planner-icon.svg" alt="Microsoft Planner"/><br/>
             Microsoft Planner
         </a>
     </td>
