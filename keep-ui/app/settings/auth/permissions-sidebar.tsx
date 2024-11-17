@@ -1,48 +1,47 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {
   Text,
   Button,
   Badge,
-  TextInput,
   MultiSelect,
   MultiSelectItem,
   Callout,
+  Title,
+  Subtitle,
 } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
+import { User, Group, Role } from "app/settings/models";
 import {
   useForm,
   Controller,
   SubmitHandler,
   FieldValues,
 } from "react-hook-form";
-import { Permission, User, Group, Role } from "app/settings/models";
+import "./multiselect.css";
 
 interface PermissionSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  accessToken: string;
-  selectedPermission: Permission | null;
-  resourceTypes: string[];
-  resources: { [key: string]: any[] };
+  selectedResource: any;
   entityOptions: {
     user: User[];
     group: Group[];
     role: Role[];
   };
-  onSavePermission: (permissionData: any) => Promise<void>;
+  onSavePermissions: (
+    resourceId: string,
+    assignments: string[]
+  ) => Promise<void>;
   isDisabled?: boolean;
 }
 
 const PermissionSidebar = ({
   isOpen,
   toggle,
-  accessToken,
-  selectedPermission,
-  resourceTypes,
-  resources,
+  selectedResource,
   entityOptions,
-  onSavePermission,
+  onSavePermissions,
   isDisabled = false,
 }: PermissionSidebarProps) => {
   const {
@@ -50,30 +49,30 @@ const PermissionSidebar = ({
     handleSubmit,
     setValue,
     reset,
-    watch,
     formState: { errors, isDirty },
     clearErrors,
     setError,
   } = useForm({
     defaultValues: {
-      resourceType: "",
-      resourceId: "",
-      entity: "",
+      assignments: [],
     },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const selectedResourceType = watch("resourceType");
+  useEffect(() => {
+    if (isOpen && selectedResource) {
+      setValue("assignments", selectedResource.assignments || []);
+      clearErrors();
+    }
+  }, [selectedResource, setValue, isOpen, clearErrors]);
 
-  // Combine all entity options into a single array with type labels
   const getAllEntityOptions = () => {
     const options = [];
 
     for (const user of entityOptions.user) {
       options.push({
-        id: `user-${user.name || user.email}`,
-        label: `${user.name || user.email} (User)`,
-        value: `user_${user.name || user.email}`,
+        id: `user-${user.email}`,
+        label: `${user.email || user.name} (User)`,
+        value: `user_${user.email}`, // Format: type_id
       });
     }
 
@@ -81,60 +80,34 @@ const PermissionSidebar = ({
       options.push({
         id: `group-${group.id}`,
         label: `${group.name} (Group)`,
-        value: `group_${group.id}`,
+        value: `group_${group.name}`, // Format: type_id
       });
     }
-
+    /* Support roles in the future
     for (const role of entityOptions.role) {
       options.push({
         id: `role-${role.id}`,
         label: `${role.name} (Role)`,
-        value: `role_${role.id}`,
+        value: `role_${role.id}`, // Format: type_id
       });
     }
+    */
 
     return options;
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      if (selectedPermission) {
-        setValue("resourceType", selectedPermission.type);
-        setValue("resourceId", selectedPermission.resource_id);
-        setValue("entity", selectedPermission.entity_id);
-      } else {
-        reset({
-          resourceType: "",
-          resourceId: "",
-          entity: "",
-        });
-      }
-      clearErrors();
-    }
-  }, [selectedPermission, setValue, isOpen, reset, clearErrors]);
-
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
-    setIsSubmitting(true);
-    clearErrors();
-
     try {
-      await onSavePermission({
-        type: data.resourceType,
-        resource_id: data.resourceId,
-        entity_id: data.entity,
-      });
+      await onSavePermissions(selectedResource.id, data.assignments);
       handleClose();
     } catch (error) {
       setError("root.serverError", {
-        message: "Failed to save permission",
+        message: "Failed to save permissions",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setIsSubmitting(false);
     clearErrors();
     reset();
     toggle();
@@ -166,7 +139,7 @@ const PermissionSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-3/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <Dialog.Title className="text-3xl font-bold" as={Text}>
-                {selectedPermission ? "Edit Permission" : "Add Permission"}
+                Manage Permissions
                 <Badge className="ml-4" color="orange">
                   Beta
                 </Badge>
@@ -175,92 +148,36 @@ const PermissionSidebar = ({
                 <IoMdClose className="h-6 w-6 text-gray-500" />
               </Button>
             </div>
+
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="mt-4 flex flex-col h-full"
             >
               <div className="flex-grow">
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Resource Type
-                  </label>
-                  <Controller
-                    name="resourceType"
-                    control={control}
-                    rules={{ required: "Resource type is required" }}
-                    render={({ field }) => (
-                      <MultiSelect
-                        value={field.value ? [field.value] : []}
-                        onValueChange={(value) => {
-                          if (value.length > 0) {
-                            field.onChange(value[0]);
-                            // Reset resourceId when type changes
-                            setValue("resourceId", "");
-                          }
-                        }}
-                        className="custom-multiselect"
-                        disabled={isDisabled || !!selectedPermission}
-                      >
-                        {resourceTypes.map((type) => (
-                          <MultiSelectItem key={`type-${type}`} value={type}>
-                            {type}
-                          </MultiSelectItem>
-                        ))}
-                      </MultiSelect>
-                    )}
-                  />
+                <div className="mt-8">
+                  <Title className="mb-2">Resource</Title>
+                  <Text className="text-gray-900">
+                    {selectedResource?.name}
+                  </Text>
                 </div>
 
-                {selectedResourceType && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Resource
-                    </label>
-                    <Controller
-                      name="resourceId"
-                      control={control}
-                      rules={{ required: "Resource is required" }}
-                      render={({ field }) => (
-                        <MultiSelect
-                          value={field.value ? [field.value] : []}
-                          onValueChange={(value) => {
-                            if (value.length > 0) {
-                              field.onChange(value[0]);
-                            }
-                          }}
-                          className="custom-multiselect"
-                          disabled={isDisabled || !!selectedPermission}
-                        >
-                          {resources[selectedResourceType]?.map((resource) => (
-                            <MultiSelectItem
-                              key={`resource-${resource.id}`}
-                              value={resource.id}
-                            >
-                              {resource.name}
-                            </MultiSelectItem>
-                          ))}
-                        </MultiSelect>
-                      )}
-                    />
-                  </div>
-                )}
+                <div className="mt-6">
+                  <Title className="mb-2">Type</Title>
+                  <Badge color="orange" size="lg">
+                    {selectedResource?.type}
+                  </Badge>
+                </div>
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Assign To
-                  </label>
+                <div className="mt-6">
+                  <Title className="mb-2">Assign To</Title>
                   <Controller
-                    name="entity"
+                    name="assignments"
                     control={control}
-                    rules={{ required: "Assignment is required" }}
                     render={({ field }) => (
                       <MultiSelect
-                        value={field.value ? [field.value] : []}
-                        onValueChange={(value) => {
-                          if (value.length > 0) {
-                            field.onChange(value[0]);
-                          }
-                        }}
+                        {...field}
+                        onValueChange={(value) => field.onChange(value)}
+                        value={field.value as string[]}
                         className="custom-multiselect"
                         disabled={isDisabled}
                       >
@@ -278,14 +195,14 @@ const PermissionSidebar = ({
               {errors.root?.serverError && (
                 <Callout
                   className="mt-4"
-                  title="Error while saving permission"
+                  title="Error while saving permissions"
                   color="rose"
                 >
                   {errors.root.serverError.message}
                 </Callout>
               )}
 
-              <div className="mt-6 flex justify-end gap-2">
+              <div className="mt-6 flex justify-end gap-3">
                 <Button
                   color="orange"
                   variant="secondary"
@@ -295,12 +212,8 @@ const PermissionSidebar = ({
                   Cancel
                 </Button>
                 {!isDisabled && (
-                  <Button
-                    color="orange"
-                    type="submit"
-                    disabled={isSubmitting || !isDirty}
-                  >
-                    {isSubmitting ? "Saving..." : "Save Permission"}
+                  <Button color="orange" type="submit" disabled={!isDirty}>
+                    Save Changes
                   </Button>
                 )}
               </div>

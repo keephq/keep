@@ -30,6 +30,7 @@ import { getColumnsIds } from "./alert-table-utils";
 import classnames from "classnames";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import clsx from "clsx";
+import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
@@ -66,6 +67,9 @@ const DraggableHeaderCell = ({
           ? "grabbing"
           : "grab",
   };
+
+  // TODO: fix multiple pinned columns
+  // const { style, className } = getCommonPinningStylesAndClassNames(column);
 
   return (
     <TableHeaderCell

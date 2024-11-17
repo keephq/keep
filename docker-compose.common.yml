@@ -7,7 +7,8 @@ services:
       - NEXTAUTH_URL=http://localhost:3000
       - NEXT_PUBLIC_API_URL=http://localhost:8080
       - POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
-      - POSTHOG_HOST=https://app.posthog.com
+      - POSTHOG_HOST=https://ingest.keephq.dev
+      - NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
       - PUSHER_HOST=localhost
       - PUSHER_PORT=6001
       - PUSHER_APP_KEY=keepappkey

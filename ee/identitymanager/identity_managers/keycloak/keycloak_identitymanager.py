@@ -27,7 +27,7 @@ from keycloak.openid_connection import KeycloakOpenIDConnection
 
 
 class KeycloakIdentityManager(BaseIdentityManager):
-
+    """
     RESOURCES = {
         "preset": {
             "table": "preset",
@@ -38,6 +38,9 @@ class KeycloakIdentityManager(BaseIdentityManager):
             "uid": "id",
         },
     }
+    """
+
+    RESOURCES = {}
 
     def __init__(self, tenant_id, context_manager: ContextManager, **kwargs):
         super().__init__(tenant_id, context_manager, **kwargs)
@@ -409,6 +412,8 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 "email": user_email,
                 "enabled": True,
                 "firstName": user_name,
+                "lastName": user_name,
+                "emailVerified": True,
             }
             if password:
                 user_data["credentials"] = [
@@ -628,7 +633,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
         # TODO: this is not efficient, we should cache this
         users = self.keycloak_admin.get_users({})
         user = next(
-            (user for user in users if user["email"] == perm.id),
+            (user for user in users if user.get("email") == perm.id),
             None,
         )
         if not user:
@@ -663,6 +668,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
         return policy_id
 
     def create_group_policy(self, perm, permission: ResourcePermission) -> None:
+        group_name = perm.id
+        group = self.keycloak_admin.get_groups(query={"search": perm.id})
+        if not group or len(group) > 1:
+            self.logger.error("Problem with group - should be 1 but got %s", len(group))
+            raise HTTPException(status_code=400, detail="Problem with group")
+        group = group[0]
+        group_id = group["id"]
         resp = self.keycloak_admin.connection.raw_post(
             f"{self.admin_url}/authz/resource-server/policy/group",
             data=json.dumps(
@@ -670,12 +682,13 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     "name": f"Allow group {perm.id} to access resource type {permission.resource_type} with name {permission.resource_name}",
                     "description": json.dumps(
                         {
-                            "group_id": perm.id,
+                            "group_name": group_name,
+                            "group_id": group_id,
                             "resource_id": permission.resource_id,
                         }
                     ),
                     "logic": "POSITIVE",
-                    "groups": [{"id": perm.id, "extendChildren": False}],
+                    "groups": [{"id": group_id, "extendChildren": False}],
                     "groupsClaim": "",
                 }
             ),
@@ -838,12 +851,14 @@ class KeycloakIdentityManager(BaseIdentityManager):
                     if resource_id not in resources_to_policies:
                         resources_to_policies[resource_id] = []
                     if policy.get("type") == "user":
+                        user_email = details.get("user_email")
                         resources_to_policies[resource_id].append(
-                            {"id": details.get("user_email"), "type": "user"}
+                            {"id": user_email, "type": "user"}
                         )
                     else:
+                        group_name = details.get("group_name")
                         resources_to_policies[resource_id].append(
-                            {"id": details["group_id"], "type": "group"}
+                            {"id": group_name, "type": "group"}
                         )
             permissions_dto = []
             for resource in resources:
@@ -858,6 +873,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                         permissions=[
                             PermissionEntity(
                                 id=policy["id"],
+                                name=policy.get("name", ""),
                                 type=policy["type"],
                             )
                             for policy in resources_to_policies.get(resource_id, [])
@@ -866,6 +882,9 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 )
             return permissions_dto
         except KeycloakGetError as e:
+            self.logger.error("Failed to fetch permissions from Keycloak: %s", str(e))
+            raise HTTPException(status_code=500, detail="Failed to fetch permissions")
+        except Exception as e:
             self.logger.error("Failed to fetch permissions from Keycloak: %s", str(e))
             raise HTTPException(status_code=500, detail="Failed to fetch permissions")
 
@@ -916,6 +935,10 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 for result in results
                 if result["status"] == "PERMIT"
             ]
+            # there is some bug/limitation in keycloak where if the resource_type does not exist, it returns
+            # all other objects, so lets handle it by checking if the word "with" is one of the results name
+            if any("with" in result for result in allowed_resources_ids):
+                return []
             return allowed_resources_ids
         except Exception as e:
             self.logger.error(

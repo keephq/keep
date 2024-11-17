@@ -147,6 +147,15 @@ Posthog configuration controls Keep's integration with the Posthog analytics pla
 | **POSTHOG_API_KEY** | API key for PostHog analytics | No | "phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ" | Valid PostHog API key |
 | **POSTHOG_DISABLED** | Disables PostHog integration | No | "false" | "true" or "false" |
 
+### Sentry
+<Info>
+Sentry configuration controls Keep's integration with Sentry for error monitoring and reporting. These settings are important for maintaining the stability and reliability of your Keep instance.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **SENTRY_DISABLED** | Disables Sentry integration | No | "false" | "true" or "false" |
+
 ### Ngrok
 <Info>
 Ngrok configuration enables secure tunneling to your Keep instance. These settings are particularly useful for development or when you need to expose your local Keep instance to the internet securely.

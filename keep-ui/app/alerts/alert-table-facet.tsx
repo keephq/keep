@@ -1,265 +1,38 @@
-import React, { useState } from "react";
-import { Icon, Title, Text } from "@tremor/react";
-import Image from "next/image";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  MagnifyingGlassIcon,
-  CircleStackIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  BellIcon,
-  ExclamationCircleIcon,
-  UserCircleIcon,
-  BellSlashIcon,
-  FireIcon,
-} from "@heroicons/react/24/outline";
-import { AlertDto, Severity } from "./models";
-import AlertSeverity from "./alert-severity";
+import React from "react";
+import { Title } from "@tremor/react";
+import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
+import { FacetProps } from "./alert-table-facet-types";
+import { FacetValue } from "./alert-table-facet-value";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
 
-interface FacetValue {
-  label: string;
-  count: number;
-  isSelected: boolean;
-}
-
-export interface FacetFilters {
-  [key: string]: string[];
-}
-
-const getFilteredAlertsForFacet = (
-  alerts: AlertDto[],
-  facetFilters: FacetFilters,
-  excludeFacet: string
-): AlertDto[] => {
-  return alerts.filter((alert) => {
-    return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
-      // Skip the current facet when filtering
-      if (facetKey === excludeFacet || includedValues.length === 0) {
-        return true;
-      }
-
-      const value = alert[facetKey as keyof AlertDto];
-
-      if (facetKey === "source") {
-        const sources = value as string[];
-        if (includedValues.includes("n/a")) {
-          return !sources || sources.length === 0;
-        }
-        return (
-          Array.isArray(sources) &&
-          sources.some((source) => includedValues.includes(source))
-        );
-      }
-
-      if (includedValues.includes("n/a")) {
-        return value === null || value === undefined || value === "";
-      }
-
-      if (value === null || value === undefined || value === "") {
-        return false;
-      }
-
-      return includedValues.includes(String(value));
-    });
-  });
-};
-
-interface FacetValueProps {
-  label: string;
-  count: number;
-  isSelected: boolean;
-  onSelect: (value: string, exclusive: boolean, isAllOnly: boolean) => void;
-  facetKey: string;
-  showIcon?: boolean;
-  isOnlySelected?: boolean;
-  facetFilters: FacetFilters;
-}
-
-const getStatusIcon = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "firing":
-      return ExclamationCircleIcon;
-    case "resolved":
-      return CheckCircleIcon;
-    case "acknowledged":
-      return CircleStackIcon;
-    default:
-      return CircleStackIcon;
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "firing":
-      return "red";
-    case "resolved":
-      return "green";
-    case "acknowledged":
-      return "blue";
-    default:
-      return "gray";
-  }
-};
-
-const getSeverityOrder = (severity: string): number => {
-  switch (severity) {
-    case "low":
-      return 1;
-    case "info":
-      return 2;
-    case "warning":
-      return 3;
-    case "error":
-    case "high":
-      return 4;
-    case "critical":
-      return 5;
-    default:
-      return 6; // Unknown severities go last
-  }
-};
-
-const FacetValue: React.FC<FacetValueProps> = ({
-  label,
-  count,
-  isSelected,
-  onSelect,
-  facetKey,
-  showIcon = false,
-  facetFilters,
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handleCheckboxClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelect(label, false, false);
-  };
-
-  const isExclusivelySelected = () => {
-    const currentFilter = facetFilters[facetKey] || [];
-    return currentFilter.length === 1 && currentFilter[0] === label;
-  };
-
-  const handleActionClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isExclusivelySelected()) {
-      onSelect("", false, true);
-    } else {
-      onSelect(label, true, true);
-    }
-  };
-
-  const currentFilter = facetFilters[facetKey] || [];
-  const isValueSelected =
-    !currentFilter?.length || currentFilter.includes(label);
-
-  return (
-    <div
-      className="flex items-center px-2 py-1 hover:bg-gray-100 rounded-sm cursor-pointer group"
-      onClick={handleCheckboxClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="flex items-center min-w-[24px]">
-        <input
-          type="checkbox"
-          checked={isValueSelected}
-          onClick={handleCheckboxClick}
-          onChange={() => {}}
-          style={{ accentColor: "#eb6221" }}
-          className="h-4 w-4 rounded border-gray-300 cursor-pointer"
-        />
-      </div>
-
-      {showIcon && (
-        <div className="flex items-center min-w-[24px] ml-2">
-          {facetKey === "source" && (
-            <Image
-              className="inline-block"
-              alt={label}
-              height={16}
-              width={16}
-              title={label}
-              src={
-                label.includes("@")
-                  ? "/icons/mailgun-icon.png"
-                  : `/icons/${label}-icon.png`
-              }
-            />
-          )}
-          {facetKey === "severity" && (
-            <AlertSeverity severity={label as Severity} />
-          )}
-          {facetKey === "assignee" && (
-            <Icon
-              icon={UserCircleIcon}
-              size="sm"
-              className="text-gray-600 !p-0"
-            />
-          )}
-          {facetKey === "status" && (
-            <Icon
-              icon={getStatusIcon(label)}
-              size="sm"
-              color={getStatusColor(label)}
-              className="!p-0"
-            />
-          )}
-          {facetKey === "dismissed" && (
-            <Icon
-              icon={label === "true" ? BellSlashIcon : BellIcon}
-              size="sm"
-              className="text-gray-600 !p-0"
-            />
-          )}
-          {facetKey === "incident" && (
-            <Icon icon={FireIcon} size="sm" className="text-gray-600 !p-0" />
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0 mx-2" title={label}>
-        <Text className="capitalize truncate">{label}</Text>
-      </div>
-
-      <div className="flex-shrink-0 w-8 text-right">
-        {isHovered ? (
-          <button
-            onClick={handleActionClick}
-            className="text-xs text-orange-600 hover:text-orange-800 w-full"
-          >
-            {isExclusivelySelected() ? "All" : "Only"}
-          </button>
-        ) : (
-          count > 0 && <Text className="text-xs text-gray-500">{count}</Text>
-        )}
-      </div>
-    </div>
-  );
-};
-
-interface FacetProps {
-  name: string;
-  values: FacetValue[];
-  onSelect: (value: string, exclusive: boolean, isAllOnly: boolean) => void;
-  facetKey: string;
-  facetFilters: FacetFilters;
-}
-
-const Facet: React.FC<FacetProps> = ({
+export const Facet: React.FC<FacetProps> = ({
   name,
   values,
   onSelect,
   facetKey,
   facetFilters,
+  showIcon = true,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [filter, setFilter] = useState("");
+  // Get preset name from URL
+  const presetName = window.location.pathname.split("/").pop() || "default";
+
+  // Store open/close state in localStorage with a unique key per preset and facet
+  const [isOpen, setIsOpen] = useLocalStorage<boolean>(
+    `facet-${presetName}-${facetKey}-open`,
+    true
+  );
+
+  // Store filter value in localStorage per preset and facet
+  const [filter, setFilter] = useLocalStorage<string>(
+    `facet-${presetName}-${facetKey}-filter`,
+    ""
+  );
 
   const filteredValues = values.filter((v) =>
     v.label.toLowerCase().includes(filter.toLowerCase())
   );
+
+  const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
 
   return (
     <div className="pb-2 border-b border-gray-200">
@@ -268,11 +41,7 @@ const Facet: React.FC<FacetProps> = ({
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center space-x-2">
-          <Icon
-            icon={isOpen ? ChevronDownIcon : ChevronRightIcon}
-            size="sm"
-            className="text-gray-600 !p-0"
-          />
+          <Icon className="size-5 -m-0.5 text-gray-600" />
           <Title className="text-sm">{name}</Title>
         </div>
       </div>
@@ -300,7 +69,7 @@ const Facet: React.FC<FacetProps> = ({
                   isSelected={facetFilters[facetKey]?.includes(value.label)}
                   onSelect={onSelect}
                   facetKey={facetKey}
-                  showIcon={true}
+                  showIcon={showIcon}
                   facetFilters={facetFilters}
                 />
               ))
@@ -315,153 +84,3 @@ const Facet: React.FC<FacetProps> = ({
     </div>
   );
 };
-
-interface AlertFacetsProps {
-  alerts: AlertDto[];
-  facetFilters: FacetFilters;
-  onSelect: (
-    facetKey: string,
-    value: string,
-    exclusive: boolean,
-    isAllOnly: boolean
-  ) => void;
-  className?: string;
-}
-const AlertFacets: React.FC<AlertFacetsProps> = ({
-  alerts,
-  facetFilters,
-  onSelect,
-  className,
-}) => {
-  const getFacetValues = (key: keyof AlertDto): FacetValue[] => {
-    // Get alerts filtered by all other facets except the current one
-    const filteredAlerts = getFilteredAlertsForFacet(
-      alerts,
-      facetFilters,
-      key as string
-    );
-
-    const valueMap = new Map<string, number>();
-    let nullCount = 0;
-
-    filteredAlerts.forEach((alert) => {
-      let value = alert[key];
-
-      if (Array.isArray(value)) {
-        if (value.length === 0) {
-          nullCount++;
-        } else {
-          value.forEach((v) => {
-            valueMap.set(v, (valueMap.get(v) || 0) + 1);
-          });
-        }
-      } else if (value !== undefined && value !== null) {
-        const strValue = String(value);
-        valueMap.set(strValue, (valueMap.get(strValue) || 0) + 1);
-      } else {
-        nullCount++;
-      }
-    });
-
-    let values = Array.from(valueMap.entries()).map(([label, count]) => ({
-      label,
-      count,
-      isSelected:
-        facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
-    }));
-
-    if (shouldShowNAValue(key) && nullCount > 0) {
-      values.push({
-        label: "n/a",
-        count: nullCount,
-        isSelected:
-          facetFilters[key]?.includes("n/a") || !facetFilters[key]?.length,
-      });
-    }
-
-    if (key === "severity") {
-      values.sort((a, b) => {
-        if (a.label === "n/a") return 1;
-        if (b.label === "n/a") return -1;
-        const orderDiff = getSeverityOrder(a.label) - getSeverityOrder(b.label);
-        if (orderDiff !== 0) return orderDiff;
-        return b.count - a.count;
-      });
-    } else {
-      values.sort((a, b) => {
-        if (a.label === "n/a") return 1;
-        if (b.label === "n/a") return -1;
-        return b.count - a.count;
-      });
-    }
-
-    return values;
-  };
-
-  const shouldShowNAValue = (key: keyof AlertDto): boolean => {
-    return ["assignee", "incident"].includes(key as string);
-  };
-
-  return (
-    <div className={className}>
-      <div className="space-y-2">
-        <Facet
-          facetKey="severity"
-          name="Severity"
-          values={getFacetValues("severity")}
-          onSelect={(value, exclusive, isAllOnly) =>
-            onSelect("severity", value, exclusive, isAllOnly)
-          }
-          facetFilters={facetFilters}
-        />
-        <Facet
-          facetKey="status"
-          name="Status"
-          values={getFacetValues("status")}
-          onSelect={(value, exclusive, isAllOnly) =>
-            onSelect("status", value, exclusive, isAllOnly)
-          }
-          facetFilters={facetFilters}
-        />
-        <Facet
-          facetKey="source"
-          name="Source"
-          values={getFacetValues("source")}
-          onSelect={(value, exclusive, isAllOnly) =>
-            onSelect("source", value, exclusive, isAllOnly)
-          }
-          facetFilters={facetFilters}
-        />
-        <Facet
-          facetKey="assignee"
-          name="Assignee"
-          values={getFacetValues("assignee")}
-          onSelect={(value, exclusive, isAllOnly) =>
-            onSelect("assignee", value, exclusive, isAllOnly)
-          }
-          facetFilters={facetFilters}
-        />
-        <Facet
-          facetKey="dismissed"
-          name="Dismissed"
-          values={getFacetValues("dismissed")}
-          onSelect={(value, exclusive, isAllOnly) =>
-            onSelect("dismissed", value, exclusive, isAllOnly)
-          }
-          facetFilters={facetFilters}
-        />
-        <Facet
-          facetKey="incident"
-          name="Incident Related"
-          values={getFacetValues("incident")}
-          onSelect={(value, exclusive, isAllOnly) =>
-            onSelect("incident", value, exclusive, isAllOnly)
-          }
-          facetFilters={facetFilters}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default AlertFacets;

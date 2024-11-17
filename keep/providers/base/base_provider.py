@@ -24,12 +24,7 @@ from keep.api.core.db import (
     get_enrichments,
     is_linked_provider,
 )
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentDto,
-)
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
@@ -324,7 +319,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         tenant_id: str | None,
         provider_type: str | None,
         provider_id: str | None,
-    ) -> AlertDto | list[AlertDto]:
+    ) -> AlertDto | list[AlertDto] | None:
         logger = logging.getLogger(__name__)
 
         provider_instance: BaseProvider | None = None
@@ -355,6 +350,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 )
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event, provider_instance)
+        if formatted_alert is None:
+            logger.debug(
+                "Provider returned None, which means it decided not to format the alert"
+            )
+            return None
         logger.debug("Alert formatted")
         # after the provider calculated the default fingerprint
         #   check if there is a custom deduplication rule and apply

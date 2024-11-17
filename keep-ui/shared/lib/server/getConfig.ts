@@ -1,19 +1,13 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { getApiURL } from "@/utils/apiUrl";
 import {
   AuthenticationType,
   MULTI_TENANT,
-  SINGLE_TENANT,
   NO_AUTH,
-} from "utils/authenticationType";
-import { getApiURL } from "utils/apiUrl";
-import { get } from "http";
+  SINGLE_TENANT,
+} from "@/utils/authenticationType";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export function getConfig() {
   let authType = process.env.AUTH_TYPE;
-
   // Backward compatibility
   if (authType === MULTI_TENANT) {
     authType = AuthenticationType.AUTH0;
@@ -32,7 +26,7 @@ export default async function handler(
   } else {
     API_URL_CLIENT = process.env.API_URL_CLIENT;
   }
-  res.status(200).json({
+  return {
     AUTH_TYPE: authType,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
     // could be relative (for ingress) or absolute (e.g. Pusher)
@@ -52,5 +46,7 @@ export default async function handler(
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
-  });
+    SENTRY_DISABLED: process.env.SENTRY_DISABLED,
+    READ_ONLY: process.env.KEEP_READ_ONLY === "true",
+  };
 }
