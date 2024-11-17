@@ -683,7 +683,7 @@ workflow:
 
 - **Developer First** - Modern REST APIs, native SDKs, and comprehensive documentation for seamless integration
 - **[Enterprise Security](https://docs.keephq.dev/deployment/authentication/overview)** - Full authentication support (SSO, SAML, OIDC, LDAP) with granular access control (RBAC, ABAC) and team management
-- **Flexible Deploymen**t\*\* - Deploy on-premises or in air-gapped environments with cloud-agnostic architecture
+- **Flexible Deployment** - Deploy on-premises or in air-gapped environments with cloud-agnostic architecture
 - **[Production Scale](https://docs.keephq.dev/deployment/stress-testing)** - High availability, performance-tested infrastructure supporting horizontal scaling for enterprise workloads
 
 ## Getting Started
