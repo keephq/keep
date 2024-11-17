@@ -8,7 +8,6 @@ import {
 
 export function getConfig() {
   let authType = process.env.AUTH_TYPE;
-
   // Backward compatibility
   if (authType === MULTI_TENANT) {
     authType = AuthenticationType.AUTH0;
@@ -48,5 +47,6 @@ export function getConfig() {
     POSTHOG_DISABLED: process.env.POSTHOG_DISABLED,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
+    READ_ONLY: process.env.KEEP_READ_ONLY === "true",
   };
 }
