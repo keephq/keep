@@ -83,6 +83,11 @@ class AuthVerifierBase:
         self.key_last_used_updates = {}
         # check if read only instance
         self.read_only = config("KEEP_READ_ONLY", default="false") == "true"
+        self.read_only_bypass_key = config("KEEP_READ_ONLY_BYPASS_KEY", default="")
+        if not self.read_only and self.read_only_bypass_key:
+            self.logger.warning(
+                "Read only bypass key set, but read only mode is not enabled"
+            )
 
     def __call__(
         self,
@@ -107,7 +112,7 @@ class AuthVerifierBase:
             HTTPException: If authentication or authorization fails.
         """
         self.logger.debug("Starting authentication process")
-        if self.read_only:
+        if self.read_only and api_key != self.read_only_bypass_key:
             # check if the scopes have scopes other than only read
             if any([scope.split(":")[0] != "read" for scope in self.scopes]):
                 self.logger.error("Read only instance, but non-read scopes requested")
