@@ -2,13 +2,8 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<div align="center">
-    <a href="https://slack.keephq.dev">
-      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
-    <a href="https://codecov.io/gh/keephq/keep" >
-        <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
-    </a>
-</div>
+<h1 align="center">The open-source alert management and AIOps platform</h1>
+
 <p align="center">
     <a href="#why-keep">Why Keep?</a>
     ·
@@ -27,7 +22,13 @@
     <a href="https://slack.keephq.dev">Slack Community</a>
 </p>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
+<div align="center">
+    <a href="https://slack.keephq.dev">
+      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
+    <a href="https://codecov.io/gh/keephq/keep" >
+        <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
+    </a>
+</div>
 
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
