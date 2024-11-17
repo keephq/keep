@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Icon, Title } from "@tremor/react";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import React from "react";
+import { Title } from "@tremor/react";
+import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { FacetProps } from "./alert-table-facet-types";
 import { FacetValue } from "./alert-table-facet-value";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -32,6 +32,8 @@ export const Facet: React.FC<FacetProps> = ({
     v.label.toLowerCase().includes(filter.toLowerCase())
   );
 
+  const Icon = isOpen ? ChevronDownIcon : ChevronRightIcon;
+
   return (
     <div className="pb-2 border-b border-gray-200">
       <div
@@ -39,11 +41,7 @@ export const Facet: React.FC<FacetProps> = ({
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center space-x-2">
-          <Icon
-            icon={isOpen ? ChevronDownIcon : ChevronRightIcon}
-            size="sm"
-            className="text-gray-600 !p-0"
-          />
+          <Icon className="size-5 -m-0.5 text-gray-600" />
           <Title className="text-sm">{name}</Title>
         </div>
       </div>
