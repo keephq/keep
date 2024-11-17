@@ -171,22 +171,6 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
     "incident",
   ];
 
-  // TODO: move to the alert-table.tsx
-  useEffect(
-    function setInitialFacetFilters() {
-      setFacetFilters((facetFilters) => {
-        return Object.keys(facetFilters).reduce((acc, key) => {
-          acc[key] =
-            facetFilters[key]?.length === 0
-              ? getFacetValues(key as keyof AlertDto).map((v) => v.label)
-              : facetFilters[key];
-          return acc;
-        }, {} as FacetFilters);
-      });
-    },
-    [getFacetValues, setFacetFilters]
-  );
-
   const handleAddFacet = (column: string) => {
     setDynamicFacets([
       ...dynamicFacets,
