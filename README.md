@@ -43,7 +43,7 @@
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts and incidents
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
 - 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
-- ⚡ [**Automation**](/#how-does-it-work) - GitHub Actions for your monitoring tools
+- ⚡ **Automation** - GitHub Actions for your monitoring tools
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization
 
 </br>
@@ -681,10 +681,10 @@ workflow:
 
 ## Enterprise Ready
 
-- Developer First - Modern REST APIs, native SDKs, and comprehensive documentation for seamless integration
-- [Enterprise Security](https://docs.keephq.dev/deployment/authentication/overview) - Full authentication support (SSO, SAML, OIDC, LDAP) with granular access control (RBAC, ABAC) and team management
-- Flexible Deployment - Deploy on-premises or in air-gapped environments with cloud-agnostic architecture
-- [Production Scale](https://docs.keephq.dev/deployment/stress-testing) - High availability, performance-tested infrastructure supporting horizontal scaling for enterprise workloads
+- **Developer First** - Modern REST APIs, native SDKs, and comprehensive documentation for seamless integration
+- **[Enterprise Security](https://docs.keephq.dev/deployment/authentication/overview)** - Full authentication support (SSO, SAML, OIDC, LDAP) with granular access control (RBAC, ABAC) and team management
+- **Flexible Deploymen**t\*\* - Deploy on-premises or in air-gapped environments with cloud-agnostic architecture
+- **[Production Scale](https://docs.keephq.dev/deployment/stress-testing)** - High availability, performance-tested infrastructure supporting horizontal scaling for enterprise workloads
 
 ## Getting Started
 
