@@ -37,7 +37,7 @@
 </br>
 
 <div align="center">
-    <img src="/assets/keep_sneakpeek2.png?raw=true">
+    <img src="/assets/sneak.png?raw=true">
 </div>
 
 ## How does it work?
