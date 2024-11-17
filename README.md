@@ -27,7 +27,7 @@
 </p>
 
 <div align="center">
-    <img src="/assets/sneak.png?raw=true" width="800" height="400">
+    <img src="/assets/sneak.png?raw=true" width="800" height="600">
 </div>
 
 <h1 align="center"></h1>
@@ -39,72 +39,6 @@
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
 
 </br>
-
-## How does it work?
-
-1. **Connect your tools**: Connect everything from monitoring platforms to databases and ticketing systems.
-<div align="center">
-
-| Connect providers                           | Receive alerts                        |
-| ------------------------------------------- | ------------------------------------- |
-| <img src="/assets/connect_providers.gif" /> | <img src="/assets/view_alerts.gif" /> |
-
-</div>
-
-2. **Set up Workflows**: Initiate automated workflows in response to alerts or based on custom intervals.
-
-<div align="center">
-
-| Create and upload workflows               |
-| ----------------------------------------- |
-| <img src="/assets/upload_workflow.gif" /> |
-
-</div>
-
-3. **Operational efficiency**: Automate your alert handling to focus your team's efforts on what really matters.
-
-## Why Keep?
-
-1. **Centralized dashboard**: Manage all your alerts across different platforms in a single interface.
-2. **Noise reduction**: Deduplicate and correlate alerts to reduce alert fatigue.
-3. **Automation**: Trigger workflows for alert enrichment and response.
-4. **Developer-first**: Keep is API-first and lets you manage your workflows as code.
-5. **Works with every tool**: Plenty of [supported providers](#supported-providers) and more to come.
-
-## Workflows
-
-The easiest way of thinking about Workflow in Keep is GitHub Actions. At its core, a Workflow in Keep is a declarative YAML file, composed of triggers, steps, and actions and serves to manage, enrich, and automate responses to alerts:
-
-```yaml
-workflow:
-  id: most-basic-keep-workflow
-  description: send a slack message when a cloudwatch alarm is triggered
-  # workflow triggers - supports alerts, interval, and manual triggers
-  triggers:
-    - type: alert
-      filters:
-        - key: source
-          value: cloudwatch
-    - type: manual
-  # list of steps that can add context to your alert
-  steps:
-    - name: enrich-alert-with-more-data-from-a-database
-      provider:
-        type: bigquery
-        config: "{{ providers.bigquery-prod }}"
-        with:
-          query: "SELECT customer_id, customer_type as date FROM `customers_prod` LIMIT 1"
-  # list of actions that can automate response and do things with your alert
-  actions:
-    - name: trigger-slack
-      provider:
-        type: slack
-        config: " {{ providers.slack-prod }} "
-        with:
-          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
-```
-
-Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ## Supported Integrations
 
@@ -662,6 +596,48 @@ Workflow triggers can either be executed manually when an alert is activated or 
     </td>
 </tr>
 </table>
+
+## Workflows
+
+Keep is GitHub Actions for your monitoring tools.
+
+A Keep Workflow is a declarative YAML file that automates your alert and incident management. Each workflow consists of:
+
+- Triggers - What starts the workflow (alerts, incidents, schedule or manual)
+- Steps - Read or fetch data (enrichment, context)
+- Actions - Execute operations (update tickets, send notifications, restart servers)
+
+Here's a simple workflow that enriches a Cloudwatch alert with customer data and notifies Slack:
+For more worfklows, see [here](https://github.com/keephq/keep/tree/main/examples/workflows).
+
+```yaml
+workflow:
+  id: most-basic-keep-workflow
+  description: send a slack message when a cloudwatch alarm is triggered
+  # workflow triggers - supports alerts, interval, and manual triggers
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: cloudwatch
+    - type: manual
+  # list of steps that can add context to your alert
+  steps:
+    - name: enrich-alert-with-more-data-from-a-database
+      provider:
+        type: bigquery
+        config: "{{ providers.bigquery-prod }}"
+        with:
+          query: "SELECT customer_id, customer_type as date FROM `customers_prod` LIMIT 1"
+  # list of actions that can automate response and do things with your alert
+  actions:
+    - name: trigger-slack
+      provider:
+        type: slack
+        config: " {{ providers.slack-prod }} "
+        with:
+          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
+```
 
 ## Getting Started
 
