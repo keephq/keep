@@ -2,20 +2,6 @@
     <img src="/assets/keep.png?raw=true" width="86">
 </div>
 
-<h1 align="center">The open-source alert management and AIOps platform</h1>
-
-- 🔍 **Single pane of glass** - One interface for all your alerts
-- 🛠️ **Swiss Army Knife for alerts** - deduplication, correlation, filtering and enrichment
-- 🔄 **Deep integrations** - bi-directional syncs with monitoring tools, customizable workflows
-- ⚡ **Automation** - Automate incident response and alerting
-- 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
-
-<div align="center">
-    <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
-</div>
-
-</br>
-
 <div align="center">
     <a href="https://slack.keephq.dev">
       <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
@@ -40,6 +26,20 @@
     ·
     <a href="https://slack.keephq.dev">Slack Community</a>
 </p>
+
+<h1 align="center">The open-source alert management and AIOps platform</h1>
+
+- 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
+- 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
+- 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
+- ⚡ **Automation** - Automate incident response and alerting
+- 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
+
+<div align="center">
+    <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
+</div>
+
+</br>
 
 ## How does it work?
 
