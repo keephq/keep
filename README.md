@@ -246,43 +246,49 @@ Workflow triggers can either be executed manually when an alert is activated or 
 <table>
 <tr>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/newrelic" target="_blank">
-            <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
-            New Relic
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/appdynamics" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/appdynamics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/appdynamics-icon.png" alt="AppDynamics"/><br/>
             AppDynamics
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/datadog" target="_blank">
-            <img width="40" src="keep-ui/public/icons/datadog-icon.png" alt="Datadog"/><br/>
-            Datadog
+        <a href="https://docs.keephq.dev/providers/documentation/axiom-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/axiom-icon.png" alt="Axiom"/><br/>
+            Axiom
         </a>
     </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/azuremonitoring-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/azuremonitoring-icon.png" alt="Azure Monitoring"/><br/>
+            Azure Monitoring
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/centreon-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/centreon-icon.png" alt="Centreon"/><br/>
+            Centreon
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/checkmk-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/centreon-icon.png" alt="Checkmk"/><br/>
+            Checkmk
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/cilium-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/cilium-icon.png" alt="Cilium"/><br/>
+            Cilium
+        </a>
+    </td>
+</tr>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/cloudwatch" target="_blank">
             <img width="40" src="keep-ui/public/icons/cloudwatch-icon.png" alt="CloudWatch"/><br/>
             CloudWatch
         </a>
     </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/elastic" target="_blank">
-            <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
-            Elastic
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/grafana" target="_blank">
-            <img width="40" src="keep-ui/public/icons/grafana-icon.png" alt="Grafana"/><br/>
-            Grafana
-        </a>
-    </td>
-</tr>
-<tr>
     <td align="center">
         <a href="https://docs.keephq.dev/providers/elastic" target="_blank">
             <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
@@ -315,9 +321,15 @@ Workflow triggers can either be executed manually when an alert is activated or 
 <table>
 <tr>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/bigquery" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/bigquery-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/bigquery-icon.png" alt="BigQuery"/><br/>
             BigQuery
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/clickhouse-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/clickhouse-icon.png" alt="ClickHouse"/><br/>
+            ClickHouse
         </a>
     </td>
     <td align="center" width="150">
@@ -410,6 +422,37 @@ Workflow triggers can either be executed manually when an alert is activated or 
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/jira" target="_blank">
             <img width="40" src="keep-ui/public/icons/jira-icon.png" alt="Jira"/><br/>
+            Jira
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/github" target="_blank">
+            <img width="40" src="keep-ui/public/icons/github-icon.png" alt="GitHub"/><br/>
+            GitHub
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/gitlab" target="_blank">
+            <img width="40" src="keep-ui/public/icons/gitlab-icon.png" alt="GitLab"/><br/>
+            GitLab
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/servicenow" target="_blank">
+            <img width="40" src="keep-ui/public/icons/servicenow-icon.png" alt="ServiceNow"/><br/>
+            ServiceNow
+        </a>
+    </td>
+</tr>
+</table>
+
+### Container Orchecstration Platforms
+
+<table>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/aks-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/aks-icon.png" alt="Azure AKS"/><br/>
             Jira
         </a>
     </td>
