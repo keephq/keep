@@ -22,6 +22,8 @@
     <a href="https://platform.keephq.dev">Try it out</a>
     ·
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
+    ·
+    <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
 </p>
 
 <h1 align="center"></h1>
@@ -31,10 +33,6 @@
 - 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
 - ⚡ **Automation** - Automate incident response and alerting
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
-
-<div align="center">
-    <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
-</div>
 
 </br>
 
