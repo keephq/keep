@@ -217,6 +217,90 @@ Workflow triggers can either be executed manually when an alert is activated or 
             OpenObserve
         </a>
     </td>
+  </tr>
+  <tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
+            Parseable
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/pingdom-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/pingdom-icon.png" alt="Pingdom"/><br/>
+            Pingdom
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/prometheus-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/prometheus-icon.png" alt="Prometheus"/><br/>
+            Prometheus
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/rollbar-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/rollbar-icon.png" alt="Rollbar"/><br/>
+            Rollbar
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/sentry-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/sentry-icon.png" alt="Sentry"/><br/>
+            Sentry
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/signalfx-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/signalfx-icon.png" alt="SignalFX"/><br/>
+            SignalFX
+        </a>
+    </td>
+</tr>
+<tr>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
+          Site24x7
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/splunk-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/splunk-icon.png" alt="Splunk"/><br/>
+          Splunk
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/statuscake-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/statuscake-icon.png" alt="StatusCake"/><br/>
+          StatusCake
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/sumologic-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/sumologic-icon.png" alt="SumoLogic"/><br/>
+          SumoLogic
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKume"/><br/>
+          UptimeKume
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/victoriametrics-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/victoriametrics-icon.png" alt="VictoriaMetrics"/><br/>
+          VictoriaMetrics
+        </a>
+  </td>
+</tr>
+<tr>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
+          Zabbix
+        </a>
+  </td>
 </tr>
 </table>
 
@@ -249,13 +333,13 @@ Workflow triggers can either be executed manually when an alert is activated or 
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/postgres" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/postgres-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/postgres-icon.png" alt="PostgreSQL"/><br/>
             PostgreSQL
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/snowflake" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/snowflake-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/snowflake-icon.png" alt="Snowflake"/><br/>
             Snowflake
         </a>
@@ -303,6 +387,58 @@ Workflow triggers can either be executed manually when an alert is activated or 
             Ntfy.sh
         </a>
     </td>
+</tr>
+<tr>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/pushover-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/pushover-icon.png" alt="Pushover"/><br/>
+            Pushover
+        </a>
+  </td>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/resend-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/resend-icon.png" alt="Resend"/><br/>
+            Resend
+        </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/sendgrid-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/sendgrid-icon.png" alt="SendGrid"/><br/>
+          SendGrid
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/slack-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/slack-icon.png" alt="Slack"/><br/>
+          Slack
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/smtp-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/smtp-icon.png" alt="SMTP"/><br/>
+          SMTP
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/teams-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/teams-icon.png" alt="Teams"/><br/>
+          Teams
+      </a>
+  </td>
+</tr>
+<tr>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/telegram-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/telegram-icon.png" alt="Telegram"/><br/>
+          Telegram
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/twilio-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/twilio-icon.png" alt="Twilio"/><br/>
+          Twilio
+      </a>
+  </td>
 </tr>
 </table>
 
@@ -360,6 +496,24 @@ Workflow triggers can either be executed manually when an alert is activated or 
               Pagertree
           </a>
       </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/signl4-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/signl4-icon.png" alt="SINGL4"/><br/>
+              SINGL4
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/squadcast-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/squadcast-icon.png" alt="Squadcast"/><br/>
+              Squadcast
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/zenduty-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/zenduty-icon.png" alt="Zenduty"/><br/>
+              Zenduty
+          </a>
+      </td>
   </tr>
 </table>
 
@@ -404,6 +558,26 @@ Workflow triggers can either be executed manually when an alert is activated or 
         </a>
     </td>
 </tr>
+<tr>
+  <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/redmine-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/redmine-icon.png" alt="Redmine"/><br/>
+            Redmine
+        </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/service-now-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/service-now-icon.png" alt="ServiceNow"/><br/>
+          ServiceNow
+      </a>
+  </td>
+  <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/trello-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/trello-icon.png" alt="Trello"/><br/>
+          Trello
+      </a>
+  </td>
+</tr>
 </table>
 
 ### Container Orchecstration Platforms
@@ -445,6 +619,30 @@ Workflow triggers can either be executed manually when an alert is activated or 
         <a href="https://docs.keephq.dev/providers/documentation/openai-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/openai-icon.png" alt="OpenAI"/><br/>
             OpenAI
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/python-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/python-icon.png" alt="Python"/><br/>
+            Python
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/quickchart-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/quickchart-icon.png" alt="QuickChart"/><br/>
+            QuickChart
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/ssh-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/ssh-icon.png" alt="SSH"/><br/>
+            SSH
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/webhook-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/webhook-icon.png" alt="Webhook"/><br/>
+            Webhook
         </a>
     </td>
 </tr>
