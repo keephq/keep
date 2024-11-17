@@ -643,9 +643,9 @@ workflow:
 
 ## Getting Started
 
-> Need help? Your environment is not listed here? Reach out at Slack and we will solve it quickly (you will be suprised how fast).
+> Need help? Can't find your environment listed? Reach out on Slack and we'll help you quickly.
 
-Keep can be run in plenty of environments and configurations. The easiest way to start is Keep's docker compose.
+Keep can run in various environments and configurations. The easiest way to start is with Keep's Docker Compose.
 
 - Running Keep [locally](https://docs.keephq.dev/development/getting-started).
 - Running Keep on [Kubernetes](https://docs.keephq.dev/deployment/kubernetes/installation).
