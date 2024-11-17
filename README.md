@@ -47,7 +47,7 @@
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts and incidents
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
 - 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
-- ⚡ **Automation** - GitHub Actions for your monitoring tools
+- ⚡ **[Automation](#workflows)** - GitHub Actions for your monitoring tools
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization
 
 </br>
