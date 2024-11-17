@@ -571,6 +571,37 @@
 </tr>
 </table>
 
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 20px; width: 100%; max-width: 800px; margin: 0 auto; padding: 16px;">
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <a href="https://docs.keephq.dev/providers/documentation/aks-provider" target="_blank" style="text-decoration: none; color: inherit;">
+            <img width="40" src="keep-ui/public/icons/aks-icon.png" alt="Azure AKS" style="margin-bottom: 8px;"/>
+            <div>Azure AKS</div>
+        </a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <a href="https://docs.keephq.dev/providers/documentation/gke-provider" target="_blank" style="text-decoration: none; color: inherit;">
+            <img width="40" src="keep-ui/public/icons/gke-icon.png" alt="GKE" style="margin-bottom: 8px;"/>
+            <div>GKE</div>
+        </a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <a href="https://docs.keephq.dev/providers/documentation/kubernetes-provider" target="_blank" style="text-decoration: none; color: inherit;">
+            <img width="40" src="keep-ui/public/icons/kubernetes-icon.png" alt="Kubernetes" style="margin-bottom: 8px;"/>
+            <div>Kubernetes</div>
+        </a>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <a href="https://docs.keephq.dev/providers/documentation/openshift-provider" target="_blank" style="text-decoration: none; color: inherit;">
+            <img width="40" src="keep-ui/public/icons/openshift-icon.png" alt="OpenShift" style="margin-bottom: 8px;"/>
+            <div>OpenShift</div>
+        </a>
+    </div>
+
+</div>
+
 ### Data Enrichment
 
 <table>
