@@ -37,7 +37,6 @@
     "chart.js": "^4.4.3",
     "crypto-js": "^4.2.0",
     "date-fns": "^2.30.0",
-    "depcheck": "^1.4.7",
     "eslint-config-next": "^14.2.1",
     "eslint-import-resolver-node": "^0.3.7",
     "eslint-import-resolver-typescript": "^3.5.5",
