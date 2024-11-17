@@ -4,8 +4,6 @@
 
 <h1 align="center">The open-source alert management and AIOps platform</h1>
 
-# Key Features
-
 - 🔍 **Single pane of glass** - One interface for all your alerts
 - 🛠️ **Swiss Army Knife for alerts** - deduplication, correlation, filtering and enrichment
 - 🔄 **Deep integrations** - bi-directional syncs with monitoring tools, customizable workflows
