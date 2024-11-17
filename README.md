@@ -38,7 +38,7 @@
 - ⚡ **Automation** - Automate incident response and alerting
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
 
-> See [documentation](https://docs.keephq/dev) for full platform documentation.
+> See full [platform documentation](https://docs.keephq/dev) .
 
 </br>
 
