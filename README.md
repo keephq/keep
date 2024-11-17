@@ -1,10 +1,4 @@
 <div align="center">
-    <img src="/assets/keep.png?raw=true" width="86">
-</div>
-
-<h1 align="center">The open-source alert management and AIOps platform</h1>
-
-<div align="center">
     <a href='http://makeapullrequest.com'>
       <img alt='PRs Welcome' src='https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields'/>
     </a>
@@ -26,7 +20,11 @@
     <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
 </p>
 
-<h1 align="center"></h1>
+<div align="center">
+    <img src="/assets/keep.png?raw=true" width="86">
+</div>
+
+<h1 align="center">The open-source alert management and AIOps platform</h1>
 
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
