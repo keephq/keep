@@ -15,6 +15,7 @@ import { ActionMeta, MultiValue } from "react-select";
 import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "utils/hooks/usePresets";
 import classNames from "classnames";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -59,7 +60,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   // Determine if we should show the feed link
   const shouldShowFeed = (() => {
     // If we have server data, check if feed preset exists
-    if (staticPresets) {
+    if (staticPresets.length > 0) {
       return staticPresets.some((preset) => preset.name === "feed");
     }
 
@@ -70,7 +71,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     }
 
     // If we're still loading (no data and no error), show based on cache
-    return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
+    return true;
   })();
 
   // Get the current alerts count only if we should show feed
@@ -89,8 +90,10 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     const cachedPreset = staticPresetsOrderFromLS?.find(
       (preset) => preset.name === "feed"
     );
-    return cachedPreset?.alerts_count ?? 0;
+    return cachedPreset?.alerts_count ?? undefined;
   })();
+
+  const isMounted = useMounted();
 
   return (
     <>
@@ -141,7 +144,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   </LinkWithIcon>
                 </li>
               )}
-              {session && (
+              {session && isMounted && (
                 <CustomPresetAlertLinks
                   session={session}
                   selectedTags={storedTags}
