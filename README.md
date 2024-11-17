@@ -99,146 +99,6 @@ workflow:
 
 Workflow triggers can either be executed manually when an alert is activated or run at predefined intervals. More examples can be found [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
-## Supported Providers
-
-> Missing any? Just submit a [new provider issue](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we will add it in the blink of an eye.
-
-<h3 align="center">Observability tools</h3>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/newrelic-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/appdynamics-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/datadog-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/cloudwatch-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/elastic-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/graylog-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/prometheus-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/sumologic-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/victoriametrics-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/zabbix-icon.png?raw=true"/>
-</p>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/sentry-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/dynatrace-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/signalfx-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/azuremonitoring-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/gcpmonitoring-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/splunk-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/incidentmanager-icon.png"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/coralogix-icon.png?raw=true" />
-</p>
-<h3 align="center">Databases and data warehouses</h3>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/bigquery-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/mysql-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/postgres-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/snowflake-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/clickhouse-icon.png?raw=true"/>
-</p>
-<h3 align="center">Communication platforms</h2>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/slack-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/teams-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/telegram-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/pushover-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/resend-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/mailchimp-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/discord-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/twilio-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/ntfy-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/sendgrid-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/smtp-icon.png?raw=true" />
-</p>
-<h3 align="center">Incident Management tools</h2>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/pagerduty-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/pagertree-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/site24x7-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/opsgenie-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/zenduty-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/squadcast-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana_oncall-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/openobserve-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/statuscake-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/uptimekuma-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/rollbar-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/centreon-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/netdata-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/incidentio-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/grafana_incident-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/webhook-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/checkmk-icon.png?raw=true"/>
-</p>
-<h3 align="center">Ticketing tools</h2>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/jira-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/gitlab-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/redmine-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/trello-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/github-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/servicenow-icon.png?raw=true"/>
-</p>
-<h3 align="center">Container Orchestration platforms</h2>
-<p align="center">
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/openshift-icon.png?raw=true"/>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img width=32 height=32 src="https://github.com/keephq/keep/blob/main/keep-ui/public/icons/kubernetes-icon.png?raw=true"/>
-</p>
-
-## bla
-
 ## Supported Integrations
 
 ### Observability Tools
@@ -339,6 +199,24 @@ Workflow triggers can either be executed manually when an alert is activated or 
             Kibana
         </a>
     </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/netdata-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/netdata-icon.png" alt="Netdata"/><br/>
+            Netdata
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/new-relic-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/newrelic-icon.png" alt="New Relic"/><br/>
+            New Relic
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/openobserve-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/openobserve-icon.png" alt="OpenObserve"/><br/>
+            OpenObserve
+        </a>
+    </td>
 </tr>
 </table>
 
@@ -359,7 +237,13 @@ Workflow triggers can either be executed manually when an alert is activated or 
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/mysql" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/mongodb-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/mongodb-icon.png" alt="MongoDB"/><br/>
+            MongoDB
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/mysql-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/mysql-icon.png" alt="MySQL"/><br/>
             MySQL
         </a>
@@ -391,8 +275,32 @@ Workflow triggers can either be executed manually when an alert is activated or 
     </td>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/google_chat-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/googlechat-icon.png" alt="Google Chat"/><br/>
+            <img width="40" src="keep-ui/public/icons/google_chat-icon.png" alt="Google Chat"/><br/>
             Google Chat
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/mailchimp-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/mailchimp-icon.png" alt="Mailchimp"/><br/>
+            Mailchimp
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/mailgun-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/mailgun-icon.png" alt="Mailgun"/><br/>
+            Mailgun
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/mattermost-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/mattermost-icon.png" alt="Mattermost"/><br/>
+            Mattermost
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/ntfy-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/ntfy-icon.png" alt="Ntfy.sh"/><br/>
+            Ntfy.sh
         </a>
     </td>
 </tr>
@@ -401,38 +309,58 @@ Workflow triggers can either be executed manually when an alert is activated or 
 ### Incident Management
 
 <table>
-<tr>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/grafana_incident-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/googlechat-icon.png" alt="Grafana Incident"/><br/>
-            Grafana Incident
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/grafana_oncall-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/googlechat-icon.png" alt="Grafana OnCall"/><br/>
-            Grafana OnCall
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/ilert-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/ilert-icon.png" alt="Ilert"/><br/>
-            Ilert
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/incidentio-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/incidentio-icon.png" alt="Incident.io"/><br/>
-            Incident.io
-        </a>
-    </td>
-    <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/incidentmanager-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/incidentmanager-icon.png" alt="AWS Incident Manager"/><br/>
-            AWS Incident Manager
-        </a>
-    </td>
-</tr>
+  <tr>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/grafana_incident-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/grafana_incident-icon.png" alt="Grafana Incident"/><br/>
+              Grafana Incident
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/grafana_oncall-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/grafana_oncall-icon.png" alt="Grafana OnCall"/><br/>
+              Grafana OnCall
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/ilert-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/ilert-icon.png" alt="Ilert"/><br/>
+              Ilert
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/incidentio-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/incidentio-icon.png" alt="Incident.io"/><br/>
+              Incident.io
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/incidentmanager-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/incidentmanager-icon.png" alt="AWS Incident Manager"/><br/>
+              AWS Incident Manager
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/opsgenie-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/opsgenie-icon.png" alt="OpsGenie"/><br/>
+              OpsGenie
+          </a>
+      </td>
+  </tr>
+    <tr>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/pagerduty-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/pagerduty-icon.png" alt="PagerDuty"/><br/>
+              PagerDuty
+          </a>
+      </td>
+      <td align="center" width="150">
+          <a href="https://docs.keephq.dev/providers/documentation/pagertree-provider" target="_blank">
+              <img width="40" src="keep-ui/public/icons/pagertree-icon.png" alt="Pagertree"/><br/>
+              Pagertree
+          </a>
+      </td>
+  </tr>
 </table>
 
 ### Ticketing Tools
@@ -455,6 +383,24 @@ Workflow triggers can either be executed manually when an alert is activated or 
         <a href="https://docs.keephq.dev/providers/documentation/jira-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/jira-icon.png" alt="Jira"/><br/>
             Jira
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/linear_provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/linear-icon.png" alt="Linear"/><br/>
+            Linear
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/linearb-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/linearb-icon.png" alt="LinearB"/><br/>
+            LinearB
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/microsoft-planner-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/microsoft-planner-icon.png" alt="Microsoft Planner"/><br/>
+            Microsoft Planner
         </a>
     </td>
 </tr>
@@ -480,6 +426,25 @@ Workflow triggers can either be executed manually when an alert is activated or 
         <a href="https://docs.keephq.dev/providers/documentation/kubernetes-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/kubernetes-icon.png" alt="Kubernetes"/><br/>
             Kubernetes
+        </a>
+    </td>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/openshift-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/openshift-icon.png" alt="OpenShift"/><br/>
+            OpenShift
+        </a>
+    </td>
+</tr>
+</table>
+
+### Data Enrichment
+
+<table>
+<tr>
+    <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/openai-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/openai-icon.png" alt="OpenAI"/><br/>
+            OpenAI
         </a>
     </td>
 </tr>
