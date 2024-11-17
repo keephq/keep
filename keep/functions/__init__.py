@@ -115,7 +115,7 @@ def to_timestamp(dt: datetime.datetime | str = "") -> int:
 
 
 def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
-    if t1 is None or t2 is None:
+    if not t1 or not t2:
         return 0
     diff = (t1 - t2).total_seconds() / 3600
     return diff
