@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -16,7 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/not-found";
-import NotAuthorized from "@/app/not-authorized";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 const defaultPresets: Preset[] = [
   {
@@ -100,6 +102,7 @@ export default function Alerts({ presetName }: AlertsProps) {
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
+  const isMounted = useMounted();
   const { data: pollAlerts } = useAlertPolling();
   const {
     data: alerts = [],
@@ -107,6 +110,9 @@ export default function Alerts({ presetName }: AlertsProps) {
     mutate: mutateAlerts,
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+
+  const isLoading = isAsyncLoading || !isMounted;
+
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     if (fingerprint) {
@@ -126,14 +132,6 @@ export default function Alerts({ presetName }: AlertsProps) {
   if (!selectedPreset) {
     return <NotFound />;
   }
-  if (alertsError) {
-    if (alertsError.statusCode === 401) {
-      console.log("unauthenticated 401");
-      window.location.href = "/signin";
-      return null;
-    }
-    return <NotAuthorized />;
-  }
 
   return (
     <>
@@ -141,7 +139,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         key={selectedPreset.name}
         preset={selectedPreset}
         alerts={alerts}
-        isAsyncLoading={isAsyncLoading}
+        isAsyncLoading={isLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}

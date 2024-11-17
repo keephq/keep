@@ -29,6 +29,7 @@ export interface FacetProps {
   facetKey: string;
   facetFilters: FacetFilters;
   showIcon?: boolean;
+  showSkeleton?: boolean;
 }
 
 export interface AlertFacetsProps {
@@ -44,4 +45,5 @@ export interface AlertFacetsProps {
   onDelete: (facetKey: string) => void;
   className?: string;
   table: Table<AlertDto>;
+  showSkeleton?: boolean;
 }

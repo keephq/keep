@@ -1,4 +1,4 @@
-import AlertsPage from "../alerts.client";
+import AlertsPage from "../alerts";
 
 type PageProps = {
   params: { id: string };
