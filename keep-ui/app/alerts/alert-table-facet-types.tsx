@@ -34,9 +34,13 @@ export interface FacetProps {
 export interface AlertFacetsProps {
   alerts: AlertDto[];
   facetFilters: FacetFilters;
-  setFacetFilters: (filters: FacetFilters) => void;
+  setFacetFilters: (
+    filters: FacetFilters | ((filters: FacetFilters) => FacetFilters)
+  ) => void;
   dynamicFacets: DynamicFacet[];
-  setDynamicFacets: (facets: DynamicFacet[]) => void;
+  setDynamicFacets: (
+    facets: DynamicFacet[] | ((facets: DynamicFacet[]) => DynamicFacet[])
+  ) => void;
   onDelete: (facetKey: string) => void;
   className?: string;
   table: Table<AlertDto>;
