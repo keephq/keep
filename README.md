@@ -4,6 +4,8 @@
 
 <h1 align="center">The open-source alert management and AIOps platform</h1>
 
+</br>
+
 <div align="center">Single pane of glass, alert deduplication, enrichment, filtering and correlation, bi-directional integrations, workflows, dashboards.
 </br>
 </div>
@@ -53,9 +55,6 @@
 ## Supported Integrations
 
 > View the full list in our [documentation](https://docs.keephq.dev/providers/documentation)
-
-</br>
-
 > Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
 ### Observability Tools
@@ -628,15 +627,16 @@ For more worfklows, see [here](https://github.com/keephq/keep/tree/main/examples
 ```yaml
 workflow:
   id: sentry-alerts
-  description: handle alerts
+  description: create ticket alerts for critical alerts from sentry
   triggers:
     - type: alert
-      # we want to run this workflow only for Sentry alerts with high severity
+      # customize the filter to run only on critical alert from sentry
       filters:
         - key: source
           value: sentry
         - key: severity
           value: critical
+        # regex to match specific services
         - key: service
           value: r"(payments|ftp)"
   actions:
@@ -645,12 +645,15 @@ workflow:
       if: "'{{ alert.service }}' == 'payments'"
       provider:
         type: slack
+        # control which Slack configuration you want to use
         config: " {{ providers.team-payments-slack }} "
+        # customize the alert message with context from {{ alert }} or any other {{ step }}
         with:
           message: |
             "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}
             {{ alert}}"
     - name: create-jira-ticket-oncall-board
+      # control the workflow flow with "if" and "foreach" statements
       if: "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
       provider:
         type: jira
@@ -660,12 +663,13 @@ workflow:
           custom_fields:
             customfield_10201: "Critical"
           issuetype: "Task"
+          # customize the summary
           summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
           description: |
             "This ticket was created by Keep.
             Please check the alert details below:
             {code:json} {{ alert }} {code}"
-          # enrich the alerts
+          # enrich the alerts with more context. from now on, the alert will be assigned with the ticket id, type and url
           enrich_alert:
             - key: ticket_type
               value: jira
@@ -675,11 +679,12 @@ workflow:
               value: results.ticket_url
 ```
 
-## Enterprise Grade
+## Enterprise Ready
 
-- Developer first (API)
-- [Enterprise-Grade Authentication & Authorization](https://docs.keephq.dev/deployment/authentication/overview) - SSO, SAML, OIDC, LDAP, RBAC, ABAC, Groups and more
-- [High Scale](https://docs.keephq.dev/deployment/stress-testing)
+- Developer First - Modern REST APIs, native SDKs, and comprehensive documentation for seamless integration
+- [Enterprise Security](https://docs.keephq.dev/deployment/authentication/overview) - Full authentication support (SSO, SAML, OIDC, LDAP) with granular access control (RBAC, ABAC) and team management
+- Flexible Deployment - Deploy on-premises or in air-gapped environments with cloud-agnostic architecture
+- [Production Scale](https://docs.keephq.dev/deployment/stress-testing) - High availability, performance-tested infrastructure supporting horizontal scaling for enterprise workloads
 
 ## Getting Started
 
