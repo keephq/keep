@@ -20,7 +20,7 @@ export const CorrelationSidebarHeader = ({
           {isRuleBeingEdited ? "Edit" : "Create"} Correlation
         </Dialog.Title>
         <Dialog.Description as={Subtitle}>
-          Group multiple alerts into single alert
+          Group multiple alerts into a single incident
         </Dialog.Description>
       </div>
       <div>

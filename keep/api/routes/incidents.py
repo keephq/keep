@@ -150,6 +150,16 @@ def get_all_incidents(
         },
     )
 
+    # get all preset ids that the user has access to
+    identity_manager = IdentityManagerFactory.get_identity_manager(
+        authenticated_entity.tenant_id
+    )
+    # Note: if no limitations (allowed_preset_ids is []), then all presets are allowed
+    allowed_incident_ids = identity_manager.get_user_permission_on_resource_type(
+        resource_type="incident",
+        authenticated_entity=authenticated_entity,
+    )
+
     incidents, total_count = get_last_incidents(
         tenant_id=tenant_id,
         is_confirmed=confirmed,
@@ -157,6 +167,7 @@ def get_all_incidents(
         offset=offset,
         sorting=sorting,
         filters=filters,
+        allowed_incident_ids=allowed_incident_ids,
     )
 
     incidents_dto = []
