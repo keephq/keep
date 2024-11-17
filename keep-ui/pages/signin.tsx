@@ -22,8 +22,13 @@ export async function getServerSideProps(context: any) {
   };
 }
 
-export default function SignIn({ params }: { params?: { amt: string } }) {
+export default function SignIn({
+  params,
+}: {
+  params?: { amt: string; callbackUrl: string };
+}) {
   const [providers, setProviders] = useState<Providers | null>(null);
+  const callbackUrl = params?.callbackUrl || "/";
 
   useEffect(() => {
     async function fetchProviders() {
@@ -40,29 +45,25 @@ export default function SignIn({ params }: { params?: { amt: string } }) {
         console.log("Signing in with auth0 provider");
         if (params?.amt) {
           // Do we have a token from AWS Marketplace? redirect to auth0 with the token
-          signIn(
-            "auth0",
-            { callbackUrl: "/" },
-            { acr_values: `amt:${params.amt}` }
-          );
+          signIn("auth0", { callbackUrl }, { acr_values: `amt:${params.amt}` });
         } else {
-          signIn("auth0", { callbackUrl: "/" });
+          signIn("auth0", { callbackUrl });
         }
       } else if (providers.credentials) {
         console.log("Signing in with credentials provider");
-        signIn("credentials", { callbackUrl: "/" });
+        signIn("credentials", { callbackUrl });
       } else if (providers.keycloak) {
         console.log("Signing in with keycloak provider");
-        signIn("keycloak", { callbackUrl: "/" });
+        signIn("keycloak", { callbackUrl });
       } else if (providers["azure-ad"]) {
         console.log("Signing in with Azure AD provider");
-        signIn("azure-ad", { callbackUrl: "/" });
+        signIn("azure-ad", { callbackUrl });
       } else {
         console.log("No provider found");
         console.log(providers);
       }
     }
-  }, [providers, params]);
+  }, [providers, params, callbackUrl]);
 
   return <div>Redirecting for authentication...</div>;
 }
