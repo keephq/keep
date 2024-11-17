@@ -84,9 +84,10 @@ class AuthVerifierBase:
         # check if read only instance
         self.read_only = config("KEEP_READ_ONLY", default="false") == "true"
         self.read_only_bypass_key = config("KEEP_READ_ONLY_BYPASS_KEY", default="")
-        if not self.read_only and self.read_only_bypass_key:
-            self.logger.warning(
-                "Read only bypass key set, but read only mode is not enabled"
+        # if read_only is enabled, read_only_bypass_key must be set
+        if self.read_only and not self.read_only_bypass_key:
+            raise ValueError(
+                "KEEP_READ_ONLY_BYPASS_KEY must be set if KEEP_READ_ONLY is enabled"
             )
 
     def __call__(
