@@ -26,6 +26,10 @@
     <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
 </p>
 
+<div align="center">
+    <img src="/assets/sneak.png?raw=true">
+</div>
+
 <h1 align="center"></h1>
 
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
@@ -35,10 +39,6 @@
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
 
 </br>
-
-<div align="center">
-    <img src="/assets/sneak.png?raw=true">
-</div>
 
 ## How does it work?
 
