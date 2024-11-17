@@ -16,4 +16,6 @@ export interface InternalConfig {
   API_URL_CLIENT?: string;
   // Sentry
   SENTRY_DISABLED: string;
+  // READ ONLY
+  READ_ONLY: boolean;
 }

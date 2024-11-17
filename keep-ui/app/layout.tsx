@@ -11,6 +11,7 @@ import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { PHProvider } from "./posthog-provider";
 import dynamic from "next/dynamic";
+import ReadOnlyBanner from "./read-only-banner";
 
 const PostHogPageView = dynamic(() => import("@/shared/ui/PostHogPageView"), {
   ssr: false,
@@ -41,6 +42,8 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                   <Navbar />
                   {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
                   <main className="page-container flex flex-col col-start-3 overflow-auto">
+                    {/* Add the banner here, before the navbar */}
+                    {config.READ_ONLY && <ReadOnlyBanner />}
                     <div className="flex-1">{children}</div>
                     <ToastContainer />
                   </main>
