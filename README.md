@@ -620,9 +620,9 @@ Keep is GitHub Actions for your monitoring tools.
 
 A Keep Workflow is a declarative YAML file that automates your alert and incident management. Each workflow consists of:
 
-- Triggers - What starts the workflow (alerts, incidents, schedule or manual)
-- Steps - Read or fetch data (enrichment, context)
-- Actions - Execute operations (update tickets, send notifications, restart servers)
+- **Triggers** - What starts the workflow (alerts, incidents, schedule or manual)
+- **Steps** - Read or fetch data (enrichment, context)
+- **Actions** - Execute operations (update tickets, send notifications, restart servers)
 
 Here's a simple workflow that creates a Jira ticket for every `critical` alert from `sentry` for `payments` and `api` services.
 
