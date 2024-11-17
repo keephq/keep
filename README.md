@@ -34,8 +34,12 @@
     <a href="https://www.keephq.dev">Website</a>
 </p>
 
-<div align="center">
-    <img src="/assets/sneak.png?raw=true" width="800" height="500">
+<div style="width: 100%; max-width: 800px; margin: 0 auto;">
+    <img
+        src="/assets/sneak.png?raw=true"
+        style="width: 100%; height: auto; object-fit: contain;"
+        alt="Sneak preview screenshot"
+    >
 </div>
 
 <h1 align="center"></h1>
