@@ -269,6 +269,18 @@ Workflow triggers can either be executed manually when an alert is activated or 
             CloudWatch
         </a>
     </td>
+    <td align="center">
+        <a href="https://docs.keephq.dev/providers/elastic" target="_blank">
+            <img width="40" src="keep-ui/public/icons/elastic-icon.png" alt="Elastic"/><br/>
+            Elastic
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://docs.keephq.dev/providers/grafana" target="_blank">
+            <img width="40" src="keep-ui/public/icons/grafana-icon.png" alt="Grafana"/><br/>
+            Grafana
+        </a>
+    </td>
 </tr>
 <tr>
     <td align="center">
