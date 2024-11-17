@@ -6,6 +6,7 @@
 
 <div align="center">Single pane of glass, alert deduplication, enrichment, filtering and correlation, bi-directional integrations, workflows, dashboards.
 </br>
+</div>
 
 <div align="center">
     <a href='http://makeapullrequest.com'>
@@ -51,7 +52,7 @@
 
 ## Supported Integrations
 
-> View the full list in our [documentation](https://docs.keephq.dev/providers/documentation) > </br>
+> View the full list in our [documentation](https://docs.keephq.dev/providers/documentation)
 
 </br>
 
