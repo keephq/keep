@@ -4,14 +4,18 @@
 
 <h1 align="center">The open-source alert management and AIOps platform</h1>
 
+# Key Features
+
+- 🔍 **Single pane of glass** - One interface for all your alerts
+- 🛠️ **Swiss Army Knife for alerts** - deduplication, correlation, filtering and enrichment
+- 🔄 **Deep integrations** - bi-directional syncs with monitoring tools, customizable workflows
+- ⚡ **Automation** - Automate incident response and alerting
+- 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
+
 <div align="center">
-- Single pane of glass - One interface for all your alerts
-- Swiss Army Knife for alerts - deduplication, correlation, filtering and enrichment
-- Deep integrations -  bi-directional syncs with monitoring tools, customizable workflows
-- Automation - Automate incident response and alerting
-- AIOps 2.0 - AI-powered correlation and summarization (limited preview)
-<a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
+    <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
 </div>
+
 </br>
 
 <div align="center">
