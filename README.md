@@ -27,16 +27,18 @@
 </p>
 
 <div align="center">
-    <img src="/assets/sneak.png?raw=true" width="800" height="600">
+    <img src="/assets/sneak.png?raw=true" width="800" height="500">
 </div>
 
 <h1 align="center"></h1>
 
-- 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
+- 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts and incidents
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
 - 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
 - ⚡ **Automation** - Automate incident response and alerting
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
+
+> See [documentation](https://docs.keephq/dev) for full platform documentation.
 
 </br>
 
@@ -641,46 +643,15 @@ workflow:
 
 ## Getting Started
 
-### Overview
+> Need help? Your environment is not listed here? Reach out at Slack and we will solve it quickly (you will be suprised how fast).
 
-Keep composed of three main components:
+Keep can be run in plenty of environments and configurations. The easiest way to start is Keep's docker compose.
 
-1. [Keep UI](https://github.com/keephq/keep/tree/main/keep-ui) - A NextJS app to connect your providers, centralize alerts and create the workflows.
-2. [Keep Backend](https://github.com/keephq/keep/tree/main/keep) - A FastAPI server that implements the business logic behind Keep, including integrating with the tools, working with alerts and scheduling and running the workflows.
-3. [Keep CLI](https://github.com/keephq/keep/blob/main/keep/cli/cli.py) - A CLI that lets you control and manage Keep via CLI.
-
-> **Disclaimer**: we use [PostHog](https://posthog.com/faq) to collect anonymous telemetries to better learn how users use Keep (masked screen recordings for CLI commands)
-> To turn PostHog off, set the `POSTHOG_DISABLED=true` environment variable and remove the `NEXT_PUBLIC_POSTHOG_KEY` environment variable.
-
-### Quickstart
-
-#### Spinning up Keep with docker-compose
-
-The easiest way to start with Keep is to run it via docker-compose:
-
-```shell
-curl https://raw.githubusercontent.com/keephq/keep/main/start.sh | sh
-```
-
-The UI is now available at http://localhost:3000 and the backend is available at http://localhost:8080.
-
-#### Spinning up Keep with Helm on Kubernetes/Openshift
-
-To install Keep to your Kubernetes ease free with Helm, run the following commands:
-
-```shell
-helm repo add keephq https://keephq.github.io/helm-charts
-helm pull keephq/keep
-helm install keep keephq/keep
-```
-
-More information about the Helm chart can be found [here](https://github.com/keephq/helm-charts).
-
-#### Local development
-
-You can also start Keep within your favorite IDE, e.g. [VSCode](https://docs.keephq.dev/development/getting-started#vscode)
-
-#### Wanna get Keep up and running in production? Go through our detailed [development guide](https://docs.keephq.dev/development)
+- Running Keep [locally](https://docs.keephq.dev/development/getting-started).
+- Running Keep on [Kubernetes](https://docs.keephq.dev/deployment/kubernetes/installation).
+- Running Keep with [Docker](https://docs.keephq.dev/deployment/docker).
+- Running Keep on [AWS ECS](https://docs.keephq.dev/deployment/ecs).
+- Running Keep on [OpenShift](https://docs.keephq.dev/deployment/kubernetes/openshift).
 
 ## 🫵 Keepers
 
