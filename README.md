@@ -27,7 +27,7 @@
 </p>
 
 <div align="center">
-    <img src="/assets/sneak.png?raw=true">
+    <img src="/assets/sneak.png?raw=true" width="800" height="400">
 </div>
 
 <h1 align="center"></h1>
