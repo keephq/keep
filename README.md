@@ -43,13 +43,18 @@
 - ⚡ **Automation** - GitHub Actions for your monitoring tools
 - 🤖 **AIOps 2.0** - AI-powered correlation and summarization
 
+</br>
+
 > See full [platform documentation](https://docs.keephq.dev).
 
 </br>
 
 ## Supported Integrations
 
-> View the full list in our [documentation](https://docs.keephq.dev/providers/documentation)
+> View the full list in our [documentation](https://docs.keephq.dev/providers/documentation) > </br>
+
+</br>
+
 > Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
 ### Observability Tools
