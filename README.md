@@ -30,6 +30,8 @@
     </a>
 </div>
 
+<h1 align="center"></h1>
+
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
 - 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
