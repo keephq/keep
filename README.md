@@ -4,6 +4,9 @@
 
 <h1 align="center">The open-source alert management and AIOps platform</h1>
 
+<div align="center">Single pane of glass, alert deduplication, enrichment, filtering and correlation, bi-directional integrations, workflows, dashboards.
+</br>
+
 <div align="center">
     <a href='http://makeapullrequest.com'>
       <img alt='PRs Welcome' src='https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields'/>
@@ -24,6 +27,8 @@
     <a href="https://github.com/keephq/keep/issues/new?assignees=&labels=bug&template=bug_report.md&title=">Report Bug</a>
     ·
     <a href="https://www.keephq.dev/meet-keep">Book a Demo</a>
+    ·
+    <a href="https://www.keephq.dev">Website</a>
 </p>
 
 <div align="center">
@@ -35,8 +40,8 @@
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts and incidents
 - 🛠️ **Swiss Army Knife for alerts** - Deduplication, correlation, filtering and enrichment
 - 🔄 **Deep integrations** - Bi-directional syncs with monitoring tools, customizable workflows
-- ⚡ **Automation** - Automate incident response and alerting
-- 🤖 **AIOps 2.0** - AI-powered correlation and summarization (limited preview)
+- ⚡ **Automation** - GitHub Actions for your monitoring tools
+- 🤖 **AIOps 2.0** - AI-powered correlation and summarization
 
 > See full [platform documentation](https://docs.keephq.dev).
 
@@ -44,6 +49,7 @@
 
 ## Supported Integrations
 
+> View the full list in our [documentation](https://docs.keephq.dev/providers/documentation)
 > Missing a provider? [Submit a new provider request](https://github.com/keephq/keep/issues/new?assignees=&labels=provider&projects=&template=new_provider_request.md&title=) and we'll add it quickly!
 
 ### Observability Tools
@@ -609,37 +615,65 @@ A Keep Workflow is a declarative YAML file that automates your alert and inciden
 - Steps - Read or fetch data (enrichment, context)
 - Actions - Execute operations (update tickets, send notifications, restart servers)
 
-Here's a simple workflow that enriches a Cloudwatch alert with customer data and notifies Slack:
+Here's a simple workflow that creates a Jira ticket for every `critical` alert from `sentry` for `payments` and `api` services.
+
 For more worfklows, see [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ```yaml
 workflow:
-  id: most-basic-keep-workflow
-  description: send a slack message when a cloudwatch alarm is triggered
-  # workflow triggers - supports alerts, interval, and manual triggers
+  id: sentry-alerts
+  description: handle alerts
   triggers:
     - type: alert
+      # we want to run this workflow only for Sentry alerts with high severity
       filters:
         - key: source
-          value: cloudwatch
-    - type: manual
-  # list of steps that can add context to your alert
-  steps:
-    - name: enrich-alert-with-more-data-from-a-database
-      provider:
-        type: bigquery
-        config: "{{ providers.bigquery-prod }}"
-        with:
-          query: "SELECT customer_id, customer_type as date FROM `customers_prod` LIMIT 1"
-  # list of actions that can automate response and do things with your alert
+          value: sentry
+        - key: severity
+          value: critical
+        - key: service
+          value: r"(payments|ftp)"
   actions:
-    - name: trigger-slack
+    - name: send-slack-message-team-payments
+      # if the alert is on the payments service, slack the payments team
+      if: "'{{ alert.service }}' == 'payments'"
       provider:
         type: slack
-        config: " {{ providers.slack-prod }} "
+        config: " {{ providers.team-payments-slack }} "
         with:
-          message: "Got alarm from aws cloudwatch! {{ alert.name }}"
+          message: |
+            "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}
+            {{ alert}}"
+    - name: create-jira-ticket-oncall-board
+      if: "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
+      provider:
+        type: jira
+        config: " {{ providers.jira }} "
+        with:
+          board_name: "Oncall Board"
+          custom_fields:
+            customfield_10201: "Critical"
+          issuetype: "Task"
+          summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
+          description: |
+            "This ticket was created by Keep.
+            Please check the alert details below:
+            {code:json} {{ alert }} {code}"
+          # enrich the alerts
+          enrich_alert:
+            - key: ticket_type
+              value: jira
+            - key: ticket_id
+              value: results.issue.key
+            - key: ticket_url
+              value: results.ticket_url
 ```
+
+## Enterprise Grade
+
+- Developer first (API)
+- [Enterprise-Grade Authentication & Authorization](https://docs.keephq.dev/deployment/authentication/overview) - SSO, SAML, OIDC, LDAP, RBAC, ABAC, Groups and more
+- [High Scale](https://docs.keephq.dev/deployment/stress-testing)
 
 ## Getting Started
 
