@@ -1,11 +1,12 @@
 import AlertsPage from "../alerts.client";
 
 type PageProps = {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default function Page({ params }: PageProps) {
+export default async function Page(props: PageProps) {
+  const params = await props.params;
   return <AlertsPage presetName={params.id} />;
 }
 

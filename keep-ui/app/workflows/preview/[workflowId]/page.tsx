@@ -1,14 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import PageClient from "../../builder/page.client";
 import Loading from "../../../loading";
 import Link from "next/link";
 
-export default function PageWithId({
-  params,
-}: {
-  params: { workflowId: string };
-}) {
+export default function PageWithId(
+  props: {
+    params: Promise<{ workflowId: string }>;
+  }
+) {
+  const params = use(props.params);
   const [workflowPreviewData, setWorkflowPreviewData] = useState<any>(null);
   const key = params?.workflowId;
 

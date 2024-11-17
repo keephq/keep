@@ -10,12 +10,8 @@ import { ConfigProvider } from "./config-provider";
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import { PHProvider } from "./posthog-provider";
-import dynamic from "next/dynamic";
 import ReadOnlyBanner from "./read-only-banner";
-
-const PostHogPageView = dynamic(() => import("@/shared/ui/PostHogPageView"), {
-  ssr: false,
-});
+import PostHogPageView from "@/shared/ui/PostHogPageView.client";
 
 // If loading a variable font, you don't need to specify the font weight
 const mulish = Mulish({

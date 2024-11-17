@@ -4,17 +4,18 @@ import { getApiURL } from "@/utils/apiUrl";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-export default async function InstallFromOAuth({
-  params,
-  searchParams,
-}: {
-  params: { providerType: string };
-  searchParams: { [key: string]: string };
-}) {
+export default async function InstallFromOAuth(
+  props: {
+    params: Promise<{ providerType: string }>;
+    searchParams: Promise<{ [key: string]: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const accessToken = await getServerSession(authOptions);
   // this is server so we can use the old getApiURL
   const apiUrl = getApiURL();
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const verifier = cookieStore.get("verifier");
   const installWebhook = cookieStore.get("oauth2_install_webhook");
   const pullingEnabled = cookieStore.get("oauth2_pulling_enabled");

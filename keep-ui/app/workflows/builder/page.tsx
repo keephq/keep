@@ -3,11 +3,12 @@ import { Suspense } from "react";
 import Loading from "../../loading";
 
 type PageProps = {
-  params: { workflow: string; workflowId: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ workflow: string; workflowId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default function Page({ params, searchParams }: PageProps) {
+export default async function Page(props: PageProps) {
+  const params = await props.params;
   return (
     <Suspense fallback={<Loading />}>
       <PageClient workflow={params.workflow} workflowId={params.workflowId} />

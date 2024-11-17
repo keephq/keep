@@ -3,11 +3,12 @@ import { authOptions } from "pages/api/auth/[...nextauth]";
 import { getApiURL } from "utils/apiUrl";
 import PageClient from "../page.client";
 
-export default async function PageWithId({
-  params,
-}: {
-  params: { workflowId: string };
-}) {
+export default async function PageWithId(
+  props: {
+    params: Promise<{ workflowId: string }>;
+  }
+) {
+  const params = await props.params;
   const accessToken = await getServerSession(authOptions);
   // server so we can use getApiUrl
   const apiUrl = getApiURL();
