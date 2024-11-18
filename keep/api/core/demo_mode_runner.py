@@ -7,6 +7,7 @@ import random
 import time
 import datetime
 from datetime import timezone
+from requests.models import PreparedRequest
 
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -316,7 +317,17 @@ async def simulate_alerts(
     ):
     GENERATE_DEDUPLICATIONS = True
 
-    providers = ["prometheus", "grafana"]
+    providers = [
+        "prometheus", 
+        "grafana",
+        "cloudwatch",
+        "datadog",
+    ]
+
+    providers_to_randomize_fingerprint_for = [
+        "cloudwatch",
+        "datadog",
+    ]
 
     provider_classes = {
         provider: ProvidersFactory.get_provider_class(provider)
@@ -333,8 +344,6 @@ async def simulate_alerts(
         get_or_create_topology(keep_api_key, keep_api_url)
 
     while True:
-        await asyncio.sleep(sleep_interval)
-
         remove_old_incidents(keep_api_key, keep_api_url)
 
         # choose provider
@@ -343,6 +352,12 @@ async def simulate_alerts(
             keep_api_url, provider_type)
         provider = provider_classes[provider_type]
         alert = provider.simulate_alert()
+
+        send_alert_url_params = {}
+
+        if provider_type in providers_to_randomize_fingerprint_for:
+            send_alert_url_params['fingerprint'] = \
+                ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=10))
 
         # Determine number of times to send the same alert
         num_iterations = 1
@@ -353,8 +368,11 @@ async def simulate_alerts(
             logger.info("Sending alert: {}".format(alert))
             try:
                 env = random.choice(["production", "staging", "development"])
+                send_alert_url_params['provider_id'] = f"{provider_type}-{env}"
+                prepared_request = PreparedRequest()
+                prepared_request.prepare_url(send_alert_url, send_alert_url_params)
                 response = requests.post(
-                    send_alert_url + f"?provider_id={provider_type}-{env}",
+                    prepared_request.url,
                     headers={"x-api-key": keep_api_key},
                     json=alert,
                 )
@@ -368,6 +386,9 @@ async def simulate_alerts(
                 logger.error("Failed to send alert: {}".format(response.text))
             else:
                 logger.info("Alert sent successfully")
+
+        await asyncio.sleep(sleep_interval)
+
 
 def launch_demo_mode():
     """
