@@ -15,7 +15,8 @@
       <img alt='PRs Welcome' src='https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields'/>
     </a>
     <a href="https://slack.keephq.dev">
-      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
+      <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" />
+    </a>
       <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/keephq/keep"/>
     <a href="https://codecov.io/gh/keephq/keep" >
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
@@ -64,8 +65,8 @@
 
 ### Observability Tools
 
-<table>
-<tr>
+<table style="width: 100%; max-width: 800px; margin: 0 auto;">
+<tr style="width: 100%; height: auto; object-fit: contain;">
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/appdynamics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/appdynamics-icon.png" alt="AppDynamics"/><br/>
@@ -103,7 +104,7 @@
         </a>
     </td>
 </tr>
-<tr>
+<tr style="width: 100%; height: auto; object-fit: contain;">
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cloudwatch-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cloudwatch-icon.png" alt="CloudWatch"/><br/>
@@ -141,7 +142,7 @@
         </a>
     </td>
   </tr>
-  <tr>
+  <tr style="width: 100%; height: auto; object-fit: contain;">
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/grafana-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/grafana-icon.png" alt="Grafana"/><br/>
@@ -179,7 +180,7 @@
         </a>
     </td>
   </tr>
-  <tr>
+  <tr style="width: 100%; height: auto; object-fit: contain;">
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
@@ -217,7 +218,7 @@
         </a>
     </td>
 </tr>
-<tr>
+<tr style="width: 100%; height: auto; object-fit: contain;">
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
@@ -255,7 +256,7 @@
         </a>
   </td>
 </tr>
-<tr>
+<tr style="width: 100%; height: auto; object-fit: contain;">
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
