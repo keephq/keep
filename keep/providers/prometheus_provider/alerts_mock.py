@@ -11,7 +11,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.host": ["host1", "host2", "host3"],
-            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka", "api", "queue", "db"],
             "labels.instance": ["instance1", "instance2", "instance3"],
         },
     },
@@ -20,11 +20,12 @@ ALERTS = {
             "summary": "Message queue is over 33% capacity",
             "labels": {
                 "severity": "warning",
+                "customer_id": "acme"
             },
         },
         "parameters": {
             "labels.queue": ["queue1", "queue2", "queue3"],
-            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka", "queue"],
             "labels.mq_manager": ["mq_manager1", "mq_manager2", "mq_manager3"],
         },
     },
@@ -37,7 +38,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.host": ["host1", "host2", "host3"],
-            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka", "api", "queue", "db"],
             "labels.instance": ["instance1", "instance2", "instance3"],
         },
     },
@@ -50,7 +51,7 @@ ALERTS = {
         },
         "parameters": {
             "labels.host": ["host1", "host2", "host3"],
-            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka"],
+            "labels.service": ["calendar-producer-java-otel-api-dd", "kafka", "api", "queue", "db"],
             "labels.instance": ["instance1", "instance2", "instance3"],
         },
     },
