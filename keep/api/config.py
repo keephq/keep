@@ -5,6 +5,7 @@ import keep.api.logging
 from keep.api.api import AUTH_TYPE
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.report_uptime import launch_uptime_reporting
+from keep.api.core.demo_mode_runner import launch_demo_mode
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 
@@ -20,6 +21,7 @@ def on_starting(server=None):
 
     migrate_db()
     launch_uptime_reporting()
+    launch_demo_mode()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
