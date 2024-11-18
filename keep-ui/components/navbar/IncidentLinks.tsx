@@ -6,9 +6,9 @@ import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
-import classNames from "classnames";
 import { useIncidents, usePollIncidents } from "utils/hooks/useIncidents";
-import {MdFlashOn} from "react-icons/md";
+import { MdFlashOn } from "react-icons/md";
+import clsx from "clsx";
 
 type IncidentsLinksProps = { session: Session | null };
 const SHOW_N_INCIDENTS = 3;
@@ -32,10 +32,7 @@ export const IncidentsLinks = ({ session }: IncidentsLinksProps) => {
               INCIDENTS
             </Subtitle>
             <IoChevronUp
-              className={classNames(
-                { "rotate-180": open },
-                "mr-2 text-slate-400"
-              )}
+              className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
             />
           </>
         )}

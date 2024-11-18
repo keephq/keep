@@ -1,6 +1,6 @@
 // culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/features/cuesheet/cuesheet-table-elements/CuesheetHeader.tsx
 
-import { CSSProperties, ReactNode } from "react";
+import { CSSProperties, ReactNode, RefObject } from "react";
 import {
   closestCenter,
   DndContext,
@@ -27,7 +27,6 @@ import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
 import { AlertDto } from "./models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
-import classnames from "classnames";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
@@ -121,7 +120,7 @@ const DraggableHeaderCell = ({
 
       {column.getIsPinned() === false && (
         <div
-          className={classnames(
+          className={clsx(
             "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
             {
               "hover:w-2 bg-blue-100": column.getIsResizing() === false,
@@ -138,12 +137,14 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   table: Table<AlertDto>;
   presetName: string;
+  a11yContainerRef: RefObject<HTMLDivElement>;
 }
 
 export default function AlertsTableHeaders({
   columns,
   table,
   presetName,
+  a11yContainerRef,
 }: Props) {
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
@@ -192,6 +193,9 @@ export default function AlertsTableHeaders({
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={onDragEnd}
+          accessibility={{
+            container: a11yContainerRef.current ?? undefined,
+          }}
         >
           <TableRow key={headerGroup.id}>
             <SortableContext

@@ -1,4 +1,4 @@
-import { AlertDto } from "app/alerts/models";
+import { AlertDto } from "@/app/alerts/models";
 
 const WINDOW_SIZE = 60 * 60 * 1000; // 60 minutes in milliseconds
 const MAX_ALERTS_PER_WINDOW = 50; // This number might come from historical data or whatever we decide

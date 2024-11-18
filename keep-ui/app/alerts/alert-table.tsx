@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Table, Callout, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
@@ -71,6 +71,8 @@ export function AlertTable({
   setDismissedModalAlert,
   mutateAlerts,
 }: Props) {
+  const a11yContainerRef = useRef<HTMLDivElement>(null);
+
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
     Object.values(severityMapping).reduce<{ [key: string]: string }>(
@@ -317,11 +319,13 @@ export function AlertTable({
                   setSelectedTab={setSelectedTab}
                 />
               )}
+              <div ref={a11yContainerRef} className="sr-only" />
               <Table className="[&>table]:table-fixed [&>table]:w-full">
                 <AlertsTableHeaders
                   columns={columns}
                   table={table}
                   presetName={presetName}
+                  a11yContainerRef={a11yContainerRef}
                 />
                 <AlertsTableBody
                   table={table}

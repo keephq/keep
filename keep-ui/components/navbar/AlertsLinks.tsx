@@ -14,8 +14,8 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
 import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "utils/hooks/usePresets";
-import classNames from "classnames";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
+import clsx from "clsx";
 
 type AlertsLinksProps = {
   session: Session | null;
@@ -106,7 +106,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   ALERTS
                 </Subtitle>
                 <FiFilter
-                  className={classNames(
+                  className={clsx(
                     "absolute left-full ml-2 cursor-pointer text-gray-400 transition-opacity",
                     {
                       "opacity-100 text-orange-500": storedTags.length > 0,
@@ -122,7 +122,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                 />
               </div>
               <IoChevronUp
-                className={classNames("mr-2 text-slate-400", {
+                className={clsx("mr-2 text-slate-400", {
                   "rotate-180": open,
                 })}
               />
