@@ -23,10 +23,6 @@ def on_starting(server=None):
     migrate_db()
     launch_uptime_reporting()
 
-    if LIVE_DEMO_MODE:
-        from keep.api.core.demo_mode_runner import launch_demo_mode
-        launch_demo_mode()
-
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
         IdentityManagerTypes.DB.value,
@@ -60,4 +56,9 @@ def on_starting(server=None):
         public_url = ngrok_connection.public_url
         logger.info(f"ngrok tunnel: {public_url}")
         os.environ["KEEP_API_URL"] = public_url
+
+    if LIVE_DEMO_MODE:
+        from keep.api.core.demo_mode_runner import launch_demo_mode
+        launch_demo_mode()
+
     logger.info("Keep server started")

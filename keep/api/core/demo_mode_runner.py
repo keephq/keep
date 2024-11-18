@@ -7,6 +7,7 @@ import random
 import time
 import datetime
 from datetime import timezone
+from dateutil import parser
 from requests.models import PreparedRequest
 
 from keep.api.core.db import get_session_sync
@@ -295,9 +296,8 @@ def remove_old_incidents(keep_api_key, keep_api_url):
     incidents_existing = incidents_existing.json()['items']
 
     for incident in incidents_existing:
-        if datetime.datetime.strptime(
-                incident["creation_time"], "%Y-%m-%dT%H:%M:%S.%f"
-        ).replace(tzinfo=timezone.utc) < (datetime.datetime.now() - consider_old_timedelta).astimezone(timezone.utc):
+        if parser.parse(incident["creation_time"]).replace(tzinfo=timezone.utc) < \
+                (datetime.datetime.now() - consider_old_timedelta).astimezone(timezone.utc):
             incident_id = incident["id"]
             response = requests.delete(
                 f"{keep_api_url}/incidents/{incident_id}",
@@ -393,13 +393,16 @@ def launch_demo_mode():
     Running async demo in the backgound.
     """
     keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
-    keep_api_key = os.environ.get("KEEP_API_KEY", get_or_create_api_key(
-        session=get_session_sync(),
-        tenant_id=SINGLE_TENANT_UUID,
-        created_by="system",
-        unique_api_key_id="simulate_alerts",
-        system_description="Simulate Alerts API key",
-    ))
+    keep_api_key = os.environ.get("KEEP_API_KEY")
+    if keep_api_key is None:
+        with get_session_sync() as session:
+            keep_api_key = get_or_create_api_key(
+                session=session,
+                tenant_id=SINGLE_TENANT_UUID,
+                created_by="system",
+                unique_api_key_id="simulate_alerts",
+                system_description="Simulate Alerts API key",
+            )
 
     thread = threading.Thread(target=asyncio.run, args=(simulate_alerts(
         keep_api_url,
