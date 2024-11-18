@@ -22,6 +22,7 @@ export interface TopologyService {
   ip_address?: string;
   mac_address?: string;
   manufacturer?: string;
+  category?: string;
   application_ids: string[];
   // Added on client to optimize rendering
   applications: TopologyApplicationMinimal[];

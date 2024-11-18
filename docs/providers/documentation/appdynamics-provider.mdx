@@ -7,19 +7,26 @@ description: "AppDynamics provider allows you to get AppDynamics `alerts/actions
 ## Authentication Parameters
 The AppDynamics provider requires the following authentication parameter:
 
-- `AppDynamics Username`: Required. This is your AppDynamics account username.
-- `AppDynamics Password`: This is the password associated with your AppDynamics Username.
+- `AppDynamics Access Token`: Required if username/password is not provided for Bearer token authentication.
+- `AppDynamics Username`: Required for Basic Auth authentication. This is your AppDynamics account username.
+- `AppDynamics Password`: Required for Basic Auth authentication. This is the password associated with your AppDynamics Username.
 - `AppDynamics Account Name`: This is your account's name.
 - `App Id`: The Id of the Application in which you would like to install the webhook.
 - `Host`: This is the hostname of the AppDynamics instance you wish to connect to. It identifies the AppDynamics server that the API will interact with.
 
 ## Connecting with the Provider
+1. Ensure you have a AppDynamics account with the necessary [permissions](https://docs.appdynamics.com/accounts/en/cisco-appdynamics-on-premises-user-management/roles-and-permissions). The basic permissions required are `Account Owner` or `Administrator`. Alternatively you can create an account (instructions)[https://docs.appdynamics.com/accounts/en/global-account-administration/access-management/manage-user-accounts]
+
+### Basic Auth authentication
 
 Obtain AppDynamics Username and Password:
-1. Ensure you have a AppDynamics account with the necessary [permissions](https://docs.appdynamics.com/accounts/en/cisco-appdynamics-on-premises-user-management/roles-and-permissions). The basic permissions required are `Account Owner` or `Administrator`. Alternatively you can create an account (instructions)[https://docs.appdynamics.com/accounts/en/global-account-administration/access-management/manage-user-accounts]
-2. Find your account name [here](https://accounts.appdynamics.com/overview).
-3. Determine the Host [here](https://accounts.appdynamics.com/overview).
-4. Get the appId of the Appdynamics instance in which you wish to install the webhook into.
+1. Find your account name [here](https://accounts.appdynamics.com/overview).
+
+OR create Access Token:
+1. Follow instructions [here](https://docs.appdynamics.com/appd/23.x/latest/en/extend-appdynamics/appdynamics-apis/api-clients)
+
+1. Determine the Host [here](https://accounts.appdynamics.com/overview).
+2. Get the appId of the Appdynamics instance in which you wish to install the webhook into.
 
 ## Webhook Integration Modifications
 
