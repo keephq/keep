@@ -229,6 +229,8 @@ def get_or_create_topology(keep_api_key, keep_api_url):
     services_existing.raise_for_status()
     services_existing = services_existing.json()
 
+    # Creating services
+
     if len(services_existing) == 0:
         process_topology(
             SINGLE_TENANT_UUID, 
@@ -237,35 +239,35 @@ def get_or_create_topology(keep_api_key, keep_api_url):
             "datadog"
         )
 
-    # Create application
-    applications_existing = requests.get(
-        f"{keep_api_url}/topology/applications",
-        headers={"x-api-key": keep_api_key},
-    )
-    applications_existing.raise_for_status()
-    applications_existing = applications_existing.json()
-    
-    if len(applications_existing) == 0:
-        # Pull services again to get their ids
-        services_existing = requests.get(
-            f"{keep_api_url}/topology",
-            headers={"x-api-key": keep_api_key},
-        )
-        services_existing.raise_for_status()
-        services_existing = services_existing.json()
-
-        # Update application_to_create with existing services ids
-        for service in application_to_create["services"]:
-            for existing_service in services_existing:
-                if service["name"] == existing_service["display_name"]:
-                    service["id"] = existing_service["id"]
-                    
-        response = requests.post(
+        # Create application
+        applications_existing = requests.get(
             f"{keep_api_url}/topology/applications",
             headers={"x-api-key": keep_api_key},
-            json=application_to_create,
         )
-        response.raise_for_status()
+        applications_existing.raise_for_status()
+        applications_existing = applications_existing.json()
+        
+        if len(applications_existing) == 0:
+            # Pull services again to get their ids
+            services_existing = requests.get(
+                f"{keep_api_url}/topology",
+                headers={"x-api-key": keep_api_key},
+            )
+            services_existing.raise_for_status()
+            services_existing = services_existing.json()
+
+            # Update application_to_create with existing services ids
+            for service in application_to_create["services"]:
+                for existing_service in services_existing:
+                    if service["name"] == existing_service["display_name"]:
+                        service["id"] = existing_service["id"]
+                        
+            response = requests.post(
+                f"{keep_api_url}/topology/applications",
+                headers={"x-api-key": keep_api_key},
+                json=application_to_create,
+            )
+            response.raise_for_status()
         
 
 def get_or_create_correlation_rules(keep_api_key, keep_api_url):
@@ -342,6 +344,7 @@ async def simulate_alerts(
         get_or_create_topology(keep_api_key, keep_api_url)
 
     while True:
+        logger.info("Looping to send alerts...")
         remove_old_incidents(keep_api_key, keep_api_url)
 
         # choose provider
