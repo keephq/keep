@@ -104,6 +104,8 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         browser.wait_for_timeout(10000)
         # refresh the page
         browser.reload()
+        # wait for badge counter to update
+        browser.wait_for_timeout(500)
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
         feed_count = int(feed_badge.text_content())
         assert feed_count > feed_count_before
