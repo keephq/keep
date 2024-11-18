@@ -10,7 +10,8 @@ from typing import List, Optional
 from urllib.parse import urlencode, urljoin
 
 import pydantic
-import requests
+import requestss
+from dateutil import parser
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
@@ -267,7 +268,7 @@ class AppdynamicsProvider(BaseProvider):
         )
         res = res.json()
         temp.close()
-        if res["success"] == "True":
+        if res["success"] == "True" or res["success"] is True:
             self.logger.info("HTTP Response template Successfully Created")
         else:
             self.logger.info("HTTP Response template creation failed", extra=res)
@@ -393,10 +394,16 @@ class AppdynamicsProvider(BaseProvider):
             id=event["id"],
             name=event["name"],
             severity=AppdynamicsProvider.SEVERITIES_MAP.get(event["severity"]),
-            lastReceived=event["lastReceived"],
+            lastReceived=parser.parse(event["lastReceived"]).isoformat(),
             message=event["message"],
             description=event["description"],
             event_id=event["event_id"],
             url=event["url"],
             source=["appdynamics"],
         )
+
+    @staticmethod
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
+        if isinstance(raw_body, dict):
+            return raw_body
+        return json.loads(raw_body, strict=False)
