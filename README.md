@@ -19,7 +19,7 @@
     <a href="https://github.com/keephq/keep/commits/main">
       <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/keephq/keep"/>
     </a>
-  "https://codecov.io/gh/keephq/keep" >
+    <a href="https://codecov.io/gh/keephq/keep" >
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
