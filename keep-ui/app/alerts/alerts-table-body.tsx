@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import clsx from "clsx";
+import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
 
 interface Props {
   table: Table<AlertDto>;
@@ -86,21 +87,27 @@ export function AlertsTableBody({
             )}
             onClick={(e) => handleRowClick(e, row.original)}
           >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell
-                key={cell.id}
-                className={clsx(
-                  cell.column.columnDef.meta?.tdClassName || "",
-                  "relative z-[1]" // Ensure cell content is above the border
-                )}
-              >
-                {showSkeleton ? (
-                  <Skeleton />
-                ) : (
-                  flexRender(cell.column.columnDef.cell, cell.getContext())
-                )}
-              </TableCell>
-            ))}
+            {row.getVisibleCells().map((cell) => {
+              // TODO: fix multiple pinned columns
+              // const { style, className } = getCommonPinningStylesAndClassNames(
+              //   cell.column
+              // );
+              return (
+                <TableCell
+                  key={cell.id}
+                  className={clsx(
+                    cell.column.columnDef.meta?.tdClassName || "",
+                    "relative z-[1]" // Ensure cell content is above the border
+                  )}
+                >
+                  {showSkeleton ? (
+                    <Skeleton />
+                  ) : (
+                    flexRender(cell.column.columnDef.cell, cell.getContext())
+                  )}
+                </TableCell>
+              );
+            })}
           </TableRow>
         );
       })}
