@@ -194,7 +194,10 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         url = incident.pop("url", "")
         documentation = incident.pop("documentation", {})
         if isinstance(documentation, dict):
-            name = documentation.get("subject", description)
+            name = (
+                documentation.get("subject", description)
+                or "GCPMontirong Alert (No subject)"
+            )
         else:
             name = "Test notification"
         incident_id = incident.get("incident_id", "")
