@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import {
   AlertFacetsProps,
   FacetValue,
@@ -12,11 +12,10 @@ import {
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { AlertDto } from "./models";
 import {
-  DynamicFacet,
   DynamicFacetWrapper,
   AddFacetModal,
 } from "./alert-table-facet-dynamic";
-import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 export const AlertFacets: React.FC<AlertFacetsProps> = ({
   alerts,
@@ -76,88 +75,92 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
     setFacetFilters(newFilters);
   };
 
-  const getFacetValues = (key: keyof AlertDto | string): FacetValue[] => {
-    const filteredAlerts = getFilteredAlertsForFacet(
-      alerts,
-      facetFilters,
-      key,
-      timeRange
-    );
-    const valueMap = new Map<string, number>();
-    let nullCount = 0;
+  const getFacetValues = useCallback(
+    (key: keyof AlertDto | string): FacetValue[] => {
+      const filteredAlerts = getFilteredAlertsForFacet(
+        alerts,
+        facetFilters,
+        key,
+        timeRange
+      );
+      const valueMap = new Map<string, number>();
+      let nullCount = 0;
 
-    filteredAlerts.forEach((alert) => {
-      let value;
+      filteredAlerts.forEach((alert) => {
+        let value;
 
-      // Handle nested keys like "labels.host"
-      if (typeof key === "string" && key.includes(".")) {
-        const [parentKey, childKey] = key.split(".");
-        const parentValue = alert[parentKey as keyof AlertDto];
+        // Handle nested keys like "labels.host"
+        if (typeof key === "string" && key.includes(".")) {
+          const [parentKey, childKey] = key.split(".");
+          const parentValue = alert[parentKey as keyof AlertDto];
 
-        if (
-          typeof parentValue === "object" &&
-          parentValue !== null &&
-          !Array.isArray(parentValue) &&
-          !(parentValue instanceof Date)
-        ) {
-          value = (parentValue as Record<string, unknown>)[childKey];
+          if (
+            typeof parentValue === "object" &&
+            parentValue !== null &&
+            !Array.isArray(parentValue) &&
+            !(parentValue instanceof Date)
+          ) {
+            value = (parentValue as Record<string, unknown>)[childKey];
+          } else {
+            value = undefined;
+          }
         } else {
-          value = undefined;
+          value = alert[key as keyof AlertDto];
         }
-      } else {
-        value = alert[key as keyof AlertDto];
-      }
 
-      if (Array.isArray(value)) {
-        if (value.length === 0) {
+        if (Array.isArray(value)) {
+          if (value.length === 0) {
+            nullCount++;
+          } else {
+            value.forEach((v) => {
+              valueMap.set(v, (valueMap.get(v) || 0) + 1);
+            });
+          }
+        } else if (value !== undefined && value !== null) {
+          const strValue = String(value);
+          valueMap.set(strValue, (valueMap.get(strValue) || 0) + 1);
+        } else {
           nullCount++;
-        } else {
-          value.forEach((v) => {
-            valueMap.set(v, (valueMap.get(v) || 0) + 1);
-          });
         }
-      } else if (value !== undefined && value !== null) {
-        const strValue = String(value);
-        valueMap.set(strValue, (valueMap.get(strValue) || 0) + 1);
-      } else {
-        nullCount++;
-      }
-    });
+      });
 
-    let values = Array.from(valueMap.entries()).map(([label, count]) => ({
-      label,
-      count,
-      isSelected:
-        facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
-    }));
-
-    if (["assignee", "incident"].includes(key as string) && nullCount > 0) {
-      values.push({
-        label: "n/a",
-        count: nullCount,
+      let values = Array.from(valueMap.entries()).map(([label, count]) => ({
+        label,
+        count,
         isSelected:
-          facetFilters[key]?.includes("n/a") || !facetFilters[key]?.length,
-      });
-    }
+          facetFilters[key]?.includes(label) || !facetFilters[key]?.length,
+      }));
 
-    if (key === "severity") {
-      values.sort((a, b) => {
-        if (a.label === "n/a") return 1;
-        if (b.label === "n/a") return -1;
-        const orderDiff = getSeverityOrder(a.label) - getSeverityOrder(b.label);
-        if (orderDiff !== 0) return orderDiff;
-        return b.count - a.count;
-      });
-    } else {
-      values.sort((a, b) => {
-        if (a.label === "n/a") return 1;
-        if (b.label === "n/a") return -1;
-        return b.count - a.count;
-      });
-    }
+      if (["assignee", "incident"].includes(key as string) && nullCount > 0) {
+        values.push({
+          label: "n/a",
+          count: nullCount,
+          isSelected:
+            facetFilters[key]?.includes("n/a") || !facetFilters[key]?.length,
+        });
+      }
 
-    return values;
-  };
+      if (key === "severity") {
+        values.sort((a, b) => {
+          if (a.label === "n/a") return 1;
+          if (b.label === "n/a") return -1;
+          const orderDiff =
+            getSeverityOrder(a.label) - getSeverityOrder(b.label);
+          if (orderDiff !== 0) return orderDiff;
+          return b.count - a.count;
+        });
+      } else {
+        values.sort((a, b) => {
+          if (a.label === "n/a") return 1;
+          if (b.label === "n/a") return -1;
+          return b.count - a.count;
+        });
+      }
+
+      return values;
+    },
+    [alerts, facetFilters, timeRange]
+  );
 
   const staticFacets = [
     "severity",

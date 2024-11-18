@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Table, Callout, Card, Icon } from "@tremor/react";
+import { useState } from "react";
+import { Table, Callout, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
@@ -263,15 +263,35 @@ export function AlertTable({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col gap-4 h-full">
       <TitleAndFilters
         table={table}
         alerts={alerts}
         presetName={presetName}
         onThemeChange={handleThemeChange}
       />
-      <div className="flex flex-grow gap-6">
-        <div className="w-32 min-w-[12rem] mt-16">
+      <div className="min-h-10">
+        {/* Setting min-h-10 to avoid jumping when actions are shown */}
+        {selectedRowIds.length ? (
+          <AlertActions
+            selectedRowIds={selectedRowIds}
+            alerts={alerts}
+            clearRowSelection={table.resetRowSelection}
+            setDismissModalAlert={setDismissedModalAlert}
+            mutateAlerts={mutateAlerts}
+          />
+        ) : (
+          <AlertPresets
+            table={table}
+            presetNameFromApi={presetName}
+            isLoading={isAsyncLoading}
+            presetPrivate={presetPrivate}
+            presetNoisy={presetNoisy}
+          />
+        )}
+      </div>
+      <div className="flex gap-6">
+        <div className="w-32 min-w-[12rem]">
           <AlertFacets
             className="sticky top-0"
             alerts={alerts}
@@ -283,28 +303,7 @@ export function AlertTable({
             table={table}
           />
         </div>
-        {/* Using p-4 -m-4 to set overflow-hidden without affecting shadow */}
-        <div className="flex flex-col gap-4 overflow-hidden p-4 -m-4">
-          <div className="min-h-10">
-            {/* Setting min-h-10 to avoid jumping when actions are shown */}
-            {selectedRowIds.length ? (
-              <AlertActions
-                selectedRowIds={selectedRowIds}
-                alerts={alerts}
-                clearRowSelection={table.resetRowSelection}
-                setDismissModalAlert={setDismissedModalAlert}
-                mutateAlerts={mutateAlerts}
-              />
-            ) : (
-              <AlertPresets
-                table={table}
-                presetNameFromApi={presetName}
-                isLoading={isAsyncLoading}
-                presetPrivate={presetPrivate}
-                presetNoisy={presetNoisy}
-              />
-            )}
-          </div>
+        <div className="flex flex-col gap-4 min-w-0">
           <Card className="flex-grow h-full flex flex-col p-0">
             <div className="flex-grow">
               {isAsyncLoading && (
@@ -327,7 +326,7 @@ export function AlertTable({
                   setSelectedTab={setSelectedTab}
                 />
               )}
-              <Table className="flex-grow overflow-auto [&>table]:table-fixed [&>table]:w-full">
+              <Table className="[&>table]:table-fixed [&>table]:w-full">
                 <AlertsTableHeaders
                   columns={columns}
                   table={table}
