@@ -225,7 +225,7 @@ class AppdynamicsProvider(BaseProvider):
                     break
         else:
             self.logger.error(
-                "Error while validating scopes for AppDynamics", extra=response.json()
+                "Error while validating scopes for AppDynamics", extra=response.content
             )
 
         return {"authenticated": authenticated, "administrator": administrator}
