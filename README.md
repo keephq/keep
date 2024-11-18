@@ -14,8 +14,7 @@
     <a href='http://makeapullrequest.com'>
       <img alt='PRs Welcome' src='https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields'/>
     </a>
-    <a href="https://codecov.io/gh/keephq/keep">
-<img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
+    <a href="https://codecov.io/gh/keephq/keep"><img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
 </div>
 
