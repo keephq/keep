@@ -4,7 +4,8 @@ import asyncio
 import logging
 import threading
 import random
-import time, datetime
+import time
+import datetime
 from datetime import timezone
 
 from keep.api.core.db import get_session_sync
