@@ -45,7 +45,7 @@ from datetime import datetime
 
 def setup_console_listener(page, log_entries):
     """Set up console listener to capture logs."""
-    page.on("console", lambda msg: log_entries.append(f"{datetime.now()}: {msg.text}"))
+    page.on("console", lambda msg: (log_entries.append(f"{datetime.now()}: {msg.text}, location: {msg.location}")))
 
 def save_failure_artifacts(page, log_entries):
     """Save screenshots, HTML content, and console logs on test failure."""
