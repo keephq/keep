@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext } from "react";
-import { InternalConfig } from "types/internal-config";
+import { InternalConfig } from "@/types/internal-config";
 
 // Create the context with undefined as initial value
 export const ConfigContext = createContext<InternalConfig | null>(null);
