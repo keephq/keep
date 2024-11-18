@@ -10,6 +10,16 @@
 </br>
 </div>
 
+<div align="center">
+    <a href='http://makeapullrequest.com'>
+      <img alt='PRs Welcome' src='https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields'/>
+    </a>
+      <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/keephq/keep"/>
+    <a href="https://codecov.io/gh/keephq/keep" >
+        <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
+    </a>
+</div>
+
 <p align="center">
     <a href="https://docs.keephq.dev">Docs</a>
     ·
