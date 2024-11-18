@@ -26,6 +26,8 @@ import APIKeysTab from "./auth/api-key-tab";
 import SSOTab from "./auth/sso-tab";
 import WebhookSettings from "./webhook-settings";
 import SmtpSettings from "./smtp-settings";
+import PermissionsTab from "./auth/permissions-tab";
+import { PermissionsTable } from "./auth/permissions-table";
 
 import { UsersTable } from "./auth/users-table";
 import { GroupsTable } from "./auth/groups-table";
@@ -53,10 +55,15 @@ export default function SettingsPage() {
 
   // future: feature flags
   const usersAllowed = authType !== AuthenticationType.NOAUTH;
+  // azure and noauth do not allow user creation
+  const userCreationAllowed =
+    authType !== AuthenticationType.NOAUTH &&
+    authType !== AuthenticationType.AZUREAD;
   const rolesAllowed = authType !== AuthenticationType.NOAUTH;
   const customRolesAllowed = authType === AuthenticationType.KEYCLOAK;
   const ssoAllowed = authType === AuthenticationType.KEYCLOAK;
   const groupsAllowed = authType === AuthenticationType.KEYCLOAK;
+  const permissionsAllowed = authType === AuthenticationType.KEYCLOAK;
   const apiKeysAllowed = true; // Assuming API keys are always allowed
 
   useEffect(() => {
@@ -74,14 +81,16 @@ export default function SettingsPage() {
       newUserSubTab === "users"
         ? 0
         : newUserSubTab === "groups"
-          ? 1
-          : newUserSubTab === "roles"
-            ? 2
-            : newUserSubTab === "api-keys"
-              ? 3
-              : newUserSubTab === "sso"
-                ? 4
-                : 0;
+        ? 1
+        : newUserSubTab === "roles"
+        ? 2
+        : newUserSubTab === "permissions"
+        ? 3
+        : newUserSubTab === "api-keys"
+        ? 4
+        : newUserSubTab === "sso"
+        ? 5
+        : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
@@ -110,6 +119,10 @@ export default function SettingsPage() {
               accessToken={session?.accessToken!}
               currentUser={session?.user}
               groupsAllowed={groupsAllowed}
+<<<<<<< HEAD
+=======
+              userCreationAllowed={userCreationAllowed}
+>>>>>>> main
             />
           );
         } else {
@@ -254,6 +267,41 @@ export default function SettingsPage() {
                 onDeleteRole={() => {}}
                 isDisabled={true}
               />
+<<<<<<< HEAD
+=======
+            </EmptyStateTable>
+          );
+        }
+      case "permissions":
+        if (permissionsAllowed) {
+          return <PermissionsTab accessToken={session?.accessToken!} />;
+        } else {
+          const mockPresets = [
+            {
+              id: "1",
+              name: "NOC Preset",
+              type: "preset",
+              assignments: ["user_noc@keephq.dev"],
+            },
+            {
+              id: "2",
+              name: "Dev Preset",
+              type: "preset",
+              assignments: ["user_noc@keephq.dev", "user_admin@keephq.dev"],
+            },
+          ];
+          return (
+            <EmptyStateTable
+              icon={MdOutlineSecurity}
+              message={`Permissions management is disabled with. See documentation on how to enabled it.`}
+              documentationURL="https://docs.keephq.dev/deployment/authentication/overview#authentication-features-comparison"
+            >
+              <PermissionsTable
+                resources={mockPresets}
+                onRowClick={() => {}}
+                isDisabled={true}
+              />
+>>>>>>> main
             </EmptyStateTable>
           );
         }
@@ -349,6 +397,15 @@ export default function SettingsPage() {
                   Roles
                 </Tab>
                 <Tab
+<<<<<<< HEAD
+=======
+                  icon={LockClosedIcon}
+                  onClick={() => handleUserSubTabChange("permissions")}
+                >
+                  Permissions
+                </Tab>
+                <Tab
+>>>>>>> main
                   icon={KeyIcon}
                   onClick={() => handleUserSubTabChange("api-keys")}
                 >
@@ -370,6 +427,9 @@ export default function SettingsPage() {
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   {renderUserSubTabContent("roles")}
+                </TabPanel>
+                <TabPanel className="h-full mt-6">
+                  {renderUserSubTabContent("permissions")}
                 </TabPanel>
                 <TabPanel className="h-full mt-6">
                   {renderUserSubTabContent("api-keys")}

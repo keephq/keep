@@ -8,22 +8,27 @@ The recommended way to install Keep on Kubernetes is via Helm Chart. <br></br>
 Follow these steps to set it up.
 </Tip>
 
-## Prerequisites
+# Prerequisites
 
-### Helm CLI
+## Helm CLI
 See the [Helm documentation](https://helm.sh/docs/intro/install/) for instructions about installing helm.
 
-### Ingress Controller (Optional)
+## Ingress Controller (Optional)
 <Info>
 You can skip this step if:
 1. You already have **ingress-nginx** installed.
 2. You don't need to expose Keep to the internet/network.
 </Info>
 
-#### Overview
+### Overview
 An ingress controller is essential for managing external access to services in your Kubernetes cluster. It acts as a smart router and load balancer, allowing you to expose multiple services through a single entry point while handling SSL termination and routing rules.
-**Keep works the best with** [ingress-nginx](https://github.com/kubernetes/ingress-nginx) **but you can customize the helm chart for other ingress controllers too.**
 
+
+
+**Keep works best with both** [ingress-nginx](https://github.com/kubernetes/ingress-nginx) **and** [HAProxy Ingress](https://haproxy-ingress.github.io/) **controllers, but you can customize the helm chart for other ingress controllers too.**
+
+
+### Nginx Ingress Controller
 
 #### Check ingress-nginx Installed
 You check if you already have ingress-nginx installed:
@@ -67,6 +72,34 @@ kubectl get configmap -n ingress-nginx ingress-nginx-controller -o yaml | grep a
 allow-snippet-annotations: "true"
 ```
 
+### HAProxy Ingress Controller
+
+#### Install ingress-haproxy
+<Info>
+To read about more installation options, see [haproxy-ingress installation docs](https://haproxy-ingress.github.io/docs/getting-started/).
+</Info>
+
+```bash
+# simplest way to install
+helm upgrade --install haproxy-ingress haproxy-ingress \
+  --repo https://haproxy-ingress.github.io/charts \
+  --namespace ingress-haproxy --create-namespace
+```
+
+Verify installation:
+```bash
+kubectl get ingressclass
+NAME      CONTROLLER                      PARAMETERS   AGE
+haproxy   haproxy-ingress.github.io/controller        <none>        4h19m
+```
+
+Verify if controller is running:
+```bash
+kubectl get pods -n ingress-haproxy -l app.kubernetes.io/instance=haproxy-ingress
+NAME                                READY   STATUS    RESTARTS   AGE
+haproxy-ingress-controller-x4n2z   1/1     Running   0          4h19m
+```
+
 ## Installation
 
 ### With Ingress-NGINX (Recommended)
@@ -79,7 +112,17 @@ helm repo add keephq https://keephq.github.io/helm-charts
 helm install keep keephq/keep -n keep --create-namespace
 ```
 
-### Without Ingress-NGINX (Not Recommended)
+### With Ingress-HAProxy (Recommended)
+
+```bash
+# Add the Helm repository
+helm repo add keephq https://keephq.github.io/helm-charts
+
+# Install Keep with ingress enabled
+helm install keep keephq/keep -n keep --create-namespace --set global.ingress.className=haproxy
+```
+
+### Without Ingress (Not Recommended)
 
 ```bash
 # Add the Helm repository

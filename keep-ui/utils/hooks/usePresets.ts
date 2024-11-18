@@ -70,30 +70,13 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     setPresetsOrderFromLS((current) =>
       updatePresets(
         presetsOrderRef.current,
-        newPresets.filter(
-          (p) =>
-            ![
-              "feed",
-              "deleted",
-              "dismissed",
-              "without-incident",
-              "groups",
-            ].includes(p.name)
-        )
+        newPresets.filter((p) => !["feed"].includes(p.name))
       )
     );
     setStaticPresetsOrderFromLS((current) =>
       updatePresets(
         staticPresetsOrderRef.current,
-        newPresets.filter((p) =>
-          [
-            "feed",
-            "deleted",
-            "dismissed",
-            "without-incident",
-            "groups",
-          ].includes(p.name)
-        )
+        newPresets.filter((p) => ["feed"].includes(p.name))
       )
     );
   };

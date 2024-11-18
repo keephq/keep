@@ -5,6 +5,7 @@ SentryProvider is a class that provides a way to read data from Sentry.
 import dataclasses
 import datetime
 import logging
+from urllib.parse import urlparse
 
 import pydantic
 import requests
@@ -257,6 +258,15 @@ class SentryProvider(BaseProvider):
             .replace("'", "")
             .replace('"', "")
         )
+
+        # Validate URL
+        if url:
+            try:
+                result = urlparse(url)
+                if not all([result.scheme, result.netloc]):
+                    url = None
+            except Exception:
+                url = None
 
         return AlertDto(
             id=event_data.pop("event_id"),

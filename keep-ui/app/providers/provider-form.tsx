@@ -220,6 +220,8 @@ const ProviderForm = ({
     e.preventDefault();
     const verifier = generateRandomString();
     cookieCutter.set("verifier", verifier);
+    cookieCutter.set("oauth2_install_webhook", formValues.install_webhook);
+    cookieCutter.set("oauth2_pulling_enabled", formValues.pulling_enabled);
     const verifierChallenge = base64urlencode(await sha256(verifier));
 
     let oauth2Url = provider.oauth2_url;
@@ -480,7 +482,18 @@ const ProviderForm = ({
         })
         .catch((error) => {
           const updatedFormErrors = error.toString();
-          setFormErrors(updatedFormErrors);
+
+          if (updatedFormErrors.includes("SyntaxError")) {
+            setFormErrors(
+              "Bad response from API: Check the backend logs for more details"
+            );
+          } else if (updatedFormErrors.includes("Failed to fetch")) {
+            setFormErrors(
+              "Failed to connect to API: Check provider settings and your internet connection"
+            );
+          } else {
+            setFormErrors(updatedFormErrors);
+          }
           onFormChange(formValues, updatedFormErrors);
           setIsLoading(false);
           onConnectChange(false, false);

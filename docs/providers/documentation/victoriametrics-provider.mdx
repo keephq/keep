@@ -6,10 +6,14 @@ description: "The VictoriametricsProvider allows you to fetch alerts in Victoria
 
 ## Authentication Parameters
 
-The Victoriametrics provider requires the following authentication parameters:
+The Victoriametrics provider requires either of the following authentication parameters:
 
 - `VMAlertHost`: The hostname or IP address where VMAlert is running. Example: `localhost`, `192.168.1.100`, or `vmalert.mydomain.com`.
 - `VMAlertPort`: The port number on which VMAlert is listening. Example: 8880 (if VMAlert is set to listen on port 8880).
+
+or
+
+- `VMAlertURL`: The full URL to the VMAlert instance. For example: `http://vmalert.mydomain.com:8880`.
 
 ## Connecting with the Provider
 
@@ -21,6 +25,7 @@ The Victoriametrics provider requires the following authentication parameters:
 The Victoriametrics provider allows you to query from Victoriametrics through `query` and `query_range` types. The following are the parameters available for querying:
 
 1. `query` type:
+
    - `query`: The query to execute on Victoriametrics. Example: `sum(rate(http_requests_total{job="api-server"}[5m]))`.
    - `start`: The time to query the data for. Example: `2024-01-01T00:00:00Z`
 
@@ -33,24 +38,25 @@ The Victoriametrics provider allows you to query from Victoriametrics through `q
 ## Push alerts to keep using webhooks
 
 You can push alerts to keep without connecting to Victoriametrics This provider takes advantage of configurable webhooks available with Prometheus Alertmanager. Use the following template to configure AlertManager:
+
 ```yml
 route:
   receiver: "keep"
-  group_by: ['alertname']
-  group_wait:      15s
-  group_interval:  15s
+  group_by: ["alertname"]
+  group_wait: 15s
+  group_interval: 15s
   repeat_interval: 1m
   continue: true
 
 receivers:
-- name: "keep"
-  webhook_configs:
-  - url: '{keep_webhook_api_url}'
-    send_resolved: true
-    http_config:
-      basic_auth:
-        username: api_key
-        password: {api_key}
+  - name: "keep"
+    webhook_configs:
+      - url: "{keep_webhook_api_url}"
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: api_key
+            password: { api_key }
 ```
 
 ## Useful Links

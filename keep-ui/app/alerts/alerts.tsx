@@ -15,6 +15,8 @@ import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
+import NotFound from "@/app/not-found";
+import NotAuthorized from "@/app/not-authorized";
 
 const defaultPresets: Preset[] = [
   {
@@ -25,7 +27,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "dismissed",
@@ -35,7 +37,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "groups",
@@ -45,7 +47,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
   {
     id: "without-incident",
@@ -55,7 +57,7 @@ const defaultPresets: Preset[] = [
     is_noisy: false,
     alerts_count: 0,
     should_do_noise_now: false,
-    tags: []
+    tags: [],
   },
 ];
 
@@ -97,11 +99,13 @@ export default function Alerts({ presetName }: AlertsProps) {
   const selectedPreset = presets.find(
     (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
+
   const { data: pollAlerts } = useAlertPolling();
   const {
     data: alerts = [],
     isLoading: isAsyncLoading,
     mutate: mutateAlerts,
+    error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
@@ -119,8 +123,16 @@ export default function Alerts({ presetName }: AlertsProps) {
     }
   }, [mutateAlerts, pollAlerts]);
 
-  if (selectedPreset === undefined) {
-    return null;
+  if (!selectedPreset) {
+    return <NotFound />;
+  }
+  if (alertsError) {
+    if (alertsError.statusCode === 401) {
+      console.log("unauthenticated 401");
+      window.location.href = "/signin";
+      return null;
+    }
+    return <NotAuthorized />;
   }
 
   return (

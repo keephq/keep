@@ -28,7 +28,7 @@ export const useAlerts = () => {
         selectedAlert && session
           ? `${apiUrl}/alerts/${
               selectedAlert.fingerprint
-            }/history/?provider_id=${selectedAlert.providerId}&provider_type=${
+            }/history?provider_id=${selectedAlert.providerId}&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
@@ -61,6 +61,7 @@ export const useAlerts = () => {
       data: alertsFromEndpoint = [],
       mutate,
       isLoading,
+      error,
     } = useAllAlerts(presetName, options);
 
     useEffect(() => {
@@ -85,6 +86,7 @@ export const useAlerts = () => {
       data: Array.from(alertsMap.values()),
       mutate: mutate,
       isLoading: isLoading,
+      error: error,
     };
   };
 

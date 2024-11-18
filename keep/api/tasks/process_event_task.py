@@ -86,6 +86,7 @@ def __save_to_db(
                 alert = AlertRaw(
                     tenant_id=tenant_id,
                     raw_alert=raw_event,
+                    provider_type=provider_type,
                 )
                 session.add(alert)
         # add audit to the deduplicated events
@@ -410,11 +411,23 @@ def __handle_formatted_events(
             },
         )
 
+    
+    pusher_client = get_pusher_client() if notify_client else None
+
     # Tell the client to poll alerts
-    if notify_client and incidents:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
-            return
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "poll-alerts",
+                "{}",
+            )
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
+            pass
+    
+    if incidents and pusher_client:
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -422,14 +435,13 @@ def __handle_formatted_events(
                 {},
             )
         except Exception:
-            logger.exception("Failed to push alert to the client")
+            logger.exception("Failed to tell the client to pull incidents")
 
     # Now we need to update the presets
     # send with pusher
-    if notify_client:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
-            return
+    if not pusher_client:
+        return
+    
     try:
         presets = get_all_presets(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
@@ -483,6 +495,7 @@ def __handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+    return enriched_formatted_events
 
 
 def process_event(
@@ -494,11 +507,11 @@ def process_event(
     api_key_name: str | None,
     trace_id: str | None,  # so we can track the job from the request to the digest
     event: (
-        AlertDto | list[AlertDto] | dict
+        AlertDto | list[AlertDto] | IncidentDto | list[IncidentDto] | dict | None
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
-):
+) -> list[Alert]:
     extra_dict = {
         "tenant_id": tenant_id,
         "provider_type": provider_type,
@@ -531,6 +544,7 @@ def process_event(
                 provider_class = ProvidersFactory.get_provider_class(provider_type)
             except Exception:
                 provider_class = ProvidersFactory.get_provider_class("keep")
+
             event = provider_class.format_alert(
                 tenant_id=tenant_id,
                 event=event,
@@ -542,6 +556,11 @@ def process_event(
             if event is None and provider_type == "cloudwatch":
                 logger.info(
                     "This is a subscription notification message from AWS - skipping processing"
+                )
+                return
+            elif event is None:
+                logger.info(
+                    "Provider returned None (failed silently), skipping processing"
                 )
                 return
 
@@ -556,7 +575,7 @@ def process_event(
             raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
-        __handle_formatted_events(
+        return __handle_formatted_events(
             tenant_id,
             provider_type,
             session,
@@ -567,13 +586,53 @@ def process_event(
             timestamp_forced,
         )
     except Exception:
-        logger.exception("Error processing event", extra=extra_dict)
+        logger.exception(
+            "Error processing event",
+            extra=extra_dict,
+        )
+        # In case of exception, add the alerts to the defect table
+        __save_error_alerts(tenant_id, provider_type, raw_event)
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
+
+
+def __save_error_alerts(
+    tenant_id, provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
+):
+    if not raw_events:
+        logger.info("No raw events to save as errors")
+        return
+
+    try:
+        logger.info("Getting database session")
+        session = get_session_sync()
+
+        # Convert to list if single dict
+        if isinstance(raw_events, dict):
+            logger.info("Converting single dict to list")
+            raw_events = [raw_events]
+
+        logger.info(f"Saving {len(raw_events)} error alerts")
+        for raw_event in raw_events:
+            # Convert AlertDto to dict if needed
+            if isinstance(raw_event, AlertDto):
+                logger.info("Converting AlertDto to dict")
+                raw_event = raw_event.dict()
+
+            alert = AlertRaw(
+                tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
+            )
+            session.add(alert)
+        session.commit()
+        logger.info("Successfully saved error alerts")
+    except Exception:
+        logger.exception("Failed to save error alerts")
+    finally:
+        session.close()
 
 
 async def async_process_event(*args, **kwargs):

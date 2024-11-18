@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import { getApiURL } from "utils/apiUrl";
+import { getApiURL } from "@/utils/apiUrl";
 
 export default withAuth(
   function middleware(req) {
@@ -52,6 +52,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!keep_big\\.svg$|gnip\\.webp|signin$|api/aws-marketplace$).*)",
+    "/((?!keep_big\\.svg$|gnip\\.webp|signin$|api/aws-marketplace$|monitoring).*)",
   ], // Adjust as needed
 };

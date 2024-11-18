@@ -1,14 +1,16 @@
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import useSWRImmutable from "swr/immutable";
-import { InternalConfig } from "types/internal-config";
-import { fetcher } from "utils/fetcher";
+import { ConfigContext } from "@/app/config-provider";
+import { useContext } from "react";
 
 export const useConfig = () => {
-  const { data: session } = useSession();
+  const context = useContext(ConfigContext);
 
-  return useSWRImmutable<InternalConfig>("/api/config", () =>
-    fetcher("/api/config", session?.accessToken)
-  );
+  if (context === undefined) {
+    throw new Error("useConfig must be used within a ConfigProvider");
+  }
+
+  return {
+    data: context,
+  };
 };
 
 export const useApiUrl = () => {

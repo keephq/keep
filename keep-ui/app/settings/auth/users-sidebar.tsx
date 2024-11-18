@@ -5,8 +5,6 @@ import {
   Subtitle,
   Button,
   TextInput,
-  SearchSelect,
-  SearchSelectItem,
   MultiSelect,
   MultiSelectItem,
   Callout,
@@ -35,6 +33,7 @@ interface UserSidebarProps {
   mutateUsers: (data?: any, shouldRevalidate?: boolean) => Promise<any>;
   groupsEnabled?: boolean;
   identifierType: "email" | "username";
+  userCreationAllowed: boolean;
 }
 
 const UsersSidebar = ({
@@ -45,6 +44,7 @@ const UsersSidebar = ({
   mutateUsers,
   groupsEnabled = true,
   identifierType,
+  userCreationAllowed,
 }: UserSidebarProps) => {
   const {
     control,
@@ -103,6 +103,10 @@ const UsersSidebar = ({
   }, [user, setValue, isOpen, reset, clearErrors, identifierType]);
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
+    if (!userCreationAllowed) {
+      return;
+    }
+
     setIsSubmitting(true);
     clearErrors("root.serverError");
 
@@ -146,6 +150,7 @@ const UsersSidebar = ({
 
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userCreationAllowed) return;
     clearErrors(); // Clear errors on each submit click
     handleSubmit(onSubmit)();
   };
@@ -194,6 +199,16 @@ const UsersSidebar = ({
               className="mt-4 flex flex-col h-full"
             >
               <div className="flex-grow">
+                {!userCreationAllowed && (
+                  <Callout
+                    className="mt-4"
+                    title="Users are managed externally"
+                    color="orange"
+                  >
+                    User management is handled through your external
+                    authentication system.
+                  </Callout>
+                )}
                 {identifierType === "email" ? (
                   <>
                     <div className="mt-4">
@@ -215,8 +230,8 @@ const UsersSidebar = ({
                             {...field}
                             error={!!errors.username}
                             errorMessage={errors.username?.message}
-                            disabled={!isNewUser}
-                            className={`${isNewUser ? "" : "bg-gray-200"}`}
+                            disabled={!isNewUser || !userCreationAllowed}
+                            className="bg-gray-200"
                           />
                         )}
                       />
@@ -234,8 +249,8 @@ const UsersSidebar = ({
                             {...field}
                             error={!!errors.name}
                             errorMessage={errors.name?.message}
-                            disabled={!isNewUser}
-                            className={`${isNewUser ? "" : "bg-gray-200"}`}
+                            disabled={!isNewUser || !userCreationAllowed}
+                            className="bg-gray-200"
                           />
                         )}
                       />
@@ -255,8 +270,8 @@ const UsersSidebar = ({
                           {...field}
                           error={!!errors.username}
                           errorMessage={errors.username?.message}
-                          disabled={!isNewUser}
-                          className={`${isNewUser ? "" : "bg-gray-200"}`}
+                          disabled={!isNewUser || !userCreationAllowed}
+                          className="bg-gray-200"
                         />
                       )}
                     />
@@ -265,7 +280,8 @@ const UsersSidebar = ({
                 {/* Password Field */}
                 {(authType === AuthenticationType.DB ||
                   authType === AuthenticationType.KEYCLOAK) &&
-                  isNewUser && (
+                  isNewUser &&
+                  userCreationAllowed && (
                     <div className="mt-4">
                       <Subtitle>Password</Subtitle>
                       <Controller
@@ -300,12 +316,13 @@ const UsersSidebar = ({
                         {...field}
                         onChange={(selectedOption) =>
                           field.onChange(selectedOption?.name)
-                        } // Assuming you want to store the role ID
-                        value={roles.find((role) => role.name === field.value)} // Ensure the value is a Role object
-                        options={roles} // Pass the full Role objects
-                        getOptionLabel={(role) => role.name} // Use the name for display
-                        getOptionValue={(role) => role.name} // Use the name as the value
+                        }
+                        value={roles.find((role) => role.name === field.value)}
+                        options={roles}
+                        getOptionLabel={(role) => role.name}
+                        getOptionValue={(role) => role.name}
                         placeholder="Select a role"
+                        isDisabled={!userCreationAllowed}
                       />
                     )}
                   />
@@ -324,6 +341,7 @@ const UsersSidebar = ({
                           onValueChange={(value) => field.onChange(value)}
                           value={field.value as string[]}
                           className="custom-multiselect"
+                          disabled={!userCreationAllowed}
                         >
                           {groups.map((group) => (
                             <MultiSelectItem key={group.id} value={group.id}>
@@ -356,19 +374,21 @@ const UsersSidebar = ({
                   }}
                   className="border border-orange-500 text-orange-500"
                 >
-                  Cancel
+                  Close
                 </Button>
-                <Button
-                  color="orange"
-                  type="submit"
-                  disabled={isSubmitting || (isNewUser ? false : !isDirty)}
-                >
-                  {isSubmitting
-                    ? "Saving..."
-                    : isNewUser
-                      ? "Create User"
-                      : "Save"}
-                </Button>
+                {userCreationAllowed && (
+                  <Button
+                    color="orange"
+                    type="submit"
+                    disabled={isSubmitting || (isNewUser ? false : !isDirty)}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : isNewUser
+                        ? "Create User"
+                        : "Save"}
+                  </Button>
+                )}
               </div>
             </form>
           </Dialog.Panel>

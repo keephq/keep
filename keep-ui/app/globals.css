@@ -25,7 +25,7 @@
 .page-container {
   @apply p-4 mx-auto w-full;
   @screen xl {
-    @apply p-10;
+    @apply p-6;
   }
 }
 

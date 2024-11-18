@@ -52,7 +52,8 @@ class TopologyService(SQLModel, table=True):
     dependencies: List["TopologyServiceDependency"] = Relationship(
         back_populates="service",
         sa_relationship_kwargs={
-            "foreign_keys": "[TopologyServiceDependency.service_id]"
+            "foreign_keys": "[TopologyServiceDependency.service_id]",
+            "cascade": "all, delete-orphan"
         },
     )
 

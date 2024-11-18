@@ -3,7 +3,7 @@ import { Callout, Card } from "@tremor/react";
 import React, { useEffect, useState } from "react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import Loading from "../../loading";
+import Loading from "app/loading";
 import { useRouter } from "next/navigation";
 import { Workflow } from "../models";
 import SideNavBar from "./side-nav-bar";

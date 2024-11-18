@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Table, Callout, Card, Icon } from "@tremor/react";
+import { useRef, useState } from "react";
+import { Table, Callout, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
 import { CircleStackIcon } from "@heroicons/react/24/outline";
@@ -32,8 +32,9 @@ import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
-import AlertFacets from "./alert-table-facet";
-import { FacetFilters } from "./alert-table-facet";
+import { AlertFacets } from "./alert-table-alert-facets";
+import { FacetFilters } from "./alert-table-facet-types";
+import { DynamicFacet } from "./alert-table-facet-dynamic";
 
 interface PresetTab {
   name: string;
@@ -70,6 +71,8 @@ export function AlertTable({
   setDismissedModalAlert,
   mutateAlerts,
 }: Props) {
+  const a11yContainerRef = useRef<HTMLDivElement>(null);
+
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
     Object.values(severityMapping).reduce<{ [key: string]: string }>(
@@ -81,12 +84,33 @@ export function AlertTable({
     )
   );
 
-  const [facetFilters, setFacetFilters] = useState<FacetFilters>({
-    severity: [],
-    status: [],
-    source: [],
-    assignee: [],
-  });
+  const [facetFilters, setFacetFilters] = useLocalStorage<FacetFilters>(
+    `alertFacetFilters-${presetName}`,
+    {
+      severity: [],
+      status: [],
+      source: [],
+      assignee: [],
+      dismissed: [],
+      incident: [],
+    }
+  );
+
+  const [dynamicFacets, setDynamicFacets] = useLocalStorage<DynamicFacet[]>(
+    `dynamicFacets-${presetName}`,
+    []
+  );
+
+  const handleFacetDelete = (facetKey: string) => {
+    setDynamicFacets((prevFacets) =>
+      prevFacets.filter((df) => df.key !== facetKey)
+    );
+    setFacetFilters((prevFilters) => {
+      const newFilters = { ...prevFilters };
+      delete newFilters[facetKey];
+      return newFilters;
+    });
+  };
 
   const columnsIds = getColumnsIds(columns);
 
@@ -140,7 +164,23 @@ export function AlertTable({
         return true;
       }
 
-      const value = alert[facetKey as keyof AlertDto];
+      let value;
+      if (facetKey.includes(".")) {
+        // Handle nested keys like "labels.job"
+        const [parentKey, childKey] = facetKey.split(".");
+        const parentValue = alert[parentKey as keyof AlertDto];
+
+        if (
+          typeof parentValue === "object" &&
+          parentValue !== null &&
+          !Array.isArray(parentValue) &&
+          !(parentValue instanceof Date)
+        ) {
+          value = (parentValue as Record<string, unknown>)[childKey];
+        }
+      } else {
+        value = alert[facetKey as keyof AlertDto];
+      }
 
       // Handle source array separately
       if (facetKey === "source") {
@@ -171,69 +211,6 @@ export function AlertTable({
       return includedValues.includes(String(value));
     });
   });
-
-  const handleFacetSelect = (
-    facetKey: string,
-    value: string,
-    exclusive: boolean,
-    isAllOnly: boolean = false
-  ) => {
-    setFacetFilters((prev) => {
-      // Handle All/Only button clicks
-      if (isAllOnly) {
-        if (value === "") {
-          // Reset to include all values (empty array)
-          return {
-            ...prev,
-            [facetKey]: [],
-          };
-        }
-
-        if (exclusive) {
-          // Only include this value
-          return {
-            ...prev,
-            [facetKey]: [value],
-          };
-        }
-      }
-
-      // Handle regular checkbox clicks
-      const currentValues = prev[facetKey] || [];
-
-      if (currentValues.length === 0) {
-        // If no filters, clicking one value means we want to exclude that value
-        // So we need to include all OTHER values
-        const allValues = new Set(
-          alerts
-            .map((alert) => {
-              const val = alert[facetKey as keyof AlertDto];
-              return Array.isArray(val) ? val : [String(val)];
-            })
-            .flat()
-        );
-        return {
-          ...prev,
-          [facetKey]: Array.from(allValues).filter((v) => v !== value),
-        };
-      }
-
-      if (currentValues.includes(value)) {
-        // Remove value if it's already included
-        const newValues = currentValues.filter((v) => v !== value);
-        return {
-          ...prev,
-          [facetKey]: newValues,
-        };
-      } else {
-        // Add value if it's not included
-        return {
-          ...prev,
-          [facetKey]: [...currentValues, value],
-        };
-      }
-    });
-  };
 
   const table = useReactTable({
     data: filteredAlerts,
@@ -288,44 +265,47 @@ export function AlertTable({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col gap-4 h-full">
       <TitleAndFilters
         table={table}
         alerts={alerts}
         presetName={presetName}
         onThemeChange={handleThemeChange}
       />
-      <div className="flex flex-grow gap-6">
-        <div className="w-32 min-w-[12rem] mt-16">
+      <div className="min-h-10">
+        {/* Setting min-h-10 to avoid jumping when actions are shown */}
+        {selectedRowIds.length ? (
+          <AlertActions
+            selectedRowIds={selectedRowIds}
+            alerts={alerts}
+            clearRowSelection={table.resetRowSelection}
+            setDismissModalAlert={setDismissedModalAlert}
+            mutateAlerts={mutateAlerts}
+          />
+        ) : (
+          <AlertPresets
+            table={table}
+            presetNameFromApi={presetName}
+            isLoading={isAsyncLoading}
+            presetPrivate={presetPrivate}
+            presetNoisy={presetNoisy}
+          />
+        )}
+      </div>
+      <div className="flex gap-6">
+        <div className="w-32 min-w-[12rem]">
           <AlertFacets
             className="sticky top-0"
             alerts={alerts}
             facetFilters={facetFilters}
-            onSelect={handleFacetSelect}
+            setFacetFilters={setFacetFilters}
+            dynamicFacets={dynamicFacets}
+            setDynamicFacets={setDynamicFacets}
+            onDelete={handleFacetDelete}
+            table={table}
           />
         </div>
-        {/* Using p-4 -m-4 to set overflow-hidden without affecting shadow */}
-        <div className="flex flex-col gap-4 overflow-hidden p-4 -m-4">
-          <div className="min-h-10">
-            {/* Setting min-h-10 to avoid jumping when actions are shown */}
-            {selectedRowIds.length ? (
-              <AlertActions
-                selectedRowIds={selectedRowIds}
-                alerts={alerts}
-                clearRowSelection={table.resetRowSelection}
-                setDismissModalAlert={setDismissedModalAlert}
-                mutateAlerts={mutateAlerts}
-              />
-            ) : (
-              <AlertPresets
-                table={table}
-                presetNameFromApi={presetName}
-                isLoading={isAsyncLoading}
-                presetPrivate={presetPrivate}
-                presetNoisy={presetNoisy}
-              />
-            )}
-          </div>
+        <div className="flex flex-col gap-4 min-w-0">
           <Card className="flex-grow h-full flex flex-col p-0">
             <div className="flex-grow">
               {isAsyncLoading && (
@@ -348,11 +328,13 @@ export function AlertTable({
                   setSelectedTab={setSelectedTab}
                 />
               )}
-              <Table className="flex-grow overflow-auto [&>table]:table-fixed [&>table]:w-full">
+              <div ref={a11yContainerRef} className="sr-only" />
+              <Table className="[&>table]:table-fixed [&>table]:w-full">
                 <AlertsTableHeaders
                   columns={columns}
                   table={table}
                   presetName={presetName}
+                  a11yContainerRef={a11yContainerRef}
                 />
                 <AlertsTableBody
                   table={table}
@@ -367,7 +349,7 @@ export function AlertTable({
           </Card>
         </div>
       </div>
-      <div className="mt-2 mb-8 pl-[12rem]">
+      <div className="mt-2 mb-8 pl-[14rem]">
         <AlertPagination
           table={table}
           presetName={presetName}

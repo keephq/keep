@@ -18,6 +18,7 @@ interface Props {
   currentUser?: AuthUser;
   selectedTab: string;
   groupsAllowed: boolean;
+  userCreationAllowed: boolean;
 }
 
 export interface Config {
@@ -29,6 +30,7 @@ export default function UsersSettings({
   currentUser,
   selectedTab,
   groupsAllowed,
+  userCreationAllowed,
 }: Props) {
   const { data: users, isLoading, mutate: mutateUsers } = useUsers();
   const { data: roles = [] } = useRoles();
@@ -128,6 +130,12 @@ export default function UsersSettings({
             size="md"
             icon={TiUserAdd}
             onClick={handleAddUserClick}
+            disabled={!userCreationAllowed}
+            title={
+              !userCreationAllowed
+                ? "Users are managed externally and cannot be created from Keep"
+                : undefined
+            }
           >
             Add User
           </Button>
@@ -148,6 +156,7 @@ export default function UsersSettings({
             onRowClick={handleRowClick}
             onDeleteUser={handleDeleteUser}
             groupsAllowed={groupsAllowed}
+            userCreationAllowed={userCreationAllowed}
           />
         </div>
       </Card>
@@ -161,6 +170,7 @@ export default function UsersSettings({
         identifierType={
           authType === AuthenticationType.DB ? "username" : "email"
         }
+        userCreationAllowed={userCreationAllowed}
       />
     </div>
   );

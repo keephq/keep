@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { Button, Textarea, Subtitle, Callout } from "@tremor/react";
 import {
-  Button,
-  Textarea,
-  Select,
-  SelectItem,
-  Subtitle,
-  Callout,
-} from "@tremor/react";
+  useForm,
+  Controller,
+  SubmitHandler,
+  FieldValues,
+} from "react-hook-form";
 import Modal from "@/components/ui/Modal";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
@@ -14,6 +13,7 @@ import { useProviders } from "utils/hooks/useProviders";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
+import Select from "@/components/ui/Select";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;
@@ -31,10 +31,6 @@ const PushAlertToServerModal = ({
   presetName,
 }: PushAlertToServerModalProps) => {
   const [alertSources, setAlertSources] = useState<AlertSource[]>([]);
-  const [selectedSource, setSelectedSource] = useState<AlertSource | null>(
-    null
-  );
-  const [alertJson, setAlertJson] = useState<string>("");
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets({
     revalidateIfStale: false,
@@ -42,6 +38,18 @@ const PushAlertToServerModal = ({
   });
   const { usePresetAlerts } = useAlerts();
   const { mutate: mutateAlerts } = usePresetAlerts(presetName);
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    setError,
+    clearErrors,
+    watch,
+    formState: { errors },
+  } = useForm();
+
+  const selectedSource = watch("source");
 
   const { data: session } = useSession();
   const { data: providersData } = useProviders();
@@ -63,34 +71,25 @@ const PushAlertToServerModal = ({
     }
   }, [providers]);
 
-  const handleSourceChange = (value: string) => {
-    const source = alertSources.find((source) => source.name === value);
+  const handleSourceChange = (source: AlertSource | null) => {
     if (source) {
-      setSelectedSource(source);
-      setAlertJson(source.alertExample);
+      setValue("source", source);
+      setValue("alertJson", source.alertExample);
+      clearErrors("source");
     }
   };
 
-  const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAlertJson(e.target.value);
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedSource) {
-      console.error("No source selected");
-      return;
-    }
-
+  const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     try {
       const response = await fetch(
-        `${apiUrl}/alerts/event/${selectedSource.type}`,
+        `${apiUrl}/alerts/event/${data.source.type}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.accessToken}`,
           },
-          body: alertJson,
+          body: data.alertJson,
         }
       );
 
@@ -100,30 +99,20 @@ const PushAlertToServerModal = ({
         presetsMutator();
         handleClose();
       } else {
-        console.error("Failed to push alert");
+        const errorData = await response.json();
+        setError("apiError", {
+          type: "manual",
+          message: errorData.detail || "Failed to push alert",
+        });
       }
     } catch (error) {
       console.error("An unexpected error occurred", error);
+      setError("apiError", {
+        type: "manual",
+        message: "An unexpected error occurred",
+      });
     }
   };
-
-  const CustomSelectValue = ({
-    selectedSource,
-  }: {
-    selectedSource: AlertSource;
-  }) => (
-    <div className="flex items-center">
-      <ImageWithFallback
-        src={`/icons/${selectedSource.type}-icon.png`}
-        fallbackSrc={`/icons/keep-icon.png`}
-        width={24}
-        height={24}
-        alt={selectedSource.type}
-        className=""
-      />
-      <span className="ml-2">{selectedSource.name}</span>
-    </div>
-  );
 
   return (
     <Modal
@@ -132,73 +121,114 @@ const PushAlertToServerModal = ({
       title="Simulate alert"
       className="w-[600px]"
     >
-      <div className="relative bg-white p-6 rounded-lg">
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">
-            Alert Source
-          </label>
-          <Select
-            value={selectedSource ? selectedSource.name : ""}
-            onValueChange={handleSourceChange}
-            placeholder="Select alert source"
-            className="mt-2"
-          >
-            {selectedSource && (
-              <CustomSelectValue selectedSource={selectedSource} />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="relative bg-white p-6 rounded-lg">
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Alert Source
+            </label>
+            <Controller
+              name="source"
+              control={control}
+              rules={{ required: "Alert source is required" }}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Select
+                  {...field}
+                  value={value}
+                  onChange={handleSourceChange}
+                  options={alertSources}
+                  getOptionLabel={(source) => source.name}
+                  formatOptionLabel={(source) => (
+                    <div className="flex items-center" key={source.type}>
+                      <ImageWithFallback
+                        src={`/icons/${source.type}-icon.png`}
+                        fallbackSrc={`/icons/keep-icon.png`}
+                        width={32}
+                        height={32}
+                        alt={source.type}
+                        className=""
+                        // Add a key prop to force re-render when source changes
+                        key={source.type}
+                      />
+                      <span className="ml-2">{source.name.toLowerCase()}</span>
+                    </div>
+                  )}
+                  getOptionValue={(source) => source.type}
+                  placeholder="Select alert source"
+                />
+              )}
+            />
+            {errors.source && (
+              <div className="text-sm text-rose-500 mt-1">
+                {errors.source.message?.toString()}
+              </div>
             )}
-            {alertSources.map((source) => (
-              <SelectItem key={source.name} value={source.name}>
-                <div className="flex items-center">
-                  <ImageWithFallback
-                    src={`/icons/${source.type}-icon.png`}
-                    fallbackSrc={`/icons/keep-icon.png`}
-                    width={32}
-                    height={32}
-                    alt={source.type}
-                    className=""
-                  />
-                  <span className="ml-2">{source.name.toLowerCase()}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </Select>
-          <Callout
-            title="About alert payload"
-            color="orange"
-            className="break-words mt-4"
-          >
-            Feel free to edit the payload as you want. However, some of the
-            providers expects specific fields, so be careful.
-          </Callout>
-        </div>
-        {selectedSource && (
-          <>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Alert Payload
-              </label>
-              <Textarea
-                value={alertJson}
-                onChange={handleJsonChange}
-                rows={20}
-                className="w-full mt-1"
-              />
-            </div>
-            <div className="mt-6 flex gap-2">
-              <Button color="orange" onClick={handleSubmit}>
-                Submit
-              </Button>
-              <Button
-                onClick={handleClose}
-                variant="secondary"
-                className="border border-orange-500 text-orange-500"
+          </div>
+
+          {selectedSource && (
+            <>
+              <Callout
+                title="About alert payload"
+                color="orange"
+                className="break-words mt-4"
               >
-                Cancel
-              </Button>
+                Feel free to edit the payload as you want. However, some of the
+                providers expects specific fields, so be careful.
+              </Callout>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Alert Payload
+                </label>
+                <Controller
+                  name="alertJson"
+                  control={control}
+                  rules={{
+                    required: "Alert payload is required",
+                    validate: (value) => {
+                      try {
+                        JSON.parse(value);
+                        return true;
+                      } catch (e) {
+                        return "Invalid JSON format";
+                      }
+                    },
+                  }}
+                  render={({ field }) => (
+                    <Textarea {...field} rows={20} className="w-full mt-1" />
+                  )}
+                />
+                {errors.alertJson && (
+                  <div className="text-sm text-rose-500 mt-1">
+                    {errors.alertJson.message?.toString()}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {errors.apiError && (
+            <div className="text-sm text-rose-500 mt-4">
+              <Callout title="Error" color="rose">
+                {errors.apiError.message?.toString()}
+              </Callout>
             </div>
-          </>
-        )}
-      </div>
+          )}
+
+          <div className="mt-6 flex gap-2">
+            <Button color="orange" type="submit">
+              Submit
+            </Button>
+            <Button
+              onClick={handleClose}
+              variant="secondary"
+              className="border border-orange-500 text-orange-500"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </form>
     </Modal>
   );
 };

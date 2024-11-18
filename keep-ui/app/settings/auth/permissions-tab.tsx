@@ -1,310 +1,189 @@
-import {
-  Title,
-  Subtitle,
-  Card,
-  Table,
-  TableHead,
-  TableRow,
-  TableHeaderCell,
-  TableBody,
-  TableCell,
-  TextInput,
-  Badge,
-  Button,
-} from "@tremor/react";
-import Loading from "app/loading";
-import { useState, useEffect, useMemo } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { usePresets } from "utils/hooks/usePresets";
-import { useGroups } from "utils/hooks/useGroups";
-import { useUsers } from "utils/hooks/useUsers";
+import React, { useState, useEffect } from "react";
+import { Title, Subtitle, Card, TextInput } from "@tremor/react";
 import { usePermissions } from "utils/hooks/usePermissions";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { useUsers } from "utils/hooks/useUsers";
+import { useGroups } from "utils/hooks/useGroups";
+import { useRoles } from "utils/hooks/useRoles";
+import { usePresets } from "utils/hooks/usePresets";
+import { useIncidents } from "utils/hooks/useIncidents";
+import Loading from "app/loading";
+import { PermissionsTable } from "./permissions-table";
 import PermissionSidebar from "./permissions-sidebar";
-import { Permission } from "app/settings/models";
-import "./multiselect.css";
+import { useApiUrl } from "utils/hooks/useConfig";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 
 interface Props {
   accessToken: string;
+  isDisabled?: boolean;
 }
 
-export default function PermissionsTab({ accessToken }: Props) {
+interface PermissionEntity {
+  id: string;
+  type: string; // 'user' or 'group' or 'role'
+}
+
+interface ResourcePermission {
+  resource_id: string;
+  resource_name: string;
+  resource_type: string;
+  permissions: PermissionEntity[];
+}
+
+export default function PermissionsTab({
+  accessToken,
+  isDisabled = false,
+}: Props) {
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
-  const [selectedPermissions, setSelectedPermissions] = useState<{
-    [key: string]: string[];
-  }>({});
-  const [initialPermissions, setInitialPermissions] = useState<{
-    [key: string]: string[];
-  }>({});
-  const [filter, setFilter] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<any>(null);
+  const [selectedResource, setSelectedResource] = useState<any>(null);
+  const [filter, setFilter] = useState("");
 
+  // Fetch data using custom hooks
+  const { data: permissions, mutate: mutatePermissions } = usePermissions();
+  const { data: users } = useUsers();
+  const { data: groups } = useGroups();
+  const { data: roles } = useRoles();
   const { useAllPresets } = usePresets();
-  const {
-    data: presets = [],
-    error: presetsError,
-    isValidating: presetsLoading,
-  } = useAllPresets();
-  const {
-    data: groups = [],
-    error: groupsError,
-    isValidating: groupsLoading,
-  } = useGroups();
-  const {
-    data: users = [],
-    error: usersError,
-    isValidating: usersLoading,
-  } = useUsers();
-  const {
-    data: permissions = [],
-    error: permissionsError,
-    isValidating: permissionsLoading,
-  } = usePermissions();
+  const { data: presets } = useAllPresets();
+  const { data: incidents } = useIncidents();
 
-  // SHAHAR: TODO: fix when needed
-  const displayPermissions = useMemo<Permission[]>(() => {
-    const groupPermissions: Permission[] = (groups || []).map((group) => ({
-      id: group.id,
-      resource_id: group.id,
-      entity_id: group.id,
-      permissions: [{ id: "group" }],
-      name: group.name,
-      type: "group",
-    }));
-    const userPermissions: Permission[] = (users || []).map((user) => ({
-      id: user.email,
-      resource_id: user.email,
-      entity_id: user.email,
-      permissions: [{ id: "user" }],
-      name: user.name,
-      type: "user",
-    }));
-    return [...groupPermissions, ...userPermissions];
-  }, [groups, users]);
+  const [loading, setLoading] = useState(true);
+  const [resources, setResources] = useState<any[]>([]);
 
-  const handlePermissionChange = (
-    presetId: string,
-    newPermissions: string[]
-  ) => {
-    setSelectedPermissions((prev) => ({
-      ...prev,
-      [presetId]: newPermissions,
-    }));
-  };
-
+  // Combine all resources and their permissions
   useEffect(() => {
-    if (permissions) {
-      const initialPerms: { [key: string]: string[] } = {};
+    if (presets && incidents && permissions) {
+      const allResources = [
+        ...(presets?.map((preset) => ({
+          id: preset.id,
+          name: preset.name,
+          type: "preset",
+          assignments:
+            permissions
+              ?.filter((p) => p.resource_id === preset.id)
+              .flatMap((p) =>
+                p.permissions.map((perm) => `${perm.type}_${perm.id}`)
+              ) || [],
+        })) || []),
+        ...(incidents?.items.map((incident) => ({
+          id: incident.id,
+          name: incident.user_generated_name || incident.ai_generated_name,
+          type: "incident",
+          assignments:
+            permissions
+              ?.filter((p) => p.resource_id === incident.id)
+              .flatMap((p) =>
+                p.permissions.map((perm) => `${perm.type}_${perm.id}`)
+              ) || [],
+        })) || []),
+      ];
+      // Compare current and new resources to prevent unnecessary updates
+      const resourcesString = JSON.stringify(allResources);
+      const currentResourcesString = JSON.stringify(resources);
 
-      permissions.forEach((permission) => {
-        initialPerms[permission.resource_id] = permission.permissions.map(
-          (p) => p.id
-        );
+      if (resourcesString !== currentResourcesString) {
+        setResources(allResources);
+      }
+      setLoading(false);
+    }
+  }, [presets, incidents, permissions]);
+
+  const handleSavePermissions = async (
+    resourceId: string,
+    assignments: string[]
+  ) => {
+    try {
+      // Convert assignments array to PermissionEntity array
+      const permissions: PermissionEntity[] = assignments.map((assignment) => {
+        // Parse the assignment string to get type and id
+        const [type, ...idParts] = assignment.split("_");
+        return {
+          id: idParts.join("_"), // Rejoin in case the id itself contains underscores
+          type: type,
+        };
       });
 
-      setInitialPermissions(initialPerms);
-      setSelectedPermissions(initialPerms);
-    }
-  }, [permissions]);
-
-  const hasChanges =
-    JSON.stringify(initialPermissions) !== JSON.stringify(selectedPermissions);
-
-  const savePermissions = async () => {
-    try {
-      const changedPermissions = Object.entries(selectedPermissions).reduce(
-        (acc, [presetId, permissions]) => {
-          if (
-            JSON.stringify(permissions) !==
-            JSON.stringify(initialPermissions[presetId])
-          ) {
-            acc[presetId] = permissions;
-          }
-          return acc;
-        },
-        {} as { [key: string]: string[] }
-      );
-
-      const resourcePermissions = Object.entries(changedPermissions).map(
-        ([presetId, permissions]) => ({
-          resource_id: presetId,
-          resource_name:
-            presets?.find((preset) => preset.id === presetId)?.name || "",
-          resource_type: "preset",
-          permissions: permissions.map((permissionId) => {
-            const permission = displayPermissions.find(
-              (p) => p.id === permissionId
-            );
-            return {
-              id: permissionId,
-              type: permission?.type,
-            };
-          }),
-        })
-      );
-
-      if (resourcePermissions.length === 0) {
-        console.log("No changes to save");
-        return;
+      // Find the resource details
+      const resource = resources.find((r) => r.id === resourceId);
+      if (!resource) {
+        throw new Error("Resource not found");
       }
 
+      // Create the resource permission object
+      const resourcePermission: ResourcePermission[] = [
+        {
+          resource_id: resource.id,
+          resource_name: resource.name,
+          resource_type: resource.type,
+          permissions: permissions,
+        },
+      ];
+
+      // Send to the backend
       const response = await fetch(`${apiUrl}/auth/permissions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(resourcePermissions),
+        body: JSON.stringify(resourcePermission),
       });
 
-      if (response.ok) {
-        setInitialPermissions(selectedPermissions);
-        // You might want to show a success message here
-      } else {
-        const errorData = await response.json();
-        console.error(
-          "Failed to save permissions:",
-          errorData.detail || errorData.message || "Unknown error"
-        );
-        // You might want to show an error message to the user here
+      if (!response.ok) {
+        throw new Error("Failed to save permissions");
       }
+
+      await mutatePermissions();
     } catch (error) {
-      console.error(
-        "An unexpected error occurred while saving permissions:",
-        error
-      );
-      // You might want to show an error message to the user here
+      console.error("Error saving permissions:", error);
+      throw error;
     }
   };
 
-  if (presetsLoading || groupsLoading || usersLoading || permissionsLoading)
-    return <Loading />;
+  if (loading) return <Loading />;
 
-  const filteredPresets = (presets || []).filter((preset) =>
-    preset.name.toLowerCase().includes(filter.toLowerCase())
+  const filteredResources = resources.filter((resource) =>
+    resource.name.toLowerCase().includes(filter.toLowerCase())
   );
-
-  const handleRowClick = (preset: any) => {
-    setSelectedPreset(preset);
-    setIsSidebarOpen(true);
-  };
-
-  const handleDeletePermission = async (
-    presetId: string,
-    event: React.MouseEvent
-  ) => {
-    event.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this permission?")) {
-      try {
-        const response = await fetch(`${apiUrl}/auth/permissions/${presetId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response.ok) {
-          // Reload permissions
-        } else {
-          console.error("Failed to delete permission");
-        }
-      } catch (error) {
-        console.error("Error deleting permission:", error);
-      }
-    }
-  };
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <Title>Permissions Management</Title>
-          <Subtitle>Manage permissions for Keep resources</Subtitle>
-        </div>
-        <Button color="orange" onClick={savePermissions} disabled={!hasChanges}>
-          Save Permissions
-        </Button>
+      <div className="mb-4">
+        <Title>Permissions Management</Title>
+        <Subtitle>Manage permissions for resources</Subtitle>
       </div>
+
       <TextInput
-        placeholder="Search resource"
+        placeholder="Search resources"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="mb-4"
+        disabled={isDisabled}
       />
+
       <Card className="flex-grow overflow-hidden flex flex-col">
-        <Table className="h-full">
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell className="w-6/24">
-                Resource Name
-              </TableHeaderCell>
-              <TableHeaderCell className="w-6/24">
-                Resource Type
-              </TableHeaderCell>
-              <TableHeaderCell className="w-11/24">Permissions</TableHeaderCell>
-              <TableHeaderCell className="w-1/24"></TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody className="overflow-auto">
-            {filteredPresets.map((preset) => (
-              <TableRow
-                key={preset.id}
-                className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
-                onClick={() => handleRowClick(preset)}
-              >
-                <TableCell className="w-6/24">{preset.name}</TableCell>
-                <TableCell className="w-6/24">
-                  {" "}
-                  <Badge color="orange" className="text-xs">
-                    preset
-                  </Badge>
-                </TableCell>
-                <TableCell className="w-11/24">
-                  <div className="flex flex-wrap gap-1">
-                    {selectedPermissions[preset.id]
-                      ?.slice(0, 5)
-                      .map((permId, index) => (
-                        <Badge key={index} color="orange" className="text-xs">
-                          {
-                            displayPermissions.find((p) => p.id === permId)
-                              ?.name
-                          }
-                        </Badge>
-                      ))}
-                    {selectedPermissions[preset.id]?.length > 5 && (
-                      <Badge color="orange" className="text-xs">
-                        +{selectedPermissions[preset.id].length - 5} more
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="w-1/24">
-                  <div className="flex justify-end">
-                    <Button
-                      icon={TrashIcon}
-                      variant="light"
-                      color="orange"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleDeletePermission(preset.id, e)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <PermissionsTable
+          resources={filteredResources}
+          onRowClick={(resource) => {
+            setSelectedResource(resource);
+            setIsSidebarOpen(true);
+          }}
+          isDisabled={isDisabled}
+        />
       </Card>
+
       <PermissionSidebar
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
-        accessToken={accessToken}
-        preset={selectedPreset}
-        permissions={displayPermissions}
-        selectedPermissions={selectedPermissions}
-        onPermissionChange={handlePermissionChange}
+        selectedResource={selectedResource}
+        entityOptions={{
+          user: users || [],
+          group: groups || [],
+          role: roles || [],
+        }}
+        onSavePermissions={handleSavePermissions}
+        isDisabled={isDisabled}
       />
     </div>
   );

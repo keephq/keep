@@ -7,6 +7,7 @@ export const PROVIDER_LABELS: Record<TProviderLabels, string> = {
   ticketing: 'Ticketing',
   data: 'Data',
   queue: 'Queue',
+  incident: 'Incident'
 }
 
 export const PROVIDER_LABELS_KEYS = Object.keys(PROVIDER_LABELS);

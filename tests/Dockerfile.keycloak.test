@@ -1,5 +1,5 @@
 # Use the Phase Two Keycloak image as the base
-FROM quay.io/phasetwo/phasetwo-keycloak:latest
+FROM quay.io/phasetwo/phasetwo-keycloak:25.0.4
 
 # Set the working directory
 WORKDIR /opt/keycloak

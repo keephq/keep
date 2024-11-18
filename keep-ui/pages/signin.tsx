@@ -1,27 +1,20 @@
 import { signIn, getProviders } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-interface Providers {
-  auth0?: {
-    // Define the properties that your auth0 provider has
-    name: string;
-    type: string;
-    signinUrl: string;
-  };
-  credentials?: {
-    // Similarly define for credentials provider
-    name: string;
-    type: string;
-    signinUrl: string;
-  };
-  keycloak?: {
-    // Similarly define for keycloak provider
-    name: string;
-    type: string;
-    signinUrl: string;
-  };
+interface Provider {
+  id: string;
+  name: string;
+  type: string;
+  signinUrl: string;
+  callbackUrl: string;
 }
 
+interface Providers {
+  auth0?: Provider;
+  credentials?: Provider;
+  keycloak?: Provider;
+  "azure-ad"?: Provider;
+}
 
 export async function getServerSideProps(context: any) {
   return {
@@ -59,11 +52,17 @@ export default function SignIn({ params }: { params?: { amt: string } }) {
         console.log("Signing in with credentials provider");
         signIn("credentials", { callbackUrl: "/" });
       } else if (providers.keycloak) {
-        console.log('Signing in with keycloak provider');
-        signIn('keycloak', { callbackUrl: "/" });
+        console.log("Signing in with keycloak provider");
+        signIn("keycloak", { callbackUrl: "/" });
+      } else if (providers["azure-ad"]) {
+        console.log("Signing in with Azure AD provider");
+        signIn("azure-ad", { callbackUrl: "/" });
+      } else {
+        console.log("No provider found");
+        console.log(providers);
       }
     }
-  }, [providers]);
+  }, [providers, params]);
 
   return <div>Redirecting for authentication...</div>;
 }
