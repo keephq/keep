@@ -10,7 +10,7 @@ from typing import List, Optional
 from urllib.parse import urlencode, urljoin
 
 import pydantic
-import requestss
+import requests
 from dateutil import parser
 
 from keep.api.models.alert import AlertDto, AlertSeverity
