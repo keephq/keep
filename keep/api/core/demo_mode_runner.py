@@ -22,14 +22,6 @@ logger = logging.getLogger(__name__)
 
 LIVE_DEMO_MODE = os.environ.get("LIVE_DEMO_MODE", "false").lower() == "true"
 
-incidents = [
-    {"name": "Performance issue, CPU, DB, UI impacted", "severity": "critical"},
-    {
-        "name": "Message queue bucles up",
-        "severity": "warning",
-    },
-]
-
 correlation_rules_to_create = [
     {
         "sqlQuery": {
@@ -39,7 +31,7 @@ correlation_rules_to_create = [
             }
         },
         "groupDescription": "This rule groups all alerts related to MQ.",
-        "ruleName": "Message Queue Bucle Up",
+        "ruleName": "Message Queue Buckle Up",
         "celQuery": "(name.contains(\"mq\"))",
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
@@ -163,20 +155,19 @@ def launch_demo_mode():
     Running async demo in the backgound.
     """
     keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
-    keep_api_key = get_or_create_api_key(
+    keep_api_key = os.environ.get("KEEP_API_KEY", get_or_create_api_key(
         session=get_session_sync(),
         tenant_id=SINGLE_TENANT_UUID,
         created_by="system",
         unique_api_key_id="simulate_alerts",
         system_description="Simulate Alerts API key",
-    )
-    sleep_interval = 5
+    ))
 
     if LIVE_DEMO_MODE:
         thread = threading.Thread(target=asyncio.run, args=(simulate_alerts(
             keep_api_url,
             keep_api_key, 
-            sleep_interval, 
+            sleep_interval=5, 
             demo_correlation_rules=True
         ), ))
         thread.start()
