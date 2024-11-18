@@ -35,7 +35,7 @@ export function AlertsTableBody({
   if (showEmptyState) {
     return (
       <>
-        <div className="flex flex-col justify-center items-center h-96 w-full absolute top-1/3">
+        <div className="flex flex-col justify-center items-center h-96 w-full absolute p-4">
           <EmptyStateCard
             title="No alerts to display"
             description="It is because you have not connected any data source yet or there are no alerts matching the filter."
