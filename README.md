@@ -43,6 +43,97 @@
     >
 </div>
 
+<div style="text-align: center; margin: 20px auto; max-width: 800px;">
+  <table style="width: 100%; border-collapse: collapse; margin: 0 auto;">
+      <tr>
+          <td style="text-align: center; padding: 10px;">
+              <a
+                  href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                  target="_blank"
+                  style="text-decoration: none; color: inherit;"
+              >
+                  <img
+                      src="keep-ui/public/icons/appdynamics-icon.png"
+                      alt="AppDynamics"
+                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                  /><br/>
+                  <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
+              </a>
+          </td>
+          <td style="text-align: center; padding: 10px;">
+              <a
+                  href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                  target="_blank"
+                  style="text-decoration: none; color: inherit;"
+              >
+                  <img
+                      src="keep-ui/public/icons/appdynamics-icon.png"
+                      alt="AppDynamics"
+                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                  /><br/>
+                  <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
+              </a>
+          </td>
+          <td style="text-align: center; padding: 10px;">
+              <a
+                  href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                  target="_blank"
+                  style="text-decoration: none; color: inherit;"
+              >
+                  <img
+                      src="keep-ui/public/icons/appdynamics-icon.png"
+                      alt="AppDynamics"
+                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                  /><br/>
+                  <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
+              </a>
+          </td>
+          <td style="text-align: center; padding: 10px;">
+              <a
+                  href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                  target="_blank"
+                  style="text-decoration: none; color: inherit;"
+              >
+                  <img
+                      src="keep-ui/public/icons/appdynamics-icon.png"
+                      alt="AppDynamics"
+                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                  /><br/>
+                  <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
+              </a>
+          </td>
+          <td style="text-align: center; padding: 10px;">
+              <a
+                  href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                  target="_blank"
+                  style="text-decoration: none; color: inherit;"
+              >
+                  <img
+                      src="keep-ui/public/icons/appdynamics-icon.png"
+                      alt="AppDynamics"
+                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                  /><br/>
+                  <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
+              </a>
+          </td>
+          <td style="text-align: center; padding: 10px;">
+              <a
+                  href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                  target="_blank"
+                  style="text-decoration: none; color: inherit;"
+              >
+                  <img
+                      src="keep-ui/public/icons/appdynamics-icon.png"
+                      alt="AppDynamics"
+                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                  /><br/>
+                  <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
+              </a>
+          </td>
+      </tr>
+  </table>
+</div>
+
 <h1 align="center"></h1>
 
 - 🔍 **Single pane of glass** - Best-in-class customizable UI for all your alerts and incidents
@@ -65,8 +156,8 @@
 
 ### Observability Tools
 
-<table style="width: 100%; max-width: 800px; margin: 0 auto;">
-<tr style="width: 100%; height: auto; object-fit: contain;">
+<table>
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/appdynamics-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/appdynamics-icon.png" alt="AppDynamics"/><br/>
@@ -104,7 +195,7 @@
         </a>
     </td>
 </tr>
-<tr style="width: 100%; height: auto; object-fit: contain;">
+<tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/cloudwatch-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/cloudwatch-icon.png" alt="CloudWatch"/><br/>
@@ -142,7 +233,7 @@
         </a>
     </td>
   </tr>
-  <tr style="width: 100%; height: auto; object-fit: contain;">
+  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/grafana-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/grafana-icon.png" alt="Grafana"/><br/>
@@ -180,7 +271,7 @@
         </a>
     </td>
   </tr>
-  <tr style="width: 100%; height: auto; object-fit: contain;">
+  <tr>
     <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/parseable-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/parseable-icon.png" alt="Parseable"/><br/>
@@ -218,7 +309,7 @@
         </a>
     </td>
 </tr>
-<tr style="width: 100%; height: auto; object-fit: contain;">
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/site24x7-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/site24x7-icon.png" alt="Site24x7"/><br/>
@@ -256,7 +347,7 @@
         </a>
   </td>
 </tr>
-<tr style="width: 100%; height: auto; object-fit: contain;">
+<tr>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/zabbix-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/zabbix-icon.png" alt="Zabbix"/><br/>
