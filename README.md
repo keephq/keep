@@ -11,6 +11,9 @@
 </div>
 
 <div align="center">
+    <a href='http://makeapullrequest.com'>
+      <img alt='PRs Welcome' src='https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields'/>
+    </a>
 </div>
 
 <p align="center">
