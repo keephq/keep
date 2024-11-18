@@ -312,8 +312,6 @@ async def simulate_alerts(
         keep_api_url=None, 
         keep_api_key=None, 
         sleep_interval=5, 
-        demo_correlation_rules=False, 
-        demo_topology=False
     ):
     GENERATE_DEDUPLICATIONS = True
 
@@ -337,15 +335,11 @@ async def simulate_alerts(
     # Wait in the beginning because server may not be ready yet.
     await asyncio.sleep(sleep_interval * 2)
 
-    if demo_correlation_rules:
-        get_or_create_correlation_rules(keep_api_key, keep_api_url)
-
-    if demo_topology:
-        get_or_create_topology(keep_api_key, keep_api_url)
-
     while True:
         logger.info("Looping to send alerts...")
+        
         remove_old_incidents(keep_api_key, keep_api_url)
+        logger.info("Old incidents removed.")
 
         # choose provider
         provider_type = random.choice(providers)
@@ -395,6 +389,8 @@ def launch_demo_mode():
     """
     Running async demo in the backgound.
     """
+    logger.info("Demo mode launched.")
+
     keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
     keep_api_key = os.environ.get("KEEP_API_KEY")
     if keep_api_key is None:
@@ -407,6 +403,12 @@ def launch_demo_mode():
                 system_description="Simulate Alerts API key",
             )
 
+    logger.info(f"Creating correlation rules for the demo mode.")
+    get_or_create_correlation_rules(keep_api_key, keep_api_url)
+
+    logger.info(f"Creating topology for the demo mode.")
+    get_or_create_topology(keep_api_key, keep_api_url)
+
     thread = threading.Thread(target=asyncio.run, args=(simulate_alerts(
         keep_api_url,
         keep_api_key, 
@@ -415,4 +417,4 @@ def launch_demo_mode():
         demo_topology=True
     ), ))
     thread.start()
-    logger.info("Simulate Alert launched.")
+    logger.info("Demo mode initialized.")
