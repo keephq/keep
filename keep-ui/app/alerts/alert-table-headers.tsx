@@ -1,6 +1,6 @@
 // culled from https://github.com/cpvalente/ontime/blob/master/apps/client/src/features/cuesheet/cuesheet-table-elements/CuesheetHeader.tsx
 
-import { CSSProperties, ReactNode } from "react";
+import { CSSProperties, ReactNode, RefObject } from "react";
 import {
   closestCenter,
   DndContext,
@@ -137,12 +137,14 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   table: Table<AlertDto>;
   presetName: string;
+  a11yContainerRef: RefObject<HTMLDivElement>;
 }
 
 export default function AlertsTableHeaders({
   columns,
   table,
   presetName,
+  a11yContainerRef,
 }: Props) {
   const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>(
     `column-order-${presetName}`,
@@ -191,6 +193,9 @@ export default function AlertsTableHeaders({
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={onDragEnd}
+          accessibility={{
+            container: a11yContainerRef.current ?? undefined,
+          }}
         >
           <TableRow key={headerGroup.id}>
             <SortableContext
