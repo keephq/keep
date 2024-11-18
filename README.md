@@ -55,7 +55,7 @@
                   <img
                       src="keep-ui/public/icons/appdynamics-icon.png"
                       alt="AppDynamics"
-                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                      style="max-width: 80px; height: auto; margin-bottom: 10px;"
                   /><br/>
                   <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
               </a>
@@ -69,7 +69,7 @@
                   <img
                       src="keep-ui/public/icons/appdynamics-icon.png"
                       alt="AppDynamics"
-                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                      style="max-width: 80px; height: auto; margin-bottom: 10px;"
                   /><br/>
                   <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
               </a>
@@ -83,7 +83,7 @@
                   <img
                       src="keep-ui/public/icons/appdynamics-icon.png"
                       alt="AppDynamics"
-                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                      style="max-width: 80px; height: auto; margin-bottom: 10px;"
                   /><br/>
                   <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
               </a>
@@ -97,7 +97,7 @@
                   <img
                       src="keep-ui/public/icons/appdynamics-icon.png"
                       alt="AppDynamics"
-                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                      style="max-width: 80px; height: auto; margin-bottom: 10px;"
                   /><br/>
                   <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
               </a>
@@ -111,7 +111,7 @@
                   <img
                       src="keep-ui/public/icons/appdynamics-icon.png"
                       alt="AppDynamics"
-                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                      style="max-width: 80px; height: auto; margin-bottom: 10px;"
                   /><br/>
                   <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
               </a>
@@ -125,7 +125,7 @@
                   <img
                       src="keep-ui/public/icons/appdynamics-icon.png"
                       alt="AppDynamics"
-                      style="width: 80px; height: auto; margin-bottom: 10px;"
+                      style="max-width: 80px; height: auto; margin-bottom: 10px;"
                   /><br/>
                   <span style="font-size: 16px; font-weight: bold;">AppDynamics</span>
               </a>
