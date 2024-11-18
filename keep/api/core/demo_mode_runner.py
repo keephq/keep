@@ -79,6 +79,7 @@ def get_or_create_correlation_rules(keep_api_key, keep_api_url):
 
 
 def remove_old_incidents(keep_api_key, keep_api_url):
+    consider_old_timedelta = datetime.timedelta(minutes=30)
     incidents_existing = requests.get(
         f"{keep_api_url}/incidents",
         headers={"x-api-key": keep_api_key},
@@ -89,7 +90,7 @@ def remove_old_incidents(keep_api_key, keep_api_url):
     for incident in incidents_existing:
         if datetime.datetime.strptime(
                 incident["creation_time"], "%Y-%m-%dT%H:%M:%S.%f"
-        ).replace(tzinfo=timezone.utc) < (datetime.datetime.now() - datetime.timedelta(minutes=30)).astimezone(timezone.utc):
+        ).replace(tzinfo=timezone.utc) < (datetime.datetime.now() - consider_old_timedelta).astimezone(timezone.utc):
             incident_id = incident["id"]
             response = requests.delete(
                 f"{keep_api_url}/incidents/{incident_id}",
