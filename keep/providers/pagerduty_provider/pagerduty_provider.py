@@ -143,7 +143,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     FINGERPRINT_FIELDS = ["alert_key"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -164,7 +164,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             self.logger.info("Refreshing access token")
             self.__refresh_token()
         elif (
-                self.authentication_config.api_key or self.authentication_config.routing_key
+            self.authentication_config.api_key or self.authentication_config.routing_key
         ):
             # No need to do anything
             return
@@ -206,9 +206,9 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             **self.config.authentication
         )
         if (
-                not self.authentication_config.routing_key
-                and not self.authentication_config.api_key
-                and not self.authentication_config.oauth_data
+            not self.authentication_config.routing_key
+            and not self.authentication_config.api_key
+            and not self.authentication_config.oauth_data
         ):
             raise ProviderConfigException(
                 "PagerdutyProvider requires either routing_key or api_key or OAuth configuration",
@@ -334,13 +334,13 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return scopes
 
     def _build_alert(
-            self,
-            title: str,
-            alert_body: str,
-            dedup: str | None = None,
-            severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
-            event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
-            source: str = "custom_event",
+        self,
+        title: str,
+        alert_body: str,
+        dedup: str | None = None,
+        severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
+        source: str = "custom_event",
     ) -> typing.Dict[str, typing.Any]:
         """
         Builds the payload for an event alert.
@@ -392,13 +392,13 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         }
 
     def _send_alert(
-            self,
-            title: str,
-            body: str,
-            dedup: str | None = None,
-            severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
-            event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
-            source: str = "custom_event",
+        self,
+        title: str,
+        body: str,
+        dedup: str | None = None,
+        severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
+        source: str = "custom_event",
     ):
         """
         Sends PagerDuty Alert
@@ -426,12 +426,12 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         return result.json()
 
     def _trigger_incident(
-            self,
-            service_id: str,
-            title: str,
-            body: dict,
-            requester: str,
-            incident_key: str | None = None,
+        self,
+        service_id: str,
+        title: str,
+        body: dict,
+        requester: str,
+        incident_key: str | None = None,
     ):
         """Triggers an incident via the V2 REST API using sample data."""
 
@@ -464,11 +464,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         pass
 
     def setup_incident_webhook(
-            self,
-            tenant_id: str,
-            keep_api_url: str,
-            api_key: str,
-            setup_alerts: bool = True,
+        self,
+        tenant_id: str,
+        keep_api_url: str,
+        api_key: str,
+        setup_alerts: bool = True,
     ):
         self.logger.info("Setting up Pagerduty webhook")
 
@@ -546,17 +546,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         self.logger.info("Webhook created")
 
     def _notify(
-            self,
-            title: str = "",
-            alert_body: str = "",
-            dedup: str = "",
-            service_id: str = "",
-            requester: str = "",
-            incident_id: str = "",
-            event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
-            severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
-            source: str = "custom_event",
-            **kwargs: dict,
+        self,
+        title: str = "",
+        alert_body: str = "",
+        dedup: str = "",
+        service_id: str = "",
+        requester: str = "",
+        incident_id: str = "",
+        event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
+        severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
+        source: str = "custom_event",
+        **kwargs: dict,
     ):
         """
         Create a PagerDuty alert.
@@ -592,7 +592,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         )
 
     def _format_alert(
-            event: dict, provider_instance: "BaseProvider" = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         # If somebody connected the provider before we refactored it
         old_format_event = event.get("event", {})
@@ -836,7 +836,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
     @staticmethod
     def _format_incident(
-            event: dict, provider_instance: "BaseProvider" = None
+        event: dict, provider_instance: "BaseProvider" = None
     ) -> IncidentDto | list[IncidentDto]:
 
         event = event["event"]["data"]
