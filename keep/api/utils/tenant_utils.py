@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from sqlmodel import Session, select
 
+from keep.api.core.config import config
 from keep.api.models.db.tenant import TenantApiKey
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.rbac import Admin as AdminRole
@@ -217,6 +218,11 @@ def get_api_keys_secret(
             secret = secret_manager.read_secret(
                 f"{api_key.tenant_id}-{api_key.reference_id}"
             )
+
+            read_only_bypass_key = config("KEEP_READ_ONLY_BYPASS_KEY", default="")
+            if read_only_bypass_key and read_only_bypass_key == secret:
+                # Do not return the bypass key if set.
+                continue
 
             api_keys_with_secret.append(
                 {
