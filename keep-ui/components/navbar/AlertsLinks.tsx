@@ -23,6 +23,8 @@ type AlertsLinksProps = {
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const isMounted = useMounted();
+
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
     []
@@ -70,13 +72,19 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
     }
 
-    // If we're still loading (no data and no error), show based on cache
-    return true;
+    // For the initial render on the server, always show feed
+    if (!isMounted) {
+      return true;
+    }
+
+    return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
   })();
 
   // Get the current alerts count only if we should show feed
   const currentAlertsCount = (() => {
-    if (!shouldShowFeed) return 0;
+    if (!shouldShowFeed) {
+      return 0;
+    }
 
     // First try to get from server data
     const serverPreset = staticPresets?.find(
@@ -92,8 +100,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     );
     return cachedPreset?.alerts_count ?? undefined;
   })();
-
-  const isMounted = useMounted();
 
   return (
     <>
