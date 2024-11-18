@@ -109,12 +109,12 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
         onMouseLeave={() => setShowDetails(false)}
       >
         {data.category && (
-          <div className="absolute -top-3 -right-1 text-gray-400">
+          <div className="absolute top-2 right-2 text-gray-400">
             <Image
               className="inline-block"
               alt={data.category}
-              height={16}
-              width={16}
+              height={24}
+              width={24}
               title={data.category}
               src={`/icons/${data.category.toLowerCase()}-icon.png`}
             />
