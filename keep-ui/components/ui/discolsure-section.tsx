@@ -1,10 +1,10 @@
 import { Disclosure } from "@headlessui/react";
-import classNames from "classnames";
 import { IoChevronUp } from "react-icons/io5";
-import { Title, Subtitle, Button } from "@tremor/react";
+import { Title, Subtitle } from "@tremor/react";
 import { LinkWithIcon } from "@/components/LinkWithIcon";
 import React from "react";
 import { IconType } from "react-icons";
+import clsx from "clsx";
 
 interface DisclosureSectionProps {
   title: string;
@@ -35,10 +35,7 @@ export function DisclosureSection({
               <Title className="ml-2 text-gray-900 font-bold">{title}</Title>
             </div>
             <IoChevronUp
-              className={classNames(
-                { "rotate-180": open },
-                "mr-2 text-slate-400"
-              )}
+              className={clsx({ "rotate-180": open }, "mr-2 text-slate-400")}
             />
           </Disclosure.Button>
           <Disclosure.Panel

@@ -4,7 +4,6 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import React from "react";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { Disclosure } from "@headlessui/react";
-import classNames from "classnames";
 import { IoChevronDown } from "react-icons/io5";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
@@ -19,6 +18,7 @@ import {
   FollowingIncidents,
 } from "@/features/same-incidents-in-the-past/";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
+import clsx from "clsx";
 
 interface Props {
   incident: IncidentDto;
@@ -43,13 +43,13 @@ function Summary({
 
   if (collapsable) {
     return (
-      <Disclosure as="div" className={classNames("space-y-1", className)}>
+      <Disclosure as="div" className={clsx("space-y-1", className)}>
         <Disclosure.Button>
           {({ open }) => (
             <h4 className="text-gray-500 text-sm inline-flex justify-between items-center gap-1">
               <span>{title}</span>
               <IoChevronDown
-                className={classNames({ "rotate-180": open }, "text-slate-400")}
+                className={clsx({ "rotate-180": open }, "text-slate-400")}
               />
             </h4>
           )}

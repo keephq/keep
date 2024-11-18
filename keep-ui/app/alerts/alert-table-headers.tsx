@@ -27,7 +27,6 @@ import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
 import { AlertDto } from "./models";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
-import classnames from "classnames";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
@@ -121,7 +120,7 @@ const DraggableHeaderCell = ({
 
       {column.getIsPinned() === false && (
         <div
-          className={classnames(
+          className={clsx(
             "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
             {
               "hover:w-2 bg-blue-100": column.getIsResizing() === false,
