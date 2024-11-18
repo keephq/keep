@@ -7,6 +7,7 @@ import { ServiceNodeType, TopologyService } from "../../model/models";
 import { Badge } from "@tremor/react";
 import { getColorForUUID } from "@/app/topology/lib/badge-colors";
 import { clsx } from "clsx";
+import Image from "next/image";
 
 const THRESHOLD = 5;
 
@@ -107,6 +108,18 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
         onMouseEnter={() => setShowDetails(true)}
         onMouseLeave={() => setShowDetails(false)}
       >
+        {data.category && (
+          <div className="absolute -top-3 -right-1 text-gray-400">
+            <Image
+              className="inline-block"
+              alt={data.category}
+              height={16}
+              width={16}
+              title={data.category}
+              src={`/icons/${data.category.toLowerCase()}-icon.png`}
+            />
+          </div>
+        )}
         <strong className="text-lg">{data.display_name || data.service}</strong>
         {alertCount > 0 && (
           <span
