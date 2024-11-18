@@ -28,14 +28,6 @@ class AppdynamicsProviderAuthConfig:
     """
     AppDynamics authentication configuration.
     """
-
-    appDynamicsAccessToken: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "AppDynamics Access Token",
-            "hint": "Access Token",
-        },
-    )
     appDynamicsAccountName: str = dataclasses.field(
         metadata={
             "required": True,
@@ -43,14 +35,7 @@ class AppdynamicsProviderAuthConfig:
             "hint": "AppDynamics Account Name",
         },
     )
-    # appDynamicsPassword: str = dataclasses.field(
-    #     metadata={
-    #         "required": True,
-    #         "description": "Password",
-    #         "hint": "Password associated with your account",
-    #         "sensitive": True,
-    #     },
-    # )
+
     appId: str = dataclasses.field(
         metadata={
             "required": True,
@@ -65,6 +50,47 @@ class AppdynamicsProviderAuthConfig:
             "hint": "e.g. https://baseball202404101029219.saas.appdynamics.com",
         },
     )
+
+    appDynamicsAccessToken: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "AppDynamics Access Token",
+            "hint": "Access Token",
+            "config_sub_group": "access_token",
+            "config_main_group": "authentication",
+        },
+    )
+
+    appDynamicsUsername: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Username",
+            "hint": "Username associated with your account",
+            "config_sub_group": "basic_auth",
+            "config_main_group": "authentication",
+        },
+    )
+    appDynamicsPassword: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Password",
+            "hint": "Password associated with your account",
+            "sensitive": True,
+            "config_sub_group": "basic_auth",
+            "config_main_group": "authentication",
+        },
+    )
+
+    @pydantic.root_validator
+    def check_password_or_token(cls, values):
+        username, password, token = (
+            values.get("appDynamicsUsername"),
+            values.get("appDynamicsPassword"),
+            values.get("appDynamicsAccessToken")
+        )
+        if not (username and password) and not token:
+            raise ValueError("Either username/password or access token must be provided")
+        return values
 
 
 class AppdynamicsProvider(BaseProvider):
@@ -151,6 +177,7 @@ class AppdynamicsProvider(BaseProvider):
         response = requests.get(
             url=self.__get_url(paths=["controller/api/rbac/v1/users/"]),
             headers=self.__get_headers(),
+            auth=self.__get_auth(),
         )
         if response.ok:
             users = response.json()
@@ -180,6 +207,7 @@ class AppdynamicsProvider(BaseProvider):
         response = requests.get(
             url=url,
             headers=self.__get_headers(),
+            auth=self.__get_auth(),
         )
         if response.ok:
             authenticated = True
@@ -202,9 +230,18 @@ class AppdynamicsProvider(BaseProvider):
         return {"authenticated": authenticated, "administrator": administrator}
 
     def __get_headers(self):
-        return {
-            "Authorization": f"Bearer {self.authentication_config.appDynamicsAccessToken}",
-        }
+        if self.authentication_config.appDynamicsAccessToken:
+            return {
+                "Authorization": f"Bearer {self.authentication_config.appDynamicsAccessToken}",
+            }
+
+    def __get_auth(self) -> tuple[str, str]:
+        if self.authentication_config.appDynamicsUsername and self.authentication_config.appDynamicsPassword:
+            return (
+                f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
+                self.authentication_config.appDynamicsPassword,
+            )
+
 
     def __create_http_response_template(self, keep_api_url: str, api_key: str):
         keep_api_host, keep_api_path = keep_api_url.rsplit("/", 1)
@@ -226,6 +263,7 @@ class AppdynamicsProvider(BaseProvider):
             self.__get_url(paths=["controller/actiontemplate/httprequest"]),
             files={"template": temp},
             headers=self.__get_headers(),
+            auth=self.__get_auth(),
         )
         res = res.json()
         temp.close()
@@ -251,6 +289,7 @@ class AppdynamicsProvider(BaseProvider):
                 ]
             ),
             headers=self.__get_headers(),
+            auth=self.__get_auth(),
             json={
                 "actionType": "HTTP_REQUEST",
                 "name": "KeepAction",
@@ -295,6 +334,7 @@ class AppdynamicsProvider(BaseProvider):
                 ]
             ),
             headers=self.__get_headers(),
+            auth=self.__get_auth(),
         )
 
         policies = policies_response.json()
@@ -313,6 +353,7 @@ class AppdynamicsProvider(BaseProvider):
                     ]
                 ),
                 headers=self.__get_headers(),
+                auth=self.__get_auth(),
             ).json()
             if policy_config not in curr_policy["actions"]:
                 curr_policy["actions"].append(policy_config)
@@ -336,6 +377,7 @@ class AppdynamicsProvider(BaseProvider):
                     ]
                 ),
                 headers=self.__get_headers(),
+                auth=self.__get_auth(),
                 json=curr_policy,
             )
             if not request.ok:
