@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import { getApiURL } from "utils/apiUrl";
+import { getApiURL } from "@/utils/apiUrl";
 
 export default withAuth(
   function middleware(req) {

@@ -827,6 +827,18 @@ def get_last_workflow_executions(tenant_id: str, limit=20):
         )
 
         return execution_with_logs
+    
+
+def get_workflow_executions_count(tenant_id: str):
+    with Session(engine) as session:
+        query = session.query(WorkflowExecution).filter(
+            WorkflowExecution.tenant_id == tenant_id,
+        )
+
+        return {
+            "success": query.filter(WorkflowExecution.status == "success").count(),
+            "other": query.filter(WorkflowExecution.status != "success").count(),
+        }
 
 
 def add_audit(

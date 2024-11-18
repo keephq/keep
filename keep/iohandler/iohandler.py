@@ -330,7 +330,17 @@ class IOHandler:
                         .replace("\n", "\\n")
                     )
                     t = self._encode_single_quotes_in_double_quotes(t)
-                    tree = ast.parse(t)
+                    try:
+                        tree = ast.parse(t)
+                    except Exception:
+                        # For strings where ' is used as the delimeter and we failed to escape all ' in the string
+                        # @tb: again, this is not ideal but it's best effort...
+                        t = (
+                            t.replace("('", '("')
+                            .replace("')", '")')
+                            .replace("',", '",')
+                        )
+                        tree = ast.parse(t)
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))

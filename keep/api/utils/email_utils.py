@@ -33,17 +33,22 @@ logger = logging.getLogger(__name__)
 FROM_EMAIL = config("SENDGRID_FROM_EMAIL", default="platform@keephq.dev")
 API_KEY = config("SENDGRID_API_KEY", default=None)
 CC = config("SENDGRID_CC", default="founders@keephq.dev")
+KEEP_EMAILS_ENABLED = config("KEEP_EMAILS_ENABLED", default=False, cast=bool)
 
 
 def send_email(
     to_email: str,
     template_id: EmailTemplates,
     **kwargs,
-):
+) -> bool:
+    if not KEEP_EMAILS_ENABLED:
+        logger.debug("Emails are disabled, skipping sending email")
+        return False
+
     # that's ok on OSS
     if not API_KEY:
         logger.debug("No SendGrid API key, skipping sending email")
-        return
+        return False
 
     message = Mail(from_email=FROM_EMAIL, to_emails=to_email)
     message.template_id = template_id.value
@@ -55,6 +60,7 @@ def send_email(
         sg = SendGridAPIClient(API_KEY)
         sg.send(message)
         logger.info(f"Email sent to {to_email} with template {template_id}")
+        return True
     except Exception as e:
         logger.error(
             f"Failed to send email to {to_email} with template {template_id}: {e}"
