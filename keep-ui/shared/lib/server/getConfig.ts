@@ -15,6 +15,9 @@ export function getConfig() {
     authType = AuthenticationType.DB;
   } else if (authType === NO_AUTH) {
     authType = AuthenticationType.NOAUTH;
+  } else {
+    // Default to NOAUTH
+    authType = AuthenticationType.NOAUTH;
   }
 
   // we want to support preview branches on vercel
