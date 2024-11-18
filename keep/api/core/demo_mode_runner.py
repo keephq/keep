@@ -24,8 +24,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-LIVE_DEMO_MODE = os.environ.get("LIVE_DEMO_MODE", "false").lower() == "true"
-
 correlation_rules_to_create = [
     {
         "sqlQuery": {
@@ -230,7 +228,7 @@ def get_or_create_topology(keep_api_key, keep_api_url):
     services_existing.raise_for_status()
     services_existing = services_existing.json()
 
-    if len(services_existing) == 0 or True:
+    if len(services_existing) == 0:
         process_topology(
             SINGLE_TENANT_UUID, 
             services_to_create,
@@ -403,15 +401,12 @@ def launch_demo_mode():
         system_description="Simulate Alerts API key",
     ))
 
-    if LIVE_DEMO_MODE:
-        thread = threading.Thread(target=asyncio.run, args=(simulate_alerts(
-            keep_api_url,
-            keep_api_key, 
-            sleep_interval=5, 
-            demo_correlation_rules=True,
-            demo_topology=True
-        ), ))
-        thread.start()
-        logger.info("Simulate Alert launched.")
-    else:
-        logger.info("Alert simulation is disabled.")
+    thread = threading.Thread(target=asyncio.run, args=(simulate_alerts(
+        keep_api_url,
+        keep_api_key, 
+        sleep_interval=5, 
+        demo_correlation_rules=True,
+        demo_topology=True
+    ), ))
+    thread.start()
+    logger.info("Simulate Alert launched.")

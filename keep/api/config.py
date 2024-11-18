@@ -5,7 +5,6 @@ import keep.api.logging
 from keep.api.api import AUTH_TYPE
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.report_uptime import launch_uptime_reporting
-from keep.api.core.demo_mode_runner import launch_demo_mode
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 
@@ -14,6 +13,8 @@ PORT = int(os.environ.get("PORT", 8080))
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
+LIVE_DEMO_MODE = os.environ.get("LIVE_DEMO_MODE", "false").lower() == "true"
+
 
 def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
@@ -21,7 +22,10 @@ def on_starting(server=None):
 
     migrate_db()
     launch_uptime_reporting()
-    launch_demo_mode()
+
+    if LIVE_DEMO_MODE:
+        from keep.api.core.demo_mode_runner import launch_demo_mode
+        launch_demo_mode()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
