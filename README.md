@@ -44,91 +44,66 @@
 </div>
 
 <!-- AppDynamics Section -->
-<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
-    <div style="flex: 0 1 150px; text-align: center;">
-        <a
-            href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
-            target="_blank"
-            style="text-decoration: none; color: inherit;"
-        >
-            <img
-                src="keep-ui/public/icons/appdynamics-icon.png"
-                alt="AppDynamics"
-                style="width: 80px; height: auto; margin-bottom: 10px;"
-            />
-            <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
-        </a>
+<div style="text-align: center; margin: 20px auto; max-width: 800px;">
+    <!-- Sneak Preview Image -->
+    <img
+        src="/assets/sneaknew.png?raw=true"
+        style="width: 100%; height: auto; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); margin-bottom: 20px;"
+        alt="Sneak preview screenshot"
+    />
+
+    <!-- Logo Table/Grid -->
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    ">
+        <div>
+            <a
+                href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                target="_blank"
+                style="text-decoration: none; color: inherit;"
+            >
+                <img
+                    src="keep-ui/public/icons/appdynamics-icon.png"
+                    alt="AppDynamics"
+                    style="width: 80px; height: auto; margin-bottom: 10px;"
+                />
+                <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
+            </a>
+        </div>
+        <div>
+            <a
+                href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                target="_blank"
+                style="text-decoration: none; color: inherit;"
+            >
+                <img
+                    src="keep-ui/public/icons/appdynamics-icon.png"
+                    alt="AppDynamics"
+                    style="width: 80px; height: auto; margin-bottom: 10px;"
+                />
+                <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
+            </a>
+        </div>
+        <div>
+            <a
+                href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
+                target="_blank"
+                style="text-decoration: none; color: inherit;"
+            >
+                <img
+                    src="keep-ui/public/icons/appdynamics-icon.png"
+                    alt="AppDynamics"
+                    style="width: 80px; height: auto; margin-bottom: 10px;"
+                />
+                <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
+            </a>
+        </div>
+        <!-- Add more logos here as needed -->
     </div>
-    <div style="flex: 0 1 150px; text-align: center;">
-        <a
-            href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
-            target="_blank"
-            style="text-decoration: none; color: inherit;"
-        >
-            <img
-                src="keep-ui/public/icons/appdynamics-icon.png"
-                alt="AppDynamics"
-                style="width: 80px; height: auto; margin-bottom: 10px;"
-            />
-            <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
-        </a>
-    </div>
-    <div style="flex: 0 1 150px; text-align: center;">
-        <a
-            href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
-            target="_blank"
-            style="text-decoration: none; color: inherit;"
-        >
-            <img
-                src="keep-ui/public/icons/appdynamics-icon.png"
-                alt="AppDynamics"
-                style="width: 80px; height: auto; margin-bottom: 10px;"
-            />
-            <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
-        </a>
-    </div>
-    <div style="flex: 0 1 150px; text-align: center;">
-        <a
-            href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
-            target="_blank"
-            style="text-decoration: none; color: inherit;"
-        >
-            <img
-                src="keep-ui/public/icons/appdynamics-icon.png"
-                alt="AppDynamics"
-                style="width: 80px; height: auto; margin-bottom: 10px;"
-            />
-            <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
-        </a>
-    </div>
-    <div style="flex: 0 1 150px; text-align: center;">
-        <a
-            href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
-            target="_blank"
-            style="text-decoration: none; color: inherit;"
-        >
-            <img
-                src="keep-ui/public/icons/appdynamics-icon.png"
-                alt="AppDynamics"
-                style="width: 80px; height: auto; margin-bottom: 10px;"
-            />
-            <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
-        </a>
-    </div>
-    <div style="flex: 0 1 150px; text-align: center;">
-        <a
-            href="https://docs.keephq.dev/providers/documentation/appdynamics-provider"
-            target="_blank"
-            style="text-decoration: none; color: inherit;"
-        >
-            <img
-                src="keep-ui/public/icons/appdynamics-icon.png"
-                alt="AppDynamics"
-                style="width: 80px; height: auto; margin-bottom: 10px;"
-            />
-            <div style="font-size: 14px; font-weight: bold;">AppDynamics</div>
-        </a>
-    </div>
+
 </div>
 
 <h1 align="center"></h1>
