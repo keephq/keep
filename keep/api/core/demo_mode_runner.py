@@ -1,5 +1,4 @@
 import os
-from fastapi import Depends
 import requests
 import asyncio
 import logging
@@ -8,7 +7,7 @@ import random
 import time, datetime
 from datetime import timezone
 
-from keep.api.core.db import get_session, get_session_sync
+from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.providers_factory import ProvidersFactory
@@ -53,7 +52,7 @@ correlation_rules_to_create = [
             "sql": "((name like :name_1) or (name = :name_2) or (name like :name_3))",
             "params": {
                 "name_1": "%network_latency_high%",
-                "name_1": "high_cpu_usage",
+                "name_2": "high_cpu_usage",
                 "name_3": "%database_connection_failure%"
             }
         },
@@ -151,7 +150,7 @@ async def simulate_alerts(keep_api_url=None, keep_api_key=None, sleep_interval=5
                 response.raise_for_status()  # Raise an HTTPError for bad responses
             except requests.exceptions.RequestException as e:
                 logger.error("Failed to send alert: {}".format(e))
-                time.sleep(SLEEP_INTERVAL)
+                time.sleep(sleep_interval)
                 continue
 
             if response.status_code != 202:
