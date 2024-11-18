@@ -16,8 +16,7 @@
     <a href="https://slack.keephq.dev">
       <img src="https://img.shields.io/badge/Join-important.svg?color=4A154B&label=Slack&logo=slack&labelColor=334155&logoColor=f5f5f5" alt="Join Slack" /></a>
     <a href="https://github.com/keephq/keep/commits/main">
-      <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/keephq/keep"/>
-    </a>
+      <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/keephq/keep"/></a>
     <a href="https://codecov.io/gh/keephq/keep" >
         <img src="https://codecov.io/gh/keephq/keep/branch/main/graph/badge.svg?token=2VT6XYMRGS"/>
     </a>
