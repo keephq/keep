@@ -1,6 +1,5 @@
-import os
 import logging
-import asyncio
+import os
 
 from keep.api.core.demo_mode_runner import simulate_alerts
 
@@ -13,11 +12,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def main():
-    SLEEP_INTERVAL = float(os.environ.get("SLEEP_INTERVAL", 0.2))  # Configurable sleep interval from env variable
+def main():
+    SLEEP_INTERVAL = float(
+        os.environ.get("SLEEP_INTERVAL", 0.2)
+    )  # Configurable sleep interval from env variable
     keep_api_key = os.environ.get("KEEP_API_KEY")
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
-    await simulate_alerts(
+    simulate_alerts(
         keep_api_key=keep_api_key,
         keep_api_url=keep_api_url,
         sleep_interval=SLEEP_INTERVAL,
@@ -26,4 +27,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

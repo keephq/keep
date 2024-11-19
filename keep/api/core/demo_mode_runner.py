@@ -1,8 +1,8 @@
-import asyncio
 import datetime
 import logging
 import os
 import random
+import threading
 import time
 from datetime import timezone
 
@@ -299,7 +299,7 @@ def remove_old_incidents(keep_api_key, keep_api_url):
             response.raise_for_status()
 
 
-async def simulate_alerts(
+def simulate_alerts(
     keep_api_url=None,
     keep_api_key=None,
     sleep_interval=5,
@@ -378,12 +378,15 @@ async def simulate_alerts(
                 time.sleep(sleep_interval)
                 continue
 
-            if response.status_code != 202:
+            if not response.ok:
                 logger.error("Failed to send alert: {}".format(response.text))
             else:
                 logger.info("Alert sent successfully")
 
-        await asyncio.sleep(sleep_interval)
+        logger.info(
+            "Sleeping for {} seconds before next iteration".format(sleep_interval)
+        )
+        time.sleep(sleep_interval)
 
 
 def launch_demo_mode():
@@ -392,7 +395,9 @@ def launch_demo_mode():
     """
     logger.info("Demo mode launched.")
 
-    keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
+    keep_api_url = os.environ.get(
+        "KEEP_API_URL", "http://localhost:" + str(os.environ.get("PORT", 8080))
+    )
     keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
     if keep_api_key is None:
         with get_session_sync() as session:
@@ -404,14 +409,15 @@ def launch_demo_mode():
                 system_description="Simulate Alerts API key",
             )
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(
-        simulate_alerts(
-            keep_api_url,
-            keep_api_key,
-            sleep_interval=5,
-            demo_correlation_rules=True,
-            demo_topology=True,
-        )
+    thread = threading.Thread(
+        target=simulate_alerts,
+        kwargs={
+            "keep_api_key": keep_api_key,
+            "keep_api_url": keep_api_url,
+            "sleep_interval": 0.2,
+            "demo_correlation_rules": True,
+        },
     )
+    thread.daemon = True
+    thread.start()
     logger.info("Demo mode initialized.")
