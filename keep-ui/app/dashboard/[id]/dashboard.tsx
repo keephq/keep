@@ -116,7 +116,6 @@ const DashboardPage = () => {
 
   const handleEditWidget = (id: string, update?: WidgetData) => {
     let itemToEdit = widgetData.find((d) => d.i === id) || null;
-    console.log(itemToEdit, update);
     if (itemToEdit && update) {
       setEditingItem({ ...itemToEdit, ...update });
     } else {

@@ -6,6 +6,7 @@ Create Date: 2024-11-08 20:58:40.201477
 
 """
 
+from datetime import datetime
 import sqlalchemy as sa
 from alembic import op
 
@@ -23,8 +24,7 @@ def upgrade() -> None:
         sa.Column(
             "timestamp",
             sa.DateTime(),
-            nullable=False,
-            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=True,
         ),
     )
     op.add_column(
