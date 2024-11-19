@@ -13,7 +13,7 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_last_incidents,
     merge_incidents_to_id,
-    remove_alerts_to_incident_by_incident_id, enrich_incidents_with_alerts,
+    remove_alerts_to_incident_by_incident_id,
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -23,7 +23,7 @@ from keep.api.models.alert import (
     IncidentSeverity,
     IncidentStatus,
 )
-from keep.api.models.db.alert import Alert, AlertToIncident, LastAlertToIncident
+from keep.api.models.db.alert import Alert, LastAlertToIncident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
 
