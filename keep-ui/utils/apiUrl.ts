@@ -3,11 +3,7 @@ export function getApiURL(): string {
   // we need to check if we are on vercel or not
   const gitBranchName = process.env.VERCEL_GIT_COMMIT_REF || "notvercel";
 
-  if (
-    gitBranchName === "main" ||
-    gitBranchName === "notvercel" ||
-    gitBranchName === "refactor/2406-hydrated-session"
-  ) {
+  if (gitBranchName === "main" || gitBranchName === "notvercel") {
     return process.env.API_URL!;
   } else {
     console.log("preview branch on vercel");
