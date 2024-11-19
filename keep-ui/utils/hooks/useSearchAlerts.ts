@@ -23,7 +23,6 @@ export const useSearchAlerts = (
     async () =>
       fetcher(`${apiUrl}/alerts/search`, session?.accessToken, {
         headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
           "Content-type": "application/json",
         },
         method: "POST",

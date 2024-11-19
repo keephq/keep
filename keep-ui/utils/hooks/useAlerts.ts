@@ -107,7 +107,6 @@ export const useAlerts = () => {
           body: JSON.stringify(fingerprints),
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
           },
         }),
       options

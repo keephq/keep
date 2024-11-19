@@ -3,11 +3,12 @@ import { KeepApiError } from "@/shared/lib/KeepApiError";
 export const fetcher = async (
   url: string,
   accessToken: string | undefined,
-  requestInit: RequestInit = {}
+  { headers: requestInitHeaders, ...requestInit }: RequestInit = {}
 ) => {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      ...requestInitHeaders,
     },
     ...requestInit,
   });
