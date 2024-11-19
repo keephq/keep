@@ -71,6 +71,30 @@ export function AlertsTableBody({
     onRowClick(alert);
   };
 
+
+  if (showSkeleton) {
+    return (
+      <TableBody>
+        {Array(20)
+          .fill("")
+          .map((index, rowIndex) => (
+            <TableRow key={`row-${index}-${rowIndex}`}>
+              {table.getAllColumns().map((c, cellIndex) => (
+                <TableCell
+                  key={clsx(
+                    `cell-${c.id}-${cellIndex}`,
+                    c.columnDef.meta?.tdClassName
+                  )}
+                >
+                  <Skeleton containerClassName="w-full" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+      </TableBody>
+    );
+  }
+
   return (
     <TableBody>
       {table.getRowModel().rows.map((row) => {
@@ -100,11 +124,7 @@ export function AlertsTableBody({
                     "relative z-[1]" // Ensure cell content is above the border
                   )}
                 >
-                  {showSkeleton ? (
-                    <Skeleton />
-                  ) : (
-                    flexRender(cell.column.columnDef.cell, cell.getContext())
-                  )}
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               );
             })}

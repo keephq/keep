@@ -16,6 +16,7 @@ import {
   AddFacetModal,
 } from "./alert-table-facet-dynamic";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import { usePathname } from "next/navigation";
 
 export const AlertFacets: React.FC<AlertFacetsProps> = ({
   alerts,
@@ -26,7 +27,9 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
   onDelete,
   className,
   table,
+  showSkeleton,
 }) => {
+  const pathname = usePathname();
   const timeRangeFilter = table
     .getState()
     .columnFilters.find((filter) => filter.id === "lastReceived");
@@ -35,7 +38,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
     | { start: Date; end: Date; isFromCalendar: boolean }
     | undefined;
 
-  const presetName = window.location.pathname.split("/").pop() || "default";
+  const presetName = pathname?.split("/").pop() || "default";
 
   const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
     `addFacetModalOpen-${presetName}`,
@@ -207,6 +210,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           }
           facetKey="severity"
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           name="Status"
@@ -216,6 +220,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           }
           facetKey="status"
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           name="Source"
@@ -225,6 +230,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           }
           facetKey="source"
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           name="Assignee"
@@ -234,6 +240,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           }
           facetKey="assignee"
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           name="Dismissed"
@@ -243,6 +250,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           }
           facetKey="dismissed"
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         <Facet
           name="Incident Related"
@@ -252,6 +260,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
             handleSelect("incident", value, exclusive, isAllOnly)
           }
           facetFilters={facetFilters}
+          showSkeleton={showSkeleton}
         />
         {/* Dynamic facets */}
         {dynamicFacets.map((facet) => (
