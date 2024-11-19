@@ -5,7 +5,7 @@ import { SessionProvider } from "next-auth/react";
 
 declare global {
   interface Window {
-    __NEXT_AUTH_SESSION__?: any;
+    __NEXT_AUTH_SESSION__?: Session | null;
   }
 }
 
