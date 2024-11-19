@@ -58,6 +58,7 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.72.0",
     "openid-client": "^6.1.3",
+    "patch-package": "^8.0.0",
     "postcss": "^8.4.31",
     "postcss-import": "^15.1.0",
     "postcss-js": "^4.0.1",
