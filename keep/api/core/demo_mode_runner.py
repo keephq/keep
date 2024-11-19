@@ -336,52 +336,57 @@ def simulate_alerts(
         logger.info("Topology created.")
 
     while True:
-        logger.info("Looping to send alerts...")
+        try:
+            logger.info("Looping to send alerts...")
 
-        logger.info("Removing old incidents...")
-        remove_old_incidents(keep_api_key, keep_api_url)
-        logger.info("Old incidents removed.")
+            logger.info("Removing old incidents...")
+            remove_old_incidents(keep_api_key, keep_api_url)
+            logger.info("Old incidents removed.")
 
-        # choose provider
-        provider_type = random.choice(providers)
-        send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
-        provider = provider_classes[provider_type]
-        alert = provider.simulate_alert()
+            # choose provider
+            provider_type = random.choice(providers)
+            send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
+            provider = provider_classes[provider_type]
+            alert = provider.simulate_alert()
 
-        send_alert_url_params = {}
+            send_alert_url_params = {}
 
-        if provider_type in providers_to_randomize_fingerprint_for:
-            send_alert_url_params["fingerprint"] = "".join(
-                random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=10)
-            )
-
-        # Determine number of times to send the same alert
-        num_iterations = 1
-        if GENERATE_DEDUPLICATIONS:
-            num_iterations = random.randint(1, 3)
-
-        for _ in range(num_iterations):
-            logger.info("Sending alert: {}".format(alert))
-            try:
-                env = random.choice(["production", "staging", "development"])
-                send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
-                prepared_request = PreparedRequest()
-                prepared_request.prepare_url(send_alert_url, send_alert_url_params)
-                response = requests.post(
-                    prepared_request.url,
-                    headers={"x-api-key": keep_api_key},
-                    json=alert,
+            if provider_type in providers_to_randomize_fingerprint_for:
+                send_alert_url_params["fingerprint"] = "".join(
+                    random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=10)
                 )
-                response.raise_for_status()  # Raise an HTTPError for bad responses
-            except requests.exceptions.RequestException as e:
-                logger.error("Failed to send alert: {}".format(e))
-                time.sleep(sleep_interval)
-                continue
 
-            if not response.ok:
-                logger.error("Failed to send alert: {}".format(response.text))
-            else:
-                logger.info("Alert sent successfully")
+            # Determine number of times to send the same alert
+            num_iterations = 1
+            if GENERATE_DEDUPLICATIONS:
+                num_iterations = random.randint(1, 3)
+
+            for _ in range(num_iterations):
+                logger.info("Sending alert: {}".format(alert))
+                try:
+                    env = random.choice(["production", "staging", "development"])
+                    send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
+                    prepared_request = PreparedRequest()
+                    prepared_request.prepare_url(send_alert_url, send_alert_url_params)
+                    response = requests.post(
+                        prepared_request.url,
+                        headers={"x-api-key": keep_api_key},
+                        json=alert,
+                    )
+                    response.raise_for_status()  # Raise an HTTPError for bad responses
+                except requests.exceptions.RequestException as e:
+                    logger.error("Failed to send alert: {}".format(e))
+                    time.sleep(sleep_interval)
+                    continue
+
+                if not response.ok:
+                    logger.error("Failed to send alert: {}".format(response.text))
+                else:
+                    logger.info("Alert sent successfully")
+        except Exception as e:
+            logger.exception(
+                "Error in simulate_alerts", extra={"exception_str": str(e)}
+            )
 
         logger.info(
             "Sleeping for {} seconds before next iteration".format(sleep_interval)
