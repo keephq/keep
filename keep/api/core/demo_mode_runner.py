@@ -414,6 +414,7 @@ def launch_demo_mode(use_thread: bool = True):
         "KEEP_API_URL", "http://localhost:" + str(os.environ.get("PORT", 8080))
     )
     keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
+    keep_sleep_interval = int(os.environ.get("KEEP_SLEEP_INTERVAL", 5))
     if keep_api_key is None:
         with get_session_sync() as session:
             keep_api_key = get_or_create_api_key(
@@ -429,7 +430,7 @@ def launch_demo_mode(use_thread: bool = True):
             kwargs={
                 "keep_api_key": keep_api_key,
                 "keep_api_url": keep_api_url,
-                "sleep_interval": 0.2,
+                "sleep_interval": keep_sleep_interval,
                 "demo_correlation_rules": True,
             },
         )
@@ -439,7 +440,7 @@ def launch_demo_mode(use_thread: bool = True):
         simulate_alerts(
             keep_api_key=keep_api_key,
             keep_api_url=keep_api_url,
-            sleep_interval=0.2,
+            sleep_interval=keep_sleep_interval,
             demo_correlation_rules=True,
         )
     logger.info("Demo mode initialized.")
