@@ -38,7 +38,7 @@ def populate_db():
                 do nothing
         """
 
-        migrate_lastalerttoincodent_query = """
+        migrate_lastalerttoincident_query = """
             insert into lastalerttoincident (incident_id, tenant_id, timestamp, fingerprint, is_created_by_ai, deleted_at)
                 select  ati.incident_id, ati.tenant_id, ati.timestamp, lf.fingerprint, ati.is_created_by_ai, ati.deleted_at
                 from alerttoincident as ati
@@ -70,7 +70,7 @@ def populate_db():
                 ) as a ON alert.fingerprint = a.fingerprint and alert.timestamp = a.last_received;
         """
 
-        migrate_lastalerttoincodent_query = """
+        migrate_lastalerttoincident_query = """
             replace into lastalerttoincident (incident_id, tenant_id, timestamp, fingerprint, is_created_by_ai, deleted_at)
                 select  ati.incident_id, ati.tenant_id, ati.timestamp, lf.fingerprint, ati.is_created_by_ai, ati.deleted_at
                 from alerttoincident as ati
@@ -88,7 +88,7 @@ def populate_db():
         """
 
     session.execute(migrate_lastalert_query)
-    session.execute(migrate_lastalerttoincodent_query)
+    session.execute(migrate_lastalerttoincident_query)
 
 
 def upgrade() -> None:
