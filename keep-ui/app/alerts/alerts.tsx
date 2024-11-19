@@ -110,7 +110,6 @@ export default function Alerts({ presetName }: AlertsProps) {
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
 
-  // const isMounted = useMounted();
   const { status: sessionStatus } = useSession();
   const isLoading = isAsyncLoading || sessionStatus === "loading";
 
