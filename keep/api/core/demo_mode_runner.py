@@ -1,47 +1,38 @@
-import os
-import time
-import random
 import asyncio
-import logging
-import requests
 import datetime
-
+import logging
+import os
+import random
+import time
 from datetime import timezone
+
+import requests
 from dateutil import parser
 from requests.models import PreparedRequest
-from multiprocessing import Process
 
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.logging import CONFIG
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.tasks.process_topology_task import process_topology
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.providers_factory import ProvidersFactory
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+logging.config.dictConfig(CONFIG)
 
 logger = logging.getLogger(__name__)
 
 correlation_rules_to_create = [
     {
-        "sqlQuery": {
-            "sql": "((name like :name_1))",
-            "params": {
-                "name_1": "%mq%"
-            }
-        },
+        "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%mq%"}},
         "groupDescription": "This rule groups all alerts related to MQ.",
         "ruleName": "Message Queue Buckle Up",
-        "celQuery": "(name.contains(\"mq\"))",
+        "celQuery": '(name.contains("mq"))',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
         "groupingCriteria": [],
         "requireApprove": False,
-        "resolveOn": "never"
+        "resolveOn": "never",
     },
     {
         "sqlQuery": {
@@ -49,17 +40,17 @@ correlation_rules_to_create = [
             "params": {
                 "name_1": "%network_latency_high%",
                 "name_2": "high_cpu_usage",
-                "name_3": "%database_connection_failure%"
-            }
+                "name_3": "%database_connection_failure%",
+            },
         },
         "groupDescription": "This rule groups alerts from multiple sources.",
         "ruleName": "Application issue caused by DB load",
-        "celQuery": "(name.contains(\"network_latency_high\")) || (name == \"high_cpu_usage\") || (name.contains(\"database_connection_failure\"))",
+        "celQuery": '(name.contains("network_latency_high")) || (name == "high_cpu_usage") || (name.contains("database_connection_failure"))',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
         "groupingCriteria": [],
         "requireApprove": False,
-        "resolveOn": "never"
+        "resolveOn": "never",
     },
 ]
 
@@ -84,7 +75,7 @@ services_to_create = [
             "queue": "AMQP",
         },
         application_ids=[],
-        updated_at="2024-11-18T09:23:46"
+        updated_at="2024-11-18T09:23:46",
     ),
     TopologyServiceInDto(
         source_provider_id="Prod-Datadog",
@@ -105,7 +96,7 @@ services_to_create = [
             "api": "HTTP/S",
         },
         application_ids=[],
-        updated_at="2024-11-18T09:29:25"
+        updated_at="2024-11-18T09:29:25",
     ),
     TopologyServiceInDto(
         source_provider_id="Prod-Datadog",
@@ -124,7 +115,7 @@ services_to_create = [
         manufacturer="",
         dependencies={},
         application_ids=[],
-        updated_at="2024-11-18T09:30:44"
+        updated_at="2024-11-18T09:30:44",
     ),
     TopologyServiceInDto(
         source_provider_id="Prod-Datadog",
@@ -145,7 +136,7 @@ services_to_create = [
             "processor": "AMQP",
         },
         application_ids=[],
-        updated_at="2024-11-18T09:31:31"
+        updated_at="2024-11-18T09:31:31",
     ),
     TopologyServiceInDto(
         source_provider_id="Prod-Datadog",
@@ -166,7 +157,7 @@ services_to_create = [
             "storage": "HTTP/S",
         },
         application_ids=[],
-        updated_at="2024-11-18T10:02:20"
+        updated_at="2024-11-18T10:02:20",
     ),
     TopologyServiceInDto(
         source_provider_id="Prod-Datadog",
@@ -187,7 +178,7 @@ services_to_create = [
             "api": "HTTP/S",
         },
         application_ids=[],
-        updated_at="2024-11-18T10:11:31"
+        updated_at="2024-11-18T10:11:31",
     ),
     TopologyServiceInDto(
         source_provider_id="Prod-Datadog",
@@ -206,8 +197,8 @@ services_to_create = [
         manufacturer="",
         dependencies={},
         application_ids=[],
-        updated_at="2024-11-18T10:13:56"
-    )
+        updated_at="2024-11-18T10:13:56",
+    ),
 ]
 
 application_to_create = {
@@ -218,9 +209,10 @@ application_to_create = {
         {"name": "DB", "service": "db"},
         {"name": "Kafka", "service": "queue"},
         {"name": "Processor", "service": "processor"},
-        {"name": "Storage", "service": "storage"}
-    ]
+        {"name": "Storage", "service": "storage"},
+    ],
 }
+
 
 def get_or_create_topology(keep_api_key, keep_api_url):
     services_existing = requests.get(
@@ -234,10 +226,7 @@ def get_or_create_topology(keep_api_key, keep_api_url):
 
     if len(services_existing) == 0:
         process_topology(
-            SINGLE_TENANT_UUID, 
-            services_to_create,
-            "Prod-Datadog", 
-            "datadog"
+            SINGLE_TENANT_UUID, services_to_create, "Prod-Datadog", "datadog"
         )
 
         # Create application
@@ -247,7 +236,7 @@ def get_or_create_topology(keep_api_key, keep_api_url):
         )
         applications_existing.raise_for_status()
         applications_existing = applications_existing.json()
-        
+
         if len(applications_existing) == 0:
             # Pull services again to get their ids
             services_existing = requests.get(
@@ -262,14 +251,14 @@ def get_or_create_topology(keep_api_key, keep_api_url):
                 for existing_service in services_existing:
                     if service["name"] == existing_service["display_name"]:
                         service["id"] = existing_service["id"]
-                        
+
             response = requests.post(
                 f"{keep_api_url}/topology/applications",
                 headers={"x-api-key": keep_api_key},
                 json=application_to_create,
             )
             response.raise_for_status()
-        
+
 
 def get_or_create_correlation_rules(keep_api_key, keep_api_url):
     correlation_rules_existing = requests.get(
@@ -296,11 +285,12 @@ def remove_old_incidents(keep_api_key, keep_api_url):
         headers={"x-api-key": keep_api_key},
     )
     incidents_existing.raise_for_status()
-    incidents_existing = incidents_existing.json()['items']
+    incidents_existing = incidents_existing.json()["items"]
 
     for incident in incidents_existing:
-        if parser.parse(incident["creation_time"]).replace(tzinfo=timezone.utc) < \
-                (datetime.datetime.now() - consider_old_timedelta).astimezone(timezone.utc):
+        if parser.parse(incident["creation_time"]).replace(tzinfo=timezone.utc) < (
+            datetime.datetime.now() - consider_old_timedelta
+        ).astimezone(timezone.utc):
             incident_id = incident["id"]
             response = requests.delete(
                 f"{keep_api_url}/incidents/{incident_id}",
@@ -310,16 +300,17 @@ def remove_old_incidents(keep_api_key, keep_api_url):
 
 
 async def simulate_alerts(
-        keep_api_url=None, 
-        keep_api_key=None, 
-        sleep_interval=5, 
-        demo_correlation_rules=False,
-        demo_topology=False,
-    ):
+    keep_api_url=None,
+    keep_api_key=None,
+    sleep_interval=5,
+    demo_correlation_rules=False,
+    demo_topology=False,
+):
+    logger.info("Simulating alerts...")
     GENERATE_DEDUPLICATIONS = True
 
     providers = [
-        "prometheus", 
+        "prometheus",
         "grafana",
         "cloudwatch",
         "datadog",
@@ -336,33 +327,33 @@ async def simulate_alerts(
     }
 
     if demo_correlation_rules:
+        logger.info("Creating correlation rules...")
         get_or_create_correlation_rules(keep_api_key, keep_api_url)
         logger.info("Correlation rules created.")
     if demo_topology:
+        logger.info("Creating topology...")
         get_or_create_topology(keep_api_key, keep_api_url)
         logger.info("Topology created.")
-
-        logger.info(f"Waiting for server to start...")
-
 
     while True:
         logger.info("Looping to send alerts...")
 
+        logger.info("Removing old incidents...")
         remove_old_incidents(keep_api_key, keep_api_url)
         logger.info("Old incidents removed.")
 
         # choose provider
         provider_type = random.choice(providers)
-        send_alert_url = "{}/alerts/event/{}".format(
-            keep_api_url, provider_type)
+        send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
         provider = provider_classes[provider_type]
         alert = provider.simulate_alert()
 
         send_alert_url_params = {}
 
         if provider_type in providers_to_randomize_fingerprint_for:
-            send_alert_url_params['fingerprint'] = \
-                ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=10))
+            send_alert_url_params["fingerprint"] = "".join(
+                random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=10)
+            )
 
         # Determine number of times to send the same alert
         num_iterations = 1
@@ -373,7 +364,7 @@ async def simulate_alerts(
             logger.info("Sending alert: {}".format(alert))
             try:
                 env = random.choice(["production", "staging", "development"])
-                send_alert_url_params['provider_id'] = f"{provider_type}-{env}"
+                send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
                 prepared_request = PreparedRequest()
                 prepared_request.prepare_url(send_alert_url, send_alert_url_params)
                 response = requests.post(
@@ -402,7 +393,7 @@ def launch_demo_mode():
     logger.info("Demo mode launched.")
 
     keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
-    keep_api_key = os.environ.get("KEEP_API_KEY")
+    keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
     if keep_api_key is None:
         with get_session_sync() as session:
             keep_api_key = get_or_create_api_key(
@@ -413,17 +404,14 @@ def launch_demo_mode():
                 system_description="Simulate Alerts API key",
             )
 
-    p = Process(
-        target=asyncio.run, 
-        args=(
-            simulate_alerts(
-                keep_api_url,
-                keep_api_key, 
-                sleep_interval=5, 
-                demo_correlation_rules=True,
-                demo_topology=True
-            ), 
+    loop = asyncio.get_event_loop()
+    loop.create_task(
+        simulate_alerts(
+            keep_api_url,
+            keep_api_key,
+            sleep_interval=5,
+            demo_correlation_rules=True,
+            demo_topology=True,
         )
     )
-    p.start()
     logger.info("Demo mode initialized.")
