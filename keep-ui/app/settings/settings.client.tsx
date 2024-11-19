@@ -81,16 +81,16 @@ export default function SettingsPage() {
       newUserSubTab === "users"
         ? 0
         : newUserSubTab === "groups"
-        ? 1
-        : newUserSubTab === "roles"
-        ? 2
-        : newUserSubTab === "permissions"
-        ? 3
-        : newUserSubTab === "api-keys"
-        ? 4
-        : newUserSubTab === "sso"
-        ? 5
-        : 0;
+          ? 1
+          : newUserSubTab === "roles"
+            ? 2
+            : newUserSubTab === "permissions"
+              ? 3
+              : newUserSubTab === "api-keys"
+                ? 4
+                : newUserSubTab === "sso"
+                  ? 5
+                  : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
@@ -119,10 +119,7 @@ export default function SettingsPage() {
               accessToken={session?.accessToken!}
               currentUser={session?.user}
               groupsAllowed={groupsAllowed}
-<<<<<<< HEAD
-=======
               userCreationAllowed={userCreationAllowed}
->>>>>>> main
             />
           );
         } else {
@@ -267,8 +264,6 @@ export default function SettingsPage() {
                 onDeleteRole={() => {}}
                 isDisabled={true}
               />
-<<<<<<< HEAD
-=======
             </EmptyStateTable>
           );
         }
@@ -301,7 +296,6 @@ export default function SettingsPage() {
                 onRowClick={() => {}}
                 isDisabled={true}
               />
->>>>>>> main
             </EmptyStateTable>
           );
         }
@@ -397,15 +391,12 @@ export default function SettingsPage() {
                   Roles
                 </Tab>
                 <Tab
-<<<<<<< HEAD
-=======
                   icon={LockClosedIcon}
                   onClick={() => handleUserSubTabChange("permissions")}
                 >
                   Permissions
                 </Tab>
                 <Tab
->>>>>>> main
                   icon={KeyIcon}
                   onClick={() => handleUserSubTabChange("api-keys")}
                 >
