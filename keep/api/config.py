@@ -21,7 +21,6 @@ def on_starting(server=None):
     logger.info("Keep server starting")
 
     migrate_db()
-    launch_uptime_reporting()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
@@ -57,8 +56,15 @@ def on_starting(server=None):
         logger.info(f"ngrok tunnel: {public_url}")
         os.environ["KEEP_API_URL"] = public_url
 
+    logger.info("Keep server started")
+
+
+def when_ready(server):
+    """This function is called by the gunicorn server when it is ready to accept requests"""
+    logger.info("Keep server ready")
+
+    launch_uptime_reporting()
+
     if LIVE_DEMO_MODE:
         from keep.api.core.demo_mode_runner import launch_demo_mode
         launch_demo_mode()
-
-    logger.info("Keep server started")

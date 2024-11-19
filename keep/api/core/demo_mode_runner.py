@@ -334,16 +334,6 @@ async def simulate_alerts(
         for provider in providers
     }
 
-    while True:
-        try:
-            logger.info(f"Demo thread: Checking if server is up at {keep_api_url}...")
-            response = requests.get(keep_api_url)
-            response.raise_for_status()
-            break
-        except requests.exceptions.RequestException as e:
-            logger.info(f"Demo thread: API is not up yet. Waiting...")
-            await asyncio.sleep(5)
-
     if demo_correlation_rules:
         get_or_create_correlation_rules(keep_api_key, keep_api_url)
         logger.info("Correlation rules created.")
