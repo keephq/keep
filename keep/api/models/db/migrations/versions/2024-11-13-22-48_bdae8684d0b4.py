@@ -1,7 +1,7 @@
 """add lastalert and lastalerttoincident table
 
 Revision ID: bdae8684d0b4
-Revises: ef0b5b0df41c
+Revises: 620b6c048091
 Create Date: 2024-11-05 22:48:04.733192
 
 """
