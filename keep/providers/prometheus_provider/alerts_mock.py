@@ -44,7 +44,7 @@ ALERTS = {
     },
     "network_latency_high": {
         "payload": {
-            "summary": "Network latency is higher than normal",
+            "summary": "Network latency is higher than normal for customer_id:acme",
             "labels": {
                 "severity": "info",
             },
