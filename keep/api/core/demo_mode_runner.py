@@ -332,8 +332,8 @@ def simulate_alerts(
             response = requests.get(keep_api_url)
             response.raise_for_status()
             break
-        except requests.exceptions.RequestException as e:
-            logger.info(f"Demo thread: API is not up yet. Waiting...")
+        except requests.exceptions.RequestException:
+            logger.info("Demo thread: API is not up yet. Waiting...")
             time.sleep(5)
 
     if demo_correlation_rules:
@@ -436,3 +436,7 @@ def launch_demo_mode():
     thread.daemon = True
     thread.start()
     logger.info("Demo mode initialized.")
+
+
+if __name__ == "__main__":
+    launch_demo_mode()
