@@ -17,6 +17,7 @@ import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/not-found";
 import NotAuthorized from "@/app/not-authorized";
+import EnrichAlertModal from "@/app/alerts/EnrichAlertModal";
 
 const defaultPresets: Preset[] = [
   {
@@ -89,6 +90,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
+  const [viewEnrichAlertModal, setEnrichAlertModal] = useState<AlertDto | null>();
   const { useAllPresets } = usePresets();
 
   const { data: savedPresets = [] } = useAllPresets({
@@ -109,11 +111,16 @@ export default function Alerts({ presetName }: AlertsProps) {
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
-    if (fingerprint) {
+    const enrich = searchParams?.get("enrich");
+    if (fingerprint && enrich) {
+      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
+      setEnrichAlertModal(alert)
+    } else if (fingerprint) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       setViewAlertModal(alert);
     } else {
       setViewAlertModal(null);
+      setEnrichAlertModal(null)
     }
   }, [searchParams, alerts]);
 
@@ -178,6 +185,11 @@ export default function Alerts({ presetName }: AlertsProps) {
         handleClose={() => setChangeStatusAlert(null)}
       />
       <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => router.replace(`/alerts/${presetName}`)}
+        mutate={mutateAlerts}
+      />
+      <EnrichAlertModal
         alert={viewAlertModal}
         handleClose={() => router.replace(`/alerts/${presetName}`)}
         mutate={mutateAlerts}
