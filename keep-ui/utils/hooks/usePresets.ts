@@ -8,8 +8,7 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
-import { usePathname, useSearchParams } from "next/navigation";
-import moment from "moment";
+import { useSearchParams } from "next/navigation";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();

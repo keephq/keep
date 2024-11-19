@@ -35,7 +35,7 @@ export function AlertsTableBody({
   if (showEmptyState) {
     return (
       <>
-        <div className="flex flex-col justify-center items-center h-96 w-full absolute top-1/3">
+        <div className="flex flex-col justify-center items-center h-96 w-full absolute p-4">
           <EmptyStateCard
             title="No alerts to display"
             description="It is because you have not connected any data source yet or there are no alerts matching the filter."
@@ -71,6 +71,30 @@ export function AlertsTableBody({
     onRowClick(alert);
   };
 
+
+  if (showSkeleton) {
+    return (
+      <TableBody>
+        {Array(20)
+          .fill("")
+          .map((index, rowIndex) => (
+            <TableRow key={`row-${index}-${rowIndex}`}>
+              {table.getAllColumns().map((c, cellIndex) => (
+                <TableCell
+                  key={clsx(
+                    `cell-${c.id}-${cellIndex}`,
+                    c.columnDef.meta?.tdClassName
+                  )}
+                >
+                  <Skeleton containerClassName="w-full" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+      </TableBody>
+    );
+  }
+
   return (
     <TableBody>
       {table.getRowModel().rows.map((row) => {
@@ -100,11 +124,7 @@ export function AlertsTableBody({
                     "relative z-[1]" // Ensure cell content is above the border
                   )}
                 >
-                  {showSkeleton ? (
-                    <Skeleton />
-                  ) : (
-                    flexRender(cell.column.columnDef.cell, cell.getContext())
-                  )}
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               );
             })}
