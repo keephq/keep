@@ -5,8 +5,7 @@ import KeycloakProvider, {
 } from "next-auth/providers/keycloak";
 import Auth0Provider from "next-auth/providers/auth0";
 import AzureADProvider from "next-auth/providers/azure-ad";
-import SHA256 from "crypto-js/sha256";
-import Base64 from "crypto-js/enc-base64";
+import { HttpsProxyAgent } from "https-proxy-agent";
 
 import { getApiURL } from "utils/apiUrl";
 import {
@@ -343,13 +342,20 @@ const azureADAuthOptions = {
       authorization: {
         params: {
           scope:
-            "api://" + process.env.KEEP_AZUREAD_CLIENT_ID! + "/default openid profile email",
+            "api://" +
+            process.env.KEEP_AZUREAD_CLIENT_ID! +
+            "/default openid profile email",
         },
       },
       checks: ["pkce"],
       client: {
         token_endpoint_auth_method: "client_secret_post",
       },
+      /*
+      httpOptions: process.env.http_proxy ? {
+        agent: new HttpsProxyAgent(process.env.http_proxy),
+      } : undefined,
+      */
     }),
   ],
   pages: {

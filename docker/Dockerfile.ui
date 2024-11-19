@@ -1,5 +1,3 @@
-
-
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
@@ -11,7 +9,7 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
 RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
-
+RUN npm install --save https-proxy-agent node-fetch openid-client
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -26,8 +24,8 @@ ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
 ENV API_URL http://localhost:8080
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
-
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -40,7 +38,8 @@ WORKDIR /app
 ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 ENV KEEP_VERSION=${KEEP_VERSION}
 
-
+# Install proxychains
+RUN apk add --no-cache proxychains-ng
 
 ENV NODE_ENV production
 # Uncomment the following line in case you want to disable telemetry during runtime.
@@ -56,6 +55,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY entrypoint.sh /app/entrypoint.sh
+# Add the proxy-patch.js file to the image
+COPY proxy-patch.js /app/proxy-patch.js
 
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app
@@ -70,6 +71,5 @@ ENV PUSHER_HOST=localhost
 ENV PUSHER_PORT=6001
 ENV PUSHER_APP_KEY=keepappkey
 ENV NEXT_PUBLIC_SENTRY_DSN=https://0d4d59e3105ffe8afa27dcb95a222009@o4505515398922240.ingest.us.sentry.io/4508258058764288
-
 
 ENTRYPOINT ["/app/entrypoint.sh"]
