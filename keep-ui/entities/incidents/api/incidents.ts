@@ -57,5 +57,10 @@ export async function getIncident(
   id: string
 ) {
   const url = `${apiUrl}/incidents/${id}`;
-  return (await fetcher(url, session?.accessToken)) as IncidentDto;
+  // enabling caching to avoid duplicate requests for incident metadata
+  return (await fetcher(url, session?.accessToken, {
+    headers: {
+      cache: "force-cache",
+    },
+  })) as IncidentDto;
 }
