@@ -421,7 +421,7 @@ def simulate_alerts(
         time.sleep(sleep_interval)
 
 
-def launch_demo_mode():
+def launch_demo_mode(use_thread: bool = True):
     """
     Running async demo in the backgound.
     """
@@ -431,6 +431,7 @@ def launch_demo_mode():
         "KEEP_API_URL", "http://localhost:" + str(os.environ.get("PORT", 8080))
     )
     keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
+    keep_sleep_interval = int(os.environ.get("KEEP_SLEEP_INTERVAL", 5))
     if keep_api_key is None:
         with get_session_sync() as session:
             keep_api_key = get_or_create_api_key(
@@ -440,21 +441,29 @@ def launch_demo_mode():
                 unique_api_key_id="simulate_alerts",
                 system_description="Simulate Alerts API key",
             )
-
-    thread = threading.Thread(
-        target=simulate_alerts,
-        kwargs={
-            "keep_api_key": keep_api_key,
-            "keep_api_url": keep_api_url,
-            "sleep_interval": 5,
-            "demo_correlation_rules": True,
-            "demo_topology": True,
-        },
-    )
-    thread.daemon = True
-    thread.start()
+    if use_thread:
+        thread = threading.Thread(
+            target=simulate_alerts,
+            kwargs={
+                "keep_api_key": keep_api_key,
+                "keep_api_url": keep_api_url,
+                "sleep_interval": keep_sleep_interval,
+                "demo_correlation_rules": True,
+                "demo_topology": True,
+            },
+        )
+        thread.daemon = True
+        thread.start()
+    else:
+        simulate_alerts(
+            keep_api_key=keep_api_key,
+            keep_api_url=keep_api_url,
+            sleep_interval=keep_sleep_interval,
+            demo_correlation_rules=True,
+            demo_topology=True,
+        )
     logger.info("Demo mode initialized.")
 
 
 if __name__ == "__main__":
-    launch_demo_mode()
+    launch_demo_mode(use_thread=False)
