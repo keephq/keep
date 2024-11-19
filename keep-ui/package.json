@@ -52,7 +52,7 @@
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.460.0",
     "moment": "^2.29.4",
-    "next": "^14.2.13",
+    "next": "^15.0.3",
     "next-auth": "^4.24.7",
     "openai": "^4.72.0",
     "postcss": "^8.4.31",
