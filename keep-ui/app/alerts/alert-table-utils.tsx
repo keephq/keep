@@ -192,7 +192,7 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "checkbox",
-            size: 10,
+            size: 46,
             header: (context) => (
               <AlertTableCheckbox
                 checked={context.table.getIsAllRowsSelected()}
