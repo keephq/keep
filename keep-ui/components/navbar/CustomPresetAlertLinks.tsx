@@ -246,6 +246,7 @@ export const CustomPresetAlertLinks = ({
       </SortableContext>
       {/* React Player for playing alert sound */}
       <ReactPlayer
+        // TODO: cache the audio file fiercely
         url="/music/alert.mp3"
         playing={anyNoisyNow}
         volume={0.5}
@@ -253,6 +254,7 @@ export const CustomPresetAlertLinks = ({
         width="0"
         height="0"
         playsinline
+        className="absolute -z-10"
       />
     </DndContext>
   );

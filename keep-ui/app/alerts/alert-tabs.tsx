@@ -1,13 +1,5 @@
-import { FormEventHandler, useState } from "react";
-import {
-  Button,
-  TextInput,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
-} from "@tremor/react";
+import { useState } from "react";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { AlertDto } from "./models";
 import AlertTabModal from "./alert-tab-modal";
 import { evalWithContext } from "./alerts-rules-builder";
