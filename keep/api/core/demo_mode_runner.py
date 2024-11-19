@@ -1,14 +1,15 @@
 import os
-import requests
+import time
+import random
 import asyncio
 import logging
-import threading
-import random
-import time
+import requests
 import datetime
+
 from datetime import timezone
 from dateutil import parser
 from requests.models import PreparedRequest
+from multiprocessing import Process
 
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -412,12 +413,17 @@ def launch_demo_mode():
                 system_description="Simulate Alerts API key",
             )
 
-    thread = threading.Thread(target=asyncio.run, args=(simulate_alerts(
-        keep_api_url,
-        keep_api_key, 
-        sleep_interval=5, 
-        demo_correlation_rules=True,
-        demo_topology=True
-    ), ))
-    thread.start()
+    p = Process(
+        target=asyncio.run, 
+        args=(
+            simulate_alerts(
+                keep_api_url,
+                keep_api_key, 
+                sleep_interval=5, 
+                demo_correlation_rules=True,
+                demo_topology=True
+            ), 
+        )
+    )
+    p.start()
     logger.info("Demo mode initialized.")

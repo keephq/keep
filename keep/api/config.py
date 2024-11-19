@@ -66,5 +66,8 @@ def when_ready(server):
     launch_uptime_reporting()
 
     if LIVE_DEMO_MODE:
+        logger.info("Launching Keep in demo mode.")
         from keep.api.core.demo_mode_runner import launch_demo_mode
         launch_demo_mode()
+    else:
+        logger.info("Not launching Keep in demo mode.")
