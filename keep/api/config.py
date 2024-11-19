@@ -58,11 +58,6 @@ def on_starting(server=None):
 
     logger.info("Keep server started")
 
-
-def when_ready(server):
-    """This function is called by the gunicorn server when it is ready to accept requests"""
-    logger.info("Keep server ready")
-
     launch_uptime_reporting()
 
     if LIVE_DEMO_MODE:

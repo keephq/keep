@@ -299,6 +299,14 @@ def remove_old_incidents(keep_api_key, keep_api_url):
             response.raise_for_status()
 
 
+def get_existing_installed_providers(keep_api_key, keep_api_url):
+    response = requests.get(
+        f"{keep_api_url}/providers",
+        headers={"x-api-key": keep_api_key},
+    )
+    response.raise_for_status()
+    return response.json()['installed_providers']
+
 def simulate_alerts(
     keep_api_url=None,
     keep_api_key=None,
@@ -307,6 +315,7 @@ def simulate_alerts(
     demo_topology=False,
 ):
     logger.info("Simulating alerts...")
+    
     GENERATE_DEDUPLICATIONS = True
 
     providers = [
@@ -336,6 +345,12 @@ def simulate_alerts(
             logger.info("Demo thread: API is not up yet. Waiting...")
             time.sleep(5)
 
+    existing_installed_providers = get_existing_installed_providers(keep_api_key, keep_api_url)
+    existing_providers_to_their_ids = {}
+    for existing_provider in existing_installed_providers:
+        if existing_provider['type'] in providers:
+            existing_providers_to_their_ids[existing_provider['type']] = existing_provider['id']
+
     if demo_correlation_rules:
         logger.info("Creating correlation rules...")
         get_or_create_correlation_rules(keep_api_key, keep_api_url)
@@ -353,13 +368,15 @@ def simulate_alerts(
             remove_old_incidents(keep_api_key, keep_api_url)
             logger.info("Old incidents removed.")
 
+            send_alert_url_params = {}
+
             # choose provider
             provider_type = random.choice(providers)
             send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
+            if provider_type in existing_providers_to_their_ids:
+                send_alert_url_params["provider_id"] = existing_providers_to_their_ids[provider_type]
             provider = provider_classes[provider_type]
             alert = provider.simulate_alert()
-
-            send_alert_url_params = {}
 
             if provider_type in providers_to_randomize_fingerprint_for:
                 send_alert_url_params["fingerprint"] = "".join(
@@ -429,8 +446,9 @@ def launch_demo_mode():
         kwargs={
             "keep_api_key": keep_api_key,
             "keep_api_url": keep_api_url,
-            "sleep_interval": 0.2,
+            "sleep_interval": 5,
             "demo_correlation_rules": True,
+            "demo_topology": True,
         },
     )
     thread.daemon = True
