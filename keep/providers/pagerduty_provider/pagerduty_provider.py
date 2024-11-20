@@ -577,7 +577,9 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" = None
+        event: dict,
+        provider_instance: "BaseProvider" = None,
+        force_new_format: bool = False,
     ) -> AlertDto:
         # If somebody connected the provider before we refactored it
         old_format_event = event.get("event", {})
@@ -622,7 +624,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         last_received = data.pop(
             "created_at", datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         )
-        name = data.pop("title")
+        name = data.pop("title", "unknown title")
         service = data.pop("service", {}).get("summary", "unknown")
         environment = next(
             iter(
@@ -799,7 +801,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 incident_id=incident_dto.fingerprint
             )
             incident_alerts = [
-                PagerdutyProvider._format_alert(alert) for alert in incident_alerts
+                PagerdutyProvider._format_alert(alert, None, force_new_format=True)
+                for alert in incident_alerts
             ]
             incident_dto._alerts = incident_alerts
             incidents.append(incident_dto)
