@@ -1,20 +1,29 @@
 "use client";
-import {useParams} from "next/navigation";
-import {ChangeEvent, useEffect, useState} from "react";
+import { useParams } from "next/navigation";
+import { ChangeEvent, useEffect, useState } from "react";
 import GridLayout from "../GridLayout";
 import WidgetModal from "../WidgetModal";
-import {Button, Card, Icon, Subtitle, TextInput} from "@tremor/react";
-import {GenericsMetrics, LayoutItem, Threshold, WidgetData, WidgetType} from "../types";
-import {Preset} from "app/alerts/models";
-import {FiEdit2, FiSave} from "react-icons/fi";
-import {useSession} from "next-auth/react";
-import {useDashboards} from "utils/hooks/useDashboards";
-import {useApiUrl} from "utils/hooks/useConfig";
+import { Button, Card, Icon, Subtitle, TextInput } from "@tremor/react";
+import {
+  GenericsMetrics,
+  LayoutItem,
+  Threshold,
+  WidgetData,
+  WidgetType,
+} from "../types";
+import { Preset } from "app/alerts/models";
+import { FiEdit2, FiSave } from "react-icons/fi";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useDashboards } from "utils/hooks/useDashboards";
+import { useApiUrl } from "utils/hooks/useConfig";
 import "./../styles.css";
-import {toast} from "react-toastify";
-import {GenericFilters} from "@/components/filters/GenericFilters";
-import {useDashboardPreset} from "utils/hooks/useDashboardPresets";
-import {MetricsWidget, useDashboardMetricWidgets} from '@/utils/hooks/useDashboardMetricWidgets';
+import { toast } from "react-toastify";
+import { GenericFilters } from "@/components/filters/GenericFilters";
+import { useDashboardPreset } from "utils/hooks/useDashboardPresets";
+import {
+  MetricsWidget,
+  useDashboardMetricWidgets,
+} from "@/utils/hooks/useDashboardMetricWidgets";
 
 const DASHBOARD_FILTERS = [
   {
@@ -33,7 +42,7 @@ const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
   const [widgetData, setWidgetData] = useState<WidgetData[]>([]);
-  const {widgets: allMetricWidgets} = useDashboardMetricWidgets(true);
+  const { widgets: allMetricWidgets } = useDashboardMetricWidgets(true);
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
   const [dashboardName, setDashboardName] = useState(decodeURIComponent(id));
   const [isEditingName, setIsEditingName] = useState(false);
@@ -59,7 +68,9 @@ const DashboardPage = () => {
   const closeModal = () => setIsModalOpen(false);
 
   const handleAddWidget = (
-    name: string, widgetType: WidgetType, preset?: Preset ,
+    name: string,
+    widgetType: WidgetType,
+    preset?: Preset,
     thresholds?: Threshold[],
     metric?: MetricsWidget,
     genericMetrics?: GenericsMetrics
@@ -69,10 +80,25 @@ const DashboardPage = () => {
       i: uniqueId,
       x: (layout.length % 12) * 2,
       y: Math.floor(layout.length / 12) * 2,
-      w: widgetType === WidgetType.GENERICS_METRICS ? 12 : widgetType === WidgetType.METRIC ? 6 : 3,
-      h: widgetType === WidgetType.GENERICS_METRICS ? 20 : widgetType === WidgetType.METRIC ? 8 : 3,
+      w:
+        widgetType === WidgetType.GENERICS_METRICS
+          ? 12
+          : widgetType === WidgetType.METRIC
+            ? 6
+            : 3,
+      h:
+        widgetType === WidgetType.GENERICS_METRICS
+          ? 20
+          : widgetType === WidgetType.METRIC
+            ? 8
+            : 3,
       minW: widgetType === WidgetType.GENERICS_METRICS ? 10 : 2,
-      minH: widgetType === WidgetType.GENERICS_METRICS ? 15 : widgetType === WidgetType.METRIC ? 7 : 3,
+      minH:
+        widgetType === WidgetType.GENERICS_METRICS
+          ? 15
+          : widgetType === WidgetType.METRIC
+            ? 7
+            : 3,
       static: false,
     };
     const newWidget: WidgetData = {
@@ -82,7 +108,7 @@ const DashboardPage = () => {
       name,
       widgetType,
       genericMetrics,
-      metric
+      metric,
     };
     setLayout((prevLayout) => [...prevLayout, newItem]);
     setWidgetData((prevData) => [...prevData, newWidget]);
@@ -90,7 +116,6 @@ const DashboardPage = () => {
 
   const handleEditWidget = (id: string, update?: WidgetData) => {
     let itemToEdit = widgetData.find((d) => d.i === id) || null;
-    console.log(itemToEdit, update)
     if (itemToEdit && update) {
       setEditingItem({ ...itemToEdit, ...update });
     } else {

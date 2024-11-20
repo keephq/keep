@@ -1,19 +1,11 @@
-import { FormEventHandler, useState } from "react";
-import {
-  Button,
-  TextInput,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
-} from "@tremor/react";
+import { useState } from "react";
+import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
 import { AlertDto } from "./models";
 import AlertTabModal from "./alert-tab-modal";
 import { evalWithContext } from "./alerts-rules-builder";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 interface Tab {
   id?: string;
   name: string;

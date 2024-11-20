@@ -25,7 +25,7 @@ import DeduplicationSidebar from "app/deduplication/DeduplicationSidebar";
 import { TrashIcon, PauseIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 

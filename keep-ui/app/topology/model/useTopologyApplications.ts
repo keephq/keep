@@ -2,7 +2,7 @@ import { TopologyApplication } from "./models";
 import { useApiUrl } from "utils/hooks/useConfig";
 import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/utils/fetcher";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useCallback, useMemo } from "react";
 import { useTopologyBaseKey, useTopology } from "./useTopology";
 import { useRevalidateMultiple } from "@/utils/state";

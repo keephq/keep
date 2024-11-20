@@ -7,7 +7,7 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { CorrelationForm } from "./CorrelationForm";
 import { CorrelationGroups } from "./CorrelationGroups";
 import { CorrelationSubmission } from "./CorrelationSubmission";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";

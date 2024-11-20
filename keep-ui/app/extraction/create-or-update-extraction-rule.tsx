@@ -13,7 +13,7 @@ import {
   Switch,
   Badge,
 } from "@tremor/react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";

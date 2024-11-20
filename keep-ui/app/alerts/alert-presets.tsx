@@ -4,7 +4,7 @@ import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput, Switch, Text } from "@tremor/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "utils/hooks/usePresets";
 import { useTags } from "utils/hooks/useTags";
 import { useRouter } from "next/navigation";

@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { usePostHog } from "posthog-js/react";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "../lib/hooks/useHydratedSession";
 import { NoAuthUserEmail } from "@/utils/authenticationType";
 
 export default function PostHogPageView(): null {
