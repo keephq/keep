@@ -72,6 +72,11 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
       } else if (providers["azure-ad"]) {
         console.log("Signing in with Azure AD provider");
         signIn("azure-ad", { callbackUrl: "/" });
+      } else if (
+        providers.credentials &&
+        providers.credentials.name == "NoAuth"
+      ) {
+        signIn("credentials", { callbackUrl: "/" });
       }
     }
   }, [providers, params]);
@@ -108,7 +113,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
   // Show loading state during redirect
   if (isRedirecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4 -mt-32">
+      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4">
         <Card
           className="w-full max-w-md p-8"
           decoration="top"
@@ -126,7 +131,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
               />
             </div>
             <Text className="text-tremor-title font-bold text-tremor-content-strong">
-              Authentication successful, redirecting to Keep
+              Authentication successful, redirecting...
             </Text>
           </div>
         </Card>
@@ -136,7 +141,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
 
   if (providers?.credentials) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4 -mt-32">
+      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4">
         <Card
           className="w-full max-w-md p-8"
           decoration="top"
