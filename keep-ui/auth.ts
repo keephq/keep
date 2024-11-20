@@ -176,6 +176,7 @@ const providerConfigs = {
 
 // Create the config
 const config = {
+  trustHost: true,
   providers:
     providerConfigs[authType as keyof typeof providerConfigs] ||
     providerConfigs[AuthType.NOAUTH],
