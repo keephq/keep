@@ -4502,3 +4502,27 @@ def get_or_creat_posthog_instance_id(
             session.commit()
             session.refresh(system)
             return system.value 
+        
+def get_activity_report(
+        session: Optional[Session] = None   
+    ):
+    from keep.api.models.db.user import User
+
+    last_24_hours = datetime.utcnow() - timedelta(hours=24)
+    activity_report = {}
+    with Session(engine) as session:
+        activity_report['tenant_count'] = session.query(Tenant).count()
+        activity_report['providers_count'] = session.query(Provider).count()
+        activity_report['users_count'] = session.query(User).count()
+        activity_report['last_24_hours_incident_count'] = session.query(Incident).filter(
+            Incident.creation_time >= last_24_hours).count()
+        activity_report['last_24_hours_alerts_count'] = session.query(Alert).filter(
+            Alert.timestamp >= last_24_hours).count()
+        activity_report['last_24_hours_rules_created'] = session.query(Rule).filter(
+            Rule.creation_time >= last_24_hours).count()
+        activity_report['last_24_hours_workflows_created'] = session.query(Workflow).filter(
+            Workflow.creation_time >= last_24_hours).count()
+        activity_report['last_24_hours_workflows_executed'] = session.query(WorkflowExecution).filter(
+            WorkflowExecution.started >= last_24_hours).count()
+        
+    return activity_report
