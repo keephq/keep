@@ -15,18 +15,100 @@ The AppDynamics provider requires the following authentication parameter:
 - `Host`: This is the hostname of the AppDynamics instance you wish to connect to. It identifies the AppDynamics server that the API will interact with.
 
 ## Connecting with the Provider
-1. Ensure you have a AppDynamics account with the necessary [permissions](https://docs.appdynamics.com/accounts/en/cisco-appdynamics-on-premises-user-management/roles-and-permissions). The basic permissions required are `Account Owner` or `Administrator`. Alternatively you can create an account (instructions)[https://docs.appdynamics.com/accounts/en/global-account-administration/access-management/manage-user-accounts]
+1. Ensure you have a AppDynamics account with the necessary [permissions](https://docs.appdynamics.com/accounts/en/cisco-appdynamics-on-premises-user-management/roles-and-permissions). The basic permissions required are `Account Owner` or `Administrator`. Alternatively you can create an account [instructions](https://docs.appdynamics.com/accounts/en/global-account-administration/access-management/manage-user-accounts)
+
+## Provider configuration
+
+1. Find your account name [here](https://accounts.appdynamics.com/overview).
+2. Get the appId of the Appdynamics instance in which you wish to install the webhook into.
+3. Determine the Host [here](https://accounts.appdynamics.com/overview).
 
 ### Basic Auth authentication
 
-Obtain AppDynamics Username and Password:
-1. Find your account name [here](https://accounts.appdynamics.com/overview).
+1. Obtain AppDynamics **Username** and **Password**
+2. Go to **Basic Auth** tab under **Authentication** section
+3. Enter **Username** and **Password**
 
-OR create Access Token:
-1. Follow instructions [here](https://docs.appdynamics.com/appd/23.x/latest/en/extend-appdynamics/appdynamics-apis/api-clients)
+<Frame>
+  <img src="/images/appdynamics_9.png" width="1000" alt="Keep add AppDynamics Username and Password"/>
+</Frame>
 
-1. Determine the Host [here](https://accounts.appdynamics.com/overview).
-2. Get the appId of the Appdynamics instance in which you wish to install the webhook into.
+### Access Token authentication
+
+1. Log in to the **Controller UI** as an **Account Owner** or other roles with the **Administer users**, **groups**, **roles** permission.
+2. Go to **Administration**
+
+<Frame>
+  <img src="/images/appdynamics_1.png" width="1000" alt="AppDynamics Administration"/>
+</Frame>
+
+3. Go to **API Client** tab
+
+<Frame>
+  <img src="/images/appdynamics_2.png" width="1000" alt="AppDynamics API Client tab"/>
+</Frame>
+
+4. Click **+ Create**
+
+<Frame>
+  <img src="/images/appdynamics_3.png" width="1000" alt="Create new AppDynamics API Client"/>
+</Frame>
+
+5. Fill Client **Name** and **Description**
+6. Click **Generate Secret**
+
+<Frame>
+  <img src="/images/appdynamics_4.png" width="1000" alt="AppDynamics generate API Client Secret"/>
+</Frame>
+
+<Tip>
+  This API Client secret is not an authentication token yet
+</Tip>
+
+7. Add **Account Owner** and/or **Administrator** roles
+
+<Frame>
+  <img src="/images/appdynamics_5.png" width="1000" alt="AppDynamics add API Client roles"/>
+</Frame>
+
+8. Click **Save**
+
+<Frame>
+  <img src="/images/appdynamics_6.png" width="1000" alt="AppDynamics save API Client"/>
+</Frame>
+
+9. Click **Generate Temporary Token**
+
+<Frame>
+  <img src="/images/appdynamics_7.png" width="1000" alt="AppDynamics Generate API Client Temporary Access Token"/>
+</Frame>
+
+<Tip>
+  This token is not persistent, but since Keep uses it just once to install Webhook, we will use it without oAuth
+</Tip>
+
+10. Click **Save** one again
+<Warning>
+  This is important. Otherwise generated token will not be saved and authentication will fail
+</Warning>
+11. Copy generated token
+
+<Frame>
+  <img src="/images/appdynamics_8.png" width="1000" alt="AppDynamics copy API Client Temporary Access Token"/>
+</Frame>
+
+12. Go to **Access Token** tab under **Authentication** section
+
+<Frame>
+  <img src="/images/appdynamics_10.png" width="1000" alt="Keep add AppDynamics Access Token"/>
+</Frame>
+
+13. Enter Access Token
+
+## Connecting provider
+
+1. Ensure **Install webhook** is checked
+2. Click **Connect**
 
 ## Webhook Integration Modifications
 
