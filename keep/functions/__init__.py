@@ -1,11 +1,12 @@
 import copy
 import datetime
+import json
 import re
 import urllib.parse
 from datetime import timedelta
 from itertools import groupby
 
-import json5 as json
+import json5
 import pytz
 from dateutil import parser
 from dateutil.parser import ParserError
@@ -179,7 +180,7 @@ def join(
     iterable: list | dict | str, delimiter: str = ",", prefix: str | None = None
 ) -> str:
     if isinstance(iterable, str):
-        iterable = json.loads(iterable)
+        iterable = json5.loads(iterable)
 
     if isinstance(iterable, dict):
         if prefix:
