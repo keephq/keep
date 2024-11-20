@@ -1,21 +1,11 @@
 import os
-import sys
 import time
+import logging
 import requests
 
 from keep.api.core.demo_mode import launch_demo_mode_thread
 from keep.api.core.report_uptime import launch_uptime_reporting_thread
 
-# It's a hack to exclude current directory from sys.path
-# to avoid importing "logging.py" located in the same directory
-# instead of the standard library "logging" module.
-# TODO: rename logging.py
-for i in range(0, len(sys.path)):
-    if "keep/api" in sys.path[i]:
-        sys.path.pop(i)
-        break
-
-import logging  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +13,7 @@ def main():
     logger.info("Starting background server jobs.")
 
     # We intentionally don't use KEEP_API_URL here to avoid going through the internet.
-    # Demo mode should be launched in the same environment as the server.
+    # Script should be launched in the same environment as the server.
     keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
 
     while True:
