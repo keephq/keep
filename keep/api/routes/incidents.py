@@ -544,12 +544,12 @@ async def receive_event(
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
             "async_process_incident",
-            {},
             authenticated_entity.tenant_id,
             provider_id,
             provider_type,
             event,
             trace_id,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
         )
         logger.info(
             "Enqueued job",

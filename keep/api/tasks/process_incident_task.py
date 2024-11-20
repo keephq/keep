@@ -32,6 +32,10 @@ def process_incident(
         "trace_id": trace_id,
     }
 
+    if ctx and isinstance(ctx, dict):
+        extra["job_try"] = ctx.get("job_try", 0)
+        extra["job_id"] = ctx.get("job_id", None)
+
     if isinstance(incidents, IncidentDto):
         incidents = [incidents]
 
