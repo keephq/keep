@@ -5,6 +5,7 @@ import random
 import threading
 import time
 from datetime import timezone
+from uuid import uuid4
 
 import requests
 from dateutil import parser
@@ -69,7 +70,6 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="10.0.0.1",
-        mac_address="",
         category="Python",
         manufacturer="",
         dependencies={
@@ -91,7 +91,6 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="10.0.0.2",
-        mac_address="",
         category="nextjs",
         manufacturer="",
         dependencies={
@@ -112,7 +111,6 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="10.0.0.3",
-        mac_address="",
         category="postgres",
         manufacturer="",
         dependencies={},
@@ -131,9 +129,7 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="10.0.0.4",
-        mac_address="",
         category="Kafka",
-        manufacturer="",
         dependencies={
             "processor": "AMQP",
         },
@@ -152,9 +148,7 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="10.0.0.5",
-        mac_address="",
         category="go",
-        manufacturer="",
         dependencies={
             "storage": "HTTP/S",
         },
@@ -173,9 +167,7 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="172.1.1.0",
-        mac_address="",
         category="nextjs",
-        manufacturer="",
         dependencies={
             "api": "HTTP/S",
         },
@@ -194,9 +186,7 @@ services_to_create = [
         email="support@keephq.dev",
         slack="https://slack.keephq.dev",
         ip_address="10.0.0.8",
-        mac_address="",
         category="python",
-        manufacturer="",
         dependencies={},
         application_ids=[],
         updated_at="2024-11-18T10:13:56",
@@ -225,7 +215,6 @@ def get_or_create_topology(keep_api_key, keep_api_url):
     services_existing = services_existing.json()
 
     # Creating services
-
     if len(services_existing) == 0:
         process_topology(
             SINGLE_TENANT_UUID, services_to_create, "Prod-Datadog", "datadog"
@@ -301,7 +290,7 @@ def remove_old_incidents(keep_api_key, keep_api_url):
             response.raise_for_status()
 
 
-def get_existing_installed_providers(keep_api_key, keep_api_url):
+def get_installed_providers(keep_api_key, keep_api_url):
     response = requests.get(
         f"{keep_api_url}/providers",
         headers={"x-api-key": keep_api_key},
@@ -309,12 +298,14 @@ def get_existing_installed_providers(keep_api_key, keep_api_url):
     response.raise_for_status()
     return response.json()['installed_providers']
 
+
 def simulate_alerts(
     keep_api_url=None,
     keep_api_key=None,
     sleep_interval=5,
     demo_correlation_rules=False,
     demo_topology=False,
+    clean_old_incidents=False,
 ):
     logger.info("Simulating alerts...")
     
@@ -337,19 +328,20 @@ def simulate_alerts(
         for provider in providers
     }
 
-    existing_installed_providers = get_existing_installed_providers(keep_api_key, keep_api_url)
+    existing_installed_providers = get_installed_providers(keep_api_key, keep_api_url)
     logger.info(f"Existing installed providers: {existing_installed_providers}")
     existing_providers_to_their_ids = {}
+
     for existing_provider in existing_installed_providers:
         if existing_provider['type'] in providers:
             existing_providers_to_their_ids[existing_provider['type']] = existing_provider['id']
-
     logger.info(f"Existing installed existing_providers_to_their_ids: {existing_providers_to_their_ids}")
 
     if demo_correlation_rules:
         logger.info("Creating correlation rules...")
         get_or_create_correlation_rules(keep_api_key, keep_api_url)
         logger.info("Correlation rules created.")
+
     if demo_topology:
         logger.info("Creating topology...")
         get_or_create_topology(keep_api_key, keep_api_url)
@@ -359,9 +351,10 @@ def simulate_alerts(
         try:
             logger.info("Looping to send alerts...")
 
-            logger.info("Removing old incidents...")
-            remove_old_incidents(keep_api_key, keep_api_url)
-            logger.info("Old incidents removed.")
+            if clean_old_incidents:
+                logger.info("Removing old incidents...")
+                remove_old_incidents(keep_api_key, keep_api_url)
+                logger.info("Old incidents removed.")
 
             send_alert_url_params = {}
 
@@ -377,9 +370,7 @@ def simulate_alerts(
             alert = provider.simulate_alert()
 
             if provider_type in providers_to_randomize_fingerprint_for:
-                send_alert_url_params["fingerprint"] = "".join(
-                    random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=10)
-                )
+                send_alert_url_params["fingerprint"] = str(uuid4())
 
             # Determine number of times to send the same alert
             num_iterations = 1
@@ -390,17 +381,20 @@ def simulate_alerts(
                 logger.info("Sending alert: {}".format(alert))
                 try:
                     env = random.choice(["production", "staging", "development"])
+
                     if not "provider_id" in send_alert_url_params:
                         send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
+
                     prepared_request = PreparedRequest()
                     prepared_request.prepare_url(send_alert_url, send_alert_url_params)
                     logger.info(f"Sending alert to {prepared_request.url} with url params {send_alert_url_params}")
+
                     response = requests.post(
                         prepared_request.url,
                         headers={"x-api-key": keep_api_key},
                         json=alert,
                     )
-                    response.raise_for_status()  # Raise an HTTPError for bad responses
+                    response.raise_for_status()
                 except requests.exceptions.RequestException as e:
                     logger.error("Failed to send alert: {}".format(e))
                     time.sleep(sleep_interval)
@@ -421,7 +415,7 @@ def simulate_alerts(
         time.sleep(sleep_interval)
 
 
-def launch_demo_mode(keep_api_url=None) -> threading.Thread | None:
+def launch_demo_mode_thread(keep_api_url=None) -> threading.Thread | None:
     if not KEEP_LIVE_DEMO_MODE:
         logger.info("Not launching the demo mode.")
         return
@@ -447,6 +441,7 @@ def launch_demo_mode(keep_api_url=None) -> threading.Thread | None:
             "sleep_interval": sleep_interval,
             "demo_correlation_rules": True,
             "demo_topology": True,
+            "clean_old_incidents": True,
         },
     )
     thread.daemon = True

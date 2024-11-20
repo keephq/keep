@@ -37,6 +37,7 @@ def main():
         sleep_interval=SLEEP_INTERVAL,
         demo_correlation_rules=args.full_demo,
         demo_topology=args.full_demo,
+        clean_old_incidents=args.full_demo,
     )
 
 if __name__ == "__main__":

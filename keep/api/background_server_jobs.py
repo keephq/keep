@@ -14,8 +14,8 @@ import time
 import logging
 import requests
 
-from keep.api.core.demo_mode import launch_demo_mode
-from keep.api.core.report_uptime import launch_uptime_reporting
+from keep.api.core.demo_mode import launch_demo_mode_thread
+from keep.api.core.report_uptime import launch_uptime_reporting_thread
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ def main():
             time.sleep(5)
 
     threads = []
-    threads.append(launch_demo_mode(keep_api_url))
-    threads.append(launch_uptime_reporting())
+    threads.append(launch_demo_mode_thread(keep_api_url))
+    threads.append(launch_uptime_reporting_thread())
     
     for thread in threads:
         if thread is not None:

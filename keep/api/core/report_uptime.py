@@ -30,7 +30,7 @@ async def report_uptime_to_posthog():
          # Important to keep it async, otherwise will clog main gunicorn thread and cause timeouts.
         await asyncio.sleep(UPTIME_REPORTING_CADENCE)
 
-def launch_uptime_reporting() -> threading.Thread | None:
+def launch_uptime_reporting_thread() -> threading.Thread | None:
     """
     Running async uptime reporting as a sub-thread.
     """
