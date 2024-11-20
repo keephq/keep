@@ -175,6 +175,17 @@ def slice(str_to_slice: str, start: int = 0, end: int = 0) -> str:
     return str_to_slice[int(start) : int(end)]
 
 
+def join(iterable: list | dict | str, delimiter: str = ",") -> str:
+    if isinstance(iterable, str):
+        try:
+            iterable = json.loads(iterable)
+        except json.JSONDecodeError:
+            iterable = json.loads(iterable.replace("'", '"'))
+    if isinstance(iterable, dict):
+        return delimiter.join([f"{k}={v}" for k, v in iterable.items()])
+    return delimiter.join([str(item) for item in iterable])
+
+
 def dict_pop(data: str | dict, *args) -> dict:
     if isinstance(data, str):
         data = json.loads(data)
