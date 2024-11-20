@@ -17,10 +17,17 @@ from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.tasks.process_topology_task import process_topology
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.providers_factory import ProvidersFactory
+# import json
 
 logging.config.dictConfig(CONFIG)
 
 logger = logging.getLogger(__name__)
+
+# file_path = '/Users/matvey/Desktop/keep-oss/keep/pr.json'
+# def read_json_file(file_path):
+#     with open(file_path, 'r') as file:
+#         return json.load(file)
+# pr_json = read_json_file(file_path)
 
 correlation_rules_to_create = [
     {
@@ -346,10 +353,14 @@ def simulate_alerts(
             time.sleep(5)
 
     existing_installed_providers = get_existing_installed_providers(keep_api_key, keep_api_url)
+    # existing_installed_providers = pr_json['installed_providers']
+    logger.info(f"Existing installed providers: {existing_installed_providers}")
     existing_providers_to_their_ids = {}
     for existing_provider in existing_installed_providers:
         if existing_provider['type'] in providers:
             existing_providers_to_their_ids[existing_provider['type']] = existing_provider['id']
+
+    logger.info(f"Existing installed existing_providers_to_their_ids: {existing_providers_to_their_ids}")
 
     if demo_correlation_rules:
         logger.info("Creating correlation rules...")
@@ -376,6 +387,7 @@ def simulate_alerts(
 
             if provider_type in existing_providers_to_their_ids:
                 send_alert_url_params["provider_id"] = existing_providers_to_their_ids[provider_type]
+            logger.info(f"Provider type: {provider_type}, send_alert_url_params now are: {send_alert_url_params}")
 
             provider = provider_classes[provider_type]
             alert = provider.simulate_alert()
@@ -398,6 +410,7 @@ def simulate_alerts(
                         send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
                     prepared_request = PreparedRequest()
                     prepared_request.prepare_url(send_alert_url, send_alert_url_params)
+                    logger.info(f"Sending alert to {prepared_request.url} with url params {send_alert_url_params}")
                     response = requests.post(
                         prepared_request.url,
                         headers={"x-api-key": keep_api_key},
