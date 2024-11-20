@@ -373,8 +373,10 @@ def simulate_alerts(
             # choose provider
             provider_type = random.choice(providers)
             send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
+
             if provider_type in existing_providers_to_their_ids:
                 send_alert_url_params["provider_id"] = existing_providers_to_their_ids[provider_type]
+
             provider = provider_classes[provider_type]
             alert = provider.simulate_alert()
 
@@ -392,7 +394,8 @@ def simulate_alerts(
                 logger.info("Sending alert: {}".format(alert))
                 try:
                     env = random.choice(["production", "staging", "development"])
-                    send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
+                    if not "provider_id" in send_alert_url_params:
+                        send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
                     prepared_request = PreparedRequest()
                     prepared_request.prepare_url(send_alert_url, send_alert_url_params)
                     response = requests.post(
