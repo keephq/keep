@@ -22,5 +22,6 @@ ENV PYTHONPATH="/app:${PYTHONPATH}"
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 
+ENTRYPOINT ["/app/keep/entrypoint_backend.sh"]
 
 CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "1" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "./keep/api/config.py", "--reload"]

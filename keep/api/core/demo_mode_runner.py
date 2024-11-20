@@ -17,17 +17,10 @@ from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.tasks.process_topology_task import process_topology
 from keep.api.utils.tenant_utils import get_or_create_api_key
 from keep.providers.providers_factory import ProvidersFactory
-# import json
 
 logging.config.dictConfig(CONFIG)
 
 logger = logging.getLogger(__name__)
-
-# file_path = '/Users/matvey/Desktop/keep-oss/keep/pr.json'
-# def read_json_file(file_path):
-#     with open(file_path, 'r') as file:
-#         return json.load(file)
-# pr_json = read_json_file(file_path)
 
 correlation_rules_to_create = [
     {
@@ -353,7 +346,6 @@ def simulate_alerts(
             time.sleep(5)
 
     existing_installed_providers = get_existing_installed_providers(keep_api_key, keep_api_url)
-    # existing_installed_providers = pr_json['installed_providers']
     logger.info(f"Existing installed providers: {existing_installed_providers}")
     existing_providers_to_their_ids = {}
     for existing_provider in existing_installed_providers:

@@ -57,12 +57,3 @@ def on_starting(server=None):
         os.environ["KEEP_API_URL"] = public_url
 
     logger.info("Keep server started")
-
-    launch_uptime_reporting()
-
-    if LIVE_DEMO_MODE:
-        logger.info("Launching Keep in demo mode.")
-        from keep.api.core.demo_mode_runner import launch_demo_mode
-        launch_demo_mode()
-    else:
-        logger.info("Not launching Keep in demo mode.")

@@ -4,6 +4,7 @@ import logging.config
 import os
 import sys
 import typing
+import time
 import uuid
 from collections import OrderedDict
 from importlib import metadata
@@ -1626,6 +1627,15 @@ def login(info: Info):
     # kills the server also, great success
     os._exit(0)
 
+
+@cli.command()
+@pass_info
+def background_server_jobs(info: Info):
+    """Run background jobs, expected to be running in parallel with the server."""
+    while True:
+        time.sleep(1)
+        logger.info("Background job running")
+        logger.info(os.environ)
 
 if __name__ == "__main__":
     cli(auto_envvar_prefix="KEEP")
