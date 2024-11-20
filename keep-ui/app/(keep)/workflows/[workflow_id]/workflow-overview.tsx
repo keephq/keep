@@ -19,7 +19,7 @@ import {
   SetStateAction,
   useLayoutEffect,
 } from "react";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import { WorkflowSteps } from "../mockworkflows";
 import { Workflow } from "../models";
 import WorkflowGraph from "../workflow-graph";

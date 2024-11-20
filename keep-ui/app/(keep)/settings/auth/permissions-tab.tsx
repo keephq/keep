@@ -6,7 +6,7 @@ import { useGroups } from "utils/hooks/useGroups";
 import { useRoles } from "utils/hooks/useRoles";
 import { usePresets } from "utils/hooks/usePresets";
 import { useIncidents } from "utils/hooks/useIncidents";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import { PermissionsTable } from "./permissions-table";
 import PermissionSidebar from "./permissions-sidebar";
 import { useApiUrl } from "utils/hooks/useConfig";

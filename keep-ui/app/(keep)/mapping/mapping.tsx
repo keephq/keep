@@ -4,7 +4,7 @@ import CreateOrEditMapping from "./create-or-edit-mapping";
 import { useMappings } from "utils/hooks/useMappingRules";
 import RulesTable from "./rules-table";
 import { MdWarning } from "react-icons/md";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import { MappingRule } from "./models";
 import { useState } from "react";
 

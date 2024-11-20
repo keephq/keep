@@ -6,11 +6,8 @@ import { useSession } from "next-auth/react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";
-import {
-  useIncidents,
-  usePollIncidents,
-} from "../../../utils/hooks/useIncidents";
-import Loading from "../loading";
+import { useIncidents, usePollIncidents } from "../../utils/hooks/useIncidents";
+import Loading from "../(keep)/loading";
 import { AlertDto } from "./models";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 

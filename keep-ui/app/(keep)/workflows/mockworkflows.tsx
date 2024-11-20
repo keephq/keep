@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { MockAction, MockStep, MockWorkflow, Workflow } from "./models";
-import Loading from "../../loading";
+import Loading from "../loading";
 import { Button, Card, Tab, TabGroup, TabList } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import PageClient from "./builder/page.client";

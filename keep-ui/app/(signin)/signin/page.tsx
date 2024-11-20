@@ -1,7 +1,6 @@
 "use client";
-// import SignInForm from './SignInForm';
+import SignInForm from "./SignInForm";
 
-export default function SignInPage({ params }) {
-  // return <SignInForm params={params} />;
-  return <>bla</>;
+export default function SignInPage({ params }: { params: { amt: string } }) {
+  return <SignInForm params={params} />;
 }

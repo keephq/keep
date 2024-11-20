@@ -15,7 +15,7 @@ import {
 } from "@tremor/react";
 import { fetcher } from "utils/fetcher";
 import { useApiUrl } from "utils/hooks/useConfig";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 
 interface SSOProvider {
   id: string;

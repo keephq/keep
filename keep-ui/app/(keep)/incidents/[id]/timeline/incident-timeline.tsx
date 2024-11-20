@@ -1,6 +1,6 @@
 "use client";
 
-import Loading from "@/app/loading";
+import Loading from "@/app/(keep)/loading";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { AuditEvent, useAlerts } from "@/utils/hooks/useAlerts";

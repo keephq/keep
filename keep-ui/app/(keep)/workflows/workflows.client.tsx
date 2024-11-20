@@ -12,7 +12,7 @@ import { useSession } from "next-auth/react";
 import { fetcher } from "../../../utils/fetcher";
 import { Workflow, MockWorkflow } from "./models";
 import { useApiUrl } from "utils/hooks/useConfig";
-import Loading from "../../loading";
+import Loading from "../loading";
 import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
 import WorkflowTile, { WorkflowTileOld } from "./workflow-tile";

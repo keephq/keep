@@ -7,7 +7,7 @@ import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import WorkflowMenu from "./workflow-menu";
-import Loading from "../../loading";
+import Loading from "../loading";
 import { Trigger, Provider } from "./models";
 import {
   Button,

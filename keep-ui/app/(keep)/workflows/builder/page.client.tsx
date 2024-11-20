@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { useSession } from "next-auth/react";
 import { BuilderCard } from "./builder-card";
-import Loading from "../../../loading";
+import Loading from "../../loading";
 
 export default function PageClient({
   workflow,

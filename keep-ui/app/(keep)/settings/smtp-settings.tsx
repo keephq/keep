@@ -3,7 +3,7 @@ import { Card, Button, Title, Subtitle, TextInput } from "@tremor/react";
 import useSWR from "swr";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { fetcher } from "utils/fetcher";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 
 interface SMTPSettings {
   host: string;

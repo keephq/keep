@@ -7,7 +7,7 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";

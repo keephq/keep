@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Loading from "../loading";
+import Loading from "../(keep)/loading";
 import Alerts from "./alerts";
 
 type AlertsPageProps = {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Title, Subtitle, Card, Button, TextInput } from "@tremor/react";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import { User as AuthUser } from "next-auth";
 import { TiUserAdd } from "react-icons/ti";
 import { AuthenticationType } from "utils/authenticationType";

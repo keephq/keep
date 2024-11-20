@@ -16,7 +16,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthenticationType } from "utils/authenticationType";
 
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import { EmptyStateTable } from "@/components/ui/EmptyStateTable";
 import { EmptyStateImage } from "@/components/ui/EmptyStateImage";
 import UsersTab from "./auth/users-tab";

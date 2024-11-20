@@ -126,7 +126,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
               />
             </div>
             <Text className="text-tremor-title font-bold text-tremor-content-strong">
-              Redirecting...
+              Authentication successful, redirecting to Keep
             </Text>
           </div>
         </Card>
@@ -232,5 +232,5 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
     );
   }
 
-  return <>Loading...</>;
+  return <>Redirecting to authentication...</>;
 }
