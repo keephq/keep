@@ -137,10 +137,10 @@ def pull_data_from_providers(
                         f"Provider {provider.type} ({provider.id}) does not implement pulling incidents",
                         extra=extra,
                     )
-                except Exception as e:
-                    logger.error(
+                except Exception:
+                    logger.exception(
                         f"Unknown error pulling incidents from provider {provider.type} ({provider.id})",
-                        extra={**extra, "error": str(e)},
+                        extra={**extra, "trace_id": trace_id},
                     )
             else:
                 logger.debug(
@@ -165,10 +165,10 @@ def pull_data_from_providers(
                     f"Provider {provider.type} ({provider.id}) does not implement pulling topology data",
                     extra=extra,
                 )
-            except Exception as e:
-                logger.error(
+            except Exception:
+                logger.exception(
                     f"Unknown error pulling topology from provider {provider.type} ({provider.id})",
-                    extra={**extra, "error": str(e)},
+                    extra={**extra},
                 )
 
             for fingerprint, alert in sorted_provider_alerts_by_fingerprint.items():

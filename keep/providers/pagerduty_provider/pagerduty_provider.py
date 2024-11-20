@@ -575,6 +575,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             else incidents
         )
 
+    @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
@@ -791,11 +792,15 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         raw_incidents = self.__get_all_incidents_or_alerts()
         incidents = []
         for incident in raw_incidents:
-            incident_dto = self._format_incident({"event": {"data": incident}})
+            incident_dto = PagerdutyProvider._format_incident(
+                {"event": {"data": incident}}
+            )
             incident_alerts = self.__get_all_incidents_or_alerts(
                 incident_id=incident_dto.fingerprint
             )
-            incident_alerts = [self._format_alert(alert) for alert in incident_alerts]
+            incident_alerts = [
+                PagerdutyProvider._format_alert(alert) for alert in incident_alerts
+            ]
             incident_dto._alerts = incident_alerts
             incidents.append(incident_dto)
         return incidents
