@@ -1,11 +1,11 @@
 import copy
 import datetime
-import json
 import re
 import urllib.parse
 from datetime import timedelta
 from itertools import groupby
 
+import json5 as json
 import pytz
 from dateutil import parser
 from dateutil.parser import ParserError
@@ -173,6 +173,22 @@ def slice(str_to_slice: str, start: int = 0, end: int = 0) -> str:
     if end == 0 or end == "0":
         return str_to_slice[int(start) :]
     return str_to_slice[int(start) : int(end)]
+
+
+def join(
+    iterable: list | dict | str, delimiter: str = ",", prefix: str | None = None
+) -> str:
+    if isinstance(iterable, str):
+        iterable = json.loads(iterable)
+
+    if isinstance(iterable, dict):
+        if prefix:
+            return delimiter.join([f"{prefix}{k}={v}" for k, v in iterable.items()])
+        return delimiter.join([f"{k}={v}" for k, v in iterable.items()])
+
+    if prefix:
+        return delimiter.join([f"{prefix}{item}" for item in iterable])
+    return delimiter.join([str(item) for item in iterable])
 
 
 def dict_pop(data: str | dict, *args) -> dict:

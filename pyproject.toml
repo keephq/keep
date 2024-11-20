@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.29.1"
+version = "0.29.2"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 readme = "README.md"
@@ -95,6 +95,7 @@ networkx = "^3.3"
 google-auth = "2.34.0"
 clickhouse-driver = "^0.2.9"
 google-cloud-logging = "^3.11.3"
+json5 = "^0.9.28"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
