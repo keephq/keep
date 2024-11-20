@@ -22,7 +22,6 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
       "@/components/*": ["./components/*"],
       "@/app/*": ["./app/*"],
       "@/pages/*": ["./pages/*"],
@@ -30,7 +29,8 @@
       "@/entities/*": ["./entities/*"],
       "@/features/*": ["./features/*"],
       "@/shared/*": ["./shared/*"],
-      "@/types/*": ["./types/*"]
+      "@/types/*": ["./types/*"],
+      "@/*": ["./*"]
     }
   },
   "include": [
@@ -38,7 +38,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "app/(signin)/signin/page.tsx",
+    "pages/signin.tsx",
     "./.next/types/**/*.ts"
   ],
   "exclude": ["node_modules"]

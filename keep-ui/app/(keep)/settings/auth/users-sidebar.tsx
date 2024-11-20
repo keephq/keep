@@ -21,7 +21,7 @@ import { useGroups } from "utils/hooks/useGroups";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { User, Group } from "@/app/(keep)/settings/models";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
 import Select from "@/components/ui/Select";
 
@@ -76,7 +76,7 @@ const UsersSidebar = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { data: configData } = useConfig();
   const apiUrl = useApiUrl();
-  const authType = configData?.AUTH_TYPE as AuthenticationType;
+  const authType = configData?.AUTH_TYPE as AuthType;
 
   useEffect(() => {
     if (isOpen) {
@@ -278,8 +278,7 @@ const UsersSidebar = ({
                   </div>
                 )}
                 {/* Password Field */}
-                {(authType === AuthenticationType.DB ||
-                  authType === AuthenticationType.KEYCLOAK) &&
+                {(authType === AuthType.DB || authType === AuthType.KEYCLOAK) &&
                   isNewUser &&
                   userCreationAllowed && (
                     <div className="mt-4">

@@ -12,14 +12,14 @@ import {
 } from "@tremor/react";
 import Image from "next/image";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthType } from "utils/authenticationType";
 import { User } from "@/app/(keep)/settings/models";
 import { getInitials } from "@/components/navbar/UserAvatar";
 
 interface UsersTableProps {
   users: User[];
   currentUserEmail?: string;
-  authType: AuthenticationType;
+  authType: AuthType;
   onRowClick?: (user: User) => void;
   onDeleteUser?: (email: string, event: React.MouseEvent) => void;
   isDisabled?: boolean;
@@ -43,8 +43,7 @@ export function UsersTable({
         <TableRow>
           <TableHeaderCell className="w-1/24">{/** Image */}</TableHeaderCell>
           <TableHeaderCell className="w-3/12">
-            {authType === AuthenticationType.AUTH0 ||
-            authType === AuthenticationType.KEYCLOAK
+            {authType === AuthType.AUTH0 || authType === AuthType.KEYCLOAK
               ? "Email"
               : "Username"}
           </TableHeaderCell>

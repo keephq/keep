@@ -14,7 +14,7 @@ import { MdOutlineSecurity } from "react-icons/md";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useConfig } from "utils/hooks/useConfig";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthType } from "@/utils/authenticationType";
 
 import Loading from "@/app/(keep)/loading";
 import { EmptyStateTable } from "@/components/ui/EmptyStateTable";
@@ -51,19 +51,18 @@ export default function SettingsPage() {
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [userSubTabIndex, setUserSubTabIndex] = useState<number>(0);
 
-  const authType = configData?.AUTH_TYPE as AuthenticationType;
+  const authType = configData?.AUTH_TYPE as AuthType;
 
   // future: feature flags
-  const usersAllowed = authType !== AuthenticationType.NOAUTH;
+  const usersAllowed = authType !== AuthType.NOAUTH;
   // azure and noauth do not allow user creation
   const userCreationAllowed =
-    authType !== AuthenticationType.NOAUTH &&
-    authType !== AuthenticationType.AZUREAD;
-  const rolesAllowed = authType !== AuthenticationType.NOAUTH;
-  const customRolesAllowed = authType === AuthenticationType.KEYCLOAK;
-  const ssoAllowed = authType === AuthenticationType.KEYCLOAK;
-  const groupsAllowed = authType === AuthenticationType.KEYCLOAK;
-  const permissionsAllowed = authType === AuthenticationType.KEYCLOAK;
+    authType !== AuthType.NOAUTH && authType !== AuthType.AZUREAD;
+  const rolesAllowed = authType !== AuthType.NOAUTH;
+  const customRolesAllowed = authType === AuthType.KEYCLOAK;
+  const ssoAllowed = authType === AuthType.KEYCLOAK;
+  const groupsAllowed = authType === AuthType.KEYCLOAK;
+  const permissionsAllowed = authType === AuthType.KEYCLOAK;
   const apiKeysAllowed = true; // Assuming API keys are always allowed
 
   useEffect(() => {

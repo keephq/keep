@@ -19,7 +19,7 @@ import { useApiUrl } from "utils/hooks/useConfig";
 import { KeyIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { fetcher } from "utils/fetcher";
 import { useState } from "react";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthType } from "utils/authenticationType";
 import CreateApiKeyModal from "../create-api-key-modal";
 import { useRoles } from "utils/hooks/useRoles";
 import { getSession } from "next-auth/react";
@@ -80,8 +80,8 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
     showLineNumbers: false,
   });
 
-  const authType = configData?.AUTH_TYPE as AuthenticationType;
-  const createApiKeyEnabled = authType !== AuthenticationType.NOAUTH;
+  const authType = configData?.AUTH_TYPE as AuthType;
+  const createApiKeyEnabled = authType !== AuthType.NOAUTH;
 
   const handleRegenerate = async (
     apiKeyId: string,

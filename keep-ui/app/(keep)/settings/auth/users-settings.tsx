@@ -3,7 +3,7 @@ import { Title, Subtitle, Card, Button, TextInput } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { User as AuthUser } from "next-auth";
 import { TiUserAdd } from "react-icons/ti";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthType } from "utils/authenticationType";
 import { useUsers } from "utils/hooks/useUsers";
 import { useRoles } from "utils/hooks/useRoles";
 import { useGroups } from "utils/hooks/useGroups";
@@ -46,7 +46,7 @@ export default function UsersSettings({
   const [isNewUser, setIsNewUser] = useState(false);
   const apiUrl = useApiUrl();
   // Determine runtime configuration
-  const authType = configData?.AUTH_TYPE as AuthenticationType;
+  const authType = configData?.AUTH_TYPE as AuthType;
 
   useEffect(() => {
     if (users) {
@@ -167,9 +167,7 @@ export default function UsersSettings({
         isNewUser={isNewUser}
         mutateUsers={mutateUsers}
         groupsEnabled={groupsAllowed}
-        identifierType={
-          authType === AuthenticationType.DB ? "username" : "email"
-        }
+        identifierType={authType === AuthType.DB ? "username" : "email"}
         userCreationAllowed={userCreationAllowed}
       />
     </div>

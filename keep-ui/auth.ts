@@ -13,12 +13,12 @@ export class BackendRefusedError extends AuthError {
 
 import { getApiURL } from "@/utils/apiUrl";
 import {
-  AuthenticationType,
-  NoAuthUserEmail,
-  NoAuthTenant,
+  AuthType,
   MULTI_TENANT,
   SINGLE_TENANT,
   NO_AUTH,
+  NoAuthUserEmail,
+  NoAuthTenant,
 } from "@/utils/authenticationType";
 import type { User } from "next-auth";
 
@@ -26,12 +26,12 @@ import type { User } from "next-auth";
 const authTypeEnv = process.env.AUTH_TYPE;
 const authType =
   authTypeEnv === MULTI_TENANT
-    ? AuthenticationType.AUTH0
+    ? AuthType.AUTH0
     : authTypeEnv === SINGLE_TENANT
-    ? AuthenticationType.DB
+    ? AuthType.DB
     : authTypeEnv === NO_AUTH
-    ? AuthenticationType.NOAUTH
-    : (authTypeEnv as AuthenticationType);
+    ? AuthType.NOAUTH
+    : (authTypeEnv as AuthType);
 
 async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
@@ -76,7 +76,7 @@ async function refreshAccessToken(token: any) {
 
 // Define provider configurations
 const providerConfigs = {
-  [AuthenticationType.AUTH0]: [
+  [AuthType.AUTH0]: [
     Auth0({
       clientId: process.env.AUTH0_CLIENT_ID!,
       clientSecret: process.env.AUTH0_CLIENT_SECRET!,
@@ -88,7 +88,7 @@ const providerConfigs = {
       },
     }),
   ],
-  [AuthenticationType.DB]: [
+  [AuthType.DB]: [
     Credentials({
       name: "Credentials",
       credentials: {
@@ -134,7 +134,7 @@ const providerConfigs = {
       },
     }),
   ],
-  [AuthenticationType.NOAUTH]: [
+  [AuthType.NOAUTH]: [
     Credentials({
       name: "NoAuth",
       credentials: {},
@@ -150,7 +150,7 @@ const providerConfigs = {
       },
     }),
   ],
-  [AuthenticationType.KEYCLOAK]: [
+  [AuthType.KEYCLOAK]: [
     Keycloak({
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
@@ -158,7 +158,7 @@ const providerConfigs = {
       authorization: { params: { scope: "openid email profile roles" } },
     }),
   ],
-  [AuthenticationType.AZUREAD]: [
+  [AuthType.AZUREAD]: [
     MicrosoftEntraID({
       clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
       clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
@@ -177,7 +177,7 @@ const providerConfigs = {
 const config = {
   providers:
     providerConfigs[authType as keyof typeof providerConfigs] ||
-    providerConfigs[AuthenticationType.NOAUTH],
+    providerConfigs[AuthType.NOAUTH],
   pages: {
     signIn: "/signin",
   },
@@ -202,13 +202,13 @@ const config = {
         token.tenantId = user.tenantId;
         token.role = user.role;
 
-        if (authType === AuthenticationType.KEYCLOAK) {
+        if (authType === AuthType.KEYCLOAK) {
           token.refreshToken = account.refresh_token;
           token.accessTokenExpires =
             Date.now() + (account.expires_in as number) * 1000;
         }
       } else if (
-        authType === AuthenticationType.KEYCLOAK &&
+        authType === AuthType.KEYCLOAK &&
         token.accessTokenExpires &&
         typeof token.accessTokenExpires === "number" &&
         Date.now() < token.accessTokenExpires
