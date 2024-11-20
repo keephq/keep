@@ -3,7 +3,7 @@ import React from "react";
 import { Text, Button } from "@tremor/react";
 import Image from "next/image";
 import KeepPng from "../keep.png";
-import posthog from "posthog-js";
+import { capture } from "@/shared/lib/capture";
 
 const ReadOnlyBanner = () => {
   return (
@@ -23,10 +23,14 @@ const ReadOnlyBanner = () => {
           <Button
             className="[&>span]:text-xs"
             onClick={() => {
-              posthog.capture("try-keep-for-free", {
+              capture("try-keep-for-free", {
                 source: "read-only-banner",
               });
-              window.open("https://platform.keephq.dev/providers", "_blank");
+              window.open(
+                "https://platform.keephq.dev/providers",
+                "_blank",
+                "noopener,noreferrer"
+              );
             }}
             variant="primary"
             color="orange"
@@ -37,10 +41,14 @@ const ReadOnlyBanner = () => {
           <Button
             className="[&>span]:text-xs"
             onClick={() => {
-              posthog.capture("talk-to-us", {
+              capture("talk-to-us", {
                 source: "read-only-banner",
               });
-              window.open("https://www.keephq.dev/meet-keep", "_blank");
+              window.open(
+                "https://www.keephq.dev/meet-keep",
+                "_blank",
+                "noopener,noreferrer"
+              );
             }}
             color="orange"
             variant="secondary"
