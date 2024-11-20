@@ -112,6 +112,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
+    console.log(enrich, fingerprint)
     if (fingerprint && enrich) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       setEnrichAlertModal(alert)
@@ -190,7 +191,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         mutate={mutateAlerts}
       />
       <EnrichAlertModal
-        alert={viewAlertModal}
+        alert={viewEnrichAlertModal}
         handleClose={() => router.replace(`/alerts/${presetName}`)}
         mutate={mutateAlerts}
       />
