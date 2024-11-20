@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { AlertDto } from "app/alerts/models";
+import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";

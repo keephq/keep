@@ -1,8 +1,8 @@
-import { AlertToWorkflowExecution } from "app/alerts/models";
+import { AlertToWorkflowExecution } from "@/app/(keep)/alerts/models";
 import {
   PaginatedWorkflowExecutionDto,
   WorkflowExecution,
-} from "app/workflows/builder/types";
+} from "@/app/(keep)/workflows/builder/types";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useSearchParams } from "next/navigation";
 import useSWR, { SWRConfiguration } from "swr";

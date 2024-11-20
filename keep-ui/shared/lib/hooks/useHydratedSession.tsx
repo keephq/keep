@@ -1,31 +1,37 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession as useNextAuthSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import type { Session } from "next-auth";
-import type { UseSessionOptions, SessionContextValue } from "next-auth/react";
 
-export function useHydratedSession(
-  options?: UseSessionOptions<boolean>
-): SessionContextValue {
+// Define window augmentation for Next Auth session
+declare global {
+  interface Window {
+    __NEXT_AUTH?: {
+      session?: Session;
+    };
+  }
+}
+
+export function useHydratedSession() {
   const [isHydrated, setIsHydrated] = useState(false);
-  const session = useNextAuthSession(options);
+  const session = useSession();
+
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-  // Ensure we're in browser environment
-  const isBrowser = typeof window !== "undefined";
-  // On first render, return hydrated session if available
+
+  // If we're in the browser and have a preloaded session
   if (
-    (!isHydrated || session.status === "loading") &&
-    isBrowser &&
-    window.__NEXT_AUTH_SESSION__ !== null &&
-    window.__NEXT_AUTH_SESSION__ !== undefined
+    !isHydrated &&
+    typeof window !== "undefined" &&
+    window.__NEXT_AUTH?.session
   ) {
     return {
-      data: window.__NEXT_AUTH_SESSION__,
+      data: window.__NEXT_AUTH.session,
       status: "authenticated" as const,
       update: session.update,
-    } satisfies SessionContextValue;
+    };
   }
+
   return session;
 }

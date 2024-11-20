@@ -1,4 +1,4 @@
-import { MaintenanceRule } from "app/maintenance/model";
+import { MaintenanceRule } from "@/app/(keep)/maintenance/model";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
