@@ -3,7 +3,7 @@ import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";

@@ -1,5 +1,5 @@
 import { TopologyService } from "@/app/topology/model/models";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useEffect } from "react";

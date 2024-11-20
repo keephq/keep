@@ -1,6 +1,6 @@
 import { Icon } from "@tremor/react";
 import { AlertDto } from "app/alerts/models";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";

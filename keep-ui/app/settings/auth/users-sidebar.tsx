@@ -5,8 +5,6 @@ import {
   Subtitle,
   Button,
   TextInput,
-  SearchSelect,
-  SearchSelectItem,
   MultiSelect,
   MultiSelectItem,
   Callout,
@@ -21,7 +19,7 @@ import {
 import { useRoles } from "utils/hooks/useRoles";
 import { useGroups } from "utils/hooks/useGroups";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { User, Group } from "app/settings/models";
 import { AuthenticationType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
@@ -105,7 +103,9 @@ const UsersSidebar = ({
   }, [user, setValue, isOpen, reset, clearErrors, identifierType]);
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
-    if (!userCreationAllowed) return;
+    if (!userCreationAllowed) {
+      return;
+    }
 
     setIsSubmitting(true);
     clearErrors("root.serverError");
@@ -385,8 +385,8 @@ const UsersSidebar = ({
                     {isSubmitting
                       ? "Saving..."
                       : isNewUser
-                      ? "Create User"
-                      : "Save"}
+                        ? "Create User"
+                        : "Save"}
                   </Button>
                 )}
               </div>

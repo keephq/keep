@@ -7,11 +7,13 @@ import { TopologyPollingContextProvider } from "@/app/topology/model/TopologyPol
 import { FrigadeProvider } from "./frigade-provider";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "./config-provider";
-import "./globals.css";
-import "react-toastify/dist/ReactToastify.css";
 import { PHProvider } from "./posthog-provider";
 import dynamic from "next/dynamic";
 import ReadOnlyBanner from "./read-only-banner";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import "./globals.css";
+import "react-toastify/dist/ReactToastify.css";
 
 const PostHogPageView = dynamic(() => import("@/shared/ui/PostHogPageView"), {
   ssr: false,
@@ -29,12 +31,14 @@ type RootLayoutProps = {
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const config = getConfig();
+  const session = await getServerSession(authOptions);
+
   return (
     <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
         <ConfigProvider config={config}>
           <PHProvider>
-            <NextAuthProvider>
+            <NextAuthProvider session={session}>
               <TopologyPollingContextProvider>
                 <FrigadeProvider>
                   {/* @ts-ignore-error Server Component */}

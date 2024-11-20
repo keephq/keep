@@ -250,10 +250,10 @@ export function AlertTable({
     return acc.concat(alertId);
   }, []);
 
-  // show skeleton if no alerts are loaded
-  let showSkeleton = table.getFilteredRowModel().rows.length === 0;
-  // if showSkeleton and not loading, show empty state
-  let showEmptyState = !isAsyncLoading && showSkeleton;
+  let showSkeleton =
+    table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
+  let showEmptyState =
+    table.getFilteredRowModel().rows.length === 0 && !isAsyncLoading;
 
   const handleRowClick = (alert: AlertDto) => {
     // if presetName is alert-history, do not open sidebar
@@ -303,21 +303,12 @@ export function AlertTable({
             setDynamicFacets={setDynamicFacets}
             onDelete={handleFacetDelete}
             table={table}
+            showSkeleton={showSkeleton}
           />
         </div>
         <div className="flex flex-col gap-4 min-w-0">
           <Card className="flex-grow h-full flex flex-col p-0">
             <div className="flex-grow">
-              {isAsyncLoading && (
-                <Callout
-                  title="Getting your alerts..."
-                  icon={CircleStackIcon}
-                  color="gray"
-                  className="m-5"
-                >
-                  Alerts will show up in this table as they are added to Keep...
-                </Callout>
-              )}
               {/* For dynamic preset, add alert tabs*/}
               {!presetStatic && (
                 <AlertTabs

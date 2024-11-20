@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
@@ -16,7 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/not-found";
-import NotAuthorized from "@/app/not-authorized";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import EnrichAlertModal from "@/app/alerts/EnrichAlertModal";
 
 const defaultPresets: Preset[] = [
@@ -109,6 +111,10 @@ export default function Alerts({ presetName }: AlertsProps) {
     mutate: mutateAlerts,
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
+
+  const { status: sessionStatus } = useSession();
+  const isLoading = isAsyncLoading || sessionStatus === "loading";
+
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
@@ -134,14 +140,6 @@ export default function Alerts({ presetName }: AlertsProps) {
   if (!selectedPreset) {
     return <NotFound />;
   }
-  if (alertsError) {
-    if (alertsError.statusCode === 401) {
-      console.log("unauthenticated 401");
-      window.location.href = "/signin";
-      return null;
-    }
-    return <NotAuthorized />;
-  }
 
   return (
     <>
@@ -149,7 +147,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         key={selectedPreset.name}
         preset={selectedPreset}
         alerts={alerts}
-        isAsyncLoading={isAsyncLoading}
+        isAsyncLoading={isLoading}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}

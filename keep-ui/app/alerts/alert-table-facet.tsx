@@ -4,6 +4,8 @@ import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { FacetProps } from "./alert-table-facet-types";
 import { FacetValue } from "./alert-table-facet-value";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import { usePathname } from "next/navigation";
+import Skeleton from "react-loading-skeleton";
 
 export const Facet: React.FC<FacetProps> = ({
   name,
@@ -12,9 +14,11 @@ export const Facet: React.FC<FacetProps> = ({
   facetKey,
   facetFilters,
   showIcon = true,
+  showSkeleton,
 }) => {
+  const pathname = usePathname();
   // Get preset name from URL
-  const presetName = window.location.pathname.split("/").pop() || "default";
+  const presetName = pathname?.split("/").pop() || "default";
 
   // Store open/close state in localStorage with a unique key per preset and facet
   const [isOpen, setIsOpen] = useLocalStorage<boolean>(
@@ -60,7 +64,17 @@ export const Facet: React.FC<FacetProps> = ({
             </div>
           )}
           <div className="max-h-60 overflow-y-auto">
-            {values.length > 0 ? (
+            {showSkeleton ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="flex items-center px-2 py-1 gap-2"
+                >
+                  <Skeleton containerClassName="h-4 w-4" />
+                  <Skeleton containerClassName="h-4 flex-1" />
+                </div>
+              ))
+            ) : values.length > 0 ? (
               filteredValues.map((value) => (
                 <FacetValue
                   key={value.label}

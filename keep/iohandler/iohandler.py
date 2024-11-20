@@ -520,17 +520,10 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {
-        "ticket_id": "1234",
-        "severity": "high",
-        "ticket_created_at": "2021-09-01T00:00:00Z",
-    }
+    context_manager.event_context = {"tags": {"k1": "v1", "k2": "v2"}}
     iohandler = IOHandler(context_manager)
     res = iohandler.render(
-        iohandler.quote(
-            "not '{{ alert.ticket_id }}' or (('{{ alert.ticket_status }}' in ['Resolved', 'Closed', 'Canceled']) and ('{{ alert.severity }}' == 'critical' or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168))"
-        ),
-        safe=False,
+        'https://www.keephq.dev?keep.join("{{alert.tags}}", "&", "prefix_")'
     )
     from asteval import Interpreter
 

@@ -17,7 +17,7 @@ import "react-quill/dist/quill.snow.css";
 import { AlertDto } from "./models";
 import { format, set, isSameDay, isAfter, addMinutes } from "date-fns";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { toast } from "react-toastify";

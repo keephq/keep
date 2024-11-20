@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Preset } from "app/alerts/models";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
@@ -8,8 +8,7 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
-import { usePathname, useSearchParams } from "next/navigation";
-import moment from "moment";
+import { useSearchParams } from "next/navigation";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();

@@ -10,7 +10,7 @@ import Loading from "app/loading";
 import { PermissionsTable } from "./permissions-table";
 import PermissionSidebar from "./permissions-sidebar";
 import { useApiUrl } from "utils/hooks/useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 
 interface Props {
   accessToken: string;
