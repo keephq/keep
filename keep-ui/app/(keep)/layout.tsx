@@ -11,7 +11,7 @@ import { PHProvider } from "../posthog-provider";
 import dynamic from "next/dynamic";
 import ReadOnlyBanner from "../read-only-banner";
 import { auth } from "@/auth";
-import "./globals.css";
+import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 
 const PostHogPageView = dynamic(() => import("@/shared/ui/PostHogPageView"), {
