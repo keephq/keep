@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import PageClient from "../../builder/page.client";
-import Loading from "../../../loading";
+import Loading from "@/app/(keep)/loading";
 import Link from "next/link";
 
 export default function PageWithId({

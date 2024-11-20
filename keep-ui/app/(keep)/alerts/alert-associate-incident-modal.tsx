@@ -10,7 +10,7 @@ import {
   useIncidents,
   usePollIncidents,
 } from "../../../utils/hooks/useIncidents";
-import Loading from "../loading";
+import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "./models";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 

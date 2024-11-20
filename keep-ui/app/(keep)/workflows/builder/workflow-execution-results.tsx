@@ -9,7 +9,7 @@ import {
 } from "@tremor/react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
-import Loading from "../../loading";
+import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import {
   Callout,

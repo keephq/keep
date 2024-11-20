@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { BuilderCard } from "./builder-card";
-import Loading from "../../loading";
+import Loading from "@/app/(keep)/loading";
 
 export default function PageClient({
   workflow,

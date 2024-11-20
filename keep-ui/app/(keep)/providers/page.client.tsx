@@ -5,7 +5,7 @@ import { KeepApiError } from "@/shared/lib/KeepApiError";
 import { useApiUrl } from "utils/hooks/useConfig";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
-import Loading from "../loading";
+import Loading from "@/app/(keep)/loading";
 import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";

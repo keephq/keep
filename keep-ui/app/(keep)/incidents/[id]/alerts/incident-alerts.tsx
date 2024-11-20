@@ -30,7 +30,6 @@ import IncidentAlertMenu from "./incident-alert-menu";
 import React, { useEffect, useMemo, useState } from "react";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
-// import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
 import { EmptyStateCard } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { TablePagination } from "@/shared/ui";

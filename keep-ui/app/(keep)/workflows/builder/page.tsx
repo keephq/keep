@@ -1,6 +1,6 @@
 import PageClient from "./page.client";
 import { Suspense } from "react";
-import Loading from "../../loading";
+import Loading from "@/app/(keep)/loading";
 
 type PageProps = {
   params: { workflow: string; workflowId: string };

@@ -3,7 +3,7 @@ import Modal from "@/components/ui/Modal";
 import { Callout, Button, Title, Card } from "@tremor/react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
-import Loading from "../loading";
+import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "./models";
 import { IncidentDto, IncidentCandidateDto } from "@/entities/incidents/model";
 import { useApiUrl } from "utils/hooks/useConfig";
