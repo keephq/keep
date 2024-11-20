@@ -6,8 +6,10 @@ set -e
 # Print commands and their arguments as they are executed
 set -x
 
-# Execute background taasks
-poetry run python keep/cli/cli.py background-server-jobs &
+# Get the directory of the current script
+SCRIPT_DIR=$(dirname "$0")
+
+python "$SCRIPT_DIR/api/background_server_jobs.py" &
 
 # Execute the CMD provided in the Dockerfile or as arguments
 exec "$@"

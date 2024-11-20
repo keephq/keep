@@ -5,6 +5,8 @@ import requests
 from posthog import Posthog
 from importlib import metadata
 
+from keep.api.core.db import get_or_creat_posthog_instance_id
+
 try:
     KEEP_VERSION = metadata.version("keep")
 except metadata.PackageNotFoundError:
@@ -14,7 +16,6 @@ except metadata.PackageNotFoundError:
         KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
 
 POSTHOG_DISABLED = os.getenv("POSTHOG_DISABLED", "false") == "true"
-RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH = uuid.uuid4()
 
 if POSTHOG_DISABLED:
     posthog.disabled = True
@@ -37,7 +38,7 @@ def is_posthog_reachable():
             feature_flags_request_timeout_seconds=3,
             sync_mode=True  # Explicitly to trigger exception if it's not reachable.
         ).capture(
-            RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH, 
+            get_or_creat_posthog_instance_id(), 
             "connectivity_check",
         )
         return True

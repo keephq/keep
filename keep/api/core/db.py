@@ -58,6 +58,7 @@ from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-impo
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
+from keep.api.models.db.system import * # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
@@ -4482,3 +4483,22 @@ def get_resource_ids_by_resource_type(
         # Execute the query and return results
         result = session.exec(query)
         return result.all()
+
+def get_or_creat_posthog_instance_id(
+        session: Optional[Session] = None
+    ):
+        POSTHOG_INSTANCE_ID_KEY = "posthog_instance_id"
+        with Session(engine) as session:
+            system = session.exec(select(System).where(System.name == POSTHOG_INSTANCE_ID_KEY)).first()
+            if system:
+                return system.value
+            
+            system = System(
+                id=str(uuid4()),
+                name=POSTHOG_INSTANCE_ID_KEY,
+                value=str(uuid4()),
+            )
+            session.add(system)
+            session.commit()
+            session.refresh(system)
+            return system.value 
