@@ -1,4 +1,4 @@
-import { DeduplicationRule } from "app/deduplication/models";
+import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import { useSession } from "next-auth/react";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";

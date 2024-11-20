@@ -1,0 +1,1114 @@
+<!doctype html>
+<html dir="rtl" itemscope="" itemtype="http://schema.org/WebPage" lang="iw">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta
+      content="/images/branding/googleg/1x/googleg_standard_color_128dp.png"
+      itemprop="image"
+    />
+    <title>Google</title>
+    <script nonce="_7qJsVyJKF763DCl8D-kgg">
+      (function () {
+        var _g = {
+          kEI: "2VM7Z6uWN8mk2roP1MH3kAU",
+          kEXPI:
+            "0,1303878,2396431,640,435,448529,90132,2872,2891,43028,36419,9708,334635,2006,8155,23350,22436,9779,12414,50244,76208,15816,1804,47082,1632,29279,14184,11219268,2841328,39,305,1,16,41,4,7,7,1,15,1,7,2,4,1,45,27979048,16672,2169859,23029351,11557,1242,100481,22622,15165,8181,49430,21670,6754,1898,5,21976,9139,4599,328,540,3919,1766,1117,1830,7471,12989,6,4577,5634,686,6592,1259,22,8393,12880,708,1342,13707,14292,1343,12591,1786,1526,1908,12565,797,11899,4971,22409,1646,1801,5862,3234,45,4914,440,41,2626,3509,2599,74,3073,866,892,1,4361,522,69,2518,324,315,1,30,1350,252,784,321,306,1450,395,46,1,3154,2,2096,2332,3290,5527,223,474,893,261,5767,464,1570,192,517,378,3,7,1681,36,3,1000,748,458,56,353,3256,808,316,201,326,1512,277,842,2,1358,1781,622,4,2,754,975,346,2,2260,1896,3,383,381,990,29,501,40,124,681,515,514,370,96,619,1382,110,338,198,134,3063,66,190,1190,179,635,1254,3,283,342,363,2,236,179,158,624,3,62,538,95,668,1102,204,912,133,67,333,708,330,1,144,1422,1004,2,3,2,836,137,1494,2,987,129,113,132,1478,602,78,159,3,489,17,249,444,116,92,85,84,90,26,306,1566,301,102,738,1069,224,9,3,73,5,4,4,4,2,596,448,12,193,61,46,235,15,1246,870,172,6,1797,477,21018342,380115,3,16997,18,2780,702,877,4382,894,676,976,6,210,1503,317",
+          kBL: "Kgt7",
+          kOPI: 89978449,
+        };
+        (function () {
+          var a;
+          ((a = window.google) == null ? 0 : a.stvsc)
+            ? (google.kEI = _g.kEI)
+            : (window.google = _g);
+        }).call(this);
+      })();
+      (function () {
+        google.sn = "webhp";
+        google.kHL = "iw";
+      })();
+      (function () {
+        var h = this || self;
+        function l() {
+          return window.google !== void 0 &&
+            window.google.kOPI !== void 0 &&
+            window.google.kOPI !== 0
+            ? window.google.kOPI
+            : null;
+        }
+        var m,
+          n = [];
+        function p(a) {
+          for (var b; a && (!a.getAttribute || !(b = a.getAttribute("eid"))); )
+            a = a.parentNode;
+          return b || m;
+        }
+        function q(a) {
+          for (
+            var b = null;
+            a && (!a.getAttribute || !(b = a.getAttribute("leid")));
+
+          )
+            a = a.parentNode;
+          return b;
+        }
+        function r(a) {
+          /^http:/i.test(a) &&
+            window.location.protocol === "https:" &&
+            (google.ml && google.ml(Error("a"), !1, { src: a, glmm: 1 }),
+            (a = ""));
+          return a;
+        }
+        function t(a, b, c, d, k) {
+          var e = "";
+          b.search("&ei=") === -1 &&
+            ((e = "&ei=" + p(d)),
+            b.search("&lei=") === -1 && (d = q(d)) && (e += "&lei=" + d));
+          d = "";
+          var g = b.search("&cshid=") === -1 && a !== "slh",
+            f = [];
+          f.push(["zx", Date.now().toString()]);
+          h._cshid && g && f.push(["cshid", h._cshid]);
+          c = c();
+          c != null && f.push(["opi", c.toString()]);
+          for (c = 0; c < f.length; c++) {
+            if (c === 0 || c > 0) d += "&";
+            d += f[c][0] + "=" + f[c][1];
+          }
+          return (
+            "/" +
+            (k || "gen_204") +
+            "?atyp=i&ct=" +
+            String(a) +
+            "&cad=" +
+            (b + e + d)
+          );
+        }
+        m = google.kEI;
+        google.getEI = p;
+        google.getLEI = q;
+        google.ml = function () {
+          return null;
+        };
+        google.log = function (a, b, c, d, k, e) {
+          e = e === void 0 ? l : e;
+          c || (c = t(a, b, e, d, k));
+          if ((c = r(c))) {
+            a = new Image();
+            var g = n.length;
+            n[g] = a;
+            a.onerror =
+              a.onload =
+              a.onabort =
+                function () {
+                  delete n[g];
+                };
+            a.src = c;
+          }
+        };
+        google.logUrl = function (a, b) {
+          b = b === void 0 ? l : b;
+          return t("", a, b);
+        };
+      }).call(this);
+      (function () {
+        google.y = {};
+        google.sy = [];
+        var d;
+        (d = google).x ||
+          (d.x = function (a, b) {
+            if (a) var c = a.id;
+            else {
+              do c = Math.random();
+              while (google.y[c]);
+            }
+            google.y[c] = [a, b];
+            return !1;
+          });
+        var e;
+        (e = google).sx ||
+          (e.sx = function (a) {
+            google.sy.push(a);
+          });
+        google.lm = [];
+        var f;
+        (f = google).plm ||
+          (f.plm = function (a) {
+            google.lm.push.apply(google.lm, a);
+          });
+        google.lq = [];
+        var g;
+        (g = google).load ||
+          (g.load = function (a, b, c) {
+            google.lq.push([[a], b, c]);
+          });
+        var h;
+        (h = google).loadAll ||
+          (h.loadAll = function (a, b) {
+            google.lq.push([a, b]);
+          });
+        google.bx = !1;
+        var k;
+        (k = google).lx || (k.lx = function () {});
+        var l = [],
+          m;
+        (m = google).fce ||
+          (m.fce = function (a, b, c, n) {
+            l.push([a, b, c, n]);
+          });
+        google.qce = l;
+      }).call(this);
+      google.f = {};
+      (function () {
+        document.documentElement.addEventListener(
+          "submit",
+          function (b) {
+            var a;
+            if ((a = b.target)) {
+              var c = a.getAttribute("data-submitfalse");
+              a = c === "1" || (c === "q" && !a.elements.q.value) ? !0 : !1;
+            } else a = !1;
+            a && (b.preventDefault(), b.stopPropagation());
+          },
+          !0,
+        );
+        document.documentElement.addEventListener(
+          "click",
+          function (b) {
+            var a;
+            a: {
+              for (
+                a = b.target;
+                a && a !== document.documentElement;
+                a = a.parentElement
+              )
+                if (a.tagName === "A") {
+                  a = a.getAttribute("data-nohref") === "1";
+                  break a;
+                }
+              a = !1;
+            }
+            a && b.preventDefault();
+          },
+          !0,
+        );
+      }).call(this);
+    </script>
+    <style>
+      #gbar,
+      #guser {
+        font-size: 13px;
+        padding-top: 1px !important;
+      }
+      #gbar {
+        height: 22px;
+      }
+      #guser {
+        padding-bottom: 7px !important;
+        text-align: left;
+      }
+      .gbh,
+      .gbd {
+        border-top: 1px solid #c9d7f1;
+        font-size: 1px;
+      }
+      .gbh {
+        height: 0;
+        position: absolute;
+        top: 24px;
+        width: 100%;
+      }
+      @media all {
+        .gb1 {
+          height: 22px;
+          margin-left: 0.5em;
+          vertical-align: top;
+        }
+        #gbar {
+          float: right;
+        }
+      }
+      a.gb1,
+      a.gb4 {
+        text-decoration: underline !important;
+      }
+      a.gb1,
+      a.gb4 {
+        color: #00c !important;
+      }
+      .gbi .gb4 {
+        color: #dd8e27 !important;
+      }
+      .gbf .gb4 {
+        color: #900 !important;
+      }
+    </style>
+    <style>
+      body,
+      td,
+      a,
+      p,
+      .h {
+        font-family: arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        overflow-y: scroll;
+      }
+      #gog {
+        padding: 3px 8px 0;
+      }
+      td {
+        line-height: 0.8em;
+      }
+      .gac_m td {
+        line-height: 17px;
+      }
+      form {
+        margin-bottom: 20px;
+      }
+      .h {
+        color: #1967d2;
+      }
+      em {
+        font-weight: bold;
+        font-style: normal;
+      }
+      .lst {
+        height: 25px;
+        width: 496px;
+      }
+      .gsfi,
+      .lst {
+        font:
+          18px arial,
+          sans-serif;
+      }
+      .gsfs {
+        font:
+          17px arial,
+          sans-serif;
+      }
+      .ds {
+        display: inline-box;
+        display: inline-block;
+        margin: 3px 0 4px;
+        margin-right: 4px;
+      }
+      input {
+        font-family: inherit;
+      }
+      body {
+        background: #fff;
+        color: #000;
+      }
+      a {
+        color: #681da8;
+        text-decoration: none;
+      }
+      a:hover,
+      a:active {
+        text-decoration: underline;
+      }
+      .fl a {
+        color: #1967d2;
+      }
+      a:visited {
+        color: #681da8;
+      }
+      .sblc {
+        padding-top: 5px;
+      }
+      .sblc a {
+        display: block;
+        margin: 2px 0;
+        margin-right: 13px;
+        font-size: 11px;
+      }
+      .lsbb {
+        background: #f8f9fa;
+        border: solid 1px;
+        border-color: #dadce0 #dadce0 #70757a #70757a;
+        height: 30px;
+      }
+      .lsbb {
+        display: block;
+      }
+      #WqQANb a {
+        display: inline-block;
+        margin: 0 12px;
+      }
+      .lsb {
+        background: url(/images/nav_logo229.png) 0 -261px repeat-x;
+        color: #000;
+        border: none;
+        cursor: pointer;
+        height: 30px;
+        margin: 0;
+        outline: 0;
+        font:
+          15px arial,
+          sans-serif;
+        vertical-align: top;
+      }
+      .lsb:active {
+        background: #dadce0;
+      }
+      .lst:focus {
+        outline: none;
+      }
+      .Ucigb {
+        width: 458px;
+      }
+    </style>
+    <script nonce="_7qJsVyJKF763DCl8D-kgg">
+      (function () {
+        window.google.erd = {
+          jsr: 1,
+          bv: 2118,
+          de: true,
+          dpf: "UQ8Zmj2WxUqSz9nvZXFpOENvrWBRkAsHqPlBOobzUs4",
+        };
+        var g = this || self;
+        var k,
+          l = (k = g.mei) != null ? k : 1,
+          n,
+          p = (n = g.sdo) != null ? n : !0,
+          q = 0,
+          r,
+          t = google.erd,
+          v = t.jsr;
+        google.ml = function (a, b, d, m, e) {
+          e = e === void 0 ? 2 : e;
+          b && (r = a && a.message);
+          d === void 0 && (d = {});
+          d.cad = "ple_" + google.ple + ".aple_" + google.aple;
+          if (google.dl) return google.dl(a, e, d, !0), null;
+          b = d;
+          if (v < 0) {
+            window.console && console.error(a, b);
+            if (v === -2) throw a;
+            b = !1;
+          } else
+            b =
+              !a ||
+              !a.message ||
+              a.message === "Error loading script" ||
+              (q >= l && !m)
+                ? !1
+                : !0;
+          if (!b) return null;
+          q++;
+          d = d || {};
+          b = encodeURIComponent;
+          var c = "/gen_204?atyp=i&ei=" + b(google.kEI);
+          google.kEXPI && (c += "&jexpid=" + b(google.kEXPI));
+          c +=
+            "&srcpg=" + b(google.sn) + "&jsr=" + b(t.jsr) + "&bver=" + b(t.bv);
+          t.dpf && (c += "&dpf=" + b(t.dpf));
+          var f = a.lineNumber;
+          f !== void 0 && (c += "&line=" + f);
+          var h = a.fileName;
+          h &&
+            (h.indexOf("-extension:/") > 0 && (e = 3),
+            (c += "&script=" + b(h)),
+            f &&
+              h === window.location.href &&
+              ((f = document.documentElement.outerHTML.split("\n")[f]),
+              (c +=
+                "&cad=" + b(f ? f.substring(0, 300) : "No script found."))));
+          google.ple && google.ple === 1 && (e = 2);
+          c += "&jsel=" + e;
+          for (var u in d) (c += "&"), (c += b(u)), (c += "="), (c += b(d[u]));
+          c = c + "&emsg=" + b(a.name + ": " + a.message);
+          c = c + "&jsst=" + b(a.stack || "N/A");
+          c.length >= 12288 && (c = c.substr(0, 12288));
+          a = c;
+          m || google.log(0, "", a);
+          return a;
+        };
+        window.onerror = function (a, b, d, m, e) {
+          r !== a &&
+            ((a = e instanceof Error ? e : Error(a)),
+            d === void 0 || "lineNumber" in a || (a.lineNumber = d),
+            b === void 0 || "fileName" in a || (a.fileName = b),
+            google.ml(
+              a,
+              !1,
+              void 0,
+              !1,
+              a.name === "SyntaxError" ||
+                a.message.substring(0, 11) === "SyntaxError" ||
+                a.message.indexOf("Script error") !== -1
+                ? 3
+                : 0,
+            ));
+          r = null;
+          p && q >= l && (window.onerror = null);
+        };
+      })();
+    </script>
+  </head>
+  <body bgcolor="#fff">
+    <script nonce="_7qJsVyJKF763DCl8D-kgg">
+      (function () {
+        var src = "/images/nav_logo229.png";
+        var iesg = false;
+        document.body.onload = function () {
+          window.n && window.n();
+          if (document.images) {
+            new Image().src = src;
+          }
+          if (!iesg) {
+            document.f && document.f.q.focus();
+            document.gbqf && document.gbqf.q.focus();
+          }
+        };
+      })();
+    </script>
+    <div id="mngb">
+      <div id="gbar">
+        <nobr
+          ><b class="gb1">&#1495;&#1497;&#1508;&#1493;&#1513;</b>
+          <a class="gb1" href="https://www.google.com/imghp?hl=iw&tab=wi"
+            >&#1495;&#1497;&#1508;&#1493;&#1513;
+            &#1514;&#1502;&#1493;&#1504;&#1493;&#1514;</a
+          >
+          <a class="gb1" href="http://maps.google.co.il/maps?hl=iw&tab=wl"
+            >&#1502;&#1508;&#1493;&#1514;</a
+          >
+          <a class="gb1" href="https://play.google.com/?hl=iw&tab=w8">Play</a>
+          <a class="gb1" href="https://www.youtube.com/?tab=w1">YouTube</a>
+          <a class="gb1" href="https://news.google.com/?tab=wn"
+            >&#1495;&#1491;&#1513;&#1493;&#1514;</a
+          >
+          <a class="gb1" href="https://mail.google.com/mail/?tab=wm">Gmail</a>
+          <a class="gb1" href="https://drive.google.com/?tab=wo">Drive</a>
+          <a
+            class="gb1"
+            style="text-decoration: none"
+            href="https://www.google.co.il/intl/iw/about/products?tab=wh"
+            ><u>&#1506;&#1493;&#1491;</u> &raquo;</a
+          ></nobr
+        >
+      </div>
+      <div id="guser" width="100%">
+        <nobr
+          ><span id="gbn" class="gbi"></span><span id="gbf" class="gbf"></span
+          ><span id="gbe"></span
+          ><a href="http://www.google.co.il/history/optout?hl=iw" class="gb4"
+            >&#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514;
+            &#1488;&#1514;&#1512;&#1497;&#1501;</a
+          >
+          |
+          <a href="/preferences?hl=iw" class="gb4"
+            >&#1492;&#1490;&#1491;&#1512;&#1493;&#1514;</a
+          >
+          |
+          <a
+            target="_top"
+            id="gb_70"
+            href="https://accounts.google.com/ServiceLogin?hl=iw&passive=true&continue=http://www.google.com/&ec=GAZAAQ"
+            class="gb4"
+            >&#1499;&#1504;&#1497;&#1505;&#1492;</a
+          ></nobr
+        >
+      </div>
+      <div class="gbh" style="left: 0"></div>
+      <div class="gbh" style="right: 0"></div>
+    </div>
+    <center>
+      <br clear="all" id="lgpd" />
+      <div id="XjhHGf">
+        <img
+          alt="Google"
+          height="92"
+          src="/images/branding/googlelogo/1x/googlelogo_white_background_color_272x92dp.png"
+          style="padding: 28px 0 14px"
+          width="272"
+          id="hplogo"
+        /><br /><br />
+      </div>
+      <form action="/search" name="f">
+        <table cellpadding="0" cellspacing="0">
+          <tr valign="top">
+            <td width="25%">&nbsp;</td>
+            <td align="center" nowrap="">
+              <input name="ie" value="ISO-8859-1" type="hidden" /><input
+                value="iw"
+                name="hl"
+                type="hidden"
+              /><input name="source" type="hidden" value="hp" /><input
+                name="biw"
+                type="hidden"
+              /><input name="bih" type="hidden" />
+              <div class="ds" style="height: 32px; margin: 4px 0">
+                <div style="position: relative; zoom: 1">
+                  <input
+                    class="lst Ucigb"
+                    style="
+                      margin: 0;
+                      padding: 5px 6px 0 8px;
+                      vertical-align: top;
+                      color: #000;
+                      padding-left: 38px;
+                    "
+                    autocomplete="off"
+                    value=""
+                    title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1489;-Google"
+                    maxlength="2048"
+                    name="q"
+                    size="57"
+                  /><img
+                    src="/textinputassistant/tia.png"
+                    style="
+                      position: absolute;
+                      cursor: pointer;
+                      left: 5px;
+                      top: 4px;
+                      z-index: 300;
+                    "
+                    data-script-url="/textinputassistant/13/iw_tia.js"
+                    id="tsuid_1"
+                    alt=""
+                    height="23"
+                    width="27"
+                  />
+                  <script nonce="_7qJsVyJKF763DCl8D-kgg">
+                    (function () {
+                      var id = "tsuid_1";
+                      document.getElementById(id).onclick = function () {
+                        var s = document.createElement("script");
+                        s.src = this.getAttribute("data-script-url");
+                        document.body.appendChild(s);
+                      };
+                    })();
+                  </script>
+                </div>
+              </div>
+              <br style="line-height: 0" /><span class="ds"
+                ><span class="lsbb"
+                  ><input
+                    class="lsb"
+                    value="&#1495;&#1497;&#1508;&#1493;&#1513; &#1489;-Google"
+                    name="btnG"
+                    type="submit" /></span></span
+              ><span class="ds"
+                ><span class="lsbb"
+                  ><input
+                    class="lsb"
+                    id="tsuid_2"
+                    value="&#1497;&#1493;&#1514;&#1512; &#1502;&#1494;&#1500; &#1502;&#1513;&#1499;&#1500;"
+                    name="btnI"
+                    type="submit" />
+                  <script nonce="_7qJsVyJKF763DCl8D-kgg">
+                    (function () {
+                      var id = "tsuid_2";
+                      document.getElementById(id).onclick = function () {
+                        if (this.form.q.value) {
+                          this.checked = 1;
+                          if (this.form.iflsig)
+                            this.form.iflsig.disabled = false;
+                        } else top.location = "/doodles/";
+                      };
+                    })();
+                  </script>
+                  <input
+                    value="AL9hbdgAAAAAZzth6eDoFWLvpkTv0H3mLLncLAbIvuth"
+                    name="iflsig"
+                    type="hidden" /></span
+              ></span>
+            </td>
+            <td class="fl sblc" align="right" nowrap="" width="25%">
+              <a href="/advanced_search?hl=iw&amp;authuser=0"
+                >&#1495;&#1497;&#1508;&#1493;&#1513;
+                &#1502;&#1514;&#1511;&#1491;&#1501;</a
+              >
+            </td>
+          </tr>
+        </table>
+        <input id="gbv" name="gbv" type="hidden" value="1" />
+        <script nonce="_7qJsVyJKF763DCl8D-kgg">
+          (function () {
+            var a,
+              b = "1";
+            if (document && document.getElementById)
+              if (typeof XMLHttpRequest != "undefined") b = "2";
+              else if (typeof ActiveXObject != "undefined") {
+                var c,
+                  d,
+                  e = [
+                    "MSXML2.XMLHTTP.6.0",
+                    "MSXML2.XMLHTTP.3.0",
+                    "MSXML2.XMLHTTP",
+                    "Microsoft.XMLHTTP",
+                  ];
+                for (c = 0; (d = e[c++]); )
+                  try {
+                    new ActiveXObject(d), (b = "2");
+                  } catch (h) {}
+              }
+            a = b;
+            if (a == "2" && location.search.indexOf("&gbv=2") == -1) {
+              var f = google.gbvu,
+                g = document.getElementById("gbv");
+              g && (g.value = a);
+              f &&
+                window.setTimeout(function () {
+                  location.href = f;
+                }, 0);
+            }
+          }).call(this);
+        </script>
+      </form>
+      <div style="font-size: 83%; min-height: 3.5em">
+        <br />
+        <div id="gws-output-pages-elements-homepage_additional_languages__als">
+          <style>
+            #gws-output-pages-elements-homepage_additional_languages__als {
+              font-size: small;
+              margin-bottom: 24px;
+            }
+            #SIvCob {
+              color: #474747;
+              display: inline-block;
+              line-height: 28px;
+            }
+            #SIvCob a {
+              padding: 0 3px;
+            }
+            .H6sW5 {
+              display: inline-block;
+              margin: 0 2px;
+              white-space: nowrap;
+            }
+            .z4hgWe {
+              display: inline-block;
+              margin: 0 2px;
+            }
+          </style>
+          <div id="SIvCob">
+            Google &#1494;&#1502;&#1497;&#1504;&#1492; &#1489;:
+            <a
+              href="http://www.google.com/setprefs?sig=0_gvo8K4XLUm5xfzltPB2vucSnn9w%3D&amp;hl=ar&amp;source=homepage&amp;sa=X&amp;ved=0ahUKEwjr5t6hkOaJAxVJklYBHdTgHVIQ2ZgBCAY"
+              >&#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</a
+            >
+            <a
+              dir="ltr"
+              href="http://www.google.com/setprefs?sig=0_gvo8K4XLUm5xfzltPB2vucSnn9w%3D&amp;hl=en&amp;source=homepage&amp;sa=X&amp;ved=0ahUKEwjr5t6hkOaJAxVJklYBHdTgHVIQ2ZgBCAc"
+              >English</a
+            >
+          </div>
+        </div>
+      </div>
+      <span id="footer"
+        ><div style="font-size: 10pt">
+          <div style="margin: 19px auto; text-align: center" id="WqQANb">
+            <a href="/intl/iw/ads/">&#1508;&#1512;&#1505;&#1493;&#1501;</a
+            ><a href="http://www.google.co.il/intl/iw/services/"
+              >&#1508;&#1514;&#1512;&#1493;&#1504;&#1493;&#1514;
+              &#1506;&#1505;&#1511;&#1497;&#1497;&#1501;</a
+            ><a href="/intl/iw/about.html"
+              >&#1492;&#1499;&#1493;&#1500; &#1506;&#1500; Google</a
+            ><a
+              dir="ltr"
+              href="http://www.google.com/setprefdomain?prefdom=IL&amp;prev=http://www.google.co.il/&amp;sig=K_wt5aue1sFeHnRRYhfIiNLFM5a1g%3D"
+              >Google.co.il</a
+            >
+          </div>
+        </div>
+        <p style="font-size: 8pt; color: #70757a">
+          &copy; 2024 -
+          <a href="/intl/iw/policies/privacy/"
+            >&#1508;&#1512;&#1496;&#1497;&#1493;&#1514;</a
+          >
+          -
+          <a href="/intl/iw/policies/terms/"
+            >&#1514;&#1504;&#1488;&#1497;&#1501;</a
+          >
+        </p></span
+      >
+    </center>
+    <script nonce="_7qJsVyJKF763DCl8D-kgg">
+      (function () {
+        window.google.cdo = { height: 757, width: 1440 };
+        (function () {
+          var a = window.innerWidth,
+            b = window.innerHeight;
+          if (!a || !b) {
+            var c = window.document,
+              d = c.compatMode == "CSS1Compat" ? c.documentElement : c.body;
+            a = d.clientWidth;
+            b = d.clientHeight;
+          }
+          if (a && b && (a != google.cdo.width || b != google.cdo.height)) {
+            var e = google,
+              f = e.log,
+              g =
+                "/client_204?&atyp=i&biw=" +
+                a +
+                "&bih=" +
+                b +
+                "&ei=" +
+                google.kEI,
+              h = "",
+              k = [],
+              l =
+                window.google !== void 0 &&
+                window.google.kOPI !== void 0 &&
+                window.google.kOPI !== 0
+                  ? window.google.kOPI
+                  : null;
+            l != null && k.push(["opi", l.toString()]);
+            for (var m = 0; m < k.length; m++) {
+              if (m === 0 || m > 0) h += "&";
+              h += k[m][0] + "=" + k[m][1];
+            }
+            f.call(e, "", "", g + h);
+          }
+        }).call(this);
+      })();
+    </script>
+    <script nonce="_7qJsVyJKF763DCl8D-kgg">
+      (function () {
+        google.xjs = {
+          basecomb:
+            "/xjs/_/js/k\x3dxjs.hp.en.PyN2x5DAHv4.es5.O/ck\x3dxjs.hp.FKqocJz5iDE.R.X.O/am\x3dBAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAggAAAAAAAAAAgAEAgHEAAAAIAAQIAAAAAAAAAAAAAAAiAAAFAGECAAAQ3xEACIBFAAB4AQ/d\x3d1/ed\x3d1/dg\x3d0/ujg\x3d1/rs\x3dACT90oG_exZx6wax9543ks37cV5oZolENw",
+          basecss:
+            "/xjs/_/ss/k\x3dxjs.hp.FKqocJz5iDE.R.X.O/am\x3dBAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAgBEAAAAIAAQIAAAAAAAAAAAAAAAiAAAFAGEC/rs\x3dACT90oGA9rudqhrdYO8Fhxx0Vs9AZd42RA",
+          basejs:
+            "/xjs/_/js/k\x3dxjs.hp.en.PyN2x5DAHv4.es5.O/am\x3dAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAgAEAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ3xEACIBFAAB4AQ/dg\x3d0/rs\x3dACT90oGJaH6cQE9WZ6K2nH-KgWql0CVJhg",
+          excm: [],
+        };
+      })();
+    </script>
+    <script nonce="_7qJsVyJKF763DCl8D-kgg">
+      (function () {
+        var u =
+          "/xjs/_/js/k\x3dxjs.hp.en.PyN2x5DAHv4.es5.O/am\x3dAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAgAEAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ3xEACIBFAAB4AQ/d\x3d1/ed\x3d1/dg\x3d3/rs\x3dACT90oGJaH6cQE9WZ6K2nH-KgWql0CVJhg/m\x3dsb_he,d";
+        var st = 1;
+        var amd = 1000;
+        var mmd = 0;
+        var pod = true;
+        var e = this || self;
+        function f() {
+          var a, b, d;
+          if (
+            (b = a =
+              (b = window.google) == null
+                ? void 0
+                : (d = b.ia) == null
+                ? void 0
+                : d.r.B2Jtyd)
+          )
+            (b = a.m), (b = b === 1 || b === 5);
+          return b && a.cbfd != null && a.cbvi != null ? a : void 0;
+        }
+        function g() {
+          var a = [u];
+          if (!google.dp) {
+            for (var b = 0; b < a.length; b++) {
+              var d = a[b],
+                c = document.createElement("link");
+              c.as = "script";
+              c.href = d;
+              c.rel = "preload";
+              document.body.appendChild(c);
+            }
+            google.dp = !0;
+          }
+        }
+        google.ps === void 0 && (google.ps = []);
+        function h() {
+          var a = u,
+            b = function () {};
+          google.lx = google.stvsc
+            ? b
+            : function () {
+                k(a);
+                google.lx = b;
+              };
+          google.bx || google.lx();
+        }
+        function l(a, b) {
+          b && (a.src = b);
+          var d = a.onload;
+          a.onload = function (c) {
+            d && d(c);
+            google.ps = google.ps.filter(function (C) {
+              return a !== C;
+            });
+          };
+          google.ps.push(a);
+          document.body.appendChild(a);
+        }
+        google.as = l;
+        function k(a) {
+          google.timers &&
+            google.timers.load &&
+            google.tick &&
+            google.tick("load", "xjsls");
+          var b = document.createElement("script");
+          b.onerror = function () {
+            google.ple = 1;
+          };
+          b.onload = function () {
+            google.ple = 0;
+          };
+          google.xjsus = void 0;
+          l(b, a);
+          google.aple = -1;
+          google.dp = !0;
+        }
+        function m(a) {
+          var b = a.getAttribute("jscontroller");
+          return (
+            (b === "UBXHI" || b === "R3fhkb" || b === "TSZEqd") &&
+            a.hasAttribute("data-src")
+          );
+        }
+        function n() {
+          for (
+            var a = document.getElementsByTagName("img"), b = 0, d = a.length;
+            b < d;
+            b++
+          ) {
+            var c = a[b];
+            if (
+              c.hasAttribute("data-lzy_") &&
+              Number(c.getAttribute("data-atf")) & 1 &&
+              !m(c)
+            )
+              return !0;
+          }
+          return !1;
+        }
+        for (
+          var p = document.getElementsByTagName("img"), q = 0, r = p.length;
+          q < r;
+          ++q
+        ) {
+          var t = p[q];
+          Number(t.getAttribute("data-atf")) & 1 &&
+            m(t) &&
+            (t.src = t.getAttribute("data-src"));
+        }
+        var w, x, y, z, A, B;
+        function D() {
+          google.xjsu = u;
+          e._F_jsUrl = u;
+          A = function () {
+            h();
+          };
+          w = !1;
+          x = (st === 1 || st === 3) && !!google.caft && !n();
+          y = f();
+          z = (st === 2 || st === 3) && !!y && !n();
+          B = pod;
+        }
+        function E() {
+          w || x || z || (A(), (w = !0));
+        }
+        setTimeout(function () {
+          google &&
+            google.tick &&
+            google.timers &&
+            google.timers.load &&
+            google.tick("load", "xjspls");
+          D();
+          if (x || z) {
+            if (x) {
+              var a = function () {
+                x = !1;
+                E();
+              };
+              google.caft(a);
+              window.setTimeout(a, amd);
+            }
+            z &&
+              ((a = function () {
+                z = !1;
+                E();
+              }),
+              y.cbvi.push(a),
+              window.setTimeout(a, mmd));
+            B && (w || g());
+          } else A();
+        }, 0);
+      })();
+      window._ = window._ || {};
+      window._DumpException = _._DumpException = function (e) {
+        throw e;
+      };
+      window._s = window._s || {};
+      _s._DumpException = _._DumpException;
+      window._qs = window._qs || {};
+      _qs._DumpException = _._DumpException;
+      (function () {
+        var t = [
+          4, 32768, 0, 0, 0, 0, 0, 0, 130, 0, 1638401, 270295232, 1638400, 8208,
+          640, 0, 2228224, 84153344, 38, 292804, 4555784, 385024,
+        ];
+        window._F_toggles = window._xjs_toggles = t;
+      })();
+      window._F_installCss = window._F_installCss || function (css) {};
+      (function () {
+        google.jl = {
+          bfl: 0,
+          dw: false,
+          ine: false,
+          ubm: false,
+          uwp: true,
+          vs: false,
+        };
+      })();
+      (function () {
+        var pmc =
+          "{\x22d\x22:{},\x22sb_he\x22:{\x22agen\x22:false,\x22cgen\x22:false,\x22client\x22:\x22heirloom-hp\x22,\x22dh\x22:true,\x22ds\x22:\x22\x22,\x22fl\x22:true,\x22host\x22:\x22google.com\x22,\x22jsonp\x22:true,\x22msgs\x22:{\x22cibl\x22:\x22\\u05e0\\u05d9\\u05e7\\u05d5\\u05d9 \\u05d4\\u05d7\\u05d9\\u05e4\\u05d5\\u05e9\x22,\x22dym\x22:\x22\\u05d4\\u05d0\\u05dd \\u05d4\\u05ea\\u05db\\u05d5\\u05d5\\u05e0\\u05ea \\u05dc:\x22,\x22lcky\x22:\x22\\u05d9\\u05d5\\u05ea\\u05e8 \\u05de\\u05d6\\u05dc \\u05de\\u05e9\\u05db\\u05dc\x22,\x22lml\x22:\x22\\u05dc\\u05de\\u05d9\\u05d3\\u05e2 \\u05e0\\u05d5\\u05e1\\u05e3\x22,\x22psrc\x22:\x22\\u05d7\\u05d9\\u05e4\\u05d5\\u05e9 \\u05d6\\u05d4 \\u05d4\\u05d5\\u05e1\\u05e8 \\u05de\\u003Ca href\x3d\\\x22/history\\\x22\\u003E\\u05d4\\u05d9\\u05e1\\u05d8\\u05d5\\u05e8\\u05d9\\u05d9\\u05ea \\u05d4\\u05d0\\u05d9\\u05e0\\u05d8\\u05e8\\u05e0\\u05d8\\u003C/a\\u003E \\u05e9\\u05dc\\u05da\x22,\x22psrl\x22:\x22\\u05d4\\u05e1\\u05e8\\u05d4\x22,\x22sbit\x22:\x22\\u05d7\\u05d9\\u05e4\\u05d5\\u05e9 \\u05dc\\u05e4\\u05d9 \\u05ea\\u05de\\u05d5\\u05e0\\u05d4\x22,\x22srch\x22:\x22\\u05d7\\u05d9\\u05e4\\u05d5\\u05e9 \\u05d1-Google\x22},\x22ovr\x22:{},\x22pq\x22:\x22\x22,\x22rfs\x22:[],\x22stok\x22:\x22ug0ddwVqsgDPAD1IsxHqd1tmMFQ\x22}}";
+        google.pmc = JSON.parse(pmc);
+      })();
+      (function () {
+        var b = function (a) {
+          var c = 0;
+          return function () {
+            return c < a.length ? { done: !1, value: a[c++] } : { done: !0 };
+          };
+        };
+        var e = this || self;
+        var g, h;
+        a: {
+          for (var k = ["CLOSURE_FLAGS"], l = e, n = 0; n < k.length; n++)
+            if (((l = l[k[n]]), l == null)) {
+              h = null;
+              break a;
+            }
+          h = l;
+        }
+        var p = h && h[610401301];
+        g = p != null ? p : !1;
+        var q,
+          r = e.navigator;
+        q = r ? r.userAgentData || null : null;
+        function t(a) {
+          return g
+            ? q
+              ? q.brands.some(function (c) {
+                  return (c = c.brand) && c.indexOf(a) != -1;
+                })
+              : !1
+            : !1;
+        }
+        function u(a) {
+          var c;
+          a: {
+            if ((c = e.navigator)) if ((c = c.userAgent)) break a;
+            c = "";
+          }
+          return c.indexOf(a) != -1;
+        }
+        function v() {
+          return g ? !!q && q.brands.length > 0 : !1;
+        }
+        function w() {
+          return (
+            u("Safari") &&
+            !(
+              x() ||
+              (v() ? 0 : u("Coast")) ||
+              (v() ? 0 : u("Opera")) ||
+              (v() ? 0 : u("Edge")) ||
+              (v() ? t("Microsoft Edge") : u("Edg/")) ||
+              (v() ? t("Opera") : u("OPR")) ||
+              u("Firefox") ||
+              u("FxiOS") ||
+              u("Silk") ||
+              u("Android")
+            )
+          );
+        }
+        function x() {
+          return v()
+            ? t("Chromium")
+            : ((u("Chrome") || u("CriOS")) && !(v() ? 0 : u("Edge"))) ||
+                u("Silk");
+        }
+        function y() {
+          return (
+            u("Android") &&
+            !(
+              x() ||
+              u("Firefox") ||
+              u("FxiOS") ||
+              (v() ? 0 : u("Opera")) ||
+              u("Silk")
+            )
+          );
+        }
+        var z = v() ? !1 : u("Trident") || u("MSIE");
+        y();
+        x();
+        w();
+        var A = !z && !w(),
+          D = function (a) {
+            if (/-[a-z]/.test("ved")) return null;
+            if (A && a.dataset) {
+              if (y() && !("ved" in a.dataset)) return null;
+              a = a.dataset.ved;
+              return a === void 0 ? null : a;
+            }
+            return a.getAttribute(
+              "data-" + "ved".replace(/([A-Z])/g, "-$1").toLowerCase(),
+            );
+          };
+        var E = [],
+          F = null;
+        function G(a) {
+          a = a.target;
+          var c = performance.now(),
+            f = [],
+            H = f.concat,
+            d = E;
+          if (!(d instanceof Array)) {
+            var m =
+              typeof Symbol != "undefined" &&
+              Symbol.iterator &&
+              d[Symbol.iterator];
+            if (m) d = m.call(d);
+            else if (typeof d.length == "number") d = { next: b(d) };
+            else throw Error("b`" + String(d));
+            for (var B = []; !(m = d.next()).done; ) B.push(m.value);
+            d = B;
+          }
+          E = H.call(f, d, [c]);
+          if (a && a instanceof HTMLElement)
+            if (a === F) {
+              if ((c = E.length >= 4))
+                c = (E[E.length - 1] - E[E.length - 4]) / 1e3 < 5;
+              if (c) {
+                c = google.getEI(a);
+                a.hasAttribute("data-ved")
+                  ? (f = a ? D(a) || "" : "")
+                  : (f = (f = a.closest("[data-ved]")) ? D(f) || "" : "");
+                f = f || "";
+                if (a.hasAttribute("jsname")) a = a.getAttribute("jsname");
+                else {
+                  var C;
+                  a =
+                    (C = a.closest("[jsname]")) == null
+                      ? void 0
+                      : C.getAttribute("jsname");
+                }
+                google.log(
+                  "rcm",
+                  "&ei=" + c + "&tgtved=" + f + "&jsname=" + (a || ""),
+                );
+              }
+            } else (F = a), (E = [c]);
+        }
+        window.document.addEventListener("DOMContentLoaded", function () {
+          document.body.addEventListener("click", G);
+        });
+      }).call(this);
+    </script>
+  </body>
+</html>

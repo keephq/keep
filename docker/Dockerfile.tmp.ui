@@ -1,0 +1,5 @@
+FROM keep-ui
+# add proxychains
+USER root
+RUN apk update && \
+    apk add --no-cache proxychains --allow-untrusted

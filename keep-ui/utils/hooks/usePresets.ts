@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Preset } from "app/alerts/models";
+import { Preset } from "@/app/(keep)/alerts/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";

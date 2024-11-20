@@ -1,4 +1,4 @@
-import { User } from "app/settings/models";
+import { User } from "@/app/(keep)/settings/models";
 import { useSession } from "next-auth/react";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";

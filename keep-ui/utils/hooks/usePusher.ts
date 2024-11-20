@@ -5,7 +5,7 @@ import { useApiUrl } from "./useConfig";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 let PUSHER: Pusher | null = null;
-const POLLING_INTERVAL = 1000 * 10;  // Once per 10 seconds.
+const POLLING_INTERVAL = 1000 * 10; // Once per 10 seconds.
 
 export const useWebsocket = () => {
   const apiUrl = useApiUrl();
@@ -13,8 +13,8 @@ export const useWebsocket = () => {
   const { data: session } = useSession();
   let channelName = `private-${session?.tenantId}`;
 
-  console.log("useWebsocket: Initializing with config:", configData);
-  console.log("useWebsocket: Session:", session);
+  // console.log("useWebsocket: Initializing with config:", configData);
+  // console.log("useWebsocket: Session:", session);
 
   // TODO: should be in useMemo?
   if (
@@ -26,12 +26,15 @@ export const useWebsocket = () => {
     channelName = `private-${session?.tenantId}`;
     console.log("useWebsocket: Creating new Pusher instance");
     try {
-      const isRelativeHostAndNotLocal = 
-        configData.PUSHER_HOST && 
-        !configData.PUSHER_HOST.includes("://") && 
+      const isRelativeHostAndNotLocal =
+        configData.PUSHER_HOST &&
+        !configData.PUSHER_HOST.includes("://") &&
         !["localhost", "127.0.0.1"].includes(configData.PUSHER_HOST);
 
-      console.log("useWebsocket: isRelativeHostAndNotLocal:", isRelativeHostAndNotLocal);
+      console.log(
+        "useWebsocket: isRelativeHostAndNotLocal:",
+        isRelativeHostAndNotLocal
+      );
 
       var pusherOptions: PusherOptions = {
         wsHost: isRelativeHostAndNotLocal
@@ -54,10 +57,13 @@ export const useWebsocket = () => {
             Authorization: `Bearer ${session?.accessToken!}`,
           },
         },
-      }
+      };
       PUSHER = new Pusher(configData.PUSHER_APP_KEY, pusherOptions);
 
-      console.log("useWebsocket: Pusher instance created successfully. Options:", pusherOptions);
+      console.log(
+        "useWebsocket: Pusher instance created successfully. Options:",
+        pusherOptions
+      );
 
       PUSHER.connection.bind("connected", () => {
         console.log("useWebsocket: Pusher connected successfully");
@@ -67,8 +73,13 @@ export const useWebsocket = () => {
         console.error("useWebsocket: Pusher connection error:", err);
       });
 
-      PUSHER.connection.bind('state_change', function(states:any) {
-        console.log("useWebsocket: Connection state changed from", states.previous, "to", states.current);
+      PUSHER.connection.bind("state_change", function (states: any) {
+        console.log(
+          "useWebsocket: Connection state changed from",
+          states.previous,
+          "to",
+          states.current
+        );
       });
 
       PUSHER.subscribe(channelName)

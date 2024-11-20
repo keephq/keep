@@ -2,6 +2,7 @@ const { withSentryConfig } = require("@sentry/nextjs");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["next-auth"],
   reactStrictMode: false,
   images: {
     remotePatterns: [

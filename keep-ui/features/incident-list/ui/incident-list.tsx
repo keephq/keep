@@ -12,7 +12,7 @@ import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import PredictedIncidentsTable from "../../../app/incidents/predicted-incidents-table";
+import PredictedIncidentsTable from "../../../app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentTableFilters } from "./incident-table-filters";
 import { useIncidentFilterContext } from "./incident-table-filters-context";

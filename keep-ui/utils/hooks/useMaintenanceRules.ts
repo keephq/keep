@@ -1,4 +1,4 @@
-import { MaintenanceRule } from "app/maintenance/model";
+import { MaintenanceRule } from "@/app/(keep)/maintenance/model";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";

@@ -1,5 +1,5 @@
 import useSWR, { SWRConfiguration } from "swr";
-import { AlertDto } from "app/alerts/models";
+import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useSession } from "next-auth/react";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";

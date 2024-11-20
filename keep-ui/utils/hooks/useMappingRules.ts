@@ -1,4 +1,4 @@
-import { MappingRule } from "app/mapping/models";
+import { MappingRule } from "@/app/(keep)/mapping/models";
 import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";

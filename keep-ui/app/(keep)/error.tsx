@@ -1,0 +1,73 @@
+"use client";
+import Image from "next/image";
+import "./error.css";
+import { useEffect } from "react";
+import { Title, Subtitle } from "@tremor/react";
+import { Button, Text } from "@tremor/react";
+import { KeepApiError } from "@/shared/lib/KeepApiError";
+import * as Sentry from "@sentry/nextjs";
+import { useSignOut } from "@/shared/lib/useSignOut";
+
+export default function ErrorComponent({
+  error,
+  reset,
+}: {
+  error: Error | KeepApiError;
+  reset: () => void;
+}) {
+  console.log("ErrorComponent");
+  const signOut = useSignOut();
+
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="error-container">
+        <Title>An error occurred while fetching data from the backend</Title>
+        <div className="code-container">
+          <code>
+            {error instanceof KeepApiError && (
+              <div className="mt-4">
+                Status Code: {error.statusCode}
+                <br />
+                Message: {error.message}
+                <br />
+                Url: {error.url}
+              </div>
+            )}
+          </code>
+        </div>
+        {error instanceof KeepApiError && error.proposedResolution && (
+          <Subtitle className="mt-4">{error.proposedResolution}</Subtitle>
+        )}
+
+        <div className="error-image">
+          <Image src="/keep.svg" alt="Keep" width={150} height={150} priority />
+        </div>
+        {error instanceof KeepApiError && error.statusCode === 401 ? (
+          <Button
+            onClick={signOut}
+            color="orange"
+            variant="secondary"
+            className="mt-4 border border-orange-500 text-orange-500"
+          >
+            <Text>Sign Out</Text>
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              console.log("Refreshing...");
+              window.location.reload();
+            }}
+            color="orange"
+            variant="secondary"
+          >
+            Try again
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

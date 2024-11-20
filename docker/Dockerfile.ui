@@ -9,7 +9,10 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
 RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
-RUN npm install --save https-proxy-agent node-fetch openid-client
+ # Copy patches directory
+COPY patches ./patches
+# Apply patches to installed modules
+RUN npx patch-package
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -56,7 +59,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY entrypoint.sh /app/entrypoint.sh
 # Add the proxy-patch.js file to the image
-COPY proxy-patch.js /app/proxy-patch.js
+# COPY proxy-patch.js /app/proxy-patch.js
 
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app
