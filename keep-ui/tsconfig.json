@@ -39,7 +39,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "pages/signin.tsx",
-    "./.next/types/**/*.ts"
+    "./.next/types/**/*.ts",
+    "types/auth.d.ts"
   ],
   "exclude": ["node_modules"]
 }

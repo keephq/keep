@@ -6,6 +6,7 @@ import Auth0 from "next-auth/providers/auth0";
 import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
 import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
+import type { JWT } from "@auth/core/jwt";
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
@@ -195,10 +196,16 @@ const config = {
       }
       return true;
     },
-    jwt: async ({ token, user, account }) => {
+    jwt: async ({ token, user, account }): Promise<JWT> => {
       if (account && user) {
-        token.accessToken =
+        // Ensure we always have an accessToken
+        const accessToken =
           user.accessToken || account.access_token || account.id_token;
+        if (!accessToken) {
+          throw new Error("No access token available");
+        }
+
+        token.accessToken = accessToken;
         token.tenantId = user.tenantId;
         token.role = user.role;
 
@@ -214,6 +221,9 @@ const config = {
         Date.now() < token.accessTokenExpires
       ) {
         token = await refreshAccessToken(token);
+        if (!token.accessToken) {
+          throw new Error("Failed to refresh access token");
+        }
       }
 
       return token;
@@ -226,6 +236,7 @@ const config = {
         userRole: token.role as string,
         user: {
           ...session.user,
+          accessToken: token.accessToken as string,
           tenantId: token.tenantId as string,
           role: token.role as string,
         },

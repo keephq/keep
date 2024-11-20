@@ -15,8 +15,8 @@ import {
 import Select from "react-select";
 import { Table } from "@tanstack/react-table";
 import { IncidentDto } from "@/entities/incidents/model";
-import { WorkflowExecution } from "app/workflows/builder/types";
-import { AlertDto } from "../../../app/alerts/models";
+import { WorkflowExecution } from "@/app/(keep)/workflows/builder/types";
+import { AlertDto } from "@/app/(keep)/alerts/models";
 
 interface Props {
   table: Table<IncidentDto> | Table<AlertDto> | Table<WorkflowExecution>;

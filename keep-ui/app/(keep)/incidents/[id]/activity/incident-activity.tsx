@@ -125,7 +125,7 @@ export function IncidentActivity({ incident }: { incident: IncidentDto }) {
     id: "newcomment",
     type: "newcomment",
     timestamp: new Date().toISOString(),
-    initiator: session?.user.email,
+    initiator: session?.user.email ?? "",
   };
 
   const renderIcon = (activity: IncidentActivity) => {

@@ -151,7 +151,7 @@ export default function UsersSettings({
         <div className="h-full w-full overflow-auto">
           <UsersTable
             users={filteredUsers}
-            currentUserEmail={currentUser?.email}
+            currentUserEmail={currentUser?.email ?? ""}
             authType={authType}
             onRowClick={handleRowClick}
             onDeleteUser={handleDeleteUser}
