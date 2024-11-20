@@ -13,8 +13,6 @@ PORT = int(os.environ.get("PORT", 8080))
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
-LIVE_DEMO_MODE = os.environ.get("KEEP_LIVE_DEMO_MODE", "false").lower() == "true"
-
 
 def on_starting(server=None):
     """This function is called by the gunicorn server when it starts"""
