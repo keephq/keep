@@ -22,6 +22,7 @@
     ],
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./*"],
       "@/components/*": ["./components/*"],
       "@/app/*": ["./app/*"],
       "@/pages/*": ["./pages/*"],
@@ -37,7 +38,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "pages/signin.tsx",
+    "app/(signin)/signin/page.tsx",
     "./.next/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
