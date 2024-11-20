@@ -1,5 +1,3 @@
-
-
 import sys
 
 # It's a dirty hack to exclude current directory from sys.path
