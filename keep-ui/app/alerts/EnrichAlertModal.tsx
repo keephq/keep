@@ -34,7 +34,7 @@ const EXCLUDED_FIELDS = [
   "assignee",
   "source",
   "pushed",
-  "environment"
+  "environment",
 ];
 
 const transformAlertToEditableFields = (alert: AlertDto | null | undefined) => {
@@ -45,10 +45,10 @@ const transformAlertToEditableFields = (alert: AlertDto | null | undefined) => {
 };
 
 const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
-  alert,
-  handleClose,
-  mutate,
-}) => {
+                                                             alert,
+                                                             handleClose,
+                                                             mutate,
+                                                           }) => {
   const isOpen = !!alert;
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
@@ -63,7 +63,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
 
   const updateCustomField = (index: number, field: "key" | "value", value: string) => {
     setCustomFields((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
   };
 
@@ -73,7 +73,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
 
   const handleFieldChange = (key: string, value: string) => {
     setEditedFields((prev) =>
-      prev.map((item) => (item.key === key ? { ...item, value } : item))
+      prev.map((item) => (item.key === key ? { ...item, value } : item)),
     );
   };
 
