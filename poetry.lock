@@ -2238,6 +2238,20 @@ files = [
 ]
 
 [[package]]
+name = "json5"
+version = "0.9.28"
+description = "A Python implementation of the JSON5 data format."
+optional = false
+python-versions = ">=3.8.0"
+files = [
+    {file = "json5-0.9.28-py3-none-any.whl", hash = "sha256:29c56f1accdd8bc2e037321237662034a7e07921e2b7223281a5ce2c46f0c4df"},
+    {file = "json5-0.9.28.tar.gz", hash = "sha256:1f82f36e615bc5b42f1bbd49dbc94b12563c56408c6ffa06414ea310890e9a6e"},
+]
+
+[package.extras]
+dev = ["build (==1.2.2.post1)", "coverage (==7.5.3)", "mypy (==1.13.0)", "pip (==24.3.1)", "pylint (==3.2.3)", "ruff (==0.7.3)", "twine (==5.1.1)", "uv (==0.5.1)"]
+
+[[package]]
 name = "jwcrypto"
 version = "1.5.6"
 description = "Implementation of JOSE Web standards"
@@ -5353,4 +5367,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "d405584a8c24ff3b5e3c7f4405d24145e5b2bf7b951f5c6279977d7cd0780d5e"
+content-hash = "1f7fba5a2c241db5654d7f84018d40650402bdc53e46ef5b09e7fcf3d6f055a8"

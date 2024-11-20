@@ -522,7 +522,9 @@ if __name__ == "__main__":
     context_manager = ContextManager("keep")
     context_manager.event_context = {"tags": {"k1": "v1", "k2": "v2"}}
     iohandler = IOHandler(context_manager)
-    res = iohandler.render('https://www.keephq.dev?keep.join("{{alert.tags}}", "&")')
+    res = iohandler.render(
+        'https://www.keephq.dev?keep.join("{{alert.tags}}", "&", "prefix_")'
+    )
     from asteval import Interpreter
 
     aeval = Interpreter()

@@ -95,6 +95,7 @@ networkx = "^3.3"
 google-auth = "2.34.0"
 clickhouse-driver = "^0.2.9"
 google-cloud-logging = "^3.11.3"
+json5 = "^0.9.28"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
