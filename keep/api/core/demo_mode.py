@@ -382,7 +382,7 @@ def simulate_alerts(
                 try:
                     env = random.choice(["production", "staging", "development"])
 
-                    if not "provider_id" in send_alert_url_params:
+                    if "provider_id" not in send_alert_url_params:
                         send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
 
                     prepared_request = PreparedRequest()

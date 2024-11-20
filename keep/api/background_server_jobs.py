@@ -1,6 +1,12 @@
+import os
 import sys
+import time
+import requests
 
-# It's a dirty hack to exclude current directory from sys.path
+from keep.api.core.demo_mode import launch_demo_mode_thread
+from keep.api.core.report_uptime import launch_uptime_reporting_thread
+
+# It's a hack to exclude current directory from sys.path
 # to avoid importing "logging.py" located in the same directory
 # instead of the standard library "logging" module.
 # TODO: rename logging.py
@@ -9,14 +15,7 @@ for i in range(0, len(sys.path)):
         sys.path.pop(i)
         break
 
-import os
-import time
-import logging
-import requests
-
-from keep.api.core.demo_mode import launch_demo_mode_thread
-from keep.api.core.report_uptime import launch_uptime_reporting_thread
-
+import logging  # noqa: E402
 logger = logging.getLogger(__name__)
 
 

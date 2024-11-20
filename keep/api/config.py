@@ -4,7 +4,6 @@ import os
 import keep.api.logging
 from keep.api.api import AUTH_TYPE
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
-from keep.api.core.report_uptime import launch_uptime_reporting_thread
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 

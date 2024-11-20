@@ -1,5 +1,4 @@
 import os
-import uuid
 import posthog
 import requests
 from posthog import Posthog
