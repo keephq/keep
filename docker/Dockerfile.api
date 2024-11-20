@@ -36,6 +36,6 @@ RUN chown -R keep:keep /app
 RUN chown -R keep:keep /venv
 USER keep
 
-ENTRYPOINT ["/venv/lib/python3.11/site-packages/keep/entrypoint_backend.sh"]
+ENTRYPOINT ["/venv/lib/python3.11/site-packages/keep/entrypoint.sh"]
 
 CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
