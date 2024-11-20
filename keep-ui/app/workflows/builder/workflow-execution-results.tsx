@@ -7,7 +7,7 @@ import {
   Card,
   Title,
 } from "@tremor/react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "../../loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
@@ -211,8 +211,8 @@ export function ExecutionResults({
                         log.message?.includes("NOT to run")
                           ? "bg-red-100"
                           : log.message?.includes("evaluated to run")
-                          ? "bg-green-100"
-                          : ""
+                            ? "bg-green-100"
+                            : ""
                       }`}
                       key={index}
                     >

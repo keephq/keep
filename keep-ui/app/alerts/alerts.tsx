@@ -18,8 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/not-found";
-import { useMounted } from "@/shared/lib/hooks/useMounted";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 
 const defaultPresets: Preset[] = [
   {
@@ -111,7 +110,6 @@ export default function Alerts({ presetName }: AlertsProps) {
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
 
-  // const isMounted = useMounted();
   const { status: sessionStatus } = useSession();
   const isLoading = isAsyncLoading || sessionStatus === "loading";
 

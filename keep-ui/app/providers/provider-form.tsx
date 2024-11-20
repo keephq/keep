@@ -2,7 +2,7 @@
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { Provider } from "./providers";
 import { useApiUrl } from "utils/hooks/useConfig";
 import Image from "next/image";

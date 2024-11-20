@@ -11,7 +11,7 @@ import {
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { MdOutlineSecurity } from "react-icons/md";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthenticationType } from "utils/authenticationType";
@@ -73,24 +73,24 @@ export default function SettingsPage() {
       newSelectedTab === "users"
         ? 0
         : newSelectedTab === "webhook"
-        ? 1
-        : newSelectedTab === "smtp"
-        ? 2
-        : 0;
+          ? 1
+          : newSelectedTab === "smtp"
+            ? 2
+            : 0;
     const userSubTabIndex =
       newUserSubTab === "users"
         ? 0
         : newUserSubTab === "groups"
-        ? 1
-        : newUserSubTab === "roles"
-        ? 2
-        : newUserSubTab === "permissions"
-        ? 3
-        : newUserSubTab === "api-keys"
-        ? 4
-        : newUserSubTab === "sso"
-        ? 5
-        : 0;
+          ? 1
+          : newUserSubTab === "roles"
+            ? 2
+            : newUserSubTab === "permissions"
+              ? 3
+              : newUserSubTab === "api-keys"
+                ? 4
+                : newUserSubTab === "sso"
+                  ? 5
+                  : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);

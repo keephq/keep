@@ -2,7 +2,7 @@ import { IncidentDto } from "@/entities/incidents/model";
 import { AuditEvent } from "@/utils/hooks/useAlerts";
 import { useApiUrl } from "@/utils/hooks/useConfig";
 import { TextInput, Button } from "@tremor/react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
