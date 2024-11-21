@@ -19,7 +19,7 @@ import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/(keep)/not-found";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import EnrichAlertModal from "@/app/alerts/EnrichAlertModal";
+import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
 
 const defaultPresets: Preset[] = [
   {
@@ -76,9 +76,9 @@ export default function Alerts({ presetName }: AlertsProps) {
   const ticketingProviders = useMemo(
     () =>
       providersData.installed_providers.filter((provider) =>
-        provider.tags.includes("ticketing")
+        provider.tags.includes("ticketing"),
       ),
-    [providersData.installed_providers]
+    [providersData.installed_providers],
   );
 
   const searchParams = useSearchParams();
@@ -103,7 +103,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const presets = [...defaultPresets, ...savedPresets] as const;
 
   const selectedPreset = presets.find(
-    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
+    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName),
   );
 
   const { data: pollAlerts } = useAlertPolling();
@@ -191,7 +191,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         handleClose={() => router.replace(`/alerts/${presetName}`)}
         mutate={mutateAlerts}
       />
-      <EnrichAlertModal
+      <EnrichAlertSidePanel
         alert={viewEnrichAlertModal}
         isOpen={isEnrichSidebarOpen}
         handleClose={() => {

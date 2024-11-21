@@ -1,10 +1,9 @@
 import { AlertDto } from "./models";
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
-import { Button, TextInput, Divider } from "@tremor/react";
+import React, { Fragment, useEffect, useState } from "react";
+import { Button, TextInput } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
-import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 interface EnrichAlertModalProps {
@@ -14,12 +13,12 @@ interface EnrichAlertModalProps {
   mutate: () => void;
 }
 
-const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
-  alert,
-  isOpen,
-  handleClose,
-  mutate,
-}) => {
+const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
+                                                                 alert,
+                                                                 isOpen,
+                                                                 handleClose,
+                                                                 mutate,
+                                                               }) => {
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
 
@@ -41,10 +40,10 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
   const updateCustomField = (
     index: number,
     field: "key" | "value",
-    value: string
+    value: string,
   ) => {
     setCustomFields((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
   };
 
@@ -67,7 +66,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
         customFields.length === preEnrichedFields.length &&
         customFields.every((field) => {
           const matchingField = preEnrichedFields.find(
-            (preField) => preField.key === field.key
+            (preField) => preField.key === field.key,
           );
           return matchingField && matchingField.value === field.value;
         });
@@ -85,17 +84,15 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
     };
 
     const calculateFinalData = () => {
-      const customFieldData = customFields.reduce(
+      return customFields.reduce(
         (acc, field) => {
           if (field.key) {
             acc[field.key] = field.value;
           }
           return acc;
         },
-        {} as Record<string, string>
+        {} as Record<string, string>,
       );
-
-      return customFieldData;
     };
     setFinalData(calculateFinalData());
     validateData();
@@ -123,10 +120,10 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
       }
     });
 
-    let fieldsUnenrichedSuccessfully = true;
+    let fieldsUnEnrichedSuccessfully = true;
 
     if (unEnrichedFields.length != 0) {
-      const unerichmentResponse = await fetch(`${apiUrl}/alerts/unenrich`, {
+      const unEnrichmentResponse = await fetch(`${apiUrl}/alerts/unenrich`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -137,7 +134,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
           enrichments: unEnrichedFields,
         }),
       });
-      fieldsUnenrichedSuccessfully = unerichmentResponse.ok;
+      fieldsUnEnrichedSuccessfully = unEnrichmentResponse.ok;
     }
 
     const response = await fetch(`${apiUrl}/alerts/enrich`, {
@@ -149,7 +146,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
       body: JSON.stringify(requestData),
     });
 
-    if (response.ok && fieldsUnenrichedSuccessfully) {
+    if (response.ok && fieldsUnEnrichedSuccessfully) {
       toast.success("Alert enriched successfully");
       await mutate();
       handleClose();
@@ -239,4 +236,4 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
   );
 };
 
-export default EnrichAlertModal;
+export default EnrichAlertSidePanel;
