@@ -11,7 +11,7 @@ ALERTS = {
             }
         },
         "parameters": {
-            "Message.AlarmName": ["HighCPUUsage-1", "HighCPUUsage-2", "HighCPUUsage-3"],
+            "Message.AlarmName": ["HighCPUUsage", "HighCPUUsageOnAPod", "PodRecycled"],
         },
     },
 }

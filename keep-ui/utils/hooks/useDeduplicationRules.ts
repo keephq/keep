@@ -1,4 +1,4 @@
-import { DeduplicationRule } from "app/deduplication/models";
+import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
