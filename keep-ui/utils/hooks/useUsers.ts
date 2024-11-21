@@ -1,4 +1,4 @@
-import { User } from "app/settings/models";
+import { User } from "@/app/(keep)/settings/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";

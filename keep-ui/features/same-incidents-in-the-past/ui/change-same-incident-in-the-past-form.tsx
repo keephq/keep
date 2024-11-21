@@ -3,7 +3,7 @@ import Select from "@/components/ui/Select";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
-import Loading from "@/app/loading";
+import Loading from "@/app/(keep)/loading";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";

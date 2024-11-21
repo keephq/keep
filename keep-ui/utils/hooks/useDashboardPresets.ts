@@ -1,6 +1,6 @@
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "./usePresets";
-import { Preset } from "app/alerts/models";
+import { Preset } from "@/app/(keep)/alerts/models";
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -33,7 +33,7 @@ export const useDashboardPreset = () => {
   );
 
   let allPreset = useMemo(() => {
-    /*If any filters are applied on the dashboard, we will fetch live data; otherwise, 
+    /*If any filters are applied on the dashboard, we will fetch live data; otherwise,
     we will use data from localStorage to sync values between the navbar and the dashboard.*/
     let combinedPresets = searchParams?.toString()
       ? [...presets, ...fetchedPresets]
