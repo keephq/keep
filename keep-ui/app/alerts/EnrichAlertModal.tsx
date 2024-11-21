@@ -44,7 +44,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
     value: string
   ) => {
     setCustomFields((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
 
@@ -62,16 +62,15 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
   }, [alert]);
 
   useEffect(() => {
-
     const validateData = () => {
       const areFieldsIdentical =
-      customFields.length === preEnrichedFields.length &&
-      customFields.every((field) => {
-        const matchingField = preEnrichedFields.find(
-          (preField) => preField.key === field.key
-        );
-        return matchingField && matchingField.value === field.value;
-      });
+        customFields.length === preEnrichedFields.length &&
+        customFields.every((field) => {
+          const matchingField = preEnrichedFields.find(
+            (preField) => preField.key === field.key
+          );
+          return matchingField && matchingField.value === field.value;
+        });
 
       if (areFieldsIdentical) {
         setIsDataValid(false);
