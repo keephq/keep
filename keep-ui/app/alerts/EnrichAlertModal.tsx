@@ -48,7 +48,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
     value: string
   ) => {
     setCustomFields((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
   };
 
