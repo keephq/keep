@@ -1,12 +1,13 @@
+import time
 import asyncio
 import logging
 import threading
+from keep.api.core.db import get_activity_report, get_or_creat_posthog_instance_id
 from keep.api.core.posthog import (
     posthog_client,
     is_posthog_reachable,
     KEEP_VERSION, 
     POSTHOG_DISABLED, 
-    RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH
 )
 
 logger = logging.getLogger(__name__)
@@ -18,19 +19,25 @@ async def report_uptime_to_posthog():
     Should be lunched in a separate thread.
     """
     while True:
+        start_time = time.time()
+        properties = {
+            "status": "up",
+            "keep_version": KEEP_VERSION,
+            **get_activity_report(),
+        }
+        end_time = time.time()
+        properties["db_request_duration_ms"] = int((end_time - start_time) * 1000)
         posthog_client.capture(
-            RANDOM_TENANT_ID_PERSISTENT_WITHIN_LAUNCH,
+            get_or_creat_posthog_instance_id(),
             "backend_status",
-            properties={
-                "status": "up",
-                "keep_version": KEEP_VERSION,
-            },
+            properties=properties,
         )
+        posthog_client.flush()
         logger.info("Uptime reported to PostHog.")
-         # Important to keep it async, otherwise will clog main gunicorn thread and cause timeouts.
+
         await asyncio.sleep(UPTIME_REPORTING_CADENCE)
 
-def launch_uptime_reporting():
+def launch_uptime_reporting_thread() -> threading.Thread | None:
     """
     Running async uptime reporting as a sub-thread.
     """
@@ -39,6 +46,7 @@ def launch_uptime_reporting():
             thread = threading.Thread(target=asyncio.run, args=(report_uptime_to_posthog(), ))
             thread.start()
             logger.info("Uptime Reporting to Posthog launched.")
+            return thread
         else:
             logger.info("Reporting to Posthog not launched because it's not reachable.")
     else:
