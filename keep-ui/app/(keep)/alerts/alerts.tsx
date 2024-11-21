@@ -145,7 +145,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   }
 
   return (
-    <div>
+    <>
       <AlertTableTabPanel
         key={selectedPreset.name}
         preset={selectedPreset}
@@ -200,6 +200,6 @@ export default function Alerts({ presetName }: AlertsProps) {
         }}
         mutate={mutateAlerts}
       />
-    </div>
+    </>
   );
 }
