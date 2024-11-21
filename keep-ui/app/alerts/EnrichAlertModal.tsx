@@ -1,7 +1,4 @@
 import { AlertDto } from "./models";
-import Modal from "@/components/ui/Modal";
-import "react-sliding-side-panel/lib/index.css";
-import SlidingPanel from "react-sliding-side-panel";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import { Button, TextInput, Divider } from "@tremor/react";
@@ -9,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { Alert } from "../workflows/builder/alert";
 
 interface EnrichAlertModalProps {
   alert: AlertDto | null | undefined;
