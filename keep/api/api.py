@@ -28,7 +28,6 @@ from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
 from keep.api.routes import (
     actions,
-    ai,
     alerts,
     dashboard,
     deduplications,
@@ -139,7 +138,6 @@ def get_app(
     app.include_router(healthcheck.router, prefix="/healthcheck", tags=["healthcheck"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
-    app.include_router(ai.router, prefix="/ai", tags=["ai"])
     app.include_router(settings.router, prefix="/settings", tags=["settings"])
     app.include_router(
         workflows.router, prefix="/workflows", tags=["workflows", "alerts"]

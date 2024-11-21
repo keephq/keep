@@ -9,6 +9,7 @@ import inspect
 import json
 import logging
 import os
+import sys
 import types
 import typing
 from dataclasses import fields
@@ -389,7 +390,9 @@ class ProvidersFactory:
                 )
 
                 # Unload the module
-                # del sys.modules[f"keep.providers.{provider_directory}.{provider_directory}"]
+                del sys.modules[
+                    f"keep.providers.{provider_directory}.{provider_directory}"
+                ]
             except ModuleNotFoundError:
                 logger.error(
                     f"Cannot import provider {provider_directory}, module not found."
@@ -402,6 +405,7 @@ class ProvidersFactory:
                 )
                 continue
 
+        importlib.invalidate_caches()
         ProvidersFactory._loaded_providers_cache = providers
         return providers
 
