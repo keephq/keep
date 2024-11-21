@@ -1,4 +1,7 @@
+import http
 import os
+import time
+
 import pydantic
 import dataclasses
 import requests
@@ -65,13 +68,23 @@ class GoogleChatProvider(BaseProvider):
         if not message:
             raise ProviderException("Message is required")
 
+        def __send_message(url, body, headers, retries=3):
+            for _ in range(retries):
+                try:
+                    resp = requests.post(url, json=body, headers=headers)
+                    if resp.status_code == http.HTTPStatus.OK:
+                        return resp
+                except requests.exceptions.RequestException as e:
+                    self.logger.error(f"Failed to send message to Google Chat: {e}")
+                time.sleep(1)
+
         payload = {
             "text": message,
         }
 
-        requestHeaders = {"Content-Type": "application/json; charset=UTF-8"}
+        request_headers = {"Content-Type": "application/json; charset=UTF-8"}
 
-        response = requests.post(webhook_url, json=payload, headers=requestHeaders)
+        response = __send_message(webhook_url, body=payload, headers=request_headers)
 
         if not response.ok:
             raise ProviderException(
