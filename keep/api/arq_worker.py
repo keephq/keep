@@ -12,7 +12,6 @@ import keep.api.logging
 from keep.api.consts import (
     KEEP_ARQ_QUEUE_BASIC,
     KEEP_ARQ_TASK_POOL,
-    KEEP_ARQ_TASK_POOL_AI,
     KEEP_ARQ_TASK_POOL_ALL,
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
 )
@@ -69,15 +68,12 @@ def get_arq_worker(queue_name: str) -> Worker:
     expires = config(
         "ARQ_EXPIRES", cast=int, default=3600
     )  # the default length of time from when a job is expected to start after which the job expires, making it shorter to avoid clogging
-    expires_ai = config("ARQ_EXPIRES_AI", cast=int, default=3600 * 1000)
     # generate a worker id so each worker will have a different health check key
     worker_id = str(uuid4()).replace("-", "")
     worker = create_worker(
         WorkerSettings,
         keep_result=keep_result,
-        expires_extra_ms=(
-            expires_ai if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else expires
-        ),
+        expires_extra_ms=expires,
         queue_name=queue_name,
         health_check_key=f"{queue_name}:{worker_id}:health-check",
     )
@@ -104,8 +100,7 @@ class WorkerSettings:
         conn_retries=10,
         conn_retry_delay=10,
     )
-    # Only if it's an AI-dedicated worker, we can set large timeout, otherwise keeping low to avoid clogging
-    timeout = 60 * 15 if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_AI else 30
+    timeout = 30
     functions: list = FUNCTIONS
     queue_name: str
     health_check_interval: int = 10

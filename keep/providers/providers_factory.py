@@ -387,6 +387,9 @@ class ProvidersFactory:
                         coming_soon=provider_class.PROVIDER_COMING_SOON,
                     )
                 )
+
+                # Unload the module
+                # del sys.modules[f"keep.providers.{provider_directory}.{provider_directory}"]
             except ModuleNotFoundError:
                 logger.error(
                     f"Cannot import provider {provider_directory}, module not found."
