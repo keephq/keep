@@ -191,7 +191,7 @@ const providerConfigs = {
         },
       },
       // see https://authjs.dev/guides/corporate-proxy
-      [customFetch]: proxyFetch,
+      ...(proxyFetch && { [customFetch]: proxyFetch }),
     }),
   ],
 };
