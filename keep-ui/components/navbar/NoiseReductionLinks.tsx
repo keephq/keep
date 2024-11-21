@@ -9,7 +9,7 @@ import { IoChevronUp } from "react-icons/io5";
 import { TbTopologyRing } from "react-icons/tb";
 import { FaVolumeMute } from "react-icons/fa";
 import { IoMdGitMerge } from "react-icons/io";
-import { useTopology } from "@/app/topology/model/useTopology";
+import { useTopology } from "@/app/(keep)/topology/model/useTopology";
 import clsx from "clsx";
 
 type NoiseReductionLinksProps = { session: Session | null };

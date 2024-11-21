@@ -1,5 +1,5 @@
 import useSWR, { SWRConfiguration } from "swr";
-import { AlertDto } from "app/alerts/models";
+import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";

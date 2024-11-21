@@ -1,4 +1,4 @@
-import { Workflow } from "app/workflows/models";
+import { Workflow } from "@/app/(keep)/workflows/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
