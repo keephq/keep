@@ -1,5 +1,5 @@
-import { AILogs, AIStats } from "app/ai/model";
-import { useSession } from "next-auth/react";
+import { AILogs, AIStats } from "@/app/(keep)/ai/model";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";

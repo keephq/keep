@@ -1,16 +1,14 @@
-import logging
-import os
 import sys
 import json
 import copy
 import csv
-
+import logging
+import argparse
 
 from keep.api.core.db import get_session_sync
 from keep.api.models.alert import AlertDto
 from keep.api.tasks.process_event_task import __handle_formatted_events
-import sys
-import argparse
+
 
 # configure logging
 logging.basicConfig(

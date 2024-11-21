@@ -11,8 +11,8 @@ ALERTS = {
         },
         "parameters": {
             "tags": [
-                "environment:production,team:backend,monitor",
-                "environment:staging,team:backend,monitor",
+                "environment:production,team:backend,monitor,service:api",
+                "environment:staging,team:backend,monitor,service:api",
             ],
             "priority": ["P2", "P3", "P4"],
         },
@@ -29,8 +29,8 @@ ALERTS = {
         },
         "parameters": {
             "tags": [
-                "environment:production,team:analytics,monitor",
-                "environment:staging,team:database,monitor",
+                "environment:production,team:analytics,monitor,service:api",
+                "environment:staging,team:database,monitor,service:api",
             ],
             "priority": ["P1", "P3", "P4"],
         },

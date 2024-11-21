@@ -1,18 +1,17 @@
-import { getServerSession } from "next-auth";
+import { auth } from "@/auth";
 import { Search } from "@/components/navbar/Search";
 import { NoiseReductionLinks } from "@/components/navbar/NoiseReductionLinks";
 import { AlertsLinks } from "@/components/navbar/AlertsLinks";
 import { UserInfo } from "@/components/navbar/UserInfo";
 import { Menu } from "@/components/navbar/Menu";
 import { MinimizeMenuButton } from "@/components/navbar/MinimizeMenuButton";
-import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import { DashboardLinks } from "@/components/navbar/DashboardLinks";
 import { IncidentsLinks } from "@/components/navbar/IncidentLinks";
 import { SetSentryUser } from "./SetSentryUser";
 import "./Navbar.css";
 
 export default async function NavbarInner() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   return (
     <>
       <Menu>

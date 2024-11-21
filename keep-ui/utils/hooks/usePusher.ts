@@ -1,6 +1,6 @@
 import Pusher, { Options as PusherOptions } from "pusher-js";
 import { useConfig } from "./useConfig";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "./useConfig";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

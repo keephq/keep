@@ -1,9 +1,9 @@
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
 import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 import { useSearchParams } from "next/navigation";
-import {  useMemo } from "react";
+import { useMemo } from "react";
 import { useApiUrl } from "./useConfig";
 
 export const useAlertQualityMetrics = (
@@ -19,7 +19,7 @@ export const useAlertQualityMetrics = (
       const fieldArray = Array.isArray(fields) ? fields : [fields];
       fieldArray.forEach((field) => params.append("fields", field));
     }
-  
+
     return params.toString();
   }, [fields, searchParams]);
   // TODO: Proper type needs to be defined.

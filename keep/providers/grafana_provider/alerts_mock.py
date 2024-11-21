@@ -1,6 +1,7 @@
 ALERTS = {
     "database_connection_failure": {
         "severity": "critical",
+        "service": "api",
         "title": "Database Connection Failure",
         "alerts": [
             {
@@ -48,6 +49,7 @@ ALERTS = {
         ],
     },
     "high_memory_usage": {
+        "service": "api",
         "payload": {
             "condition": "B",
             "data": [
@@ -92,6 +94,7 @@ ALERTS = {
         },
     },
     "network_latency_high": {
+        "service": "db",
         "payload": {
             "condition": "C",
             "data": [

@@ -1,6 +1,6 @@
 import { getApiURL } from "@/utils/apiUrl";
 import {
-  AuthenticationType,
+  AuthType,
   MULTI_TENANT,
   NO_AUTH,
   SINGLE_TENANT,
@@ -10,11 +10,17 @@ export function getConfig() {
   let authType = process.env.AUTH_TYPE;
   // Backward compatibility
   if (authType === MULTI_TENANT) {
-    authType = AuthenticationType.AUTH0;
+    authType = AuthType.AUTH0;
   } else if (authType === SINGLE_TENANT) {
-    authType = AuthenticationType.DB;
+    authType = AuthType.DB;
   } else if (authType === NO_AUTH) {
-    authType = AuthenticationType.NOAUTH;
+    authType = AuthType.NOAUTH;
+  } else if (Object.values(AuthType).includes(authType as AuthType)) {
+    // Keep the auth type if it's a valid enum value
+    authType = authType as AuthType;
+  } else {
+    // Default to NOAUTH
+    authType = AuthType.NOAUTH;
   }
 
   // we want to support preview branches on vercel

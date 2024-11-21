@@ -14,6 +14,7 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
 import { useTags } from "utils/hooks/useTags";
 import { usePresets } from "utils/hooks/usePresets";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
 
 type AlertsLinksProps = {
@@ -22,6 +23,8 @@ type AlertsLinksProps = {
 
 export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const isMounted = useMounted();
+
   const [storedTags, setStoredTags] = useLocalStorage<string[]>(
     "selectedTags",
     []
@@ -59,7 +62,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   // Determine if we should show the feed link
   const shouldShowFeed = (() => {
     // If we have server data, check if feed preset exists
-    if (staticPresets) {
+    if (staticPresets.length > 0) {
       return staticPresets.some((preset) => preset.name === "feed");
     }
 
@@ -69,13 +72,19 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
     }
 
-    // If we're still loading (no data and no error), show based on cache
+    // For the initial render on the server, always show feed
+    if (!isMounted) {
+      return true;
+    }
+
     return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
   })();
 
   // Get the current alerts count only if we should show feed
   const currentAlertsCount = (() => {
-    if (!shouldShowFeed) return 0;
+    if (!shouldShowFeed) {
+      return 0;
+    }
 
     // First try to get from server data
     const serverPreset = staticPresets?.find(
@@ -89,7 +98,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     const cachedPreset = staticPresetsOrderFromLS?.find(
       (preset) => preset.name === "feed"
     );
-    return cachedPreset?.alerts_count ?? 0;
+    return cachedPreset?.alerts_count ?? undefined;
   })();
 
   return (
@@ -141,7 +150,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   </LinkWithIcon>
                 </li>
               )}
-              {session && (
+              {session && isMounted && (
                 <CustomPresetAlertLinks
                   session={session}
                   selectedTags={storedTags}

@@ -1,41 +1,64 @@
 "use client";
 import React from "react";
-import { X } from "lucide-react";
-import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { Card, Text, Button } from "@tremor/react";
+import { Text, Button } from "@tremor/react";
 import Image from "next/image";
 import KeepPng from "../keep.png";
+import { capture } from "@/shared/lib/capture";
 
 const ReadOnlyBanner = () => {
-  const [isVisible, setIsVisible] = useLocalStorage(
-    "read-only-banner-visible",
-    true
-  );
-
-  if (!isVisible) return null;
-
   return (
-    <Card
-      className="w-full rounded-none bg-orange-400 text-black py-2"
-      decoration="none"
-    >
-      <div className="container mx-auto relative">
-        <div className="flex items-center justify-center gap-2">
-          <Image src={KeepPng} alt="Keep Logo" width={20} height={20} />
-          <Text className="text-sm font-medium text-black">
-            Keep is in read-only mode.
-          </Text>
+    <div className="w-full py-2 pl-4 pr-2 mb-4 bg-orange-50 border border-orange-200 rounded-lg">
+      <div className="flex items-center justify-between gap-4">
+        <Text className="text-sm font-medium text-black">
+          <Image
+            src={KeepPng}
+            alt="Keep Logo"
+            width={20}
+            height={20}
+            className="inline-block mr-2"
+          />
+          Keep is in read-only mode.
+        </Text>
+        <div className="flex items-center gap-2">
+          <Button
+            className="[&>span]:text-xs"
+            onClick={() => {
+              capture("try-keep-for-free", {
+                source: "read-only-banner",
+              });
+              window.open(
+                "https://platform.keephq.dev/providers",
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }}
+            variant="primary"
+            color="orange"
+            size="xs"
+          >
+            Try for free
+          </Button>
+          <Button
+            className="[&>span]:text-xs"
+            onClick={() => {
+              capture("talk-to-us", {
+                source: "read-only-banner",
+              });
+              window.open(
+                "https://www.keephq.dev/meet-keep",
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }}
+            color="orange"
+            variant="secondary"
+            size="xs"
+          >
+            Talk to us
+          </Button>
         </div>
-        <Button
-          onClick={() => setIsVisible(false)}
-          variant="light"
-          color="gray"
-          icon={X}
-          size="xs"
-          className="hover:text-gray-500 transition-colors absolute right-0 top-1/2 -translate-y-1/2"
-        />
       </div>
-    </Card>
+    </div>
   );
 };
 

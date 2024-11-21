@@ -188,8 +188,9 @@ class ServicenowProvider(BaseTopologyProvider):
     def _query(
         self,
         table_name: str,
-        get_incidents: bool = False,
         incident_id: str = None,
+        sysparm_limit: int = 100,
+        sysparm_offset: int = 0,
         **kwargs: dict,
     ):
         request_url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}"
@@ -205,11 +206,23 @@ class ServicenowProvider(BaseTopologyProvider):
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
 
+        if incident_id:
+            request_url = f"{request_url}/{incident_id}"
+
+        params = {"sysparm_offset": 0, "sysparm_limit": 100}
+        # Add pagination parameters if not already set
+        if sysparm_limit:
+            params["sysparm_limit"] = (
+                sysparm_limit  # Limit number of records per request
+            )
+        if sysparm_offset:
+            params["sysparm_offset"] = 0  # Start from beginning
+
         response = requests.get(
             request_url,
             headers=headers,
             auth=auth,
-            params=kwargs,
+            params=params,
             verify=False,
             timeout=10,
         )
