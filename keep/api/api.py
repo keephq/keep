@@ -15,6 +15,7 @@ from starlette_context.middleware import RawContextMiddleware
 
 import keep.api.logging
 import keep.api.observability
+import keep.api.utils.import_ee
 from keep.api.arq_worker import get_arq_worker
 from keep.api.consts import (
     KEEP_ARQ_QUEUE_BASIC,
