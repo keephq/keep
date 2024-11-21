@@ -199,9 +199,14 @@ const config = {
     },
     jwt: async ({ token, user, account }): Promise<JWT> => {
       if (account && user) {
+        let accessToken: string | undefined;
         // Ensure we always have an accessToken
-        const accessToken =
-          user.accessToken || account.access_token || account.id_token;
+        if (authType == AuthType.AUTH0) {
+          accessToken = account.id_token;
+        } else {
+          accessToken =
+            user.accessToken || account.access_token || account.id_token;
+        }
         if (!accessToken) {
           throw new Error("No access token available");
         }
