@@ -9,7 +9,6 @@ import inspect
 import json
 import logging
 import os
-import sys
 import types
 import typing
 from dataclasses import fields
@@ -31,6 +30,8 @@ from keep.providers.base.base_provider import (
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
+PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.json")
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +223,7 @@ class ProvidersFactory:
         return methods
 
     @staticmethod
-    def get_all_providers() -> list[Provider]:
+    def get_all_providers(ignore_cache_file: bool = False) -> list[Provider]:
         """
         Get all the providers.
 
@@ -233,6 +234,22 @@ class ProvidersFactory:
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
             logger.debug("Using cached providers")
+            return ProvidersFactory._loaded_providers_cache
+
+        if os.path.exists(PROVIDERS_CACHE_FILE) and not ignore_cache_file:
+            logger.info(
+                "Loading providers from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
+            with open(PROVIDERS_CACHE_FILE, "r") as f:
+                providers_cache = json.load(f)
+                ProvidersFactory._loaded_providers_cache = [
+                    Provider(**provider) for provider in providers_cache
+                ]
+            logger.info(
+                "Providers loaded from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -388,11 +405,6 @@ class ProvidersFactory:
                         coming_soon=provider_class.PROVIDER_COMING_SOON,
                     )
                 )
-
-                # Unload the module
-                del sys.modules[
-                    f"keep.providers.{provider_directory}.{provider_directory}"
-                ]
             except ModuleNotFoundError:
                 logger.error(
                     f"Cannot import provider {provider_directory}, module not found."
@@ -405,7 +417,6 @@ class ProvidersFactory:
                 )
                 continue
 
-        importlib.invalidate_caches()
         ProvidersFactory._loaded_providers_cache = providers
         return providers
 

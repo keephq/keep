@@ -24,12 +24,15 @@ COPY examples examples
 COPY README.md README.md
 RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 
+
 FROM base as final
 ENV PATH="/venv/bin:${PATH}"
 ENV VIRTUAL_ENV="/venv"
 ENV EE_PATH="ee"
 COPY --from=builder /venv /venv
 COPY --from=builder /app/examples /examples
+# Build the providers cache
+RUN keep provider build_cache
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app
 RUN chown -R keep:keep /app
