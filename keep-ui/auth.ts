@@ -197,12 +197,20 @@ const config = {
       }
       return true;
     },
-    jwt: async ({ token, user, account }): Promise<JWT> => {
+    jwt: async ({ token, user, account, profile }): Promise<JWT> => {
       if (account && user) {
         let accessToken: string | undefined;
+        let tenantId: string | undefined = user.tenantId;
+        let role: string | undefined = user.role;
         // Ensure we always have an accessToken
         if (authType == AuthType.AUTH0) {
           accessToken = account.id_token;
+          if ((profile as any)?.keep_tenant_id) {
+            tenantId = (profile as any).keep_tenant_id;
+          }
+          if ((profile as any)?.keep_role) {
+            role = (profile as any).keep_role;
+          }
         } else {
           accessToken =
             user.accessToken || account.access_token || account.id_token;
@@ -212,8 +220,8 @@ const config = {
         }
 
         token.accessToken = accessToken;
-        token.tenantId = user.tenantId;
-        token.role = user.role;
+        token.tenantId = tenantId;
+        token.role = role;
 
         if (authType === AuthType.KEYCLOAK) {
           token.refreshToken = account.refresh_token;
