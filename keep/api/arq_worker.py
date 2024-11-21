@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-from arq import Worker, cron
+from arq import Worker
 from arq.connections import RedisSettings
 from arq.worker import create_worker
 from pydantic.utils import import_string
@@ -10,7 +10,6 @@ from starlette.datastructures import CommaSeparatedStrings
 
 import keep.api.logging
 from keep.api.consts import (
-    KEEP_ARQ_QUEUE_AI,
     KEEP_ARQ_QUEUE_BASIC,
     KEEP_ARQ_TASK_POOL,
     KEEP_ARQ_TASK_POOL_AI,
@@ -18,7 +17,6 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
 )
 from keep.api.core.config import config
-from keep.api.tasks.process_background_ai_task import process_background_ai_task
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
@@ -39,25 +37,6 @@ if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_BASIC_PROCE
         ),
     ]
 
-if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_AI]:
-    all_tasks_for_the_worker += [
-        (
-            "keep.api.tasks.process_background_ai_task.process_background_ai_task",
-            KEEP_ARQ_QUEUE_AI,
-        ),
-        (
-            "keep.api.tasks.process_background_ai_task.process_correlation",
-            KEEP_ARQ_QUEUE_AI,
-        ),
-        (
-            "keep.api.tasks.process_background_ai_task.process_summary_generation",
-            KEEP_ARQ_QUEUE_AI,
-        ),
-        (
-            "keep.api.tasks.process_background_ai_task.process_name_generation",
-            KEEP_ARQ_QUEUE_AI,
-        ),
-    ]
 
 ARQ_BACKGROUND_FUNCTIONS: Optional[CommaSeparatedStrings] = config(
     "ARQ_BACKGROUND_FUNCTIONS",
@@ -134,16 +113,3 @@ class WorkerSettings:
 
     def __init__(self, queue_name: str):
         self.queue_name = queue_name
-
-    cron_jobs = []
-    if KEEP_ARQ_TASK_POOL in [KEEP_ARQ_TASK_POOL_ALL, KEEP_ARQ_TASK_POOL_AI]:
-        cron_jobs.append(
-            cron(
-                process_background_ai_task,
-                minute=at_every_x_minutes(1),
-                unique=True,
-                timeout=30,
-                max_tries=1,
-                run_at_startup=True,
-            )
-        )

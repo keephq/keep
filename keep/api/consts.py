@@ -40,7 +40,6 @@ KEEP_ARQ_TASK_POOL_BASIC_PROCESSING = "basic_processing"  # Everything except AI
 KEEP_ARQ_TASK_POOL_AI = "ai"  # Only AI
 # Define queues for different task types
 KEEP_ARQ_QUEUE_BASIC = "basic_processing"
-KEEP_ARQ_QUEUE_AI = "ai_processing"
 
 REDIS = os.environ.get("REDIS", "false") == "true"
 KEEP_ARQ_TASK_POOL = os.environ.get("KEEP_ARQ_TASK_POOL", None)

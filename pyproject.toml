@@ -88,7 +88,6 @@ arq = "^0.26.0"
 
 alembic = "^1.13.2"
 numpy = "^2.0.0"
-pandas = "^2.2.2"
 quickchart-io = "^2.0.0"
 scipy = "^1.14.1"
 networkx = "^3.3"
