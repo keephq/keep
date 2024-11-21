@@ -92,7 +92,9 @@ export default function Alerts({ presetName }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
-  const [viewEnrichAlertModal, setEnrichAlertModal] = useState<AlertDto | null>();
+  const [viewEnrichAlertModal, setEnrichAlertModal] =
+    useState<AlertDto | null>();
+  const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
   const { useAllPresets } = usePresets();
 
   const { data: savedPresets = [] } = useAllPresets({
@@ -114,20 +116,21 @@ export default function Alerts({ presetName }: AlertsProps) {
 
   const { status: sessionStatus } = useSession();
   const isLoading = isAsyncLoading || sessionStatus === "loading";
-
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
-    console.log(enrich, fingerprint)
+    console.log(enrich, fingerprint);
     if (fingerprint && enrich) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      setEnrichAlertModal(alert)
+      setEnrichAlertModal(alert);
+      setIsEnrichSidebarOpen(true);
     } else if (fingerprint) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       setViewAlertModal(alert);
     } else {
       setViewAlertModal(null);
-      setEnrichAlertModal(null)
+      setEnrichAlertModal(null);
+      setIsEnrichSidebarOpen(false);
     }
   }, [searchParams, alerts]);
 
@@ -142,7 +145,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   }
 
   return (
-    <>
+    <div>
       <AlertTableTabPanel
         key={selectedPreset.name}
         preset={selectedPreset}
@@ -190,9 +193,13 @@ export default function Alerts({ presetName }: AlertsProps) {
       />
       <EnrichAlertModal
         alert={viewEnrichAlertModal}
-        handleClose={() => router.replace(`/alerts/${presetName}`)}
+        isOpen={isEnrichSidebarOpen}
+        handleClose={() => {
+          setIsEnrichSidebarOpen(false);
+          router.replace(`/alerts/${presetName}`);
+        }}
         mutate={mutateAlerts}
       />
-    </>
+    </div>
   );
 }

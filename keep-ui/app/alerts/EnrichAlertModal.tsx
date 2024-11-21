@@ -1,67 +1,52 @@
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
+import "react-sliding-side-panel/lib/index.css";
+import SlidingPanel from "react-sliding-side-panel";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
 import { Button, TextInput, Divider } from "@tremor/react";
 import { useSession } from "next-auth/react";
 import { useApiUrl } from "utils/hooks/useConfig";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { Alert } from "../workflows/builder/alert";
 
 interface EnrichAlertModalProps {
   alert: AlertDto | null | undefined;
+  isOpen: boolean;
   handleClose: () => void;
   mutate: () => void;
 }
 
-const EXCLUDED_FIELDS = [
-  "id",
-  "status",
-  "severity",
-  "lastReceived",
-  "fingerprint",
-  "isPartialDuplicate",
-  "isFullDuplicate",
-  "apiKeyRef",
-  "firingStartTime",
-  "enriched_fields",
-  "isNoisy",
-  "deleted",
-  "startedAt",
-  "incident",
-  "providerId",
-  "providerType",
-  "dismissUntil",
-  "dismissed",
-  "assignee",
-  "source",
-  "pushed",
-  "environment"
-];
-
-const transformAlertToEditableFields = (alert: AlertDto | null | undefined) => {
-  if (!alert) return [];
-  return Object.entries(alert)
-    .filter(([key]) => !EXCLUDED_FIELDS.includes(key))
-    .map(([key, value]) => ({ key, value }));
-};
-
 const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
   alert,
+  isOpen,
   handleClose,
   mutate,
 }) => {
-  const isOpen = !!alert;
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
 
-  const [customFields, setCustomFields] = useState<{ key: string; value: string }[]>([]);
-  const [editedFields, setEditedFields] = useState<{ key: string; value: string }[]>([]);
+  const [customFields, setCustomFields] = useState<
+    { key: string; value: string }[]
+  >([]);
+
+  const [preEnrichedFields, setPreEnrichedFields] = useState<
+    { key: string; value: string }[]
+  >([]);
+
   const [finalData, setFinalData] = useState<Record<string, any>>({});
+  const [isDataValid, setIsDataValid] = useState<boolean>(false);
 
   const addCustomField = () => {
     setCustomFields((prev) => [...prev, { key: "", value: "" }]);
   };
 
-  const updateCustomField = (index: number, field: "key" | "value", value: string) => {
+  const updateCustomField = (
+    index: number,
+    field: "key" | "value",
+    value: string
+  ) => {
     setCustomFields((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
@@ -71,47 +56,94 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
     setCustomFields((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleFieldChange = (key: string, value: string) => {
-    setEditedFields((prev) =>
-      prev.map((item) => (item.key === key ? { ...item, value } : item))
-    );
-  };
-
   useEffect(() => {
-    setCustomFields([]);
-    setEditedFields(transformAlertToEditableFields(alert));
+    const preEnrichedFields =
+      alert?.enriched_fields?.map((key) => {
+        return { key, value: alert[key as keyof AlertDto] as any };
+      }) || [];
+    setCustomFields(preEnrichedFields);
+    setPreEnrichedFields(preEnrichedFields);
   }, [alert]);
 
   useEffect(() => {
-    const calculateFinalData = () => {
-      const changedFields = editedFields.reduce((acc, field) => {
-        const key = field.key as keyof AlertDto;
-        const originalValue = alert ? alert[key] : undefined;
 
-        if (String(originalValue) !== String(field.value)) {
-          acc[key] = field.value as any ?? null;
-        }
-        return acc;
-      }, {} as Partial<AlertDto>);
+    const validateData = () => {
+      const areFieldsIdentical =
+      customFields.length === preEnrichedFields.length &&
+      customFields.every((field) => {
+        const matchingField = preEnrichedFields.find(
+          (preField) => preField.key === field.key
+        );
+        return matchingField && matchingField.value === field.value;
+      });
 
-      const customFieldData = customFields.reduce((acc, field) => {
-        if (field.key) {
-          acc[field.key] = field.value;
-        }
-        return acc;
-      }, {} as Record<string, string>);
+      if (areFieldsIdentical) {
+        setIsDataValid(false);
+        return;
+      }
 
-      return { ...changedFields, ...customFieldData };
+      const keys = customFields.map((field) => field.key);
+      const hasEmptyKeys = keys.some((key) => !key);
+      const hasDuplicateKeys = new Set(keys).size !== keys.length;
+
+      setIsDataValid(!hasEmptyKeys && !hasDuplicateKeys);
     };
 
+    const calculateFinalData = () => {
+      const customFieldData = customFields.reduce(
+        (acc, field) => {
+          if (field.key) {
+            acc[field.key] = field.value;
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      return customFieldData;
+    };
     setFinalData(calculateFinalData());
-  }, [customFields, editedFields, alert]);
+    validateData();
+  }, [customFields, preEnrichedFields]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFinalData({});
+      setIsDataValid(false);
+    }
+  }, [isOpen]);
 
   const handleSave = async () => {
     const requestData = {
       enrichments: finalData,
       fingerprint: alert?.fingerprint,
     };
+
+    const enrichedFieldKeys = customFields.map((field) => field.key);
+    const preEnrichedFieldKeys = preEnrichedFields.map((field) => field.key);
+
+    const unEnrichedFields = preEnrichedFieldKeys.filter((key) => {
+      if (!enrichedFieldKeys.includes(key)) {
+        return key;
+      }
+    });
+
+    let fieldsUnenrichedSuccessfully = true;
+
+    if (unEnrichedFields.length != 0) {
+      const unerichmentResponse = await fetch(`${apiUrl}/alerts/unenrich`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify({
+          fingerprint: alert?.fingerprint,
+          enrichments: unEnrichedFields,
+        }),
+      });
+      fieldsUnenrichedSuccessfully = unerichmentResponse.ok;
+    }
 
     const response = await fetch(`${apiUrl}/alerts/enrich`, {
       method: "POST",
@@ -122,30 +154,14 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
       body: JSON.stringify(requestData),
     });
 
-    if (response.ok) {
+    if (response.ok && fieldsUnenrichedSuccessfully) {
       toast.success("Alert enriched successfully");
-      mutate();
+      await mutate();
       handleClose();
     } else {
       toast.error("Failed to enrich alert");
     }
   };
-
-  const renderFormFields = () =>
-    editedFields.map((field) => (
-      <div key={field.key} className="mb-4 flex items-center gap-2">
-        <label htmlFor={field.key} className="mb-1 w-[20%] truncate">
-          {field.key}:
-        </label>
-        <TextInput
-          id={field.key}
-          name={field.key}
-          value={String(field.value || "")}
-          className="mt-1 w-full"
-          onChange={(e) => handleFieldChange(e.target.name, e.target.value)}
-        />
-      </div>
-    ));
 
   const renderCustomFields = () =>
     customFields.map((field, index) => (
@@ -161,7 +177,7 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
           placeholder="Field Value"
           value={field.value}
           onChange={(e) => updateCustomField(index, "value", e.target.value)}
-          className="w-1/3"
+          className="w-full"
         />
         <Button color="red" onClick={() => removeCustomField(index)}>
           ✕
@@ -170,43 +186,61 @@ const EnrichAlertModal: React.FC<EnrichAlertModalProps> = ({
     ));
 
   return (
-    <Modal
-      onClose={handleClose}
-      isOpen={isOpen}
-      className="overflow-auto !max-w-full w-[50%]"
-    >
-      <div className="flex justify-between items-center mb-4 min-w-full">
-        <h2 className="text-lg font-semibold">Enrich Alert</h2>
-        <div className="flex gap-x-2">
-          <Button
-            onClick={handleSave}
-            color="orange"
-            variant="primary"
-            disabled={Object.keys(finalData).length === 0} // Disable button if finalData is empty
-          >
-            Save
-          </Button>
-          <Button onClick={handleClose} color="orange" variant="secondary">
-            Close
-          </Button>
-        </div>
-      </div>
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog onClose={handleClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/30 z-20" aria-hidden="true" />
+        </Transition.Child>
+        <Transition.Child
+          as={Fragment}
+          enter="transition ease-in-out duration-300 transform"
+          enterFrom="translate-x-full"
+          enterTo="translate-x-0"
+          leave="transition ease-in-out duration-300 transform"
+          leaveFrom="translate-x-0"
+          leaveTo="translate-x-full"
+        >
+          <Dialog.Panel className="fixed right-0 inset-y-0 w-1/3 bg-white z-30 flex flex-col">
+            <div className="flex justify-between items-center min-w-full p-6">
+              <h2 className="text-lg font-semibold">Enrich Alert</h2>
+            </div>
 
-      <div>
-        <h3 className="text-md font-semibold mb-2">Custom Fields</h3>
-        {renderCustomFields()}
-        <Button onClick={addCustomField} className="mt-2 bg-orange-500">
-          + Add Field
-        </Button>
-      </div>
+            <div className="flex-1 overflow-auto pb-6 px-6 mt-2">
+              {renderCustomFields()}
+            </div>
 
-      <Divider />
-
-      <div>
-        <h3 className="text-md font-semibold mb-2">Alert Data</h3>
-        {alert ? renderFormFields() : <p>No data available.</p>}
-      </div>
-    </Modal>
+            <div className="sticky bottom-0 p-4 border-t border-gray-200 bg-white flex justify-end gap-2">
+              <Button
+                onClick={addCustomField}
+                className="bg-orange-500"
+                variant="primary"
+              >
+                + Add Field
+              </Button>
+              <Button
+                onClick={handleSave}
+                color="orange"
+                variant="primary"
+                disabled={!isDataValid}
+              >
+                Save
+              </Button>
+              <Button onClick={handleClose} color="orange" variant="secondary">
+                Close
+              </Button>
+            </div>
+          </Dialog.Panel>
+        </Transition.Child>
+      </Dialog>
+    </Transition>
   );
 };
 

@@ -9,7 +9,7 @@ import {
   UserPlusIcon,
   PlayIcon,
   EyeIcon,
-  SparklesIcon,
+  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
 
@@ -230,7 +230,7 @@ export default function AlertMenu({
               active ? "bg-slate-200" : "text-gray-900"
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
-            <SparklesIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            <AdjustmentsHorizontalIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             Enrich
           </button>
         )}
