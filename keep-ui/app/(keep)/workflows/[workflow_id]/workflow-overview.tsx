@@ -170,70 +170,75 @@ export default function WorkflowOverview({
           </Button>
         )}
       </div>
-      {!data || isLoading || (isValidating && <Loading />)}
-      {data?.items && (
-        <div className="mt-2 flex flex-col gap-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
-            <StatsCard data={`${data.count ?? 0}`}>
-              <Title>Total Executions</Title>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  {formatNumber(data.count ?? 0)}
-                </h1>
+      {!data || isLoading || isValidating ? (
+        <Loading />
+      ) : (
+        <>
+          {data?.items && (
+            <div className="mt-2 flex flex-col gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-0.5">
+                <StatsCard data={`${data.count ?? 0}`}>
+                  <Title>Total Executions</Title>
+                  <div>
+                    <h1 className="text-2xl font-bold">
+                      {formatNumber(data.count ?? 0)}
+                    </h1>
+                  </div>
+                </StatsCard>
+                <StatsCard data={`${data.passCount}/${data.failCount}`}>
+                  <Title>Pass / Fail ratio</Title>
+                  <div>
+                    <h1 className="text-2xl font-bold">
+                      {formatNumber(data.passCount)}
+                      {"/"}
+                      {formatNumber(data.failCount)}
+                    </h1>
+                  </div>
+                </StatsCard>
+                <StatsCard>
+                  <Title>Success %</Title>
+                  <div>
+                    <h1 className="text-2xl font-bold">
+                      {(data.count
+                        ? (data.passCount / data.count) * 100
+                        : 0
+                      ).toFixed(2)}
+                      {"%"}
+                    </h1>
+                  </div>
+                </StatsCard>
+                <StatsCard>
+                  <Title>Avg. duration</Title>
+                  <div>
+                    <h1 className="text-2xl font-bold">
+                      {(data.avgDuration ?? 0).toFixed(2)}
+                    </h1>
+                  </div>
+                </StatsCard>
+                <StatsCard>
+                  <Title>Involved Services</Title>
+                  <WorkflowSteps workflow={parsedWorkflowFile} />
+                </StatsCard>
               </div>
-            </StatsCard>
-            <StatsCard data={`${data.passCount}/${data.failCount}`}>
-              <Title>Pass / Fail ratio</Title>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  {formatNumber(data.passCount)}
-                  {"/"}
-                  {formatNumber(data.failCount)}
-                </h1>
-              </div>
-            </StatsCard>
-            <StatsCard>
-              <Title>Success %</Title>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  {(data.count
-                    ? (data.passCount / data.count) * 100
-                    : 0
-                  ).toFixed(2)}
-                  {"%"}
-                </h1>
-              </div>
-            </StatsCard>
-            <StatsCard>
-              <Title>Avg. duration</Title>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  {(data.avgDuration ?? 0).toFixed(2)}
-                </h1>
-              </div>
-            </StatsCard>
-            <StatsCard>
-              <Title>Involved Services</Title>
-              <WorkflowSteps workflow={parsedWorkflowFile} />
-            </StatsCard>
-          </div>
-          <WorkflowGraph
-            showLastExecutionStatus={false}
-            workflow={workflow}
-            limit={executionPagination.limit}
-            showAll={true}
-            size="sm"
-          />
-          <h1 className="text-xl font-bold mt-4">Execution History</h1>
-          <TableFilters workflowId={data.workflow.id} />
-          <ExecutionTable
-            executions={data}
-            setPagination={setExecutionPagination}
-          />
-        </div>
-      )}
-      {!!data?.workflow && !!getTriggerModalProps && (
-        <AlertTriggerModal {...getTriggerModalProps()} />
+              <WorkflowGraph
+                showLastExecutionStatus={false}
+                workflow={workflow}
+                limit={executionPagination.limit}
+                showAll={true}
+                size="sm"
+              />
+              <h1 className="text-xl font-bold mt-4">Execution History</h1>
+              <TableFilters workflowId={data.workflow.id} />
+              <ExecutionTable
+                executions={data}
+                setPagination={setExecutionPagination}
+              />
+            </div>
+          )}
+          {!!data?.workflow && !!getTriggerModalProps && (
+            <AlertTriggerModal {...getTriggerModalProps()} />
+          )}
+        </>
       )}
     </>
   );
