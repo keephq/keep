@@ -4565,7 +4565,7 @@ def get_activity_report(
 
 def get_last_alert_by_fingerprint(
     tenant_id: str, fingerprint: str, session: Optional[Session] = None
-) -> Optional[Alert]:
+) -> Optional[LastAlert]:
     with existed_or_new_session(session) as session:
         return session.exec(
             select(LastAlert)
