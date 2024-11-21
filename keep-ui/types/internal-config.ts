@@ -18,4 +18,5 @@ export interface InternalConfig {
   SENTRY_DISABLED: string;
   // READ ONLY
   READ_ONLY: boolean;
+  OPEN_AI_API_KEY_SET: boolean;
 }
