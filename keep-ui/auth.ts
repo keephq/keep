@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
+import { customFetch } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Keycloak from "next-auth/providers/keycloak";
 import Auth0 from "next-auth/providers/auth0";
@@ -7,6 +8,9 @@ import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
 import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
 import type { JWT } from "@auth/core/jwt";
+
+// see https://authjs.dev/guides/corporate-proxy
+import { ProxyAgent, fetch as undici } from "undici";
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
@@ -33,6 +37,22 @@ const authType =
     : authTypeEnv === NO_AUTH
     ? AuthType.NOAUTH
     : (authTypeEnv as AuthType);
+
+// Proxy configuration
+const proxyUrl =
+  process.env.HTTP_PROXY ||
+  process.env.HTTPS_PROXY ||
+  process.env.http_proxy ||
+  process.env.https_proxy;
+const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
+
+function proxyFetch(
+  ...args: Parameters<typeof fetch>
+): ReturnType<typeof fetch> {
+  if (!dispatcher) return fetch(...args);
+  // @ts-expect-error `undici` has a `duplex` option
+  return undici(args[0], { ...args[1], dispatcher });
+}
 
 async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
@@ -170,6 +190,8 @@ const providerConfigs = {
             .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
         },
       },
+      // see https://authjs.dev/guides/corporate-proxy
+      [customFetch]: proxyFetch,
     }),
   ],
 };
