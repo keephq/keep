@@ -29,12 +29,14 @@ def main():
     threads = []
     threads.append(launch_demo_mode_thread(keep_api_url))
     threads.append(launch_uptime_reporting_thread())
+
+    logger.info("Background server jobs threads launched, joining them.")
     
     for thread in threads:
         if thread is not None:
             thread.join()
 
-    logger.info("Background server jobs started.")
+    logger.info("Background server jobs script executed and exiting.")
 
 
 if __name__ == "__main__":

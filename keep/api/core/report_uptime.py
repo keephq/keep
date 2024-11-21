@@ -1,3 +1,4 @@
+import time
 import asyncio
 import logging
 import threading
@@ -18,13 +19,13 @@ async def report_uptime_to_posthog():
     Should be lunched in a separate thread.
     """
     while True:
-        start_time = asyncio.get_event_loop().time()
+        start_time = time.time()
         properties = {
             "status": "up",
             "keep_version": KEEP_VERSION,
             **get_activity_report(),
         }
-        end_time = asyncio.get_event_loop().time()
+        end_time = time.time()
         properties["db_request_duration_ms"] = int((end_time - start_time) * 1000)
         posthog_client.capture(
             get_or_creat_posthog_instance_id(),
