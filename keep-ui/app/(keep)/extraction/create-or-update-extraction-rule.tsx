@@ -93,6 +93,7 @@ export default function CreateOrUpdateExtractionRule({
       }),
     });
     if (response.ok) {
+      exitEditOrCreateMode();
       clearForm();
       mutate();
       toast.success("Extraction rule created successfully");
@@ -126,7 +127,7 @@ export default function CreateOrUpdateExtractionRule({
       }
     );
     if (response.ok) {
-      exitEditMode();
+      exitEditOrCreateMode();
       mutate();
       toast.success("Extraction updated successfully");
     } else {
@@ -136,7 +137,7 @@ export default function CreateOrUpdateExtractionRule({
     }
   };
 
-  const exitEditMode = async () => {
+  const exitEditOrCreateMode = async () => {
     editCallback(null);
     clearForm();
   };
@@ -301,19 +302,14 @@ export default function CreateOrUpdateExtractionRule({
         </div>
       </div>
       <div className={"space-x-1 flex flex-row justify-end items-center"}>
-        {/*If we are in the editMode we need an extra cancel button option for the user*/}
-        {editMode ? (
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            onClick={exitEditMode}
-          >
-            Cancel
-          </Button>
-        ) : (
-          <></>
-        )}
+        <Button
+          color="orange"
+          size="xs"
+          variant="secondary"
+          onClick={exitEditOrCreateMode}
+        >
+          Cancel
+        </Button>
         <Button
           disabled={!submitEnabled()}
           color="orange"
