@@ -29,6 +29,14 @@ def generate_incident_summary(
         )
         return ""
 
+    if "OPENAI_API_URL" not in os.environ:
+        logger.error(
+            "OpenAI API url is not set. You use OpenAi models.",
+            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                   "incident_id": incident.id, "tenant_id": incident.tenant_id}
+        )
+        return ""
+
     if not generate_summary:
         generate_summary = os.environ.get("GENERATE_INCIDENT_SUMMARY", "True")
 
@@ -148,6 +156,14 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
         )
         return ""
 
+    if "OPENAI_API_URL" not in os.environ:
+        logger.error(
+            "OpenAI API url is not set. You use OpenAi models.",
+            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
+                   "incident_id": incident.id, "tenant_id": incident.tenant_id}
+        )
+        return ""
+
     if not generate_name:
         generate_name = os.environ.get("GENERATE_INCIDENT_NAME", "True")
 
@@ -164,7 +180,10 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
             "MAX_NAME_LENGTH", MAX_NAME_LENGTH)
 
     try:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        client = OpenAI(
+            api_key=os.environ["OPENAI_API_KEY"],
+            base_url=os.environ["OPENAI_API_URL"]
+        )
 
         incident = get_incident_by_id(incident.tenant_id, incident.id)
 
