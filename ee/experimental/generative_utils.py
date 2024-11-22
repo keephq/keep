@@ -31,7 +31,7 @@ def generate_incident_summary(
 
     if "OPENAI_API_URL" not in os.environ:
         logger.error(
-            "OpenAI API url is not set. You use OpenAi models.",
+            "OpenAI API URL is not set. You use OpenAI models. But if you want use yourself LLM just add url to your LLM(vllm/ollama)",
             extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
                    "incident_id": incident.id, "tenant_id": incident.tenant_id}
         )
@@ -158,7 +158,7 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
     if "OPENAI_API_URL" not in os.environ:
         logger.error(
-            "OpenAI API url is not set. You use OpenAi models.",
+            "OpenAI API URL is not set. You use OpenAI models. But if you want use yourself LLM just add url to your LLM(vllm/ollama)",
             extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
                    "incident_id": incident.id, "tenant_id": incident.tenant_id}
         )
