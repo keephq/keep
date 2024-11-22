@@ -15,11 +15,12 @@ NAME_GENERATOR_VERBOSE_NAME = "Name generator v0.1"
 MAX_SUMMARY_LENGTH = 900
 MAX_NAME_LENGTH = 75
 
+
 def generate_incident_summary(
-    incident: Incident,
-    use_n_alerts_for_summary: int = -1,
-    generate_summary: str = None,
-    max_summary_length: int = None,
+        incident: Incident,
+        use_n_alerts_for_summary: int = -1,
+        generate_summary: str = None,
+        max_summary_length: int = None,
 ) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error(
@@ -31,7 +32,7 @@ def generate_incident_summary(
 
     if "OPENAI_API_URL" not in os.environ:
         logger.error(
-            "OpenAI API URL is not set. You use OpenAI models. But if you want use yourself LLM just add url to your LLM(vllm/ollama)",
+            "OpenAI API URL is not set. You use OpenAI models. But if you want use yourself LLM just add url to your LLM(vllm/ollama). Example http://IP:PORT/v1",
             extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
                    "incident_id": incident.id, "tenant_id": incident.tenant_id}
         )
@@ -42,7 +43,8 @@ def generate_incident_summary(
 
     if generate_summary == "False":
         logger.info(f"Incident summary generation is disabled. Aborting.",
-                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                           "tenant_id": incident.tenant_id})
         return ""
 
     if incident.user_summary:
@@ -53,7 +55,10 @@ def generate_incident_summary(
             "MAX_SUMMARY_LENGTH", MAX_SUMMARY_LENGTH)
 
     try:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        client = OpenAI(
+            api_key=os.environ["OPENAI_API_KEY"],
+            base_url=os.environ["OPENAI_API_URL"]
+        )
 
         incident = get_incident_by_id(incident.tenant_id, incident.id)
 
@@ -105,11 +110,13 @@ def generate_incident_summary(
         )
 
         logger.info(f"Generated incident summary with length {len(summary)} symbols",
-                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                    extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                           "tenant_id": incident.tenant_id})
 
         if len(summary) > max_summary_length:
             logger.info(f"Generated incident summary is too long. Applying smart truncation",
-                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                               "tenant_id": incident.tenant_id})
 
             summary = (
                 client.chat.completions.create(
@@ -133,21 +140,25 @@ def generate_incident_summary(
             )
 
             logger.info(f"Generated new incident summary with length {len(summary)} symbols",
-                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                        extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                               "tenant_id": incident.tenant_id})
 
             if len(summary) > max_summary_length:
                 logger.info(f"Generated incident summary is too long. Applying hard truncation",
-                            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                            extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                                   "tenant_id": incident.tenant_id})
                 summary = summary[: max_summary_length]
 
         return summary
     except Exception as e:
         logger.error(f"Error in generating incident summary: {e}",
-                     extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                     extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                            "tenant_id": incident.tenant_id})
         return ""
 
 
-def generate_incident_name(incident: Incident, generate_name: str = None, max_name_length: int = None, use_n_alerts_for_name: int = -1) -> str:
+def generate_incident_name(incident: Incident, generate_name: str = None, max_name_length: int = None,
+                           use_n_alerts_for_name: int = -1) -> str:
     if "OPENAI_API_KEY" not in os.environ:
         logger.error(
             "OpenAI API key is not set. Incident name generation is not available.",
@@ -158,7 +169,7 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
     if "OPENAI_API_URL" not in os.environ:
         logger.error(
-            "OpenAI API URL is not set. You use OpenAI models. But if you want use yourself LLM just add url to your LLM(vllm/ollama)",
+            "OpenAI API URL is not set. You use OpenAI models. But if you want use yourself LLM just add url to your LLM(vllm/ollama). Example http://IP:PORT/v1",
             extra={"algorithm": SUMMARY_GENERATOR_VERBOSE_NAME,
                    "incident_id": incident.id, "tenant_id": incident.tenant_id}
         )
@@ -169,7 +180,8 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
     if generate_name == "False":
         logger.info(f"Incident name generation is disabled. Aborting.",
-                    extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                    extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                           "tenant_id": incident.tenant_id})
         return ""
 
     if incident.user_generated_name:
@@ -224,7 +236,8 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
 
         if len(name) > max_name_length:
             logger.info(f"Generated incident name is too long. Applying smart truncation",
-                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                               "tenant_id": incident.tenant_id})
 
             name = client.chat.completions.create(model=model, messages=[
                 {
@@ -244,15 +257,18 @@ def generate_incident_name(incident: Incident, generate_name: str = None, max_na
             ]).choices[0].message.content
 
             logger.info(f"Generated new incident name with length {len(name)} symbols",
-                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                        extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                               "tenant_id": incident.tenant_id})
 
             if len(name) > max_name_length:
                 logger.info(f"Generated incident name is too long. Applying hard truncation",
-                            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                            extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                                   "tenant_id": incident.tenant_id})
                 name = name[: max_name_length]
 
         return name
     except Exception as e:
         logger.error(f"Error in generating incident name: {e}",
-                     extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id, "tenant_id": incident.tenant_id})
+                     extra={"algorithm": NAME_GENERATOR_VERBOSE_NAME, "incident_id": incident.id,
+                            "tenant_id": incident.tenant_id})
         return ""
