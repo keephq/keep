@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Preset } from "app/alerts/models";
+import { Preset } from "@/app/(keep)/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
 // Using dynamic import to avoid hydration issues with react-player
 import dynamic from "next/dynamic";
@@ -246,6 +246,7 @@ export const CustomPresetAlertLinks = ({
       </SortableContext>
       {/* React Player for playing alert sound */}
       <ReactPlayer
+        // TODO: cache the audio file fiercely
         url="/music/alert.mp3"
         playing={anyNoisyNow}
         volume={0.5}
@@ -253,6 +254,7 @@ export const CustomPresetAlertLinks = ({
         width="0"
         height="0"
         playsinline
+        className="absolute -z-10"
       />
     </DndContext>
   );

@@ -1,7 +1,7 @@
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "./useConfig";
 import { SWRConfiguration } from "swr";
-import { ProvidersResponse } from "app/providers/providers";
+import { ProvidersResponse } from "@/app/(keep)/providers/providers";
 import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 

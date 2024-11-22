@@ -1,5 +1,5 @@
-import { Group } from "app/settings/models";
-import { useSession } from "next-auth/react";
+import { Group } from "@/app/(keep)/settings/models";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
 import { useApiUrl } from "./useConfig";
