@@ -21,7 +21,6 @@ RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 COPY keep keep
 COPY ee keep/ee
 COPY examples examples
-COPY README.md README.md
 RUN poetry build && /venv/bin/pip install --use-deprecated=legacy-resolver dist/*.whl
 
 

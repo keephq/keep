@@ -15,7 +15,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import uuid4
 
-import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -3935,15 +3934,6 @@ def confirm_predicted_incident_by_id(
         session.refresh(incident)
 
         return incident
-
-
-def write_pmi_matrix_to_temp_file(
-    tenant_id: str, pmi_matrix: np.array, fingerprints: List, temp_dir: str
-) -> bool:
-    np.savez(
-        f"{temp_dir}/pmi_matrix.npz", pmi_matrix=pmi_matrix, fingerprints=fingerprints
-    )
-    return True
 
 
 def get_tenant_config(tenant_id: str) -> dict:

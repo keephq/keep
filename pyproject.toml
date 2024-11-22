@@ -3,7 +3,6 @@ name = "keep"
 version = "0.29.5"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
-readme = "README.md"
 packages = [{include = "keep"}]
 
 [tool.poetry.dependencies]
