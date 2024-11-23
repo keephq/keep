@@ -249,6 +249,7 @@ const config = {
         let tenantId: string | undefined = user.tenantId;
         let role: string | undefined = user.role;
         // Ensure we always have an accessToken
+        // https://github.com/nextauthjs/next-auth/discussions/4255
         if (authType === AuthType.AZUREAD) {
           // Properly handle Azure AD tokens
           accessToken = account.access_token;
