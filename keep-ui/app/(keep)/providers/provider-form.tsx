@@ -116,7 +116,7 @@ function getRequiredConfigs(config: Provider["config"]): Provider["config"] {
 function getOptionalConfigs(config: Provider["config"]): Provider["config"] {
   const configs = Object.entries(config).filter(
     ([_, config]) =>
-      config.required && !config.hidden && !config.config_main_group
+      !config.required && !config.hidden && !config.config_main_group
   );
   return getConfigsFromArr(configs);
 }
@@ -145,11 +145,10 @@ function getInitialFormValues(provider: Provider) {
     install_webhook: provider.can_setup_webhook ?? false,
     pulling_enabled: provider.pulling_enabled,
   };
-  if (!provider.installed) return initialValues;
 
   Object.assign(initialValues, {
-    provider_name: provider.details.name,
-    ...provider.details.authentication,
+    provider_name: provider.details?.name,
+    ...provider.details?.authentication,
   });
 
   // Set default values for select & switch inputs
