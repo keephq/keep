@@ -11,7 +11,7 @@ class HttpsUrl(HttpUrl):
 
     @staticmethod
     def get_default_parts(parts):
-        return {"port": "443"}
+        return {"scheme": "https", "port": "443"}
 
 
 class NoSchemeUrl(AnyUrl):

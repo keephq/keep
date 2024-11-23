@@ -30,9 +30,9 @@ class Auth0ProviderAuthConfig:
     )
 
     token: str = dataclasses.field(
-        default=None,
         metadata={
             "required": True,
+            "sensitive": True,
             "description": "Auth0 API Token",
             "hint": "https://manage.auth0.com/dashboard/us/YOUR_ACCOUNT/apis/management/explorer",
         },
@@ -56,11 +56,6 @@ class Auth0Provider(BaseProvider):
         """
         Validates required configuration for Auth0 provider.
         """
-        if self.is_installed or self.is_provisioned:
-            host = self.config.authentication["domain"]
-            host = "https://" + host if not host.startswith("https://") else host
-            self.config.authentication["domain"] = host
-
         self.authentication_config = Auth0ProviderAuthConfig(
             **self.config.authentication
         )
@@ -91,9 +86,9 @@ class Auth0Provider(BaseProvider):
             "per_page": 100,  # specify the number of entries per page
         }
         if from_:
-            params[
-                "q"
-            ] = f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now().isoformat()}])"
+            params["q"] = (
+                f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now().isoformat()}])"
+            )
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         logs = response.json()

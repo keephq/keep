@@ -153,11 +153,6 @@ class JiraProvider(BaseProvider):
         return scopes
 
     def validate_config(self):
-        if self.is_installed or self.is_provisioned:
-            host = self.config.authentication['host']
-            host = "https://" + host if not host.startswith("https://") else host
-            self.config.authentication['host'] = host
-
         self.authentication_config = JiraProviderAuthConfig(
             **self.config.authentication
         )
