@@ -48,6 +48,7 @@
     "eslint-scope": "^7.2.0",
     "eslint-utils": "^3.0.0",
     "eslint-visitor-keys": "^3.4.1",
+    "https-proxy-agent": "^7.0.5",
     "js-yaml": "^4.1.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.460.0",
