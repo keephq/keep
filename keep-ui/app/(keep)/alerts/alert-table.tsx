@@ -265,15 +265,20 @@ export function AlertTable({
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <TitleAndFilters
-        table={table}
-        alerts={alerts}
-        presetName={presetName}
-        onThemeChange={handleThemeChange}
-      />
-      <div className="min-h-10">
-        {/* Setting min-h-10 to avoid jumping when actions are shown */}
+    // Add h-screen to make it full height and remove the default flex-col gap
+    <div className="h-screen flex flex-col">
+      {/* Add padding to account for any top nav/header */}
+      <div className="pt-4 px-4 flex-none">
+        <TitleAndFilters
+          table={table}
+          alerts={alerts}
+          presetName={presetName}
+          onThemeChange={handleThemeChange}
+        />
+      </div>
+
+      {/* Make actions/presets section fixed height */}
+      <div className="h-12 px-4 flex-none">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
@@ -292,61 +297,77 @@ export function AlertTable({
           />
         )}
       </div>
-      <div className="flex gap-6">
-        <div className="w-32 min-w-[12rem]">
-          <AlertFacets
-            className="sticky top-0"
-            alerts={alerts}
-            facetFilters={facetFilters}
-            setFacetFilters={setFacetFilters}
-            dynamicFacets={dynamicFacets}
-            setDynamicFacets={setDynamicFacets}
-            onDelete={handleFacetDelete}
-            table={table}
-            showSkeleton={showSkeleton}
-          />
-        </div>
-        <div className="flex flex-col gap-4 min-w-0">
-          <Card className="flex-grow h-full flex flex-col p-0">
-            <div className="flex-grow">
-              {/* For dynamic preset, add alert tabs*/}
-              {!presetStatic && (
-                <AlertTabs
-                  presetId={presetId}
-                  tabs={tabs}
-                  setTabs={setTabs}
-                  selectedTab={selectedTab}
-                  setSelectedTab={setSelectedTab}
-                />
-              )}
-              <div ref={a11yContainerRef} className="sr-only" />
-              <Table className="[&>table]:table-fixed [&>table]:w-full">
-                <AlertsTableHeaders
-                  columns={columns}
-                  table={table}
-                  presetName={presetName}
-                  a11yContainerRef={a11yContainerRef}
-                />
-                <AlertsTableBody
-                  table={table}
-                  showSkeleton={showSkeleton}
-                  showEmptyState={showEmptyState}
-                  theme={theme}
-                  onRowClick={handleRowClick}
-                  presetName={presetName}
-                />
-              </Table>
-            </div>
-          </Card>
+
+      {/* Main content area - uses flex-grow to fill remaining space */}
+      <div className="flex-grow overflow-hidden px-4 pb-4">
+        <div className="h-full flex gap-6">
+          {/* Facets sidebar */}
+          <div className="w-32 min-w-[12rem] overflow-y-auto">
+            <AlertFacets
+              className="sticky top-0"
+              alerts={alerts}
+              facetFilters={facetFilters}
+              setFacetFilters={setFacetFilters}
+              dynamicFacets={dynamicFacets}
+              setDynamicFacets={setDynamicFacets}
+              onDelete={handleFacetDelete}
+              table={table}
+              showSkeleton={showSkeleton}
+            />
+          </div>
+
+          {/* Table section */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <Card className="h-full flex flex-col p-0">
+              <div className="flex-grow flex flex-col overflow-hidden">
+                {!presetStatic && (
+                  <div className="flex-none">
+                    <AlertTabs
+                      presetId={presetId}
+                      tabs={tabs}
+                      setTabs={setTabs}
+                      selectedTab={selectedTab}
+                      setSelectedTab={setSelectedTab}
+                    />
+                  </div>
+                )}
+
+                <div ref={a11yContainerRef} className="sr-only" />
+
+                {/* Make table wrapper scrollable */}
+                <div className="flex-grow overflow-auto">
+                  <Table className="[&>table]:table-fixed [&>table]:w-full">
+                    <AlertsTableHeaders
+                      columns={columns}
+                      table={table}
+                      presetName={presetName}
+                      a11yContainerRef={a11yContainerRef}
+                    />
+                    <AlertsTableBody
+                      table={table}
+                      showSkeleton={showSkeleton}
+                      showEmptyState={showEmptyState}
+                      theme={theme}
+                      onRowClick={handleRowClick}
+                      presetName={presetName}
+                    />
+                  </Table>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
-      <div className="mt-2 mb-8 pl-[14rem]">
+
+      {/* Pagination footer - fixed height */}
+      <div className="h-16 px-4 flex-none pl-[14rem]">
         <AlertPagination
           table={table}
           presetName={presetName}
           isRefreshAllowed={isRefreshAllowed}
         />
       </div>
+
       <AlertSidebar
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}

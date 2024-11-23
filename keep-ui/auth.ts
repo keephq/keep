@@ -8,9 +8,8 @@ import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
 import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
 import type { JWT } from "@auth/core/jwt";
-
-// see https://authjs.dev/guides/corporate-proxy
-import { ProxyAgent, fetch as undici } from "undici";
+// https://github.com/nextauthjs/next-auth/issues/11028
+import { initProxyFetch } from "./proxyFetch";
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
@@ -38,21 +37,60 @@ const authType =
     ? AuthType.NOAUTH
     : (authTypeEnv as AuthType);
 
-// Proxy configuration
 const proxyUrl =
   process.env.HTTP_PROXY ||
   process.env.HTTPS_PROXY ||
   process.env.http_proxy ||
   process.env.https_proxy;
-const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 
-function proxyFetch(
-  ...args: Parameters<typeof fetch>
-): ReturnType<typeof fetch> {
-  if (!dispatcher) return fetch(...args);
-  // @ts-expect-error `undici` has a `duplex` option
-  return undici(args[0], { ...args[1], dispatcher });
+// Helper function to dynamically import proxyFetch only when needed
+async function getProxyFetch() {
+  if (typeof window === "undefined" && !process.env.NEXT_RUNTIME) {
+    // Only import in Node.js environment, not Edge
+    try {
+      const { initProxyFetch } = await import("./proxyFetch");
+      return initProxyFetch();
+    } catch (e) {
+      console.warn("Failed to load proxy fetch:", e);
+      return null;
+    }
+  }
+  return null;
 }
+
+// Create Azure AD provider configuration
+const createAzureADProvider = () => {
+  const baseConfig = {
+    clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
+    clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
+    // The issuer is the URL of the identity provider
+    issuer: `https://login.microsoftonline.com/${process.env
+      .KEEP_AZUREAD_TENANT_ID!}/v2.0`,
+    authorization: {
+      params: {
+        scope: `api://${process.env
+          .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
+      },
+    },
+    client: {
+      token_endpoint_auth_method: "client_secret_post",
+    },
+  };
+
+  if (!proxyUrl) {
+    console.log("Using built-in fetch for Azure AD provider");
+    return MicrosoftEntraID(baseConfig);
+  }
+
+  console.log("Using proxy fetch for Azure AD provider");
+  return MicrosoftEntraID({
+    ...baseConfig,
+    async [customFetch](...args) {
+      const proxyFetch = await getProxyFetch();
+      return proxyFetch ? proxyFetch(...args) : fetch(...args);
+    },
+  });
+};
 
 async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
@@ -179,21 +217,7 @@ const providerConfigs = {
       authorization: { params: { scope: "openid email profile roles" } },
     }),
   ],
-  [AuthType.AZUREAD]: [
-    MicrosoftEntraID({
-      clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
-      clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
-      issuer: process.env.KEEP_AZUREAD_TENANT_ID!,
-      authorization: {
-        params: {
-          scope: `api://${process.env
-            .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
-        },
-      },
-      // see https://authjs.dev/guides/corporate-proxy
-      ...(proxyFetch && { [customFetch]: proxyFetch }),
-    }),
-  ],
+  [AuthType.AZUREAD]: [createAzureADProvider()],
 };
 
 // Create the config
@@ -225,7 +249,24 @@ const config = {
         let tenantId: string | undefined = user.tenantId;
         let role: string | undefined = user.role;
         // Ensure we always have an accessToken
-        if (authType == AuthType.AUTH0) {
+        if (authType === AuthType.AZUREAD) {
+          // Properly handle Azure AD tokens
+          accessToken = account.access_token;
+          // You might want to extract additional claims from the id_token if needed
+          if (account.id_token) {
+            try {
+              // Basic JWT decode (you might want to use a proper JWT library here)
+              const payload = JSON.parse(
+                Buffer.from(account.id_token.split(".")[1], "base64").toString()
+              );
+              // Extract any additional claims you need
+              role = payload.roles?.[0] || "user";
+              tenantId = payload.tid || undefined;
+            } catch (e) {
+              console.warn("Failed to decode id_token:", e);
+            }
+          }
+        } else if (authType == AuthType.AUTH0) {
           accessToken = account.id_token;
           if ((profile as any)?.keep_tenant_id) {
             tenantId = (profile as any).keep_tenant_id;
