@@ -164,6 +164,7 @@ if __name__ == "__main__":
             "password": os.environ.get("CLICKHOUSE_PASSWORD"),
             "host": os.environ.get("CLICKHOUSE_HOST"),
             "database": os.environ.get("CLICKHOUSE_DATABASE"),
+            "port": os.environ.get("CLICKHOUSE_PORT")
         }
     )
     context_manager = ContextManager(

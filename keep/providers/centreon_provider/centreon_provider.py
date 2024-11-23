@@ -148,7 +148,7 @@ class CentreonProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error("Error getting host status from Centreon: %s", e)
-            raise ProviderException(f"Error getting host status from Centreon: {e}")
+            raise ProviderException(f"Error getting host status from Centreon: {e}") from e
 
     def __get_service_status(self) -> list[AlertDto]:
         try:
@@ -181,7 +181,7 @@ class CentreonProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error("Error getting service status from Centreon: %s", e)
-            raise ProviderException(f"Error getting service status from Centreon: {e}")
+            raise ProviderException(f"Error getting service status from Centreon: {e}") from e
 
     def _get_alerts(self) -> list[AlertDto]:
         alerts = []

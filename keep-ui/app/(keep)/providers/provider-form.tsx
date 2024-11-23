@@ -100,19 +100,25 @@ function base64urlencode(a: ArrayBuffer) {
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+function getConfigsFromArr(arr: [string, ProviderAuthConfig][]) {
+  const configs: Provider["config"] = {};
+  arr.forEach(([key, value]) => (configs[key] = value));
+  return configs;
+}
+
 function getRequiredConfigs(config: Provider["config"]): Provider["config"] {
-  return Object.entries(config)
-    .filter(([_, config]) => config.required && !config.config_main_group)
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+  const configs = Object.entries(config).filter(
+    ([_, config]) => config.required && !config.config_main_group
+  );
+  return getConfigsFromArr(configs);
 }
 
 function getOptionalConfigs(config: Provider["config"]): Provider["config"] {
-  return Object.entries(config)
-    .filter(
-      ([_, config]) =>
-        !config.required && !config.hidden && !config.config_main_group
-    )
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+  const configs = Object.entries(config).filter(
+    ([_, config]) =>
+      config.required && !config.hidden && !config.config_main_group
+  );
+  return getConfigsFromArr(configs);
 }
 
 function getConfigGroup(type: "config_main_group" | "config_sub_group") {

@@ -313,7 +313,7 @@ class Parser:
 
     def _parse_providers_from_workflow(
         self, context_manager: ContextManager, workflow: dict
-    ):
+    ) -> None:
         context_manager.providers_context.update(workflow.get("providers"))
         self.logger.debug("Workflow providers parsed successfully")
 

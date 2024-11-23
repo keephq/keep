@@ -119,12 +119,17 @@ class IlertProvider(BaseProvider):
                         headers={
                             "Authorization": self.authentication_config.ilert_token
                         },
+                        timeout=10
                     )
                     res.raise_for_status()
                     data = res.json()
                     if data['role'] not in ["USER", "ADMIN"]:
-                        scopes[scope.name] = "User role & permisisions may be limited."
-                    scopes[scope.name] = True
+                        warning_msg = f"User role '{data['role']}' has limited permissions"
+                        self.logger.warning(warning_msg)
+                        scopes[scope.name] = warning_msg
+                    else:
+                        self.logger.debug(f"Write permission validated successfully for role: {data['role']}")
+                        scopes[scope.name] = True
             except Exception as e:
                 self.logger.warning(
                     "Failed to validate scope",

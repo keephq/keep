@@ -25,6 +25,7 @@ class SlackProviderAuthConfig:
             "required": True,
             "description": "Slack Webhook Url",
             "validation": "https_url",
+            "sensitive": True
         },
     )
     access_token: str = dataclasses.field(

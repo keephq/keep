@@ -23,7 +23,7 @@ class GitlabProviderAuthConfig:
             "required": True,
             "description": "GitLab Host",
             "sensitive": False,
-            "hint": "example.gitlab.com",
+            "hint": "http://example.gitlab.com",
             "validation": "any_http_url"
         }
     )

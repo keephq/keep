@@ -443,8 +443,9 @@ class KibanaProvider(BaseProvider):
     def validate_config(self):
         if self.is_installed or self.is_provisioned:
             host = self.config.authentication['kibana_host']
-            host = "https://" + host if not (host.startswith("http://") or host.startswith("https://")) else host
-            self.config.authentication['kibana_host'] = host
+            if not (host.startswith("http://") or host.startswith("https://")):
+                scheme = "http://" if "localhost" in host else "https://"
+                self.config.authentication['kibana_host'] = scheme + host
 
         self.authentication_config = KibanaProviderAuthConfig(
             **self.config.authentication

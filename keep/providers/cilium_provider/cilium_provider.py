@@ -11,19 +11,20 @@ from keep.providers.cilium_provider.grpc.observer_pb2 import (FlowFilter,
                                                               GetFlowsRequest)
 from keep.providers.cilium_provider.grpc.observer_pb2_grpc import ObserverStub
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import NoSchemeUrl
 
 
 @pydantic.dataclasses.dataclass
 class CiliumProviderAuthConfig:
     """Cilium authentication configuration."""
 
-    cilium_base_endpoint: str = dataclasses.field(
+    cilium_base_endpoint: NoSchemeUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "The base endpoint of the cilium hubble relay",
             "sensitive": False,
-            "hint": "http://localhost:4245",
-            "validation": "any_http_url"
+            "hint": "localhost:4245",
+            "validation": "no_scheme_url"
         }
     )
 

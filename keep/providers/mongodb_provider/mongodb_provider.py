@@ -140,11 +140,10 @@ class MongodbProvider(BaseProvider):
         host = self.config.authentication["host"]
         if host is None:
             raise ProviderConfigException("Please provide a value for `host`")
-        host = (
-            "mongodb://" + host
-            if not (host.startswith("mongodb://") or host.startwith("mongodb+srv://"))
-            else host
-        )
+        if not host.strip():
+            raise ProviderConfigException("Host cannot be empty")
+        if not (host.startswith("mongodb://") or host.startswith("mongodb+srv://")):
+            host = f"mongodb://{host}"
 
         self.authentication_config = MongodbProviderAuthConfig(
             **self.config.authentication
