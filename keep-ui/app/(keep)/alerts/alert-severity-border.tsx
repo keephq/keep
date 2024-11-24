@@ -1,27 +1,27 @@
 import clsx from "clsx";
 import { Severity } from "./models";
 
+const getSeverityBgClassName = (severity?: Severity) => {
+  switch (severity) {
+    case "critical":
+      return "bg-red-500";
+    case "high":
+    case "error":
+      return "bg-orange-500";
+    case "warning":
+      return "bg-yellow-500";
+    case "info":
+      return "bg-blue-500";
+    default:
+      return "bg-emerald-500";
+  }
+};
+
 export function AlertSeverityBorder({
   severity,
 }: {
   severity: Severity | undefined;
 }) {
-  const getSeverityBgClassName = (severity?: Severity) => {
-    switch (severity) {
-      case "critical":
-        return "bg-red-500";
-      case "high":
-      case "error":
-        return "bg-orange-500";
-      case "warning":
-        return "bg-yellow-500";
-      case "info":
-        return "bg-blue-500";
-      default:
-        return "bg-emerald-500";
-    }
-  };
-
   return (
     <div
       className={clsx(
@@ -29,6 +29,14 @@ export function AlertSeverityBorder({
         getSeverityBgClassName(severity)
       )}
       aria-label={severity}
+    />
+  );
+}
+
+export function AlertSeverityBorderIcon({ severity }: { severity: Severity }) {
+  return (
+    <div
+      className={clsx("w-1 h-4 rounded-lg", getSeverityBgClassName(severity))}
     />
   );
 }
