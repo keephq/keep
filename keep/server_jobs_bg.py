@@ -15,6 +15,7 @@ def main():
     # We intentionally don't use KEEP_API_URL here to avoid going through the internet.
     # Script should be launched in the same environment as the server.
     keep_api_url = "http://localhost:" + str(os.environ.get("PORT", 8080))
+    keep_api_key = os.environ.get("KEEP_LIVE_DEMO_MODE_API_KEY")
 
     while True:
         try:
@@ -27,7 +28,7 @@ def main():
             time.sleep(5)
 
     threads = []
-    threads.append(launch_demo_mode_thread(keep_api_url))
+    threads.append(launch_demo_mode_thread(keep_api_url, keep_api_key))
     threads.append(launch_uptime_reporting_thread())
 
     logger.info("Background server jobs threads launched, joining them.")
