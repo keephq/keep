@@ -22,6 +22,7 @@ import {
   MdOutlineNotificationsOff,
 } from "react-icons/md";
 import { AlertSeverityBorder } from "./alert-severity-border";
+import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -272,6 +273,17 @@ export const useAlertTableCols = (
       id: "status",
       minSize: 100,
       header: "Status",
+      cell: (context) => (
+        <span className="flex items-center gap-1 capitalize">
+          <Icon
+            icon={getStatusIcon(context.getValue())}
+            size="sm"
+            color={getStatusColor(context.getValue())}
+            className="!p-0"
+          />
+          {context.getValue()}
+        </span>
+      ),
     }),
     columnHelper.accessor("lastReceived", {
       id: "lastReceived",
