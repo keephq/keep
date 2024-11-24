@@ -63,8 +63,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
 
   // TODO: fix multiple pinned columns
@@ -82,8 +82,11 @@ const DraggableHeaderCell = ({
     >
       <div className="flex items-center" {...listeners}>
         {/* Flex container */}
+        {children} {/* Column name or text */}
         {column.getCanSort() && ( // Sorting icon to the left
           <>
+            {/* Custom styled vertical line separator */}
+            <div className="w-px h-5 mx-2 bg-gray-400"></div>
             <span
               className="cursor-pointer" // Ensures clickability of the icon
               onClick={(event) => {
@@ -96,8 +99,8 @@ const DraggableHeaderCell = ({
                 column.getNextSortingOrder() === "asc"
                   ? "Sort ascending"
                   : column.getNextSortingOrder() === "desc"
-                  ? "Sort descending"
-                  : "Clear sort"
+                    ? "Sort descending"
+                    : "Clear sort"
               }
             >
               {/* Icon logic */}
@@ -111,11 +114,8 @@ const DraggableHeaderCell = ({
                 <FaArrowRight />
               )}
             </span>
-            {/* Custom styled vertical line separator */}
-            <div className="w-px h-5 mx-2 bg-gray-400"></div>
           </>
         )}
-        {children} {/* Column name or text */}
       </div>
 
       {column.getIsPinned() === false && (

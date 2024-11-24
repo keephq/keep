@@ -1,5 +1,5 @@
 import React from "react";
-import { Subtitle, Button } from "@tremor/react";
+import { Subtitle, Button, Card, Title } from "@tremor/react";
 import { Chrono } from "react-chrono";
 import Image from "next/image";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
@@ -71,9 +71,9 @@ const AlertTimeline: React.FC<AlertTimelineProps> = ({
   ));
 
   return (
-    <div className="max-h-[500px] overflow-y-auto">
+    <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <Subtitle>Timeline</Subtitle>
+        <Title>Timeline</Title>
         <Button
           icon={ArrowPathIcon}
           color="orange"
@@ -84,48 +84,50 @@ const AlertTimeline: React.FC<AlertTimelineProps> = ({
           title="Refresh"
         />
       </div>
-      {isLoading ? (
-        <div className="flex justify-center items-center h-full">
-          <p>Loading...</p>
-        </div>
-      ) : (
-        <div className="flex-grow">
-          <Chrono
-            items={
-              auditContent.map((entry) => ({
-                title: formatTimestamp(entry.timestamp),
-              })) || []
-            }
-            hideControls
-            disableToolbar
-            borderLessCards
-            slideShow={false}
-            mode="VERTICAL"
-            theme={{
-              primary: "orange",
-              secondary: "rgb(255 247 237)",
-              titleColor: "orange",
-              titleColorActive: "orange",
-            }}
-            fontSizes={{
-              title: ".75rem",
-            }}
-            cardWidth={400}
-            cardHeight="auto"
-            classNames={{
-              card: "hidden",
-              cardMedia: "hidden",
-              cardSubTitle: "hidden",
-              cardText: "hidden",
-              cardTitle: "hidden",
-              title: "mb-3",
-              contentDetails: "w-full !m-0",
-            }}
-          >
-            {content}
-          </Chrono>
-        </div>
-      )}
+      <Card className="max-h-[500px] overflow-y-auto p-0">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-full">
+            <p>Loading...</p>
+          </div>
+        ) : (
+          <div className="flex-grow">
+            <Chrono
+              items={
+                auditContent.map((entry) => ({
+                  title: formatTimestamp(entry.timestamp),
+                })) || []
+              }
+              hideControls
+              disableToolbar
+              borderLessCards
+              slideShow={false}
+              mode="VERTICAL"
+              theme={{
+                primary: "orange",
+                secondary: "rgb(255 247 237)",
+                titleColor: "orange",
+                titleColorActive: "orange",
+              }}
+              fontSizes={{
+                title: ".75rem",
+              }}
+              cardWidth={400}
+              cardHeight="auto"
+              classNames={{
+                card: "hidden",
+                cardMedia: "hidden",
+                cardSubTitle: "hidden",
+                cardText: "hidden",
+                cardTitle: "hidden",
+                title: "mb-3",
+                contentDetails: "w-full !m-0",
+              }}
+            >
+              {content}
+            </Chrono>
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
