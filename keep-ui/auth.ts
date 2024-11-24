@@ -9,7 +9,6 @@ import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
 import type { JWT } from "@auth/core/jwt";
 // https://github.com/nextauthjs/next-auth/issues/11028
-import { initProxyFetch } from "./proxyFetch";
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
@@ -43,23 +42,21 @@ const proxyUrl =
   process.env.http_proxy ||
   process.env.https_proxy;
 
-// Helper function to dynamically import proxyFetch only when needed
-async function getProxyFetch() {
-  if (typeof window === "undefined" && !process.env.NEXT_RUNTIME) {
-    // Only import in Node.js environment, not Edge
-    try {
-      const { initProxyFetch } = await import("./proxyFetch");
-      return initProxyFetch();
-    } catch (e) {
-      console.warn("Failed to load proxy fetch:", e);
-      return null;
-    }
-  }
-  return null;
+import { ProxyAgent, fetch as undici } from "undici";
+function proxy(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
+  const dispatcher = new ProxyAgent(proxyUrl!);
+  // @ts-expect-error `undici` has a `duplex` option
+  return undici(args[0], { ...args[1], dispatcher });
 }
 
 // Create Azure AD provider configuration
 const createAzureADProvider = () => {
+  // check if proxy is enabled
+  if (!proxyUrl) {
+    console.log("Proxy is not enabled");
+  } else {
+    console.log("Proxy is enabled - ", proxyUrl);
+  }
   const baseConfig = {
     clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
     clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
@@ -72,24 +69,13 @@ const createAzureADProvider = () => {
           .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
       },
     },
+    [customFetch]: proxyUrl ? proxy : undefined,
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
   };
 
-  if (!proxyUrl) {
-    console.log("Using built-in fetch for Azure AD provider");
-    return MicrosoftEntraID(baseConfig);
-  }
-
-  console.log("Using proxy fetch for Azure AD provider");
-  return MicrosoftEntraID({
-    ...baseConfig,
-    async [customFetch](...args) {
-      const proxyFetch = await getProxyFetch();
-      return proxyFetch ? proxyFetch(...args) : fetch(...args);
-    },
-  });
+  return MicrosoftEntraID(baseConfig);
 };
 
 async function refreshAccessToken(token: any) {
