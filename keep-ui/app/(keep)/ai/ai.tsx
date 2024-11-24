@@ -17,7 +17,7 @@ export default function Ai() {
   const [animate, setAnimate] = useState(false);
   const onlyOnce = useRef(false);
   const apiUrl = useApiUrl();
-  const configData = useConfig();
+  const { data: configData} = useConfig();
 
   const mutateAILogs = (logs: AILogs) => {
     setBasicAlgorithmLog(logs.log);
