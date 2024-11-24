@@ -57,7 +57,7 @@ class SumologicProvider(BaseProvider):
     """Install Webhooks and receive alerts from SumoLogic."""
 
     PROVIDER_DISPLAY_NAME = "SumoLogic"
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",

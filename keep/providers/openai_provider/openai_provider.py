@@ -29,6 +29,7 @@ class OpenaiProviderAuthConfig:
 
 class OpenaiProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "OpenAI"
+    PROVIDER_CATEGORY = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

@@ -29,6 +29,7 @@ class AppdynamicsProviderAuthConfig:
     """
     AppDynamics authentication configuration.
     """
+
     appDynamicsAccountName: str = dataclasses.field(
         metadata={
             "required": True,
@@ -87,10 +88,12 @@ class AppdynamicsProviderAuthConfig:
         username, password, token = (
             values.get("appDynamicsUsername"),
             values.get("appDynamicsPassword"),
-            values.get("appDynamicsAccessToken")
+            values.get("appDynamicsAccessToken"),
         )
         if not (username and password) and not token:
-            raise ValueError("Either username/password or access token must be provided")
+            raise ValueError(
+                "Either username/password or access token must be provided"
+            )
         return values
 
 
@@ -98,7 +101,7 @@ class AppdynamicsProvider(BaseProvider):
     """Install Webhooks and receive alerts from AppDynamics."""
 
     PROVIDER_DISPLAY_NAME = "AppDynamics"
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
@@ -196,7 +199,9 @@ class AppdynamicsProvider(BaseProvider):
         administrator = "Missing Administrator Privileges"
         self.logger.info("Validating AppDynamics Scopes")
 
-        user_id = self.get_user_id_by_name(self.authentication_config.appDynamicsAccountName)
+        user_id = self.get_user_id_by_name(
+            self.authentication_config.appDynamicsAccountName
+        )
 
         url = self.__get_url(
             paths=[
@@ -237,12 +242,14 @@ class AppdynamicsProvider(BaseProvider):
             }
 
     def __get_auth(self) -> tuple[str, str]:
-        if self.authentication_config.appDynamicsUsername and self.authentication_config.appDynamicsPassword:
+        if (
+            self.authentication_config.appDynamicsUsername
+            and self.authentication_config.appDynamicsPassword
+        ):
             return (
                 f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
                 self.authentication_config.appDynamicsPassword,
             )
-
 
     def __create_http_response_template(self, keep_api_url: str, api_key: str):
         keep_api_host, keep_api_path = keep_api_url.rsplit("/", 1)

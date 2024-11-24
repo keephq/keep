@@ -2,7 +2,7 @@ import { createContext, useState, FC, PropsWithChildren } from "react";
 import { IFilterContext } from "./types";
 import { useSearchParams } from "next/navigation";
 import { PROVIDER_LABELS_KEYS } from "./constants";
-import type { TProviderLabels } from "../providers";
+import type { TProviderCategory, TProviderLabels } from "../providers";
 
 export const FilterContext = createContext<IFilterContext | null>(null);
 
@@ -11,6 +11,9 @@ export const FilerContextProvider: FC<PropsWithChildren> = ({ children }) => {
 
   const [providersSearchString, setProvidersSearchString] =
     useState<string>("");
+
+  const [providersSelectedCategories, setProvidersSelectedCategories] =
+    useState<TProviderCategory[]>([]);
 
   const [providersSelectedTags, setProvidersSelectedTags] = useState<
     TProviderLabels[]
@@ -26,8 +29,10 @@ export const FilerContextProvider: FC<PropsWithChildren> = ({ children }) => {
   const contextValue: IFilterContext = {
     providersSearchString,
     providersSelectedTags,
+    providersSelectedCategories,
     setProvidersSelectedTags,
     setProvidersSearchString,
+    setProvidersSelectedCategories,
   };
 
   return (

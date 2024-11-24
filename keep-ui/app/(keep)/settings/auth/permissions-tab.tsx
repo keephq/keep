@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Title, Subtitle, Card, TextInput } from "@tremor/react";
 import { usePermissions } from "utils/hooks/usePermissions";
-import { useUsers } from "utils/hooks/useUsers";
+import { useUsers } from "@/entities/users/model/useUsers";
 import { useGroups } from "utils/hooks/useGroups";
 import { useRoles } from "utils/hooks/useRoles";
 import { usePresets } from "utils/hooks/usePresets";

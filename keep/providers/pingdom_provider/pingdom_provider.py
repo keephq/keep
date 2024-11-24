@@ -34,7 +34,7 @@ class PingdomProvider(BaseProvider):
     4. Click Save Integration.
 """
     webhook_template = """"""
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="read",

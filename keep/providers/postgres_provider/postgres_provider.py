@@ -41,6 +41,7 @@ class PostgresProvider(BaseProvider):
     """Enrich alerts with data from Postgres."""
 
     PROVIDER_DISPLAY_NAME = "PostgreSQL"
+    PROVIDER_CATEGORY = ["Database"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connect_to_server",
@@ -104,11 +105,7 @@ class PostgresProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(
-            self,
-            query: str,
-            **kwargs: dict
-            ) -> list | tuple:
+    def _query(self, query: str, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the Postgres database.
 
@@ -135,11 +132,7 @@ class PostgresProvider(BaseProvider):
             # Close the database connection
             conn.close()
 
-    def _notify(
-            self,
-            query: str,
-            **kwargs
-            ):
+    def _notify(self, query: str, **kwargs):
         """
         Notifies the Postgres database.
         """

@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import {
   Card,
+  Icon,
   Table,
   TableBody,
   TableCell,
@@ -33,6 +34,9 @@ import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils
 import { EmptyStateCard } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { TablePagination } from "@/shared/ui";
+import { AlertSeverityBorder } from "@/app/(keep)/alerts/alert-severity-border";
+import { getStatusIcon } from "@/shared/lib/status-utils";
+import { getStatusColor } from "@/shared/lib/status-utils";
 
 interface Props {
   incident: IncidentDto;
@@ -110,11 +114,17 @@ export default function IncidentAlerts({ incident }: Props) {
       //     />
       //   ),
       // }),
-      columnHelper.accessor("severity", {
+      columnHelper.display({
         id: "severity",
-        header: "Severity",
-        minSize: 80,
-        cell: (context) => <AlertSeverity severity={context.getValue()} />,
+        maxSize: 4,
+        header: () => <></>,
+        cell: (context) => (
+          <AlertSeverityBorder severity={context.row.original.severity} />
+        ),
+        meta: {
+          tdClassName: "p-0",
+          thClassName: "p-0",
+        },
       }),
       columnHelper.display({
         id: "name",
@@ -140,17 +150,28 @@ export default function IncidentAlerts({ incident }: Props) {
         id: "status",
         minSize: 100,
         header: "Status",
+        cell: (context) => (
+          <span className="flex items-center gap-1 capitalize">
+            <Icon
+              icon={getStatusIcon(context.getValue())}
+              size="sm"
+              color={getStatusColor(context.getValue())}
+              className="!p-0"
+            />
+            {context.getValue()}
+          </span>
+        ),
       }),
       columnHelper.accessor("is_created_by_ai", {
         id: "is_created_by_ai",
-        header: "🔗",
+        header: "🔗 Correlation type",
         minSize: 50,
         cell: (context) => (
           <>
             {context.getValue() ? (
-              <div title="Correlated with AI">🤖</div>
+              <div title="Correlated with AI">🤖 AI</div>
             ) : (
-              <div title="Correlated manually">👨‍💻</div>
+              <div title="Correlated manually">👨‍💻 Manually</div>
             )}
           </>
         ),
@@ -182,7 +203,7 @@ export default function IncidentAlerts({ incident }: Props) {
       }),
       columnHelper.display({
         id: "remove",
-        header: "",
+        header: "Correlation",
         cell: (context) =>
           incident.is_confirmed && (
             <IncidentAlertMenu

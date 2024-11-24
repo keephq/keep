@@ -51,6 +51,21 @@ interface AlertDistritbuionData {
   number: number;
 }
 
+export type TProviderCategory =
+  | "Monitoring"
+  | "Incident Management"
+  | "Cloud Infrastructure"
+  | "Ticketing"
+  | "Developer Tools"
+  | "Database"
+  | "Identity and Access Management"
+  | "Security"
+  | "Collaboration"
+  | "CRM"
+  | "Queues"
+  | "Coming Soon"
+  | "Others";
+
 export type TProviderLabels =
   | "alert"
   | "incident"
@@ -81,7 +96,6 @@ export interface Provider {
   id: string;
   // the name of the provider
   display_name: string;
-  comingSoon?: boolean;
   can_query: boolean;
   query_params?: string[];
   can_notify: boolean;
@@ -101,6 +115,8 @@ export interface Provider {
   alertsDistribution?: AlertDistritbuionData[];
   alertExample?: { [key: string]: string };
   provisioned?: boolean;
+  categories: TProviderCategory[];
+  coming_soon: boolean;
 }
 
 export type Providers = Provider[];
@@ -119,4 +135,6 @@ export const defaultProvider: Provider = {
   tags: [],
   validatedScopes: {},
   pulling_enabled: true,
+  categories: ["Others"],
+  coming_soon: false,
 };

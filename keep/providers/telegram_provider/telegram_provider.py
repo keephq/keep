@@ -31,6 +31,7 @@ class TelegramProvider(BaseProvider):
     """Send alert message to Telegram."""
 
     PROVIDER_DISPLAY_NAME = "Telegram"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
