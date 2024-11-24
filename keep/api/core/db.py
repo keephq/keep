@@ -2616,7 +2616,7 @@ def get_presets(
     return presets
 
 
-def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
+def get_db_preset_by_name(tenant_id: str, preset_name: str) -> Preset | None:
     with Session(engine) as session:
         preset = session.exec(
             select(Preset)
@@ -2625,7 +2625,7 @@ def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
         ).first()
     return preset
 
-def get_all_presets(tenant_id: str) -> List[Preset]:
+def get_db_presets(tenant_id: str) -> List[Preset]:
     with Session(engine) as session:
         presets = (
             session.exec(select(Preset).where(Preset.tenant_id == tenant_id))
@@ -2634,9 +2634,8 @@ def get_all_presets(tenant_id: str) -> List[Preset]:
         )
     return presets
 
-# 
-def get_db_and_static_presets_dtos(tenant_id: str) -> List[PresetDto]:
-    presets = get_all_presets(tenant_id)
+def get_all_presets_dtos(tenant_id: str) -> List[PresetDto]:
+    presets = get_db_presets(tenant_id)
     static_presets_dtos = list(STATIC_PRESETS.values())
     return [PresetDto(**preset.to_dict()) for preset in presets] + static_presets_dtos
 

@@ -20,8 +20,8 @@ from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     get_alerts_by_fingerprint,
-    get_all_presets,
-    get_db_and_static_presets_dtos,
+    get_db_presets,
+    get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
 )
@@ -444,7 +444,7 @@ def __handle_formatted_events(
         return
     
     try:
-        presets = get_db_and_static_presets_dtos(tenant_id)
+        presets = get_all_presets_dtos(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
         presets_do_update = []
         for preset_dto in presets:
