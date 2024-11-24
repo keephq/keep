@@ -52,10 +52,6 @@ export const FacetValue: React.FC<FacetValueProps> = ({
     [incidentMap, facetKey, label]
   );
 
-  if (facetKey === "incident") {
-    console.log(label, incident, incidentMap, incidents?.items);
-  }
-
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelect(label, false, false);
