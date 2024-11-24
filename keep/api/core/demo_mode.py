@@ -423,21 +423,22 @@ def simulate_alerts(
         time.sleep(sleep_interval)
 
 
-def launch_demo_mode_thread(keep_api_url=None) -> threading.Thread | None:
+def launch_demo_mode_thread(keep_api_url=None, keep_api_key=None) -> threading.Thread | None:
     if not KEEP_LIVE_DEMO_MODE:
         logger.info("Not launching the demo mode.")
         return
     
     logger.info("Launching demo mode.")
 
-    with get_session_sync() as session:
-        keep_api_key = get_or_create_api_key(
-            session=session,
-            tenant_id=SINGLE_TENANT_UUID,
-            created_by="system",
-            unique_api_key_id="simulate_alerts",
-            system_description="Simulate Alerts API key",
-        )
+    if keep_api_key is None:
+        with get_session_sync() as session:
+            keep_api_key = get_or_create_api_key(
+                session=session,
+                tenant_id=SINGLE_TENANT_UUID,
+                created_by="system",
+                unique_api_key_id="simulate_alerts",
+                system_description="Simulate Alerts API key",
+            )
 
     sleep_interval = 5
 
