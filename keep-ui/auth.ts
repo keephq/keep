@@ -4,10 +4,10 @@ import { customFetch } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Keycloak from "next-auth/providers/keycloak";
 import Auth0 from "next-auth/providers/auth0";
-import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
-import type { JWT } from "@auth/core/jwt";
+import type { JWT } from "next-auth/jwt";
 // https://github.com/nextauthjs/next-auth/issues/11028
 
 export class BackendRefusedError extends AuthError {
