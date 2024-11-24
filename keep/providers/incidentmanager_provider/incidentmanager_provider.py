@@ -61,6 +61,8 @@ class IncidentmanagerProviderAuthConfig:
 class IncidentmanagerProvider(BaseProvider):
     """Push incidents from AWS IncidentManager to Keep."""
 
+    PROVIDER_CATEGORY = ["Incident Management"]
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="ssm-incidents:ListIncidentRecords",
