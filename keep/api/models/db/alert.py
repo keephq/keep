@@ -82,7 +82,7 @@ class LastAlert(SQLModel, table=True):
 
 
 class LastAlertToIncident(SQLModel, table=True):
-    tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     fingerprint: str = Field(foreign_key="lastalert.fingerprint", primary_key=True)
