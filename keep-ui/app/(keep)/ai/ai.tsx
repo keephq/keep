@@ -2,10 +2,11 @@
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
 import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { AILogs } from "./model";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 export default function Ai() {
   const { data: aistats, isLoading } = useAIStats();
@@ -16,6 +17,7 @@ export default function Ai() {
   const [animate, setAnimate] = useState(false);
   const onlyOnce = useRef(false);
   const apiUrl = useApiUrl();
+  const configData = useConfig();
 
   const mutateAILogs = (logs: AILogs) => {
     setBasicAlgorithmLog(logs.log);
@@ -52,8 +54,8 @@ export default function Ai() {
       body: JSON.stringify({}),
     });
     if (!response.ok) {
-      toast.error(
-        "Failed to mine incidents, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to mine incidents, please contact us if this issue persists.", configData
       );
     }
 

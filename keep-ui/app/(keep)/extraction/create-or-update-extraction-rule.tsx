@@ -16,11 +16,12 @@ import {
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { ExtractionRule } from "./model";
 import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;
@@ -32,6 +33,7 @@ export default function CreateOrUpdateExtractionRule({
   editCallback,
 }: Props) {
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
   const { mutate } = useExtractions();
   const [extractionName, setExtractionName] = useState<string>("");
   const [isPreFormatting, setIsPreFormatting] = useState<boolean>(false);
@@ -97,8 +99,8 @@ export default function CreateOrUpdateExtractionRule({
       mutate();
       toast.success("Extraction rule created successfully");
     } else {
-      toast.error(
-        "Failed to create extraction rule, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to create extraction rule, please contact us if this issue persists.", configData
       );
     }
   };
@@ -130,8 +132,8 @@ export default function CreateOrUpdateExtractionRule({
       mutate();
       toast.success("Extraction updated successfully");
     } else {
-      toast.error(
-        "Failed to update extraction, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to update extraction, please contact us if this issue persists.", configData
       );
     }
   };

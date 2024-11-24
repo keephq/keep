@@ -5,7 +5,7 @@ import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import {
   useIncidents,
   usePollIncidents,
@@ -13,6 +13,7 @@ import {
 import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "./models";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ const AlertAssociateIncidentModal = ({
   alerts,
 }: AlertAssociateIncidentModalProps) => {
   const [createIncident, setCreateIncident] = useState(false);
+  const { data: configData} = useConfig();
 
   const { data: incidents, isLoading, mutate } = useIncidents(true, 100);
   usePollIncidents(mutate);
@@ -54,8 +56,8 @@ const AlertAssociateIncidentModal = ({
         await mutate();
         toast.success("Alerts associated with incident successfully");
       } else {
-        toast.error(
-          "Failed to associated alerts with incident, please contact us if this issue persists."
+        ReadOnlyAwareToaster.error(
+          "Failed to associated alerts with incident, please contact us if this issue persists.", configData
         );
       }
     },

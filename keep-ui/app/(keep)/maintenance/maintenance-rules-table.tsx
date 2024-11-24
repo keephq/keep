@@ -19,11 +19,12 @@ import {
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { MaintenanceRule } from "./model";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 const columnHelper = createColumnHelper<MaintenanceRule>();
 
@@ -37,6 +38,7 @@ export default function MaintenanceRulesTable({
   editCallback,
 }: Props) {
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
   const apiUrl = useApiUrl();
 
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -133,8 +135,9 @@ export default function MaintenanceRulesTable({
         if (response.ok) {
           toast.success("Maintenance rule deleted successfully");
         } else {
-          toast.error(
-            "Failed to delete maintenance rule, contact us if this persists"
+          ReadOnlyAwareToaster.error(
+            "Failed to delete maintenance rule, contact us if this persists",
+            configData
           );
         }
       });

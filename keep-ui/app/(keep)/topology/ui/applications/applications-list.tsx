@@ -14,6 +14,8 @@ import {
   useTopologySearchContext,
 } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 type ModalState = {
   isOpen: boolean;
@@ -32,6 +34,7 @@ export function ApplicationsList({
 }: {
   applications?: TopologyApplication[];
 }) {
+  const { data: configData } = useConfig();
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications({
       initialData: initialApplications,
@@ -66,7 +69,7 @@ export function ApplicationsList({
       updateApplication(updatedApplication).then(
         () => {},
         (error) => {
-          toast.error("Failed to update application");
+          ReadOnlyAwareToaster.error("Failed to update application", configData);
         }
       );
     },
@@ -79,7 +82,7 @@ export function ApplicationsList({
         removeApplication(applicationId);
         setModalState(initialModalState);
       } catch (error) {
-        toast.error("Failed to delete application");
+        ReadOnlyAwareToaster.error("Failed to delete application", configData);
       }
     },
     [removeApplication]

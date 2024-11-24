@@ -4,11 +4,12 @@ import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { IncidentDto } from "@/entities/incidents/model";
 import { AlertDto } from "@/app/(keep)/alerts/models";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -29,6 +30,7 @@ export default function ManualRunWorkflowModal({
   >(undefined);
   const { data: workflows } = useWorkflows({});
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
   const router = useRouter();
   const apiUrl = useApiUrl();
 
@@ -64,7 +66,7 @@ export default function ManualRunWorkflowModal({
         `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`
       );
     } else {
-      toast.error("Failed to start workflow", { position: "top-left" });
+      ReadOnlyAwareToaster.error("Failed to start workflow", configData, { position: "top-left" });
     }
     clearAndClose();
   };

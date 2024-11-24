@@ -19,7 +19,7 @@ import {
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { ExtractionRule } from "./model";
@@ -27,6 +27,7 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
 
@@ -53,6 +54,7 @@ export default function RulesTable({
 }: Props) {
   const { data: session } = useSession();
   const { mutate } = useMappings();
+  const { data: configData } = useConfig();
   const apiUrl = useApiUrl();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -193,8 +195,8 @@ export default function RulesTable({
           mutate();
           toast.success("Extraction deleted successfully");
         } else {
-          toast.error(
-            "Failed to delete extraction rule, contact us if this persists"
+          ReadOnlyAwareToaster.error(
+            "Failed to delete extraction rule, contact us if this persists", configData
           );
         }
       });

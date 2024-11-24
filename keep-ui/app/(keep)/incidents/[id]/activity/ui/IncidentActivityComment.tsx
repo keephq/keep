@@ -1,11 +1,12 @@
 import { IncidentDto } from "@/entities/incidents/model";
 import { AuditEvent } from "@/utils/hooks/useAlerts";
-import { useApiUrl } from "@/utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "@/utils/hooks/useConfig";
 import { TextInput, Button } from "@tremor/react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 export function IncidentActivityComment({
   incident,
@@ -17,6 +18,7 @@ export function IncidentActivityComment({
   const [comment, setComment] = useState("");
   const apiUrl = useApiUrl();
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
 
   const onSubmit = useCallback(async () => {
     const response = await fetch(`${apiUrl}/incidents/${incident.id}/comment`, {
@@ -35,7 +37,7 @@ export function IncidentActivityComment({
       setComment("");
       mutator();
     } else {
-      toast.error("Failed to add comment", { position: "top-right" });
+      ReadOnlyAwareToaster.error("Failed to add comment", configData, { position: "top-right" });
     }
   }, [
     apiUrl,

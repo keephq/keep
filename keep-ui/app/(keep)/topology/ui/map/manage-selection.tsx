@@ -14,8 +14,11 @@ import {
 import { toast } from "react-toastify";
 import { TopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 export function ManageSelection({ className }: { className?: string }) {
+  const { data: configData } = useConfig();
   const { setSelectedObjectId } = useContext(TopologySearchContext);
   const { applications, addApplication, removeApplication, updateApplication } =
     useTopologyApplications();
@@ -81,7 +84,7 @@ export function ManageSelection({ className }: { className?: string }) {
         setSelectedObjectId(updatedApplication.id);
       },
       (error) => {
-        toast.error("Failed to update application");
+        ReadOnlyAwareToaster.error("Failed to update application", configData);
       }
     );
   };
@@ -103,7 +106,7 @@ export function ManageSelection({ className }: { className?: string }) {
         setSelectedApplication(null);
         setIsModalOpen(false);
       } catch (error) {
-        toast.error("Failed to delete application");
+        ReadOnlyAwareToaster.error("Failed to delete application", configData);
       }
     },
     [removeApplication]

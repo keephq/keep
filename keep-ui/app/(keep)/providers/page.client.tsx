@@ -2,7 +2,7 @@
 import { defaultProvider, Provider } from "./providers";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { KeepApiError } from "@/shared/lib/KeepApiError";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
@@ -10,6 +10,7 @@ import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useProviders } from "@/utils/hooks/useProviders";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -117,12 +118,15 @@ export default function ProvidersPage({
   } = useFilterContext();
   const apiUrl = useApiUrl();
   const router = useRouter();
+  const { data: configData } = useConfig();
+  
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
       const reason = JSON.parse(searchParams.reason);
-      toast.error(`Failed to install provider: ${reason.detail}`, {
-        position: toast.POSITION.TOP_LEFT,
-      });
+      ReadOnlyAwareToaster.error(`Failed to install provider: ${reason.detail}`, 
+        configData,
+        {position: toast.POSITION.TOP_LEFT,}
+      );
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {
         position: toast.POSITION.TOP_LEFT,

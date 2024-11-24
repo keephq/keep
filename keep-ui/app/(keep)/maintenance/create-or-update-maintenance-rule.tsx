@@ -13,13 +13,14 @@ import {
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { MaintenanceRule } from "./model";
 import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -43,6 +44,8 @@ export default function CreateOrUpdateMaintenanceRule({
   const editMode = maintenanceToEdit !== null;
   const router = useRouter();
   const apiUrl = useApiUrl();
+  const { data: configData } = useConfig();
+  
   useEffect(() => {
     if (maintenanceToEdit) {
       setMaintenanceName(maintenanceToEdit.name);
@@ -109,8 +112,9 @@ export default function CreateOrUpdateMaintenanceRule({
       mutate();
       toast.success("Maintenance rule created successfully");
     } else {
-      toast.error(
-        "Failed to create maintenance rule, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to create maintenance rule, please contact us if this issue persists.",
+        configData
       );
     }
   };
@@ -140,8 +144,8 @@ export default function CreateOrUpdateMaintenanceRule({
       mutate();
       toast.success("Maintenance rule updated successfully");
     } else {
-      toast.error(
-        "Failed to update maintenance rule, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to update maintenance rule, please contact us if this issue persists.", configData
       );
     }
   };

@@ -8,7 +8,7 @@ import Select, {
 } from "react-select";
 import { useState } from "react";
 import { AlertDto, Status } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
@@ -75,6 +76,7 @@ export default function AlertChangeStatusModal({
   presetName,
 }: Props) {
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets();
@@ -105,7 +107,7 @@ export default function AlertChangeStatusModal({
 
   const handleChangeStatus = async () => {
     if (!selectedStatus) {
-      toast.error("Please select a new status.");
+      ReadOnlyAwareToaster.error("Please select a new status.", configData);
       return;
     }
 
@@ -137,10 +139,10 @@ export default function AlertChangeStatusModal({
         await alertsMutator();
         await presetsMutator();
       } else {
-        toast.error("Failed to change alert status.");
+        ReadOnlyAwareToaster.error("Failed to change alert status.", configData);
       }
     } catch (error) {
-      toast.error("An error occurred while changing alert status.");
+      ReadOnlyAwareToaster.error("An error occurred while changing alert status.", configData);
     }
   };
 

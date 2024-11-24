@@ -1,9 +1,10 @@
-import { useApiUrl } from "@/utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "@/utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useCallback } from "react";
-import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Status } from "./models";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
+import { toast } from "react-toastify";
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -45,6 +46,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const apiUrl = useApiUrl();
   const { data: session } = useSession();
   const { mutate } = useSWRConfig();
+  const { data: configData } = useConfig();
 
   const mutateIncidentsList = useCallback(
     () =>
@@ -76,8 +78,8 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.success("Incident created successfully");
         return await response.json();
       } else {
-        toast.error(
-          "Failed to create incident, please contact us if this issue persists."
+        ReadOnlyAwareToaster.error(
+          "Failed to create incident, please contact us if this issue persists.", configData
         );
       }
     },
@@ -106,8 +108,8 @@ export function useIncidentActions(): UseIncidentActionsValue {
         mutateIncident(incidentId);
         toast.success("Incident updated successfully");
       } else {
-        toast.error(
-          "Failed to update incident, please contact us if this issue persists."
+        ReadOnlyAwareToaster.error(
+          "Failed to update incident, please contact us if this issue persists.", configData
         );
       }
     },
@@ -120,7 +122,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
       destinationIncident: IncidentDto
     ) => {
       if (!sourceIncidents.length || !destinationIncident) {
-        toast.error("Please select incidents to merge.");
+        ReadOnlyAwareToaster.error("Please select incidents to merge.", configData);
         return;
       }
 
@@ -141,10 +143,10 @@ export function useIncidentActions(): UseIncidentActionsValue {
           toast.success("Incidents merged successfully!");
           mutateIncidentsList();
         } else {
-          toast.error("Failed to merge incidents.");
+          ReadOnlyAwareToaster.error("Failed to merge incidents.", configData);
         }
       } catch (error) {
-        toast.error("An error occurred while merging incidents.");
+        ReadOnlyAwareToaster.error("An error occurred while merging incidents.", configData);
       }
     },
     [apiUrl, mutateIncidentsList, session?.accessToken]
@@ -170,7 +172,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.success("Incident deleted successfully");
         return true;
       } else {
-        toast.error("Failed to delete incident, contact us if this persists");
+        ReadOnlyAwareToaster.error("Failed to delete incident, contact us if this persists", configData);
         return false;
       }
     },
@@ -180,7 +182,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const changeStatus = useCallback(
     async (incidentId: string, status: Status, comment?: string) => {
       if (!status) {
-        toast.error("Please select a new status.");
+        ReadOnlyAwareToaster.error("Please select a new status.", configData);
         return;
       }
 
@@ -204,10 +206,10 @@ export function useIncidentActions(): UseIncidentActionsValue {
           toast.success("Incident status changed successfully!");
           mutateIncidentsList();
         } else {
-          toast.error("Failed to change incident status.");
+          ReadOnlyAwareToaster.error("Failed to change incident status.", configData);
         }
       } catch (error) {
-        toast.error("An error occurred while changing incident status.");
+        ReadOnlyAwareToaster.error("An error occurred while changing incident status.", configData);
       }
     },
     [apiUrl, mutateIncidentsList, session?.accessToken]
@@ -231,8 +233,9 @@ export function useIncidentActions(): UseIncidentActionsValue {
         mutateIncident(incidentId);
         toast.success("Predicted incident confirmed successfully");
       } else {
-        toast.error(
-          "Failed to confirm predicted incident, please contact us if this issue persists."
+        ReadOnlyAwareToaster.error(
+          "Failed to confirm predicted incident, please contact us if this issue persists.", 
+          configData
         );
       }
     },

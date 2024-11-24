@@ -53,6 +53,7 @@ import "./provider-form.css";
 import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -150,6 +151,7 @@ const ProviderForm = ({
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const { mutate } = useProviders();
+  const { data: configData } = useConfig();
   const searchParams = useSearchParams();
   const [activeTabsState, setActiveTabsState] = useState({});
   const initialData = {
@@ -292,7 +294,7 @@ const ProviderForm = ({
         mutate();
         closeModal();
       } else {
-        toast.error(`Failed to delete ${provider.type} 😢`);
+        ReadOnlyAwareToaster.error(`Failed to delete ${provider.type} 😢`, configData);
       }
     }
   }
@@ -452,7 +454,7 @@ const ProviderForm = ({
           mutate();
         })
         .catch((error) => {
-          toast.error("Failed to update provider", { position: "top-left" });
+          ReadOnlyAwareToaster.error("Failed to update provider", configData, { position: "top-left" });
           const updatedFormErrors = error.toString();
           setFormErrors(updatedFormErrors);
           onFormChange(formValues, updatedFormErrors);

@@ -6,7 +6,7 @@ import {
   ProviderMethodParam,
 } from "@/app/(keep)/providers/providers";
 import { getSession } from "next-auth/react";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import Loading from "@/app/(keep)/loading";
 import {
@@ -22,6 +22,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
@@ -33,6 +34,7 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const apiUrl = useApiUrl();
+  const { data: configData} = useConfig();
 
   const alertFingerprint = searchParams?.get("alertFingerprint");
   const providerId = searchParams?.get("providerId");
@@ -187,18 +189,19 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
           setIsLoading(false);
         }
       } else {
-        toast.error(
+        ReadOnlyAwareToaster.error(
           `Failed to invoke "${method.name}" on ${
             provider.details.name ?? provider.id
-          } due to ${responseObject.detail}`,
+          } due to ${responseObject.detail}`, configData,
           { position: toast.POSITION.TOP_LEFT }
         );
       }
     } catch (e: any) {
-      toast.error(
+      ReadOnlyAwareToaster.error(
         `Failed to invoke "${method.name}" on ${
           provider.details.name ?? provider.id
-        } due to ${e.message}`,
+        } due to ${e.message}`, 
+        configData,
         { position: toast.POSITION.TOP_LEFT }
       );
       handleClose();

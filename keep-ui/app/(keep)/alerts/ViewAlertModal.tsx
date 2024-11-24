@@ -2,11 +2,12 @@ import { AlertDto } from "./models"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
 import { Button, Icon, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -27,6 +28,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
   const [showHighlightedOnly, setShowHighlightedOnly] = useState(false);
   const { data: session } = useSession();
   const apiUrl = useApiUrl();
+  const { data: configData } = useConfig();
 
   const unEnrichAlert = async (key: string) => {
     if (confirm(`Are you sure you want to un-enrich ${key}?`)) {
@@ -49,12 +51,12 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
           await mutate();
         } else {
           // Handle error
-          toast.error(`Failed to un-enriched ${key}`);
+          ReadOnlyAwareToaster.error(`Failed to un-enriched ${key}`, configData);
           await mutate();
         }
       } catch (error) {
         // Handle unexpected error
-        toast.error("An unexpected error occurred");
+        ReadOnlyAwareToaster.error("An unexpected error occurred", configData);
       }
     }
   };
@@ -104,7 +106,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         await navigator.clipboard.writeText(JSON.stringify(alert, null, 2));
         toast.success("Alert copied to clipboard!");
       } catch (err) {
-        toast.error("Failed to copy alert.");
+        ReadOnlyAwareToaster.error("Failed to copy alert.", configData);
       }
     }
   };

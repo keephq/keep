@@ -28,11 +28,12 @@ import {
 } from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
 import { useTopology } from "@/app/(keep)/topology/model";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 interface Props {
   editRule: MappingRule | null;
@@ -41,6 +42,7 @@ interface Props {
 
 export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
   const { mutate } = useMappings();
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [mapName, setMapName] = useState<string>("");
@@ -155,8 +157,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       mutate();
       toast.success("Mapping created successfully");
     } else {
-      toast.error(
-        "Failed to create mapping, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to create mapping, please contact us if this issue persists.",
+        configData
       );
     }
   };
@@ -186,8 +189,9 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       mutate();
       toast.success("Mapping updated successfully");
     } else {
-      toast.error(
-        "Failed to update mapping, please contact us if this issue persists."
+      ReadOnlyAwareToaster.error(
+        "Failed to update mapping, please contact us if this issue persists.",
+        configData
       );
     }
   };

@@ -19,10 +19,11 @@ import {
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApiUrl, useConfig } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { useState } from "react";
+import { ReadOnlyAwareToaster } from "@/shared/lib/ReadOnlyAwareToaster";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -33,6 +34,7 @@ interface Props {
 
 export default function RulesTable({ mappings, editCallback }: Props) {
   const { data: session } = useSession();
+  const { data: configData } = useConfig();
   const { mutate } = useMappings();
   const apiUrl = useApiUrl();
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -126,7 +128,10 @@ export default function RulesTable({ mappings, editCallback }: Props) {
           mutate();
           toast.success("Rule deleted successfully");
         } else {
-          toast.error("Failed to delete rule, contact us if this persists");
+          ReadOnlyAwareToaster.error(
+            "Failed to delete rule, contact us if this persists",
+            configData,
+          );
         }
       });
     }
