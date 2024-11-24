@@ -20,7 +20,6 @@ from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     get_alerts_by_fingerprint,
-    get_db_presets,
     get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
