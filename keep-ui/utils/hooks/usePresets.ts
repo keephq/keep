@@ -9,6 +9,7 @@ import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
 import { useSearchParams } from "next/navigation";
+import { useRevalidateMultiple } from "../state";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();
@@ -31,6 +32,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   const presetsOrderRef = useRef(presetsOrderFromLS);
   const staticPresetsOrderRef = useRef(staticPresetsOrderFromLS);
   const { bind, unbind } = useWebsocket();
+  const revalidateMultiple = useRevalidateMultiple();
 
   useEffect(() => {
     presetsOrderRef.current = presetsOrderFromLS;
@@ -88,6 +90,8 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     (_, { next }) => {
       const newPresets = (newPresets: Preset[]) => {
         updateLocalPresets(newPresets);
+        const presetKeys = newPresets.map((preset) => `preset/${preset.id}`);
+        revalidateMultiple(presetKeys);
         next(null, {
           presets: newPresets,
           isAsyncLoading: false,
