@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-// https://github.com/nextauthjs/next-auth/issues/11028#issuecomment-2391497962
 import { getToken } from "next-auth/jwt";
+import type { JWT } from "next-auth/jwt";
 import { getApiURL } from "@/utils/apiUrl";
 
 export async function middleware(request: NextRequest) {
@@ -10,11 +10,11 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
 
-  // Get the token using next-auth/jwt instead of auth wrapper
-  const token = await getToken({
+  // Get the token using next-auth/jwt with the correct type
+  const token = (await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-  });
+  })) as JWT | null;
 
   // Handle legacy /backend/ redirects
   if (pathname.startsWith("/backend/")) {
@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Role-based routing (NOC users)
-  if (token?.user?.role === "noc" && !pathname.startsWith("/alerts")) {
+  if (token?.role === "noc" && !pathname.startsWith("/alerts")) {
     return NextResponse.redirect(new URL("/alerts/feed", request.url));
   }
 
