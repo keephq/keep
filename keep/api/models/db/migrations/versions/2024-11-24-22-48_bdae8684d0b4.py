@@ -113,6 +113,10 @@ def upgrade() -> None:
             ["alert_id"],
             ["alert.id"],
         ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenant.id"],
+        ),
         sa.PrimaryKeyConstraint("tenant_id", "fingerprint"),
     )
     with op.batch_alter_table("lastalert", schema=None) as batch_op:

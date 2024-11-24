@@ -5,7 +5,7 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, ForeignKeyConstraint
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
@@ -76,7 +76,7 @@ class AlertToIncident(SQLModel, table=True):
 class LastAlert(SQLModel, table=True):
 
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
-    fingerprint: str = Field(primary_key=True)
+    fingerprint: str = Field(primary_key=True, index=True)
     alert_id: UUID = Field(foreign_key="alert.id")
     timestamp: datetime = Field(nullable=False, index=True)
 
@@ -85,7 +85,7 @@ class LastAlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    fingerprint: str = Field(foreign_key="lastalert.fingerprint", primary_key=True)
+    fingerprint: str = Field(primary_key=True)
     incident_id: UUID = Field(
         sa_column=Column(
             UUIDType(binary=False),
@@ -102,6 +102,14 @@ class LastAlertToIncident(SQLModel, table=True):
         primary_key=True,
         default=NULL_FOR_DELETED_AT,
     )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "fingerprint"],
+            ["lastalert.tenant_id", "lastalert.fingerprint"]),
+        {}
+    )
+
 
     # alert: "Alert" = Relationship(
     #     back_populates="alert_to_incident_link",
