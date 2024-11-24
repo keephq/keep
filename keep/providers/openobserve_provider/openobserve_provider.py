@@ -73,7 +73,7 @@ class OpenobserveProvider(BaseProvider):
     """Install Webhooks and receive alerts from OpenObserve."""
 
     PROVIDER_DISPLAY_NAME = "OpenObserve"
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",

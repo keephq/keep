@@ -4,7 +4,7 @@ Statuscake is a class that provides a way to read alerts from the Statuscake API
 
 import dataclasses
 from typing import List
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urlencode, urljoin
 
 import pydantic
 import requests
@@ -34,7 +34,7 @@ class StatuscakeProviderAuthConfig:
 class StatuscakeProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Statuscake"
     PROVIDER_TAGS = ["alert"]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="alerts",
@@ -229,7 +229,9 @@ class StatuscakeProvider(BaseProvider):
             )
             if not response.ok:
                 raise Exception(response.text)
-            self.logger.info("Successfully updated alert", extra={"data": data, "paths": paths})
+            self.logger.info(
+                "Successfully updated alert", extra={"data": data, "paths": paths}
+            )
         except Exception as e:
             self.logger.error("Error while updating alert", extra={"exception": str(e)})
             raise e
@@ -349,25 +351,27 @@ class StatuscakeProvider(BaseProvider):
         severity = AlertSeverity.HIGH
 
         alert = AlertDto(
-            id=event.get('TestID', event.get("Name")),
+            id=event.get("TestID", event.get("Name")),
             name=event.get("Name"),
             status=status if status is not None else AlertStatus.FIRING,
             severity=severity,
             url=event.get("URL", None),
             ip=event.get("IP", None),
             tags=event.get("Tags", None),
-            test_id=event.get('TestID', None),
+            test_id=event.get("TestID", None),
             method=event.get("Method", None),
             checkrate=event.get("Checkrate", None),
             status_code=event.get("StatusCode", None),
             source=["statuscake"],
         )
-        alert.fingerprint = StatuscakeProvider.get_alert_fingerprint(
-            alert,
-            (
-                StatuscakeProvider.FINGERPRINT_FIELDS
-            ),
-        ) if event.get("TestID", None) else None
+        alert.fingerprint = (
+            StatuscakeProvider.get_alert_fingerprint(
+                alert,
+                (StatuscakeProvider.FINGERPRINT_FIELDS),
+            )
+            if event.get("TestID", None)
+            else None
+        )
 
         return alert
 

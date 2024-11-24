@@ -30,6 +30,7 @@ class LinearbProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "LinearB"
     LINEARB_API = "https://public-api.linearb.io"
+    PROVIDER_CATEGORY = ["Developer Tools"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="any", description="A way to validate the provider", mandatory=True

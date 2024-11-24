@@ -30,6 +30,7 @@ class DiscordProvider(BaseProvider):
     """Send alert message to Discord."""
 
     PROVIDER_DISPLAY_NAME = "Discord"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

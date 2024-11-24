@@ -40,6 +40,27 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
+    PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
+    PROVIDER_CATEGORY: list[
+        Literal[
+            "Monitoring",
+            "Incident Management",
+            "Cloud Infrastructure",
+            "Ticketing",
+            "Identity",
+            "Developer Tools",
+            "Database",
+            "Identity and Access Management",
+            "Security",
+            "Collaboration",
+            "Organizational Tools",
+            "CRM",
+            "Queues",
+            "Others",
+        ]
+    ] = [
+        "Others"
+    ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
         Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
     ] = []

@@ -45,6 +45,7 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
 
     PROVIDER_DISPLAY_NAME = "Netdata"
     PROVIDER_TAGS = ["alert"]
+    PROVIDER_CATEGORY = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

@@ -4,7 +4,7 @@ import Loading from "@/app/(keep)/loading";
 import { User as AuthUser } from "next-auth";
 import { TiUserAdd } from "react-icons/ti";
 import { AuthType } from "utils/authenticationType";
-import { useUsers } from "utils/hooks/useUsers";
+import { useUsers } from "@/entities/users/model/useUsers";
 import { useRoles } from "utils/hooks/useRoles";
 import { useGroups } from "utils/hooks/useGroups";
 import { useConfig } from "utils/hooks/useConfig";

@@ -20,7 +20,7 @@ from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     get_alerts_by_fingerprint,
-    get_all_presets,
+    get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
 )
@@ -28,7 +28,6 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
-from keep.api.models.db.preset import PresetDto
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
@@ -443,12 +442,11 @@ def __handle_formatted_events(
         return
     
     try:
-        presets = get_all_presets(tenant_id)
+        presets = get_all_presets_dtos(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
         presets_do_update = []
-        for preset in presets:
+        for preset_dto in presets:
             # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.to_dict())
             filtered_alerts = rules_engine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )
@@ -458,7 +456,7 @@ def __handle_formatted_events(
             presets_do_update.append(preset_dto)
             preset_dto.alerts_count = len(filtered_alerts)
             # update noisy
-            if preset.is_noisy:
+            if preset_dto.is_noisy:
                 firing_filtered_alerts = list(
                     filter(
                         lambda alert: alert.status == AlertStatus.FIRING.value,

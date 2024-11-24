@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "Keep AIOps",
-  description: "Keep AIOps",
+  title: "Keep",
+  description: "The open-source alert management and AIOps platform",
 };
 
 export default function RootLayout({

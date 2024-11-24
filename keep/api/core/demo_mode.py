@@ -29,7 +29,7 @@ correlation_rules_to_create = [
     {
         "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%mq%"}},
         "groupDescription": "This rule groups all alerts related to MQ.",
-        "ruleName": "Message Queue Buckle Up",
+        "ruleName": "Message queue is getting filled up",
         "celQuery": '(name.contains("mq"))',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
@@ -243,6 +243,14 @@ def get_or_create_topology(keep_api_key, keep_api_url):
                     if service["name"] == existing_service["display_name"]:
                         service["id"] = existing_service["id"]
 
+            # Check if any service does not have an id
+            for service in application_to_create["services"]:
+                if "id" not in service:
+                    logger.error(
+                        f"Service {service['name']} does not have an id. Application creation failed."
+                    )
+                    return True
+
             response = requests.post(
                 f"{keep_api_url}/topology/applications",
                 headers={"x-api-key": keep_api_key},
@@ -415,21 +423,22 @@ def simulate_alerts(
         time.sleep(sleep_interval)
 
 
-def launch_demo_mode_thread(keep_api_url=None) -> threading.Thread | None:
+def launch_demo_mode_thread(keep_api_url=None, keep_api_key=None) -> threading.Thread | None:
     if not KEEP_LIVE_DEMO_MODE:
         logger.info("Not launching the demo mode.")
         return
     
     logger.info("Launching demo mode.")
 
-    with get_session_sync() as session:
-        keep_api_key = get_or_create_api_key(
-            session=session,
-            tenant_id=SINGLE_TENANT_UUID,
-            created_by="system",
-            unique_api_key_id="simulate_alerts",
-            system_description="Simulate Alerts API key",
-        )
+    if keep_api_key is None:
+        with get_session_sync() as session:
+            keep_api_key = get_or_create_api_key(
+                session=session,
+                tenant_id=SINGLE_TENANT_UUID,
+                created_by="system",
+                unique_api_key_id="simulate_alerts",
+                system_description="Simulate Alerts API key",
+            )
 
     sleep_interval = 5
 

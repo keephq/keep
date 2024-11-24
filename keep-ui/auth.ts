@@ -19,6 +19,7 @@ import {
 } from "@/utils/authenticationType";
 import type { User } from "next-auth";
 import { ProxyAgent, fetch as undici } from "undici";
+
 // https://github.com/nextauthjs/next-auth/issues/11028
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
