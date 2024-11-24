@@ -90,8 +90,8 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     (_, { next }) => {
       const newPresets = (newPresets: Preset[]) => {
         updateLocalPresets(newPresets);
-        const presetKeys = newPresets.map((preset) => `preset/${preset.id}`);
-        revalidateMultiple(presetKeys);
+        // update the presets aggregated endpoint for the sidebar
+        revalidateMultiple(["/preset"]);
         next(null, {
           presets: newPresets,
           isAsyncLoading: false,
@@ -114,11 +114,11 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     return useSWR<Preset[]>(
       () =>
         session
-          ? `${apiUrl}/preset${
+          ? `/preset${
               useFilters && filters && isDashBoard ? `?${filters}` : ""
             }`
           : null,
-      (url) => fetcher(url, session?.accessToken),
+      (url) => fetcher(apiUrl + url, session?.accessToken),
       {
         ...options,
         onSuccess: (data) => {
