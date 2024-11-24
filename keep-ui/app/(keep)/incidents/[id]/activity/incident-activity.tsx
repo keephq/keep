@@ -2,7 +2,7 @@
 
 import { AlertDto } from "@/app/(keep)/alerts/models";
 import { IncidentDto } from "@/entities/incidents/model";
-import { useUsers } from "@/utils/hooks/useUsers";
+import { useUsers } from "@/entities/users/model/useUsers";
 import Image from "next/image";
 import UserAvatar from "@/components/navbar/UserAvatar";
 import "./incident-activity.css";

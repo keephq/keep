@@ -35,13 +35,15 @@ export function AlertsTableBody({
   if (showEmptyState) {
     return (
       <>
-        <div className="flex flex-col justify-center items-center h-96 w-full absolute p-4">
-          <EmptyStateCard
-            title="No alerts to display"
-            description="It is because you have not connected any data source yet or there are no alerts matching the filter."
-            buttonText="Add Alert"
-            onClick={handleModalOpen}
-          />
+        <div className="flex items-center h-full w-full absolute -mt-20">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              title="No alerts to display"
+              description="It is because you have not connected any data source yet or there are no alerts matching the filter."
+              buttonText="Add Alert"
+              onClick={handleModalOpen}
+            />
+          </div>
         </div>
         {modalOpen && (
           <PushAlertToServerModal

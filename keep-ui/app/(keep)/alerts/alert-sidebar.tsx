@@ -2,12 +2,20 @@ import { Fragment } from "react";
 import Image from "next/image";
 import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "./models";
-import { Button, Title, Card, Badge } from "@tremor/react";
+import { Button, Title, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { TopologyMap } from "../topology/ui/map";
 import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchContext";
+import {
+  AlertSeverityBorderIcon,
+  AlertSeverityLabel,
+} from "./alert-severity-border";
+import { FieldHeader } from "@/shared/ui/FieldHeader";
+import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
+import { Tooltip } from "@/shared/ui/Tooltip";
+import { Link } from "@/components/ui";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -57,11 +65,14 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                 {/*Will add soon*/}
                 {/*<AlertMenu alert={alert} presetName="feed" isInSidebar={true} />*/}
                 {/*<Divider></Divider>*/}
-                <Dialog.Title className="text-3xl font-bold" as={Title}>
-                  Alert Details
-                  <Badge className="ml-4" color="orange">
-                    Beta
-                  </Badge>
+                <Dialog.Title
+                  className="text-xl font-bold flex flex-col gap-2 items-start"
+                  as={Title}
+                >
+                  {alert?.severity && (
+                    <AlertSeverityLabel severity={alert.severity} />
+                  )}
+                  {alert?.name ? alert.name : "Alert Details"}
                 </Dialog.Title>
               </div>
               <div>
@@ -72,43 +83,63 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
             </div>
             {alert && (
               <div className="space-y-4">
-                <Card>
-                  <div className="mt-4 space-y-2">
-                    <p>
-                      <strong>Name:</strong> {alert.name}
-                    </p>
-                    <p>
-                      <strong>Service:</strong> {alert.service}
-                    </p>
-                    <p>
-                      <strong>Severity:</strong> {alert.severity}
-                    </p>
-                    <p>
-                      <Image
-                        src={`/icons/${alert.source![0]}-icon.png`}
-                        alt={alert.source![0]}
-                        width={24}
-                        height={24}
-                        className="inline-block w-6 h-6"
-                      />
-                    </p>
-                    <p>
-                      <strong>Description:</strong> {alert.description}
-                    </p>
-                    <p>
-                      <strong>Fingerprint:</strong> {alert.fingerprint}
-                    </p>
-                  </div>
-                </Card>
-                <Card className="flex-grow">
-                  <AlertTimeline
-                    key={auditData ? auditData.length : 1}
-                    alert={alert}
-                    auditData={auditData || []}
-                    isLoading={isLoading}
-                    onRefresh={handleRefresh}
-                  />
-                </Card>
+                <div className="space-y-2">
+                  <p>
+                    <FieldHeader>Name</FieldHeader>
+                    {alert.name}
+                  </p>
+                  <p>
+                    <FieldHeader>Service</FieldHeader>
+                    <Badge size="sm" color="gray">
+                      {alert.service}
+                    </Badge>
+                  </p>
+                  <p>
+                    <FieldHeader>Source</FieldHeader>
+                    <Image
+                      src={`/icons/${alert.source![0]}-icon.png`}
+                      alt={alert.source![0]}
+                      width={24}
+                      height={24}
+                      className="inline-block w-6 h-6"
+                    />
+                  </p>
+                  <p>
+                    <FieldHeader>Description</FieldHeader>
+                    {alert.description}
+                  </p>
+                  <p>
+                    <FieldHeader className="flex items-center gap-1">
+                      Fingerprint
+                      <Tooltip
+                        content={
+                          <>
+                            Fingerprints are unique identifiers associated with
+                            alert instances in Keep. Every provider declares the
+                            fields fingerprints are calculated upon.{" "}
+                            <Link
+                              href="https://docs.keephq.dev/providers/fingerprints#fingerprints"
+                              className="text-white"
+                            >
+                              Docs
+                            </Link>
+                          </>
+                        }
+                        className="z-50"
+                      >
+                        <QuestionMarkCircleIcon className="w-4 h-4" />
+                      </Tooltip>
+                    </FieldHeader>
+                    {alert.fingerprint}
+                  </p>
+                </div>
+                <AlertTimeline
+                  key={auditData ? auditData.length : 1}
+                  alert={alert}
+                  auditData={auditData || []}
+                  isLoading={isLoading}
+                  onRefresh={handleRefresh}
+                />
                 <Title>Related Services</Title>
                 <TopologySearchProvider>
                   <TopologyMap
