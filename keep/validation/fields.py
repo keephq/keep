@@ -7,42 +7,26 @@ UrlPort = conint(ge=1, le=65_535)
 
 
 class HttpsUrl(HttpUrl):
-    scheme = {"https"}
+    """Validate https url, coerce if no scheme, throw if wrong scheme."""
+
+    allowed_schemes = {"https"}
+
+    def __new__(cls, url: Optional[str], **kwargs) -> object:
+        _url = url if url is not None and url.startswith("https://") else None
+        return super().__new__(cls, _url, **kwargs)
 
     @staticmethod
-    def get_default_parts(parts):
+    def get_default_parts(parts: Parts) -> Parts:
         return {"scheme": "https", "port": "443"}
 
 
 class NoSchemeUrl(AnyUrl):
-    """Override to allow url without a scheme."""
+    """Validate url with any scheme, remove scheme in output."""
 
-    @classmethod
-    def build(
-        cls,
-        *,
-        scheme: str,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        host: str,
-        port: Optional[str] = None,
-        path: Optional[str] = None,
-        query: Optional[str] = None,
-        fragment: Optional[str] = None,
-        **_kwargs: str,
-    ) -> str:
-        url = super().build(
-            scheme=scheme,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            path=path,
-            query=query,
-            fragment=fragment,
-            **_kwargs,
-        )
-        return url.split("://")[1]
+    def __new__(cls, url: Optional[str], **kwargs) -> object:
+        _url = cls.build(**kwargs) if url is None else url
+        _url = _url.split("://")[1] if "://" in _url else _url
+        return super().__new__(cls, _url, **kwargs)
 
     @classmethod
     def validate_parts(cls, parts: Parts, validate_port: bool = True) -> Parts:
