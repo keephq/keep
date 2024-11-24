@@ -1808,7 +1808,7 @@ def get_rule_distribution(tenant_id, minute=False):
             session.query(
                 Rule.id.label("rule_id"),
                 Rule.name.label("rule_name"),
-                Incident.id.label("group_id"),
+                Incident.id.label("incident_id"),
                 Incident.rule_fingerprint.label("rule_fingerprint"),
                 timestamp_format.label("time"),
                 func.count(LastAlertToIncident.fingerprint).label("hits"),
@@ -1821,7 +1821,7 @@ def get_rule_distribution(tenant_id, minute=False):
             )
             .filter(Rule.tenant_id == tenant_id)  # Filter by tenant_id
             .group_by(
-                "rule_id", "rule_name", "incident_id", "rule_fingerprint", "time"
+                Rule.id, "rule_name", Incident.id, "rule_fingerprint", "time"
             )  # Adjusted here
             .order_by("time")
         )

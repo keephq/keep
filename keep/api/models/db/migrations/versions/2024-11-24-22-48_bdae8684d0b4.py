@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 # revision identifiers, used by Alembic.
 revision = "bdae8684d0b4"
-down_revision = "620b6c048091"
+down_revision = "192157fd5788"
 branch_labels = None
 depends_on = None
 
@@ -31,7 +31,7 @@ def populate_db():
                 from alert
                 join (
                     select
-                        alert.fingerprint, max(alert.timestamp) as last_received
+                        alert.tenant_id, alert.fingerprint, max(alert.timestamp) as last_received
                     from alert
                     group by fingerprint, tenant_id
                 ) as a ON alert.fingerprint = a.fingerprint and alert.timestamp = a.last_received and alert.tenant_id = a.tenant_id
