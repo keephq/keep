@@ -31,7 +31,7 @@ export const ProvidersCategories = () => {
   };
 
   return (
-    <div className="max-w-4xl flex flex-wrap justify-center gap-2 mt-2.5">
+    <div className="w-full flex flex-wrap justify-start gap-2 mt-2.5">
       {categories.map((category) => (
         <Badge
           color={
