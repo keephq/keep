@@ -13,16 +13,17 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import MultiHostUrl
 
 
 @pydantic.dataclasses.dataclass
 class MongodbProviderAuthConfig:
-    host: pydantic.AnyUrl = dataclasses.field(
+    host: MultiHostUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Mongo host_uri",
-            "hint": "any valid mongo host_uri like mongodb://host:port, user:paassword@host:port?authSource",
-            "validation": "any_url",
+            "hint": "mongodb+srv://host:port, mongodb://host1:port1,host2:port2?authSource",
+            "validation": "multihost_url",
         }
     )
     username: str = dataclasses.field(

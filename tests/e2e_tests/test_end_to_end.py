@@ -24,7 +24,6 @@
 
 import os
 import random
-
 # Adding a new test:
 # 1. Manually:
 #    - Create a new test function.

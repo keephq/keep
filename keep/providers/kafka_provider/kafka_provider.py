@@ -14,6 +14,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import NoSchemeMultiHostUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -22,12 +23,12 @@ class KafkaProviderAuthConfig:
     Kafka authentication configuration.
     """
 
-    host: pydantic.AnyUrl = dataclasses.field(
+    host: NoSchemeMultiHostUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Kafka host",
-            "hint": "e.g. https://kafka:9092",
-            "validation": "any_url"
+            "hint": "e.g. localhost:9092 or localhost:9092,localhost:8093",
+            "validation": "no_scheme_multihost_url"
         },
     )
     topic: str = dataclasses.field(
