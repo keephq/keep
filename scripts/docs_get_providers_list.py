@@ -15,10 +15,6 @@ import sys
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
 NON_DOCUMENTED_PROVIDERS = [
-    "zendesk",
-    "salesforce",
-    "microsoft teams",
-    "google kubernetes engine",
 ]
 
 
@@ -52,6 +48,7 @@ def validate_all_providers_are_documented(documented_providers):
         if (
             provider_name not in documented_providers
             and provider_name not in NON_DOCUMENTED_PROVIDERS
+            and not provider.coming_soon
         ):
             raise Exception(
                 f"""Provider "{provider_name}" is not documented in the docs/providers/documentation folder,
