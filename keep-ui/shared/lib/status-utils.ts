@@ -2,7 +2,9 @@ import {
   ExclamationCircleIcon,
   CheckCircleIcon,
   CircleStackIcon,
+  PauseIcon,
 } from "@heroicons/react/24/outline";
+import { IoIosGitPullRequest } from "react-icons/io";
 
 export const getStatusIcon = (status: string) => {
   switch (status.toLowerCase()) {
@@ -11,7 +13,9 @@ export const getStatusIcon = (status: string) => {
     case "resolved":
       return CheckCircleIcon;
     case "acknowledged":
-      return CircleStackIcon;
+      return PauseIcon;
+    case "merged":
+      return IoIosGitPullRequest;
     default:
       return CircleStackIcon;
   }
@@ -24,7 +28,9 @@ export const getStatusColor = (status: string) => {
     case "resolved":
       return "green";
     case "acknowledged":
-      return "blue";
+      return "gray";
+    case "merged":
+      return "purple";
     default:
       return "gray";
   }
