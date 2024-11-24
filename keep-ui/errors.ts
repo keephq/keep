@@ -15,3 +15,5 @@ export const AuthErrorCodes = {
   INVALID_TOKEN: "invalid_token",
   SERVER_ERROR: "server_error",
 } as const;
+
+//
