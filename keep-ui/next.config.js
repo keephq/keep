@@ -52,12 +52,7 @@ const nextConfig = {
     ],
   },
   compiler: {
-    removeConsole:
-      process.env.NODE_ENV === "production"
-        ? {
-            exclude: ["error"],
-          }
-        : process.env.REMOVE_CONSOLE === "true",
+    removeConsole: false,
   },
   output: "standalone",
   productionBrowserSourceMaps:

@@ -44,18 +44,26 @@ const proxyUrl =
 
 import { ProxyAgent, fetch as undici } from "undici";
 function proxy(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
-  const dispatcher = new ProxyAgent({
-    uri: proxyUrl!,
-    // Force DNS resolution through the proxy
-    // Use requestTls to control connection behavior
-    requestTls: {
-      rejectUnauthorized: true,
-      // This will make the DNS resolution happen on the proxy side
-      servername: new URL(args[0].toString()).hostname,
-    },
-  });
+  console.log(
+    "Proxy called for URL:",
+    args[0] instanceof Request ? args[0].url : args[0]
+  );
+  const dispatcher = new ProxyAgent(proxyUrl!);
+
+  if (args[0] instanceof Request) {
+    const request = args[0];
+    // @ts-expect-error `undici` has a `duplex` option
+    return undici(request.url, {
+      ...args[1],
+      method: request.method,
+      headers: request.headers as HeadersInit,
+      body: request.body,
+      dispatcher,
+    });
+  }
+
   // @ts-expect-error `undici` has a `duplex` option
-  return undici(args[0], { ...args[1], dispatcher });
+  return undici(args[0], { ...(args[1] || {}), dispatcher });
 }
 
 // Create Azure AD provider configuration
