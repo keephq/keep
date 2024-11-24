@@ -114,11 +114,7 @@ export default function IncidentAlerts({ incident }: Props) {
         id: "severity",
         header: "Severity",
         minSize: 80,
-        cell: (context) => (
-          <div className="text-center">
-            <AlertSeverity severity={context.getValue()} />
-          </div>
-        ),
+        cell: (context) => <AlertSeverity severity={context.getValue()} />,
       }),
       columnHelper.display({
         id: "name",
@@ -161,7 +157,7 @@ export default function IncidentAlerts({ incident }: Props) {
       }),
       columnHelper.accessor("lastReceived", {
         id: "lastReceived",
-        header: "Last Received",
+        header: "Last Event Time",
         minSize: 100,
         cell: (context) => (
           <span>{getAlertLastReceieved(context.getValue())}</span>

@@ -1,10 +1,10 @@
-import { Icon } from "@tremor/react";
+import { Badge, Icon } from "@tremor/react";
 import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
-import { LinkSlashIcon } from "@heroicons/react/24/outline";
+import { LiaUnlinkSolid } from "react-icons/lia";
 
 interface Props {
   incidentId: string;
@@ -44,13 +44,15 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
 
   return (
     <div className="flex flex-col">
-      <Icon
-        icon={LinkSlashIcon}
+      <Badge
+        icon={LiaUnlinkSolid}
         color="red"
         tooltip="Remove correlation"
         className="cursor-pointer"
         onClick={onRemove}
-      />
+      >
+        Unlink
+      </Badge>
     </div>
   );
 }
