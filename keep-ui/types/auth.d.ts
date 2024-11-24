@@ -1,6 +1,7 @@
-import type { DefaultSession } from "@auth/core/types";
+import type { DefaultSession } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 
-declare module "@auth/core/types" {
+declare module "next-auth" {
   interface Session {
     accessToken: string;
     tenantId?: string;
@@ -13,7 +14,7 @@ declare module "@auth/core/types" {
       accessToken: string;
       tenantId?: string;
       role?: string;
-    };
+    } & DefaultSession["user"];
   }
 
   interface User {
@@ -26,9 +27,9 @@ declare module "@auth/core/types" {
   }
 }
 
-declare module "@auth/core/jwt" {
+declare module "next-auth/jwt" {
   interface JWT {
-    accessToken: string; // Changed to required
+    accessToken: string;
     tenantId?: string;
     role?: string;
   }

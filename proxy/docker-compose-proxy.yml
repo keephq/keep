@@ -26,7 +26,7 @@ services:
     ports:
       - "3000:3000"
     extends:
-      file: docker-compose.common.yml
+      file: ../docker-compose.common.yml
       service: keep-frontend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-ui:feature_proxy
     environment:
@@ -49,15 +49,15 @@ services:
     depends_on:
       - keep-backend
       - proxy
-    # networks:
-    # - proxy-net
-    # - internal
+    networks:
+      # - proxy-net
+      - internal
 
   keep-backend:
     ports:
       - "8080:8080"
     extends:
-      file: docker-compose.common.yml
+      file: ../docker-compose.common.yml
       service: keep-backend-common
     image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
@@ -70,7 +70,7 @@ services:
 
   keep-websocket-server:
     extends:
-      file: docker-compose.common.yml
+      file: ../docker-compose.common.yml
       service: keep-websocket-server-common
     networks:
       - internal
