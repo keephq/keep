@@ -40,6 +40,7 @@ from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
+from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 
 # This import is required to create the tables
@@ -2624,7 +2625,6 @@ def get_preset_by_name(tenant_id: str, preset_name: str) -> Preset:
         ).first()
     return preset
 
-
 def get_all_presets(tenant_id: str) -> List[Preset]:
     with Session(engine) as session:
         presets = (
@@ -2634,6 +2634,11 @@ def get_all_presets(tenant_id: str) -> List[Preset]:
         )
     return presets
 
+# 
+def get_db_and_static_presets_dtos(tenant_id: str) -> List[PresetDto]:
+    presets = get_all_presets(tenant_id)
+    static_presets_dtos = list(STATIC_PRESETS.values())
+    return [PresetDto(**preset.to_dict()) for preset in presets] + static_presets_dtos
 
 def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
     with Session(engine) as session:
