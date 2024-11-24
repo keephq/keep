@@ -33,6 +33,7 @@ class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

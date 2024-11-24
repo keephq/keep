@@ -52,6 +52,7 @@ class SquadcastProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Squadcast"
     PROVIDER_TAGS = ["alert"]
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

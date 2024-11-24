@@ -51,6 +51,7 @@ class ClickhouseProvider(BaseProvider):
     """Enrich alerts with data from Clickhouse."""
 
     PROVIDER_DISPLAY_NAME = "Clickhouse"
+    PROVIDER_CATEGORY = ["Database"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

@@ -76,6 +76,7 @@ class SmtpProvider(BaseProvider):
             alias="Send Email",
         )
     ]
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     PROVIDER_TAGS = ["messaging"]
     PROVIDER_DISPLAY_NAME = "SMTP"

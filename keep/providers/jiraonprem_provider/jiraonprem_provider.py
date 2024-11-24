@@ -43,6 +43,8 @@ class JiraonpremProviderAuthConfig:
 class JiraonpremProvider(BaseProvider):
     """Enrich alerts with Jira tickets."""
 
+    PROVIDER_CATEGORY = ["Ticketing"]
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="BROWSE_PROJECTS",
@@ -324,7 +326,7 @@ class JiraonpremProvider(BaseProvider):
             return {"issue": response.json()}
         except Exception as e:
             raise ProviderException(f"Failed to create an issue: {e}")
-        
+
     def __update_issue(
         self,
         issue_id: str,
@@ -344,7 +346,7 @@ class JiraonpremProvider(BaseProvider):
 
             url = self.__get_url(paths=["issue", issue_id])
 
-            update = { }
+            update = {}
 
             if summary:
                 update["summary"] = [{"set": summary}]
@@ -356,7 +358,9 @@ class JiraonpremProvider(BaseProvider):
                 update["priority"] = [{"set": {"name": priority}}]
 
             if components:
-                update["components"] = [{"set": [{"name": component} for component in components]}]
+                update["components"] = [
+                    {"set": [{"name": component} for component in components]}
+                ]
 
             if labels:
                 update["labels"] = [{"set": label} for label in labels]
@@ -378,11 +382,9 @@ class JiraonpremProvider(BaseProvider):
                 if response.status_code != 204:
                     response.raise_for_status()
             except Exception:
-                self.logger.exception(
-                    "Failed to update an issue", extra=response.text
-                )
+                self.logger.exception("Failed to update an issue", extra=response.text)
                 raise ProviderException("Failed to update an issue")
-            
+
             result = {
                 "issue": {
                     "id": issue_id,
@@ -393,7 +395,7 @@ class JiraonpremProvider(BaseProvider):
 
             self.logger.info("Updated an issue!")
             return result
-        
+
         except Exception as e:
             raise ProviderException(f"Failed to update an issue: {e}")
 
@@ -458,7 +460,7 @@ class JiraonpremProvider(BaseProvider):
             )
         else:
             raise Exception("Could not fetch boards: " + boards_response.text)
-        
+
     def _extract_issue_key_from_issue_id(self, issue_id: str):
         headers = {
             "Accept": "application/json",
@@ -475,7 +477,7 @@ class JiraonpremProvider(BaseProvider):
         if issue_key.status_code == 200:
             return issue_key.json()["key"]
         else:
-            raise Exception("Could not fetch issue key: " + issue_key.text)    
+            raise Exception("Could not fetch issue key: " + issue_key.text)
 
     def _notify(
         self,
@@ -518,14 +520,14 @@ class JiraonpremProvider(BaseProvider):
                 result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
 
                 self.logger.info("Updated a jira issue: " + str(result))
-                return result               
+                return result
 
             if not project_key:
                 project_key = self._extract_project_key_from_board_name(board_name)
             if not project_key or not summary or not issue_type or not description:
                 raise ProviderException(
                     f"Project key and summary are required! - {project_key}, {summary}, {issue_type}, {description}"
-                )           
+                )
 
             result = self.__create_issue(
                 project_key=project_key,

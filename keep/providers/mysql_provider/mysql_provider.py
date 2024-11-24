@@ -37,6 +37,7 @@ class MysqlProvider(BaseProvider):
     """Enrich alerts with data from MySQL."""
 
     PROVIDER_DISPLAY_NAME = "MySQL"
+    PROVIDER_CATEGORY = ["Database"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

@@ -88,6 +88,7 @@ class WebhookProvider(BaseProvider):
         "localhost",
         "googleapis.com",
     ]
+    PROVIDER_CATEGORY = ["Developer Tools"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

@@ -1,6 +1,7 @@
 """
 Kafka Provider is a class that allows to ingest/digest data from Grafana.
 """
+
 import dataclasses
 import inspect
 import logging
@@ -97,6 +98,8 @@ class KafkaProvider(BaseProvider):
     Kafka provider class.
     """
 
+    PROVIDER_CATEGORY = ["Developer Tools", "Queues"]
+
     PROVIDER_DISPLAY_NAME = "Kafka"
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -186,9 +189,11 @@ class KafkaProvider(BaseProvider):
         if self.authentication_config.username and self.authentication_config.password:
             basic_conf.update(
                 {
-                    "security_protocol": "SASL_SSL"
-                    if self.authentication_config.username
-                    else "PLAINTEXT",
+                    "security_protocol": (
+                        "SASL_SSL"
+                        if self.authentication_config.username
+                        else "PLAINTEXT"
+                    ),
                     "sasl_mechanism": "PLAIN",
                     "sasl_plain_username": self.authentication_config.username,
                     "sasl_plain_password": self.authentication_config.password,

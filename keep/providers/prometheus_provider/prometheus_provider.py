@@ -70,6 +70,7 @@ receivers:
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
     }
+    PROVIDER_CATEGORY = ["Monitoring"]
 
     STATUS_MAP = {
         "firing": AlertStatus.FIRING,

@@ -48,6 +48,7 @@ class OpenshiftProvider(BaseProvider):
 
     provider_id: str
     PROVIDER_DISPLAY_NAME = "Openshift"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -58,9 +59,7 @@ class OpenshiftProvider(BaseProvider):
         )
     ]
 
-    def __init__(
-            self, context_manager, provider_id: str, config: ProviderConfig
-    ):
+    def __init__(self, context_manager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
         self.authentication_config = None
         self.validate_config()
@@ -97,10 +96,12 @@ class OpenshiftProvider(BaseProvider):
             with oc.timeout(60 * 30), oc.tracking() as t, client:
                 if oc.get_config_context() is None:
                     try:
-                        oc.invoke('login')
+                        oc.invoke("login")
                     except OpenShiftPythonException:
                         traceback.print_exc()
-                        self.logger.error(f'Tracking:\n{t.get_result().as_json(redact_streams=False)}\n\n')
+                        self.logger.error(
+                            f"Tracking:\n{t.get_result().as_json(redact_streams=False)}\n\n"
+                        )
                         self.logger.error("Error logging into the API server")
                         raise Exception("Error logging into the API server")
             scopes = {
@@ -117,19 +118,25 @@ class OpenshiftProvider(BaseProvider):
         """Rollout restart the specified kind."""
         client = self.__get_ocp_client()
         client.project_name = project_name
-        self.logger.info(f"Performing rollout restart for {kind} {name} using openshift provider")
+        self.logger.info(
+            f"Performing rollout restart for {kind} {name} using openshift provider"
+        )
         with oc.timeout(60 * 30), oc.tracking() as t, client:
             if oc.get_config_context() is None:
-                self.logger.error(f'Current context not set! Logging into API server: {client.api_server}\n')
+                self.logger.error(
+                    f"Current context not set! Logging into API server: {client.api_server}\n"
+                )
                 try:
-                    oc.invoke('login')
+                    oc.invoke("login")
                 except OpenShiftPythonException:
-                    self.logger.error('error occurred logging into API Server')
+                    self.logger.error("error occurred logging into API Server")
                     traceback.print_exc()
-                    self.logger.error(f'Tracking:\n{t.get_result().as_json(redact_streams=False)}\n\n')
+                    self.logger.error(
+                        f"Tracking:\n{t.get_result().as_json(redact_streams=False)}\n\n"
+                    )
                     raise Exception("Error logging into the API server")
             try:
-                oc.invoke('rollout', ['restart', kind, name])
+                oc.invoke("rollout", ["restart", kind, name])
             except OpenShiftPythonException:
                 self.logger.error(f"Error restarting {kind} {name}")
                 raise Exception(f"Error restarting {kind} {name}")

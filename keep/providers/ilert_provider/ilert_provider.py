@@ -63,6 +63,7 @@ class IlertProvider(BaseProvider):
         ProviderScope("read_permission", "Read permission", mandatory=True),
         ProviderScope("write_permission", "Write permission", mandatory=False),
     ]
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     SEVERITIES_MAP = {
         "MAJOR_OUTAGE": AlertSeverity.CRITICAL,

@@ -1,15 +1,15 @@
 """
 MailchimpProvider is a class that implements the Mailchimp API and allows email sending through Keep.
 """
+
 import dataclasses
 
 import pydantic
+from mailchimp_transactional import Client
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
-
-from mailchimp_transactional import Client
 
 
 @pydantic.dataclasses.dataclass
@@ -27,6 +27,8 @@ class MailchimpProviderAuthConfig:
 class MailchimpProvider(BaseProvider):
     """Send email using the Mailchimp API."""
 
+    PROVIDER_CATEGORY = ["Collaboration"]
+
     PROVIDER_DISPLAY_NAME = "Mailchimp"
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -38,7 +40,7 @@ class MailchimpProvider(BaseProvider):
     ]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -90,19 +92,19 @@ class MailchimpProvider(BaseProvider):
         )
 
         client = self.__generate_client()
-        res = client.messages.send({
-            "message": {"from_email": _from,
-                        "subject": subject,
-                        "text": html,
-                        "to": [{
-                            "email": to,
-                            "type": "to"
-                        }]
-                        }
-        })
+        res = client.messages.send(
+            {
+                "message": {
+                    "from_email": _from,
+                    "subject": subject,
+                    "text": html,
+                    "to": [{"email": to, "type": "to"}],
+                }
+            }
+        )
         print(res)
-        if res[0]["status"] != 'sent':
-            error = res[0]['reject_reason']
+        if res[0]["status"] != "sent":
+            error = res[0]["reject_reason"]
             raise Exception("Failed to send email: " + error)
         return res[0]
 
@@ -125,7 +127,9 @@ if __name__ == "__main__":
     config = ProviderConfig(
         authentication={"api_key": mailchimp_api_key},
     )
-    provider = MailchimpProvider(context_manager, provider_id="mailchimp-test", config=config)
+    provider = MailchimpProvider(
+        context_manager, provider_id="mailchimp-test", config=config
+    )
     response = provider.notify(
         "onboarding@mailchimp.dev",
         "youremail@gmail.com",

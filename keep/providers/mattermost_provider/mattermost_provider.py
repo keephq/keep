@@ -27,6 +27,7 @@ class MattermostProvider(BaseProvider):
     """send alert message to Mattermost."""
 
     PROVIDER_DISPLAY_NAME = "Mattermost"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

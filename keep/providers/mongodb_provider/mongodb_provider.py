@@ -58,6 +58,7 @@ class MongodbProvider(BaseProvider):
     """Enrich alerts with data from MongoDB."""
 
     PROVIDER_DISPLAY_NAME = "MongoDB"
+    PROVIDER_CATEGORY = ["Database"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

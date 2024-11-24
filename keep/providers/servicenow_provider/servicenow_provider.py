@@ -70,6 +70,7 @@ class ServicenowProviderAuthConfig:
 class ServicenowProvider(BaseTopologyProvider):
     """Manage ServiceNow tickets."""
 
+    PROVIDER_CATEGORY = ["Ticketing"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="itil",

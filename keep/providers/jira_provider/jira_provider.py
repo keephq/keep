@@ -1,6 +1,7 @@
 """
 JiracloudProvider is a class that implements the BaseProvider interface for Jira updates.
 """
+
 import dataclasses
 import json
 from typing import List
@@ -52,6 +53,8 @@ class JiraProviderAuthConfig:
 
 class JiraProvider(BaseProvider):
     """Enrich alerts with Jira tickets."""
+
+    PROVIDER_CATEGORY = ["Ticketing"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -306,7 +309,7 @@ class JiraProvider(BaseProvider):
             return {"issue": response.json()}
         except Exception as e:
             raise ProviderException(f"Failed to create an issue: {e}")
-        
+
     def __update_issue(
         self,
         issue_id: str,
@@ -325,7 +328,7 @@ class JiraProvider(BaseProvider):
 
             url = self.__get_url(paths=["issue", issue_id])
 
-            update = { }
+            update = {}
 
             if summary:
                 update["summary"] = [{"set": summary}]
@@ -342,7 +345,7 @@ class JiraProvider(BaseProvider):
             if custom_fields:
                 update.update(custom_fields)
 
-            request_body = { "update": update }
+            request_body = {"update": update}
 
             response = requests.put(
                 url=url, json=request_body, auth=self.__get_auth(), verify=False
@@ -352,9 +355,7 @@ class JiraProvider(BaseProvider):
                 if response.status_code != 204:
                     response.raise_for_status()
             except Exception:
-                self.logger.exception(
-                    "Failed to update an issue", extra=response.text
-                )
+                self.logger.exception("Failed to update an issue", extra=response.text)
                 raise ProviderException("Failed to update an issue")
             self.logger.info("Updated an issue!")
             return {
@@ -364,7 +365,7 @@ class JiraProvider(BaseProvider):
                     "self": self.__get_url(paths=["issue", issue_id]),
                 }
             }
-        
+
         except Exception as e:
             raise ProviderException(f"Failed to update an issue: {e}")
 
@@ -391,7 +392,7 @@ class JiraProvider(BaseProvider):
             )
         else:
             raise Exception("Could not fetch boards: " + boards_response.text)
-        
+
     def _extract_issue_key_from_issue_id(self, issue_id: str):
         issue_key = requests.get(
             f"{self.jira_host}/rest/api/2/issue/{issue_id}",
@@ -444,7 +445,7 @@ class JiraProvider(BaseProvider):
 
                 self.logger.info("Updated a jira issue: " + str(result))
                 return result
-            
+
             if not project_key:
                 project_key = self._extract_project_key_from_board_name(board_name)
             if not project_key or not summary or not issue_type or not description:

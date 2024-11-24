@@ -69,7 +69,7 @@ const ProvidersTiles = ({
       return "Linked Providers";
     }
 
-    return "Connect Provider";
+    return "Available Providers";
   };
 
   const sortedProviders = providers
@@ -80,6 +80,9 @@ const ProvidersTiles = ({
     )
     .sort(
       (a, b) =>
+        // Put coming_soon providers at the end
+        Number(a.coming_soon) - Number(b.coming_soon) ||
+        // Then sort by webhook/oauth capabilities
         Number(b.can_setup_webhook) - Number(a.can_setup_webhook) ||
         Number(b.supports_webhook) - Number(a.supports_webhook) ||
         Number(b.oauth2_url ? true : false) -
@@ -96,7 +99,7 @@ const ProvidersTiles = ({
               icon={QuestionMarkCircleIcon} // Use the appropriate icon for your use case
               className="text-gray-400 hover:text-gray-600"
               size="sm"
-              tooltip="Providers which send alerts without being installed by Keep"
+              tooltip="Providers that send alerts to Keep and are not installed."
             />
           </div>
         )}

@@ -28,7 +28,6 @@ class GrafanaIncidentProviderAuthConfig:
             "sensitive": False,
             "validation": "https_url",
         },
-        default=None,
     )
 
     service_account_token: str = dataclasses.field(
@@ -51,6 +50,7 @@ class GrafanaIncidentProvider(BaseProvider):
             description="User is Authenticated",
         ),
     ]
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     SEVERITIES_MAP = {
         "Pending": AlertSeverity.INFO,

@@ -44,6 +44,7 @@ class GrafanaOncallProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "Grafana OnCall"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     API_URI = "api/plugins/grafana-incident-app/resources/api"
     provider_description = "Grafana OnCall is a SaaS incident management solution that helps you resolve incidents faster."

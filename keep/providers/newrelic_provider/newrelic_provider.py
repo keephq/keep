@@ -51,6 +51,7 @@ class NewrelicProviderAuthConfig:
 class NewrelicProvider(BaseProvider):
     """Get alerts from New Relic into Keep."""
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     NEWRELIC_WEBHOOK_NAME = "keep-webhook"
     PROVIDER_DISPLAY_NAME = "New Relic"
     PROVIDER_SCOPES = [

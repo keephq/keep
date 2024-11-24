@@ -50,6 +50,7 @@ class RedmineProvider(BaseProvider):
         ),
     ]
     PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_CATEGORY = ["Ticketing"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

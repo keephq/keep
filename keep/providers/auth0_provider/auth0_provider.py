@@ -43,6 +43,7 @@ class Auth0Provider(BaseProvider):
     """Enrich alerts with data from Auth0."""
 
     PROVIDER_DISPLAY_NAME = "Auth0"
+    PROVIDER_CATEGORY = ["Identity and Access Management"]
 
     provider_id: str
     config: ProviderConfig

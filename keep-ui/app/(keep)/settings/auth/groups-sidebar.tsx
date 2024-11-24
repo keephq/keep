@@ -17,7 +17,7 @@ import {
   FieldValues,
 } from "react-hook-form";
 import { useRoles } from "utils/hooks/useRoles";
-import { useUsers } from "utils/hooks/useUsers";
+import { useUsers } from "@/entities/users/model/useUsers";
 import { useApiUrl } from "utils/hooks/useConfig";
 import "./multiselect.css";
 
@@ -259,8 +259,8 @@ const GroupsSidebar = ({
                   {isSubmitting
                     ? "Saving..."
                     : isNewGroup
-                    ? "Create Group"
-                    : "Save"}
+                      ? "Create Group"
+                      : "Save"}
                 </Button>
               </div>
             </form>

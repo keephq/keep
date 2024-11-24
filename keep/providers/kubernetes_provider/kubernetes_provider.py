@@ -50,7 +50,7 @@ class KubernetesProvider(BaseProvider):
 
     provider_id: str
     PROVIDER_DISPLAY_NAME = "Kubernetes"
-
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Developer Tools"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="connect_to_kubernetes",
@@ -60,9 +60,7 @@ class KubernetesProvider(BaseProvider):
         )
     ]
 
-    def __init__(
-            self, context_manager, provider_id: str, config: ProviderConfig
-    ):
+    def __init__(self, context_manager, provider_id: str, config: ProviderConfig):
         super().__init__(context_manager, provider_id, config)
         self.authentication_config = None
         self.validate_config()
@@ -77,7 +75,9 @@ class KubernetesProvider(BaseProvider):
         """
         if self.config.authentication is None:
             self.config.authentication = {}
-        self.authentication_config = KubernetesProviderAuthConfig(**self.config.authentication)
+        self.authentication_config = KubernetesProviderAuthConfig(
+            **self.config.authentication
+        )
 
     def __create_k8s_client(self):
         """
@@ -87,7 +87,9 @@ class KubernetesProvider(BaseProvider):
 
         client_configuration.host = self.authentication_config.api_server
         client_configuration.verify_ssl = not self.authentication_config.insecure
-        client_configuration.api_key = {"authorization": "Bearer " + self.authentication_config.token}
+        client_configuration.api_key = {
+            "authorization": "Bearer " + self.authentication_config.token
+        }
 
         return client.ApiClient(client_configuration)
 
@@ -110,11 +112,21 @@ class KubernetesProvider(BaseProvider):
 
         return scopes
 
-    def _notify(self, action: str, kind: str, object_name: str, namespace: str, labels: str, **kwargs):
+    def _notify(
+        self,
+        action: str,
+        kind: str,
+        object_name: str,
+        namespace: str,
+        labels: str,
+        **kwargs,
+    ):
         if labels is None:
             labels = []
         if action == "rollout_restart":
-            self.__rollout_restart(kind=kind, name=object_name, namespace=namespace, labels=labels)
+            self.__rollout_restart(
+                kind=kind, name=object_name, namespace=namespace, labels=labels
+            )
         elif action == "list_pods":
             self.__list_pods(namespace=namespace, labels=labels)
         else:
@@ -122,16 +134,16 @@ class KubernetesProvider(BaseProvider):
 
     def __rollout_restart(self, kind, name, namespace, labels):
         api_client = self.__create_k8s_client()
-        self.logger.info(f"Performing rollout restart for {kind} {name} using kubernetes provider")
+        self.logger.info(
+            f"Performing rollout restart for {kind} {name} using kubernetes provider"
+        )
         now = datetime.datetime.now(datetime.timezone.utc)
         now = str(now.isoformat("T") + "Z")
         body = {
-            'spec': {
-                'template': {
-                    'metadata': {
-                        'annotations': {
-                            'kubectl.kubernetes.io/restartedAt': now
-                        }
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {"kubectl.kubernetes.io/restartedAt": now}
                     }
                 }
             }
@@ -139,24 +151,44 @@ class KubernetesProvider(BaseProvider):
         apps_v1 = client.AppsV1Api(api_client)
         try:
             if kind == "deployment":
-                deployment_list = apps_v1.list_namespaced_deployment(namespace=namespace, label_selector=labels)
+                deployment_list = apps_v1.list_namespaced_deployment(
+                    namespace=namespace, label_selector=labels
+                )
                 if not deployment_list.items:
-                    raise ValueError(f"Deployment with labels {labels} not found in namespace {namespace}")
-                apps_v1.patch_namespaced_deployment(name=name, namespace=namespace, body=body)
+                    raise ValueError(
+                        f"Deployment with labels {labels} not found in namespace {namespace}"
+                    )
+                apps_v1.patch_namespaced_deployment(
+                    name=name, namespace=namespace, body=body
+                )
             elif kind == "statefulset":
-                statefulset_list = apps_v1.list_namespaced_stateful_set(namespace=namespace, label_selector=labels)
+                statefulset_list = apps_v1.list_namespaced_stateful_set(
+                    namespace=namespace, label_selector=labels
+                )
                 if not statefulset_list.items:
-                    raise ValueError(f"StatefulSet with labels {labels} not found in namespace {namespace}")
-                apps_v1.patch_namespaced_stateful_set(name=name, namespace=namespace, body=body)
+                    raise ValueError(
+                        f"StatefulSet with labels {labels} not found in namespace {namespace}"
+                    )
+                apps_v1.patch_namespaced_stateful_set(
+                    name=name, namespace=namespace, body=body
+                )
             elif kind == "daemonset":
-                daemonset_list = apps_v1.list_namespaced_daemon_set(namespace=namespace, label_selector=labels)
+                daemonset_list = apps_v1.list_namespaced_daemon_set(
+                    namespace=namespace, label_selector=labels
+                )
                 if not daemonset_list.items:
-                    raise ValueError(f"DaemonSet with labels {labels} not found in namespace {namespace}")
-                apps_v1.patch_namespaced_daemon_set(name=name, namespace=namespace, body=body)
+                    raise ValueError(
+                        f"DaemonSet with labels {labels} not found in namespace {namespace}"
+                    )
+                apps_v1.patch_namespaced_daemon_set(
+                    name=name, namespace=namespace, body=body
+                )
             else:
                 raise ValueError(f"Unsupported kind {kind} to perform rollout restart")
         except ApiException as e:
-            self.logger.error(f"Error performing rollout restart for {kind} {name}: {e}")
+            self.logger.error(
+                f"Error performing rollout restart for {kind} {name}: {e}"
+            )
             raise Exception(f"Error performing rollout restart for {kind} {name}: {e}")
 
         self.logger.info(f"Successfully performed rollout restart for {kind} {name}")
@@ -170,10 +202,16 @@ class KubernetesProvider(BaseProvider):
         try:
             core_v1.list_namespaced_pod(namespace=namespace, label_selector=labels)
         except ApiException as e:
-            self.logger.error(f"Error listing pods in namespace {namespace} with labels {labels}: {e}")
-            raise Exception(f"Error listing pods in namespace {namespace} with labels {labels}: {e}")
+            self.logger.error(
+                f"Error listing pods in namespace {namespace} with labels {labels}: {e}"
+            )
+            raise Exception(
+                f"Error listing pods in namespace {namespace} with labels {labels}: {e}"
+            )
 
-        self.logger.info(f"Successfully listed pods in namespace {namespace} with labels {labels}")
+        self.logger.info(
+            f"Successfully listed pods in namespace {namespace} with labels {labels}"
+        )
 
 
 if __name__ == "__main__":
@@ -184,6 +222,7 @@ if __name__ == "__main__":
 
     # Load environment variables
     import os
+
     url = os.environ.get("KUBERNETES_URL")
     token = os.environ.get("KUBERNETES_TOKEN")
     insecure = os.environ.get("KUBERNETES_INSECURE", "false").lower() == "true"
@@ -199,7 +238,11 @@ if __name__ == "__main__":
         },
     )
 
-    kubernetes_provider = KubernetesProvider(context_manager, "kubernetes_keephq", config)
+    kubernetes_provider = KubernetesProvider(
+        context_manager, "kubernetes_keephq", config
+    )
 
-    result = kubernetes_provider.notify("rollout_restart", "deployment", "nginx", "default", {"app": "nginx"})
+    result = kubernetes_provider.notify(
+        "rollout_restart", "deployment", "nginx", "default", {"app": "nginx"}
+    )
     print(result)

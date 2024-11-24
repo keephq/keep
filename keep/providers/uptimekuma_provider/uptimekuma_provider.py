@@ -48,6 +48,7 @@ class UptimekumaProviderAuthConfig:
 class UptimekumaProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "UptimeKuma"
     PROVIDER_TAGS = ["alert"]
+    PROVIDER_CATEGORY = ["Monitoring"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

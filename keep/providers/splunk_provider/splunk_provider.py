@@ -70,7 +70,7 @@ class SplunkProvider(BaseProvider):
         ),
     ]
     FINGERPRINT_FIELDS = ["exception", "logger", "service"]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "LOW": AlertSeverity.LOW,
         "INFO": AlertSeverity.INFO,
