@@ -43,7 +43,9 @@ const proxyUrl =
   process.env.https_proxy;
 
 import { ProxyAgent, fetch as undici } from "undici";
-function proxy(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
+function proxyFetch(
+  ...args: Parameters<typeof fetch>
+): ReturnType<typeof fetch> {
   console.log(
     "Proxy called for URL:",
     args[0] instanceof Request ? args[0].url : args[0]
@@ -66,18 +68,20 @@ function proxy(...args: Parameters<typeof fetch>): ReturnType<typeof fetch> {
   return undici(args[0], { ...(args[1] || {}), dispatcher });
 }
 
-// Create Azure AD provider configuration
-const createAzureADProvider = () => {
-  // check if proxy is enabled
+/**
+ * Creates a Microsoft Entra ID provider configuration and overrides the customFetch.
+ */
+export const createAzureADProvider = () => {
   if (!proxyUrl) {
     console.log("Proxy is not enabled");
   } else {
-    console.log("Proxy is enabled - ", proxyUrl);
+    console.log("Proxy is enabled:", proxyUrl);
   }
+
+  // Step 1: Create the base provider
   const baseConfig = {
     clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
     clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
-    // The issuer is the URL of the identity provider
     issuer: `https://login.microsoftonline.com/${process.env
       .KEEP_AZUREAD_TENANT_ID!}/v2.0`,
     authorization: {
@@ -86,13 +90,38 @@ const createAzureADProvider = () => {
           .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
       },
     },
-    [customFetch]: proxyUrl ? proxy : undefined,
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
   };
 
-  return MicrosoftEntraID(baseConfig);
+  const provider = MicrosoftEntraID(baseConfig);
+  // if not proxyUrl, return the provider
+  if (!proxyUrl) return provider;
+
+  // Step 2: Override the `customFetch` symbol in the provider
+  provider[customFetch] = async (...args: Parameters<typeof fetch>) => {
+    const url = new URL(args[0] instanceof Request ? args[0].url : args[0]);
+    console.log("Custom Fetch Intercepted:", url.toString());
+
+    // Handle `.well-known/openid-configuration` logic
+    if (url.pathname.endsWith(".well-known/openid-configuration")) {
+      console.log("Intercepting .well-known/openid-configuration");
+      const response = await proxyFetch(...args);
+      const json = await response.clone().json();
+      const tenantRe = /microsoftonline\.com\/(\w+)\/v2\.0/;
+      const tenantId = baseConfig.issuer?.match(tenantRe)?.[1] ?? "common";
+      const issuer = json.issuer.replace("{tenantid}", tenantId);
+      console.log("Modified issuer:", issuer);
+      return Response.json({ ...json, issuer });
+    }
+
+    // Fallback for all other requests
+    return proxyFetch(...args);
+  };
+
+  const bla = provider[customFetch];
+  return provider;
 };
 
 async function refreshAccessToken(token: any) {
