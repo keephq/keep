@@ -1,4 +1,4 @@
-import { Icon } from "@tremor/react";
+import { Button, Icon } from "@tremor/react";
 import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
@@ -46,14 +46,18 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
   }
 
   return (
-    <div className="flex flex-col">
-      <Icon
+    <div className="">
+      <Button
+        variant="light"
+        size="xs"
         icon={LinkSlashIcon}
         color="red"
         tooltip="Remove correlation"
         className="cursor-pointer"
         onClick={onRemove}
-      />
+      >
+        Remove correlation
+      </Button>
     </div>
   );
 }
