@@ -152,6 +152,9 @@ export const FacetValue: React.FC<FacetValueProps> = ({
           return label;
         }
       }
+      if (facetKey === "dismissed") {
+        return label === "true" ? "Dismissed" : "Not dismissed";
+      }
       return <span className="capitalize">{label}</span>;
     },
     [incident]
