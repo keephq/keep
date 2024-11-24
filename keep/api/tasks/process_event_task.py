@@ -29,7 +29,6 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
-from keep.api.models.db.preset import PresetDto
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
