@@ -4,8 +4,8 @@ import {
   PaginatedIncidentAlertsDto,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
-import { PaginatedWorkflowExecutionDto } from "app/workflows/builder/types";
-import { useSession } from "next-auth/react";
+import { PaginatedWorkflowExecutionDto } from "@/app/(keep)/workflows/builder/types";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";

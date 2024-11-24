@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Preset } from "app/alerts/models";
-import { useSession } from "next-auth/react";
+import { Preset } from "@/app/(keep)/alerts/models";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
@@ -8,8 +8,8 @@ import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
-import { usePathname, useSearchParams } from "next/navigation";
-import moment from "moment";
+import { useSearchParams } from "next/navigation";
+import { useRevalidateMultiple } from "../state";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const { data: session } = useSession();
@@ -32,6 +32,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   const presetsOrderRef = useRef(presetsOrderFromLS);
   const staticPresetsOrderRef = useRef(staticPresetsOrderFromLS);
   const { bind, unbind } = useWebsocket();
+  const revalidateMultiple = useRevalidateMultiple();
 
   useEffect(() => {
     presetsOrderRef.current = presetsOrderFromLS;
@@ -89,6 +90,8 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     (_, { next }) => {
       const newPresets = (newPresets: Preset[]) => {
         updateLocalPresets(newPresets);
+        // update the presets aggregated endpoint for the sidebar
+        revalidateMultiple(["/preset"]);
         next(null, {
           presets: newPresets,
           isAsyncLoading: false,
@@ -111,11 +114,11 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     return useSWR<Preset[]>(
       () =>
         session
-          ? `${apiUrl}/preset${
+          ? `/preset${
               useFilters && filters && isDashBoard ? `?${filters}` : ""
             }`
           : null,
-      (url) => fetcher(url, session?.accessToken),
+      (url) => fetcher(apiUrl + url, session?.accessToken),
       {
         ...options,
         onSuccess: (data) => {

@@ -4,7 +4,7 @@ import { Menu } from "@headlessui/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import { Session } from "next-auth";
 import { useConfig } from "utils/hooks/useConfig";
-import { AuthenticationType } from "utils/authenticationType";
+import { AuthType } from "@/utils/authenticationType";
 import Link from "next/link";
 import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
@@ -17,7 +17,8 @@ import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/useSignOut";
-import { useSetSentryUser } from "@/shared/lib/useSetSentryUser";
+
+const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
 type UserDropdownProps = {
   session: Session;
@@ -34,6 +35,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
     strategy: "fixed",
   });
 
+  const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
     <Menu as="li" ref={refs.setReference}>
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
@@ -67,7 +69,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
               </Menu.Item>
             </li>
           )}
-          {configData?.AUTH_TYPE !== AuthenticationType.NOAUTH && (
+          {!isNoAuth && (
             <li>
               <Menu.Item
                 as="button"
@@ -89,7 +91,7 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+  const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   return (
@@ -113,14 +115,11 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             Join our Slack
           </LinkWithIcon>
         </li>
-        {session && <UserDropdown session={session} />}
-        {isOnboardingComplete === false && (
+        {flow?.isCompleted === false && (
           <li>
             <Frigade.ProgressBadge
-              flowId="flow_FHDz1hit"
-              onComplete={() => setIsOnboardingComplete(true)}
+              flowId={ONBOARDING_FLOW_ID}
               onClick={() => setIsOnboardingOpen(true)}
-              // css={{ backgroundColor: "#F9FAFB" }}
             />
             <Onboarding
               isOpen={isOnboardingOpen}
@@ -131,6 +130,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             />
           </li>
         )}
+        {session && <UserDropdown session={session} />}
       </ul>
     </>
   );

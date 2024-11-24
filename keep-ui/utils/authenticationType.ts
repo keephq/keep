@@ -1,6 +1,6 @@
 // AuthenticationType.ts
 
-export enum AuthenticationType {
+export enum AuthType {
   AUTH0 = "AUTH0",
   DB = "DB",
   KEYCLOAK = "KEYCLOAK",
