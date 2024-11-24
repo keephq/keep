@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from keep.api.consts import PROVIDER_PULL_INTERVAL_DAYS, STATIC_PRESETS
-from keep.api.core.db import get_preset_by_name as get_preset_by_name_db
+from keep.api.core.db import get_db_preset_by_name
 from keep.api.core.db import get_presets as get_presets_db
 from keep.api.core.db import (
     get_session,
@@ -448,7 +448,7 @@ def get_preset_alerts(
     if preset_name in STATIC_PRESETS:
         preset = STATIC_PRESETS[preset_name]
     else:
-        preset = get_preset_by_name_db(tenant_id, preset_name)
+        preset = get_db_preset_by_name(tenant_id, preset_name)
     # if preset does not exist
     if not preset:
         raise HTTPException(404, "Preset not found")

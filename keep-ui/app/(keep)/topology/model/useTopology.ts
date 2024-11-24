@@ -7,7 +7,7 @@ import { buildTopologyUrl } from "@/app/(keep)/topology/api";
 import { useTopologyPollingContext } from "@/app/(keep)/topology/model/TopologyPollingContext";
 import { useApiUrl } from "utils/hooks/useConfig";
 
-export const useTopologyBaseKey = () => `${useApiUrl()}/topology`;
+export const TOPOLOGY_URL = `/topology`;
 
 type UseTopologyOptions = {
   providerIds?: string[];
@@ -37,11 +37,11 @@ export const useTopology = (
 
   const url = !session
     ? null
-    : buildTopologyUrl(apiUrl!, { providerIds, services, environment });
+    : buildTopologyUrl({ providerIds, services, environment });
 
   const { data, error, mutate } = useSWR<TopologyService[]>(
     url,
-    (url: string) => fetcher(url, session!.accessToken),
+    (url: string) => fetcher(apiUrl! + url, session!.accessToken),
     {
       fallbackData,
       ...options,
