@@ -8,12 +8,6 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
 import type { JWT } from "next-auth/jwt";
-// https://github.com/nextauthjs/next-auth/issues/11028
-
-export class BackendRefusedError extends AuthError {
-  static type = "BackendRefusedError";
-}
-
 import { getApiURL } from "@/utils/apiUrl";
 import {
   AuthType,
@@ -24,6 +18,11 @@ import {
   NoAuthTenant,
 } from "@/utils/authenticationType";
 import type { User } from "next-auth";
+import { ProxyAgent, fetch as undici } from "undici";
+// https://github.com/nextauthjs/next-auth/issues/11028
+export class BackendRefusedError extends AuthError {
+  static type = "BackendRefusedError";
+}
 
 // Determine auth type with backward compatibility
 const authTypeEnv = process.env.AUTH_TYPE;
@@ -36,13 +35,15 @@ const authType =
     ? AuthType.NOAUTH
     : (authTypeEnv as AuthType);
 
+// Determine proxy settings
 const proxyUrl =
   process.env.HTTP_PROXY ||
   process.env.HTTPS_PROXY ||
   process.env.http_proxy ||
   process.env.https_proxy;
 
-import { ProxyAgent, fetch as undici } from "undici";
+// used only if proxyUrl is set
+// currently tested only on Azure AD
 function proxyFetch(
   ...args: Parameters<typeof fetch>
 ): ReturnType<typeof fetch> {
@@ -75,12 +76,6 @@ function proxyFetch(
  * because in Microsoft entra it already has a customFetch symbol and we need to override it.s
  */
 export const createAzureADProvider = () => {
-  if (!proxyUrl) {
-    console.log("Proxy is not enabled");
-  } else {
-    console.log("Proxy is enabled:", proxyUrl);
-  }
-
   // Step 1: Create the base provider
   const baseConfig = {
     clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
