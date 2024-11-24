@@ -78,7 +78,7 @@ class Site24X7Provider(BaseProvider):
             alias="Valid TLD",
         ),
     ]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "DOWN": AlertSeverity.WARNING,
         "TROUBLE": AlertSeverity.HIGH,

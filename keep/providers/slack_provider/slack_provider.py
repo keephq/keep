@@ -46,6 +46,7 @@ class SlackProvider(BaseProvider):
     SLACK_CLIENT_ID = os.environ.get("SLACK_CLIENT_ID")
     SLACK_CLIENT_SECRET = os.environ.get("SLACK_CLIENT_SECRET")
     SLACK_API = "https://slack.com/api"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

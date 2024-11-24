@@ -25,6 +25,7 @@ class IncidentioProviderAuthConfig:
     """
     Incidentio authentication configuration.
     """
+
     incidentIoApiKey: str = dataclasses.field(
         metadata={
             "required": True,
@@ -39,6 +40,7 @@ class IncidentioProvider(BaseProvider):
     """Receive Incidents from Incidentio."""
 
     PROVIDER_DISPLAY_NAME = "incident.io"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -52,7 +54,7 @@ class IncidentioProvider(BaseProvider):
             description="User has read access",
             mandatory=True,
             alias="can_read",
-        )
+        ),
     ]
 
     SEVERITIES_MAP = {
@@ -60,7 +62,7 @@ class IncidentioProvider(BaseProvider):
         "Major": AlertSeverity.HIGH,
         "Info": AlertSeverity.INFO,
         "Critical": AlertSeverity.CRITICAL,
-        "Minor": AlertSeverity.LOW
+        "Minor": AlertSeverity.LOW,
     }
 
     STATUS_MAP = {
@@ -71,11 +73,11 @@ class IncidentioProvider(BaseProvider):
         "live": AlertStatus.FIRING,
         "learning": AlertStatus.PENDING,
         "closed": AlertStatus.RESOLVED,
-        "paused": AlertStatus.SUPPRESSED
+        "paused": AlertStatus.SUPPRESSED,
     }
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -121,7 +123,7 @@ class IncidentioProvider(BaseProvider):
         Building the headers for api requests
         """
         return {
-            'Authorization': f'Bearer {self.authentication_config.incidentIoApiKey}',
+            "Authorization": f"Bearer {self.authentication_config.incidentIoApiKey}",
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
@@ -138,36 +140,58 @@ class IncidentioProvider(BaseProvider):
                 return {"authenticated": True, "read_access": True}
             else:
                 self.logger.error(f"Failed to validate scopes: {response.status_code}")
-                scopes = {"authenticated": "Unable to query incidents: {response.status_code}", "read_access": False}
+                scopes = {
+                    "authenticated": "Unable to query incidents: {response.status_code}",
+                    "read_access": False,
+                }
         except Exception as e:
-            self.logger.error("Error getting IncidentIO scopes:", extra={"exception": str(e)})
-            scopes = {"authenticated": "Unable to query incidents: {e}", "read_access": False}
+            self.logger.error(
+                "Error getting IncidentIO scopes:", extra={"exception": str(e)}
+            )
+            scopes = {
+                "authenticated": "Unable to query incidents: {e}",
+                "read_access": False,
+            }
 
         return scopes
 
     def _query(self, incident_id, **kwargs) -> AlertDto:
         """query IncidentIO Incident"""
-        self.logger.info("Querying IncidentIO incident",
-                         extra={
-                             "incident_id": incident_id,
-                             **kwargs,
-                         }, )
+        self.logger.info(
+            "Querying IncidentIO incident",
+            extra={
+                "incident_id": incident_id,
+                **kwargs,
+            },
+        )
         try:
             response = requests.get(
                 url=self.__get_url(paths=["incidents", incident_id]),
                 headers=self.__get_headers(),
             )
         except Exception as e:
-            self.logger.error("Error while fetching Incident",
-                              extra={"incident_id": incident_id, "kwargs": kwargs, "exception": str(e)})
+            self.logger.error(
+                "Error while fetching Incident",
+                extra={
+                    "incident_id": incident_id,
+                    "kwargs": kwargs,
+                    "exception": str(e),
+                },
+            )
             raise e
         else:
             if response.ok:
                 res = response.json()
                 return self.__map_alert_to_AlertDTO({"event": res})
             else:
-                self.logger.error("Error while fetching Incident",
-                                  extra={"incident_id": incident_id, "kwargs": kwargs, "res": response.text})
+                self.logger.error(
+                    "Error while fetching Incident",
+                    extra={
+                        "incident_id": incident_id,
+                        "kwargs": kwargs,
+                        "res": response.text,
+                    },
+                )
 
     def _get_alerts(self) -> list[AlertDto]:
         alerts = []
@@ -175,28 +199,35 @@ class IncidentioProvider(BaseProvider):
 
         while True:
             try:
-                params = {'page_size': 100}
+                params = {"page_size": 100}
                 if next_page:
-                    params['after'] = next_page
+                    params["after"] = next_page
 
-                response = requests.get(self.__get_url(paths=["incidents"]), headers=self.__get_headers(), params=params,
-                                        timeout=15)
+                response = requests.get(
+                    self.__get_url(paths=["incidents"]),
+                    headers=self.__get_headers(),
+                    params=params,
+                    timeout=15,
+                )
                 response.raise_for_status()
             except requests.RequestException as e:
-                self.logger.error("Error getting IncidentIO scopes:", extra={"exception": str(e)})
+                self.logger.error(
+                    "Error getting IncidentIO scopes:", extra={"exception": str(e)}
+                )
                 raise e
             else:
                 data = response.json()
                 try:
-                    for incident in data.get('incidents', []):
-                        alerts.append(
-                            self.__map_alert_to_AlertDTO(incident)
-                        )
+                    for incident in data.get("incidents", []):
+                        alerts.append(self.__map_alert_to_AlertDTO(incident))
                 except Exception as e:
-                    self.logger.error("Error while mapping incidents to AlertDTO", extra={"exception": str(e)})
+                    self.logger.error(
+                        "Error while mapping incidents to AlertDTO",
+                        extra={"exception": str(e)},
+                    )
                     raise e
-                pagination_meta = data.get('pagination_meta', {})
-                next_page = pagination_meta.get('after')
+                pagination_meta = data.get("pagination_meta", {})
+                next_page = pagination_meta.get("after")
 
                 if not next_page:
                     break
@@ -205,20 +236,25 @@ class IncidentioProvider(BaseProvider):
 
     def __map_alert_to_AlertDTO(self, incident) -> AlertDto:
         return AlertDto(
-            id=incident['id'],
-            fingerprint=incident['id'],
-            name=incident['name'],
-            status=IncidentioProvider.STATUS_MAP[incident['incident_status']["category"]],
+            id=incident["id"],
+            fingerprint=incident["id"],
+            name=incident["name"],
+            status=IncidentioProvider.STATUS_MAP[
+                incident["incident_status"]["category"]
+            ],
             severity=IncidentioProvider.SEVERITIES_MAP.get(
-                incident.get("severity", {}).get("name", "minor"), AlertSeverity.WARNING),
-            lastReceived=incident.get('created_at'),
-            description=incident.get('summary', ""),
+                incident.get("severity", {}).get("name", "minor"), AlertSeverity.WARNING
+            ),
+            lastReceived=incident.get("created_at"),
+            description=incident.get("summary", ""),
             apiKeyRef=incident["creator"]["api_key"]["id"],
             assignee=", ".join(
-                assignment["role"]["name"] for assignment in
-                incident["incident_role_assignments"]),
-            url=incident.get("permalink", "https://app.incident.io/")
+                assignment["role"]["name"]
+                for assignment in incident["incident_role_assignments"]
+            ),
+            url=incident.get("permalink", "https://app.incident.io/"),
         )
+
 
 if __name__ == "__main__":
     import logging
@@ -235,9 +271,7 @@ if __name__ == "__main__":
 
     config = ProviderConfig(
         description="Incidentio Provider",
-        authentication={
-            "incidentIoApiKey": api_key
-        },
+        authentication={"incidentIoApiKey": api_key},
     )
 
     provider = IncidentioProvider(
