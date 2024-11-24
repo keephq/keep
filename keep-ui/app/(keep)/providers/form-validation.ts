@@ -6,6 +6,7 @@ type URLOptions = {
   requireTld: boolean;
   requireProtocol: boolean;
   requirePort: boolean;
+  alllowMultihost: boolean;
   validateLength: boolean;
   maxLength: number;
 };
@@ -17,6 +18,7 @@ const defaultURLOptions: URLOptions = {
   requireTld: false,
   requireProtocol: true,
   requirePort: false,
+  alllowMultihost: false,
   validateLength: true,
   maxLength: 2 ** 16,
 };
@@ -37,6 +39,7 @@ const missingPortError = error("A URL with a port number is required");
 const portError = error("Invalid port number");
 const hostError = error("Invalid URL host");
 const hostWildcardError = error("Wildcard in URL host is not allowed");
+const multihostError = error("Multiple hosts are not allowed.");
 const tldError = error(
   "URL must contain a valid TLD e.g .com, .io, .dev, .net"
 );
@@ -105,6 +108,35 @@ function isIP(str: string) {
   return validation.success;
 }
 
+function validateHost(hostname: string, opts: URLOptions): ValidatorRes {
+  let host: string;
+  let port: number;
+  let portStr: string = "";
+  let split: string[];
+
+  // extract ipv6 & port
+  const wrapped_ipv6 = /^\[([^\]]+)\](?::([0-9]+))?$/;
+  const ipv6Match = hostname.match(wrapped_ipv6);
+  if (ipv6Match) {
+    host = ipv6Match[1];
+    portStr = ipv6Match[2];
+  } else {
+    split = hostname.split(":");
+    host = split.shift() ?? "";
+    if (split.length) portStr = split.join(":");
+  }
+
+  if (portStr.length) {
+    port = parseInt(portStr, 10);
+    if (Number.isNaN(port)) return urlError;
+    if (port <= 0 || port > 65_535) return portError;
+  } else if (opts.requirePort) return missingPortError;
+
+  if (!host) return hostError;
+  if (isIP(host)) return { success: true };
+  return isFQDN(host, opts);
+}
+
 function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
   const opts = mergeOptions(defaultURLOptions, options);
 
@@ -114,9 +146,6 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
   }
 
   let url = str;
-  let host: string;
-  let port: number;
-  let portStr: string = "";
   let split: string[];
 
   split = url.split("#");
@@ -153,27 +182,17 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
   }
   const hostname = split.join("@");
 
-  // extract ipv6 & port
-  const wrapped_ipv6 = /^\[([^\]]+)\](?::([0-9]+))?$/;
-  const ipv6Match = hostname.match(wrapped_ipv6);
-  if (ipv6Match) {
-    host = ipv6Match[1];
-    portStr = ipv6Match[2];
-  } else {
-    split = hostname.split(":");
-    host = split.shift() ?? "";
-    if (split.length) portStr = split.join(":");
+  // validate multihost
+  split = hostname.split(",");
+  if (split.length > 1 && !opts.alllowMultihost) return multihostError;
+  if (split.length > 1) {
+    for (const host of split) {
+      const res = validateHost(host, opts);
+      if (!res.success) return res;
+    }
+    return { success: true };
   }
-
-  if (portStr.length) {
-    port = parseInt(portStr, 10);
-    if (Number.isNaN(port)) return urlError;
-    if (port <= 0 || port > 65_535) return portError;
-  } else if (opts.requirePort) return missingPortError;
-
-  if (!host) return hostError;
-  if (isIP(host)) return { success: true };
-  return isFQDN(host, opts);
+  return validateHost(hostname, opts);
 }
 
 const required_error = "This field is required";
@@ -258,6 +277,21 @@ export function getZodSchema(fields: Provider["config"], installed: boolean) {
 
     if (config.validation === "no_scheme_url") {
       const baseSchema = getBaseUrlSchema({ requireProtocol: false });
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
+    }
+
+    if (config.validation === "multihost_url") {
+      const baseSchema = getBaseUrlSchema({ alllowMultihost: true });
+      const schema = config.required ? baseSchema : baseSchema.optional();
+      return [field, schema];
+    }
+
+    if (config.validation === "no_scheme_multihost_url") {
+      const baseSchema = getBaseUrlSchema({
+        alllowMultihost: true,
+        requireProtocol: false,
+      });
       const schema = config.required ? baseSchema : baseSchema.optional();
       return [field, schema];
     }

@@ -1,7 +1,12 @@
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from keep.validation.fields import HttpsUrl, NoSchemeUrl
+from keep.validation.fields import (
+    HttpsUrl,
+    MultiHostUrl,
+    NoSchemeMultiHostUrl,
+    NoSchemeUrl,
+)
 
 
 @pytest.mark.parametrize(
@@ -80,6 +85,86 @@ def test_no_scheme_url_valid(value, expected):
 def test_no_scheme_url_invalid(value):
     class Model(BaseModel):
         v: NoSchemeUrl
+
+    with pytest.raises(ValidationError) as exc_info:
+        Model(v=value)
+    assert len(exc_info.value.errors()) == 1, exc_info.value.errors()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "http://localhost:5000",
+        "http://localhost:5000,localhost:2222",
+        "https://user:pass@localhost:4321,localhost:3000/app",
+        "http://123.45.67.8:8329/,113.45.67.8:9309/",
+        "http://[2001:db8::ff00:42]:8329,[2001:db8::ff00:42]:5000",
+        "ampq://broker.com,en.broker.com/app",
+        "postgres://user:pass@host1.db.net:4321,host2.db.net:6432/app",
+        "mongodb://user:pass@host1.db.net:4321,host2.db.net:6432/app?query#fragment",
+    ],
+)
+def test_multihost_url_valid(value):
+    class Model(BaseModel):
+        v: MultiHostUrl
+
+    assert str(Model(v=value).v) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "localhost:5000,localhost:2222",
+        "broker.com,en.broker.com/app",
+        "http://[192.168.1.1]:8329,[192.168.1.2]:8421",
+        "user:pass@host1.db.net:4321,host2.db.net:6432/app?query#fragment",
+    ],
+)
+def test_multihost_url_invalid(value):
+    class Model(BaseModel):
+        v: MultiHostUrl
+
+    with pytest.raises(ValidationError) as exc_info:
+        Model(v=value)
+    assert len(exc_info.value.errors()) == 1, exc_info.value.errors()
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("http://localhost:5000,localhost:2222", "localhost:5000,localhost:2222"),
+        ("localhost:5000,localhost:2222", "localhost:5000,localhost:2222"),
+        (
+            "https://user:pass@localhost:4321,localhost:3000/app",
+            "user:pass@localhost:4321,localhost:3000/app",
+        ),
+        (
+            "postgres://user:pass@host1.db.net:4321,host2.db.net:6432/app?query#fragment",
+            "user:pass@host1.db.net:4321,host2.db.net:6432/app?query#fragment",
+        ),
+    ],
+)
+def test_no_scheme_multihost_url_valid(value, expected):
+    class Model(BaseModel):
+        v: NoSchemeMultiHostUrl
+
+    assert str(Model(v=value).v) == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "http://??, localhost:5000",
+        "../icons/logo.gif",
+        "http://[192.168.1.1]:8329",
+        "..",
+        "/rando/",
+        "http://example.com:99999",
+    ],
+)
+def test_no_scheme_multihost_url_invalid(value):
+    class Model(BaseModel):
+        v: NoSchemeMultiHostUrl
 
     with pytest.raises(ValidationError) as exc_info:
         Model(v=value)

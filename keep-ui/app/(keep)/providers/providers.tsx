@@ -7,6 +7,8 @@ export interface ProviderAuthConfig {
     | "any_http_url"
     | "https_url"
     | "no_scheme_url"
+    | "multihost_url"
+    | "no_scheme_multihost_url"
     | "port"
     | "tld";
   required?: boolean;
