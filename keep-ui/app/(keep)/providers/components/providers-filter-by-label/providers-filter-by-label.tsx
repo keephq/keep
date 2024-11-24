@@ -18,8 +18,8 @@ export const ProvidersFilterByLabel: FC = (props) => {
     <MultiSelect
       onValueChange={headerSelect}
       value={providersSelectedTags}
-      placeholder="Filter by label..."
-      className="w-full ml-2.5"
+      placeholder="All Labels"
+      className="w-64 ml-2.5"
       icon={TagIcon}
     >
       {options.map(([value, label]) => (

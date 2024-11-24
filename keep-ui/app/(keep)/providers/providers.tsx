@@ -56,7 +56,6 @@ export type TProviderCategory =
   | "Incident Management"
   | "Cloud Infrastructure"
   | "Ticketing"
-  | "Identity"
   | "Developer Tools"
   | "Database"
   | "Identity and Access Management"
@@ -64,6 +63,7 @@ export type TProviderCategory =
   | "Collaboration"
   | "CRM"
   | "Queues"
+  | "Coming Soon"
   | "Others";
 
 export type TProviderLabels =
@@ -96,7 +96,6 @@ export interface Provider {
   id: string;
   // the name of the provider
   display_name: string;
-  comingSoon?: boolean;
   can_query: boolean;
   query_params?: string[];
   can_notify: boolean;
