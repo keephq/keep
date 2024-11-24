@@ -1,9 +1,9 @@
+import dataclasses
 import http
 import os
 import time
 
 import pydantic
-import dataclasses
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -32,9 +32,10 @@ class GoogleChatProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Google Chat"
     PROVIDER_TAGS = ["messaging"]
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
@@ -75,7 +76,9 @@ class GoogleChatProvider(BaseProvider):
                     if resp.status_code == http.HTTPStatus.OK:
                         return resp
 
-                    self.logger.warning(f"Attempt {attempt + 1} failed with status code {resp.status_code}")
+                    self.logger.warning(
+                        f"Attempt {attempt + 1} failed with status code {resp.status_code}"
+                    )
 
                 except requests.exceptions.RequestException as e:
                     self.logger.error(f"Attempt {attempt + 1} failed: {e}")
@@ -83,7 +86,9 @@ class GoogleChatProvider(BaseProvider):
                 if attempt < retries - 1:
                     time.sleep(1)
 
-            raise requests.exceptions.RequestException(f"Failed to notify message after {retries} attempts")
+            raise requests.exceptions.RequestException(
+                f"Failed to notify message after {retries} attempts"
+            )
 
         payload = {
             "text": message,
@@ -93,7 +98,9 @@ class GoogleChatProvider(BaseProvider):
 
         response = __send_message(webhook_url, body=payload, headers=request_headers)
         if response.status_code != http.HTTPStatus.OK:
-            raise ProviderException(f"Failed to notify message to Google Chat: {response.text}")
+            raise ProviderException(
+                f"Failed to notify message to Google Chat: {response.text}"
+            )
 
         self.logger.debug("Alert message sent to Google Chat successfully")
         return "Alert message sent to Google Chat successfully"

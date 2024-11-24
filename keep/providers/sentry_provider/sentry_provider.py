@@ -77,7 +77,7 @@ class SentryProvider(BaseProvider):
         ),
     ]
     DEFAULT_TIMEOUT = 600
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "fatal": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,

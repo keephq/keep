@@ -3,22 +3,23 @@ Grafana Incident Provider is a class that allows to query all incidents from Gra
 """
 
 import dataclasses
-import pydantic
-
-import requests
-
 from urllib.parse import urljoin
+
+import pydantic
+import requests
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
+
 @pydantic.dataclasses.dataclass
 class GrafanaIncidentProviderAuthConfig:
     """
     GrafanaIncidentProviderAuthConfig is a class that allows to authenticate in Grafana Incident.
     """
+
     host_url: str = dataclasses.field(
         metadata={
             "required": True,
@@ -37,6 +38,7 @@ class GrafanaIncidentProviderAuthConfig:
         default=None,
     )
 
+
 class GrafanaIncidentProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Grafana Incident"
     PROVIDER_TAGS = ["alert"]
@@ -47,6 +49,7 @@ class GrafanaIncidentProvider(BaseProvider):
             description="User is Authenticated",
         ),
     ]
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     SEVERITIES_MAP = {
         "Pending": AlertSeverity.INFO,
@@ -55,19 +58,16 @@ class GrafanaIncidentProvider(BaseProvider):
         "Minor": AlertSeverity.LOW,
     }
 
-    STATUS_MAP = {
-        "active": AlertStatus.FIRING,
-        "resolved": AlertStatus.RESOLVED
-    }
+    STATUS_MAP = {"active": AlertStatus.FIRING, "resolved": AlertStatus.RESOLVED}
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
 
     def dispose(self):
         pass
-    
+
     def validate_config(self):
         """
         Validate the configuration of the provider.
@@ -91,49 +91,61 @@ class GrafanaIncidentProvider(BaseProvider):
         """
         try:
             response = requests.post(
-                urljoin(self.authentication_config.host_url, "/api/plugins/grafana-incident-app/resources/api/v1/IncidentsService.QueryIncidentPreviews"),
+                urljoin(
+                    self.authentication_config.host_url,
+                    "/api/plugins/grafana-incident-app/resources/api/v1/IncidentsService.QueryIncidentPreviews",
+                ),
                 headers=self.__get_headers(),
                 json={
                     "query": {
                         "limit": 10,
                         "orderDirection": "DESC",
-                        "orderField": "createdTime"
+                        "orderField": "createdTime",
                     }
-                }
+                },
             )
 
             if response.status_code == 200:
                 return {"authenticated": True}
             else:
                 self.logger.error(f"Failed to validate scopes: {response.status_code}")
-                scopes = {"authenticated": f"Unable to query incidents: {response.status_code}"}
+                scopes = {
+                    "authenticated": f"Unable to query incidents: {response.status_code}"
+                }
         except Exception as e:
             self.logger.error(f"Failed to validate scopes: {e}")
             scopes = {"authenticated": f"Unable to query incidents: {e}"}
 
         return scopes
-    
+
     def _get_alerts(self) -> list[AlertDto]:
         """
         Get the alerts from Grafana Incident.
         """
         try:
             response = requests.post(
-                urljoin(self.authentication_config.host_url, "/api/plugins/grafana-incident-app/resources/api/v1/IncidentsService.QueryIncidentPreviews"),
+                urljoin(
+                    self.authentication_config.host_url,
+                    "/api/plugins/grafana-incident-app/resources/api/v1/IncidentsService.QueryIncidentPreviews",
+                ),
                 headers=self.__get_headers(),
                 json={
                     "query": {
                         "limit": 10,
                         "orderDirection": "DESC",
-                        "orderField": "createdTime"
+                        "orderField": "createdTime",
                     }
-                }
+                },
             )
 
             if not response.ok:
-                self.logger.error(f"Failed to get incidents from grafana incident: {response.status_code}")
-                raise Exception(f"Failed to get incidents from grafana incident: {response.status_code} - {response.text}")
-            
+                self.logger.error(
+                    f"Failed to get incidents from grafana incident: {response.status_code}"
+                )
+                raise Exception(
+                    f"Failed to get incidents from grafana incident: {response.status_code} - {response.text}"
+                )
+
             return [
                 AlertDto(
                     id=incident["incidentID"],
@@ -158,7 +170,7 @@ class GrafanaIncidentProvider(BaseProvider):
                     incidentMembershipPreview=incident["incidentMembershipPreview"],
                     fieldValues=incident["fieldValues"],
                     version=incident["version"],
-                    source=["grafana_incident"]
+                    source=["grafana_incident"],
                 )
                 for incident in response.json()["incidentPreviews"]
             ]
@@ -166,7 +178,8 @@ class GrafanaIncidentProvider(BaseProvider):
         except Exception as e:
             self.logger.error(f"Failed to get incidents from grafana incident: {e}")
             raise Exception(f"Failed to get incidents from grafana incident: {e}")
-             
+
+
 if __name__ == "__main__":
     import logging
 
@@ -182,8 +195,10 @@ if __name__ == "__main__":
     api_token = os.getenv("GRAFANA_SERVICE_ACCOUNT_TOKEN")
 
     if host_url is None or api_token is None:
-        raise Exception("GRAFANA_HOST_URL and GRAFANA_SERVICE_ACCOUNT_TOKEN environment variables are required")
-    
+        raise Exception(
+            "GRAFANA_HOST_URL and GRAFANA_SERVICE_ACCOUNT_TOKEN environment variables are required"
+        )
+
     config = ProviderConfig(
         description="Grafana Incident Provider",
         authentication={

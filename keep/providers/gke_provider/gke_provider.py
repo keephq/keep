@@ -44,7 +44,8 @@ class GkeProviderAuthConfig:
 class GkeProvider(BaseProvider):
     """Enrich alerts with data from GKE."""
 
-    PROVIDER_DISPLAY_NAME = "GKE"
+    PROVIDER_DISPLAY_NAME = "Google Kubernetes Engine"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -87,9 +88,9 @@ class GkeProvider(BaseProvider):
             scopes["roles/container.viewer"] = True
         except Exception as e:
             if "404" in str(e):
-                scopes[
-                    "roles/container.viewer"
-                ] = "Cluster not found (404 from GKE), please check the cluster name and region"
+                scopes["roles/container.viewer"] = (
+                    "Cluster not found (404 from GKE), please check the cluster name and region"
+                )
             elif "403" in str(e):
                 scopes["roles/container.viewer"] = "Permission denied (403 from GKE)"
             else:
