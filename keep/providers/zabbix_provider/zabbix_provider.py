@@ -53,6 +53,7 @@ class ZabbixProvider(BaseProvider):
     Pull/Push alerts from Zabbix into Keep.
     """
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
     KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
         "zabbix_provider_script.js"  # zabbix mediatype script file

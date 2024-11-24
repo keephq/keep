@@ -47,6 +47,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
     }
 
     PROVIDER_DISPLAY_NAME = "Azure Monitor"
+    PROVIDER_CATEGORY = ["Monitoring", "Cloud Infrastructure"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

@@ -75,7 +75,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         "ERROR": AlertSeverity.HIGH,
         "WARNING": AlertSeverity.WARNING,
     }
-
+    PROVIDER_CATEGORY = ["Monitoring", "Cloud Infrastructure"]
     STATUS_MAP = {
         "CLOSED": AlertStatus.RESOLVED,
         "OPEN": AlertStatus.FIRING,

@@ -1,6 +1,7 @@
 """
 TeamsProvider is a class that implements the BaseOutputProvider interface for Microsoft Teams messages.
 """
+
 import dataclasses
 
 import pydantic
@@ -28,7 +29,8 @@ class TeamsProviderAuthConfig:
 class TeamsProvider(BaseProvider):
     """Send alert message to Teams."""
 
-    PROVIDER_DISPLAY_NAME = "Teams"
+    PROVIDER_DISPLAY_NAME = "Microsoft Teams"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

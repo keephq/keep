@@ -61,6 +61,7 @@ class NtfyProviderAuthConfig:
 
 class NtfyProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Ntfy.sh"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

@@ -1,8 +1,7 @@
 import { useRef, useState } from "react";
-import { Table, Callout, Card } from "@tremor/react";
+import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
 import { AlertDto } from "./models";
-import { CircleStackIcon } from "@heroicons/react/24/outline";
 import {
   getCoreRowModel,
   useReactTable,

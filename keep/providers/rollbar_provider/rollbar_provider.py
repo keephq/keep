@@ -35,7 +35,7 @@ class RollbarProviderAuthConfig:
 class RollbarProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Rollbar"
     PROVIDER_TAGS = ["alert"]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",

@@ -55,6 +55,8 @@ class DynatraceProvider(BaseProvider):
     Dynatrace provider class.
     """
 
+    PROVIDER_CATEGORY = ["Monitoring"]
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="problems.read",

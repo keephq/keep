@@ -1,6 +1,7 @@
 """
 SquadcastProvider is a class that implements the Squadcast API and allows creating incidents and notes.
 """
+
 import dataclasses
 import json
 
@@ -49,6 +50,7 @@ class SquadcastProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Squadcast"
     PROVIDER_TAGS = ["alert"]
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -134,7 +136,7 @@ class SquadcastProvider(BaseProvider):
 
         # append body to additional_json we are doing this way because we don't want to override the core body fields
         body = json.dumps({**json.loads(additional_json), **json.loads(body)})
-        
+
         return requests.post(
             self.authentication_config.webhook_url, data=body, headers=headers
         )

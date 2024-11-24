@@ -49,9 +49,10 @@ class RedmineProvider(BaseProvider):
         ),
     ]
     PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_CATEGORY = ["Ticketing"]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         self._host = None
         super().__init__(context_manager, provider_id, config)
@@ -69,16 +70,23 @@ class RedmineProvider(BaseProvider):
         try:
             resp.raise_for_status()
             if resp.status_code == 200:
-                scopes = {
-                    "authenticated": True
-                }
+                scopes = {"authenticated": True}
             else:
-                self.logger.error(f"Failed to validate scope for {self.provider_id}", extra=resp.json())
+                self.logger.error(
+                    f"Failed to validate scope for {self.provider_id}",
+                    extra=resp.json(),
+                )
                 scopes = {
-                    "authenticated": {"status_code": resp.status_code, "error": resp.json()}
+                    "authenticated": {
+                        "status_code": resp.status_code,
+                        "error": resp.json(),
+                    }
                 }
         except HTTPError as e:
-            self.logger.error(f"HTTPError while validating scope for {self.provider_id}", extra={"error": str(e)})
+            self.logger.error(
+                f"HTTPError while validating scope for {self.provider_id}",
+                extra={"error": str(e)},
+            )
             scopes = {
                 "authenticated": {"status_code": resp.status_code, "error": str(e)}
             }
@@ -98,7 +106,7 @@ class RedmineProvider(BaseProvider):
 
         # if the user explicitly supplied a host with http/https, use it
         if self.authentication_config.host.startswith(
-                "http://"
+            "http://"
         ) or self.authentication_config.host.startswith("https://"):
             self._host = self.authentication_config.host
             return self.authentication_config.host.rstrip("/")
@@ -144,18 +152,36 @@ class RedmineProvider(BaseProvider):
                 params[param] = kwargs[param]
         return params
 
-    def _notify(self, project_id: str, subject: str, priority_id: str, description: str = "",
-                **kwargs: dict):
+    def _notify(
+        self,
+        project_id: str,
+        subject: str,
+        priority_id: str,
+        description: str = "",
+        **kwargs: dict,
+    ):
         self.logger.info("Creating an issue in redmine")
         payload = self.__build_payload_from_kwargs(
-            kwargs={**kwargs, 'subject': subject, 'description': description, "project_id": project_id,
-                    "priority_id": priority_id})
-        resp = requests.post(f"{self.__redmine_url}/issues.json", headers=self.__get_headers(),
-                             json={'issue': payload})
+            kwargs={
+                **kwargs,
+                "subject": subject,
+                "description": description,
+                "project_id": project_id,
+                "priority_id": priority_id,
+            }
+        )
+        resp = requests.post(
+            f"{self.__redmine_url}/issues.json",
+            headers=self.__get_headers(),
+            json={"issue": payload},
+        )
         try:
             resp.raise_for_status()
         except HTTPError as e:
             self.logger.error("Error While creating Redmine Issue")
             raise Exception(f"Failed to create issue: {str(e)}")
-        self.logger.info("Successfully created a Redmine Issue", extra={"status_code": resp.status_code})
+        self.logger.info(
+            "Successfully created a Redmine Issue",
+            extra={"status_code": resp.status_code},
+        )
         return resp.json()
