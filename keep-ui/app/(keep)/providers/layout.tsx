@@ -9,7 +9,7 @@ export default function ProvidersLayout({ children }: PropsWithChildren) {
   return (
     <FilerContextProvider>
       <main className="p-4">
-        <div className="flex w-full flex-col items-center mb-4 ml-2.5">
+        <div className="flex w-full flex-col items-center mb-4">
           <div className="flex w-full">
             <ProvidersSearch />
             <ProvidersFilterByLabel />
