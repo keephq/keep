@@ -1,4 +1,4 @@
-FROM python:3.11.6-slim as base
+FROM python:3.11.10-slim-bullseye as base
 
 ENV PYTHONFAULTHANDLER=1 \
     PYTHONHASHSEED=random \
@@ -44,4 +44,4 @@ USER keep
 
 ENTRYPOINT ["/venv/lib/python3.11/site-packages/keep/entrypoint.sh"]
 
-CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py"]
+CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py", "--preload"]
