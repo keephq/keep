@@ -54,5 +54,6 @@ export function getConfig() {
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
     READ_ONLY: process.env.KEEP_READ_ONLY === "true",
+    OPEN_AI_API_KEY_SET: !!process.env.OPEN_AI_API_KEY,
   };
 }
