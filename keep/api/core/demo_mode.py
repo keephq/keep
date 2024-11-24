@@ -29,7 +29,7 @@ correlation_rules_to_create = [
     {
         "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%mq%"}},
         "groupDescription": "This rule groups all alerts related to MQ.",
-        "ruleName": "Message Queue Buckle Up",
+        "ruleName": "Message queue is getting filled up",
         "celQuery": '(name.contains("mq"))',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
@@ -242,6 +242,14 @@ def get_or_create_topology(keep_api_key, keep_api_url):
                 for existing_service in services_existing:
                     if service["name"] == existing_service["display_name"]:
                         service["id"] = existing_service["id"]
+
+            # Check if any service does not have an id
+            for service in application_to_create["services"]:
+                if "id" not in service:
+                    logger.error(
+                        f"Service {service['name']} does not have an id. Application creation failed."
+                    )
+                    return True
 
             response = requests.post(
                 f"{keep_api_url}/topology/applications",
