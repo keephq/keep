@@ -70,6 +70,9 @@ function proxyFetch(
 
 /**
  * Creates a Microsoft Entra ID provider configuration and overrides the customFetch.
+ *
+ * SHAHAR: this is a workaround to override the customFetch symbol in the provider
+ * because in Microsoft entra it already has a customFetch symbol and we need to override it.s
  */
 export const createAzureADProvider = () => {
   if (!proxyUrl) {
@@ -120,7 +123,37 @@ export const createAzureADProvider = () => {
     return proxyFetch(...args);
   };
 
-  const bla = provider[customFetch];
+  // Step 3: override profile since it use fetch without customFetch
+  provider.profile = async (profile, tokens) => {
+    const profilePhotoSize = 48; // Default or custom size
+    console.log("Fetching profile photo via proxy");
+
+    const response = await proxyFetch(
+      `https://graph.microsoft.com/v1.0/me/photos/${profilePhotoSize}x${profilePhotoSize}/$value`,
+      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+    );
+
+    let image: string | null = null;
+    if (response.ok && typeof Buffer !== "undefined") {
+      try {
+        const pictureBuffer = await response.arrayBuffer();
+        const pictureBase64 = Buffer.from(pictureBuffer).toString("base64");
+        image = `data:image/jpeg;base64,${pictureBase64}`;
+      } catch (error) {
+        console.error("Error processing profile photo:", error);
+      }
+    }
+
+    // Ensure the returned object matches the User interface
+    return {
+      id: profile.sub,
+      name: profile.name,
+      email: profile.email,
+      image: image ?? null,
+      accessToken: tokens.access_token ?? "", // Provide empty string as fallback
+    };
+  };
+
   return provider;
 };
 
