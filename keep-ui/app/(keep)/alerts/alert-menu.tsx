@@ -9,6 +9,7 @@ import {
   UserPlusIcon,
   PlayIcon,
   EyeIcon,
+  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
 import Link from "next/link";
@@ -202,6 +203,24 @@ export default function AlertMenu({
           >
             <ArchiveBoxIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             History
+          </button>
+        )}
+      </Menu.Item>
+      <Menu.Item>
+        {({ active }) => (
+          <button
+            onClick={() => {
+              router.replace(
+                `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`,
+              );
+              handleCloseMenu();
+            }}
+            className={`${
+              active ? "bg-slate-200" : "text-gray-900"
+            } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+          >
+            <AdjustmentsHorizontalIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            Enrich
           </button>
         )}
       </Menu.Item>
