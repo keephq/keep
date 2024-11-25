@@ -7,6 +7,8 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { CorrelationForm } from "./CorrelationForm";
 import { CorrelationGroups } from "./CorrelationGroups";
 import { CorrelationSubmission } from "./CorrelationSubmission";
+import { Link } from "@/components/ui";
+import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
@@ -112,10 +114,16 @@ export const CorrelationSidebarBody = ({
           color="teal"
         >
           A versatile tool for grouping and consolidating alerts. Read more in
-          our{" "}
-          <a href="https://docs.keephq.dev/overview/ruleengine" target="_blank">
-            docs.
-          </a>
+          our{"  "}
+          <Link
+            icon={ArrowUpRightIcon}
+            iconPosition="right"
+            className="!text-orange-500 hover:!text-orange-700 ml-0.5"
+            target="_blank"
+            href="https://docs.keephq.dev/overview/ruleengine"
+          >
+            docs
+          </Link>
           <Button
             className="absolute top-0 right-0"
             onClick={() => setIsCalloutShown(false)}
