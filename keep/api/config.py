@@ -6,6 +6,7 @@ from keep.api.api import AUTH_TYPE
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
+from keep.providers.providers_factory import ProvidersFactory
 
 PORT = int(os.environ.get("PORT", 8080))
 
@@ -18,6 +19,10 @@ def on_starting(server=None):
     logger.info("Keep server starting")
 
     migrate_db()
+    # Load this early and use preloading
+    # https://www.joelsleppy.com/blog/gunicorn-application-preloading/
+    # @tb: 👏 @Matvey-Kuk
+    ProvidersFactory.get_all_providers()
 
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
