@@ -38,15 +38,15 @@ const AlertAssociateIncidentModal = ({
 
   const associateAlertsHandler = useCallback(
     async (incidentId: string) => {
-      const response = await api.post(
-        `/incidents/${incidentId}/alerts`,
-        alerts.map(({ event_id }) => event_id)
-      );
-      if (response.ok) {
+      try {
+        const response = await api.post(
+          `/incidents/${incidentId}/alerts`,
+          alerts.map(({ event_id }) => event_id)
+        );
         handleSuccess();
         await mutate();
         toast.success("Alerts associated with incident successfully");
-      } else {
+      } catch (error) {
         toast.error(
           "Failed to associated alerts with incident, please contact us if this issue persists."
         );

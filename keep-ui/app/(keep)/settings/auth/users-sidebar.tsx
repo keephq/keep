@@ -111,10 +111,8 @@ const UsersSidebar = ({
 
     const method = isNewUser ? "post" : "put";
     const url = isNewUser
-      ? `${apiUrl}/auth/users`
-      : `${apiUrl}/auth/users/${
-          identifierType === "email" ? user?.email : user?.name
-        }`;
+      ? "/auth/users"
+      : `/auth/users/${identifierType === "email" ? user?.email : user?.name}`;
     try {
       await api[method](url, data);
 

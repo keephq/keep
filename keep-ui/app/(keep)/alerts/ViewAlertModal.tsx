@@ -8,6 +8,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -37,17 +38,15 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         };
         const response = await api.post(`/alerts/unenrich`, requestData);
 
-        if (response.ok) {
-          toast.success(`${key} un-enriched successfully!`);
-          await mutate();
-        } else {
-          // Handle error
-          toast.error(`Failed to un-enriched ${key}`);
-          await mutate();
-        }
+        toast.success(`${key} un-enriched successfully!`);
+        await mutate();
       } catch (error) {
-        // Handle unexpected error
-        toast.error("An unexpected error occurred");
+        if (error instanceof KeepApiError) {
+          toast.error(error.message || `Failed to un-enriched ${key}`);
+        } else {
+          // Handle unexpected error
+          toast.error("An unexpected error occurred");
+        }
       }
     }
   };

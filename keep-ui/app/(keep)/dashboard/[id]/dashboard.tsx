@@ -23,6 +23,7 @@ import {
 } from "@/utils/hooks/useDashboardMetricWidgets";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import "../styles.css";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 const DASHBOARD_FILTERS = [
   {
@@ -154,7 +155,7 @@ const DashboardPage = () => {
         dashboard ? `/${encodeURIComponent(dashboard.id)}` : ""
       }`;
 
-      const response = await api.post(
+      const result = await api.post(
         endpoint,
         {
           dashboard_name: dashboardName,
@@ -168,16 +169,17 @@ const DashboardPage = () => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Failed to save dashboard: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       console.log("Dashboard saved successfully", result);
       mutateDashboard();
       toast.success("Dashboard saved successfully");
     } catch (error) {
-      console.error("Error saving dashboard", error);
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to save dashboard", {
+          position: "top-left",
+        });
+      } else {
+        toast.error("An unexpected error occurred", { position: "top-left" });
+      }
     }
   };
 

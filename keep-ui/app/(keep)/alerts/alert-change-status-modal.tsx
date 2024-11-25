@@ -122,16 +122,12 @@ export default function AlertChangeStatusModal({
         }
       );
 
-      if (response.ok) {
-        toast.success("Alert status changed successfully!");
-        clearAndClose();
-        await alertsMutator();
-        await presetsMutator();
-      } else {
-        toast.error("Failed to change alert status.");
-      }
+      toast.success("Alert status changed successfully!");
+      clearAndClose();
+      await alertsMutator();
+      await presetsMutator();
     } catch (error) {
-      toast.error("An error occurred while changing alert status.");
+      toast.error("Failed to change alert status.");
     }
   };
 

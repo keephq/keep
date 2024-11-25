@@ -32,6 +32,7 @@ import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
 import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface Props {
   editRule: MappingRule | null;
@@ -132,47 +133,55 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
 
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await api.post("/mapping", {
-      priority: priority,
-      name: mapName,
-      description: mapDescription,
-      file_name: fileName,
-      type: mappingType,
-      matchers: selectedLookupAttributes.map((attr) => attr.trim()),
-      rows: mappingType === "csv" ? parsedData : null,
-    });
-    if (response.ok) {
+    try {
+      const response = await api.post("/mapping", {
+        priority: priority,
+        name: mapName,
+        description: mapDescription,
+        file_name: fileName,
+        type: mappingType,
+        matchers: selectedLookupAttributes.map((attr) => attr.trim()),
+        rows: mappingType === "csv" ? parsedData : null,
+      });
       clearForm();
       mutate();
       toast.success("Mapping created successfully");
-    } else {
-      toast.error(
-        "Failed to create mapping, please contact us if this issue persists."
-      );
+    } catch (error) {
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to create mapping");
+      } else {
+        toast.error(
+          "Failed to create mapping, please contact us if this issue persists."
+        );
+      }
     }
   };
 
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await api.put(`/mapping/${editRule?.id}`, {
-      id: editRule?.id,
-      priority: priority,
-      name: mapName,
-      description: mapDescription,
-      file_name: fileName,
-      type: mappingType,
-      matchers: selectedLookupAttributes.map((attr) => attr.trim()),
-      rows: mappingType === "csv" ? parsedData : null,
-    });
-    if (response.ok) {
+    try {
+      const response = await api.put(`/mapping/${editRule?.id}`, {
+        id: editRule?.id,
+        priority: priority,
+        name: mapName,
+        description: mapDescription,
+        file_name: fileName,
+        type: mappingType,
+        matchers: selectedLookupAttributes.map((attr) => attr.trim()),
+        rows: mappingType === "csv" ? parsedData : null,
+      });
       exitEditMode();
       mutate();
       toast.success("Mapping updated successfully");
-    } else {
-      toast.error(
-        "Failed to update mapping, please contact us if this issue persists."
-      );
+    } catch (error) {
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to update mapping");
+      } else {
+        toast.error(
+          "Failed to update mapping, please contact us if this issue persists."
+        );
+      }
     }
   };
 

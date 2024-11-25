@@ -115,8 +115,8 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
   }
 
   const onDelete = async () => {
-    const response = await api.delete(`/settings/smtp`);
-    if (response.ok) {
+    try {
+      const response = await api.delete(`/settings/smtp`);
       // If the delete was successful
       setDeleteSuccessful(true);
       setSettings({
@@ -128,11 +128,14 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
         from_email: "",
         to_email: "",
       });
-    } else {
+    } catch (error) {
       // If the delete failed
       setDeleteSuccessful(false);
-      const errorData = await response.json(); // assuming the server sends JSON with an error message
-      setErrorMessage(errorData.message || "An error occurred while deleting.");
+      if (error instanceof KeepApiError) {
+        setErrorMessage(error.message || "An error occurred while deleting.");
+      } else {
+        setErrorMessage("An unexpected error occurred");
+      }
     }
   };
 
@@ -163,9 +166,8 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
   const onTest = async () => {
     try {
       if (!validateTestFields()) return;
-      const response = await api.post(`/settings/smtp/test`);
+      const result = await api.post(`/settings/smtp/test`);
 
-      const result = await response.json();
       setTestResult({
         status: true,
         message: "Success!",

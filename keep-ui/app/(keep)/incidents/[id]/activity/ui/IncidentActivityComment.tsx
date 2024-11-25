@@ -17,15 +17,15 @@ export function IncidentActivityComment({
   const api = useApi();
 
   const onSubmit = useCallback(async () => {
-    const response = await api.post(`/incidents/${incident.id}/comment`, {
-      status: incident.status,
-      comment,
-    });
-    if (response.ok) {
+    try {
+      const response = await api.post(`/incidents/${incident.id}/comment`, {
+        status: incident.status,
+        comment,
+      });
       toast.success("Comment added!", { position: "top-right" });
       setComment("");
       mutator();
-    } else {
+    } catch (error) {
       toast.error("Failed to add comment", { position: "top-right" });
     }
   }, [api, incident.id, incident.status, comment, mutator]);

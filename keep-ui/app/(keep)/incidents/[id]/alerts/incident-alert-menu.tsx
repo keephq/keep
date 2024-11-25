@@ -19,20 +19,19 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
         .delete(`/incidents/${incidentId}/alerts`, {
           body: [alert.event_id],
         })
-        .then((response) => {
-          if (response.ok) {
-            toast.success("Alert removed from incident successfully", {
+        .then(() => {
+          toast.success("Alert removed from incident successfully", {
+            position: "top-right",
+          });
+          mutate();
+        })
+        .catch((error) => {
+          toast.error(
+            "Failed to remove alert from incident, please contact us if this issue persists.",
+            {
               position: "top-right",
-            });
-            mutate();
-          } else {
-            toast.error(
-              "Failed to remove alert from incident, please contact us if this issue persists.",
-              {
-                position: "top-right",
-              }
-            );
-          }
+            }
+          );
         });
     }
   }

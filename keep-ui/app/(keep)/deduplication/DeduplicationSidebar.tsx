@@ -25,6 +25,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface ProviderOption {
   value: string;
@@ -165,23 +166,22 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           ? await api.post(url, data)
           : await api.put(url, data);
 
-      if (response.ok) {
-        console.log("Deduplication rule saved:", data);
-        reset();
-        handleToggle();
-        await mutateDeduplicationRules();
-      } else {
-        const errorData = await response.json();
+      console.log("Deduplication rule saved:", data);
+      reset();
+      handleToggle();
+      await mutateDeduplicationRules();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
         setError("root.serverError", {
           type: "manual",
-          message: errorData.message || "Failed to save deduplication rule",
+          message: error.message || "Failed to save deduplication rule",
+        });
+      } else {
+        setError("root.serverError", {
+          type: "manual",
+          message: "An unexpected error occurred",
         });
       }
-    } catch (error) {
-      setError("root.serverError", {
-        type: "manual",
-        message: "An unexpected error occurred",
-      });
     } finally {
       setIsSubmitting(false);
     }

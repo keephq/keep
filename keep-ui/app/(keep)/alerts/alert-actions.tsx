@@ -57,11 +57,11 @@ export default function AlertActions({
         ""
       );
       const options = [{ value: formattedCel, label: "CEL" }];
-      const response = await api.post(`/preset`, {
-        name: newPresetName,
-        options: options,
-      });
-      if (response.ok) {
+      try {
+        const response = await api.post(`/preset`, {
+          name: newPresetName,
+          options: options,
+        });
         toast(`Preset ${newPresetName} created!`, {
           position: "top-left",
           type: "success",
@@ -69,7 +69,7 @@ export default function AlertActions({
         presetsMutator();
         clearRowSelection();
         router.replace(`/alerts/${newPresetName}`);
-      } else {
+      } catch (error) {
         toast(`Error creating preset ${newPresetName}`, {
           position: "top-left",
           type: "error",

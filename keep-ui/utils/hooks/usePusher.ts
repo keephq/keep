@@ -2,7 +2,7 @@ import Pusher, { Options as PusherOptions } from "pusher-js";
 import { useConfig } from "./useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "./useConfig";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 let PUSHER: Pusher | null = null;
 const POLLING_INTERVAL = 1000 * 10; // Once per 10 seconds.

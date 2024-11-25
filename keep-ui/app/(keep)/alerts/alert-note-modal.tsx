@@ -9,6 +9,8 @@ import { Button } from "@tremor/react";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { toast } from "react-toastify";
 
 interface AlertNoteModalProps {
   handleClose: () => void;
@@ -65,17 +67,13 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
       };
       const response = await api.post(`/alerts/enrich`, requestData);
 
-      if (response.ok) {
-        // Handle success
-        console.log("Note saved successfully");
-        handleNoteClose();
-      } else {
-        // Handle error
-        console.error("Failed to save note");
-      }
+      handleNoteClose();
     } catch (error) {
-      // Handle unexpected error
-      console.error("An unexpected error occurred");
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to save note");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 

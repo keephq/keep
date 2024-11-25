@@ -41,8 +41,9 @@ export default function Ai() {
     e.preventDefault();
     setAnimate(true);
     setNewText("Mining 🚀🚀🚀 ...");
-    const response = await api.post(`/incidents/mine`, {});
-    if (!response.ok) {
+    try {
+      const response = await api.post(`/incidents/mine`, {});
+    } catch (error) {
       toast.error(
         "Failed to mine incidents, please contact us if this issue persists."
       );

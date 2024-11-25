@@ -39,14 +39,16 @@ export default function ManualRunWorkflowModal({
 
   const handleRun = async () => {
     try {
-      const response = await api.post(`/workflows/${selectedWorkflowId}/run`, {
-        type: alert ? "alert" : "incident",
-        body: alert ? alert : incident,
-      });
+      const responseData = await api.post(
+        `/workflows/${selectedWorkflowId}/run`,
+        {
+          type: alert ? "alert" : "incident",
+          body: alert ? alert : incident,
+        }
+      );
 
       // Workflow started successfully
       toast.success("Workflow started successfully", { position: "top-left" });
-      const responseData = await response.json();
       const { workflow_execution_id } = responseData;
       router.push(
         `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`

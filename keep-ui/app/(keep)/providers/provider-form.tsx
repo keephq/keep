@@ -53,6 +53,7 @@ import "./provider-form.css";
 import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
+import { error } from "console";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -207,9 +208,32 @@ const ProviderForm = ({
 
   const api = useApi();
 
+  function installWebhook(provider: Provider) {
+    return toast.promise(
+      api
+        .post(`/providers/install/webhook/${provider.type}/${provider.id}`)
+        .catch((error) => Promise.reject({ data: error })),
+      {
+        pending: "Webhook installing 🤞",
+        success: `${provider.type} webhook installed 👌`,
+        error: {
+          render({ data }) {
+            // When the promise reject, data will contains the error
+            return `Webhook installation failed 😢 Error: ${
+              (data as any).message
+            }`;
+          },
+        },
+      },
+      {
+        position: toast.POSITION.TOP_LEFT,
+      }
+    );
+  }
+
   const callInstallWebhook = async (e: Event) => {
     e.preventDefault();
-    await installWebhook(provider, accessToken!, apiUrl);
+    await installWebhook(provider);
   };
 
   async function handleOauth(e: MouseEvent) {
@@ -425,7 +449,7 @@ const ProviderForm = ({
     e.preventDefault();
     if (validate()) {
       setIsLoading(true);
-      submit(`${apiUrl}/providers/${provider.id}`, "PUT")
+      submit(`/providers/${provider.id}`, "PUT")
         .then((data) => {
           setIsLoading(false);
           toast.success("Updated provider successfully", {
@@ -447,7 +471,7 @@ const ProviderForm = ({
     if (validate()) {
       setIsLoading(true);
       onConnectChange(true, false);
-      submit(`${apiUrl}/providers/install`)
+      submit(`/providers/install`)
         .then(async (data) => {
           console.log("Connect Result:", data);
           setIsLoading(false);
@@ -458,7 +482,7 @@ const ProviderForm = ({
             !isLocalhost
           ) {
             // mutate after webhook installation
-            await installWebhook(data as Provider, accessToken, apiUrl);
+            await installWebhook(data as Provider);
           }
           mutate();
         })

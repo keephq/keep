@@ -60,16 +60,8 @@ const AlertAssignTicketModal = ({
       };
 
       const response = await api.post(`/alerts/enrich`, requestData);
-
-      if (response.ok) {
-        // Handle success
-        console.log("Ticket assigned successfully");
-        alert.ticket_url = data.ticket_url;
-        handleClose();
-      } else {
-        // Handle error
-        console.error("Failed to assign ticket");
-      }
+      alert.ticket_url = data.ticket_url;
+      handleClose();
     } catch (error) {
       // Handle unexpected error
       console.error("An unexpected error occurred");

@@ -6,9 +6,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 type UseIncidentActionsValue = {
-  addIncident: (
-    incident: IncidentCreateDto
-  ) => Promise<IncidentDto | undefined>;
+  addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
   updateIncident: (
     incidentId: string,
     incident: IncidentUpdateDto,
@@ -73,6 +71,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.error(
           "Failed to create incident, please contact us if this issue persists."
         );
+        throw error;
       }
     },
     [api, mutateIncidentsList]

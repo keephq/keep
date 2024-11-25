@@ -7,6 +7,8 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { toast } from "react-toastify";
 interface Tab {
   id?: string;
   name: string;
@@ -57,18 +59,19 @@ const AlertTabs = ({
         `/preset/${presetId}/tab/${tabToDelete.id}`
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to delete the tab");
-      }
-
       const updatedTabs = tabs.filter((_, i) => i !== index);
       setTabs(updatedTabs);
       if (selectedTab === index) {
         setSelectedTab(0); // Set to "All" if the selected tab is deleted
       }
     } catch (error) {
-      console.error(error);
-      alert("Failed to delete the tab");
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to delete the tab", {
+          position: "top-left",
+        });
+      } else {
+        toast.error("An unexpected error occurred", { position: "top-left" });
+      }
     }
   };
 

@@ -12,6 +12,7 @@ import { formatQuery, parseCEL } from "react-querybuilder";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 type OptionType = { value: string; label: string };
 
@@ -120,29 +121,23 @@ export default function AlertPresets({
         })),
       };
 
-      if (selectedPreset?.id) {
-        const response = await api.put(`/preset/${selectedPreset?.id}`, body);
-        if (response.ok) {
-          setIsModalOpen(false);
-          toast(`Preset ${presetName} updated!`, {
-            position: "top-left",
-            type: "success",
-          });
-          presetsMutator();
-          mutateTags();
-          router.push(`/alerts/${presetName.toLowerCase()}`);
-        }
-      } else {
-        const response = await api.post(`/preset`, body);
-        if (response.ok) {
-          setIsModalOpen(false);
-          toast(`Preset ${presetName} created!`, {
-            position: "top-left",
-            type: "success",
-          });
-          presetsMutator();
-          mutateTags();
-          router.push(`/alerts/${presetName.toLowerCase()}`);
+      try {
+        const response = selectedPreset?.id
+          ? await api.put(`/preset/${selectedPreset?.id}`, body)
+          : await api.post(`/preset`, body);
+        setIsModalOpen(false);
+        toast(`Preset ${presetName} updated!`, {
+          position: "top-left",
+          type: "success",
+        });
+        presetsMutator();
+        mutateTags();
+        router.push(`/alerts/${presetName.toLowerCase()}`);
+      } catch (error) {
+        if (error instanceof KeepApiError) {
+          toast.error(error.message || "Failed to update preset");
+        } else {
+          toast.error("An unexpected error occurred");
         }
       }
     }

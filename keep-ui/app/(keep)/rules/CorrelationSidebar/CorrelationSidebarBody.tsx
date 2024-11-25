@@ -14,6 +14,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { toast } from "react-toastify";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 export const TIMEFRAME_UNITS_TO_SECONDS = {
   seconds: (amount: number) => amount,
@@ -84,14 +86,22 @@ export const CorrelationSidebarBody = ({
       resolveOn: resolveOn,
     };
 
-    const response = selectedId
-      ? await api.put(`/rules/${selectedId}`, body)
-      : await api.post("/rules", body);
+    try {
+      const response = selectedId
+        ? await api.put(`/rules/${selectedId}`, body)
+        : await api.post("/rules", body);
 
-    if (response.ok) {
       toggle();
       mutate();
       router.replace("/rules");
+    } catch (error) {
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to create correlation rule");
+      } else {
+        toast.error(
+          "Failed to create correlation rule, please contact us if this issue persists."
+        );
+      }
     }
   };
 

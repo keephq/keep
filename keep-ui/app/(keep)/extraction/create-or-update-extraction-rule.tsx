@@ -74,21 +74,21 @@ export default function CreateOrUpdateExtractionRule({
 
   const addExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await api.post("/extraction", {
-      priority: priority,
-      name: extractionName,
-      description: mapDescription,
-      pre: isPreFormatting,
-      attribute: attribute,
-      regex: regex,
-      condition: condition,
-    });
-    if (response.ok) {
+    try {
+      const response = await api.post("/extraction", {
+        priority: priority,
+        name: extractionName,
+        description: mapDescription,
+        pre: isPreFormatting,
+        attribute: attribute,
+        regex: regex,
+        condition: condition,
+      });
       exitEditOrCreateMode();
       clearForm();
       mutate();
       toast.success("Extraction rule created successfully");
-    } else {
+    } catch (error) {
       toast.error(
         "Failed to create extraction rule, please contact us if this issue persists."
       );
@@ -98,20 +98,20 @@ export default function CreateOrUpdateExtractionRule({
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await api.put(`/extraction/${extractionToEdit?.id}`, {
-      priority: priority,
-      name: extractionName,
-      description: mapDescription,
-      pre: isPreFormatting,
-      attribute: attribute,
-      regex: regex,
-      condition: condition,
-    });
-    if (response.ok) {
+    try {
+      const response = await api.put(`/extraction/${extractionToEdit?.id}`, {
+        priority: priority,
+        name: extractionName,
+        description: mapDescription,
+        pre: isPreFormatting,
+        attribute: attribute,
+        regex: regex,
+        condition: condition,
+      });
       exitEditOrCreateMode();
       mutate();
       toast.success("Extraction updated successfully");
-    } else {
+    } catch (error) {
       toast.error(
         "Failed to update extraction, please contact us if this issue persists."
       );

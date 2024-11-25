@@ -21,6 +21,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
@@ -162,35 +163,34 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
     userParams: { [key: string]: string }
   ) => {
     try {
-      const response = await api.post(
+      const responseObject = await api.post(
         `/providers/${provider.id}/invoke/${method.func_name}`,
         userParams
       );
-      const responseObject = await response.json();
-      if (response.ok) {
-        if (method.type === "action") mutate();
-        toast.success(`Successfully called "${method.name}"`, {
-          position: toast.POSITION.TOP_LEFT,
-        });
-        if (method.type === "view") {
-          setMethodResult(responseObject);
-          setIsLoading(false);
-        }
+      if (method.type === "action") mutate();
+      toast.success(`Successfully called "${method.name}"`, {
+        position: toast.POSITION.TOP_LEFT,
+      });
+      if (method.type === "view") {
+        setMethodResult(responseObject);
+        setIsLoading(false);
+      }
+    } catch (e: any) {
+      if (e instanceof KeepApiError) {
+        toast.error(
+          `Failed to invoke "${method.name}" on ${
+            provider.details.name ?? provider.id
+          } due to ${e.responseJson.detail}`,
+          { position: toast.POSITION.TOP_LEFT }
+        );
       } else {
         toast.error(
           `Failed to invoke "${method.name}" on ${
             provider.details.name ?? provider.id
-          } due to ${responseObject.detail}`,
+          } due to ${e.message}`,
           { position: toast.POSITION.TOP_LEFT }
         );
       }
-    } catch (e: any) {
-      toast.error(
-        `Failed to invoke "${method.name}" on ${
-          provider.details.name ?? provider.id
-        } due to ${e.message}`,
-        { position: toast.POSITION.TOP_LEFT }
-      );
       handleClose();
     } finally {
       if (method.type === "action") {

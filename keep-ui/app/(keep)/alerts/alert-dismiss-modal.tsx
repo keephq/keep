@@ -23,6 +23,7 @@ const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "./alert-dismiss-modal.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface Props {
   preset: string;
@@ -98,18 +99,22 @@ export default function AlertDismissModal({
       return api.post(`/alerts/enrich`, requestData);
     });
 
-    const responses = await Promise.all(requests);
-    const responsesOk = responses.every((response) => response.ok);
-    if (responsesOk) {
+    try {
+      const responses = await Promise.all(requests);
       toast.success(`${alerts.length} alerts dismissed successfully!`, {
         position: "top-right",
       });
       await alertsMutator();
-      clearAndClose();
-    } else {
+      await presetsMutator();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to dismiss alerts");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+    } finally {
       clearAndClose();
     }
-    await presetsMutator();
   };
 
   const clearAndClose = () => {

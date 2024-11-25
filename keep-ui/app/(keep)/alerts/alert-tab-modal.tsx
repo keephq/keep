@@ -5,6 +5,7 @@ import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface AlertTabModalProps {
   presetId: string;
@@ -40,22 +41,13 @@ const AlertTabModal = ({
         filter: newTabFilter,
       });
 
-      if (!response.ok) {
-        throw new Error(
-          "Failed to add the new tab: " +
-            response.status +
-            " " +
-            response.statusText
-        );
-      }
-
       onAddTab(newTabName, newTabFilter);
       setNewTabName("");
       setNewTabFilter("");
       setBackendError(null); // Clear any previous backend errors
       onClose();
     } catch (error) {
-      if (error instanceof Error) {
+      if (error instanceof KeepApiError) {
         setBackendError(error.message);
       } else {
         setBackendError("An error occurred while adding the tab");
