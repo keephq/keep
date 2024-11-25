@@ -2,11 +2,11 @@ name: Test docs
 on:
   push:
     paths:
-      - 'keep/poviders/**'
+      - 'keep/providers/**'
       - 'docs/**'
   pull_request:
     paths:
-      - 'keep/poviders/**'
+      - 'keep/providers/**'
       - 'docs/**'
   workflow_dispatch:
 concurrency:
