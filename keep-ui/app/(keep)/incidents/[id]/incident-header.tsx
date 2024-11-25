@@ -17,6 +17,7 @@ import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentOverview } from "./incident-overview";
+import { CopilotKit } from "@copilotkit/react-core";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -53,7 +54,7 @@ export function IncidentHeader({
   };
 
   return (
-    <>
+    <CopilotKit runtimeUrl="/api/copilotkit">
       <header className="flex flex-col gap-4">
         <Subtitle className="text-sm">
           <Link href="/incidents">All Incidents</Link>{" "}
@@ -70,26 +71,28 @@ export function IncidentHeader({
             size="xs"
             variant="secondary"
             icon={MdPlayArrow}
-            tooltip="Run Workflow"
             onClick={(e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
               handleRunWorkflow();
             }}
-          />
+          >
+            Run Workflow
+          </Button>
           {incident.is_confirmed && (
             <Button
               color="orange"
               size="xs"
               variant="secondary"
               icon={MdModeEdit}
-              tooltip="Edit Incident"
               onClick={(e: React.MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
                 handleStartEdit();
               }}
-            />
+            >
+              Edit Incident
+            </Button>
           )}
           {!incident.is_confirmed && (
             <div className="space-x-1 flex flex-row items-center justify-center">
@@ -143,6 +146,6 @@ export function IncidentHeader({
         incident={runWorkflowModalIncident}
         handleClose={() => setRunWorkflowModalIncident(null)}
       />
-    </>
+    </CopilotKit>
   );
 }

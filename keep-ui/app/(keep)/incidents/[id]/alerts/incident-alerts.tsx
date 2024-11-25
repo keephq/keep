@@ -178,7 +178,7 @@ export default function IncidentAlerts({ incident }: Props) {
       }),
       columnHelper.accessor("lastReceived", {
         id: "lastReceived",
-        header: "Last Received",
+        header: "Last Event Time",
         minSize: 100,
         cell: (context) => (
           <span>{getAlertLastReceieved(context.getValue())}</span>

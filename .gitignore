@@ -212,3 +212,4 @@ ee/experimental/ai_temp/*
 oauth2.cfg
 scripts/keep_slack_bot.py
 keepnew.db
+providers_cache.json

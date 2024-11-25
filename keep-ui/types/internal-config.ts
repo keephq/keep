@@ -19,4 +19,7 @@ export interface InternalConfig {
   // READ ONLY
   READ_ONLY: boolean;
   OPEN_AI_API_KEY_SET: boolean;
+
+  // NOISY ALERTS ENABLED
+  NOISY_ALERTS_ENABLED: boolean;
 }

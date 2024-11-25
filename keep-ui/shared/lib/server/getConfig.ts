@@ -55,5 +55,7 @@ export function getConfig() {
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
     READ_ONLY: process.env.KEEP_READ_ONLY === "true",
     OPEN_AI_API_KEY_SET: !!process.env.OPEN_AI_API_KEY,
+    // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
+    NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
   };
 }
