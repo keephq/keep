@@ -98,7 +98,7 @@ jobs:
             sleep 1
           done
           echo "MySQL is up and running!"
-          poetry run coverage run --branch -m pytest --ignore=tests/e2e_tests/
+          poetry run coverage run --branch -m pytest -n autofeature --ignore=tests/e2e_tests/
 
       - name: Convert coverage results to JSON (for CodeCov support)
         env:
