@@ -139,7 +139,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         if PAGERDUTY_CLIENT_ID is not None and PAGERDUTY_CLIENT_SECRET is not None
         else None
     )
-
+    PROVIDER_CATEGORY = ["Incident Management"]
     FINGERPRINT_FIELDS = ["alert_key"]
 
     def __init__(

@@ -2,19 +2,16 @@ import { fetcher } from "@/utils/fetcher";
 import { Session } from "next-auth";
 import { TopologyApplication, TopologyService } from "../model/models";
 
-export function buildTopologyUrl(
-  apiUrl: string,
-  {
-    providerIds,
-    services,
-    environment,
-  }: {
-    providerIds?: string[];
-    services?: string[];
-    environment?: string;
-  }
-) {
-  const baseUrl = `${apiUrl}/topology`;
+export function buildTopologyUrl({
+  providerIds,
+  services,
+  environment,
+}: {
+  providerIds?: string[];
+  services?: string[];
+  environment?: string;
+}) {
+  const baseUrl = `/topology`;
 
   const params = new URLSearchParams();
 
@@ -57,6 +54,8 @@ export function getTopology(
   if (!session) {
     return null;
   }
-  const url = buildTopologyUrl(apiUrl, { providerIds, services, environment });
-  return fetcher(url, session.accessToken) as Promise<TopologyService[]>;
+  const url = buildTopologyUrl({ providerIds, services, environment });
+  return fetcher(apiUrl + url, session.accessToken) as Promise<
+    TopologyService[]
+  >;
 }

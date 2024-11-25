@@ -32,6 +32,7 @@ class GitlabpipelinesProvider(BaseProvider):
     """Enrich alerts with data from GitLab Pipelines."""
 
     PROVIDER_DISPLAY_NAME = "GitLab Pipelines"
+    PROVIDER_CATEGORY = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -49,12 +50,7 @@ class GitlabpipelinesProvider(BaseProvider):
         """
         pass
 
-    def _notify(
-            self,
-            gitlab_url: str = "",
-            gitlab_method: str = "",
-            **kwargs
-            ):
+    def _notify(self, gitlab_url: str = "", gitlab_method: str = "", **kwargs):
         url = gitlab_url
         method = gitlab_method.upper()
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NameInitialsAvatar } from "react-name-initials-avatar";
-import { useUsers } from "utils/hooks/useUsers";
+import { useUsers } from "@/entities/users/model/useUsers";
 
 interface Props {
   assignee: string | undefined;

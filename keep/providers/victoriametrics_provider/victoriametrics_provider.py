@@ -89,7 +89,7 @@ receivers:
             alias="Connect to the client",
         ),
     ]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,

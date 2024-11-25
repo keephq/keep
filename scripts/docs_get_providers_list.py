@@ -14,9 +14,8 @@ import sys
 
 LOGO_DEV_PUBLISHABLE_KEY = "pk_dfXfZBoKQMGDTIgqu7LvYg"
 
-NON_DOCUMENTED_PROVIDERS = (
-    []
-)  # known not documented providers https://github.com/keephq/keep/issues/2033
+NON_DOCUMENTED_PROVIDERS = [
+]
 
 
 def validate_overview_is_complete(documented_providers):
@@ -49,6 +48,7 @@ def validate_all_providers_are_documented(documented_providers):
         if (
             provider_name not in documented_providers
             and provider_name not in NON_DOCUMENTED_PROVIDERS
+            and not provider.coming_soon
         ):
             raise Exception(
                 f"""Provider "{provider_name}" is not documented in the docs/providers/documentation folder,

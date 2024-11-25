@@ -110,7 +110,11 @@ export default function ProvidersPage({
     session,
     isLocalhost,
   } = useFetchProviders();
-  const { providersSearchString, providersSelectedTags } = useFilterContext();
+  const {
+    providersSearchString,
+    providersSelectedTags,
+    providersSelectedCategories,
+  } = useFilterContext();
   const apiUrl = useApiUrl();
   const router = useRouter();
   useEffect(() => {
@@ -147,6 +151,21 @@ export default function ProvidersPage({
     );
   };
 
+  const searchCategories = (provider: Provider) => {
+    if (providersSelectedCategories.includes("Coming Soon")) {
+      if (provider.coming_soon) {
+        return true;
+      }
+    }
+
+    return (
+      providersSelectedCategories.length === 0 ||
+      provider.categories.some((category) =>
+        providersSelectedCategories.includes(category)
+      )
+    );
+  };
+
   const searchTags = (provider: Provider) => {
     return (
       providersSelectedTags.length === 0 ||
@@ -171,7 +190,10 @@ export default function ProvidersPage({
       )}
       <ProvidersTiles
         providers={providers.filter(
-          (provider) => searchProviders(provider) && searchTags(provider)
+          (provider) =>
+            searchProviders(provider) &&
+            searchTags(provider) &&
+            searchCategories(provider)
         )}
         isLocalhost={isLocalhost}
       />

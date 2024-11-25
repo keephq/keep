@@ -47,6 +47,8 @@ class PlannerProvider(BaseProvider):
     MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/plans")
     MS_TASKS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/tasks")
 
+    PROVIDER_CATEGORY = ["Collaboration"]
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):

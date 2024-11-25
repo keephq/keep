@@ -26,6 +26,7 @@ class MattermostProvider(BaseProvider):
     """send alert message to Mattermost."""
 
     PROVIDER_DISPLAY_NAME = "Mattermost"
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -59,7 +60,7 @@ class MattermostProvider(BaseProvider):
         webhook_url = self.authentication_config.webhook_url
         payload = {"text": message, "blocks": blocks}
         # channel is currently bugged (and unnecessary, as a webhook url is already one per channel) and so it is ignored for now
-        #if channel:
+        # if channel:
         #    payload["channel"] = channel
 
         response = requests.post(webhook_url, json=payload, verify=False)

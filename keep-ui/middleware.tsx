@@ -1,15 +1,21 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import type { JWT } from "next-auth/jwt";
 import { getApiURL } from "@/utils/apiUrl";
+import { config as authConfig } from "@/auth.config";
+import NextAuth from "next-auth";
 
-// Use auth as a wrapper for middleware logic
-export default auth(async (req) => {
-  const { pathname, searchParams } = req.nextUrl;
+const { auth } = NextAuth(authConfig);
 
+export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  const session = await auth();
+  const role = session?.userRole;
+  const isAuthenticated = !!session;
   // Keep it on header so it can be used in server components
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-url", req.url);
-
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-url", request.url);
   // Handle legacy /backend/ redirects
   if (pathname.startsWith("/backend/")) {
     const apiUrl = getApiURL();
@@ -25,36 +31,37 @@ export default auth(async (req) => {
   if (pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
+
   // If not authenticated and not on signin page, redirect to signin
-  if (!req.auth && !pathname.startsWith("/signin")) {
+  if (!isAuthenticated && !pathname.startsWith("/signin")) {
     console.log("Redirecting to signin page because user is not authenticated");
-    return NextResponse.redirect(new URL("/signin", req.url));
+    return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  // else if authenticated and on signin page, redirect to dashboard
-  if (req.auth && pathname.startsWith("/signin")) {
+  // If authenticated and on signin page, redirect to incidents
+  if (isAuthenticated && pathname.startsWith("/signin")) {
     console.log(
       "Redirecting to incidents because user try to get /signin but already authenticated"
     );
-    return NextResponse.redirect(new URL("/incidents", req.url));
+    return NextResponse.redirect(new URL("/incidents", request.url));
   }
 
   // Role-based routing (NOC users)
-  if (req.auth?.user?.role === "noc" && !pathname.startsWith("/alerts")) {
-    return NextResponse.redirect(new URL("/alerts/feed", req.url));
+  if (role === "noc" && !pathname.startsWith("/alerts")) {
+    return NextResponse.redirect(new URL("/alerts/feed", request.url));
   }
 
   // Allow all other authenticated requests
   console.log("Allowing request to pass through");
-  console.log("Request URL: ", req.url);
-  // console.log("Request headers: ", requestHeaders)
+  console.log("Request URL: ", request.url);
+
   return NextResponse.next({
     request: {
       // Apply new request headers
       headers: requestHeaders,
     },
   });
-});
+}
 
 // Update the matcher to handle static files and public routes
 export const config = {
