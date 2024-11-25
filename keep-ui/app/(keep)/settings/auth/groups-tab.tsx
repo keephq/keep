@@ -192,7 +192,6 @@ export default function GroupsTab() {
         group={selectedGroup}
         isNewGroup={!selectedGroup}
         mutateGroups={mutateGroups}
-        accessToken={accessToken}
       />
     </div>
   );

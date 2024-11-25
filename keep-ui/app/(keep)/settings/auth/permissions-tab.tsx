@@ -12,7 +12,6 @@ import PermissionSidebar from "./permissions-sidebar";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
-  accessToken: string;
   isDisabled?: boolean;
 }
 
@@ -28,10 +27,7 @@ interface ResourcePermission {
   permissions: PermissionEntity[];
 }
 
-export default function PermissionsTab({
-  accessToken,
-  isDisabled = false,
-}: Props) {
+export default function PermissionsTab({ isDisabled = false }: Props) {
   const api = useApi();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<any>(null);

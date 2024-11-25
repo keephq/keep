@@ -115,7 +115,6 @@ export default function SettingsPage() {
         if (usersAllowed) {
           return (
             <UsersTab
-              accessToken={session?.accessToken!}
               currentUser={session?.user}
               groupsAllowed={groupsAllowed}
               userCreationAllowed={userCreationAllowed}
@@ -173,7 +172,7 @@ export default function SettingsPage() {
         }
       case "groups":
         if (groupsAllowed) {
-          return <GroupsTab accessToken={session?.accessToken!} />;
+          return <GroupsTab />;
         } else {
           const mockGroups = [
             {
@@ -228,12 +227,7 @@ export default function SettingsPage() {
         }
       case "roles":
         if (rolesAllowed) {
-          return (
-            <RolesTab
-              accessToken={session?.accessToken!}
-              customRolesAllowed={customRolesAllowed}
-            />
-          );
+          return <RolesTab customRolesAllowed={customRolesAllowed} />;
         } else {
           const mockRoles = [
             {
@@ -268,7 +262,7 @@ export default function SettingsPage() {
         }
       case "permissions":
         if (permissionsAllowed) {
-          return <PermissionsTab accessToken={session?.accessToken!} />;
+          return <PermissionsTab />;
         } else {
           const mockPresets = [
             {
@@ -337,7 +331,7 @@ export default function SettingsPage() {
         }
       case "sso":
         if (ssoAllowed) {
-          return <SSOTab accessToken={session?.accessToken!} />;
+          return <SSOTab />;
         } else {
           return (
             <EmptyStateImage
@@ -431,16 +425,10 @@ export default function SettingsPage() {
             </TabGroup>
           </TabPanel>
           <TabPanel className="h-full">
-            <WebhookSettings
-              accessToken={session?.accessToken!}
-              selectedTab={selectedTab}
-            />
+            <WebhookSettings selectedTab={selectedTab} />
           </TabPanel>
           <TabPanel className="h-full">
-            <SmtpSettings
-              accessToken={session?.accessToken!}
-              selectedTab={selectedTab}
-            />
+            <SmtpSettings selectedTab={selectedTab} />
           </TabPanel>
         </TabPanels>
       </TabGroup>

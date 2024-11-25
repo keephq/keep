@@ -31,7 +31,6 @@ interface TestResult {
 }
 
 interface Props {
-  accessToken: string;
   selectedTab: string;
 }
 
@@ -39,7 +38,7 @@ const isValidPort = (port: number) => {
   return !isNaN(port) && port > 0 && port <= 65535;
 };
 
-export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
+export default function SMTPSettingsForm({ selectedTab }: Props) {
   const [settings, setSettings] = useState<SMTPSettings>({
     host: "",
     port: 25,

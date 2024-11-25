@@ -1018,10 +1018,7 @@ const ProviderForm = ({
             </>
           )}
           {provider.supports_webhook && (
-            <ProviderSemiAutomated
-              provider={provider}
-              accessToken={accessToken}
-            />
+            <ProviderSemiAutomated provider={provider} />
           )}
           {formErrors && (
             <Callout
