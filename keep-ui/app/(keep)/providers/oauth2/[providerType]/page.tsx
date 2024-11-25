@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { getServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { createServerApiClient } from "@/shared/lib/api/getServerApiClient";
 
 export default async function InstallFromOAuth({
   params,
@@ -9,7 +9,7 @@ export default async function InstallFromOAuth({
   params: { providerType: string };
   searchParams: { [key: string]: string };
 }) {
-  const api = await getServerApiClient();
+  const api = await createServerApiClient();
   const cookieStore = cookies();
   const verifier = cookieStore.get("verifier");
   const installWebhook = cookieStore.get("oauth2_install_webhook");

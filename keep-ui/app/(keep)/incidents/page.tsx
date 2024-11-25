@@ -4,7 +4,7 @@ import {
   GetIncidentsParams,
 } from "@/entities/incidents/api/incidents";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
-import { getServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { createServerApiClient } from "@/shared/lib/api/getServerApiClient";
 
 const defaultIncidentsParams: GetIncidentsParams = {
   confirmed: true,
@@ -17,7 +17,7 @@ const defaultIncidentsParams: GetIncidentsParams = {
 export default async function Page() {
   let incidents: PaginatedIncidentsDto | null = null;
   try {
-    const api = await getServerApiClient();
+    const api = await createServerApiClient();
     incidents = await getIncidents(api, defaultIncidentsParams);
   } catch (error) {
     console.log(error);
