@@ -6,6 +6,7 @@ import sys
 import typing
 import uuid
 from collections import OrderedDict
+from dataclasses import _MISSING_TYPE
 from importlib import metadata
 
 import click
@@ -16,11 +17,12 @@ from prettytable import PrettyTable
 
 from keep.api.core.db_on_start import try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.core.posthog import posthog_client
 from keep.cli.click_extensions import NotRequiredIf
+from keep.providers.models.provider_config import ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflowmanager import WorkflowManager
 from keep.workflowmanager.workflowstore import WorkflowStore
-from keep.api.core.posthog import posthog_client
 
 load_dotenv(find_dotenv())
 
@@ -134,6 +136,7 @@ class Info:
             or "api" in arguments
             or "config" in arguments
             or "version" in arguments
+            or "build_cache" in arguments
         ):
             return
 
@@ -311,9 +314,19 @@ def whoami(info: Info):
 
 @cli.command()
 @click.option("--multi-tenant", is_flag=True, help="Enable multi-tenant mode")
-@click.option("--port", "-p", type=int, default=int(os.environ.get("PORT", 8080)), help="The port to run the API on")
 @click.option(
-    "--host", "-h", type=str, default=os.environ.get("HOST", "0.0.0.0"), help="The host to run the API on"
+    "--port",
+    "-p",
+    type=int,
+    default=int(os.environ.get("PORT", 8080)),
+    help="The port to run the API on",
+)
+@click.option(
+    "--host",
+    "-h",
+    type=str,
+    default=os.environ.get("HOST", "0.0.0.0"),
+    help="The host to run the API on",
 )
 def api(multi_tenant: bool, port: int, host: str):
     """Start the API."""
@@ -1088,6 +1101,27 @@ def provider(info: Info):
     pass
 
 
+@provider.command(name="build_cache", help="Output providers cache for future use")
+def build_cache():
+    class ProviderEncoder(json.JSONEncoder):
+        def default(self, o):
+            if isinstance(o, ProviderScope):
+                dct = o.__dict__
+                dct.pop("__pydantic_initialised__", None)
+                return dct
+            elif isinstance(o, _MISSING_TYPE):
+                return None
+            return o.dict()
+
+    logger.info("Building providers cache")
+    providers_cache = ProvidersFactory.get_all_providers(ignore_cache_file=True)
+    with open("providers_cache.json", "w") as f:
+        json.dump(providers_cache, f, cls=ProviderEncoder)
+    logger.info(
+        "Providers cache built successfully", extra={"file": "providers_cache.json"}
+    )
+
+
 @provider.command(name="list")
 @click.option(
     "--available",
@@ -1511,6 +1545,7 @@ def simulate(info: Info, provider_type: str, params: list[str]):
         click.echo(click.style(f"Error simulating alert: {resp.text}", bold=True))
     else:
         click.echo(click.style("Alert simulated successfully", bold=True))
+
 
 @cli.group()
 @pass_info
