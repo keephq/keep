@@ -403,28 +403,6 @@ export default function IncidentTimeline({
     <Card className="py-2 px-0">
       <div className="overflow-x-auto">
         <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
-          {/* Time labels */}
-          <div
-            className="flex mb-2 relative"
-            style={{ height: "20px", paddingLeft: "40px" }}
-          >
-            {intervals.map((time, index) => (
-              <div
-                key={index}
-                className="text-xs px-2 text-gray-400 absolute whitespace-nowrap"
-                style={{
-                  left: `${
-                    (time.getTime() - startTime.getTime()) *
-                      pixelsPerMillisecond || 30
-                  }px`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                {format(time, formatString)}
-              </div>
-            ))}
-          </div>
-
           {/* Alert bars */}
           <div className="space-y-0">
             {alertsWithEvents
@@ -455,6 +433,32 @@ export default function IncidentTimeline({
                   isLastRow={index === array.length - 1}
                 />
               ))}
+          </div>
+
+          {/* Time labels */}
+          <div
+            className="relative mt-4"
+            style={{ height: "50px", paddingLeft: "40px" }}
+          >
+            {intervals.map((time, index) => (
+              <div
+                key={index}
+                className="absolute flex flex-col items-center text-xs text-gray-400"
+                style={{
+                  left: `${
+                    // Padding the first and last interval to make it look nicer
+                    ((time.getTime() - startTime.getTime()) *
+                      pixelsPerMillisecond || 30) -
+                    (index === intervals.length - 1 ? 50 : 0)
+                  }px`,
+                  transform: "translateX(-50%)",
+                }}
+              >
+                <div className="h-4 border-l border-gray-300 mb-1"></div>
+                <div>{format(time, "MMM dd")}</div>
+                <div className="text-gray-500">{format(time, "HH:mm")}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
