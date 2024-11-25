@@ -2,6 +2,7 @@ import { InternalConfig } from "@/types/internal-config";
 import { Session } from "next-auth";
 import { KeepApiError } from "./KeepApiError";
 import { getApiUrlFromConfig } from "./getApiUrlFromConfig";
+import { getApiURL } from "@/utils/apiUrl";
 
 export class ApiClient {
   constructor(
@@ -58,7 +59,9 @@ export class ApiClient {
   }
 
   async fetch(url: string, requestInit: RequestInit = {}) {
-    const apiUrl = getApiUrlFromConfig(this.config, this.isServer);
+    const apiUrl = this.isServer
+      ? getApiURL()
+      : getApiUrlFromConfig(this.config);
     const fullUrl = apiUrl + url;
 
     if (!this.config) {
