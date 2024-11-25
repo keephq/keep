@@ -29,7 +29,7 @@ export function buildTopologyUrl({
 
 export async function getApplications(api: ApiClient) {
   const url = `/topology/applications`;
-  return (await api.get(url)) as Promise<TopologyApplication[]>;
+  return await api.get<TopologyApplication[]>(url);
 }
 
 export async function getTopology(
@@ -45,5 +45,5 @@ export async function getTopology(
   }
 ) {
   const url = buildTopologyUrl({ providerIds, services, environment });
-  return (await api.get(url)) as Promise<TopologyService[]>;
+  return await api.get<TopologyService[]>(url);
 }

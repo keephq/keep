@@ -37,9 +37,9 @@ export function buildIncidentsUrl(params: GetIncidentsParams) {
 
 export async function getIncidents(api: ApiClient, params: GetIncidentsParams) {
   const url = buildIncidentsUrl(params);
-  return (await api.get(url)) as Promise<PaginatedIncidentsDto>;
+  return await api.get<PaginatedIncidentsDto>(url);
 }
 
 export async function getIncident(api: ApiClient, id: string) {
-  return (await api.get(`/incidents/${id}`)) as IncidentDto;
+  return await api.get<IncidentDto>(`/incidents/${id}`);
 }
