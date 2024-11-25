@@ -74,6 +74,8 @@ class SignalfxProviderAuthConfig:
 class SignalfxProvider(BaseProvider):
     """Get alerts from SignalFx into Keep."""
 
+    PROVIDER_CATEGORY = ["Monitoring"]
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="API",

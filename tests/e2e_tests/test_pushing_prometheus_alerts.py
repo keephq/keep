@@ -34,8 +34,10 @@ def test_pulling_prometheus_alerts_to_provider(browser):
         browser.get_by_placeholder("Filter providers...").click()
         browser.get_by_placeholder("Filter providers...").fill("prometheus")
         browser.get_by_placeholder("Filter providers...").press("Enter")
-        browser.get_by_text("Connect Provider").hover()
-        prometheus_tile = browser.locator("button:has-text('prometheus'):has-text('alert'):has-text('data')")
+        browser.get_by_text("Available Providers").hover()
+        prometheus_tile = browser.locator(
+            "button:has-text('prometheus'):has-text('alert'):has-text('data')"
+        )
         prometheus_tile.first.hover()
         prometheus_tile.first.click()
         browser.get_by_placeholder("Enter provider name").click()

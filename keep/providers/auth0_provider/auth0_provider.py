@@ -1,6 +1,7 @@
 """
 Auth0 provider.
 """
+
 import dataclasses
 import datetime
 import os
@@ -40,6 +41,7 @@ class Auth0Provider(BaseProvider):
     """Enrich alerts with data from Auth0."""
 
     PROVIDER_DISPLAY_NAME = "Auth0"
+    PROVIDER_CATEGORY = ["Identity and Access Management"]
 
     provider_id: str
     config: ProviderConfig
@@ -86,9 +88,9 @@ class Auth0Provider(BaseProvider):
             "per_page": 100,  # specify the number of entries per page
         }
         if from_:
-            params[
-                "q"
-            ] = f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now().isoformat()}])"
+            params["q"] = (
+                f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now().isoformat()}])"
+            )
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         logs = response.json()

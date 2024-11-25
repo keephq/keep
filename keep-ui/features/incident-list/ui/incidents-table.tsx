@@ -35,6 +35,7 @@ import { useIncidentActions } from "@/entities/incidents/model";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, TablePagination } from "@/shared/ui";
+import { UserStatefulAvatar } from "@/entities/users/ui";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -228,7 +229,9 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "assignee",
       header: "Assignee",
-      cell: ({ row }) => row.original.assignee,
+      cell: ({ row }) => (
+        <UserStatefulAvatar email={row.original.assignee} size="xs" />
+      ),
     }),
     columnHelper.accessor("creation_time", {
       id: "creation_time",

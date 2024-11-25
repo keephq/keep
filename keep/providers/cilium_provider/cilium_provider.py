@@ -31,6 +31,7 @@ class CiliumProvider(BaseTopologyProvider):
 
     PROVIDER_TAGS = ["topology"]
     PROVIDER_DISPLAY_NAME = "Cilium"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Security"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

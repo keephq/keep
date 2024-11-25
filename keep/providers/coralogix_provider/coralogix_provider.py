@@ -44,7 +44,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
 
     PROVIDER_DISPLAY_NAME = "Coralogix"
     PROVIDER_TAGS = ["alert"]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     FINGERPRINT_FIELDS = ["alertUniqueIdentifier"]
 
     def __init__(
