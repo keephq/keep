@@ -130,13 +130,26 @@ class ElasticProvider(BaseProvider):
 
     def _run_sql_query(self, query: str) -> list[str]:
         response = self.client.sql.query(body={"query": query})
-        import pandas as pd
 
-        results = pd.DataFrame(response["rows"])
+        # @tb: I removed pandas so if we'll have performance issues we can revert to pandas
+        # Original pandas implementation:
+        # import pandas as pd
+        # results = pd.DataFrame(response["rows"])
+        # columns = [col["name"] for col in response["columns"]]
+        # results.rename(
+        #     columns={i: columns[i] for i in range(len(columns))}, inplace=True
+        # )
+        # return results
+
+        # Convert rows to list of dicts with proper column names
         columns = [col["name"] for col in response["columns"]]
-        results.rename(
-            columns={i: columns[i] for i in range(len(columns))}, inplace=True
-        )
+        results = []
+        for row in response["rows"]:
+            result = {}
+            for i, value in enumerate(row):
+                result[columns[i]] = value
+            results.append(result)
+
         return results
 
     def _run_eql_query(self, query: str | dict, index: str) -> list[str]:

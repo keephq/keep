@@ -18,9 +18,7 @@ export const CorrelationGroups = () => {
         <Button
           className="cursor-default"
           type="button"
-          tooltip="Any Rule consists of one or more Correlations. Each alert group is evaluated separately and the results are combined using AND combinator.
-                  For example, if you want to group alerts that has a severity of 'critical' and another alert with a source of 'Kibana', you would create a rule with two alert groups.
-                  The first alert group would have a rule with severity = 'critical' and the second alert group would have a rule with source = 'kibana'."
+          tooltip="A Rule contains one or more Correlations, each evaluating a separate alert group. Results are combined using an AND operator. For instance, to group alerts by severity 'critical' and source 'Kibana', create two alert groups: one with severity = 'critical' and another with source = 'Kibana'."
           icon={QuestionMarkCircleIcon}
           size="xs"
           variant="light"
