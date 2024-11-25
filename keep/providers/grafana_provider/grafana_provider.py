@@ -91,7 +91,6 @@ class GrafanaProvider(BaseProvider):
         "ok": AlertStatus.RESOLVED,
         "resolved": AlertStatus.RESOLVED,
         "normal": AlertStatus.RESOLVED,
-        "resolved": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
         "alerting": AlertStatus.FIRING,
         "pending": AlertStatus.PENDING,
