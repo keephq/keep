@@ -1,10 +1,11 @@
-import { AlertDto } from "./models";
-import { Dialog, Transition } from "@headlessui/react";
-import React, { Fragment, useEffect, useState } from "react";
-import { Button, TextInput } from "@tremor/react";
-import { useSession } from "next-auth/react";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { toast } from "react-toastify";
+import {AlertDto} from "./models";
+import {Dialog, Transition} from "@headlessui/react";
+import React, {Fragment, useEffect, useState} from "react";
+import {Button, TextInput} from "@tremor/react";
+import {useSession} from "next-auth/react";
+import {useApiUrl} from "utils/hooks/useConfig";
+import {toast} from "react-toastify";
+import SidePanel from "@/components/SidePanel"
 
 interface EnrichAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -178,61 +179,36 @@ const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
     ));
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog onClose={handleClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/30 z-20" aria-hidden="true" />
-        </Transition.Child>
-        <Transition.Child
-          as={Fragment}
-          enter="transition ease-in-out duration-300 transform"
-          enterFrom="translate-x-full"
-          enterTo="translate-x-0"
-          leave="transition ease-in-out duration-300 transform"
-          leaveFrom="translate-x-0"
-          leaveTo="translate-x-full"
-        >
-          <Dialog.Panel className="fixed right-0 inset-y-0 w-1/3 bg-white z-30 flex flex-col">
-            <div className="flex justify-between items-center min-w-full p-6">
-              <h2 className="text-lg font-semibold">Enrich Alert</h2>
-            </div>
+    <SidePanel isOpen={isOpen} onClose={handleClose} panelWidth={"w-1/3"}>
+      <div className="flex justify-between items-center min-w-full">
+        <h2 className="text-lg font-semibold">Enrich Alert</h2>
+      </div>
 
-            <div className="flex-1 overflow-auto pb-6 px-6 mt-2">
-              {renderCustomFields()}
-            </div>
+      <div className="flex-1 overflow-auto pb-6 mt-4">
+        {renderCustomFields()}
+      </div>
 
-            <div className="sticky bottom-0 p-4 border-t border-gray-200 bg-white flex justify-end gap-2">
-              <Button
-                onClick={addCustomField}
-                className="bg-orange-500"
-                variant="primary"
-              >
-                + Add Field
-              </Button>
-              <Button
-                onClick={handleSave}
-                color="orange"
-                variant="primary"
-                disabled={!isDataValid}
-              >
-                Save
-              </Button>
-              <Button onClick={handleClose} color="orange" variant="secondary">
-                Close
-              </Button>
-            </div>
-          </Dialog.Panel>
-        </Transition.Child>
-      </Dialog>
-    </Transition>
+      <div className="sticky bottom-0 p-4 border-t border-gray-200 bg-white flex justify-end gap-2">
+        <Button
+          onClick={addCustomField}
+          className="bg-orange-500"
+          variant="primary"
+        >
+          + Add Field
+        </Button>
+        <Button
+          onClick={handleSave}
+          color="orange"
+          variant="primary"
+          disabled={!isDataValid}
+        >
+          Save
+        </Button>
+        <Button onClick={handleClose} color="orange" variant="secondary">
+          Close
+        </Button>
+      </div>
+    </SidePanel>
   );
 };
 
