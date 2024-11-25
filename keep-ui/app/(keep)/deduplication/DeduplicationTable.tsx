@@ -13,6 +13,7 @@ import {
   Badge,
   SparkAreaChart,
 } from "@tremor/react";
+import { Tooltip } from "@/shared/ui/Tooltip";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createColumnHelper,
@@ -22,7 +23,12 @@ import {
 } from "@tanstack/react-table";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import DeduplicationSidebar from "@/app/(keep)/deduplication/DeduplicationSidebar";
-import { TrashIcon, PauseIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+  TrashIcon,
+  PauseIcon,
+  PlusIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
@@ -108,6 +114,13 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
     }
   }, [isSidebarOpen, selectedId, router]);
 
+  const TOOLTIPS = {
+    distribution:
+      "Displays the number of alerts processed hourly over the last 24 hours. A consistent or high distribution indicates steady activity for this deduplication rule.",
+    dedup_ratio:
+      "Represents the percentage of alerts successfully deduplicated. Higher values indicate better deduplication efficiency, meaning fewer redundant alerts.",
+  };
+
   const DEDUPLICATION_TABLE_COLS = useMemo(
     () => [
       columnHelper.accessor("provider_type", {
@@ -127,11 +140,11 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         ),
       }),
       columnHelper.accessor("description", {
-        header: "Name",
+        header: "Description",
         cell: (info) => (
           <div className="flex items-center justify-between max-w-[320px]">
             <span className="truncate lg:whitespace-normal">
-              {info.getValue()}
+              {info.row.original.provider_id ?? "Keep"} {" "} deduplication rule
             </span>
             {info.row.original.default ? (
               <Badge color="orange" size="xs" className="ml-2">
@@ -161,11 +174,16 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       columnHelper.accessor("dedup_ratio", {
         header: "Dedup Ratio",
         cell: (info) => {
-          const value = info.getValue() || 0;
-          const formattedValue = Number(value).toFixed(1);
+          let formattedValue;
+          if (info.row.original.ingested === 0) {
+            formattedValue = "Unknown yet";
+          } else {
+            const value = info.getValue() || 0;
+            formattedValue = `${Number(value).toFixed(1)}%`;
+          }
           return (
-            <Badge color="orange" className="w-16">
-              {formattedValue}%
+            <Badge color="orange" className="w-fit">
+              {formattedValue}
             </Badge>
           );
         },
@@ -278,7 +296,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         <div>
           <Title className="text-2xl font-normal">
             Deduplication Rules{" "}
-            <span className="text-gray-400">({deduplicationRules.length})</span>
+            <span className="text-gray-400">
+              ({deduplicationRules?.length})
+            </span>
           </Title>
           <Subtitle className="text-gray-400">
             Set up rules to deduplicate similar alerts
@@ -301,10 +321,22 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHeaderCell key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
+                    <span className="flex items-center">
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                      {Object.keys(TOOLTIPS).includes(header.id) && (
+                        <Tooltip
+                          content={
+                            <>{TOOLTIPS[header.id as keyof typeof TOOLTIPS]}</>
+                          }
+                          className="z-50"
+                        >
+                          <QuestionMarkCircleIcon className="w-4 h-4 ml-1" />
+                        </Tooltip>
+                      )}
+                    </span>
                   </TableHeaderCell>
                 ))}
               </TableRow>

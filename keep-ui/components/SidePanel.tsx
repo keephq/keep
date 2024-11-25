@@ -1,5 +1,5 @@
-import React, { Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
+import React, { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
 
 interface SidePanelProps {
   isOpen: boolean;
@@ -13,8 +13,8 @@ const SidePanel: React.FC<SidePanelProps> = ({
   isOpen,
   onClose,
   children,
-  panelWidth = 'w-1/2', // Default width
-  overlayOpacity = 'bg-black/30', // Default overlay opacity
+  panelWidth = "w-1/2", // Default width
+  overlayOpacity = "bg-black/30", // Default overlay opacity
 }) => {
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -28,7 +28,10 @@ const SidePanel: React.FC<SidePanelProps> = ({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className={`fixed inset-0 ${overlayOpacity}`} aria-hidden="true" />
+          <div
+            className={`fixed inset-0 ${overlayOpacity}`}
+            aria-hidden="true"
+          />
         </Transition.Child>
         <Transition.Child
           as={Fragment}
@@ -39,7 +42,9 @@ const SidePanel: React.FC<SidePanelProps> = ({
           leaveFrom="translate-x-0"
           leaveTo="translate-x-full"
         >
-          <Dialog.Panel className={`fixed right-0 inset-y-0 ${panelWidth} bg-white z-30 flex flex-col`}>
+          <Dialog.Panel
+            className={`fixed right-0 inset-y-0 ${panelWidth} bg-white z-30 flex flex-col p-6`}
+          >
             {children}
           </Dialog.Panel>
         </Transition.Child>
