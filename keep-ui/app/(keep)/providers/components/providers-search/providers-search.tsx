@@ -16,6 +16,7 @@ export const ProvidersSearch: FC = () => {
       id="search-providers"
       icon={MagnifyingGlassIcon}
       placeholder="Filter providers..."
+      className="w-full"
       value={providersSearchString}
       onChange={handleChange}
     />

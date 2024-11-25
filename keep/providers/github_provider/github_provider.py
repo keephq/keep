@@ -33,6 +33,7 @@ class GithubProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "GitHub"
+    PROVIDER_CATEGORY = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

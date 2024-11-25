@@ -45,6 +45,7 @@ class SendgridProvider(BaseProvider):
     """Send email using the SendGrid API."""
 
     PROVIDER_DISPLAY_NAME = "SendGrid"
+    PROVIDER_CATEGORY = ["Collaboration"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="email.send",

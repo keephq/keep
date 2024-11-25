@@ -1,9 +1,5 @@
-import React, { useCallback, useEffect } from "react";
-import {
-  AlertFacetsProps,
-  FacetValue,
-  FacetFilters,
-} from "./alert-table-facet-types";
+import React, { useCallback } from "react";
+import { AlertFacetsProps, FacetValue } from "./alert-table-facet-types";
 import { Facet } from "./alert-table-facet";
 import {
   getFilteredAlertsForFacet,
@@ -148,7 +144,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           if (a.label === "n/a") return 1;
           if (b.label === "n/a") return -1;
           const orderDiff =
-            getSeverityOrder(a.label) - getSeverityOrder(b.label);
+            getSeverityOrder(b.label) - getSeverityOrder(a.label);
           if (orderDiff !== 0) return orderDiff;
           return b.count - a.count;
         });
@@ -253,7 +249,7 @@ export const AlertFacets: React.FC<AlertFacetsProps> = ({
           showSkeleton={showSkeleton}
         />
         <Facet
-          name="Incident Related"
+          name="Incident"
           facetKey="incident"
           values={getFacetValues("incident")}
           onSelect={(value, exclusive, isAllOnly) =>

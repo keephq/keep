@@ -22,7 +22,11 @@ from keep.api.core.db import (
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import (
+    BaseIncidentProvider,
+    BaseProvider,
+    BaseTopologyProvider,
+)
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -38,7 +42,9 @@ class ProvidersFactory:
     _loaded_providers_cache = None
 
     @staticmethod
-    def get_provider_class(provider_type: str) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
+    def get_provider_class(
+        provider_type: str,
+    ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         provider_type_split = provider_type.split(
             "."
         )  # e.g. "cloudwatch.logs" or "cloudwatch.metrics"
@@ -267,7 +273,8 @@ class ProvidersFactory:
                     and provider_class.__dict__.get("setup_webhook") is not None
                 ) or (
                     issubclass(provider_class, BaseIncidentProvider)
-                    and provider_class.__dict__.get("setup_incident_webhook") is not None
+                    and provider_class.__dict__.get("setup_incident_webhook")
+                    is not None
                 )
                 webhook_required = provider_class.WEBHOOK_INSTALLATION_REQUIRED
                 supports_webhook = (
@@ -376,6 +383,8 @@ class ProvidersFactory:
                         tags=provider_tags,
                         alertExample=alert_example,
                         default_fingerprint_fields=default_fingerprint_fields,
+                        categories=provider_class.PROVIDER_CATEGORY,
+                        coming_soon=provider_class.PROVIDER_COMING_SOON,
                     )
                 )
             except ModuleNotFoundError:
