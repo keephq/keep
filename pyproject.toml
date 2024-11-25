@@ -1,9 +1,8 @@
 [tool.poetry]
 name = "keep"
-version = "0.29.4"
+version = "0.30.1"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
-readme = "README.md"
 packages = [{include = "keep"}]
 
 [tool.poetry.dependencies]
@@ -18,7 +17,6 @@ python-dotenv = "^0.21.1"
 pygithub = "^1.57"
 sentry-sdk = "^1.15.0"
 pydantic = "^1.10.4"
-datefinder = "^0.7.3"
 mysql-connector-python = "^9.1.0"
 logmine = "^0.4.1"
 astunparse = "^1.6.3"
@@ -29,17 +27,13 @@ python-telegram-bot = "^20.1"
 fastapi = "^0.109.1"
 uvicorn = "^0.20.0"
 opsgenie-sdk = "^2.1.5"
-psycopg2-binary = "^2.9.5"
 starlette-context = "^0.3.6"
-nest-asyncio = "^1.5.6"
 datadog-api-client = "^2.12.0"
 sqlmodel = "^0.0.8"
-grafana-api-sdk = "^0.1.0"
 cloud-sql-python-connector = "1.12.0"
 pymysql = "^1.1.1"
 google-cloud-secret-manager = "^2.16.1"
 python-jose = "^3.3.0"
-jwcrypto = "^1.5.6"
 sqlalchemy = "1.4.41"
 snowflake-connector-python = "3.12.3"
 openai = "1.37.1"
@@ -84,18 +78,14 @@ openshift-client = "^2.0.4"
 uptime-kuma-api = "^1.2.1"
 packaging = "^24.0"
 arq = "^0.26.0"
-
-
 alembic = "^1.13.2"
-numpy = "^2.0.0"
-pandas = "^2.2.2"
 quickchart-io = "^2.0.0"
-scipy = "^1.14.1"
-networkx = "^3.3"
 google-auth = "2.34.0"
 clickhouse-driver = "^0.2.9"
 google-cloud-logging = "^3.11.3"
 json5 = "^0.9.28"
+
+psycopg2-binary = "^2.9.10"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
@@ -109,8 +99,8 @@ coverage = "^7.2.2"
 pytest-mock = "^3.11.1"
 ruff = "^0.1.6"
 pytest-docker = "^2.0.1"
-
 playwright = "^1.44.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

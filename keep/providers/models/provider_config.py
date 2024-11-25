@@ -1,11 +1,12 @@
 """
 Provider configuration model.
 """
+
 import os
-from dataclasses import dataclass
 from typing import Optional
 
 import chevron
+from pydantic.dataclasses import dataclass
 
 
 @dataclass

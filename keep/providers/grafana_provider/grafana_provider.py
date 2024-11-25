@@ -7,7 +7,6 @@ import datetime
 
 import pydantic
 import requests
-from grafana_api.model import APIEndpoints
 from packaging.version import Version
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
@@ -90,6 +89,7 @@ class GrafanaProvider(BaseProvider):
     # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
     STATUS_MAP = {
         "ok": AlertStatus.RESOLVED,
+        "resolved": AlertStatus.RESOLVED,
         "normal": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
         "alerting": AlertStatus.FIRING,
@@ -155,7 +155,7 @@ class GrafanaProvider(BaseProvider):
         return validated_scopes
 
     def get_alerts_configuration(self, alert_id: str | None = None):
-        api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
+        api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.get(api, verify=False, headers=headers)
         if not response.ok:
@@ -172,7 +172,7 @@ class GrafanaProvider(BaseProvider):
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
         self.logger.info("Deploying alert")
-        api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
+        api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.post(api, verify=False, json=alert, headers=headers)
 
@@ -244,7 +244,9 @@ class GrafanaProvider(BaseProvider):
             f"{GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME}-{tenant_id}"
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
+        contacts_api = (
+            f"{self.authentication_config.host}/api/v1/provisioning/contact-points"
+        )
         try:
             self.logger.info("Getting contact points")
             all_contact_points = requests.get(
@@ -346,7 +348,9 @@ class GrafanaProvider(BaseProvider):
         # Finally, we need to update the policies to match the webhook
         if setup_alerts:
             self.logger.info("Setting up alerts")
-            policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
+            policies_api = (
+                f"{self.authentication_config.host}/api/v1/provisioning/policies"
+            )
             all_policies = requests.get(
                 policies_api, verify=False, headers=headers
             ).json()
