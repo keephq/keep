@@ -59,7 +59,7 @@ export const CorrelationForm = ({
             <Button
               className="cursor-default ml-2"
               type="button"
-              tooltip="When the first alert arrives, Keep will start to calculate the timespan, any new alert within the timeframe will correlate into the same incident. Time cannot exceed 14 days"
+              tooltip="When the first alert arrives, Keep calculates the timespan. Any new alert within this timeframe will correlate into the same incident. The timeframe cannot exceed 14 days."
               icon={QuestionMarkCircleIcon}
               size="xs"
               variant="light"
@@ -98,7 +98,7 @@ export const CorrelationForm = ({
               <Button
                 className="cursor-default ml-2"
                 type="button"
-                tooltip="Keep will use these attributes to split between incidents. For example, with attribute host, Keep will correlate alert with hostX and alert with host hostY to different incidents. You cannot calculate attributes to group by without alerts"
+                tooltip="Attributes are used to distinguish between incidents. For example, grouping by 'host' will correlate alerts with hostX and hostY into separate incidents. Attributes cannot be calculated without alerts."
                 icon={QuestionMarkCircleIcon}
                 size="xs"
                 variant="light"

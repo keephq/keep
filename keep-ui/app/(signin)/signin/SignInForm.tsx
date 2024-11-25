@@ -21,7 +21,7 @@ export interface Providers {
   auth0?: Provider;
   credentials?: Provider;
   keycloak?: Provider;
-  "azure-ad"?: Provider;
+  "microsoft-entra-id"?: Provider;
 }
 
 interface SignInFormInputs {
@@ -42,15 +42,11 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
   } = useForm<SignInFormInputs>();
 
   useEffect(() => {
-    console.log("Fetching providers");
     async function fetchProviders() {
-      console.log("Fetching providers 2");
       const response = await getProviders();
       setProviders(response as Providers);
     }
-    console.log("Fetching providers 3");
     fetchProviders();
-    console.log("Fetching providers 4");
   }, []);
 
   useEffect(() => {
@@ -69,9 +65,9 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
       } else if (providers.keycloak) {
         console.log("Signing in with keycloak provider");
         signIn("keycloak", { callbackUrl: "/" });
-      } else if (providers["azure-ad"]) {
+      } else if (providers["microsoft-entra-id"]) {
         console.log("Signing in with Azure AD provider");
-        signIn("azure-ad", { callbackUrl: "/" });
+        signIn("microsoft-entra-id", { callbackUrl: "/" });
       } else if (
         providers.credentials &&
         providers.credentials.name == "NoAuth"
