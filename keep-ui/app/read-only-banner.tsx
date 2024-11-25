@@ -23,8 +23,7 @@ const ReadOnlyBanner = () => {
           <Button
             className="[&>span]:text-xs"
             onClick={() => {
-              // I leave it as try-keep-for-free for now for the sake of Slack event.
-              capture("try-keep-for-free", {
+              capture("star-us", {
                 source: "read-only-banner",
               });
               window.open(
