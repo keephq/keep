@@ -23,9 +23,8 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { KeyedMutator } from "swr";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface ProviderOption {
   value: string;
@@ -74,8 +73,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     data: providers = { installed_providers: [], linked_providers: [] },
   } = useProviders();
   const { data: deduplicationFields = {} } = useDeduplicationFields();
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const alertProviders = useMemo(
     () =>
@@ -151,7 +149,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     setIsSubmitting(true);
     clearErrors();
     try {
-      let url = `${apiUrl}/deduplications`;
+      let url = "/deduplications";
 
       if (selectedDeduplicationRule && selectedDeduplicationRule.id) {
         url += `/${selectedDeduplicationRule.id}`;
@@ -162,14 +160,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           ? "POST"
           : "PUT";
 
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const response =
+        method === "POST"
+          ? await api.post(url, data)
+          : await api.put(url, data);
 
       if (response.ok) {
         console.log("Deduplication rule saved:", data);

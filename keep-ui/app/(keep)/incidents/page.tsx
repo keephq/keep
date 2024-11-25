@@ -1,11 +1,10 @@
-import { getApiURL } from "@/utils/apiUrl";
-import { auth } from "@/auth";
 import { IncidentList } from "@/features/incident-list";
 import {
   getIncidents,
   GetIncidentsParams,
 } from "@/entities/incidents/api/incidents";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
+import { getServerApiClient } from "@/shared/lib/api/getServerApiClient";
 
 const defaultIncidentsParams: GetIncidentsParams = {
   confirmed: true,
@@ -18,10 +17,8 @@ const defaultIncidentsParams: GetIncidentsParams = {
 export default async function Page() {
   let incidents: PaginatedIncidentsDto | null = null;
   try {
-    const session = await auth();
-    const apiUrl = getApiURL();
-
-    incidents = await getIncidents(apiUrl, session, defaultIncidentsParams);
+    const api = await getServerApiClient();
+    incidents = await getIncidents(api, defaultIncidentsParams);
   } catch (error) {
     console.log(error);
   }

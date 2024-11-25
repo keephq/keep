@@ -2,17 +2,16 @@ import React, { useState, useEffect } from "react";
 import { AlertDto, Preset } from "./models";
 import Modal from "@/components/ui/Modal";
 import { Button, Subtitle, TextInput, Switch, Text } from "@tremor/react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "utils/hooks/usePresets";
 import { useTags } from "utils/hooks/useTags";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
-import QueryBuilder, { formatQuery, parseCEL } from "react-querybuilder";
+import { formatQuery, parseCEL } from "react-querybuilder";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 type OptionType = { value: string; label: string };
 
@@ -36,12 +35,11 @@ export default function AlertPresets({
   presetPrivate = false,
   presetNoisy = false,
 }: Props) {
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
   });
-  const { data: session } = useSession();
   const { data: tags = [], mutate: mutateTags } = useTags();
   const router = useRouter();
 
@@ -77,19 +75,19 @@ export default function AlertPresets({
         `You are about to delete preset ${presetNameFromApi}, are you sure?`
       )
     ) {
-      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-      if (response.ok) {
+      try {
+        const response = await api.delete(`/preset/${presetId}`);
         toast(`Preset ${presetNameFromApi} deleted!`, {
           position: "top-left",
           type: "success",
         });
         presetsMutator();
         router.push("/alerts/feed");
+      } catch (error) {
+        toast(`Error deleting preset ${presetNameFromApi}`, {
+          position: "top-left",
+          type: "error",
+        });
       }
     }
   }
@@ -102,51 +100,50 @@ export default function AlertPresets({
         parseNumbers: true,
       });
 
-      const response = await fetch(
-        selectedPreset?.id
-          ? `${apiUrl}/preset/${selectedPreset?.id}`
-          : `${apiUrl}/preset`,
-        {
-          method: selectedPreset?.id ? "PUT" : "POST",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: presetName,
-            options: [
-              {
-                label: "CEL",
-                value: presetCEL,
-              },
-              {
-                label: "SQL",
-                value: sqlQuery,
-              },
-            ],
-            is_private: isPrivate,
-            is_noisy: isNoisy,
-            tags: selectedTags.map((tag) => ({
-              id: tag.id,
-              name: tag.name,
-            })),
-          }),
-        }
-      );
-      if (response.ok) {
-        setIsModalOpen(false);
-        toast(
-          selectedPreset
-            ? `Preset ${presetName} updated!`
-            : `Preset ${presetName} created!`,
+      const body = {
+        name: presetName,
+        options: [
           {
+            label: "CEL",
+            value: presetCEL,
+          },
+          {
+            label: "SQL",
+            value: sqlQuery,
+          },
+        ],
+        is_private: isPrivate,
+        is_noisy: isNoisy,
+        tags: selectedTags.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+        })),
+      };
+
+      if (selectedPreset?.id) {
+        const response = await api.put(`/preset/${selectedPreset?.id}`, body);
+        if (response.ok) {
+          setIsModalOpen(false);
+          toast(`Preset ${presetName} updated!`, {
             position: "top-left",
             type: "success",
-          }
-        );
-        presetsMutator();
-        mutateTags();
-        router.push(`/alerts/${presetName.toLowerCase()}`);
+          });
+          presetsMutator();
+          mutateTags();
+          router.push(`/alerts/${presetName.toLowerCase()}`);
+        }
+      } else {
+        const response = await api.post(`/preset`, body);
+        if (response.ok) {
+          setIsModalOpen(false);
+          toast(`Preset ${presetName} created!`, {
+            position: "top-left",
+            type: "success",
+          });
+          presetsMutator();
+          mutateTags();
+          router.push(`/alerts/${presetName.toLowerCase()}`);
+        }
       }
     }
   }

@@ -22,10 +22,9 @@ import {
 } from "@tanstack/react-table";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import DeduplicationSidebar from "@/app/(keep)/deduplication/DeduplicationSidebar";
-import { TrashIcon, PauseIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, PlusIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 const columnHelper = createColumnHelper<DeduplicationRule>();
 
@@ -40,10 +39,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   deduplicationRules,
   mutateDeduplicationRules,
 }) => {
+  const api = useApi();
   const router = useRouter();
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const apiUrl = useApiUrl();
 
   let selectedId = searchParams ? searchParams.get("id") : null;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -73,19 +71,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       window.confirm("Are you sure you want to delete this deduplication rule?")
     ) {
       try {
-        const url = `${apiUrl}/deduplications/${rule.id}`;
-        const response = await fetch(url, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        });
+        await api.delete(`/deduplications/${rule.id}`);
 
-        if (response.ok) {
-          await mutateDeduplicationRules();
-        } else {
-          console.error("Failed to delete deduplication rule");
-        }
+        await mutateDeduplicationRules();
       } catch (error) {
         console.error("Error deleting deduplication rule:", error);
       }
@@ -254,7 +242,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         ),
       }),
     ],
-    [handleDeleteRule]
+    []
   );
 
   const table = useReactTable({

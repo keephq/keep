@@ -14,7 +14,6 @@ import {
   TextInput,
 } from "@tremor/react";
 import { useState, useEffect, useMemo } from "react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useScopes } from "utils/hooks/useScopes";
 import { useRoles } from "utils/hooks/useRoles";
 import React from "react";
@@ -24,17 +23,14 @@ import { Role } from "@/app/(keep)/settings/models";
 import "./multiselect.css";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdAddModerator } from "react-icons/md";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface RolesTabProps {
-  accessToken: string;
   customRolesAllowed: boolean;
 }
 
-export default function RolesTab({
-  accessToken,
-  customRolesAllowed,
-}: RolesTabProps) {
-  const apiUrl = useApiUrl();
+export default function RolesTab({ customRolesAllowed }: RolesTabProps) {
+  const api = useApi();
   const { data: scopes = [], isLoading: scopesLoading } = useScopes();
   const {
     data: roles = [],
@@ -77,18 +73,8 @@ export default function RolesTab({
     event.stopPropagation();
     if (window.confirm("Are you sure you want to delete this role?")) {
       try {
-        const response = await fetch(`${apiUrl}/auth/roles/${roleId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response.ok) {
-          await mutateRoles();
-        } else {
-          console.error("Failed to delete role");
-        }
+        await api.delete(`/auth/roles/${roleId}`);
+        await mutateRoles();
       } catch (error) {
         console.error("Error deleting role:", error);
       }
@@ -206,7 +192,6 @@ export default function RolesTab({
       <RoleSidebar
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
-        accessToken={accessToken}
         selectedRole={selectedRole}
         resources={resources}
         mutateRoles={mutateRoles}

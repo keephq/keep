@@ -5,13 +5,11 @@ import {
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model";
 import { PaginatedWorkflowExecutionDto } from "@/app/(keep)/workflows/builder/types";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 import { useAlerts } from "./useAlerts";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface IncidentUpdatePayload {
   incident_id: string | null;
@@ -35,8 +33,7 @@ export const useIncidents = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session, status: sessionStatus } = useSession();
+  const api = useApi();
 
   const filtersParams = new URLSearchParams();
 
@@ -52,20 +49,18 @@ export const useIncidents = (
 
   const swrValue = useSWR<PaginatedIncidentsDto>(
     () =>
-      session
+      api.isReady()
         ? `/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
             sorting.desc ? "-" : ""
           }${sorting.id}&${filtersParams.toString()}`
         : null,
-    (url) => fetcher(apiUrl + url, session?.accessToken),
+    api.get,
     options
   );
 
   return {
     ...swrValue,
-    isLoading:
-      swrValue.isLoading ||
-      (!options.fallbackData && sessionStatus === "loading"),
+    isLoading: swrValue.isLoading || (!options.fallbackData && !api.isReady()),
   };
 };
 
@@ -77,14 +72,13 @@ export const useIncidentAlerts = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
   return useSWR<PaginatedIncidentAlertsDto>(
     () =>
-      session
-        ? `${apiUrl}/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}`
+      api.isReady()
+        ? `/incidents/${incidentId}/alerts?limit=${limit}&offset=${offset}`
         : null,
-    (url) => fetcher(url, session?.accessToken),
+    api.get,
     options
   );
 };
@@ -95,13 +89,11 @@ export const useIncidentFutureIncidents = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWR<PaginatedIncidentsDto>(
-    () =>
-      session ? `${apiUrl}/incidents/${incidentId}/future_incidents` : null,
-    (url) => fetcher(url, session?.accessToken),
+    () => (api.isReady() ? `/incidents/${incidentId}/future_incidents` : null),
+    api.get,
     options
   );
 };
@@ -112,12 +104,11 @@ export const useIncident = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWR<IncidentDto>(
-    () => (session && incidentId ? `/incidents/${incidentId}` : null),
-    (url) => fetcher(apiUrl + url, session?.accessToken),
+    () => (api.isReady() && incidentId ? `/incidents/${incidentId}` : null),
+    api.get,
     options
   );
 };
@@ -130,14 +121,13 @@ export const useIncidentWorkflowExecutions = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
   return useSWR<PaginatedWorkflowExecutionDto>(
     () =>
-      session
-        ? `${apiUrl}/incidents/${incidentId}/workflows?limit=${limit}&offset=${offset}`
+      api.isReady()
+        ? `/incidents/${incidentId}/workflows?limit=${limit}&offset=${offset}`
         : null,
-    (url) => fetcher(url, session?.accessToken),
+    api.get,
     options
   );
 };
@@ -199,12 +189,11 @@ export const useIncidentsMeta = (
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWR<IncidentsMetaDto>(
-    () => (session ? `${apiUrl}/incidents/meta` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/incidents/meta" : null,
+    api.get,
     options
   );
 };

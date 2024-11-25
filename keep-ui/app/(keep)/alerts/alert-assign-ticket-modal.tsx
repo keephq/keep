@@ -4,10 +4,9 @@ import { Button, TextInput, Text } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "../providers/providers";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface AlertAssignTicketModalProps {
   handleClose: () => void;
@@ -38,14 +37,12 @@ const AlertAssignTicketModal = ({
   ticketingProviders,
   alert,
 }: AlertAssignTicketModalProps) => {
+  const api = useApi();
   const {
     handleSubmit,
     control,
     formState: { errors },
   } = useForm<FormData>();
-  // get the token
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
 
   // if this modal should not be open, do nothing
   if (!alert) return null;
@@ -62,14 +59,7 @@ const AlertAssignTicketModal = ({
         fingerprint: alert.fingerprint,
       };
 
-      const response = await fetch(`${apiUrl}/alerts/enrich`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify(requestData),
-      });
+      const response = await api.post(`/alerts/enrich`, requestData);
 
       if (response.ok) {
         // Handle success

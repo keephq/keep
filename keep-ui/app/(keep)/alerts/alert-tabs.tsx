@@ -6,6 +6,7 @@ import { evalWithContext } from "./alerts-rules-builder";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useApi } from "@/shared/lib/hooks/useApi";
 interface Tab {
   id?: string;
   name: string;
@@ -28,8 +29,7 @@ const AlertTabs = ({
   setSelectedTab,
 }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const handleTabChange = (index: any) => {
     setSelectedTab(index);
@@ -53,15 +53,8 @@ const AlertTabs = ({
 
     // if the tab has id, means it already in the database
     try {
-      const response = await fetch(
-        `${apiUrl}/preset/${presetId}/tab/${tabToDelete.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }
+      const response = await api.delete(
+        `/preset/${presetId}/tab/${tabToDelete.id}`
       );
 
       if (!response.ok) {

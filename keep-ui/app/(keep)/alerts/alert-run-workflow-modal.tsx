@@ -7,6 +7,7 @@ import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydrated
 import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   alert: AlertDto | null | undefined;
@@ -20,10 +21,9 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<
     string | undefined
   >(undefined);
+  const api = useApi();
   const { data: workflows } = useWorkflows({});
-  const { data: session } = useSession();
   const router = useRouter();
-  const apiUrl = useApiUrl();
 
   const isOpen = !!alert;
 
@@ -33,16 +33,9 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
   };
 
   const handleRun = async () => {
-    const response = await fetch(
-      `${apiUrl}/workflows/${selectedWorkflowId}/run`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(alert),
-      }
+    const response = await api.post(
+      `/workflows/${selectedWorkflowId}/run`,
+      alert
     );
 
     if (response.ok) {

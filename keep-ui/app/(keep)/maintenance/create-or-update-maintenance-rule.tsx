@@ -10,16 +10,15 @@ import {
   Select,
   SelectItem,
 } from "@tremor/react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { MaintenanceRule } from "./model";
 import { useMaintenanceRules } from "utils/hooks/useMaintenanceRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -30,7 +29,7 @@ export default function CreateOrUpdateMaintenanceRule({
   maintenanceToEdit,
   editCallback,
 }: Props) {
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useMaintenanceRules();
   const [maintenanceName, setMaintenanceName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -42,7 +41,6 @@ export default function CreateOrUpdateMaintenanceRule({
   const [suppress, setSuppress] = useState<boolean>(false);
   const editMode = maintenanceToEdit !== null;
   const router = useRouter();
-  const apiUrl = useApiUrl();
   useEffect(() => {
     if (maintenanceToEdit) {
       setMaintenanceName(maintenanceToEdit.name);
@@ -89,20 +87,13 @@ export default function CreateOrUpdateMaintenanceRule({
 
   const addMaintenanceRule = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await fetch(`${apiUrl}/maintenance`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: maintenanceName,
-        description: description,
-        cel_query: celQuery,
-        start_time: startTime,
-        duration_seconds: calculateDurationInSeconds(),
-        enabled: enabled,
-      }),
+    const response = await api.post("/maintenance", {
+      name: maintenanceName,
+      description: description,
+      cel_query: celQuery,
+      start_time: startTime,
+      duration_seconds: calculateDurationInSeconds(),
+      enabled: enabled,
     });
     if (response.ok) {
       clearForm();
@@ -117,24 +108,14 @@ export default function CreateOrUpdateMaintenanceRule({
 
   const updateMaintenanceRule = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await fetch(
-      `${apiUrl}/maintenance/${maintenanceToEdit?.id}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: maintenanceName,
-          description: description,
-          cel_query: celQuery,
-          start_time: startTime,
-          duration_seconds: calculateDurationInSeconds(),
-          enabled: enabled,
-        }),
-      }
-    );
+    const response = await api.put(`/maintenance/${maintenanceToEdit?.id}`, {
+      name: maintenanceName,
+      description: description,
+      cel_query: celQuery,
+      start_time: startTime,
+      duration_seconds: calculateDurationInSeconds(),
+      enabled: enabled,
+    });
     if (response.ok) {
       exitEditMode();
       mutate();

@@ -1,12 +1,14 @@
-import { useApiUrl } from "@/utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useCallback } from "react";
 import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Status } from "./models";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 type UseIncidentActionsValue = {
-  addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
+  addIncident: (
+    incident: IncidentCreateDto
+  ) => Promise<IncidentDto | undefined>;
   updateIncident: (
     incidentId: string,
     incident: IncidentUpdateDto,
@@ -42,8 +44,7 @@ type IncidentUpdateDto = Partial<IncidentCreateDto> &
   }>;
 
 export function useIncidentActions(): UseIncidentActionsValue {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useSWRConfig();
 
   const mutateIncidentsList = useCallback(
@@ -63,25 +64,18 @@ export function useIncidentActions(): UseIncidentActionsValue {
 
   const addIncident = useCallback(
     async (incident: IncidentCreateDto) => {
-      const response = await fetch(`${apiUrl}/incidents`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(incident),
-      });
-      if (response.ok) {
+      try {
+        const result = await api.post("/incidents", incident);
         mutateIncidentsList();
         toast.success("Incident created successfully");
-        return await response.json();
-      } else {
+        return result as IncidentDto;
+      } catch (error) {
         toast.error(
           "Failed to create incident, please contact us if this issue persists."
         );
       }
     },
-    [apiUrl, mutateIncidentsList, session?.accessToken]
+    [api, mutateIncidentsList]
   );
 
   const updateIncident = useCallback(
@@ -90,28 +84,24 @@ export function useIncidentActions(): UseIncidentActionsValue {
       incident: IncidentUpdateDto,
       generatedByAi: boolean
     ) => {
-      const response = await fetch(
-        `${apiUrl}/incidents/${incidentId}?generatedByAi=${generatedByAi}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(incident),
-        }
-      );
-      if (response.ok) {
+      try {
+        const result = await api.put(
+          `/incidents/${incidentId}?generatedByAi=${generatedByAi}`,
+          incident
+        );
+
         mutateIncidentsList();
         mutateIncident(incidentId);
         toast.success("Incident updated successfully");
-      } else {
+
+        return result;
+      } catch (error) {
         toast.error(
           "Failed to update incident, please contact us if this issue persists."
         );
       }
     },
-    [apiUrl, mutateIncident, mutateIncidentsList, session?.accessToken]
+    [api, mutateIncident, mutateIncidentsList]
   );
 
   const mergeIncidents = useCallback(
@@ -125,29 +115,24 @@ export function useIncidentActions(): UseIncidentActionsValue {
       }
 
       try {
-        const response = await fetch(`${apiUrl}/incidents/merge`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-          body: JSON.stringify({
-            source_incident_ids: sourceIncidents.map((incident) => incident.id),
-            destination_incident_id: destinationIncident.id,
-          }),
+        const result = await api.post("/incidents/merge", {
+          source_incident_ids: sourceIncidents.map((incident) => incident.id),
+          destination_incident_id: destinationIncident.id,
         });
-
-        if (response.ok) {
-          toast.success("Incidents merged successfully!");
-          mutateIncidentsList();
-        } else {
-          toast.error("Failed to merge incidents.");
-        }
+        toast.success("Incidents merged successfully!");
+        mutateIncidentsList();
+        return result;
       } catch (error) {
-        toast.error("An error occurred while merging incidents.");
+        if (error instanceof KeepApiError) {
+          toast.error(
+            "Failed to merge incidents, please contact us if this issue persists."
+          );
+        } else {
+          toast.error("An error occurred while merging incidents.");
+        }
       }
     },
-    [apiUrl, mutateIncidentsList, session?.accessToken]
+    [api, mutateIncidentsList]
   );
 
   const deleteIncident = useCallback(
@@ -158,23 +143,17 @@ export function useIncidentActions(): UseIncidentActionsValue {
       ) {
         return false;
       }
-      const response = await fetch(`${apiUrl}/incidents/${incidentId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-
-      if (response.ok) {
+      try {
+        const result = await api.delete(`/incidents/${incidentId}`);
         mutateIncidentsList();
         toast.success("Incident deleted successfully");
         return true;
-      } else {
+      } catch (error) {
         toast.error("Failed to delete incident, contact us if this persists");
         return false;
       }
     },
-    [apiUrl, mutateIncidentsList, session?.accessToken]
+    [api, mutateIncidentsList]
   );
 
   const changeStatus = useCallback(
@@ -185,58 +164,47 @@ export function useIncidentActions(): UseIncidentActionsValue {
       }
 
       try {
-        const response = await fetch(
-          `${apiUrl}/incidents/${incidentId}/status`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.accessToken}`,
-            },
-            body: JSON.stringify({
-              status,
-              comment,
-            }),
-          }
-        );
+        const result = await api.post(`/incidents/${incidentId}/status`, {
+          status,
+          comment,
+        });
 
-        if (response.ok) {
-          toast.success("Incident status changed successfully!");
-          mutateIncidentsList();
-        } else {
-          toast.error("Failed to change incident status.");
-        }
+        toast.success("Incident status changed successfully!");
+        mutateIncidentsList();
+        return result;
       } catch (error) {
-        toast.error("An error occurred while changing incident status.");
+        if (error instanceof KeepApiError) {
+          toast.error(
+            "Failed to change incident status, please contact us if this issue persists."
+          );
+        } else {
+          toast.error("An error occurred while changing incident status.");
+        }
       }
     },
-    [apiUrl, mutateIncidentsList, session?.accessToken]
+    [api, mutateIncidentsList]
   );
 
   // Is it used?
   const confirmPredictedIncident = useCallback(
     async (incidentId: string) => {
-      const response = await fetch(
-        `${apiUrl}/incidents/${incidentId}/confirm`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (response.ok) {
+      try {
+        const result = await api.post(`/incidents/${incidentId}/confirm`);
         mutateIncidentsList();
         mutateIncident(incidentId);
         toast.success("Predicted incident confirmed successfully");
-      } else {
-        toast.error(
-          "Failed to confirm predicted incident, please contact us if this issue persists."
-        );
+        return result;
+      } catch (error) {
+        if (error instanceof KeepApiError) {
+          toast.error(
+            "Failed to confirm predicted incident, please contact us if this issue persists."
+          );
+        } else {
+          toast.error("An error occurred while confirming predicted incident.");
+        }
       }
     },
-    [apiUrl, mutateIncident, mutateIncidentsList, session?.accessToken]
+    [api, mutateIncident, mutateIncidentsList]
   );
 
   return {

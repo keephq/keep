@@ -1,10 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { AlertDto } from "@/app/(keep)/alerts/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
 import { toDateObjectWithFallback } from "utils/helpers";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export type AuditEvent = {
   id: string;
@@ -16,8 +14,7 @@ export type AuditEvent = {
 };
 
 export const useAlerts = () => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   const useAlertHistory = (
     selectedAlert?: AlertDto,
@@ -25,14 +22,14 @@ export const useAlerts = () => {
   ) => {
     return useSWR<AlertDto[]>(
       () =>
-        selectedAlert && session
-          ? `${apiUrl}/alerts/${
+        api.isReady() && selectedAlert
+          ? `/alerts/${
               selectedAlert.fingerprint
             }/history?provider_id=${selectedAlert.providerId}&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
-      (url) => fetcher(url, session?.accessToken),
+      api.get,
       options
     );
   };
@@ -43,8 +40,8 @@ export const useAlerts = () => {
   ) => {
     return useSWR<AlertDto[]>(
       () =>
-        session && presetName ? `${apiUrl}/preset/${presetName}/alerts` : null,
-      (url) => fetcher(url, session?.accessToken),
+        api.isReady() && presetName ? `/preset/${presetName}/alerts` : null,
+      api.get,
       options
     );
   };
@@ -95,18 +92,10 @@ export const useAlerts = () => {
   ) => {
     return useSWR<AuditEvent[]>(
       () =>
-        session && fingerprints && fingerprints?.length > 0
-          ? `${apiUrl}/alerts/audit`
+        api.isReady() && fingerprints && fingerprints?.length > 0
+          ? `/alerts/audit`
           : null,
-      (url) =>
-        fetcher(url, session?.accessToken, {
-          method: "POST",
-          body: JSON.stringify(fingerprints),
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }),
+      api.post,
       options
     );
   };
@@ -119,8 +108,8 @@ export const useAlerts = () => {
   ) => {
     return useSWR<AuditEvent[]>(
       () =>
-        session && fingerprint ? `${apiUrl}/alerts/${fingerprint}/audit` : null,
-      (url) => fetcher(url, session?.accessToken),
+        api.isReady() && fingerprint ? `/alerts/${fingerprint}/audit` : null,
+      api.get,
       options
     );
   };

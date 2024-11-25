@@ -9,8 +9,7 @@ import { useIncidents } from "utils/hooks/useIncidents";
 import Loading from "@/app/(keep)/loading";
 import { PermissionsTable } from "./permissions-table";
 import PermissionSidebar from "./permissions-sidebar";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   accessToken: string;
@@ -33,8 +32,7 @@ export default function PermissionsTab({
   accessToken,
   isDisabled = false,
 }: Props) {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<any>(null);
   const [filter, setFilter] = useState("");
@@ -87,7 +85,7 @@ export default function PermissionsTab({
       }
       setLoading(false);
     }
-  }, [presets, incidents, permissions]);
+  }, [presets, incidents, permissions, resources]);
 
   const handleSavePermissions = async (
     resourceId: string,
@@ -121,18 +119,7 @@ export default function PermissionsTab({
       ];
 
       // Send to the backend
-      const response = await fetch(`${apiUrl}/auth/permissions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(resourcePermission),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save permissions");
-      }
+      await api.post("/auth/permissions", resourcePermission);
 
       await mutatePermissions();
     } catch (error) {

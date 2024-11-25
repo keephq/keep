@@ -4,6 +4,7 @@ import { Button, TextInput } from "@tremor/react";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "utils/hooks/useConfig";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface AlertTabModalProps {
   presetId: string;
@@ -22,8 +23,7 @@ const AlertTabModal = ({
   const [newTabFilter, setNewTabFilter] = useState<string>("");
   const [errors, setErrors] = useState({ name: false, filter: false });
   const [backendError, setBackendError] = useState<string | null>(null);
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const handleAddTab = async () => {
     if (!newTabName || !newTabFilter) {
       setErrors({
@@ -35,13 +35,9 @@ const AlertTabModal = ({
 
     try {
       // Send the new tab data to the backend
-      const response = await fetch(`${apiUrl}/preset/${presetId}/tab`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({ name: newTabName, filter: newTabFilter }),
+      const response = await api.post(`/preset/${presetId}/tab`, {
+        name: newTabName,
+        filter: newTabFilter,
       });
 
       if (!response.ok) {
@@ -114,8 +110,8 @@ const AlertTabModal = ({
             !newTabName
               ? "Tab name is required"
               : !newTabFilter
-              ? "Tab filter is required (notice you need to click 'enter' to apply the filter)"
-              : ""
+                ? "Tab filter is required (notice you need to click 'enter' to apply the filter)"
+                : ""
           }
         >
           Add Tab

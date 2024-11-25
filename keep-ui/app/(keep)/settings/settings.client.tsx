@@ -72,24 +72,24 @@ export default function SettingsPage() {
       newSelectedTab === "users"
         ? 0
         : newSelectedTab === "webhook"
-        ? 1
-        : newSelectedTab === "smtp"
-        ? 2
-        : 0;
+          ? 1
+          : newSelectedTab === "smtp"
+            ? 2
+            : 0;
     const userSubTabIndex =
       newUserSubTab === "users"
         ? 0
         : newUserSubTab === "groups"
-        ? 1
-        : newUserSubTab === "roles"
-        ? 2
-        : newUserSubTab === "permissions"
-        ? 3
-        : newUserSubTab === "api-keys"
-        ? 4
-        : newUserSubTab === "sso"
-        ? 5
-        : 0;
+          ? 1
+          : newUserSubTab === "roles"
+            ? 2
+            : newUserSubTab === "permissions"
+              ? 3
+              : newUserSubTab === "api-keys"
+                ? 4
+                : newUserSubTab === "sso"
+                  ? 5
+                  : 0;
     setTabIndex(tabIndex);
     setUserSubTabIndex(userSubTabIndex);
     setSelectedTab(newSelectedTab);
@@ -300,7 +300,7 @@ export default function SettingsPage() {
         }
       case "api-keys":
         if (apiKeysAllowed) {
-          return <APIKeysTab accessToken={session?.accessToken!} />;
+          return <APIKeysTab />;
         } else {
           const mockApiKeys = [
             {

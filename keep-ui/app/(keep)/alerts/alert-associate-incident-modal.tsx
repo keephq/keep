@@ -2,10 +2,8 @@ import Modal from "@/components/ui/Modal";
 import { Button, Divider, Title } from "@tremor/react";
 import Select from "@/components/ui/Select";
 import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import {
   useIncidents,
   usePollIncidents,
@@ -13,6 +11,7 @@ import {
 import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "./models";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -35,20 +34,14 @@ const AlertAssociateIncidentModal = ({
   const [selectedIncident, setSelectedIncident] = useState<
     string | undefined
   >();
-  // get the token
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const associateAlertsHandler = useCallback(
     async (incidentId: string) => {
-      const response = await fetch(`${apiUrl}/incidents/${incidentId}/alerts`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(alerts.map(({ event_id }) => event_id)),
-      });
+      const response = await api.post(
+        `/incidents/${incidentId}/alerts`,
+        alerts.map(({ event_id }) => event_id)
+      );
       if (response.ok) {
         handleSuccess();
         await mutate();
@@ -59,7 +52,7 @@ const AlertAssociateIncidentModal = ({
         );
       }
     },
-    [alerts, apiUrl, handleSuccess, mutate, session?.accessToken]
+    [alerts, api, handleSuccess, mutate]
   );
 
   const handleAssociateAlerts = (e: FormEvent) => {

@@ -5,8 +5,6 @@ import {
   ProviderMethod,
   ProviderMethodParam,
 } from "@/app/(keep)/providers/providers";
-import { getSession } from "next-auth/react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import Loading from "@/app/(keep)/loading";
 import {
@@ -22,6 +20,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
@@ -32,7 +31,7 @@ interface AlertMethodModalProps {
 export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const alertFingerprint = searchParams?.get("alertFingerprint");
   const providerId = searchParams?.get("providerId");
@@ -162,19 +161,10 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
     method: ProviderMethod,
     userParams: { [key: string]: string }
   ) => {
-    const session = await getSession();
-
     try {
-      const response = await fetch(
-        `${apiUrl}/providers/${provider.id}/invoke/${method.func_name}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(userParams),
-        }
+      const response = await api.post(
+        `/providers/${provider.id}/invoke/${method.func_name}`,
+        userParams
       );
       const responseObject = await response.json();
       if (response.ok) {

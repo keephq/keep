@@ -14,6 +14,7 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import Select from "@/components/ui/Select";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;
@@ -50,10 +51,9 @@ const PushAlertToServerModal = ({
   } = useForm();
 
   const selectedSource = watch("source");
+  const api = useApi();
 
-  const { data: session } = useSession();
   const { data: providersData } = useProviders();
-  const apiUrl = useApiUrl();
   const providers = providersData?.providers || [];
 
   useEffect(() => {
@@ -81,16 +81,9 @@ const PushAlertToServerModal = ({
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     try {
-      const response = await fetch(
-        `${apiUrl}/alerts/event/${data.source.type}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-          body: data.alertJson,
-        }
+      const response = await api.post(
+        `/alerts/event/${data.source.type}`,
+        data.alertJson
       );
 
       if (response.ok) {

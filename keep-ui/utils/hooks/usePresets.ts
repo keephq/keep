@@ -1,20 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { Preset } from "@/app/(keep)/alerts/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
 import { useSearchParams } from "next/navigation";
 import { useRevalidateMultiple } from "../state";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
-  const { data: session } = useSession();
+  const api = useApi();
   const { data: configData } = useConfig();
-  const apiUrl = useApiUrl();
   //ideally, we can use pathname. but hardcoding it for now.
   const isDashBoard = type === "dashboard";
   const [presetsOrderFromLS, setPresetsOrderFromLS] = useLocalStorage<Preset[]>(
@@ -84,7 +81,9 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
 
   useSWRSubscription(
     () =>
-      configData?.PUSHER_DISABLED === false && session && isLocalStorageReady
+      configData?.PUSHER_DISABLED === false &&
+      api.isReady() &&
+      isLocalStorageReady
         ? "presets"
         : null,
     (_, { next }) => {
@@ -113,12 +112,12 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     const filters = searchParams?.toString();
     return useSWR<Preset[]>(
       () =>
-        session
+        api.isReady()
           ? `/preset${
               useFilters && filters && isDashBoard ? `?${filters}` : ""
             }`
           : null,
-      (url) => fetcher(apiUrl + url, session?.accessToken),
+      api.get,
       {
         ...options,
         onSuccess: (data) => {

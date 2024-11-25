@@ -205,11 +205,7 @@ const ProviderForm = ({
   const inputFileRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const apiUrl = useApiUrl();
-
-  const { data: session } = useSession();
-
-  const accessToken = session?.accessToken;
+  const api = useApi();
 
   const callInstallWebhook = async (e: Event) => {
     e.preventDefault();
@@ -257,43 +253,34 @@ const ProviderForm = ({
   useEffect(() => {
     if (triggerRevalidateScope !== 0) {
       setRefreshLoading(true);
-      fetch(`${apiUrl}/providers/${provider.id}/scopes`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
-          response.json().then((newValidatedScopes) => {
-            setProviderValidatedScopes(newValidatedScopes);
-            provider.validatedScopes = newValidatedScopes;
-            mutate();
-            setRefreshLoading(false);
-          });
-        } else {
+      api
+        .post(`/providers/${provider.id}/scopes`)
+        .then((newValidatedScopes) => {
+          setProviderValidatedScopes(newValidatedScopes);
+          provider.validatedScopes = newValidatedScopes;
+          mutate();
           setRefreshLoading(false);
-        }
-      });
+        })
+        .catch(() => {
+          toast.error(
+            "Failed to revalidate scopes, contact us if this persists"
+          );
+          setRefreshLoading(false);
+        });
     }
   }, [triggerRevalidateScope, accessToken, provider.id]);
 
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
-      const response = await fetch(
-        `${apiUrl}/providers/${provider.type}/${provider.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken!}`,
-          },
-        }
-      );
-      if (response.ok) {
-        mutate();
-        closeModal();
-      } else {
-        toast.error(`Failed to delete ${provider.type} 😢`);
-      }
+      const response = await api
+        .delete(`/providers/${provider.type}/${provider.id}`)
+        .then(() => {
+          mutate();
+          closeModal();
+        })
+        .catch(() => {
+          toast.error(`Failed to delete ${provider.type} 😢`);
+        });
     }
   }
 
@@ -384,10 +371,6 @@ const ProviderForm = ({
     requestUrl: string,
     method: string = "POST"
   ): Promise<any> => {
-    let headers = {
-      Authorization: `Bearer ${accessToken}`,
-    };
-
     let body;
 
     if (Object.values(formValues).some((value) => value instanceof File)) {
@@ -403,34 +386,33 @@ const ProviderForm = ({
       body = JSON.stringify(formValues);
     }
 
-    return fetch(requestUrl, {
-      method: method,
-      headers: headers,
-      body: body,
-    })
-      .then((response) => {
-        const response_json = response.json();
-        if (!response.ok) {
+    return api
+      .fetch(requestUrl, {
+        method: method,
+        headers: headers,
+        body: body,
+      })
+      .then((jsonResponse) => jsonResponse)
+      .catch((error) => {
+        if (error instanceof KeepApiError) {
+          const errorData = error.responseJson;
           // If the response is not okay, throw the error message
-          return response_json.then((errorData) => {
-            if (response.status === 400) {
-              throw `${errorData.detail}`;
-            }
-            if (response.status === 409) {
-              throw `Provider with name ${formValues.provider_name} already exists`;
-            }
-            const errorDetail = errorData.detail;
-            if (response.status === 412) {
-              setProviderValidatedScopes(errorDetail);
-            }
-            throw `${provider.type} scopes are invalid: ${JSON.stringify(
-              errorDetail,
-              null,
-              4
-            )}`;
-          });
+          if (response.status === 400) {
+            throw `${errorData.detail}`;
+          }
+          if (response.status === 409) {
+            throw `Provider with name ${formValues.provider_name} already exists`;
+          }
+          const errorDetail = errorData.detail;
+          if (response.status === 412) {
+            setProviderValidatedScopes(errorDetail);
+          }
+          throw `${provider.type} scopes are invalid: ${JSON.stringify(
+            errorDetail,
+            null,
+            4
+          )}`;
         }
-        return response_json;
       })
       .then((data) => {
         setFormErrors("");

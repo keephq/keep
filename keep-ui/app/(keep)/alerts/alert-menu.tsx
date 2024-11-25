@@ -11,9 +11,6 @@ import {
   EyeIcon,
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
-
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Link from "next/link";
 import { ProviderMethod } from "@/app/(keep)/providers/providers";
 import { AlertDto } from "./models";
@@ -21,6 +18,7 @@ import { useFloating } from "@floating-ui/react";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   alert: AlertDto;
@@ -43,8 +41,8 @@ export default function AlertMenu({
   presetName,
   isInSidebar,
 }: Props) {
+  const api = useApi();
   const router = useRouter();
-  const apiUrl = useApiUrl();
   const {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
@@ -53,8 +51,6 @@ export default function AlertMenu({
 
   const { usePresetAlerts } = useAlerts();
   const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
-
-  const { data: session } = useSession();
 
   const { refs, x, y } = useFloating();
 
@@ -93,15 +89,8 @@ export default function AlertMenu({
         "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
       )
     ) {
-      const res = await fetch(
-        `${apiUrl}/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
+      const res = await api.post(
+        `/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`
       );
       if (res.ok) {
         await mutate();

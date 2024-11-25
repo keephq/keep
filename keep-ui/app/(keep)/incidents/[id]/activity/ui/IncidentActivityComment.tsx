@@ -1,11 +1,10 @@
 import { IncidentDto } from "@/entities/incidents/model";
 import { AuditEvent } from "@/utils/hooks/useAlerts";
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import { TextInput, Button } from "@tremor/react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export function IncidentActivityComment({
   incident,
@@ -15,20 +14,12 @@ export function IncidentActivityComment({
   mutator: KeyedMutator<AuditEvent[]>;
 }) {
   const [comment, setComment] = useState("");
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   const onSubmit = useCallback(async () => {
-    const response = await fetch(`${apiUrl}/incidents/${incident.id}/comment`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        status: incident.status,
-        comment: comment,
-      }),
+    const response = await api.post(`/incidents/${incident.id}/comment`, {
+      status: incident.status,
+      comment,
     });
     if (response.ok) {
       toast.success("Comment added!", { position: "top-right" });
@@ -37,14 +28,7 @@ export function IncidentActivityComment({
     } else {
       toast.error("Failed to add comment", { position: "top-right" });
     }
-  }, [
-    apiUrl,
-    incident.id,
-    incident.status,
-    comment,
-    session?.accessToken,
-    mutator,
-  ]);
+  }, [api, incident.id, incident.status, comment, mutator]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {

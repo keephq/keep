@@ -1,10 +1,9 @@
 import React from "react";
-
-import { auth } from "@/auth";
 import { getApplications, getTopology } from "./api";
 import { TopologyPageClient } from "./topology-client";
 import { Subtitle, Title } from "@tremor/react";
-import { getApiURL } from "@/utils/apiUrl";
+import { getServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { TopologyApplication, TopologyService } from "./model";
 
 export const metadata = {
   title: "Keep - Service Topology",
@@ -20,15 +19,21 @@ type PageProps = {
 };
 
 export default async function Page({ searchParams }: PageProps) {
-  const session = await auth();
-  const apiUrl = getApiURL();
+  const api = await getServerApiClient();
 
-  const applications = await getApplications(apiUrl, session);
-  const topologyServices = await getTopology(apiUrl, session, {
-    providerIds: searchParams.providerIds,
-    services: searchParams.services,
-    environment: searchParams.environment,
-  });
+  let applications: TopologyApplication[] | undefined;
+  let topologyServices: TopologyService[] | undefined;
+
+  try {
+    applications = await getApplications(api);
+    topologyServices = await getTopology(api, {
+      providerIds: searchParams.providerIds,
+      services: searchParams.services,
+      environment: searchParams.environment,
+    });
+  } catch (error) {
+    console.error(error);
+  }
 
   return (
     <>

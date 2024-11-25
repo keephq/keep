@@ -1,3 +1,4 @@
+import { InternalConfig } from "@/types/internal-config";
 import { getApiURL } from "@/utils/apiUrl";
 import {
   AuthType,
@@ -6,7 +7,7 @@ import {
   SINGLE_TENANT,
 } from "@/utils/authenticationType";
 
-export function getConfig() {
+export function getConfig(): InternalConfig {
   let authType = process.env.AUTH_TYPE;
   // Backward compatibility
   if (authType === MULTI_TENANT) {

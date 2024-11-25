@@ -7,6 +7,7 @@ import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydrated
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -25,8 +26,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
 }) => {
   const isOpen = !!alert;
   const [showHighlightedOnly, setShowHighlightedOnly] = useState(false);
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const unEnrichAlert = async (key: string) => {
     if (confirm(`Are you sure you want to un-enrich ${key}?`)) {
@@ -35,14 +35,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
           enrichments: [key],
           fingerprint: alert!.fingerprint,
         };
-        const response = await fetch(`${apiUrl}/alerts/unenrich`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-          body: JSON.stringify(requestData),
-        });
+        const response = await api.post(`/alerts/unenrich`, requestData);
 
         if (response.ok) {
           toast.success(`${key} un-enriched successfully!`);

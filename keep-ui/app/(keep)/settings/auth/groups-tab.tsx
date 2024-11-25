@@ -19,15 +19,12 @@ import { useUsers } from "@/entities/users/model/useUsers";
 import { useRoles } from "utils/hooks/useRoles";
 import { useState, useEffect, useMemo } from "react";
 import GroupsSidebar from "./groups-sidebar";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { MdGroupAdd } from "react-icons/md";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
-interface Props {
-  accessToken: string;
-}
-
-export default function GroupsTab({ accessToken }: Props) {
+export default function GroupsTab() {
+  const api = useApi();
   const {
     data: groups = [],
     isLoading: groupsLoading,
@@ -47,7 +44,6 @@ export default function GroupsTab({ accessToken }: Props) {
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [filter, setFilter] = useState("");
   const [isNewGroup, setIsNewGroup] = useState(false);
-  const apiUrl = useApiUrl();
 
   useEffect(() => {
     if (groups) {
@@ -94,20 +90,10 @@ export default function GroupsTab({ accessToken }: Props) {
     event.stopPropagation();
     if (window.confirm("Are you sure you want to delete this group?")) {
       try {
-        const url = `${apiUrl}/auth/groups/${groupName}`;
-        const response = await fetch(url, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        await api.delete(`/auth/groups/${groupName}`);
 
-        if (response.ok) {
-          await mutateGroups();
-          await mutateUsers();
-        } else {
-          console.error("Failed to delete group");
-        }
+        await mutateGroups();
+        await mutateUsers();
       } catch (error) {
         console.error("Error deleting group:", error);
       }

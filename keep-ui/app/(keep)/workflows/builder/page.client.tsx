@@ -9,9 +9,7 @@ import {
   ArrowUpOnSquareIcon,
   PlayIcon,
 } from "@heroicons/react/20/solid";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { BuilderCard } from "./builder-card";
-import Loading from "@/app/(keep)/loading";
 
 export default function PageClient({
   workflow,
@@ -29,12 +27,11 @@ export default function PageClient({
   const [triggerRun, setTriggerRun] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
-  const { data: session, status, update } = useSession();
 
   useEffect(() => {
     setFileContents(null);
     setFileName("");
-  });
+  }, []);
 
   function loadAlert() {
     document.getElementById("alertFile")?.click();
@@ -59,13 +56,6 @@ export default function PageClient({
     };
     reader.readAsText(file);
   }
-  if (status === "loading" || status === "unauthenticated")
-    return (
-      <div>
-        <Loading />
-      </div>
-    );
-
   const incrementState = (s: number) => s + 1;
 
   return (
@@ -152,7 +142,6 @@ export default function PageClient({
         </div>
       </div>
       <BuilderCard
-        accessToken={session?.accessToken!}
         fileContents={fileContents}
         fileName={fileName}
         enableButtons={enableButtons}
