@@ -15,7 +15,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import uuid4
 
-import numpy as np
 import validators
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -59,7 +58,7 @@ from keep.api.models.db.mapping import *  # pylint: disable=unused-wildcard-impo
 from keep.api.models.db.preset import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.provider import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.rule import *  # pylint: disable=unused-wildcard-import
-from keep.api.models.db.system import * # pylint: disable=unused-wildcard-import
+from keep.api.models.db.system import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.tenant import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.topology import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.workflow import *  # pylint: disable=unused-wildcard-import
@@ -3937,25 +3936,6 @@ def confirm_predicted_incident_by_id(
         return incident
 
 
-def write_pmi_matrix_to_temp_file(
-    tenant_id: str, pmi_matrix: np.array, fingerprints: List, temp_dir: str
-) -> bool:
-    np.savez(
-        f"{temp_dir}/pmi_matrix.npz", pmi_matrix=pmi_matrix, fingerprints=fingerprints
-    )
-    return True
-
-
-def get_pmi_values_from_temp_file(temp_dir: str) -> Tuple[np.array, Dict[str, int]]:
-    npzfile = np.load(f"{temp_dir}/pmi_matrix.npz", allow_pickle=True)
-    pmi_matrix = npzfile["pmi_matrix"]
-    fingerprints = npzfile["fingerprints"]
-
-    fingerint2idx = {fingerprint: i for i, fingerprint in enumerate(fingerprints)}
-
-    return pmi_matrix, fingerint2idx
-
-
 def get_tenant_config(tenant_id: str) -> dict:
     with Session(engine) as session:
         tenant_data = session.exec(select(Tenant).where(Tenant.id == tenant_id)).first()
@@ -4488,45 +4468,56 @@ def get_resource_ids_by_resource_type(
         result = session.exec(query)
         return result.all()
 
-def get_or_creat_posthog_instance_id(
-        session: Optional[Session] = None
-    ):
-        POSTHOG_INSTANCE_ID_KEY = "posthog_instance_id"
-        with Session(engine) as session:
-            system = session.exec(select(System).where(System.name == POSTHOG_INSTANCE_ID_KEY)).first()
-            if system:
-                return system.value
-            
-            system = System(
-                id=str(uuid4()),
-                name=POSTHOG_INSTANCE_ID_KEY,
-                value=str(uuid4()),
-            )
-            session.add(system)
-            session.commit()
-            session.refresh(system)
-            return system.value 
-        
-def get_activity_report(
-        session: Optional[Session] = None   
-    ):
+
+def get_or_creat_posthog_instance_id(session: Optional[Session] = None):
+    POSTHOG_INSTANCE_ID_KEY = "posthog_instance_id"
+    with Session(engine) as session:
+        system = session.exec(
+            select(System).where(System.name == POSTHOG_INSTANCE_ID_KEY)
+        ).first()
+        if system:
+            return system.value
+
+        system = System(
+            id=str(uuid4()),
+            name=POSTHOG_INSTANCE_ID_KEY,
+            value=str(uuid4()),
+        )
+        session.add(system)
+        session.commit()
+        session.refresh(system)
+        return system.value
+
+
+def get_activity_report(session: Optional[Session] = None):
     from keep.api.models.db.user import User
 
     last_24_hours = datetime.utcnow() - timedelta(hours=24)
     activity_report = {}
     with Session(engine) as session:
-        activity_report['tenants_count'] = session.query(Tenant).count()
-        activity_report['providers_count'] = session.query(Provider).count()
-        activity_report['users_count'] = session.query(User).count()
-        activity_report['last_24_hours_incidents_count'] = session.query(Incident).filter(
-            Incident.creation_time >= last_24_hours).count()
-        activity_report['last_24_hours_alerts_count'] = session.query(Alert).filter(
-            Alert.timestamp >= last_24_hours).count()
-        activity_report['last_24_hours_rules_created'] = session.query(Rule).filter(
-            Rule.creation_time >= last_24_hours).count()
-        activity_report['last_24_hours_workflows_created'] = session.query(Workflow).filter(
-            Workflow.creation_time >= last_24_hours).count()
-        activity_report['last_24_hours_workflows_executed'] = session.query(WorkflowExecution).filter(
-            WorkflowExecution.started >= last_24_hours).count()
-        
+        activity_report["tenants_count"] = session.query(Tenant).count()
+        activity_report["providers_count"] = session.query(Provider).count()
+        activity_report["users_count"] = session.query(User).count()
+        activity_report["last_24_hours_incidents_count"] = (
+            session.query(Incident)
+            .filter(Incident.creation_time >= last_24_hours)
+            .count()
+        )
+        activity_report["last_24_hours_alerts_count"] = (
+            session.query(Alert).filter(Alert.timestamp >= last_24_hours).count()
+        )
+        activity_report["last_24_hours_rules_created"] = (
+            session.query(Rule).filter(Rule.creation_time >= last_24_hours).count()
+        )
+        activity_report["last_24_hours_workflows_created"] = (
+            session.query(Workflow)
+            .filter(Workflow.creation_time >= last_24_hours)
+            .count()
+        )
+        activity_report["last_24_hours_workflows_executed"] = (
+            session.query(WorkflowExecution)
+            .filter(WorkflowExecution.started >= last_24_hours)
+            .count()
+        )
+
     return activity_report
