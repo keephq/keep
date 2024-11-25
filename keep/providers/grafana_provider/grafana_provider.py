@@ -89,6 +89,7 @@ class GrafanaProvider(BaseProvider):
     # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
     STATUS_MAP = {
         "ok": AlertStatus.RESOLVED,
+        "resolved": AlertStatus.RESOLVED,
         "normal": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
         "alerting": AlertStatus.FIRING,
