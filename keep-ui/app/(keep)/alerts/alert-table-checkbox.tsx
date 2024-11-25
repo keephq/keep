@@ -22,14 +22,16 @@ export default function AlertTableCheckbox({
   }, [indeterminate, rest.checked]);
 
   return (
-    <input
-      type="checkbox"
-      ref={ref}
-      disabled={disabled}
-      className={
-        className + `${disabled ? "cursor-not-allowed" : "cursor-pointer"}`
-      }
-      {...rest}
-    />
+    <div className="flex items-center justify-center">
+      <input
+        type="checkbox"
+        ref={ref}
+        disabled={disabled}
+        className={
+          className + `${disabled ? "cursor-not-allowed" : "cursor-pointer"}`
+        }
+        {...rest}
+      />
+    </div>
   );
 }
