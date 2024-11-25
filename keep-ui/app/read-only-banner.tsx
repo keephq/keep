@@ -23,11 +23,12 @@ const ReadOnlyBanner = () => {
           <Button
             className="[&>span]:text-xs"
             onClick={() => {
+              // I leave it as try-keep-for-free for now for the sake of Slack event.
               capture("try-keep-for-free", {
                 source: "read-only-banner",
               });
               window.open(
-                "https://platform.keephq.dev/providers",
+                "https://www.github.com/keephq/keep",
                 "_blank",
                 "noopener,noreferrer"
               );
@@ -36,7 +37,7 @@ const ReadOnlyBanner = () => {
             color="orange"
             size="xs"
           >
-            Try for free
+            Give us a ⭐️
           </Button>
           <Button
             className="[&>span]:text-xs"

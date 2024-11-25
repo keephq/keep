@@ -8,7 +8,13 @@ import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Card } from "@tremor/react";
 import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
 import { AlertDto } from "@/app/(keep)/alerts/models";
-import { format, parseISO } from "date-fns";
+import {
+  format,
+  parseISO,
+  differenceInMinutes,
+  differenceInHours,
+  differenceInDays,
+} from "date-fns";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
@@ -303,32 +309,38 @@ export default function IncidentTimeline({
       const pixelsPerMillisecond = 5000 / totalDuration; // Assuming 5000px minimum width
 
       let timeScale: "seconds" | "minutes" | "hours" | "days";
-      let intervalDuration: number;
+      let intervalCount = 12; // Target number of intervals
       let formatString: string;
 
-      if (totalDuration > 3 * 24 * 60 * 60 * 1000) {
+      // Determine scale and format based on total duration
+      const durationInDays = differenceInDays(paddedEndTime, startTime);
+      const durationInHours = differenceInHours(paddedEndTime, startTime);
+      const durationInMinutes = differenceInMinutes(paddedEndTime, startTime);
+
+      if (durationInDays > 3) {
         timeScale = "days";
-        intervalDuration = 24 * 60 * 60 * 1000;
         formatString = "MMM dd";
-      } else if (totalDuration > 24 * 60 * 60 * 1000) {
+        intervalCount = Math.min(durationInDays + 1, 12);
+      } else if (durationInHours > 24) {
         timeScale = "hours";
-        intervalDuration = 60 * 60 * 1000;
-        formatString = "HH:mm";
-      } else if (totalDuration > 60 * 60 * 1000) {
+        formatString = "MMM dd HH:mm";
+        intervalCount = Math.min(Math.ceil(durationInHours / 2), 12);
+      } else if (durationInMinutes > 60) {
         timeScale = "minutes";
-        intervalDuration = 5 * 60 * 1000; // 5-minute intervals
         formatString = "HH:mm";
+        intervalCount = Math.min(Math.ceil(durationInMinutes / 5), 12);
       } else {
         timeScale = "seconds";
-        intervalDuration = 10 * 1000; // 10-second intervals
         formatString = "HH:mm:ss";
+        intervalCount = 12;
       }
 
+      // Calculate interval duration based on total time and desired interval count
+      const intervalDuration = totalDuration / (intervalCount - 1);
+
       const intervals: Date[] = [];
-      let currentTime = startTime;
-      while (currentTime <= paddedEndTime) {
-        intervals.push(new Date(currentTime));
-        currentTime = new Date(currentTime.getTime() + intervalDuration);
+      for (let i = 0; i < intervalCount; i++) {
+        intervals.push(new Date(startTime.getTime() + i * intervalDuration));
       }
 
       return {
@@ -378,6 +390,15 @@ export default function IncidentTimeline({
     (endTime.getTime() - startTime.getTime()) * pixelsPerMillisecond
   );
 
+  // Filter out alerts with no audit events
+  const alertsWithEvents = alerts.items.filter((alert) =>
+    auditEvents.some((event) => event.fingerprint === alert.fingerprint)
+  );
+
+  if (alertsWithEvents.length === 0) {
+    return <IncidentTimelineNoAlerts />;
+  }
+
   return (
     <Card className="py-2 px-0">
       <div className="overflow-x-auto">
@@ -394,7 +415,7 @@ export default function IncidentTimeline({
                 style={{
                   left: `${
                     (time.getTime() - startTime.getTime()) *
-                    pixelsPerMillisecond
+                      pixelsPerMillisecond || 30
                   }px`,
                   transform: "translateX(-50%)",
                 }}
@@ -406,7 +427,7 @@ export default function IncidentTimeline({
 
           {/* Alert bars */}
           <div className="space-y-0">
-            {alerts?.items
+            {alertsWithEvents
               .sort((a, b) => {
                 const aStart = Math.min(
                   ...auditEvents

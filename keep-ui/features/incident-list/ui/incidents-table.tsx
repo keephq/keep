@@ -238,13 +238,13 @@ export default function IncidentsTable({
       header: "Created At",
       cell: ({ row }) => <DateTimeField date={row.original.creation_time} />,
     }),
-    columnHelper.display({
-      id: "rule_fingerprint",
-      header: "Group by value",
-      cell: ({ row }) => (
-        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
-      ),
-    }),
+    // columnHelper.display({
+    //   id: "rule_fingerprint",
+    //   header: "Group by value",
+    //   cell: ({ row }) => (
+    //     <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
+    //   ),
+    // }),
     columnHelper.display({
       id: "actions",
       header: "",
