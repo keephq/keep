@@ -317,7 +317,7 @@ def simulate_alerts(
 ):
     logger.info("Simulating alerts...")
     
-    GENERATE_DEDUPLICATIONS = True
+    GENERATE_DEDUPLICATIONS = False
 
     providers = [
         "prometheus",
