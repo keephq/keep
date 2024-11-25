@@ -15,7 +15,7 @@ import {
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { useGroups } from "utils/hooks/useGroups";
-import { useUsers } from "utils/hooks/useUsers";
+import { useUsers } from "@/entities/users/model/useUsers";
 import { useRoles } from "utils/hooks/useRoles";
 import { useState, useEffect, useMemo } from "react";
 import GroupsSidebar from "./groups-sidebar";

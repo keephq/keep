@@ -9,6 +9,7 @@ from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
+
 class S4Status(str, enum.Enum):
     """
     SIGNL4 alert status.
@@ -17,6 +18,7 @@ class S4Status(str, enum.Enum):
     NEW = "new"
     ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
+
 
 class S4AlertingScenario(str, enum.Enum):
     """
@@ -44,6 +46,7 @@ class Signl4Provider(BaseProvider):
     """Trigger SIGNL4 alerts."""
 
     PROVIDER_DISPLAY_NAME = "SIGNL4"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -88,7 +91,7 @@ class Signl4Provider(BaseProvider):
     def _notify(
         self,
         title: str | None = None,
-        message: str | None = None,    
+        message: str | None = None,
         user: str | None = None,
         s4_external_id: str | None = None,
         s4_status: S4Status = S4Status.NEW,
@@ -108,36 +111,40 @@ class Signl4Provider(BaseProvider):
 
         # Alert data
         alert_data = {
-            'title': title,
-            'message': message,
-            'user': user,
-            'X-S4-ExternalID': s4_external_id,
-            'X-S4-Status': s4_status,
-            'X-S4-Service': s4_service,
-            'X-S4-Location': s4_location,
-            'X-S4-AlertingScenario': s4_alerting_scenario,
-            'X-S4-Filtering': s4_filtering,
-            'X-S4-SourceSystem': 'Keep',
+            "title": title,
+            "message": message,
+            "user": user,
+            "X-S4-ExternalID": s4_external_id,
+            "X-S4-Status": s4_status,
+            "X-S4-Service": s4_service,
+            "X-S4-Location": s4_location,
+            "X-S4-AlertingScenario": s4_alerting_scenario,
+            "X-S4-Filtering": s4_filtering,
+            "X-S4-SourceSystem": "Keep",
             **kwargs,
         }
 
         # SIGNL4 webhook URL
-        webhook_url = 'https://connect.signl4.com/webhook/' + self.authentication_config.signl4_integration_secret
+        webhook_url = (
+            "https://connect.signl4.com/webhook/"
+            + self.authentication_config.signl4_integration_secret
+        )
 
         try:
-            result = requests.post(url = webhook_url, json = alert_data)
+            result = requests.post(url=webhook_url, json=alert_data)
 
             if result.status_code == 201:
                 # Success
                 self.logger.info(result.text)
             else:
                 # Error
-                self.logger.exception('Error: ' + str(result.status_code))
-                raise Exception('Error: ' + str(result.status_code))
+                self.logger.exception("Error: " + str(result.status_code))
+                raise Exception("Error: " + str(result.status_code))
 
         except:
             self.logger.exception("Failed to create SIGNL4 alert")
             raise
+
 
 if __name__ == "__main__":
     # Output debug messages

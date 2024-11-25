@@ -4,13 +4,16 @@ import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/utils/fetcher";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useCallback, useMemo } from "react";
-import { useTopologyBaseKey, useTopology } from "./useTopology";
+import { useTopology } from "./useTopology";
 import { useRevalidateMultiple } from "@/utils/state";
+import { TOPOLOGY_URL } from "./useTopology";
 
 type UseTopologyApplicationsOptions = {
   initialData?: TopologyApplication[];
   options?: SWRConfiguration;
 };
+
+export const TOPOLOGY_APPLICATIONS_URL = `/topology/applications`;
 
 export function useTopologyApplications(
   { initialData, options }: UseTopologyApplicationsOptions = {
@@ -21,13 +24,11 @@ export function useTopologyApplications(
 ) {
   const apiUrl = useApiUrl();
   const { data: session } = useSession();
-  const topologyBaseKey = useTopologyBaseKey();
   const revalidateMultiple = useRevalidateMultiple();
   const { topologyData, mutate: mutateTopology } = useTopology();
-  const topologyApplicationsKey = `${apiUrl}/topology/applications`;
   const { data, error, isLoading, mutate } = useSWR<TopologyApplication[]>(
-    !session ? null : topologyApplicationsKey,
-    (url: string) => fetcher(url, session!.accessToken),
+    !session ? null : TOPOLOGY_APPLICATIONS_URL,
+    (url: string) => fetcher(apiUrl + url, session!.accessToken),
     {
       fallbackData: initialData,
       ...options,
@@ -48,7 +49,7 @@ export function useTopologyApplications(
       });
       if (response.ok) {
         console.log("mutating on success");
-        revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
+        revalidateMultiple([TOPOLOGY_URL, TOPOLOGY_APPLICATIONS_URL]);
       } else {
         // Rollback optimistic update on error
         throw new Error("Failed to add application", {
@@ -58,7 +59,7 @@ export function useTopologyApplications(
       const json = await response.json();
       return json as TopologyApplication;
     },
-    [revalidateMultiple, session?.accessToken, topologyApplicationsKey]
+    [apiUrl, revalidateMultiple, session?.accessToken]
   );
 
   const updateApplication = useCallback(
@@ -98,7 +99,7 @@ export function useTopologyApplications(
         }
       );
       if (response.ok) {
-        revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
+        revalidateMultiple([TOPOLOGY_URL, TOPOLOGY_APPLICATIONS_URL]);
       } else {
         // Rollback optimistic update on error
         mutate(applications, false);
@@ -110,12 +111,12 @@ export function useTopologyApplications(
       return response;
     },
     [
+      apiUrl,
       applications,
       mutate,
       mutateTopology,
       revalidateMultiple,
       session?.accessToken,
-      topologyApplicationsKey,
       topologyData,
     ]
   );
@@ -152,7 +153,7 @@ export function useTopologyApplications(
         }
       );
       if (response.ok) {
-        revalidateMultiple([topologyBaseKey, topologyApplicationsKey]);
+        revalidateMultiple([TOPOLOGY_URL, TOPOLOGY_APPLICATIONS_URL]);
       } else {
         // Rollback optimistic update on error
         mutate(applications, false);
@@ -164,12 +165,12 @@ export function useTopologyApplications(
       return response;
     },
     [
+      apiUrl,
       applications,
       mutate,
       mutateTopology,
       revalidateMultiple,
       session?.accessToken,
-      topologyApplicationsKey,
       topologyData,
     ]
   );

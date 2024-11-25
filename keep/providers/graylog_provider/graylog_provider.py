@@ -1,12 +1,13 @@
 """
 Graylog Provider is a class that allows to install webhooks in Graylog.
 """
+
 # Documentation for older versions of graylog: https://github.com/Graylog2/documentation
 
 import dataclasses
 import math
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 from urllib.parse import urlencode, urljoin, urlparse
 
@@ -57,6 +58,7 @@ class GraylogProviderAuthConfig:
 class GraylogProvider(BaseProvider):
     """Install Webhooks and receive alerts from Graylog."""
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
@@ -231,18 +233,16 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     def __get_graylog_version(self) -> str:
         self.logger.info("Getting graylog version info")
         try:
-            version_response = requests.get(
-                url=self.__get_url(),
-                headers=self._headers
-            )
+            version_response = requests.get(url=self.__get_url(), headers=self._headers)
             if version_response.status_code != 200:
                 raise Exception(version_response.text)
             version = version_response.json()["version"].strip()
             self.logger.info(f"We are working with Graylog version: {version}")
             return version
         except Exception as e:
-            self.logger.error("Error while getting Graylog Version", extra={"exception": str(e)})
-
+            self.logger.error(
+                "Error while getting Graylog Version", extra={"exception": str(e)}
+            )
 
     def __get_url_whitelist(self):
         try:
@@ -485,16 +485,11 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 # We need to clean up the previously installed notification
                 existing_notification_id = notification["notifications"][0]["id"]
 
-                self.__delete_notification(
-                    notification_id=existing_notification_id
-                )
+                self.__delete_notification(notification_id=existing_notification_id)
 
             self.logger.info("Creating new notification")
             if self.is_v4:
-                config = {
-                    "type": "http-notification-v1",
-                    "url": keep_api_url
-                }
+                config = {"type": "http-notification-v1", "url": keep_api_url}
             else:
                 config = {
                     "type": "http-notification-v2",
@@ -520,7 +515,10 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             )
 
             for event_definition in event_definitions:
-                if not self.is_v4 and event_definition["_scope"] == "SYSTEM_NOTIFICATION_EVENT":
+                if (
+                    not self.is_v4
+                    and event_definition["_scope"] == "SYSTEM_NOTIFICATION_EVENT"
+                ):
                     self.logger.info("Skipping SYSTEM_NOTIFICATION_EVENT")
                     continue
                 self.logger.info(f"Updating event with ID: {event_definition['id']}")
@@ -571,14 +569,17 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         return alert
 
     @staticmethod
-    def _format_alert(event: dict, provider_instance: BaseProvider | None = None) -> AlertDto:
+    def _format_alert(
+        event: dict, provider_instance: BaseProvider | None = None
+    ) -> AlertDto:
         return GraylogProvider.__map_event_to_alert(event=event)
 
     @classmethod
     def simulate_alert(cls) -> dict:
-        from keep.providers.graylog_provider.alerts_mock import ALERTS
         import random
         import string
+
+        from keep.providers.graylog_provider.alerts_mock import ALERTS
 
         # Use the provided ALERTS structure
         alert_data = ALERTS.copy()

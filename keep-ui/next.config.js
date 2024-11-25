@@ -3,6 +3,29 @@ const { withSentryConfig } = require("@sentry/nextjs");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  webpack: (
+    config,
+    { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
+  ) => {
+    // Only apply proxy configuration for Node.js server runtime
+    if (isServer && nextRuntime === "nodejs") {
+      // Add environment variables for proxy at build time
+      config.plugins.push(
+        new webpack.DefinePlugin({
+          "process.env.IS_NODEJS_RUNTIME": JSON.stringify(true),
+        })
+      );
+    } else {
+      // For edge runtime and client
+      config.plugins.push(
+        new webpack.DefinePlugin({
+          "process.env.IS_NODEJS_RUNTIME": JSON.stringify(false),
+        })
+      );
+    }
+
+    return config;
+  },
   transpilePackages: ["next-auth"],
   images: {
     remotePatterns: [
@@ -29,12 +52,7 @@ const nextConfig = {
     ],
   },
   compiler: {
-    removeConsole:
-      process.env.NODE_ENV === "production"
-        ? {
-            exclude: ["error"],
-          }
-        : process.env.REMOVE_CONSOLE === "true",
+    removeConsole: false,
   },
   output: "standalone",
   productionBrowserSourceMaps:

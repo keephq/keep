@@ -1,6 +1,7 @@
 """
 AxiomProvider is a class that allows to ingest/digest data from Axiom.
 """
+
 import dataclasses
 from typing import Optional
 
@@ -36,6 +37,7 @@ class AxiomProvider(BaseProvider):
     """Enrich alerts with data from Axiom."""
 
     PROVIDER_DISPLAY_NAME = "Axiom"
+    PROVIDER_CATEGORY = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

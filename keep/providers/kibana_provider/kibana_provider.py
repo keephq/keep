@@ -46,6 +46,7 @@ class KibanaProviderAuthConfig:
 class KibanaProvider(BaseProvider):
     """Enrich alerts with data from Kibana."""
 
+    PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
     DEFAULT_TIMEOUT = 10
     WEBHOOK_PAYLOAD = json.dumps(
         {

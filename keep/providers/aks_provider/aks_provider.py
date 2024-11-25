@@ -72,6 +72,7 @@ class AksProvider(BaseProvider):
     """Enrich alerts using data from AKS."""
 
     PROVIDER_DISPLAY_NAME = "Azure AKS"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

@@ -1,3 +1,13 @@
-export const FieldHeader = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-sm text-gray-500 font-semibold">{children}</h3>
+import clsx from "clsx";
+
+export const FieldHeader = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <h3 className={clsx("text-sm text-gray-500 font-semibold", className)}>
+    {children}
+  </h3>
 );

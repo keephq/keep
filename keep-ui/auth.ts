@@ -1,12 +1,14 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
+import { customFetch } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Keycloak from "next-auth/providers/keycloak";
 import Auth0 from "next-auth/providers/auth0";
-import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { AuthError } from "next-auth";
 import { AuthenticationError, AuthErrorCodes } from "@/errors";
-import type { JWT } from "@auth/core/jwt";
+import type { JWT } from "next-auth/jwt";
+// https://github.com/nextauthjs/next-auth/issues/11028
 
 export class BackendRefusedError extends AuthError {
   static type = "BackendRefusedError";
@@ -33,6 +35,127 @@ const authType =
     : authTypeEnv === NO_AUTH
     ? AuthType.NOAUTH
     : (authTypeEnv as AuthType);
+
+const proxyUrl =
+  process.env.HTTP_PROXY ||
+  process.env.HTTPS_PROXY ||
+  process.env.http_proxy ||
+  process.env.https_proxy;
+
+import { ProxyAgent, fetch as undici } from "undici";
+function proxyFetch(
+  ...args: Parameters<typeof fetch>
+): ReturnType<typeof fetch> {
+  console.log(
+    "Proxy called for URL:",
+    args[0] instanceof Request ? args[0].url : args[0]
+  );
+  const dispatcher = new ProxyAgent(proxyUrl!);
+
+  if (args[0] instanceof Request) {
+    const request = args[0];
+    // @ts-expect-error `undici` has a `duplex` option
+    return undici(request.url, {
+      ...args[1],
+      method: request.method,
+      headers: request.headers as HeadersInit,
+      body: request.body,
+      dispatcher,
+    });
+  }
+
+  // @ts-expect-error `undici` has a `duplex` option
+  return undici(args[0], { ...(args[1] || {}), dispatcher });
+}
+
+/**
+ * Creates a Microsoft Entra ID provider configuration and overrides the customFetch.
+ *
+ * SHAHAR: this is a workaround to override the customFetch symbol in the provider
+ * because in Microsoft entra it already has a customFetch symbol and we need to override it.s
+ */
+export const createAzureADProvider = () => {
+  if (!proxyUrl) {
+    console.log("Proxy is not enabled");
+  } else {
+    console.log("Proxy is enabled:", proxyUrl);
+  }
+
+  // Step 1: Create the base provider
+  const baseConfig = {
+    clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
+    clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
+    issuer: `https://login.microsoftonline.com/${process.env
+      .KEEP_AZUREAD_TENANT_ID!}/v2.0`,
+    authorization: {
+      params: {
+        scope: `api://${process.env
+          .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
+      },
+    },
+    client: {
+      token_endpoint_auth_method: "client_secret_post",
+    },
+  };
+
+  const provider = MicrosoftEntraID(baseConfig);
+  // if not proxyUrl, return the provider
+  if (!proxyUrl) return provider;
+
+  // Step 2: Override the `customFetch` symbol in the provider
+  provider[customFetch] = async (...args: Parameters<typeof fetch>) => {
+    const url = new URL(args[0] instanceof Request ? args[0].url : args[0]);
+    console.log("Custom Fetch Intercepted:", url.toString());
+
+    // Handle `.well-known/openid-configuration` logic
+    if (url.pathname.endsWith(".well-known/openid-configuration")) {
+      console.log("Intercepting .well-known/openid-configuration");
+      const response = await proxyFetch(...args);
+      const json = await response.clone().json();
+      const tenantRe = /microsoftonline\.com\/(\w+)\/v2\.0/;
+      const tenantId = baseConfig.issuer?.match(tenantRe)?.[1] ?? "common";
+      const issuer = json.issuer.replace("{tenantid}", tenantId);
+      console.log("Modified issuer:", issuer);
+      return Response.json({ ...json, issuer });
+    }
+
+    // Fallback for all other requests
+    return proxyFetch(...args);
+  };
+
+  // Step 3: override profile since it use fetch without customFetch
+  provider.profile = async (profile, tokens) => {
+    const profilePhotoSize = 48; // Default or custom size
+    console.log("Fetching profile photo via proxy");
+
+    const response = await proxyFetch(
+      `https://graph.microsoft.com/v1.0/me/photos/${profilePhotoSize}x${profilePhotoSize}/$value`,
+      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+    );
+
+    let image: string | null = null;
+    if (response.ok && typeof Buffer !== "undefined") {
+      try {
+        const pictureBuffer = await response.arrayBuffer();
+        const pictureBase64 = Buffer.from(pictureBuffer).toString("base64");
+        image = `data:image/jpeg;base64,${pictureBase64}`;
+      } catch (error) {
+        console.error("Error processing profile photo:", error);
+      }
+    }
+
+    // Ensure the returned object matches the User interface
+    return {
+      id: profile.sub,
+      name: profile.name,
+      email: profile.email,
+      image: image ?? null,
+      accessToken: tokens.access_token ?? "", // Provide empty string as fallback
+    };
+  };
+
+  return provider;
+};
 
 async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
@@ -159,19 +282,7 @@ const providerConfigs = {
       authorization: { params: { scope: "openid email profile roles" } },
     }),
   ],
-  [AuthType.AZUREAD]: [
-    MicrosoftEntraID({
-      clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
-      clientSecret: process.env.KEEP_AZUREAD_CLIENT_SECRET!,
-      issuer: process.env.KEEP_AZUREAD_TENANT_ID!,
-      authorization: {
-        params: {
-          scope: `api://${process.env
-            .KEEP_AZUREAD_CLIENT_ID!}/default openid profile email`,
-        },
-      },
-    }),
-  ],
+  [AuthType.AZUREAD]: [createAzureADProvider()],
 };
 
 // Create the config
@@ -203,7 +314,25 @@ const config = {
         let tenantId: string | undefined = user.tenantId;
         let role: string | undefined = user.role;
         // Ensure we always have an accessToken
-        if (authType == AuthType.AUTH0) {
+        // https://github.com/nextauthjs/next-auth/discussions/4255
+        if (authType === AuthType.AZUREAD) {
+          // Properly handle Azure AD tokens
+          accessToken = account.access_token;
+          // You might want to extract additional claims from the id_token if needed
+          if (account.id_token) {
+            try {
+              // Basic JWT decode (you might want to use a proper JWT library here)
+              const payload = JSON.parse(
+                Buffer.from(account.id_token.split(".")[1], "base64").toString()
+              );
+              // Extract any additional claims you need
+              role = payload.roles?.[0] || "user";
+              tenantId = payload.tid || undefined;
+            } catch (e) {
+              console.warn("Failed to decode id_token:", e);
+            }
+          }
+        } else if (authType == AuthType.AUTH0) {
           accessToken = account.id_token;
           if ((profile as any)?.keep_tenant_id) {
             tenantId = (profile as any).keep_tenant_id;
