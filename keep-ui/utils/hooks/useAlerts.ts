@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { AlertDto } from "app/alerts/models";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useMemo } from "react";
+import { AlertDto } from "@/app/(keep)/alerts/models";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
 import { useApiUrl } from "./useConfig";
 import { fetcher } from "utils/fetcher";
@@ -28,7 +28,7 @@ export const useAlerts = () => {
         selectedAlert && session
           ? `${apiUrl}/alerts/${
               selectedAlert.fingerprint
-            }/history/?provider_id=${selectedAlert.providerId}&provider_type=${
+            }/history?provider_id=${selectedAlert.providerId}&provider_type=${
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
@@ -53,38 +53,37 @@ export const useAlerts = () => {
     presetName: string,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    const [alertsMap, setAlertsMap] = useState<Map<string, AlertDto>>(
-      new Map()
-    );
-
     const {
       data: alertsFromEndpoint = [],
       mutate,
       isLoading,
+      error: alertsError,
     } = useAllAlerts(presetName, options);
 
-    useEffect(() => {
-      if (alertsFromEndpoint.length) {
-        const newAlertsMap = new Map<string, AlertDto>(
-          alertsFromEndpoint.map((alertFromEndpoint) => [
-            alertFromEndpoint.fingerprint,
-            {
-              ...alertFromEndpoint,
-              lastReceived: toDateObjectWithFallback(
-                alertFromEndpoint.lastReceived
-              ),
-            },
-          ])
-        );
-
-        setAlertsMap(newAlertsMap);
+    const alertsValue = useMemo(() => {
+      if (!alertsFromEndpoint.length) {
+        return [];
       }
+
+      const alertsMap = new Map<string, AlertDto>(
+        alertsFromEndpoint.map((alertFromEndpoint) => [
+          alertFromEndpoint.fingerprint,
+          {
+            ...alertFromEndpoint,
+            lastReceived: toDateObjectWithFallback(
+              alertFromEndpoint.lastReceived
+            ),
+          },
+        ])
+      );
+      return Array.from(alertsMap.values());
     }, [alertsFromEndpoint]);
 
     return {
-      data: Array.from(alertsMap.values()),
+      data: alertsValue,
       mutate: mutate,
       isLoading: isLoading,
+      error: alertsError,
     };
   };
 

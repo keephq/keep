@@ -6,7 +6,6 @@ import { usePresets } from "utils/hooks/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
 import { Subtitle } from "@tremor/react";
-import classNames from "classnames";
 import { LinkWithIcon } from "../LinkWithIcon";
 import {
   DndContext,
@@ -19,13 +18,14 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Preset } from "app/alerts/models";
+import { Preset } from "@/app/(keep)/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
 // Using dynamic import to avoid hydration issues with react-player
 import dynamic from "next/dynamic";
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
+import clsx from "clsx";
 
 type PresetAlertProps = {
   preset: Preset;
@@ -67,7 +67,8 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
         count={preset.alerts_count}
         isDeletable={true}
         onDelete={() => deletePreset(preset.id, preset.name)}
-        className={classNames(
+        isExact={true}
+        className={clsx(
           "flex items-center space-x-2 text-sm p-1 text-slate-400 font-medium rounded-lg",
           {
             "bg-stone-200/50": isActive,
@@ -77,7 +78,7 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
         )}
       >
         <Subtitle
-          className={classNames("truncate max-w-[7.5rem]", {
+          className={clsx("truncate max-w-[7.5rem]", {
             "text-orange-400": isActive,
           })}
           title={preset.name}
@@ -245,6 +246,7 @@ export const CustomPresetAlertLinks = ({
       </SortableContext>
       {/* React Player for playing alert sound */}
       <ReactPlayer
+        // TODO: cache the audio file fiercely
         url="/music/alert.mp3"
         playing={anyNoisyNow}
         volume={0.5}
@@ -252,6 +254,7 @@ export const CustomPresetAlertLinks = ({
         width="0"
         height="0"
         playsinline
+        className="absolute -z-10"
       />
     </DndContext>
   );

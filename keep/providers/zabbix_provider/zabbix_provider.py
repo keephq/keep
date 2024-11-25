@@ -53,6 +53,7 @@ class ZabbixProvider(BaseProvider):
     Pull/Push alerts from Zabbix into Keep.
     """
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
     KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
         "zabbix_provider_script.js"  # zabbix mediatype script file
@@ -290,8 +291,12 @@ class ZabbixProvider(BaseProvider):
                     validated_scopes[scope.name] = "Permission denied"
                     continue
                 else:
-                    validated_scopes[scope.name] = error
-                    continue
+                    if error and "invalid parameter" in error.lower():
+                        # This is OK, it means the request is broken but we have access to the endpoint.
+                        pass
+                    else:
+                        validated_scopes[scope.name] = error
+                        continue
             validated_scopes[scope.name] = True
         return validated_scopes
 

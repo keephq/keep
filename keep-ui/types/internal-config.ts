@@ -14,4 +14,9 @@ export interface InternalConfig {
   // the API URL for the client (browser)
   // optional, defaults to /backend (relative)
   API_URL_CLIENT?: string;
+  // Sentry
+  SENTRY_DISABLED: string;
+  // READ ONLY
+  READ_ONLY: boolean;
+  OPEN_AI_API_KEY_SET: boolean;
 }

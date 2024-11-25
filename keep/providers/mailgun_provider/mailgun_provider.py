@@ -48,6 +48,7 @@ class MailgunProviderAuthConfig:
 class MailgunProvider(BaseProvider):
     MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY")
     WEBHOOK_INSTALLATION_REQUIRED = True
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

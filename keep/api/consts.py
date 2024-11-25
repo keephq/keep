@@ -14,10 +14,10 @@ STATIC_PRESETS = {
         id=StaticPresetsId.FEED_PRESET_ID.value,
         name="feed",
         options=[
-            {"label": "CEL", "value": "(!deleted && !dismissed)"},
+            {"label": "CEL", "value": ""},
             {
                 "label": "SQL",
-                "value": {"sql": "(deleted=false AND dismissed=false)", "params": {}},
+                "value": {"sql": "", "params": {}},
             },
         ],
         created_by=None,
@@ -26,36 +26,7 @@ STATIC_PRESETS = {
         should_do_noise_now=False,
         static=True,
         tags=[],
-    ),
-    "dismissed": PresetDto(
-        id=StaticPresetsId.DISMISSED_PRESET_ID.value,
-        name="dismissed",
-        options=[
-            {"label": "CEL", "value": "dismissed"},
-            {"label": "SQL", "value": {"sql": "dismissed=true", "params": {}}},
-        ],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        static=True,
-        tags=[],
-    ),
-    "without-incident": PresetDto(
-        id=StaticPresetsId.WITHOUT_INCIDENT_PRESET_ID.value,
-        name="without-incident",
-        options=[
-            {"label": "CEL", "value": "incident == null"},
-            {"label": "SQL", "value": {"sql": "incident is null", "params": {}}},
-        ],
-        created_by=None,
-        is_private=False,
-        is_noisy=False,
-        should_do_noise_now=False,
-        static=True,
-        tags=[],
-    ),
-
+    )
 }
 
 ###

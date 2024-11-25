@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "sourceMap": true,
     "target": "es6",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -28,7 +29,9 @@
       "@/utils/*": ["./utils/*"],
       "@/entities/*": ["./entities/*"],
       "@/features/*": ["./features/*"],
-      "@/shared/*": ["./shared/*"]
+      "@/shared/*": ["./shared/*"],
+      "@/types/*": ["./types/*"],
+      "@/*": ["./*"]
     }
   },
   "include": [
@@ -37,7 +40,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "pages/signin.tsx",
-    "./.next/types/**/*.ts"
+    "./.next/types/**/*.ts",
+    "types/auth.d.ts"
   ],
   "exclude": ["node_modules"]
 }

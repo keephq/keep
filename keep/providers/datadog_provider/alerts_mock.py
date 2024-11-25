@@ -11,8 +11,8 @@ ALERTS = {
         },
         "parameters": {
             "tags": [
-                "environment:production,team:backend,monitor",
-                "environment:staging,team:backend,monitor",
+                "environment:production,team:backend,monitor,service:api",
+                "environment:staging,team:backend,monitor,service:api",
             ],
             "priority": ["P2", "P3", "P4"],
         },
@@ -29,8 +29,26 @@ ALERTS = {
         },
         "parameters": {
             "tags": [
-                "environment:production,team:analytics,monitor",
-                "environment:staging,team:database,monitor",
+                "environment:production,team:analytics,monitor,service:api",
+                "environment:staging,team:database,monitor,service:api",
+            ],
+            "priority": ["P1", "P3", "P4"],
+        },
+    },
+    "mq_consumer_struggling": {
+        "payload": {
+            "title": "mq consumer is struggling",
+            "type": "metric alert",
+            "query": "avg(last_1h):min:mq_processing{*} by {host} < 10",
+            "message": "MQ Consumer is processing less than 10 messages per second on {{host.name}}.",
+            "tags": "environment:production,team:database",
+            "priority": 4,
+            "monitor_id": "1234567891",
+        },
+        "parameters": {
+            "tags": [
+                "environment:production,team:analytics,monitor,service:api",
+                "environment:staging,team:database,monitor,service:api",
             ],
             "priority": ["P1", "P3", "P4"],
         },

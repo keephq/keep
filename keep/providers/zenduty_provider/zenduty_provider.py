@@ -22,6 +22,7 @@ class ZendutyProvider(BaseProvider):
     """Create incident in Zenduty."""
 
     PROVIDER_DISPLAY_NAME = "Zenduty"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -40,14 +41,14 @@ class ZendutyProvider(BaseProvider):
         pass
 
     def _notify(
-            self,
-            title: str = "",
-            summary: str = "",
-            service: str = "",
-            user: str = "",
-            policy: str = "",
-            **kwargs: dict
-            ):
+        self,
+        title: str = "",
+        summary: str = "",
+        service: str = "",
+        user: str = "",
+        policy: str = "",
+        **kwargs: dict
+    ):
         """
         Create incident Zenduty using the Zenduty API
 

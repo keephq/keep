@@ -63,6 +63,7 @@ class SshProvider(BaseProvider):
     """Enrich alerts with data from SSH."""
 
     PROVIDER_DISPLAY_NAME = "SSH"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

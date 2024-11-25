@@ -22,7 +22,11 @@ from keep.api.core.db import (
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider
+from keep.providers.base.base_provider import (
+    BaseIncidentProvider,
+    BaseProvider,
+    BaseTopologyProvider,
+)
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
@@ -38,7 +42,9 @@ class ProvidersFactory:
     _loaded_providers_cache = None
 
     @staticmethod
-    def get_provider_class(provider_type: str) -> BaseProvider:
+    def get_provider_class(
+        provider_type: str,
+    ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         provider_type_split = provider_type.split(
             "."
         )  # e.g. "cloudwatch.logs" or "cloudwatch.metrics"
@@ -72,7 +78,7 @@ class ProvidersFactory:
         provider_type: str,
         provider_config: dict,
         **kwargs,
-    ) -> BaseProvider:
+    ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         """
         Get the instantiated provider class according to the provider type.
 
@@ -265,6 +271,10 @@ class ProvidersFactory:
                 can_setup_webhook = (
                     issubclass(provider_class, BaseProvider)
                     and provider_class.__dict__.get("setup_webhook") is not None
+                ) or (
+                    issubclass(provider_class, BaseIncidentProvider)
+                    and provider_class.__dict__.get("setup_incident_webhook")
+                    is not None
                 )
                 webhook_required = provider_class.WEBHOOK_INSTALLATION_REQUIRED
                 supports_webhook = (
@@ -313,6 +323,7 @@ class ProvidersFactory:
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
                 docs = provider_class.__doc__
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
+                can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
 
                 provider_tags = set(provider_class.PROVIDER_TAGS)
                 if can_fetch_topology:
@@ -327,6 +338,8 @@ class ProvidersFactory:
                     provider_tags.add("alert")
                 if can_notify and "ticketing" not in provider_tags:
                     provider_tags.add("messaging")
+                if can_fetch_incidents and "incident" not in provider_tags:
+                    provider_tags.add("incident")
                 provider_tags = list(provider_tags)
 
                 provider_methods = ProvidersFactory.__get_methods(provider_class)
@@ -370,6 +383,8 @@ class ProvidersFactory:
                         tags=provider_tags,
                         alertExample=alert_example,
                         default_fingerprint_fields=default_fingerprint_fields,
+                        categories=provider_class.PROVIDER_CATEGORY,
+                        coming_soon=provider_class.PROVIDER_COMING_SOON,
                     )
                 )
             except ModuleNotFoundError:

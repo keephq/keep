@@ -20,7 +20,7 @@ from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     get_alerts_by_fingerprint,
-    get_all_presets,
+    get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
 )
@@ -28,7 +28,6 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
-from keep.api.models.db.preset import PresetDto
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
@@ -86,6 +85,7 @@ def __save_to_db(
                 alert = AlertRaw(
                     tenant_id=tenant_id,
                     raw_alert=raw_event,
+                    provider_type=provider_type,
                 )
                 session.add(alert)
         # add audit to the deduplicated events
@@ -410,11 +410,23 @@ def __handle_formatted_events(
             },
         )
 
+    
+    pusher_client = get_pusher_client() if notify_client else None
+
     # Tell the client to poll alerts
-    if notify_client and incidents:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
-            return
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "poll-alerts",
+                "{}",
+            )
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
+            pass
+    
+    if incidents and pusher_client:
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -422,21 +434,19 @@ def __handle_formatted_events(
                 {},
             )
         except Exception:
-            logger.exception("Failed to push alert to the client")
+            logger.exception("Failed to tell the client to pull incidents")
 
     # Now we need to update the presets
     # send with pusher
-    if notify_client:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
-            return
+    if not pusher_client:
+        return
+    
     try:
-        presets = get_all_presets(tenant_id)
+        presets = get_all_presets_dtos(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
         presets_do_update = []
-        for preset in presets:
+        for preset_dto in presets:
             # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.to_dict())
             filtered_alerts = rules_engine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )
@@ -446,7 +456,7 @@ def __handle_formatted_events(
             presets_do_update.append(preset_dto)
             preset_dto.alerts_count = len(filtered_alerts)
             # update noisy
-            if preset.is_noisy:
+            if preset_dto.is_noisy:
                 firing_filtered_alerts = list(
                     filter(
                         lambda alert: alert.status == AlertStatus.FIRING.value,
@@ -483,6 +493,7 @@ def __handle_formatted_events(
                 "tenant_id": tenant_id,
             },
         )
+    return enriched_formatted_events
 
 
 def process_event(
@@ -494,11 +505,11 @@ def process_event(
     api_key_name: str | None,
     trace_id: str | None,  # so we can track the job from the request to the digest
     event: (
-        AlertDto | list[AlertDto] | dict
+        AlertDto | list[AlertDto] | IncidentDto | list[IncidentDto] | dict | None
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
-):
+) -> list[Alert]:
     extra_dict = {
         "tenant_id": tenant_id,
         "provider_type": provider_type,
@@ -531,6 +542,7 @@ def process_event(
                 provider_class = ProvidersFactory.get_provider_class(provider_type)
             except Exception:
                 provider_class = ProvidersFactory.get_provider_class("keep")
+
             event = provider_class.format_alert(
                 tenant_id=tenant_id,
                 event=event,
@@ -542,6 +554,11 @@ def process_event(
             if event is None and provider_type == "cloudwatch":
                 logger.info(
                     "This is a subscription notification message from AWS - skipping processing"
+                )
+                return
+            elif event is None:
+                logger.info(
+                    "Provider returned None (failed silently), skipping processing"
                 )
                 return
 
@@ -556,7 +573,7 @@ def process_event(
             raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
-        __handle_formatted_events(
+        return __handle_formatted_events(
             tenant_id,
             provider_type,
             session,
@@ -567,13 +584,53 @@ def process_event(
             timestamp_forced,
         )
     except Exception:
-        logger.exception("Error processing event", extra=extra_dict)
+        logger.exception(
+            "Error processing event",
+            extra=extra_dict,
+        )
+        # In case of exception, add the alerts to the defect table
+        __save_error_alerts(tenant_id, provider_type, raw_event)
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
     logger.info("Event processed", extra=extra_dict)
+
+
+def __save_error_alerts(
+    tenant_id, provider_type, raw_events: dict | list[dict] | list[AlertDto] | None
+):
+    if not raw_events:
+        logger.info("No raw events to save as errors")
+        return
+
+    try:
+        logger.info("Getting database session")
+        session = get_session_sync()
+
+        # Convert to list if single dict
+        if isinstance(raw_events, dict):
+            logger.info("Converting single dict to list")
+            raw_events = [raw_events]
+
+        logger.info(f"Saving {len(raw_events)} error alerts")
+        for raw_event in raw_events:
+            # Convert AlertDto to dict if needed
+            if isinstance(raw_event, AlertDto):
+                logger.info("Converting AlertDto to dict")
+                raw_event = raw_event.dict()
+
+            alert = AlertRaw(
+                tenant_id=tenant_id, raw_alert=raw_event, provider_type=provider_type
+            )
+            session.add(alert)
+        session.commit()
+        logger.info("Successfully saved error alerts")
+    except Exception:
+        logger.exception("Failed to save error alerts")
+    finally:
+        session.close()
 
 
 async def async_process_event(*args, **kwargs):

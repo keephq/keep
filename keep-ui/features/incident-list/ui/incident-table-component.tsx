@@ -51,8 +51,8 @@ const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
                 column.getNextSortingOrder() === "asc"
                   ? "Sort ascending"
                   : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                  ? "Sort descending"
+                  : "Clear sort"
               }
               icon={
                 column.getIsSorted()
@@ -77,14 +77,17 @@ export const IncidentTableComponent = (props: Props) => {
   return (
     <Table>
       <TableHead>
-        {table.getHeaderGroups().map((headerGroup) => (
+        {table.getHeaderGroups().map((headerGroup, index) => (
           <TableRow
             className="border-b border-tremor-border dark:border-dark-tremor-border"
-            key={headerGroup.id}
+            key={`${headerGroup.id}-${index}`}
           >
-            {headerGroup.headers.map((header) => {
+            {headerGroup.headers.map((header, index) => {
               return (
-                <SortableHeaderCell header={header} key={header.id}>
+                <SortableHeaderCell
+                  header={header}
+                  key={`${header.id}-${index}`}
+                >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext()

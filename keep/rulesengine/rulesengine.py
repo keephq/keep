@@ -9,10 +9,13 @@ import celpy.celtypes
 import celpy.evaluation
 from sqlmodel import Session
 
-from keep.api.consts import STATIC_PRESETS
-from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule, is_all_incident_alerts_resolved, \
-    is_first_incident_alert_resolved, is_last_incident_alert_resolved
+from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
 from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.db import (
+    is_all_incident_alerts_resolved,
+    is_first_incident_alert_resolved,
+    is_last_incident_alert_resolved,
+)
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus
 from keep.api.models.db.rule import ResolveOn
 from keep.api.utils.cel_utils import preprocess_cel_expression
@@ -42,7 +45,9 @@ class RulesEngine:
         self.logger = logging.getLogger(__name__)
         self.env = celpy.Environment()
 
-    def run_rules(self, events: list[AlertDto], session: Optional[Session] = None) -> list[IncidentDto]:
+    def run_rules(
+        self, events: list[AlertDto], session: Optional[Session] = None
+    ) -> list[IncidentDto]:
         self.logger.info("Running rules")
         rules = get_rules_db(tenant_id=self.tenant_id)
 
@@ -68,26 +73,38 @@ class RulesEngine:
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
                     incident = get_incident_for_grouping_rule(
-                        self.tenant_id, rule, rule.timeframe, rule_fingerprint,
-                        session=session
+                        self.tenant_id,
+                        rule,
+                        rule.timeframe,
+                        rule_fingerprint,
+                        session=session,
                     )
 
                     incident = assign_alert_to_incident(
                         alert_id=event.event_id,
                         incident=incident,
                         tenant_id=self.tenant_id,
-                        session=session
+                        session=session,
                     )
 
                     should_resolve = False
 
-                    if rule.resolve_on == ResolveOn.ALL.value and is_all_incident_alerts_resolved(incident, session=session):
+                    if (
+                        rule.resolve_on == ResolveOn.ALL.value
+                        and is_all_incident_alerts_resolved(incident, session=session)
+                    ):
                         should_resolve = True
 
-                    elif rule.resolve_on == ResolveOn.FIRST.value and is_first_incident_alert_resolved(incident, session=session):
+                    elif (
+                        rule.resolve_on == ResolveOn.FIRST.value
+                        and is_first_incident_alert_resolved(incident, session=session)
+                    ):
                         should_resolve = True
 
-                    if rule.resolve_on == ResolveOn.LAST.value and is_last_incident_alert_resolved(incident, session=session):
+                    if (
+                        rule.resolve_on == ResolveOn.LAST.value
+                        and is_last_incident_alert_resolved(incident, session=session)
+                    ):
                         should_resolve = True
 
                     if should_resolve:
@@ -223,14 +240,9 @@ class RulesEngine:
             list[AlertDto]: list of alerts that are related to the cel
         """
         logger = logging.getLogger(__name__)
-
-        # tb: temp hack because this function is super slow
-        if cel == STATIC_PRESETS.get("feed", {}).options[0].get("value"):
-            return [
-                alert
-                for alert in alerts
-                if (alert.deleted == False and alert.dismissed == False)
-            ]
+        # if the cel is empty, return all the alerts
+        if cel == "":
+            return alerts
         # if the cel is empty, return all the alerts
         if not cel:
             logger.debug("No CEL expression provided")

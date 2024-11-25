@@ -21,7 +21,18 @@ def get_permissions(
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
-    permissions = identity_manager.get_permissions()
+    try:
+        permissions = identity_manager.get_permissions()
+    except Exception as e:
+        logger.error(f"Failed to get permissions: {e}")
+        return []
+    # filter out permissions for keep_alert
+    permissions = [
+        permission
+        for permission in permissions
+        if "keep_alert" not in permission.resource_type
+        and "keep_route" not in permission.resource_type
+    ]
     return permissions
 
 

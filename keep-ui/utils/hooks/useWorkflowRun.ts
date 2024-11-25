@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApiUrl } from "./useConfig";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
-import { Filter, Workflow } from "app/workflows/models";
-import { Provider } from "app/providers/providers";
+import { Filter, Workflow } from "@/app/(keep)/workflows/models";
+import { Provider } from "@/app/(keep)/providers/providers";
 
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };

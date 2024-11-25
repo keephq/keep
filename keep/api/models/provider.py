@@ -43,8 +43,12 @@ class Provider(BaseModel):
     last_pull_time: datetime | None = None
     docs: str | None = None
     tags: list[
-        Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
+        Literal[
+            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
+        ]
     ] = []
+    categories: list[str] = ["Others"]
+    coming_soon: bool = False
     alertsDistribution: dict[str, int] | None = None
     alertExample: dict | None = None
     default_fingerprint_fields: list[str] | None = None

@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import Loading from "app/loading";
+import Loading from "@/app/(keep)/loading";
 import React, { useState } from "react";
 import type {
   IncidentDto,
@@ -12,7 +12,7 @@ import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentListPlaceholder } from "./incident-list-placeholder";
 import Modal from "@/components/ui/Modal";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import PredictedIncidentsTable from "../../../app/incidents/predicted-incidents-table";
+import PredictedIncidentsTable from "@/app/(keep)/incidents/predicted-incidents-table";
 import { SortingState } from "@tanstack/react-table";
 import { IncidentTableFilters } from "./incident-table-filters";
 import { useIncidentFilterContext } from "./incident-table-filters-context";
@@ -108,7 +108,7 @@ export function IncidentList({
     if (incidentsError) {
       return (
         <Card className="flex-grow">
-          <IncidentListError />
+          <IncidentListError incidentError={incidentsError} />
         </Card>
       );
     }

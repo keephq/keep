@@ -1,6 +1,7 @@
 """
 BigQuery provider.
 """
+
 import dataclasses
 import os
 from typing import Optional
@@ -46,6 +47,7 @@ class BigqueryProvider(BaseProvider):
     config: ProviderConfig
 
     PROVIDER_DISPLAY_NAME = "BigQuery"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Database"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

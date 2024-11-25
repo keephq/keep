@@ -24,7 +24,7 @@ from keep.api.core.db import (
     get_enrichments,
     is_linked_provider,
 )
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
@@ -40,6 +40,27 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
+    PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
+    PROVIDER_CATEGORY: list[
+        Literal[
+            "Monitoring",
+            "Incident Management",
+            "Cloud Infrastructure",
+            "Ticketing",
+            "Identity",
+            "Developer Tools",
+            "Database",
+            "Identity and Access Management",
+            "Security",
+            "Collaboration",
+            "Organizational Tools",
+            "CRM",
+            "Queues",
+            "Others",
+        ]
+    ] = [
+        "Others"
+    ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
         Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
     ] = []
@@ -319,7 +340,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         tenant_id: str | None,
         provider_type: str | None,
         provider_id: str | None,
-    ) -> AlertDto | list[AlertDto]:
+    ) -> AlertDto | list[AlertDto] | None:
         logger = logging.getLogger(__name__)
 
         provider_instance: BaseProvider | None = None
@@ -350,6 +371,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 )
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event, provider_instance)
+        if formatted_alert is None:
+            logger.debug(
+                "Provider returned None, which means it decided not to format the alert"
+            )
+            return None
         logger.debug("Alert formatted")
         # after the provider calculated the default fingerprint
         #   check if there is a custom deduplication rule and apply
@@ -710,3 +736,74 @@ class BaseProvider(metaclass=abc.ABCMeta):
 class BaseTopologyProvider(BaseProvider):
     def pull_topology(self) -> list[TopologyServiceInDto]:
         raise NotImplementedError("get_topology() method not implemented")
+
+
+class BaseIncidentProvider(BaseProvider):
+    def _get_incidents(self) -> list[IncidentDto]:
+        raise NotImplementedError("_get_incidents() in not implemented")
+
+    def get_incidents(self) -> list[IncidentDto]:
+        return self._get_incidents()
+
+    @staticmethod
+    def _format_incident(
+        event: dict, provider_instance: "BaseProvider" = None
+    ) -> IncidentDto | list[IncidentDto]:
+        raise NotImplementedError("_format_incidents() not implemented")
+
+    @classmethod
+    def format_incident(
+        cls,
+        event: dict,
+        tenant_id: str | None,
+        provider_type: str | None,
+        provider_id: str | None,
+    ) -> IncidentDto | list[IncidentDto]:
+        logger = logging.getLogger(__name__)
+
+        provider_instance: BaseProvider | None = None
+        if provider_id and provider_type and tenant_id:
+            try:
+                # To prevent circular imports
+                from keep.providers.providers_factory import ProvidersFactory
+
+                provider_instance: BaseProvider = (
+                    ProvidersFactory.get_installed_provider(
+                        tenant_id, provider_id, provider_type
+                    )
+                )
+            except Exception:
+                logger.exception(
+                    "Failed loading provider instance although all parameters were given",
+                    extra={
+                        "tenant_id": tenant_id,
+                        "provider_id": provider_id,
+                        "provider_type": provider_type,
+                    },
+                )
+        logger.debug("Formatting Incident")
+        return cls._format_incident(event, provider_instance)
+
+    def setup_incident_webhook(
+        self,
+        tenant_id: str,
+        keep_api_url: str,
+        api_key: str,
+        setup_alerts: bool = True,
+    ) -> dict | None:
+        """
+        Setup a webhook for the provider.
+
+        Args:
+            tenant_id (str): _description_
+            keep_api_url (str): _description_
+            api_key (str): _description_
+            setup_alerts (bool, optional): _description_. Defaults to True.
+
+        Returns:
+            dict | None: If some secrets needs to be saved, return them in a dict.
+
+        Raises:
+            NotImplementedError: _description_
+        """
+        raise NotImplementedError("setup_webhook() method not implemented")

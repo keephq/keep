@@ -25,20 +25,36 @@ class VictoriametricsProviderAuthConfig:
     vmalert authentication configuration.
     """
 
-    VMAlertHost: str = dataclasses.field(
+    VMAlertHost: str | None = dataclasses.field(
         metadata={
-            "required": True,
+            "required": False,
             "description": "The hostname or IP address where VMAlert is running. This can be a local or remote server address.",
             "hint": "Example: 'localhost', '192.168.1.100', or 'vmalert.mydomain.com'",
+            "config_sub_group": "host",
+            "config_main_group": "address",
         },
+        default=None,
     )
 
     VMAlertPort: int = dataclasses.field(
         metadata={
-            "required": True,
+            "required": False,
             "description": "The port number on which VMAlert is listening. This should match the port configured in your VMAlert setup.",
-            "hint": "Example: 8880 (if VMAlert is set to listen on port 8880)",
+            "hint": "Example: 8880 (if VMAlert is set to listen on port 8880), defaults to 8880",
+            "config_sub_group": "host",
+            "config_main_group": "address",
         },
+        default=8880,
+    )
+
+    VMAlertURL: str | None = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "The full URL to the VMAlert instance. For example: http://vmalert.mydomain.com:8880",
+            "config_sub_group": "url",
+            "config_main_group": "address",
+        },
+        default=None,
     )
 
 
@@ -73,7 +89,7 @@ receivers:
             alias="Connect to the client",
         ),
     ]
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,
@@ -91,9 +107,7 @@ receivers:
     }
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        response = requests.get(
-            f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}"
-        )
+        response = requests.get(self.vmalert_host)
         if response.status_code == 200:
             connected_to_client = True
             self.logger.info("Connected to client successfully")
@@ -128,6 +142,11 @@ receivers:
         self.authentication_config = VictoriametricsProviderAuthConfig(
             **self.config.authentication
         )
+        if (
+            self.authentication_config.VMAlertURL is None
+            and self.authentication_config.VMAlertHost is None
+        ):
+            raise Exception("VMAlertURL or VMAlertHost is required")
 
     @property
     def vmalert_host(self):
@@ -135,29 +154,35 @@ receivers:
         if self._host:
             return self._host.rstrip("/")
 
+        host = None
+
+        if self.authentication_config.VMAlertURL is not None:
+            host = self.authentication_config.VMAlertURL
+        else:
+            host = f"{self.authentication_config.VMAlertHost}:{self.authentication_config.VMAlertPort}"
+
         # if the user explicitly supplied a host with http/https, use it
-        if self.authentication_config.VMAlertHost.startswith(
-            "http://"
-        ) or self.authentication_config.VMAlertHost.startswith("https://"):
-            self._host = self.authentication_config.VMAlertHost
-            return self.authentication_config.VMAlertHost.rstrip("/")
+        if host.startswith("http://") or host.startswith("https://"):
+            self._host = host
+            return host.rstrip("/")
 
         # otherwise, try to use https:
         try:
+            url = f"https://{host}"
             requests.get(
-                f"https://{self.authentication_config.VMAlertHost}:{self.authentication_config.VMAlertPort}",
+                url,
                 verify=False,
             )
             self.logger.debug("Using https")
-            self._host = f"https://{self.authentication_config.VMAlertHost}"
+            self._host = f"https://{host}"
             return self._host.rstrip("/")
         except requests.exceptions.SSLError:
             self.logger.debug("Using http")
-            self._host = f"http://{self.authentication_config.VMAlertHost}"
+            self._host = f"http://{host}"
             return self._host.rstrip("/")
         # should happen only if the user supplied invalid host, so just let validate_config fail
         except Exception:
-            return self.authentication_config.VMAlertHost.rstrip("/")
+            return host.rstrip("/")
 
     @staticmethod
     def _format_alert(
@@ -185,9 +210,7 @@ receivers:
         return alerts
 
     def _get_alerts(self) -> list[AlertDto]:
-        response = requests.get(
-            f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/alerts"
-        )
+        response = requests.get(f"{self.vmalert_host}/api/v1/alerts")
         if response.status_code == 200:
             alerts = []
             response = response.json()
@@ -217,7 +240,7 @@ receivers:
     def _query(self, query="", start="", end="", step="", queryType="", **kwargs: dict):
         if queryType == "query":
             response = requests.get(
-                f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/query",
+                f"{self.vmalert_host}/api/v1/query",
                 params={"query": query, "time": start},
             )
             if response.status_code == 200:
@@ -230,7 +253,7 @@ receivers:
 
         elif queryType == "query_range":
             response = requests.get(
-                f"{self.vmalert_host}:{self.authentication_config.VMAlertPort}/api/v1/query_range",
+                f"{self.vmalert_host}/api/v1/query_range",
                 params={"query": query, "start": start, "end": end, "step": step},
             )
             if response.status_code == 200:

@@ -63,7 +63,8 @@ class CloudwatchProviderAuthConfig:
 class CloudwatchProvider(BaseProvider):
     """Push alarms from AWS Cloudwatch to Keep."""
 
-    PROVIDER_DISPLAY_NAME = "Cloudwatch"
+    PROVIDER_DISPLAY_NAME = "CloudWatch"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Monitoring"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -257,6 +258,7 @@ class CloudwatchProvider(BaseProvider):
 
         # 4. validate start query
         logs_client = self.__generate_client("logs")
+        query = False
         try:
             query = logs_client.start_query(
                 logGroupName="keepTest",
@@ -277,6 +279,8 @@ class CloudwatchProvider(BaseProvider):
             else:
                 self.logger.info("Error validating AWS logs:StartQuery scope")
                 scopes["logs:StartQuery"] = str(e)
+
+        query_id = False
         if query:
             try:
                 query_id = logs_client.describe_queries().get("queries")[0]["queryId"]

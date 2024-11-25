@@ -13,6 +13,8 @@ COPY themes/keep.jar /opt/keycloak/providers/keep.jar
 # Copy the last login event listener
 COPY event_listeners/last-login-event-listener-0.0.1-SNAPSHOT.jar /opt/keycloak/providers/keycloak-event-listener.jar
 
+COPY javascript_providers/keep-abac-policy.jar /opt/keycloak/providers/keep-abac-policy.jar
+
 # Copy the custom entrypoint script and ensure it's executable
 COPY --chmod=755 keycloak_entrypoint.sh /opt/keycloak/keycloak_entrypoint.sh
 

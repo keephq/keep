@@ -7,9 +7,9 @@ from keep.api.core.elastic import ElasticClient
 from keep.api.core.tenant_configuration import TenantConfiguration
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.preset import PresetDto, PresetSearchQuery
+from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.rulesengine.rulesengine import RulesEngine
-from keep.api.models.time_stamp import TimeStampFilter
 
 
 class SearchMode(enum.Enum):
@@ -52,7 +52,9 @@ class SearchEngine:
             extra={"tenant_id": self.tenant_id, "search_mode": self.search_mode},
         )
 
-    def _get_last_alerts(self, limit=1000, timeframe: int = 0, time_stamp:TimeStampFilter=None) -> list[AlertDto]:
+    def _get_last_alerts(
+        self, limit=1000, timeframe: int = 0, time_stamp: TimeStampFilter = None
+    ) -> list[AlertDto]:
         """Get the last alerts
 
         Returns:
@@ -63,13 +65,18 @@ class SearchEngine:
         upper_timestamp = time_stamp.upper_timestamp if time_stamp else None
 
         alerts = get_last_alerts(
-            tenant_id=self.tenant_id, limit=limit, timeframe=timeframe,
-            lower_timestamp=lower_timestamp, upper_timestamp=upper_timestamp,
-            with_incidents=True
+            tenant_id=self.tenant_id,
+            limit=limit,
+            timeframe=timeframe,
+            lower_timestamp=lower_timestamp,
+            upper_timestamp=upper_timestamp,
+            with_incidents=True,
         )
         # convert the alerts to DTO
         alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
-        self.logger.info(f"Finished getting last alerts {lower_timestamp} {upper_timestamp} {time_stamp}")
+        self.logger.info(
+            f"Finished getting last alerts {lower_timestamp} {upper_timestamp} {time_stamp}"
+        )
         return alerts_dto
 
     def search_alerts_by_cel(
@@ -113,7 +120,8 @@ class SearchEngine:
         query = self._create_raw_sql(sql_query.get("sql"), sql_query.get("params"))
         # get the alerts from elastic
         elastic_sql_query = (
-            f"""select * from "{self.elastic_client.alerts_index}" where {query}"""
+            f"""select * from "{self.elastic_client.alerts_index}" """
+            + (f"where {query}" if query else "")
         )
         if timeframe:
             elastic_sql_query += f" and lastReceived > now() - {timeframe}s"
@@ -156,8 +164,7 @@ class SearchEngine:
         return filtered_alerts
 
     def search_preset_alerts(
-        self, presets: list[PresetDto],
-        time_stamp: TimeStampFilter = None
+        self, presets: list[PresetDto], time_stamp: TimeStampFilter = None
     ) -> dict[str, list[AlertDto]]:
         """Search for alerts based on a list of queries
 
@@ -184,6 +191,7 @@ class SearchEngine:
                 )
                 preset.alerts_count = len(filtered_alerts)
                 # update noisy
+
                 if preset.is_noisy:
                     firing_filtered_alerts = list(
                         filter(
@@ -220,7 +228,10 @@ class SearchEngine:
                         preset.sql_query.get("sql"), preset.sql_query.get("params")
                     )
                     # get number of alerts and number of noisy alerts
-                    elastic_sql_query = f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "{self.elastic_client.alerts_index}" where {query}"""
+                    elastic_sql_query = (
+                        f"""select count(*),  MAX(CASE WHEN isNoisy = true AND dismissed = false AND deleted = false THEN 1 ELSE 0 END) from "{self.elastic_client.alerts_index}" """
+                        + (f" where {query}" if query else "")
+                    )
                     results = self.elastic_client.run_query(elastic_sql_query)
                     if results:
                         preset.alerts_count = results["rows"][0][0]

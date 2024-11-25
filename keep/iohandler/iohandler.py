@@ -281,7 +281,8 @@ class IOHandler:
                                 pass
                     else:
                         _arg = arg.id
-                    if _arg:
+                    # if the value is empty '', we still need to pass it to the function
+                    if _arg or _arg == "":
                         _args.append(_arg)
                 # check if we need to inject tenant_id
                 keep_func = getattr(keep_functions, func.attr)
@@ -329,7 +330,17 @@ class IOHandler:
                         .replace("\n", "\\n")
                     )
                     t = self._encode_single_quotes_in_double_quotes(t)
-                    tree = ast.parse(t)
+                    try:
+                        tree = ast.parse(t)
+                    except Exception:
+                        # For strings where ' is used as the delimeter and we failed to escape all ' in the string
+                        # @tb: again, this is not ideal but it's best effort...
+                        t = (
+                            t.replace("('", '("')
+                            .replace("')", '")')
+                            .replace("',", '",')
+                        )
+                        tree = ast.parse(t)
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
@@ -509,17 +520,10 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {
-        "ticket_id": "1234",
-        "severity": "high",
-        "ticket_created_at": "2021-09-01T00:00:00Z",
-    }
+    context_manager.event_context = {"tags": {"k1": "v1", "k2": "v2"}}
     iohandler = IOHandler(context_manager)
     res = iohandler.render(
-        iohandler.quote(
-            "not '{{ alert.ticket_id }}' or (('{{ alert.ticket_status }}' in ['Resolved', 'Closed', 'Canceled']) and ('{{ alert.severity }}' == 'critical' or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168))"
-        ),
-        safe=False,
+        'https://www.keephq.dev?keep.join("{{alert.tags}}", "&", "prefix_")'
     )
     from asteval import Interpreter
 
