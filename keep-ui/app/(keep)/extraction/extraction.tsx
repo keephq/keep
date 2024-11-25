@@ -58,15 +58,13 @@ export default function Extraction() {
           isOpen={isSidePanelOpen}
           onClose={() => handleSidePanelExit(null)}
         >
-          <div className="pt-6 px-6">
-            <CreateOrUpdateExtractionRule
-              extractionToEdit={extractionToEdit}
-              editCallback={handleSidePanelExit}
-            />
-          </div>
+          <CreateOrUpdateExtractionRule
+            extractionToEdit={extractionToEdit}
+            editCallback={handleSidePanelExit}
+          />
         </SidePanel>
-        <div className="">
-          <div className="">
+        <div>
+          <div>
             {isLoading ? (
               <Loading />
             ) : extractions && extractions.length > 0 ? (
