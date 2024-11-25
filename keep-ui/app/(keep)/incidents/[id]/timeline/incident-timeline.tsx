@@ -58,7 +58,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
   alert,
 }) => {
   return (
-    <div className="mt-4 p-4 bg-gray-100">
+    <div className="h-full p-4 bg-gray-100 border-l">
       <h2 className="font-semibold mb-2">
         {alert.name} ({alert.fingerprint})
       </h2>
@@ -261,6 +261,32 @@ const IncidentTimelineNoAlerts: React.FC = () => {
   );
 };
 
+const SeverityLegend: React.FC<{ alerts: AlertDto[] }> = ({ alerts }) => {
+  const severityCounts = alerts.reduce(
+    (acc, alert) => {
+      acc[alert.severity!] = (acc[alert.severity!] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  return (
+    <div className="flex flex-col gap-2 p-4">
+      {Object.entries(severityCounts).map(([severity, count]) => (
+        <div key={severity} className="flex items-center gap-2">
+          <div
+            className={`w-4 h-4 rounded-full ${
+              severityColors[severity as keyof typeof severityColors]
+            }`}
+          />
+          <span className="capitalize">{severity}</span>
+          <span className="text-gray-500">({count})</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function IncidentTimeline({
   incident,
 }: {
@@ -400,82 +426,94 @@ export default function IncidentTimeline({
   }
 
   return (
-    <Card className="py-2 px-0">
-      <div className="overflow-x-auto">
-        <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
-          {/* Alert bars */}
-          <div className="space-y-0">
-            {alertsWithEvents
-              .sort((a, b) => {
-                const aStart = Math.min(
-                  ...auditEvents
-                    .filter((e) => e.fingerprint === a.fingerprint)
-                    .map((e) => parseISO(e.timestamp).getTime())
-                );
-                const bStart = Math.min(
-                  ...auditEvents
-                    .filter((e) => e.fingerprint === b.fingerprint)
-                    .map((e) => parseISO(e.timestamp).getTime())
-                );
-                return aStart - bStart;
-              })
-              .map((alert, index, array) => (
-                <AlertBar
-                  key={alert.id}
-                  alert={alert}
-                  auditEvents={auditEvents}
-                  startTime={startTime}
-                  endTime={endTime}
-                  timeScale={timeScale}
-                  onEventClick={setSelectedEvent}
-                  selectedEventId={selectedEvent?.id || null}
-                  isFirstRow={index === 0}
-                  isLastRow={index === array.length - 1}
-                />
-              ))}
+    <Card className="py-2 px-0" style={{ height: "calc(100vh - 430px)" }}>
+      <div className="flex h-full">
+        <div
+          className={`flex flex-col flex-grow transition-all duration-300 ${
+            selectedEvent ? "w-2/3" : "w-full"
+          }`}
+        >
+          <div className="flex flex-grow overflow-x-auto">
+            <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
+              {/* Alert bars */}
+              <div className="space-y-0">
+                {alertsWithEvents
+                  .sort((a, b) => {
+                    const aStart = Math.min(
+                      ...auditEvents
+                        .filter((e) => e.fingerprint === a.fingerprint)
+                        .map((e) => parseISO(e.timestamp).getTime())
+                    );
+                    const bStart = Math.min(
+                      ...auditEvents
+                        .filter((e) => e.fingerprint === b.fingerprint)
+                        .map((e) => parseISO(e.timestamp).getTime())
+                    );
+                    return aStart - bStart;
+                  })
+                  .map((alert, index, array) => (
+                    <AlertBar
+                      key={alert.id}
+                      alert={alert}
+                      auditEvents={auditEvents}
+                      startTime={startTime}
+                      endTime={endTime}
+                      timeScale={timeScale}
+                      onEventClick={setSelectedEvent}
+                      selectedEventId={selectedEvent?.id || null}
+                      isFirstRow={index === 0}
+                      isLastRow={index === array.length - 1}
+                    />
+                  ))}
+              </div>
+            </div>
           </div>
 
-          {/* Time labels */}
-          <div
-            className="relative mt-4"
-            style={{ height: "50px", paddingLeft: "40px" }}
-          >
-            {intervals.map((time, index) => (
-              <div
-                key={index}
-                className="absolute flex flex-col items-center text-xs text-gray-400"
-                style={{
-                  left: `${
-                    // Padding the first and last interval to make it look nicer
-                    ((time.getTime() - startTime.getTime()) *
-                      pixelsPerMillisecond || 30) -
-                    (index === intervals.length - 1 ? 50 : 0)
-                  }px`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                <div className="h-4 border-l border-gray-300 mb-1"></div>
-                <div>{format(time, "MMM dd")}</div>
-                <div className="text-gray-500">{format(time, "HH:mm")}</div>
-              </div>
-            ))}
+          {/* Time labels - Now sticky at bottom */}
+          <div className="sticky bottom-0 bg-white border-t">
+            <div
+              className="relative"
+              style={{ height: "50px", paddingLeft: "40px" }}
+            >
+              {intervals.map((time, index) => (
+                <div
+                  key={index}
+                  className="absolute flex flex-col items-center text-xs text-gray-400 h-[50px]"
+                  style={{
+                    left: `${
+                      ((time.getTime() - startTime.getTime()) *
+                        pixelsPerMillisecond || 30) -
+                      (index === intervals.length - 1 ? 50 : 0)
+                    }px`,
+                    transform: "translateX(-50%)",
+                  }}
+                >
+                  <div className="h-4 border-l border-gray-300 mb-1"></div>
+                  <div>{format(time, "MMM dd")}</div>
+                  <div className="text-gray-500">{format(time, "HH:mm")}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Event details box */}
+        {selectedEvent && (
+          <div
+            className="w-1/4 overflow-y-auto"
+            style={{ height: "calc(100% - 50px)" }}
+          >
+            <AlertEventInfo
+              event={selectedEvent}
+              alert={
+                alerts?.items.find(
+                  (a) => a.fingerprint === selectedEvent.fingerprint
+                )!
+              }
+            />
+          </div>
+        )}
       </div>
-      <div className="h-3" />
-      {/* Event details box */}
-      {selectedEvent && (
-        <div className="overflow-x-hidden">
-          <AlertEventInfo
-            event={selectedEvent}
-            alert={
-              alerts?.items.find(
-                (a) => a.fingerprint === selectedEvent.fingerprint
-              )!
-            }
-          />
-        </div>
-      )}
     </Card>
   );
 }
