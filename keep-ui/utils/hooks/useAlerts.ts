@@ -95,7 +95,7 @@ export const useAlerts = () => {
         api.isReady() && fingerprints && fingerprints?.length > 0
           ? `/alerts/audit`
           : null,
-      api.post,
+      (url) => api.post(url, fingerprints),
       options
     );
   };
