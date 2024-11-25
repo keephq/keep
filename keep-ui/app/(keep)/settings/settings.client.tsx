@@ -361,7 +361,7 @@ export default function SettingsPage() {
             Users and Access
           </Tab>
           <Tab icon={GlobeAltIcon} onClick={() => handleTabChange("webhook")}>
-            Webhook
+            Incoming Webhook
           </Tab>
           <Tab icon={EnvelopeIcon} onClick={() => handleTabChange("smtp")}>
             SMTP
