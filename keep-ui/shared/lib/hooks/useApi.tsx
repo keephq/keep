@@ -9,7 +9,7 @@ export function useApi() {
 
   const api = useMemo(() => {
     return new ApiClient(session, config, false);
-  }, [session, config]);
+  }, [session?.accessToken, config]);
 
   return api;
 }

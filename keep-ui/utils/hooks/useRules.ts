@@ -25,5 +25,9 @@ export type Rule = {
 export const useRules = (options?: SWRConfiguration) => {
   const api = useApi();
 
-  return useSWR<Rule[]>(api.isReady() ? "/rules" : null, api.get, options);
+  return useSWR<Rule[]>(
+    api.isReady() ? "/rules" : null,
+    (url) => api.get(url),
+    options
+  );
 };

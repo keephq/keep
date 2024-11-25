@@ -81,7 +81,7 @@ export default function WorkflowsPage() {
   const onDrop = async (files: any) => {
     const fileUpload = async (formData: FormData, reload: boolean) => {
       try {
-        const response = await api.fetch(`/workflows`, {
+        const response = await api.request(`/workflows`, {
           method: "POST",
           body: formData,
         });

@@ -117,7 +117,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
               useFilters && filters && isDashBoard ? `?${filters}` : ""
             }`
           : null,
-      api.get,
+      (url) => api.get(url),
       {
         ...options,
         onSuccess: (data) => {

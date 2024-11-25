@@ -8,7 +8,7 @@ export const useRoles = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<Role[]>(
     api.isReady() ? "/auth/roles" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

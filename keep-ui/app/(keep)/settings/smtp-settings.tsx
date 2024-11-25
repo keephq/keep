@@ -88,7 +88,7 @@ export default function SMTPSettingsForm({ selectedTab }: Props) {
     isValidating: isLoading,
   } = useSWR(
     shouldFetchUrl, // Update with your actual endpoint
-    api.get,
+    (url) => api.get(url),
     { revalidateOnFocus: false }
   );
 

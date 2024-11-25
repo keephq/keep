@@ -58,7 +58,10 @@ export class ApiClient {
     }
   }
 
-  async fetch(url: string, requestInit: RequestInit = {}) {
+  async request<T = any>(
+    url: string,
+    requestInit: RequestInit = {}
+  ): Promise<T> {
     const apiUrl = this.isServer
       ? getApiURL()
       : getApiUrlFromConfig(this.config);
@@ -78,16 +81,16 @@ export class ApiClient {
     return this.handleResponse(response, url);
   }
 
-  async get(url: string, requestInit: RequestInit = {}) {
-    return this.fetch(url, { method: "GET", ...requestInit });
+  async get<T = any>(url: string, requestInit: RequestInit = {}) {
+    return this.request<T>(url, { method: "GET", ...requestInit });
   }
 
-  async post(
+  async post<T = any>(
     url: string,
     data?: any,
     { headers, ...requestInit }: RequestInit = {}
   ) {
-    return this.fetch(url, {
+    return this.request<T>(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -98,12 +101,12 @@ export class ApiClient {
     });
   }
 
-  async put(
+  async put<T = any>(
     url: string,
     data?: any,
     { headers, ...requestInit }: RequestInit = {}
   ) {
-    return this.fetch(url, {
+    return this.request<T>(url, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -114,12 +117,12 @@ export class ApiClient {
     });
   }
 
-  async patch(
+  async patch<T = any>(
     url: string,
     data?: any,
     { headers, ...requestInit }: RequestInit = {}
   ) {
-    return this.fetch(url, {
+    return this.request<T>(url, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -130,12 +133,12 @@ export class ApiClient {
     });
   }
 
-  async delete(
+  async delete<T = any>(
     url: string,
     data?: any,
     { headers, ...requestInit }: RequestInit = {}
   ) {
-    return this.fetch(url, {
+    return this.request<T>(url, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

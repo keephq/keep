@@ -8,7 +8,7 @@ export const useTags = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<Tag[]>(
     api.isReady() ? "/tags" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

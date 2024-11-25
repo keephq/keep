@@ -11,7 +11,7 @@ export const useMaintenanceRules = (
 
   return useSWR<MaintenanceRule[]>(
     api.isReady() ? "/maintenance" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

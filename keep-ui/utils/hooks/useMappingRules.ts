@@ -12,7 +12,7 @@ export const useMappings = (
 
   return useSWR<MappingRule[]>(
     api.isReady() ? "/mapping" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

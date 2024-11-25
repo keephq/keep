@@ -26,7 +26,7 @@ export function useTopologyApplications(
   const { topologyData, mutate: mutateTopology } = useTopology();
   const { data, error, isLoading, mutate } = useSWR<TopologyApplication[]>(
     TOPOLOGY_APPLICATIONS_URL,
-    api.get,
+    (url) => api.get(url),
     {
       fallbackData: initialData,
       ...options,

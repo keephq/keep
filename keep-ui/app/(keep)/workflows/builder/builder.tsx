@@ -105,7 +105,7 @@ function Builder({
   const updateWorkflow = () => {
     const body = stringify(buildAlert(definition.value));
     api
-      .fetch(`/workflows/${workflowId}`, {
+      .request(`/workflows/${workflowId}`, {
         method: "PUT",
         body,
         headers: { "Content-Type": "text/html" },
@@ -122,7 +122,7 @@ function Builder({
     setTestRunModalOpen(true);
     const body = stringify(buildAlert(definition.value));
     api
-      .fetch(`/workflows/test`, {
+      .request(`/workflows/test`, {
         method: "POST",
         body,
         headers: { "Content-Type": "text/html" },
@@ -144,7 +144,7 @@ function Builder({
   const addWorkflow = () => {
     const body = stringify(buildAlert(definition.value));
     api
-      .fetch(`/workflows/json`, {
+      .request(`/workflows/json`, {
         method: "POST",
         body,
         headers: { "Content-Type": "text/html" },

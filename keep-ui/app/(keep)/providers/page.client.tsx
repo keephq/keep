@@ -14,6 +14,10 @@ export const useFetchProviders = () => {
 
   const { data, error } = useProviders();
 
+  if (error) {
+    throw error;
+  }
+
   const isLocalhost = data && data.is_localhost;
   const toastShownKey = "localhostToastShown";
   const ToastMessage = () => (
@@ -121,6 +125,7 @@ export default function ProvidersPage({
   }, [searchParams]);
 
   if (!providers || !installedProviders || providers.length <= 0) {
+    // TODO: skeleton loader
     return <Loading />;
   }
 

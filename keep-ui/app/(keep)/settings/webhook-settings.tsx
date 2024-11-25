@@ -41,7 +41,7 @@ export default function WebhookSettings({ selectedTab }: Props) {
 
   const { data, error, isLoading } = useSWR<Webhook>(
     api.isReady() && selectedTab === "webhook" ? `/settings/webhook` : null,
-    api.get,
+    (url) => api.get(url),
     { revalidateOnFocus: false }
   );
   const router = useRouter();

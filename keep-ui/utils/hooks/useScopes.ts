@@ -7,7 +7,7 @@ export const useScopes = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<string[]>(
     api.isReady() ? "/auth/permissions/scopes" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

@@ -8,7 +8,7 @@ export const useUsers = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<User[]>(
     api.isReady() ? "/auth/users" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

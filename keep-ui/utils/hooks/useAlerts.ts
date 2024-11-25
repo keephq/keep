@@ -29,7 +29,7 @@ export const useAlerts = () => {
               selectedAlert.source ? selectedAlert.source[0] : ""
             }`
           : null,
-      api.get,
+      (url) => api.get(url),
       options
     );
   };
@@ -41,7 +41,7 @@ export const useAlerts = () => {
     return useSWR<AlertDto[]>(
       () =>
         api.isReady() && presetName ? `/preset/${presetName}/alerts` : null,
-      api.get,
+      (url) => api.get(url),
       options
     );
   };
@@ -109,7 +109,7 @@ export const useAlerts = () => {
     return useSWR<AuditEvent[]>(
       () =>
         api.isReady() && fingerprint ? `/alerts/${fingerprint}/audit` : null,
-      api.get,
+      (url) => api.get(url),
       options
     );
   };

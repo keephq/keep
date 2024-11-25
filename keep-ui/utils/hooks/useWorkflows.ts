@@ -8,7 +8,7 @@ export const useWorkflows = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<Workflow[]>(
     api.isReady() ? "/workflows" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

@@ -12,7 +12,7 @@ const FileUpload: React.FC = () => {
     formData.append("file", files[0]);
 
     try {
-      const response = await api.fetch("/workflows", {
+      const response = await api.request("/workflows", {
         method: "POST",
         body: formData,
       });

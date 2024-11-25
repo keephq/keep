@@ -25,7 +25,7 @@ export const useAlertQualityMetrics = (
       api.isReady()
         ? `/alerts/quality/metrics${filters ? `?${filters}` : ""}`
         : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

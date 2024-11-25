@@ -8,7 +8,7 @@ export const useGroups = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<Group[]>(
     api.isReady() ? "/auth/groups" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

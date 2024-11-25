@@ -8,7 +8,7 @@ export const useDeduplicationRules = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<DeduplicationRule[]>(
     api.isReady() ? "/deduplications" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };
@@ -18,7 +18,7 @@ export const useDeduplicationFields = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<Record<string, string[]>>(
     api.isReady() ? "/deduplications/fields" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

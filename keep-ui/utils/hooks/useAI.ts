@@ -12,7 +12,11 @@ export const useAIStats = (
 ) => {
   const api = useApi();
 
-  return useSWR<AIStats>(api.isReady() ? "/ai/stats" : null, api.get, options);
+  return useSWR<AIStats>(
+    api.isReady() ? "/ai/stats" : null,
+    (url) => api.get(url),
+    options
+  );
 };
 
 export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {

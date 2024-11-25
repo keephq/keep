@@ -11,7 +11,7 @@ export const useExtractions = (
 
   return useSWR<ExtractionRule[]>(
     api.isReady() ? "/extraction" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

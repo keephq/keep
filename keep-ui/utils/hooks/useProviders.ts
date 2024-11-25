@@ -10,7 +10,7 @@ export const useProviders = (
 
   return useSWRImmutable<ProvidersResponse>(
     api.isReady() ? "/providers" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

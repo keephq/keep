@@ -16,7 +16,7 @@ export const useWorkflowExecutions = (
 
   return useSWR<AlertToWorkflowExecution[]>(
     api.isReady() ? "/workflows/executions" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };

@@ -9,7 +9,7 @@ export const usePermissions = (options: SWRConfiguration = {}) => {
 
   return useSWRImmutable<Permission[]>(
     api.isReady() ? "/auth/permissions" : null,
-    api.get,
+    (url) => api.get(url),
     options
   );
 };
