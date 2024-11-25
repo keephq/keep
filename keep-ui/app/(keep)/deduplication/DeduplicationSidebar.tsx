@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState, useMemo } from "react";
-import { Dialog, Transition } from "@headlessui/react";
+import {  useEffect, useState, useMemo } from "react";
+import { Dialog } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import {
   Text,
@@ -14,7 +14,6 @@ import {
 } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
-import { useProviders } from "utils/hooks/useProviders";
 import { useDeduplicationFields } from "utils/hooks/useDeduplicationRules";
 import { GroupBase } from "react-select";
 import Select from "@/components/ui/Select";
@@ -23,6 +22,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { Providers } from "@/app/(keep)/providers/providers";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { KeyedMutator } from "swr";
@@ -40,6 +40,7 @@ interface DeduplicationSidebarProps {
   selectedDeduplicationRule: DeduplicationRule | null;
   onSubmit: (data: Partial<DeduplicationRule>) => Promise<void>;
   mutateDeduplicationRules: KeyedMutator<DeduplicationRule[]>;
+  providers: { installed_providers: Providers, linked_providers: Providers };
 }
 
 const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
@@ -48,6 +49,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   selectedDeduplicationRule,
   onSubmit,
   mutateDeduplicationRules,
+  providers
 }) => {
   const {
     control,
@@ -71,9 +73,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    data: providers = { installed_providers: [], linked_providers: [] },
-  } = useProviders();
+  
   const { data: deduplicationFields = {} } = useDeduplicationFields();
   const { data: session } = useSession();
   const apiUrl = useApiUrl();

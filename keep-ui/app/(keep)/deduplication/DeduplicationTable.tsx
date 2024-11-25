@@ -30,6 +30,7 @@ import {
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { useProviders } from "utils/hooks/useProviders";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 
@@ -50,6 +51,17 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const apiUrl = useApiUrl();
+
+  const {
+    data: providers = {
+      installed_providers: [],
+      linked_providers: [],
+    },
+  } = useProviders();
+
+  useEffect(() => {
+    console.log(providers);
+  }, [providers]);
 
   let selectedId = searchParams ? searchParams.get("id") : null;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -144,7 +156,12 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         cell: (info) => (
           <div className="flex items-center justify-between max-w-[320px]">
             <span className="truncate lg:whitespace-normal">
-              {info.row.original.provider_id ?? "Keep"} {" "} deduplication rule
+              {providers.installed_providers.find(
+                (provider) => provider.id === info.row.original.provider_id
+              )?.details.name ||
+                info.row.original.provider_id ||
+                "Keep"}{" "}
+              deduplication rule
             </span>
             {info.row.original.default ? (
               <Badge color="orange" size="xs" className="ml-2">
@@ -365,6 +382,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
         toggle={onCloseDeduplication}
         selectedDeduplicationRule={selectedDeduplicationRule}
         onSubmit={handleSubmitDeduplicationRule}
+        providers={providers}
       />
     </div>
   );
