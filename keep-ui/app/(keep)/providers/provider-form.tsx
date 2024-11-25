@@ -4,7 +4,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { Provider } from "./providers";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Image from "next/image";
 import {
   Title,
@@ -54,6 +53,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
 import { error } from "console";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 type ProviderFormProps = {
   provider: Provider;
