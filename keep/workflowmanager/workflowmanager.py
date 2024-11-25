@@ -4,8 +4,6 @@ import re
 import typing
 import uuid
 
-from pandas.core.common import flatten
-
 from keep.api.core.config import config
 from keep.api.core.db import (
     get_enrichment,
@@ -115,13 +113,15 @@ class WorkflowManager:
             if workflow is None:
                 continue
 
-            incident_triggers = flatten(
-                [
-                    t.get("events", [])
-                    for t in workflow.workflow_triggers
-                    if t["type"] == "incident"
-                ]
-            )
+            # Using list comprehension instead of pandas flatten() for better performance
+            # and to avoid pandas dependency
+            # @tb: I removed pandas so if we'll have performance issues we can revert to pandas
+            incident_triggers = [
+                event
+                for trigger in workflow.workflow_triggers
+                if trigger["type"] == "incident"
+                for event in trigger.get("events", [])
+            ]
 
             if trigger not in incident_triggers:
                 self.logger.debug(

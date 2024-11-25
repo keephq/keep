@@ -29,6 +29,7 @@ from keep.providers.base.base_provider import (
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
+
 # Todo: think about splitting in to PagerdutyIncidentsProvider and PagerdutyAlertsProvider
 # Read this: https://community.pagerduty.com/forum/t/create-incident-using-python/3596/3
 
@@ -58,6 +59,14 @@ class PagerdutyProviderAuthConfig:
             "hidden": True,
         },
         default="",
+    )
+    service_id: str | None = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Service Id (if provided, keep will only operate on this service)",
+            "sensitive": False,
+        },
+        default=None,
     )
 
 
@@ -505,7 +514,14 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                     "incident.triggered",
                     "incident.unacknowledged",
                 ],
-                "filter": {"type": "account_reference"},
+                "filter": (
+                    {
+                        "type": "service_reference",
+                        "id": self.authentication_config.service_id,
+                    }
+                    if self.authentication_config.service_id
+                    else {"type": "account_reference"}
+                ),
             },
         }
         if webhook_exists:
@@ -681,14 +697,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                     url += f"/{incident_id}/alerts"
                     include = ["teams", "services"]
                     resource = "alerts"
+                params = {
+                    "include[]": include,
+                    "offset": offset,
+                    "limit": 100,
+                }
+                if not incident_id and self.authentication_config.service_id:
+                    params["service_ids[]"] = [self.authentication_config.service_id]
                 response = requests.get(
                     url=url,
                     headers=self.__get_headers(),
-                    params={
-                        "include[]": include,
-                        "offset": offset,
-                        "limit": 100,
-                    },
+                    params=params,
                 )
                 response.raise_for_status()
                 response = response.json()
@@ -699,7 +718,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             paginated_response.extend(response.get(resource, []))
             self.logger.info("Fetched incidents or alerts", extra={"offset": offset})
             # No more results
-            if response.get("more", False) == False:
+            if not response.get("more", False):
                 self.logger.info("No more incidents or alerts")
                 break
         self.logger.info(
