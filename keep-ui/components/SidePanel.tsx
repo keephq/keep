@@ -39,7 +39,7 @@ const SidePanel: React.FC<SidePanelProps> = ({
           leaveFrom="translate-x-0"
           leaveTo="translate-x-full"
         >
-          <Dialog.Panel className={`fixed right-0 inset-y-0 ${panelWidth} bg-white z-30 flex flex-col`}>
+          <Dialog.Panel className={`fixed right-0 inset-y-0 ${panelWidth} bg-white z-30 flex flex-col p-6`}>
             {children}
           </Dialog.Panel>
         </Transition.Child>

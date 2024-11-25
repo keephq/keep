@@ -8,7 +8,13 @@ import { useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Card } from "@tremor/react";
 import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
 import { AlertDto } from "@/app/(keep)/alerts/models";
-import { format, parseISO } from "date-fns";
+import {
+  format,
+  parseISO,
+  differenceInMinutes,
+  differenceInHours,
+  differenceInDays,
+} from "date-fns";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
@@ -52,7 +58,7 @@ const AlertEventInfo: React.FC<{ event: AuditEvent; alert: AlertDto }> = ({
   alert,
 }) => {
   return (
-    <div className="mt-4 p-4 bg-gray-100">
+    <div className="h-full p-4 bg-gray-100 border-l">
       <h2 className="font-semibold mb-2">
         {alert.name} ({alert.fingerprint})
       </h2>
@@ -255,6 +261,32 @@ const IncidentTimelineNoAlerts: React.FC = () => {
   );
 };
 
+const SeverityLegend: React.FC<{ alerts: AlertDto[] }> = ({ alerts }) => {
+  const severityCounts = alerts.reduce(
+    (acc, alert) => {
+      acc[alert.severity!] = (acc[alert.severity!] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  return (
+    <div className="flex flex-col gap-2 p-4">
+      {Object.entries(severityCounts).map(([severity, count]) => (
+        <div key={severity} className="flex items-center gap-2">
+          <div
+            className={`w-4 h-4 rounded-full ${
+              severityColors[severity as keyof typeof severityColors]
+            }`}
+          />
+          <span className="capitalize">{severity}</span>
+          <span className="text-gray-500">({count})</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function IncidentTimeline({
   incident,
 }: {
@@ -303,32 +335,38 @@ export default function IncidentTimeline({
       const pixelsPerMillisecond = 5000 / totalDuration; // Assuming 5000px minimum width
 
       let timeScale: "seconds" | "minutes" | "hours" | "days";
-      let intervalDuration: number;
+      let intervalCount = 12; // Target number of intervals
       let formatString: string;
 
-      if (totalDuration > 3 * 24 * 60 * 60 * 1000) {
+      // Determine scale and format based on total duration
+      const durationInDays = differenceInDays(paddedEndTime, startTime);
+      const durationInHours = differenceInHours(paddedEndTime, startTime);
+      const durationInMinutes = differenceInMinutes(paddedEndTime, startTime);
+
+      if (durationInDays > 3) {
         timeScale = "days";
-        intervalDuration = 24 * 60 * 60 * 1000;
         formatString = "MMM dd";
-      } else if (totalDuration > 24 * 60 * 60 * 1000) {
+        intervalCount = Math.min(durationInDays + 1, 12);
+      } else if (durationInHours > 24) {
         timeScale = "hours";
-        intervalDuration = 60 * 60 * 1000;
-        formatString = "HH:mm";
-      } else if (totalDuration > 60 * 60 * 1000) {
+        formatString = "MMM dd HH:mm";
+        intervalCount = Math.min(Math.ceil(durationInHours / 2), 12);
+      } else if (durationInMinutes > 60) {
         timeScale = "minutes";
-        intervalDuration = 5 * 60 * 1000; // 5-minute intervals
         formatString = "HH:mm";
+        intervalCount = Math.min(Math.ceil(durationInMinutes / 5), 12);
       } else {
         timeScale = "seconds";
-        intervalDuration = 10 * 1000; // 10-second intervals
         formatString = "HH:mm:ss";
+        intervalCount = 12;
       }
 
+      // Calculate interval duration based on total time and desired interval count
+      const intervalDuration = totalDuration / (intervalCount - 1);
+
       const intervals: Date[] = [];
-      let currentTime = startTime;
-      while (currentTime <= paddedEndTime) {
-        intervals.push(new Date(currentTime));
-        currentTime = new Date(currentTime.getTime() + intervalDuration);
+      for (let i = 0; i < intervalCount; i++) {
+        intervals.push(new Date(startTime.getTime() + i * intervalDuration));
       }
 
       return {
@@ -378,79 +416,104 @@ export default function IncidentTimeline({
     (endTime.getTime() - startTime.getTime()) * pixelsPerMillisecond
   );
 
+  // Filter out alerts with no audit events
+  const alertsWithEvents = alerts.items.filter((alert) =>
+    auditEvents.some((event) => event.fingerprint === alert.fingerprint)
+  );
+
+  if (alertsWithEvents.length === 0) {
+    return <IncidentTimelineNoAlerts />;
+  }
+
   return (
-    <Card className="py-2 px-0">
-      <div className="overflow-x-auto">
-        <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
-          {/* Time labels */}
-          <div
-            className="flex mb-2 relative"
-            style={{ height: "20px", paddingLeft: "40px" }}
-          >
-            {intervals.map((time, index) => (
-              <div
-                key={index}
-                className="text-xs px-2 text-gray-400 absolute whitespace-nowrap"
-                style={{
-                  left: `${
-                    (time.getTime() - startTime.getTime()) *
-                    pixelsPerMillisecond
-                  }px`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                {format(time, formatString)}
+    <Card className="py-2 px-0" style={{ height: "calc(100vh - 430px)" }}>
+      <div className="flex h-full">
+        <div
+          className={`flex flex-col flex-grow transition-all duration-300 ${
+            selectedEvent ? "w-2/3" : "w-full"
+          }`}
+        >
+          <div className="flex flex-grow overflow-x-auto">
+            <div style={{ width: `${totalWidth}px`, minWidth: "100%" }}>
+              {/* Alert bars */}
+              <div className="space-y-0">
+                {alertsWithEvents
+                  .sort((a, b) => {
+                    const aStart = Math.min(
+                      ...auditEvents
+                        .filter((e) => e.fingerprint === a.fingerprint)
+                        .map((e) => parseISO(e.timestamp).getTime())
+                    );
+                    const bStart = Math.min(
+                      ...auditEvents
+                        .filter((e) => e.fingerprint === b.fingerprint)
+                        .map((e) => parseISO(e.timestamp).getTime())
+                    );
+                    return aStart - bStart;
+                  })
+                  .map((alert, index, array) => (
+                    <AlertBar
+                      key={alert.id}
+                      alert={alert}
+                      auditEvents={auditEvents}
+                      startTime={startTime}
+                      endTime={endTime}
+                      timeScale={timeScale}
+                      onEventClick={setSelectedEvent}
+                      selectedEventId={selectedEvent?.id || null}
+                      isFirstRow={index === 0}
+                      isLastRow={index === array.length - 1}
+                    />
+                  ))}
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Alert bars */}
-          <div className="space-y-0">
-            {alerts?.items
-              .sort((a, b) => {
-                const aStart = Math.min(
-                  ...auditEvents
-                    .filter((e) => e.fingerprint === a.fingerprint)
-                    .map((e) => parseISO(e.timestamp).getTime())
-                );
-                const bStart = Math.min(
-                  ...auditEvents
-                    .filter((e) => e.fingerprint === b.fingerprint)
-                    .map((e) => parseISO(e.timestamp).getTime())
-                );
-                return aStart - bStart;
-              })
-              .map((alert, index, array) => (
-                <AlertBar
-                  key={alert.id}
-                  alert={alert}
-                  auditEvents={auditEvents}
-                  startTime={startTime}
-                  endTime={endTime}
-                  timeScale={timeScale}
-                  onEventClick={setSelectedEvent}
-                  selectedEventId={selectedEvent?.id || null}
-                  isFirstRow={index === 0}
-                  isLastRow={index === array.length - 1}
-                />
+          {/* Time labels - Now sticky at bottom */}
+          <div className="sticky bottom-0 bg-white border-t">
+            <div
+              className="relative"
+              style={{ height: "50px", paddingLeft: "40px" }}
+            >
+              {intervals.map((time, index) => (
+                <div
+                  key={index}
+                  className="absolute flex flex-col items-center text-xs text-gray-400 h-[50px]"
+                  style={{
+                    left: `${
+                      ((time.getTime() - startTime.getTime()) *
+                        pixelsPerMillisecond || 30) -
+                      (index === intervals.length - 1 ? 50 : 0)
+                    }px`,
+                    transform: "translateX(-50%)",
+                  }}
+                >
+                  <div className="h-4 border-l border-gray-300 mb-1"></div>
+                  <div>{format(time, "MMM dd")}</div>
+                  <div className="text-gray-500">{format(time, "HH:mm")}</div>
+                </div>
               ))}
+            </div>
           </div>
         </div>
+
+        {/* Event details box */}
+        {selectedEvent && (
+          <div
+            className="w-1/4 overflow-y-auto"
+            style={{ height: "calc(100% - 50px)" }}
+          >
+            <AlertEventInfo
+              event={selectedEvent}
+              alert={
+                alerts?.items.find(
+                  (a) => a.fingerprint === selectedEvent.fingerprint
+                )!
+              }
+            />
+          </div>
+        )}
       </div>
-      <div className="h-3" />
-      {/* Event details box */}
-      {selectedEvent && (
-        <div className="overflow-x-hidden">
-          <AlertEventInfo
-            event={selectedEvent}
-            alert={
-              alerts?.items.find(
-                (a) => a.fingerprint === selectedEvent.fingerprint
-              )!
-            }
-          />
-        </div>
-      )}
     </Card>
   );
 }

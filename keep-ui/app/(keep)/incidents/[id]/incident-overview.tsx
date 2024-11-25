@@ -270,6 +270,16 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             ) : (
               "No environments involved"
             )}
+            {incident.rule_fingerprint !== "none" && (
+              <>
+                <FieldHeader>Grouped by</FieldHeader>
+                <div className="flex flex-wrap gap-1">
+                  <Badge size="sm" className="cursor-pointer">
+                    {incident.rule_fingerprint}
+                  </Badge>
+                </div>
+              </>
+            )}
           </div>
           <div>
             <SameIncidentField incident={incident} />
