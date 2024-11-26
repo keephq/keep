@@ -50,12 +50,16 @@ class ExternalAIDto(BaseModel):
         else:
             self.last_time_reminded = datetime.now()
 
+        if self.api_url is None or self.api_key is None:
+            logger.error(f"API URL or API Key is missing for {self.name}. Skipping reminder.")
+            return
+
         self.last_time_reminded = datetime.now()
         back_api_key = get_or_create_api_key(
             session=next(get_session()),
             tenant_id=tenant_id, 
             created_by="system",
-            unique_api_key_id=self.name
+            unique_api_key_id=self.name.lower().replace(" ", "_")
         )
         
         try:
