@@ -303,7 +303,7 @@ export const useAlertTableCols = (
       header: "Name",
       minSize: 330,
       cell: (context) => (
-        <div className="flex items-center">
+        <div>
           <AlertName
             alert={context.row.original}
             setNoteModalAlert={setNoteModalAlert}
