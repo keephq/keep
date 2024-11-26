@@ -14,7 +14,7 @@ import {
   SortingState,
   getSortedRowModel,
 } from "@tanstack/react-table";
-
+import { CopilotKit } from "@copilotkit/react-core";
 import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -287,13 +287,15 @@ export function AlertTable({
             mutateAlerts={mutateAlerts}
           />
         ) : (
-          <AlertPresets
-            table={table}
-            presetNameFromApi={presetName}
-            isLoading={isAsyncLoading}
-            presetPrivate={presetPrivate}
-            presetNoisy={presetNoisy}
-          />
+          <CopilotKit runtimeUrl="/api/copilotkit">
+            <AlertPresets
+              table={table}
+              presetNameFromApi={presetName}
+              isLoading={isAsyncLoading}
+              presetPrivate={presetPrivate}
+              presetNoisy={presetNoisy}
+            />
+          </CopilotKit>
         )}
       </div>
 
