@@ -51,7 +51,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api/KeepApiError";
+import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 type ProviderFormProps = {

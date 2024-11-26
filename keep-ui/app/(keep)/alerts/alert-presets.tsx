@@ -19,7 +19,6 @@ import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
 import { formatQuery, parseCEL, RuleGroupType } from "react-querybuilder";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
 import {

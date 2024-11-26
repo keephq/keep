@@ -24,7 +24,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 import { Providers } from "@/app/(keep)/providers/providers";
 import SidePanel from "@/components/SidePanel";
 

@@ -1,3 +1,2 @@
-export { KeepApiError } from "./KeepApiError";
+export { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
 export { ApiClient } from "./ApiClient";
-export { createServerApiClient } from "./createServerApiClient";

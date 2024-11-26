@@ -23,7 +23,6 @@ const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "./alert-dismiss-modal.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {

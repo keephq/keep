@@ -9,8 +9,6 @@ import { Button } from "@tremor/react";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
-import { toast } from "react-toastify";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface AlertNoteModalProps {

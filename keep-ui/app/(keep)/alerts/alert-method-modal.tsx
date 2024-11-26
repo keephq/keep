@@ -21,7 +21,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const supportedParamTypes = ["datetime", "literal", "str"];

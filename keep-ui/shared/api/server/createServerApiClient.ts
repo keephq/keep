@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { getConfig } from "@/shared/lib/server/getConfig";
-import { ApiClient } from "./ApiClient";
+import { ApiClient } from "../ApiClient";
 
 /**
  * Creates an API client configured for server-side usage

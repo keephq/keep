@@ -32,7 +32,7 @@ import useStore, {
 } from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import "./page.css";
 

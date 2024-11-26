@@ -1,5 +1,5 @@
 import { Link } from "@/components/ui";
-import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api/KeepApiError";
+import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
 import { toast, ToastOptions } from "react-toastify";
 
 export function showErrorToast(

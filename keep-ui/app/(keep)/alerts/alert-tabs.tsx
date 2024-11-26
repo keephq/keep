@@ -4,11 +4,7 @@ import { AlertDto } from "./models";
 import AlertTabModal from "./alert-tab-modal";
 import { evalWithContext } from "./alerts-rules-builder";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api/KeepApiError";
-import { toast } from "react-toastify";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 interface Tab {
   id?: string;
