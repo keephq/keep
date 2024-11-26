@@ -25,8 +25,8 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   alert: AlertDto;
-  isMenuOpen: boolean;
-  setIsMenuOpen: (key: string) => void;
+  isMenuOpen?: boolean;
+  setIsMenuOpen?: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
@@ -145,11 +145,11 @@ export default function AlertMenu({
   const canAssign = true; // TODO: keep track of assignments for auditing
 
   const handleMenuToggle = () => {
-    setIsMenuOpen(alert.fingerprint);
+    setIsMenuOpen!(alert.fingerprint);
   };
 
   const handleCloseMenu = () => {
-    setIsMenuOpen("");
+    setIsMenuOpen!("");
   };
 
   useEffect(() => {
@@ -222,7 +222,7 @@ export default function AlertMenu({
           <button
             onClick={() => {
               router.replace(
-                `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`,
+                `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
               );
               handleCloseMenu();
             }}
@@ -230,7 +230,10 @@ export default function AlertMenu({
               active ? "bg-slate-200" : "text-gray-900"
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
-            <AdjustmentsHorizontalIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            <AdjustmentsHorizontalIcon
+              className="mr-2 h-4 w-4"
+              aria-hidden="true"
+            />
             Enrich
           </button>
         )}

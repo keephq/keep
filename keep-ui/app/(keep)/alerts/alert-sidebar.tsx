@@ -2,34 +2,48 @@ import { Fragment } from "react";
 import Image from "next/image";
 import { Dialog, Transition } from "@headlessui/react";
 import { AlertDto } from "./models";
-import { Button, Title, Badge } from "@tremor/react";
+import { Button, Title, Badge, Divider } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import AlertTimeline from "./alert-timeline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { TopologyMap } from "../topology/ui/map";
 import { TopologySearchProvider } from "@/app/(keep)/topology/TopologySearchContext";
-import {
-  AlertSeverityBorderIcon,
-  AlertSeverityLabel,
-} from "./alert-severity-border";
+import { AlertSeverityLabel } from "./alert-severity-border";
 import { FieldHeader } from "@/shared/ui/FieldHeader";
 import { QuestionMarkCircleIcon } from "@heroicons/react/20/solid";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { Link } from "@/components/ui";
+import { useProviders } from "@/utils/hooks/useProviders";
+import AlertMenu from "./alert-menu";
 
 type AlertSidebarProps = {
   isOpen: boolean;
   toggle: VoidFunction;
   alert: AlertDto | null;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[] | null) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
 };
 
-const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
+const AlertSidebar = ({
+  isOpen,
+  toggle,
+  alert,
+  setRunWorkflowModalAlert,
+  setDismissModalAlert,
+  setChangeStatusAlert,
+}: AlertSidebarProps) => {
   const { useAlertAudit } = useAlerts();
   const {
     data: auditData,
     isLoading,
     mutate,
   } = useAlertAudit(alert?.fingerprint || "");
+
+  const { data: providers } = useProviders();
+  const providerName =
+    providers?.installed_providers.find((p) => p.id === alert?.providerId)
+      ?.display_name || alert?.providerId;
 
   const handleRefresh = async () => {
     console.log("Refresh button clicked");
@@ -62,9 +76,18 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
           <Dialog.Panel className="fixed right-0 inset-y-0 w-2/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <div>
-                {/*Will add soon*/}
-                {/*<AlertMenu alert={alert} presetName="feed" isInSidebar={true} />*/}
-                {/*<Divider></Divider>*/}
+                {/* Will add soon*/}
+                <AlertMenu
+                  alert={alert!}
+                  presetName="feed"
+                  isInSidebar={true}
+                  isMenuOpen={isOpen}
+                  setIsMenuOpen={toggle}
+                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                  setDismissModalAlert={setDismissModalAlert}
+                  setChangeStatusAlert={setChangeStatusAlert}
+                />
+                <Divider />
                 <Dialog.Title
                   className="text-xl font-bold flex flex-col gap-2 items-start"
                   as={Title}
@@ -84,16 +107,14 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
             {alert && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <p>
-                    <FieldHeader>Name</FieldHeader>
-                    {alert.name}
-                  </p>
-                  <p>
-                    <FieldHeader>Service</FieldHeader>
-                    <Badge size="sm" color="gray">
-                      {alert.service}
-                    </Badge>
-                  </p>
+                  {alert.service && (
+                    <p>
+                      <FieldHeader>Service</FieldHeader>
+                      <Badge size="sm" color="gray">
+                        {alert.service}
+                      </Badge>
+                    </p>
+                  )}
                   <p>
                     <FieldHeader>Source</FieldHeader>
                     <Image
@@ -103,6 +124,7 @@ const AlertSidebar = ({ isOpen, toggle, alert }: AlertSidebarProps) => {
                       height={24}
                       className="inline-block w-6 h-6"
                     />
+                    {providerName}
                   </p>
                   <p>
                     <FieldHeader>Description</FieldHeader>

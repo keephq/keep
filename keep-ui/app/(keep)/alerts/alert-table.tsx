@@ -54,6 +54,9 @@ interface Props {
   isMenuColDisplayed?: boolean;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[] | null) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
 }
 
 export function AlertTable({
@@ -69,6 +72,9 @@ export function AlertTable({
   isRefreshAllowed = true,
   setDismissedModalAlert,
   mutateAlerts,
+  setRunWorkflowModalAlert,
+  setDismissModalAlert,
+  setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
 
@@ -373,6 +379,9 @@ export function AlertTable({
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
         alert={selectedAlert}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+        setChangeStatusAlert={setChangeStatusAlert}
       />
     </div>
   );

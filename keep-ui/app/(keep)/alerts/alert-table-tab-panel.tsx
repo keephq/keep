@@ -89,6 +89,9 @@ export default function AlertTableTabPanel({
       presetId={preset.id}
       presetTabs={presetTabs}
       mutateAlerts={mutateAlerts}
+      setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+      setDismissModalAlert={setDismissModalAlert}
+      setChangeStatusAlert={setChangeStatusAlert}
     />
   );
 }
