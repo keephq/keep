@@ -9,7 +9,7 @@ import { usePollAILogs } from "utils/hooks/useAI";
 
 export const AILink = () => {
   const [text, setText] = useState("");
-  const [newText, setNewText] = useState("Pluggable AI");
+  const [newText, setNewText] = useState("AI Plugins");
 
   const mutateAILogs = (logs: any) => {
     setNewText("AI iterated 🎉")

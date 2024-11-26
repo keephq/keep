@@ -4435,14 +4435,14 @@ def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigA
             select(ExternalAIConfigAndMetadata).where(ExternalAIConfigAndMetadata.tenant_id == tenant_id)
         ).all()
         if len(algorithm_configs) == 0:
-            # Once more algorithms, more complicated design of which algo for whom to enable is needed here.
-            algorithm_config = ExternalAIConfigAndMetadata.from_external_ai(
-                tenant_id=tenant_id,
-                algorithm=ExternalAITransformers
-            )
-            session.add(algorithm_config)
-            session.commit()
-            algorithm_configs = [algorithm_config]
+            if os.environ.get("KEEP_EXTERNAL_AI_TRANSFORMERS_URL") is not None:
+                algorithm_config = ExternalAIConfigAndMetadata.from_external_ai(
+                    tenant_id=tenant_id,
+                    algorithm=external_ai_transformers
+                )
+                session.add(algorithm_config)
+                session.commit()
+                algorithm_configs = [algorithm_config]
     return [ExternalAIConfigAndMetadataDto.from_orm(algorithm_config) for algorithm_config in algorithm_configs]
 
 def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDto:
@@ -4453,6 +4453,8 @@ def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndM
         ).first()
         setting.settings = json.dumps(ai_settings.settings)
         setting.feedback_logs = ai_settings.feedback_logs
+        if ai_settings.settings_proposed_by_algorithm is not None:
+            setting.settings_proposed_by_algorithm = json.dumps(ai_settings.settings_proposed_by_algorithm)
         session.add(setting)
         session.commit()
     return setting

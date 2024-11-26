@@ -32,11 +32,16 @@ def get_stats(
     ),
 ):
     tenant_id = authenticated_entity.tenant_id
+    external_ai_settings = get_or_create_external_ai_settings(tenant_id)
+
+    for setting in external_ai_settings:
+        setting.algorithm.remind_about_the_client(tenant_id)
+
     return {
         "alerts_count": get_alerts_count(tenant_id),
         "first_alert_datetime": get_first_alert_datetime(tenant_id),
         "incidents_count": get_incidents_count(tenant_id),
-        "algorithm_configs": get_or_create_external_ai_settings(tenant_id),
+        "algorithm_configs": external_ai_settings,
     }
 
 
