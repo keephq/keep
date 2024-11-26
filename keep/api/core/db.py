@@ -1336,7 +1336,7 @@ def get_last_alerts(
         query = query.order_by(desc(Alert.timestamp)).limit(limit)
 
         # Execute the query
-        alerts_with_start = session.exec(query).all()
+        alerts_with_start = query.all()
 
         # Process results based on dialect
         alerts = []
