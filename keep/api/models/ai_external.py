@@ -57,21 +57,21 @@ class ExternalAIDto(BaseModel):
             created_by="system",
             unique_api_key_id=self.name
         )
-        response = requests.post(
-            self.api_url + "/remind_about_the_client",
-            json={
-                "api_key": self.api_key,
-                "tenant_id": tenant_id, 
-                "back_api_key": back_api_key,
-                "back_api_url": os.environ.get("KEEP_API_URL"),
-            },
-            timeout=0.5  # 1 second timeout, intentionally short because it's blocking and we don't care about response.
-        )
         
         try:
+            response = requests.post(
+                self.api_url + "/remind_about_the_client",
+                json={
+                    "api_key": self.api_key,
+                    "tenant_id": tenant_id, 
+                    "back_api_key": back_api_key,
+                    "back_api_url": os.environ.get("KEEP_API_URL"),
+                },
+                timeout=0.5  # 1 second timeout, intentionally short because it's blocking and we don't care about response.
+            )
             response.raise_for_status()
         except Exception as e:
-            logger.error(f"Failed to remind about the client for {self.name}. Error: {e}, response: {response.content}")
+            logger.error(f"Failed to remind about the client for {self.name}. Error: {e}")
             return
         
 

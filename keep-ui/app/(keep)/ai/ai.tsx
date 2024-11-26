@@ -7,7 +7,7 @@ import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import debounce from "lodash.debounce";
 
-function RangeInput({
+function RangeInputWithLabel({
   setting,
   onChange,
 }: {
@@ -29,20 +29,23 @@ function RangeInput({
     };
   }, [debouncedOnChange]);
 
-  return (
-    <input
-      type="range"
-      className="bg-orange-500 accent-orange-500"
-      step={(setting.max - setting.min) / 100}
-      min={setting.min}
-      max={setting.max}
-      value={value}
-      onChange={(e) => {
-        const newValue = parseFloat(e.target.value);
-        setValue(newValue);
-        debouncedOnChange(newValue);
-      }}
-    />
+  return ( 
+    <div>
+      <p>Value: {value}</p>
+      <input
+        type="range"
+        className="bg-orange-500 accent-orange-500"
+        step={(setting.max - setting.min) / 100}
+        min={setting.min}
+        max={setting.max}
+        value={value}
+        onChange={(e) => {
+          const newValue = setting.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+          setValue(newValue);
+          debouncedOnChange(newValue);
+        }}
+      />
+    </div>
   );
 }
 
@@ -152,9 +155,8 @@ export default function Ai() {
                             />
                           ) : null}
                           {setting.type === "float" ? (
-                            <div>
-                              <p>Value: {setting.value}</p>
-                              <RangeInput
+                            
+                              <RangeInputWithLabel
                                 key={setting.value}
                                 setting={setting}
                                 onChange={(newValue) => {
@@ -168,12 +170,10 @@ export default function Ai() {
                                   refetchAIStats();
                                 }}
                               />
-                            </div>
+                            
                           ) : null}
                           {setting.type === "int" ? (
-                            <div>
-                              <p>Value: {setting.value}</p>
-                              <RangeInput
+                              <RangeInputWithLabel
                                 key={setting.value}
                                 setting={setting}
                                 onChange={(newValue) => {
@@ -187,7 +187,6 @@ export default function Ai() {
                                   refetchAIStats();
                                 }}
                               />
-                            </div>
                           ) : null}
                         </div>
                       ))}
