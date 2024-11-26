@@ -1,15 +1,14 @@
 "use client";
 import { Menu, Transition, Portal } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import { Bars3Icon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import { TrashIcon } from "@radix-ui/react-icons";
-import { getSession } from "next-auth/react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { User } from "../models";
 import { User as AuthUser } from "next-auth";
 import { mutate } from "swr";
 import { useFloating } from "@floating-ui/react";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   user: User;
@@ -18,24 +17,18 @@ interface Props {
 
 export default function UsersMenu({ user, currentUser }: Props) {
   const { refs, x, y } = useFloating();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const onDelete = async () => {
     const confirmed = confirm(
       "Are you sure you want to delete this user? This is irreversible."
     );
     if (confirmed) {
-      const session = await getSession();
-
-      const res = await fetch(`${apiUrl}/users/${user.email}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (res.ok) {
-        mutate(`${apiUrl}/users`);
+      try {
+        await api.delete(`/users/${user.email}`);
+        mutate("/users");
+      } catch (error) {
+        console.error(error);
       }
     }
   };

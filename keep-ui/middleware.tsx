@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+// TODO: is it safe to remove these imports?
 import { getToken } from "next-auth/jwt";
 import type { JWT } from "next-auth/jwt";
 import { getApiURL } from "@/utils/apiUrl";

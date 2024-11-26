@@ -7,13 +7,13 @@ import {
   FieldValues,
 } from "react-hook-form";
 import Modal from "@/components/ui/Modal";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useProviders } from "utils/hooks/useProviders";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import Select from "@/components/ui/Select";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;
@@ -50,10 +50,9 @@ const PushAlertToServerModal = ({
   } = useForm();
 
   const selectedSource = watch("source");
+  const api = useApi();
 
-  const { data: session } = useSession();
   const { data: providersData } = useProviders();
-  const apiUrl = useApiUrl();
   const providers = providersData?.providers || [];
 
   useEffect(() => {
@@ -81,36 +80,26 @@ const PushAlertToServerModal = ({
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     try {
-      const response = await fetch(
-        `${apiUrl}/alerts/event/${data.source.type}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-          body: data.alertJson,
-        }
+      const response = await api.post(
+        `/alerts/event/${data.source.type}`,
+        data.alertJson
       );
 
-      if (response.ok) {
-        console.log("Alert pushed successfully");
-        mutateAlerts();
-        presetsMutator();
-        handleClose();
-      } else {
-        const errorData = await response.json();
+      mutateAlerts();
+      presetsMutator();
+      handleClose();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
         setError("apiError", {
           type: "manual",
-          message: errorData.detail || "Failed to push alert",
+          message: error.message || "Failed to push alert",
+        });
+      } else {
+        setError("apiError", {
+          type: "manual",
+          message: "An unexpected error occurred",
         });
       }
-    } catch (error) {
-      console.error("An unexpected error occurred", error);
-      setError("apiError", {
-        type: "manual",
-        message: "An unexpected error occurred",
-      });
     }
   };
 

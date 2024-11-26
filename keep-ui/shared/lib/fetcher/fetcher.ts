@@ -1,5 +1,10 @@
-import { KeepApiError } from "@/shared/lib/KeepApiError";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { InternalConfig } from "@/types/internal-config";
+import { Session } from "next-auth";
+import { getApiUrlFromConfig } from "../api/getApiUrlFromConfig";
 
+// TODO: use axios, add retry logic
+// TODO: create a custom hook for authenticated fetcher
 export const fetcher = async (
   url: string,
   accessToken: string | undefined,

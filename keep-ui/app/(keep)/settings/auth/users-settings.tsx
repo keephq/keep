@@ -10,13 +10,13 @@ import { useGroups } from "utils/hooks/useGroups";
 import { useConfig } from "utils/hooks/useConfig";
 import UsersSidebar from "./users-sidebar";
 import { User } from "@/app/(keep)/settings/models";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { UsersTable } from "./users-table";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { toast } from "react-toastify";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface Props {
-  accessToken: string;
   currentUser?: AuthUser;
-  selectedTab: string;
   groupsAllowed: boolean;
   userCreationAllowed: boolean;
 }
@@ -26,12 +26,11 @@ export interface Config {
 }
 
 export default function UsersSettings({
-  accessToken,
   currentUser,
-  selectedTab,
   groupsAllowed,
   userCreationAllowed,
 }: Props) {
+  const api = useApi();
   const { data: users, isLoading, mutate: mutateUsers } = useUsers();
   const { data: roles = [] } = useRoles();
   const { data: groups } = useGroups();
@@ -44,7 +43,6 @@ export default function UsersSettings({
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [filter, setFilter] = useState("");
   const [isNewUser, setIsNewUser] = useState(false);
-  const apiUrl = useApiUrl();
   // Determine runtime configuration
   const authType = configData?.AUTH_TYPE as AuthType;
 
@@ -98,20 +96,15 @@ export default function UsersSettings({
     event.stopPropagation();
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        const url = `${apiUrl}/auth/users/${userEmail}`;
-        const response = await fetch(url, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        await api.delete(`/auth/users/${userEmail}`);
 
-        if (response.ok) {
-          await mutateUsers();
-        } else {
-          console.error("Failed to delete user");
-        }
+        await mutateUsers();
       } catch (error) {
+        toast.error(
+          error instanceof KeepApiError
+            ? error.message
+            : "Failed to delete user"
+        );
         console.error("Error deleting user:", error);
       }
     }

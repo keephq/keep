@@ -8,8 +8,6 @@ import Select, {
 } from "react-select";
 import { useState } from "react";
 import { AlertDto, Status } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,
@@ -20,6 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
@@ -74,12 +73,11 @@ export default function AlertChangeStatusModal({
   handleClose,
   presetName,
 }: Props) {
-  const { data: session } = useSession();
+  const api = useApi();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator } = useAllPresets();
   const { useAllAlerts } = useAlerts();
-  const apiUrl = useApiUrl();
   const { mutate: alertsMutator } = useAllAlerts(presetName, {
     revalidateOnMount: false,
   });
@@ -110,37 +108,26 @@ export default function AlertChangeStatusModal({
     }
 
     try {
-      const response = await fetch(
-        `${apiUrl}/alerts/enrich?dispose_on_new_alert=true`,
+      const response = await api.post(
+        `/alerts/enrich?dispose_on_new_alert=true`,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
+          enrichments: {
+            status: selectedStatus,
+            ...(selectedStatus !== Status.Suppressed && {
+              dismissed: false,
+              dismissUntil: "",
+            }),
           },
-          body: JSON.stringify({
-            enrichments: {
-              status: selectedStatus,
-              ...(selectedStatus !== Status.Suppressed && {
-                dismissed: false,
-                dismissUntil: "",
-              }),
-            },
-            fingerprint: alert.fingerprint,
-          }),
+          fingerprint: alert.fingerprint,
         }
       );
 
-      if (response.ok) {
-        toast.success("Alert status changed successfully!");
-        clearAndClose();
-        await alertsMutator();
-        await presetsMutator();
-      } else {
-        toast.error("Failed to change alert status.");
-      }
+      toast.success("Alert status changed successfully!");
+      clearAndClose();
+      await alertsMutator();
+      await presetsMutator();
     } catch (error) {
-      toast.error("An error occurred while changing alert status.");
+      toast.error("Failed to change alert status.");
     }
   };
 

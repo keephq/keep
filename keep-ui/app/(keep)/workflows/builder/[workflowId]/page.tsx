@@ -1,22 +1,22 @@
-import { auth } from "@/auth";
-import { getApiURL } from "utils/apiUrl";
 import PageClient from "../page.client";
+import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
+
+type WorkflowRawResponse = {
+  workflow_raw: string;
+};
 
 export default async function PageWithId({
   params,
 }: {
   params: { workflowId: string };
 }) {
-  const accessToken = await auth();
-  // server so we can use getApiUrl
-  const apiUrl = getApiURL();
-  const response = await fetch(`${apiUrl}/workflows/${params.workflowId}/raw`, {
-    headers: {
-      Authorization: `Bearer ${accessToken?.accessToken}`,
-    },
-    cache: "no-store",
-  });
-  const text = await response.json();
+  const api = await createServerApiClient();
+  const text = await api.get<WorkflowRawResponse>(
+    `/workflows/${params.workflowId}/raw`,
+    {
+      cache: "no-store",
+    }
+  );
   return (
     <PageClient workflow={text.workflow_raw} workflowId={params.workflowId} />
   );

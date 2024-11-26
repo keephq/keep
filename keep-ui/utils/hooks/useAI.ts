@@ -1,23 +1,21 @@
 import { AILogs, AIStats, AIConfig } from "@/app/(keep)/ai/model";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+
 import useSWR, { SWRConfiguration } from "swr";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
 
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useAIStats = (
   options: SWRConfiguration = {
     revalidateOnFocus: false,
   }
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
-
-  const { data, error, mutate } = useSWR<AIStats>(
-    () => (session ? `${apiUrl}/ai/stats` : null),
-    (url) => fetcher(url, session?.accessToken),
+  const api = useApi();
+  return useSWR<AIStats>(
+    api.isReady() ? "/ai/stats" : null,
+    (url) => api.get(url),
     options
   );
 

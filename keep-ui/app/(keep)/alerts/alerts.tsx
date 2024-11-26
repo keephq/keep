@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/(keep)/not-found";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
 
 const defaultPresets: Preset[] = [
@@ -114,8 +114,9 @@ export default function Alerts({ presetName }: AlertsProps) {
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
 
-  const { status: sessionStatus } = useSession();
-  const isLoading = isAsyncLoading || sessionStatus === "loading";
+  const api = useApi();
+  const isLoading = isAsyncLoading || !api.isReady();
+
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");

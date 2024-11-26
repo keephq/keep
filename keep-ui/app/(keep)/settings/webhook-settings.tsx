@@ -18,12 +18,11 @@ import Loading from "@/app/(keep)/loading";
 import { useRouter } from "next/navigation";
 import { CodeBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { fetcher } from "utils/fetcher";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import * as Frigade from "@frigade/react";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Webhook {
   webhookApi: string;
@@ -32,18 +31,17 @@ interface Webhook {
 }
 
 interface Props {
-  accessToken: string;
   selectedTab: string;
 }
 
-export default function WebhookSettings({ accessToken, selectedTab }: Props) {
+export default function WebhookSettings({ selectedTab }: Props) {
   const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
 
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const { data, error, isLoading } = useSWR<Webhook>(
-    selectedTab === "webhook" ? `${apiUrl}/settings/webhook` : null,
-    (url) => fetcher(url, accessToken),
+    api.isReady() && selectedTab === "webhook" ? `/settings/webhook` : null,
+    (url) => api.get(url),
     { revalidateOnFocus: false }
   );
   const router = useRouter();
