@@ -17,7 +17,7 @@ from keep.topologies.topologies_service import (
     InvalidApplicationDataException,
     ServiceNotFoundException,
 )
-from tests.fixtures.client import setup_api_key
+from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
 
 
 VALID_API_KEY = "valid_api_key"
