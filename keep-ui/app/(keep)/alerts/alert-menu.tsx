@@ -264,7 +264,7 @@ export default function AlertMenu({
         )}
       </Menu.Item>
       {provider?.methods && provider.methods.length > 0 && (
-        <div className="px-1 py-1">
+        <div className={`px-1 py-1 ${isInSidebar ? "flex text-nowrap" : ""}`}>
           {provider.methods.map((method) => {
             const methodEnabled = isMethodEnabled(method);
             return (
@@ -390,8 +390,10 @@ export default function AlertMenu({
           )}
         </Menu>
       ) : (
-        <Menu>
-          <div className="flex space-x-2">{menuItems}</div>
+        <Menu as="div" className="w-full">
+          <div className="flex space-x-2 w-full overflow-x-scroll">
+            {menuItems}
+          </div>
         </Menu>
       )}
     </>
