@@ -1,8 +1,7 @@
 // TODO: refactor this file and separate in to smaller components
 //  There's also a lot of s**t in here, but it works for now 🤷‍♂️
 // @ts-nocheck
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import React, { useEffect, useState, useRef } from "react";
 import { Provider } from "./providers";
 import Image from "next/image";
 import {
@@ -42,7 +41,6 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { installWebhook } from "../../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
 import Link from "next/link";
@@ -52,7 +50,6 @@ import "./provider-form.css";
 import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
-import { error } from "console";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 type ProviderFormProps = {
