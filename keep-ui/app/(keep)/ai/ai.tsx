@@ -1,17 +1,56 @@
 "use client";
-import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
-import { useAIStats, usePollAILogs, UseAIActions } from "utils/hooks/useAI";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
+
+import { Card, Title, Subtitle } from "@tremor/react";
+import { useAIStats, UseAIActions } from "utils/hooks/useAI";
 import { toast } from "react-toastify";
-import { useEffect, useState, useRef, FormEvent } from "react";
-import { AILogs } from "./model";
+import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
+import debounce from "lodash.debounce";
+
+function RangeInput({
+  setting,
+  onChange,
+}: {
+  setting: any;
+  onChange: (newValue: number) => void;
+}) {
+  const [value, setValue] = useState(setting.value);
+
+  // Create a memoized debounced function
+  const debouncedOnChange = useMemo(
+    () => debounce((value: number) => onChange(value), 1000),
+    [onChange]
+  );
+
+  // Cleanup the debounced function on unmount
+  useEffect(() => {
+    return () => {
+      debouncedOnChange.cancel();
+    };
+  }, [debouncedOnChange]);
+
+  return (
+    <input
+      type="range"
+      className="bg-orange-500 accent-orange-500"
+      step={(setting.max - setting.min) / 100}
+      min={setting.min}
+      max={setting.max}
+      value={value}
+      onChange={(e) => {
+        const newValue = parseFloat(e.target.value);
+        setValue(newValue);
+        debouncedOnChange(newValue);
+      }}
+    />
+  );
+}
 
 export default function Ai() {
   const { data: aistats, isLoading, refetch: refetchAIStats } = useAIStats();
   const { updateAISettings } = UseAIActions();
 
+  // TODO: use pollingInterval instead
   useEffect(() => {
     const interval = setInterval(() => {
       refetchAIStats();
@@ -40,32 +79,36 @@ export default function Ai() {
               {aistats?.algorithm_configs?.length === 0 && (
                 <div className="flex flex-row">
                   <Image
-                  src="/keep_sleeping.png"
-                  alt="AI"
-                  width={300}
-                  height={300}
-                  className="mr-4 rounded-lg"
+                    src="/keep_sleeping.png"
+                    alt="AI"
+                    width={300}
+                    height={300}
+                    className="mr-4 rounded-lg"
                   />
                   <div>
-                  <Title>No AI plugged in to your environment.</Title>
-                  <p className="pt-2">
-                    AI plugins can seamlessly correlate, enrich, and summarize
-                    your alerts and incidents by leveraging the complete
-                    context within Keep. This includes detailed information
-                    like topology, runbooks, and other valuable data, allowing
-                    you to gain deeper insights and respond more effectively.
-                  </p>
-                  <p className="pt-2">
-                    Plus, AI plugins can even run in air-gapped environments. You can train models on-premises using your own data, so there is no need to share anything with third-party providers like OpenAI—keeping your data secure and private.
-                  </p>
-                  <p className="pt-2">
-                    <a
-                    href="https://www.keephq.dev/meet-keep"
-                    className="text-orange-500 underline"
-                    >
-                    Talk to us to get access!
-                    </a>
-                  </p>
+                    <Title>No AI plugged in to your environment.</Title>
+                    <p className="pt-2">
+                      AI plugins can seamlessly correlate, enrich, and summarize
+                      your alerts and incidents by leveraging the complete
+                      context within Keep. This includes detailed information
+                      like topology, runbooks, and other valuable data, allowing
+                      you to gain deeper insights and respond more effectively.
+                    </p>
+                    <p className="pt-2">
+                      Plus, AI plugins can even run in air-gapped environments.
+                      You can train models on-premises using your own data, so
+                      there is no need to share anything with third-party
+                      providers like OpenAI—keeping your data secure and
+                      private.
+                    </p>
+                    <p className="pt-2">
+                      <a
+                        href="https://www.keephq.dev/meet-keep"
+                        className="text-orange-500 underline"
+                      >
+                        Talk to us to get access!
+                      </a>
+                    </p>
                   </div>
                 </div>
               )}
@@ -111,15 +154,10 @@ export default function Ai() {
                           {setting.type === "float" ? (
                             <div>
                               <p>Value: {setting.value}</p>
-                              <input
-                                type="range"
-                                className="bg-orange-500 accent-orange-500"
-                                step={(setting.max - setting.min) / 100}
-                                min={setting.min}
-                                max={setting.max}
-                                // value={setting.value}
-                                onChange={(e) => {
-                                  const newValue = parseFloat(e.target.value);
+                              <RangeInput
+                                key={setting.value}
+                                setting={setting}
+                                onChange={(newValue) => {
                                   setting.value = newValue;
                                   algorithm_config.settings_proposed_by_algorithm =
                                     null;
@@ -135,15 +173,10 @@ export default function Ai() {
                           {setting.type === "int" ? (
                             <div>
                               <p>Value: {setting.value}</p>
-                              <input
-                                type="range"
-                                className="bg-orange-500 accent-orange-500"
-                                step={1}
-                                min={setting.min}
-                                max={setting.max}
-                                // value={setting.value}
-                                onChange={(e) => {
-                                  const newValue = parseFloat(e.target.value);
+                              <RangeInput
+                                key={setting.value}
+                                setting={setting}
+                                onChange={(newValue) => {
                                   setting.value = newValue;
                                   algorithm_config.settings_proposed_by_algorithm =
                                     null;
