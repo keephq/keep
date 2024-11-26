@@ -181,8 +181,11 @@ const providers =
   baseProviderConfigs[AuthType.NOAUTH];
 
 export const providerMap = new Map(
-  providers.map((provider) => {
-    return [provider.id, provider];
+  providers.map((provider: any) => {
+    if (provider.id === "credentials") {
+      return [provider.id, provider.options.name];
+    }
+    return [provider.id, provider.name];
   })
 );
 

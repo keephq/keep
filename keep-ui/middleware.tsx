@@ -35,7 +35,10 @@ export async function middleware(request: NextRequest) {
   // If not authenticated and not on signin page, redirect to signin
   if (!isAuthenticated && !pathname.startsWith("/signin")) {
     console.log("Redirecting to signin page because user is not authenticated");
-    return NextResponse.redirect(new URL("/signin", request.url));
+    const callbackUrl = request.url || "/incidents";
+    return NextResponse.redirect(
+      new URL(`/signin?callbackUrl=${callbackUrl}`, request.url)
+    );
   }
 
   // If authenticated and on signin page, redirect to incidents

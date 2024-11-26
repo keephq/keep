@@ -6,9 +6,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
 import { useRouter } from "next/navigation";
-import { SignInPageProps } from "./page";
+import { SignInPageProps } from "../page";
 import { SignInLoader } from "./ui/loader";
-import "../../globals.css";
 
 interface SignInFormInputs {
   username: string;
@@ -45,7 +44,7 @@ export function CredentialsSignInForm({ searchParams }: SignInPageProps) {
       // Add a small delay before redirect to ensure state update
       await new Promise((resolve) => setTimeout(resolve, 100));
       // TODO: Redirect to the correct page redirectTo
-      router.replace("/incidents");
+      router.replace(redirectTo);
 
       // Disable form interactions during redirect
       await revalidateAfterAuth();
