@@ -13,7 +13,6 @@ from keep.api.core.db import (
     update_extrnal_ai_settings,
 )
 from keep.api.models.ai_external import ExternalAIConfigAndMetadataDto
-from keep.api.utils.import_ee import ALGORITHM_VERBOSE_NAME
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
