@@ -466,7 +466,7 @@ class ProvidersFactory:
                     provider_auth = {
                         key: "demo"
                         for key in provider_auth
-                        if isinstance(provider_auth[key], str)
+                        if isinstance(provider_auth[key], str) and key != "name"
                     }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
