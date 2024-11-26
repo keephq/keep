@@ -5,33 +5,26 @@ import { Text, TextInput, Button, Card } from "@tremor/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import "../../globals.css";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
 import { useRouter } from "next/navigation";
-
-export interface Provider {
-  id: string;
-  name: string;
-  type: string;
-  signinUrl: string;
-  callbackUrl: string;
-}
-
-export interface Providers {
-  auth0?: Provider;
-  credentials?: Provider;
-  keycloak?: Provider;
-  "microsoft-entra-id"?: Provider;
-}
+import { SignInPageProps } from "./page";
+import { SignInLoader } from "./ui/loader";
+import "../../globals.css";
 
 interface SignInFormInputs {
   username: string;
   password: string;
 }
 
-export default function SignInForm({ params }: { params?: { amt: string } }) {
+type ProvidersType = Awaited<ReturnType<typeof getProviders>>;
+
+export default function SignInForm({ params, searchParams }: SignInPageProps) {
   console.log("Init SignInForm");
-  const [providers, setProviders] = useState<Providers | null>(null);
+  const redirectTo = searchParams?.callbackUrl ?? "/";
+
+  console.log("redirectTo", redirectTo);
+
+  const [providers, setProviders] = useState<ProvidersType | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const router = useRouter();
   const {
@@ -44,38 +37,36 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
   useEffect(() => {
     async function fetchProviders() {
       const response = await getProviders();
-      setProviders(response as Providers);
+      setProviders(response);
     }
     fetchProviders();
   }, []);
 
   useEffect(() => {
-    if (providers) {
-      if (providers.auth0) {
-        console.log("Signing in with auth0 provider");
-        if (params?.amt) {
-          signIn(
-            "auth0",
-            { callbackUrl: "/" },
-            { acr_values: `amt:${params.amt}` }
-          );
-        } else {
-          signIn("auth0", { callbackUrl: "/" });
-        }
-      } else if (providers.keycloak) {
-        console.log("Signing in with keycloak provider");
-        signIn("keycloak", { callbackUrl: "/" });
-      } else if (providers["microsoft-entra-id"]) {
-        console.log("Signing in with Azure AD provider");
-        signIn("microsoft-entra-id", { callbackUrl: "/" });
-      } else if (
-        providers.credentials &&
-        providers.credentials.name == "NoAuth"
-      ) {
-        signIn("credentials", { callbackUrl: "/" });
-      }
+    if (!providers) {
+      return;
     }
-  }, [providers, params]);
+
+    if (providers.auth0) {
+      console.log("Signing in with auth0 provider");
+      if (params?.amt) {
+        signIn("auth0", { redirectTo }, { acr_values: `amt:${params.amt}` });
+      } else {
+        signIn("auth0", { redirectTo });
+      }
+    } else if (providers.keycloak) {
+      console.log("Signing in with keycloak provider");
+      signIn("keycloak", { redirectTo });
+    } else if (providers["microsoft-entra-id"]) {
+      console.log("Signing in with Azure AD provider");
+      signIn("microsoft-entra-id", { redirectTo });
+    } else if (
+      providers.credentials &&
+      providers.credentials.name == "NoAuth"
+    ) {
+      signIn("credentials", { redirectTo });
+    }
+  }, [providers]);
 
   const onSubmit = async (data: SignInFormInputs) => {
     try {
@@ -108,31 +99,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
 
   // Show loading state during redirect
   if (isRedirecting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4">
-        <Card
-          className="w-full max-w-md p-8"
-          decoration="top"
-          decorationColor="orange"
-        >
-          <div className="flex flex-col items-center gap-6">
-            <div className="relative w-32 h-32">
-              <Image
-                src="/keep_big.svg"
-                alt="Keep Logo"
-                width={128}
-                height={128}
-                priority
-                className="object-contain"
-              />
-            </div>
-            <Text className="text-tremor-title font-bold text-tremor-content-strong">
-              Authentication successful, redirecting...
-            </Text>
-          </div>
-        </Card>
-      </div>
-    );
+    return <SignInLoader text="Authentication successful, redirecting..." />;
   }
 
   if (providers?.credentials) {
@@ -215,8 +182,8 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
                 {isSubmitting
                   ? "Signing in..."
                   : isRedirecting
-                  ? "Redirecting..."
-                  : "Sign in"}
+                    ? "Redirecting..."
+                    : "Sign in"}
               </Button>
 
               {errors.root && (
@@ -233,5 +200,5 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
     );
   }
 
-  return <>Redirecting to authentication...</>;
+  return <SignInLoader text="Redirecting to authentication..." />;
 }
