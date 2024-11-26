@@ -289,7 +289,7 @@ const ProviderForm = ({
           setRefreshLoading(false);
         });
     }
-  }, [triggerRevalidateScope, accessToken, provider.id]);
+  }, [triggerRevalidateScope, provider.id]);
 
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
