@@ -19,6 +19,7 @@ import AlertChangeStatusModal from "./alert-change-status-modal";
 import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/(keep)/not-found";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
 
 const defaultPresets: Preset[] = [
   {
@@ -75,9 +76,9 @@ export default function Alerts({ presetName }: AlertsProps) {
   const ticketingProviders = useMemo(
     () =>
       providersData.installed_providers.filter((provider) =>
-        provider.tags.includes("ticketing")
+        provider.tags.includes("ticketing"),
       ),
-    [providersData.installed_providers]
+    [providersData.installed_providers],
   );
 
   const searchParams = useSearchParams();
@@ -91,6 +92,9 @@ export default function Alerts({ presetName }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
+  const [viewEnrichAlertModal, setEnrichAlertModal] =
+    useState<AlertDto | null>();
+  const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
   const { useAllPresets } = usePresets();
 
   const { data: savedPresets = [] } = useAllPresets({
@@ -99,7 +103,7 @@ export default function Alerts({ presetName }: AlertsProps) {
   const presets = [...defaultPresets, ...savedPresets] as const;
 
   const selectedPreset = presets.find(
-    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
+    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName),
   );
 
   const { data: pollAlerts } = useAlertPolling();
@@ -112,14 +116,21 @@ export default function Alerts({ presetName }: AlertsProps) {
 
   const { status: sessionStatus } = useSession();
   const isLoading = isAsyncLoading || sessionStatus === "loading";
-
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
-    if (fingerprint) {
+    const enrich = searchParams?.get("enrich");
+    console.log(enrich, fingerprint);
+    if (fingerprint && enrich) {
+      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
+      setEnrichAlertModal(alert);
+      setIsEnrichSidebarOpen(true);
+    } else if (fingerprint) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       setViewAlertModal(alert);
     } else {
       setViewAlertModal(null);
+      setEnrichAlertModal(null);
+      setIsEnrichSidebarOpen(false);
     }
   }, [searchParams, alerts]);
 
@@ -178,6 +189,15 @@ export default function Alerts({ presetName }: AlertsProps) {
       <ViewAlertModal
         alert={viewAlertModal}
         handleClose={() => router.replace(`/alerts/${presetName}`)}
+        mutate={mutateAlerts}
+      />
+      <EnrichAlertSidePanel
+        alert={viewEnrichAlertModal}
+        isOpen={isEnrichSidebarOpen}
+        handleClose={() => {
+          setIsEnrichSidebarOpen(false);
+          router.replace(`/alerts/${presetName}`);
+        }}
         mutate={mutateAlerts}
       />
     </>
