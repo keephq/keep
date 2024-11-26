@@ -6,15 +6,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
 import { useRouter } from "next/navigation";
-import { SignInPageProps } from "../page";
 import { SignInLoader } from "./ui/loader";
+import { SignInFormPageProps } from "./page";
 
 interface SignInFormInputs {
   username: string;
   password: string;
 }
 
-export function CredentialsSignInForm({ searchParams }: SignInPageProps) {
+export function CredentialsSignInForm({ searchParams }: SignInFormPageProps) {
   console.log("Init SignInForm");
   const redirectTo = searchParams?.callbackUrl ?? "/";
 
