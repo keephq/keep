@@ -434,14 +434,14 @@ class ProvidersFactory:
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
-            provider: Provider = next(
+            provider: Provider | None = next(
                 filter(
                     lambda provider: provider.type == p.type,
                     all_providers,
                 ),
                 None,
             )
-            if not provider:
+            if provider is None:
                 logger.warning(f"Installed provider {p.type} does not exist anymore?")
                 continue
             provider_copy = provider.copy()
@@ -451,6 +451,7 @@ class ProvidersFactory:
             provider_copy.last_pull_time = p.last_pull_time
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
+            provider_copy.installed = True
             try:
                 provider_auth = {"name": p.name}
                 if include_details:

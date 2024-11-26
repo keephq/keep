@@ -6,6 +6,7 @@ import uuid
 from typing import Callable, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
@@ -13,6 +14,7 @@ from starlette.datastructures import UploadFile
 from keep.api.core.config import config
 from keep.api.core.db import count_alerts, get_provider_distribution, get_session
 from keep.api.models.db.provider import Provider
+from keep.api.models.provider import Provider as ProviderDTO
 from keep.api.models.provider import ProviderAlertsCountResponseDTO
 from keep.api.models.webhook import ProviderWebhookSettings
 from keep.api.utils.tenant_utils import get_or_create_api_key
@@ -91,7 +93,11 @@ def get_providers(
     }
 
 
-@router.get("/export", description="export all installed providers")
+@router.get(
+    "/export",
+    description="export all installed providers",
+    response_model=list[ProviderDTO],
+)
 def get_installed_providers(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:providers"])
@@ -103,18 +109,7 @@ def get_installed_providers(
     installed_providers = ProvidersFactory.get_installed_providers(
         tenant_id, providers, include_details=True
     )
-
-    is_localhost = _is_localhost()
-
-    try:
-        return {
-            "installed_providers": installed_providers,
-            "is_localhost": is_localhost,
-        }
-    except Exception as e:
-        logger.info(f"execption in {e}")
-        logger.exception("Failed to get providers")
-        return {"installed_providers": [], "is_localhost": is_localhost}
+    return JSONResponse(content=jsonable_encoder(installed_providers), status_code=200)
 
 
 @router.get(
