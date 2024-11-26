@@ -17,6 +17,8 @@ interface Props {
   clearRowSelection: () => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
+  setIsIncidentSelectorOpen: (open: boolean) => void;
+  isIncidentSelectorOpen: boolean;
 }
 
 export default function AlertActions({
@@ -25,6 +27,8 @@ export default function AlertActions({
   clearRowSelection,
   setDismissModalAlert,
   mutateAlerts,
+  setIsIncidentSelectorOpen,
+  isIncidentSelectorOpen,
 }: Props) {
   const router = useRouter();
   const { useAllPresets } = usePresets();
@@ -32,8 +36,7 @@ export default function AlertActions({
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
   });
-  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
-    useState<boolean>(false);
+
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);
 
