@@ -1,5 +1,5 @@
 import { TopologyApplication, TopologyService } from "../model/models";
-import { ApiClient } from "@/shared/lib/api/ApiClient";
+import { ApiClient } from "@/shared/api";
 
 export function buildTopologyUrl({
   providerIds,

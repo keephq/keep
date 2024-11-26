@@ -3,8 +3,7 @@ import { Button } from "@tremor/react";
 import { MouseEvent } from "react";
 import { useRules } from "utils/hooks/useRules";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { toast } from "react-toastify";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 type DeleteRuleCellProps = {
   ruleId: string;
@@ -23,13 +22,7 @@ export const DeleteRuleCell = ({ ruleId }: DeleteRuleCellProps) => {
         const response = await api.delete(`/rules/${ruleId}`);
         await mutate();
       } catch (error) {
-        if (error instanceof KeepApiError) {
-          toast.error(error.message || "Failed to delete rule");
-        } else {
-          toast.error(
-            "Failed to delete rule, please contact us if this issue persists."
-          );
-        }
+        showErrorToast(error, "Failed to delete rule");
       }
     }
   };

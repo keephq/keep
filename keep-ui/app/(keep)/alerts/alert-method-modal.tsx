@@ -21,7 +21,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useProviders } from "utils/hooks/useProviders";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const supportedParamTypes = ["datetime", "literal", "str"];
 
@@ -178,21 +178,12 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
         setIsLoading(false);
       }
     } catch (e: any) {
-      if (e instanceof KeepApiError) {
-        toast.error(
-          `Failed to invoke "${method.name}" on ${
-            provider.details.name ?? provider.id
-          } due to ${e.responseJson.detail}`,
-          { position: toast.POSITION.TOP_LEFT }
-        );
-      } else {
-        toast.error(
-          `Failed to invoke "${method.name}" on ${
-            provider.details.name ?? provider.id
-          } due to ${e.message}`,
-          { position: toast.POSITION.TOP_LEFT }
-        );
-      }
+      showErrorToast(
+        e,
+        `Failed to invoke "${method.name}" on ${
+          provider.details.name ?? provider.id
+        } due to ${e.message}`
+      );
       handleClose();
     } finally {
       if (method.type === "action") {

@@ -23,6 +23,7 @@ import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const columnHelper = createColumnHelper<MaintenanceRule>();
 
@@ -127,10 +128,8 @@ export default function MaintenanceRulesTable({
         .then(() => {
           toast.success("Maintenance rule deleted successfully");
         })
-        .catch(() => {
-          toast.error(
-            "Failed to delete maintenance rule, contact us if this persists"
-          );
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to delete maintenance rule");
         });
     }
   };

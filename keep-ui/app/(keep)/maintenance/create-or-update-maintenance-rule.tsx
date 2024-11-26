@@ -19,7 +19,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   maintenanceToEdit: MaintenanceRule | null;
@@ -101,20 +101,14 @@ export default function CreateOrUpdateMaintenanceRule({
       mutate();
       toast.success("Maintenance rule created successfully");
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to create maintenance rule");
-      } else {
-        toast.error(
-          "Failed to create maintenance rule, please contact us if this issue persists."
-        );
-      }
+      showErrorToast(error, "Failed to create maintenance rule");
     }
   };
 
   const updateMaintenanceRule = async (e: FormEvent) => {
     e.preventDefault();
     if (!maintenanceToEdit?.id) {
-      toast.error("No maintenance rule selected for update");
+      showErrorToast(new Error("No maintenance rule selected for update"));
       return;
     }
     try {
@@ -130,13 +124,7 @@ export default function CreateOrUpdateMaintenanceRule({
       mutate();
       toast.success("Maintenance rule updated successfully");
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to update maintenance rule");
-      } else {
-        toast.error(
-          "Failed to update maintenance rule, please contact us if this issue persists."
-        );
-      }
+      showErrorToast(error, "Failed to update maintenance rule");
     }
   };
 

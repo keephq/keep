@@ -12,6 +12,7 @@ import Loading from "@/app/(keep)/loading";
 import { AlertDto } from "./models";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -47,7 +48,8 @@ const AlertAssociateIncidentModal = ({
         await mutate();
         toast.success("Alerts associated with incident successfully");
       } catch (error) {
-        toast.error(
+        showErrorToast(
+          error,
           "Failed to associated alerts with incident, please contact us if this issue persists."
         );
       }

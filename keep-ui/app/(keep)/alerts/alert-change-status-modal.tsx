@@ -19,6 +19,7 @@ import {
 import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
@@ -103,7 +104,7 @@ export default function AlertChangeStatusModal({
 
   const handleChangeStatus = async () => {
     if (!selectedStatus) {
-      toast.error("Please select a new status.");
+      showErrorToast(new Error("Please select a new status."));
       return;
     }
 
@@ -127,7 +128,7 @@ export default function AlertChangeStatusModal({
       await alertsMutator();
       await presetsMutator();
     } catch (error) {
-      toast.error("Failed to change alert status.");
+      showErrorToast(error, "Failed to change alert status.");
     }
   };
 

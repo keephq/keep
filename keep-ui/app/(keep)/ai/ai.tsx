@@ -3,7 +3,7 @@
 import { Card, Title, Subtitle } from "@tremor/react";
 import { useAIStats, UseAIActions } from "utils/hooks/useAI";
 import { toast } from "react-toastify";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import debounce from "lodash.debounce";
 
@@ -29,7 +29,7 @@ function RangeInputWithLabel({
     };
   }, [debouncedOnChange]);
 
-  return ( 
+  return (
     <div>
       <p>Value: {value}</p>
       <input
@@ -40,7 +40,10 @@ function RangeInputWithLabel({
         max={setting.max}
         value={value}
         onChange={(e) => {
-          const newValue = setting.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+          const newValue =
+            setting.type === "float"
+              ? parseFloat(e.target.value)
+              : parseInt(e.target.value, 10);
           setValue(newValue);
           debouncedOnChange(newValue);
         }}
@@ -67,9 +70,7 @@ export default function Ai() {
       <div className="flex justify-between items-center">
         <div>
           <Title>AI Plugins</Title>
-          <Subtitle>
-            For correlation, summarization, and enrichment
-          </Subtitle>
+          <Subtitle>For correlation, summarization, and enrichment</Subtitle>
         </div>
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
@@ -91,17 +92,17 @@ export default function Ai() {
                   <div>
                     <Title>No AI enabled for this tenant</Title>
                     <p className="pt-2">
-                      AI plugins can correlate, enrich, or summarize
-                      your alerts and incidents by leveraging the 
-                      the context within Keep allowing
-                      you to gain deeper insights and respond more effectively.
+                      AI plugins can correlate, enrich, or summarize your alerts
+                      and incidents by leveraging the the context within Keep
+                      allowing you to gain deeper insights and respond more
+                      effectively.
                     </p>
                     <p className="pt-2">
-                      By the way, AI plugins are designed to work even in air-gapped environments.
-                      You can train models using your data, so
-                      there is no need to share information with third-party
-                      providers like OpenAI. Keep your data secure and
-                      private.
+                      By the way, AI plugins are designed to work even in
+                      air-gapped environments. You can train models using your
+                      data, so there is no need to share information with
+                      third-party providers like OpenAI. Keep your data secure
+                      and private.
                     </p>
                     <p className="pt-2">
                       <a
@@ -155,40 +156,38 @@ export default function Ai() {
                             />
                           ) : null}
                           {setting.type === "float" ? (
-                            
-                              <RangeInputWithLabel
-                                key={setting.value}
-                                setting={setting}
-                                onChange={(newValue) => {
-                                  setting.value = newValue;
-                                  algorithm_config.settings_proposed_by_algorithm =
-                                    null;
-                                  updateAISettings(
-                                    algorithm_config.algorithm_id,
-                                    algorithm_config
-                                  );
-                                  toast.success("Settings updated successfully!");
-                                  refetchAIStats();
-                                }}
-                              />
-                            
+                            <RangeInputWithLabel
+                              key={setting.value}
+                              setting={setting}
+                              onChange={(newValue) => {
+                                setting.value = newValue;
+                                algorithm_config.settings_proposed_by_algorithm =
+                                  null;
+                                updateAISettings(
+                                  algorithm_config.algorithm_id,
+                                  algorithm_config
+                                );
+                                toast.success("Settings updated successfully!");
+                                refetchAIStats();
+                              }}
+                            />
                           ) : null}
                           {setting.type === "int" ? (
-                              <RangeInputWithLabel
-                                key={setting.value}
-                                setting={setting}
-                                onChange={(newValue) => {
-                                  setting.value = newValue;
-                                  algorithm_config.settings_proposed_by_algorithm =
-                                    null;
-                                  updateAISettings(
-                                    algorithm_config.algorithm_id,
-                                    algorithm_config
-                                  );
-                                  toast.success("Settings updated successfully!");
-                                  refetchAIStats();
-                                }}
-                              />
+                            <RangeInputWithLabel
+                              key={setting.value}
+                              setting={setting}
+                              onChange={(newValue) => {
+                                setting.value = newValue;
+                                algorithm_config.settings_proposed_by_algorithm =
+                                  null;
+                                updateAISettings(
+                                  algorithm_config.algorithm_id,
+                                  algorithm_config
+                                );
+                                toast.success("Settings updated successfully!");
+                                refetchAIStats();
+                              }}
+                            />
                           ) : null}
                         </div>
                       ))}

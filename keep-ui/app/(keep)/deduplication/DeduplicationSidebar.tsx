@@ -1,4 +1,4 @@
-import {  useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Dialog } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import {
@@ -24,7 +24,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 import { Providers } from "@/app/(keep)/providers/providers";
 import SidePanel from "@/components/SidePanel";
 
@@ -40,7 +40,7 @@ interface DeduplicationSidebarProps {
   selectedDeduplicationRule: DeduplicationRule | null;
   onSubmit: (data: Partial<DeduplicationRule>) => Promise<void>;
   mutateDeduplicationRules: KeyedMutator<DeduplicationRule[]>;
-  providers: { installed_providers: Providers, linked_providers: Providers };
+  providers: { installed_providers: Providers; linked_providers: Providers };
 }
 
 const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
@@ -49,7 +49,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   selectedDeduplicationRule,
   onSubmit,
   mutateDeduplicationRules,
-  providers
+  providers,
 }) => {
   const {
     control,
@@ -73,7 +73,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { data: deduplicationFields = {} } = useDeduplicationFields();
   const api = useApi();
 

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { LiaUnlinkSolid } from "react-icons/lia";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   incidentId: string;
@@ -25,13 +26,8 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
           });
           mutate();
         })
-        .catch((error) => {
-          toast.error(
-            "Failed to remove alert from incident, please contact us if this issue persists.",
-            {
-              position: "top-right",
-            }
-          );
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to remove alert from incident");
         });
     }
   }

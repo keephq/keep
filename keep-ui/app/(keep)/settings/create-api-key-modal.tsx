@@ -12,7 +12,7 @@ import { Role } from "@/app/(keep)/settings/models";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 
 interface CreateApiKeyModalProps {
   isOpen: boolean;
