@@ -48,7 +48,7 @@ export const useWorkflowExecutionsV2 = (
           searchParams ? `&${searchParams.toString()}` : ""
         }`
       : null,
-    api.get
+    (url: string) => api.get(url)
   );
 };
 
@@ -62,6 +62,6 @@ export const useWorkflowExecution = (
     api.isReady()
       ? `/workflows/${workflowId}/runs/${workflowExecutionId}`
       : null,
-    api.get
+    (url: string) => api.get(url)
   );
 };

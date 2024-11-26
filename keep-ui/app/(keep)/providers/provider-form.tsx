@@ -51,6 +51,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -393,8 +394,11 @@ const ProviderForm = ({
     method: string = "POST"
   ): Promise<any> => {
     let body;
+    let headers: Record<string, string> = {};
 
-    if (Object.values(formValues).some((value) => value instanceof File)) {
+    if (
+      Object.values(formValues).some((value: unknown) => value instanceof File)
+    ) {
       // FormData for file uploads
       let formData = new FormData();
       for (let key in formValues) {
@@ -407,25 +411,26 @@ const ProviderForm = ({
       body = JSON.stringify(formValues);
     }
 
+    // TODO: refactor
     return api
-      .fetch(requestUrl, {
-        method: method,
-        headers: headers,
-        body: body,
+      .request(requestUrl, {
+        method,
+        headers,
+        body,
       })
       .then((jsonResponse) => jsonResponse)
       .catch((error) => {
         if (error instanceof KeepApiError) {
           const errorData = error.responseJson;
           // If the response is not okay, throw the error message
-          if (response.status === 400) {
+          if (error.statusCode === 400) {
             throw `${errorData.detail}`;
           }
-          if (response.status === 409) {
+          if (error.statusCode === 409) {
             throw `Provider with name ${formValues.provider_name} already exists`;
           }
           const errorDetail = errorData.detail;
-          if (response.status === 412) {
+          if (error.statusCode === 412) {
             setProviderValidatedScopes(errorDetail);
           }
           throw `${provider.type} scopes are invalid: ${JSON.stringify(

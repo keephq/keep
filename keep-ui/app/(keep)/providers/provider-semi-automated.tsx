@@ -22,7 +22,7 @@ export const ProviderSemiAutomated = ({ provider }: Props) => {
   const api = useApi();
   const { data, error, isLoading } = useSWR<WebhookSettings>(
     `/providers/${provider.type}/webhook`,
-    api.get
+    (url: string) => api.get(url)
   );
 
   if (isLoading) return <div>Loading...</div>;
