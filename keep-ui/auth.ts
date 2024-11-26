@@ -101,3 +101,4 @@ if (authType === AuthType.AZUREAD && proxyUrl) {
 console.log("Starting Keep frontend with auth type:", authType);
 
 export const { handlers, auth, signIn, signOut } = NextAuth(config);
+export { providerMap } from "@/auth.config";

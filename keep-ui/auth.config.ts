@@ -27,10 +27,10 @@ export const authType =
   authTypeEnv === MULTI_TENANT
     ? AuthType.AUTH0
     : authTypeEnv === SINGLE_TENANT
-    ? AuthType.DB
-    : authTypeEnv === NO_AUTH
-    ? AuthType.NOAUTH
-    : (authTypeEnv as AuthType);
+      ? AuthType.DB
+      : authTypeEnv === NO_AUTH
+        ? AuthType.NOAUTH
+        : (authTypeEnv as AuthType);
 
 async function refreshAccessToken(token: any) {
   const issuerUrl = process.env.KEYCLOAK_ISSUER;
@@ -176,11 +176,19 @@ const baseProviderConfigs = {
   ],
 };
 
+const providers =
+  baseProviderConfigs[authType as keyof typeof baseProviderConfigs] ||
+  baseProviderConfigs[AuthType.NOAUTH];
+
+export const providerMap = new Map(
+  providers.map((provider) => {
+    return [provider.id, provider];
+  })
+);
+
 export const config = {
   trustHost: true,
-  providers:
-    baseProviderConfigs[authType as keyof typeof baseProviderConfigs] ||
-    baseProviderConfigs[AuthType.NOAUTH],
+  providers,
   pages: {
     signIn: "/signin",
   },
