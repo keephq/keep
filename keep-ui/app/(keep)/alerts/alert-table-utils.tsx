@@ -94,17 +94,6 @@ const invertedSeverityMapping = Object.entries(severityMapping).reduce<{
   return acc;
 }, {});
 
-const customSeveritySortFn = (rowA: any, rowB: any) => {
-  // Adjust the way to access severity values according to your data structure
-  const severityValueA = rowA.original?.severity; // or rowA.severity;
-  const severityValueB = rowB.original?.severity; // or rowB.severity;
-
-  // Use the inverted mapping to get ranks
-  const rankA = invertedSeverityMapping[severityValueA] || 0;
-  const rankB = invertedSeverityMapping[severityValueB] || 0;
-
-  return rankA > rankB ? 1 : rankA < rankB ? -1 : 0;
-};
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
