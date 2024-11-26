@@ -78,7 +78,6 @@ const AlertSidebar = ({
           <Dialog.Panel className="fixed right-0 inset-y-0 w-2/4 bg-white z-30 p-6 overflow-auto flex flex-col">
             <div className="flex justify-between mb-4">
               <div>
-                {/* Will add soon*/}
                 <AlertMenu
                   alert={alert!}
                   presetName="feed"
