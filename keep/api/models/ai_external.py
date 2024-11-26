@@ -55,7 +55,7 @@ class ExternalAIDto(BaseModel):
             session=next(get_session()),
             tenant_id=tenant_id, 
             created_by="system",
-            unique_api_key_id=self.name
+            unique_api_key_id=self.name.lower().replace(" ", "_")
         )
         
         try:

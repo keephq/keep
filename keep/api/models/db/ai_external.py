@@ -39,7 +39,7 @@ analyzing the alert feed and making decisions for each incoming alert.""",
     config_default=json.dumps(
         [
             {"min": 0.3, "max": 0.99, "value": 0.9, "type": "float", "name": "Model Accuracy Threshold", "description": "The trained model accuracy will be evaluated using 30 percent of alerts-to-incident correlations as a validation dataset. If the accuracy is below this threshold, the correlation won't be launched."},
-            {"min": 0.3, "max": 0.99, "value": 0.9, "type": "float", "name": "Correlation Threshold", "description": "The minimum correlation value to consider two alerts belonging to an ancident."},
+            {"min": 0.3, "max": 0.99, "value": 0.9, "type": "float", "name": "Correlation Threshold", "description": "The minimum correlation value to consider two alerts belonging to an incident."},
             {"min": 1, "max": 20, "value": 1, "type": "int", "name": "Train Epochs", "description": "The amount of epochs to train the model for. The less the better to avoid over-fitting."},
             {"value": True, "type": "bool", "name": "Create New Incidents", "description": "Do you want AI to issue new incident if correlation is detected and the incnident alerts are related to is resolved?"},
             {"value": True, "type": "bool", "name": "Enabled", "description": "Enable or disable the algorithm."},
