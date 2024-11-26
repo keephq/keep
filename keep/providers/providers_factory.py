@@ -14,6 +14,7 @@ import typing
 from dataclasses import fields
 from typing import get_args
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_consumer_providers,
     get_installed_providers,
@@ -32,6 +33,7 @@ from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMet
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
 PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.json")
+READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -460,6 +462,12 @@ class ProvidersFactory:
                             secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                         )
                     )
+                if READ_ONLY_MODE:
+                    provider_auth = {
+                        key: "demo"
+                        for key in provider_auth
+                        if isinstance(provider_auth[key], str)
+                    }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:
