@@ -4435,6 +4435,8 @@ def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndM
         setting.feedback_logs = ai_settings.feedback_logs
         if ai_settings.settings_proposed_by_algorithm is not None:
             setting.settings_proposed_by_algorithm = json.dumps(ai_settings.settings_proposed_by_algorithm)
+        else:
+            setting.settings_proposed_by_algorithm = None
         session.add(setting)
         session.commit()
     return setting

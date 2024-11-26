@@ -1,11 +1,8 @@
-import { AILogs, AIStats, AIConfig } from "@/app/(keep)/ai/model";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-
-import useSWR, { SWRConfiguration } from "swr";
-
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { AIConfig, AILogs, AIStats } from "@/app/(keep)/ai/model";
+import useSWR, { SWRConfiguration } from "swr";
 
 export const useAIStats = (
   options: SWRConfiguration = {
@@ -13,18 +10,12 @@ export const useAIStats = (
   }
 ) => {
   const api = useApi();
+
   return useSWR<AIStats>(
     api.isReady() ? "/ai/stats" : null,
     (url) => api.get(url),
     options
   );
-
-  return {
-    data,
-    isLoading: !data && !error,
-    error,
-    refetch: mutate,
-  };
 };
 
 export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
@@ -50,24 +41,15 @@ type UseAIActionsValue = {
 
 export function UseAIActions(): UseAIActionsValue {
 
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   const updateAISettings = async (algorithm_id:string, settings: AIConfig): Promise<AIStats> => {
-    const response = await fetch(`${apiUrl}/ai/${algorithm_id}/settings`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(settings),
-    });
+    const response = await api.put<AIStats>(`/ai/${algorithm_id}/settings`, settings);
 
-    if (!response.ok) {
-      throw new Error('Failed to update AI settings');
+    if (!response) {
+      throw new Error("Failed to update AI settings");
     }
-
-    return response.json();
+    return response;
   };
   
   return {

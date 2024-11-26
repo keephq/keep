@@ -1,19 +1,20 @@
 "use client";
 
-import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
-import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
+import { Card, Title, Subtitle } from "@tremor/react";
+import { useAIStats, UseAIActions } from "utils/hooks/useAI";
 import { toast } from "react-toastify";
-import { useEffect, useState, FormEvent } from "react";
-import { AILogs } from "./model";
-import { useApi } from "@/shared/lib/hooks/useApi";
+import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
+import debounce from "lodash.debounce";
 
-export default function Ai() {
-  const api = useApi();
-  const { data: aistats } = useAIStats();
-  const [text, setText] = useState("");
-  const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
-  const [newText, setNewText] = useState("Mine incidents");
-  const [animate, setAnimate] = useState(false);
+function RangeInputWithLabel({
+  setting,
+  onChange,
+}: {
+  setting: any;
+  onChange: (newValue: number) => void;
+}) {
+  const [value, setValue] = useState(setting.value);
 
   // Create a memoized debounced function
   const debouncedOnChange = useMemo(
@@ -49,7 +50,7 @@ export default function Ai() {
 }
 
 export default function Ai() {
-  const { data: aistats, isLoading, refetch: refetchAIStats } = useAIStats();
+  const { data: aistats, isLoading, mutate: refetchAIStats } = useAIStats();
   const { updateAISettings } = UseAIActions();
 
   // TODO: use pollingInterval instead
@@ -57,18 +58,6 @@ export default function Ai() {
     const interval = setInterval(() => {
       refetchAIStats();
     }, 5000);
-
-  const mineIncidents = async (e: FormEvent) => {
-    e.preventDefault();
-    setAnimate(true);
-    setNewText("Mining 🚀🚀🚀 ...");
-    try {
-      const response = await api.post(`/incidents/mine`, {});
-    } catch (error) {
-      toast.error(
-        "Failed to mine incidents, please contact us if this issue persists."
-      );
-    }
 
     return () => clearInterval(interval);
   }, [refetchAIStats]);
@@ -160,6 +149,7 @@ export default function Ai() {
                                   algorithm_config.algorithm_id,
                                   algorithm_config
                                 );
+                                toast.success("Settings updated successfully!");
                                 refetchAIStats();
                               }}
                               className="mt-2 bg-orange-500 accent-orange-500"
@@ -178,6 +168,7 @@ export default function Ai() {
                                     algorithm_config.algorithm_id,
                                     algorithm_config
                                   );
+                                  toast.success("Settings updated successfully!");
                                   refetchAIStats();
                                 }}
                               />
@@ -195,6 +186,7 @@ export default function Ai() {
                                     algorithm_config.algorithm_id,
                                     algorithm_config
                                   );
+                                  toast.success("Settings updated successfully!");
                                   refetchAIStats();
                                 }}
                               />
