@@ -11,6 +11,7 @@ import { FaVolumeMute } from "react-icons/fa";
 import { IoMdGitMerge } from "react-icons/io";
 import { useTopology } from "@/app/(keep)/topology/model/useTopology";
 import clsx from "clsx";
+import { AILink } from "./AILink";
 
 type NoiseReductionLinksProps = { session: Session | null };
 
@@ -80,7 +81,10 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
             <Subtitle>Maintenance Windows</Subtitle>
           </LinkWithIcon>
         </li>
-      </Disclosure.Panel>
+        <li>
+          <AILink></AILink>
+        </li>
+    </Disclosure.Panel>
     </Disclosure>
   );
 };
