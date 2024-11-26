@@ -156,7 +156,7 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request):
+def db_session(request, worker_id):
     # Create a database connection
     os.environ["DB_ECHO"] = "true"
     if (
@@ -205,8 +205,8 @@ actions:
 """
     workflow_data = [
         Workflow(
-            id="test-id-1",
-            name="test-id-1",
+            id=f"test-id-1-{worker_id}",
+            name=f"test-id-1-{worker_id}",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -214,8 +214,8 @@ actions:
             workflow_raw=mock_raw_workflow.format("test-id-1"),
         ),
         Workflow(
-            id="test-id-2",
-            name="test-id-2",
+            id=f"test-id-2-{worker_id}",
+            name=f"test-id-2-{worker_id}",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -223,8 +223,8 @@ actions:
             workflow_raw=mock_raw_workflow.format("test-id-2"),
         ),
         WorkflowExecution(
-            id="test-execution-id-1",
-            workflow_id="test-id-1",
+            id=f"test-execution-id-1-{worker_id}",
+            workflow_id=f"test-id-1-{worker_id}",
             tenant_id=SINGLE_TENANT_UUID,
             triggered_by="keep-test",
             status="success",
@@ -233,7 +233,7 @@ actions:
         ),
         WorkflowToAlertExecution(
             id=1,
-            workflow_execution_id="test-execution-id-1",
+            workflow_execution_id=f"test-execution-id-1-{worker_id}",
             alert_fingerprint="mock_alert",
             event_id="mock_event_id",
         ),
