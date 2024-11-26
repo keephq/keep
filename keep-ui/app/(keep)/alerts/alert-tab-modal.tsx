@@ -3,7 +3,7 @@ import Modal from "@/components/ui/Modal";
 import { Button, TextInput } from "@tremor/react";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 interface AlertTabModalProps {
   presetId: string;

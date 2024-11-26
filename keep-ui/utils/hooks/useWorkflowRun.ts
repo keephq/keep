@@ -3,9 +3,8 @@ import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/app/(keep)/workflows/models";
 import { Provider } from "@/app/(keep)/providers/providers";
-import { toast } from "react-toastify";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };
@@ -107,11 +106,7 @@ export const useWorkflowRun = (workflow: Workflow) => {
       const { workflow_execution_id } = result;
       router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message);
-      } else {
-        toast.error("An error occurred while starting workflow");
-      }
+      showErrorToast(error, "Failed to start workflow");
     } finally {
       setIsRunning(false);
     }

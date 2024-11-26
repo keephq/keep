@@ -24,3 +24,16 @@ export class KeepApiError extends Error {
     return `${this.name}: ${this.message} - ${this.url} - ${this.proposedResolution} - ${this.statusCode}`;
   }
 }
+
+export class KeepApiReadOnlyError extends KeepApiError {
+  constructor(
+    message: string,
+    url: string,
+    proposedResolution: string,
+    responseJson: any,
+    statusCode?: number
+  ) {
+    super(message, url, proposedResolution, responseJson, statusCode);
+    this.name = "KeepReadOnlyError";
+  }
+}

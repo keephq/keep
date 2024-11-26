@@ -1,7 +1,7 @@
 import { getIncident } from "@/entities/incidents/api/incidents";
-import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
+import { createServerApiClient } from "@/shared/api/createServerApiClient";
 import { notFound } from "next/navigation";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 import { IncidentDto } from "@/entities/incidents/model";
 
 export async function getIncidentWithErrorHandling(

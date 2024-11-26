@@ -19,7 +19,7 @@ import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
 import { formatQuery, parseCEL, RuleGroupType } from "react-querybuilder";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
 import {
@@ -32,6 +32,7 @@ import { TbSparkles } from "react-icons/tb";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface TagOption {
   id?: number;
@@ -285,7 +286,7 @@ export default function AlertPresets({
         parseNumbers: true,
       });
     } catch (error) {
-      toast.error("Failed to parse the CEL query");
+      showErrorToast(error, "Failed to parse the CEL query");
       return;
     }
     const body = {
@@ -326,11 +327,7 @@ export default function AlertPresets({
         }
       );
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to update preset");
-      } else {
-        toast.error("An unexpected error occurred");
-      }
+      showErrorToast(error, "Failed to update preset");
     }
   }
 

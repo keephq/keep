@@ -23,7 +23,8 @@ const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "./alert-dismiss-modal.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   preset: string;
@@ -107,11 +108,7 @@ export default function AlertDismissModal({
       await alertsMutator();
       await presetsMutator();
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to dismiss alerts");
-      } else {
-        toast.error("An unexpected error occurred");
-      }
+      showErrorToast(error, "Failed to dismiss alerts");
     } finally {
       clearAndClose();
     }

@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { useEffect, useState, FormEvent } from "react";
 import { AILogs } from "./model";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export default function Ai() {
   const api = useApi();
@@ -44,7 +45,8 @@ export default function Ai() {
     try {
       const response = await api.post(`/incidents/mine`, {});
     } catch (error) {
-      toast.error(
+      showErrorToast(
+        error,
         "Failed to mine incidents, please contact us if this issue persists."
       );
     }

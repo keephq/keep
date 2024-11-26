@@ -19,7 +19,7 @@ import { useRoles } from "utils/hooks/useRoles";
 import { useUsers } from "@/entities/users/model/useUsers";
 import "./multiselect.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 interface GroupSidebarProps {
   isOpen: boolean;

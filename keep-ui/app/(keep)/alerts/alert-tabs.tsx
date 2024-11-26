@@ -7,8 +7,9 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 import { toast } from "react-toastify";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 interface Tab {
   id?: string;
   name: string;
@@ -65,13 +66,7 @@ const AlertTabs = ({
         setSelectedTab(0); // Set to "All" if the selected tab is deleted
       }
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to delete the tab", {
-          position: "top-left",
-        });
-      } else {
-        toast.error("An unexpected error occurred", { position: "top-left" });
-      }
+      showErrorToast(error, "Failed to delete the tab");
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 const FileUpload: React.FC = () => {
   const api = useApi();

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
+import { createServerApiClient } from "@/shared/api/createServerApiClient";
 
 export default async function InstallFromOAuth({
   params,

@@ -13,7 +13,7 @@ import { useAlerts } from "utils/hooks/useAlerts";
 import { usePresets } from "utils/hooks/usePresets";
 import Select from "@/components/ui/Select";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;

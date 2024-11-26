@@ -9,8 +9,9 @@ import { Button } from "@tremor/react";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 import { toast } from "react-toastify";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface AlertNoteModalProps {
   handleClose: () => void;
@@ -69,11 +70,7 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
 
       handleNoteClose();
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to save note");
-      } else {
-        toast.error("An unexpected error occurred");
-      }
+      showErrorToast(error, "Failed to save note");
     }
   };
 

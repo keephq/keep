@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { getConfig } from "../server/getConfig";
+import { getConfig } from "@/shared/lib/server/getConfig";
 import { ApiClient } from "./ApiClient";
 
 /**

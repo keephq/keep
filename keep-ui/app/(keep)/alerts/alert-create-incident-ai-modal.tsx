@@ -10,7 +10,7 @@ import IncidentCard from "./alert-create-incident-ai-card";
 import { useIncidents } from "utils/hooks/useIncidents";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api/KeepApiError";
 
 interface CreateIncidentWithAIModalProps {
   isOpen: boolean;
