@@ -62,7 +62,7 @@ export default function AlertName({
   }
 
   return (
-    <div className="flex items-start justify-between">
+    <div className="flex items-center justify-between">
       <div className="line-clamp-3 whitespace-pre-wrap" title={alert.name}>
         {name}
       </div>
