@@ -192,7 +192,6 @@ class IncidentBl:
                 self.logger.info(
                     f"Summary generation for incident {incident_id} scheduled, job: {job}",
                     extra={
-                        "algorithm": ALGORITHM_VERBOSE_NAME,
                         "tenant_id": self.tenant_id,
                         "incident_id": incident_id,
                     },
