@@ -463,11 +463,12 @@ class ProvidersFactory:
                         )
                     )
                 if READ_ONLY_MODE:
-                    provider_auth = {
-                        key: "demo"
-                        for key in provider_auth
-                        if isinstance(provider_auth[key], str) and key != "name"
-                    }
+                    if "authentication" in provider_auth:
+                        provider_auth["authentication"] = {
+                            key: "demo"
+                            for key in provider_auth["authentication"]
+                            if isinstance(provider_auth["authentication"][key], str)
+                        }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:
