@@ -1,25 +1,24 @@
 import { useState } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "./useConfig";
 import { useRouter } from "next/navigation";
 import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/app/(keep)/workflows/models";
 import { Provider } from "@/app/(keep)/providers/providers";
+import { toast } from "react-toastify";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };
 }
 
 export const useWorkflowRun = (workflow: Workflow) => {
+  const api = useApi();
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
-  const { data: session, status, update } = useSession();
-  const accessToken = session?.accessToken;
   const [isAlertTriggerModalOpen, setIsAlertTriggerModalOpen] = useState(false);
   let message = "";
   const [alertFilters, setAlertFilters] = useState<Filter[]>([]);
   const [alertDependencies, setAlertDependencies] = useState<string[]>([]);
-  const apiUrl = useApiUrl();
 
   const { data: providersData = { providers: {} } as ProvidersData } =
     useProviders();
@@ -103,25 +102,16 @@ export const useWorkflowRun = (workflow: Workflow) => {
         return;
       }
       setIsRunning(true);
-      const response = await fetch(`${apiUrl}/workflows/${workflow?.id}/run`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const result = await api.post(`/workflows/${workflow?.id}/run`, payload);
 
-      if (response.ok) {
-        // Workflow started successfully
-        const responseData = await response.json();
-        const { workflow_execution_id } = responseData;
-        router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
-      } else {
-        console.error("Failed to start workflow");
-      }
+      const { workflow_execution_id } = result;
+      router.push(`/workflows/${workflow?.id}/runs/${workflow_execution_id}`);
     } catch (error) {
-      console.error("An error occurred while starting workflow", error);
+      if (error instanceof KeepApiError) {
+        toast.error(error.message);
+      } else {
+        toast.error("An error occurred while starting workflow");
+      }
     } finally {
       setIsRunning(false);
     }

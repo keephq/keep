@@ -1,4 +1,3 @@
-import "./page.css";
 import { useEffect, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
@@ -32,6 +31,9 @@ import useStore, {
   Definition as FlowDefinition,
 } from "./builder-store";
 import { toast } from "react-toastify";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import "./page.css";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -43,7 +45,6 @@ interface Props {
   triggerRun: number;
   workflow?: string;
   workflowId?: string;
-  accessToken?: string;
   installedProviders?: Provider[] | undefined | null;
   isPreview?: boolean;
 }
@@ -58,10 +59,10 @@ function Builder({
   triggerRun,
   workflow,
   workflowId,
-  accessToken,
   installedProviders,
   isPreview,
 }: Props) {
+  const api = useApi();
   const [definition, setDefinition] = useState(() =>
     wrapDefinitionV2({ sequence: [], properties: {}, isValid: false })
   );
@@ -81,7 +82,6 @@ function Builder({
 
   const searchParams = useSearchParams();
   const { errorNode, setErrorNode, canDeploy, synced } = useStore();
-  const apiUrl = useApiUrl();
 
   const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
     setStepValidationError(error);
@@ -103,75 +103,61 @@ function Builder({
   };
 
   const updateWorkflow = () => {
-    const url = `${apiUrl}/workflows/${workflowId}`;
-    const method = "PUT";
-    const headers = {
-      "Content-Type": "text/html",
-      Authorization: `Bearer ${accessToken}`,
-    };
     const body = stringify(buildAlert(definition.value));
-    fetch(url, { method, headers, body })
-      .then((response) => {
-        if (response.ok) {
-          window.location.assign("/workflows");
-        } else {
-          throw new Error(response.statusText);
-        }
+    api
+      .request(`/workflows/${workflowId}`, {
+        method: "PUT",
+        body,
+        headers: { "Content-Type": "text/html" },
+      })
+      .then(() => {
+        window.location.assign("/workflows");
       })
       .catch((error) => {
-        alert(`Error: ${error}`);
+        toast.error(
+          error instanceof KeepApiError
+            ? error.message
+            : "Failed to add workflow",
+          { position: "top-left" }
+        );
       });
   };
 
   const testRunWorkflow = () => {
-    const url = `${apiUrl}/workflows/test`;
-    const method = "POST";
-    const headers = {
-      "Content-Type": "text/html",
-      Authorization: `Bearer ${accessToken}`,
-    };
-
     setTestRunModalOpen(true);
     const body = stringify(buildAlert(definition.value));
-    fetch(url, { method, headers, body })
-      .then((response) => {
-        if (response.ok) {
-          response.json().then((data) => {
-            setRunningWorkflowExecution({
-              ...data,
-            });
-          });
-        } else {
-          response.json().then((data) => {
-            setRunningWorkflowExecution({
-              error: data?.detail ?? "Unknown error",
-            });
-          });
-        }
+    api
+      .request(`/workflows/test`, {
+        method: "POST",
+        body,
+        headers: { "Content-Type": "text/html" },
+      })
+      .then((data) => {
+        setRunningWorkflowExecution({
+          ...data,
+        });
       })
       .catch((error) => {
-        alert(`Error: ${error}`);
+        setRunningWorkflowExecution({
+          error:
+            error instanceof KeepApiError ? error.message : "Unknown error",
+        });
         setTestRunModalOpen(false);
       });
   };
 
   const addWorkflow = () => {
-    const url = `${apiUrl}/workflows/json`;
-    const method = "POST";
-    const headers = {
-      "Content-Type": "text/html",
-      Authorization: `Bearer ${accessToken}`,
-    };
     const body = stringify(buildAlert(definition.value));
-    fetch(url, { method, headers, body })
-      .then((response) => {
-        if (response.ok) {
-          // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
-          // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
-          window.location.assign("/workflows");
-        } else {
-          throw new Error(response.statusText);
-        }
+    api
+      .request(`/workflows/json`, {
+        method: "POST",
+        body,
+        headers: { "Content-Type": "text/html" },
+      })
+      .then(() => {
+        // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
+        // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
+        window.location.assign("/workflows");
       })
       .catch((error) => {
         alert(`Error: ${error}`);
@@ -210,7 +196,7 @@ function Builder({
       );
     }
     setIsLoading(false);
-  }, [loadedAlertFile, workflow, searchParams]);
+  }, [loadedAlertFile, workflow, searchParams, providers]);
 
   useEffect(() => {
     if (triggerGenerate) {
@@ -258,7 +244,7 @@ function Builder({
         addWorkflow();
       }
     }
-  }, [canDeploy, errorNode, definition?.isValid]);
+  }, [canDeploy, errorNode, definition.isValid, synced, workflowId]);
 
   useEffect(() => {
     enableGenerate(

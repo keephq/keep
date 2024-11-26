@@ -1,18 +1,15 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { AlertDto } from "@/app/(keep)/alerts/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { RuleGroupType, formatQuery } from "react-querybuilder";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import { useMemo, useEffect } from "react";
 
 export const useSearchAlerts = (
   args: { query: RuleGroupType; timeframe: number },
   options?: SWRConfiguration
 ) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   // Create a stable key for our query
   const argsString = useMemo(
@@ -32,19 +29,12 @@ export const useSearchAlerts = (
   const swr = useSWR<AlertDto[]>(
     key,
     async () =>
-      fetcher(`${apiUrl}/alerts/search`, session?.accessToken, {
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-type": "application/json",
+      api.post(`/alerts/search`, {
+        query: {
+          cel_query: formatQuery(debouncedArgs.query, "cel"),
+          sql_query: formatQuery(debouncedArgs.query, "parameterized_named"),
         },
-        method: "POST",
-        body: JSON.stringify({
-          query: {
-            cel_query: formatQuery(debouncedArgs.query, "cel"),
-            sql_query: formatQuery(debouncedArgs.query, "parameterized_named"),
-          },
-          timeframe: debouncedArgs.timeframe,
-        }),
+        timeframe: debouncedArgs.timeframe,
       }),
     {
       ...options,

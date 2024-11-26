@@ -13,10 +13,7 @@ import {
 } from "../types";
 import { Preset } from "@/app/(keep)/alerts/models";
 import { FiEdit2, FiSave } from "react-icons/fi";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useDashboards } from "utils/hooks/useDashboards";
-import { useApiUrl } from "utils/hooks/useConfig";
-import "../styles.css";
 import { toast } from "react-toastify";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useDashboardPreset } from "utils/hooks/useDashboardPresets";
@@ -24,6 +21,9 @@ import {
   MetricsWidget,
   useDashboardMetricWidgets,
 } from "@/utils/hooks/useDashboardMetricWidgets";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import "../styles.css";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 const DASHBOARD_FILTERS = [
   {
@@ -35,9 +35,9 @@ const DASHBOARD_FILTERS = [
 ];
 
 const DashboardPage = () => {
+  const api = useApi();
   const allPresets = useDashboardPreset();
   const { id }: any = useParams();
-  const { data: session } = useSession();
   const { dashboards, isLoading, mutate: mutateDashboard } = useDashboards();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [layout, setLayout] = useState<LayoutItem[]>([]);
@@ -46,7 +46,6 @@ const DashboardPage = () => {
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
   const [dashboardName, setDashboardName] = useState(decodeURIComponent(id));
   const [isEditingName, setIsEditingName] = useState(false);
-  const apiUrl = useApiUrl();
 
   useEffect(() => {
     if (!isLoading) {
@@ -84,21 +83,21 @@ const DashboardPage = () => {
         widgetType === WidgetType.GENERICS_METRICS
           ? 12
           : widgetType === WidgetType.METRIC
-          ? 6
-          : 3,
+            ? 6
+            : 3,
       h:
         widgetType === WidgetType.GENERICS_METRICS
           ? 20
           : widgetType === WidgetType.METRIC
-          ? 8
-          : 3,
+            ? 8
+            : 3,
       minW: widgetType === WidgetType.GENERICS_METRICS ? 10 : 2,
       minH:
         widgetType === WidgetType.GENERICS_METRICS
           ? 15
           : widgetType === WidgetType.METRIC
-          ? 7
-          : 3,
+            ? 7
+            : 3,
       static: false,
     };
     const newWidget: WidgetData = {
@@ -152,35 +151,35 @@ const DashboardPage = () => {
         (d) => d.dashboard_name === decodeURIComponent(id)
       );
       const method = dashboard ? "PUT" : "POST";
-      const endpoint = `${apiUrl}/dashboard${
+      const endpoint = `/dashboard${
         dashboard ? `/${encodeURIComponent(dashboard.id)}` : ""
       }`;
 
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
-        },
-        body: JSON.stringify({
+      const result = await api.post(
+        endpoint,
+        {
           dashboard_name: dashboardName,
           dashboard_config: {
             layout,
             widget_data: widgetData,
           },
-        }),
-      });
+        },
+        {
+          method,
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`Failed to save dashboard: ${response.statusText}`);
-      }
-
-      const result = await response.json();
       console.log("Dashboard saved successfully", result);
       mutateDashboard();
       toast.success("Dashboard saved successfully");
     } catch (error) {
-      console.error("Error saving dashboard", error);
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to save dashboard", {
+          position: "top-left",
+        });
+      } else {
+        toast.error("An unexpected error occurred", { position: "top-left" });
+      }
     }
   };
 

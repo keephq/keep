@@ -1,19 +1,16 @@
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "./useConfig";
 import { SWRConfiguration } from "swr";
 import { ProvidersResponse } from "@/app/(keep)/providers/providers";
-import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useProviders = (
   options: SWRConfiguration = { revalidateOnFocus: false }
 ) => {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   return useSWRImmutable<ProvidersResponse>(
-    () => (session ? `${apiUrl}/providers` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/providers" : null,
+    (url) => api.get(url),
     options
   );
 };

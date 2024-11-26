@@ -1,20 +1,19 @@
 "use client";
 
-import { Card, Title, Subtitle } from "@tremor/react";
-import { useAIStats, UseAIActions } from "utils/hooks/useAI";
+import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
+import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
 import { toast } from "react-toastify";
-import { useEffect, useState, useMemo } from "react";
-import Image from "next/image";
-import debounce from "lodash.debounce";
+import { useEffect, useState, FormEvent } from "react";
+import { AILogs } from "./model";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
-function RangeInputWithLabel({
-  setting,
-  onChange,
-}: {
-  setting: any;
-  onChange: (newValue: number) => void;
-}) {
-  const [value, setValue] = useState(setting.value);
+export default function Ai() {
+  const api = useApi();
+  const { data: aistats } = useAIStats();
+  const [text, setText] = useState("");
+  const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
+  const [newText, setNewText] = useState("Mine incidents");
+  const [animate, setAnimate] = useState(false);
 
   // Create a memoized debounced function
   const debouncedOnChange = useMemo(
@@ -58,6 +57,18 @@ export default function Ai() {
     const interval = setInterval(() => {
       refetchAIStats();
     }, 5000);
+
+  const mineIncidents = async (e: FormEvent) => {
+    e.preventDefault();
+    setAnimate(true);
+    setNewText("Mining 🚀🚀🚀 ...");
+    try {
+      const response = await api.post(`/incidents/mine`, {});
+    } catch (error) {
+      toast.error(
+        "Failed to mine incidents, please contact us if this issue persists."
+      );
+    }
 
     return () => clearInterval(interval);
   }, [refetchAIStats]);

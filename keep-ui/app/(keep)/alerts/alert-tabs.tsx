@@ -6,6 +6,9 @@ import { evalWithContext } from "./alerts-rules-builder";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useApiUrl } from "utils/hooks/useConfig";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { toast } from "react-toastify";
 interface Tab {
   id?: string;
   name: string;
@@ -28,8 +31,7 @@ const AlertTabs = ({
   setSelectedTab,
 }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const handleTabChange = (index: any) => {
     setSelectedTab(index);
@@ -53,20 +55,9 @@ const AlertTabs = ({
 
     // if the tab has id, means it already in the database
     try {
-      const response = await fetch(
-        `${apiUrl}/preset/${presetId}/tab/${tabToDelete.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }
+      const response = await api.delete(
+        `/preset/${presetId}/tab/${tabToDelete.id}`
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to delete the tab");
-      }
 
       const updatedTabs = tabs.filter((_, i) => i !== index);
       setTabs(updatedTabs);
@@ -74,8 +65,13 @@ const AlertTabs = ({
         setSelectedTab(0); // Set to "All" if the selected tab is deleted
       }
     } catch (error) {
-      console.error(error);
-      alert("Failed to delete the tab");
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to delete the tab", {
+          position: "top-left",
+        });
+      } else {
+        toast.error("An unexpected error occurred", { position: "top-left" });
+      }
     }
   };
 

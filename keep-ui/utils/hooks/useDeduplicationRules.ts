@@ -1,28 +1,24 @@
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useDeduplicationRules = (options: SWRConfiguration = {}) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWRImmutable<DeduplicationRule[]>(
-    () => (session ? `${apiUrl}/deduplications` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/deduplications" : null,
+    (url) => api.get(url),
     options
   );
 };
 
 export const useDeduplicationFields = (options: SWRConfiguration = {}) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWRImmutable<Record<string, string[]>>(
-    () => (session ? `${apiUrl}/deduplications/fields` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/deduplications/fields" : null,
+    (url) => api.get(url),
     options
   );
 };
