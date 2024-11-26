@@ -167,7 +167,9 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
         `/providers/${provider.id}/invoke/${method.func_name}`,
         userParams
       );
-      if (method.type === "action") mutate();
+      if (method.type === "action") {
+        mutate();
+      }
       toast.success(`Successfully called "${method.name}"`, {
         position: toast.POSITION.TOP_LEFT,
       });
@@ -196,6 +198,7 @@ export function AlertMethodModal({ presetName }: AlertMethodModalProps) {
       if (method.type === "action") {
         handleClose();
       }
+      setIsLoading(false);
     }
   };
 

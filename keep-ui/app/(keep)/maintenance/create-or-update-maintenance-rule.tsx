@@ -113,8 +113,12 @@ export default function CreateOrUpdateMaintenanceRule({
 
   const updateMaintenanceRule = async (e: FormEvent) => {
     e.preventDefault();
+    if (!maintenanceToEdit?.id) {
+      toast.error("No maintenance rule selected for update");
+      return;
+    }
     try {
-      const response = await api.put(`/maintenance/${maintenanceToEdit?.id}`, {
+      const response = await api.put(`/maintenance/${maintenanceToEdit.id}`, {
         name: maintenanceName,
         description: description,
         cel_query: celQuery,

@@ -54,7 +54,9 @@ export default function ManualRunWorkflowModal({
         `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`
       );
     } catch (error) {
-      toast.error("Failed to start workflow", { position: "top-left" });
+      const message =
+        error instanceof Error ? error.message : "Failed to start workflow";
+      toast.error(message, { position: "top-left" });
     }
     clearAndClose();
   };

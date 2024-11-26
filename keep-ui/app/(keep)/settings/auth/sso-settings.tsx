@@ -11,7 +11,6 @@ import {
   TableHeaderCell,
   TableRow,
   Button,
-  Icon,
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -22,11 +21,7 @@ interface SSOProvider {
   connected: boolean;
 }
 
-interface Props {
-  selectedTab: string;
-}
-
-const SSOSettings: React.FC<Props> = () => {
+const SSOSettings = () => {
   const api = useApi();
   const { data, error } = useSWR<{
     sso: boolean;

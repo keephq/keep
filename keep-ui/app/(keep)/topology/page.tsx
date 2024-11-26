@@ -2,7 +2,7 @@ import React from "react";
 import { getApplications, getTopology } from "./api";
 import { TopologyPageClient } from "./topology-client";
 import { Subtitle, Title } from "@tremor/react";
-import { createServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
 import { TopologyApplication, TopologyService } from "./model";
 
 export const metadata = {

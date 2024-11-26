@@ -1,5 +1,9 @@
 import PageClient from "../page.client";
-import { createServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
+
+type WorkflowRawResponse = {
+  workflow_raw: string;
+};
 
 export default async function PageWithId({
   params,
@@ -7,9 +11,12 @@ export default async function PageWithId({
   params: { workflowId: string };
 }) {
   const api = await createServerApiClient();
-  const text = await api.get(`/workflows/${params.workflowId}/raw`, {
-    cache: "no-store",
-  });
+  const text = await api.get<WorkflowRawResponse>(
+    `/workflows/${params.workflowId}/raw`,
+    {
+      cache: "no-store",
+    }
+  );
   return (
     <PageClient workflow={text.workflow_raw} workflowId={params.workflowId} />
   );

@@ -24,6 +24,8 @@ import { mutate } from "swr";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { toast } from "react-toastify";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface Props {
   selectedTab: string;
@@ -84,11 +86,17 @@ export default function ApiKeySettings({ selectedTab }: Props) {
     );
 
     if (confirmed) {
-      const res = await api.put(`/settings/apikey`, { apiKeyId });
-      if (res.ok) {
+      try {
+        const res = await api.put(`/settings/apikey`, { apiKeyId });
         mutate(`/settings/apikeys`);
-      } else {
-        alert("Something went wrong! Please try again.");
+      } catch (error) {
+        if (error instanceof KeepApiError) {
+          toast.error(error.message);
+        } else {
+          toast.error(
+            "An unknown error occurred while regenerating the API key."
+          );
+        }
       }
     }
   };
@@ -100,11 +108,15 @@ export default function ApiKeySettings({ selectedTab }: Props) {
     );
 
     if (confirmed) {
-      const res = await api.delete(`/settings/apikey/${apiKeyId}`);
-      if (res.ok) {
+      try {
+        const res = await api.delete(`/settings/apikey/${apiKeyId}`);
         mutate(`/settings/apikeys`);
-      } else {
-        alert("Something went wrong! Please try again.");
+      } catch (error) {
+        if (error instanceof KeepApiError) {
+          toast.error(error.message);
+        } else {
+          toast.error("An unknown error occurred while deleting the API key.");
+        }
       }
     }
   };

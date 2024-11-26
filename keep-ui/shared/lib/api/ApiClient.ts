@@ -16,8 +16,8 @@ export class ApiClient {
   }
 
   getHeaders() {
-    if (!this.session) {
-      throw new Error("No session found");
+    if (!this.session || !this.session.accessToken) {
+      throw new Error("No valid session or access token found");
     }
     return {
       Authorization: `Bearer ${this.session.accessToken}`,
@@ -62,14 +62,14 @@ export class ApiClient {
     url: string,
     requestInit: RequestInit = {}
   ): Promise<T> {
+    if (!this.config) {
+      throw new Error("No config found");
+    }
+
     const apiUrl = this.isServer
       ? getApiURL()
       : getApiUrlFromConfig(this.config);
     const fullUrl = apiUrl + url;
-
-    if (!this.config) {
-      throw new Error("No config found");
-    }
 
     const response = await fetch(fullUrl, {
       ...requestInit,

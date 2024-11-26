@@ -2,8 +2,6 @@ import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, TextInput } from "@tremor/react";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 

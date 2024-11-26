@@ -88,15 +88,20 @@ const CreateIncidentWithAIModal = ({
 
         let data: IncidentSuggestion;
 
-        // First attempt
-        try {
-          data = await api.post(
+        const fetchIncidentSuggestions = async (
+          alertsToProcess: AlertDto[],
+          controller: AbortController
+        ) => {
+          return await api.post(
             "/incidents/ai/suggest",
             alertsToProcess.map((alert) => alert.fingerprint),
-            {
-              signal: controller.signal,
-            }
+            { signal: controller.signal }
           );
+        };
+
+        // First attempt
+        try {
+          data = await fetchIncidentSuggestions(alertsToProcess, controller);
           handleSuccess(data);
         } catch (error) {
           // If timeout error (which happens after 30s with NextJS), wait 10s and retry
@@ -104,13 +109,7 @@ const CreateIncidentWithAIModal = ({
           // TODO: https://github.com/keephq/keep/issues/2374
           if (error instanceof KeepApiError && error.statusCode === 500) {
             await new Promise((resolve) => setTimeout(resolve, 10000));
-            data = await api.post(
-              "/incidents/ai/suggest",
-              alertsToProcess.map((alert) => alert.fingerprint),
-              {
-                signal: controller.signal,
-              }
-            );
+            data = await fetchIncidentSuggestions(alertsToProcess, controller);
             handleSuccess(data);
           }
         }
@@ -128,10 +127,10 @@ const CreateIncidentWithAIModal = ({
             error.message || "Failed to create incident suggestions with AI"
           );
         }
+      } else {
+        setError("An unexpected error occurred. Please try again.");
       }
-
       console.error("Error creating incident with AI:", error);
-      setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }

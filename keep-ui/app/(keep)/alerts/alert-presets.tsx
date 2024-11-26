@@ -278,11 +278,16 @@ export default function AlertPresets({
   async function addOrUpdatePreset() {
     if (!presetName) return;
 
-    const sqlQuery = formatQuery(parseCEL(presetCEL), {
-      format: "parameterized_named",
-      parseNumbers: true,
-    });
-
+    let sqlQuery;
+    try {
+      sqlQuery = formatQuery(parseCEL(presetCEL), {
+        format: "parameterized_named",
+        parseNumbers: true,
+      });
+    } catch (error) {
+      toast.error("Failed to parse the CEL query");
+      return;
+    }
     const body = {
       name: presetName,
       options: [

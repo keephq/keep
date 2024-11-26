@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Select, { components } from "react-select";
 import { Button, TextInput, Text } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
@@ -41,7 +41,7 @@ const AlertAssignTicketModal = ({
   const {
     handleSubmit,
     control,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
   // if this modal should not be open, do nothing
@@ -58,7 +58,6 @@ const AlertAssignTicketModal = ({
         },
         fingerprint: alert.fingerprint,
       };
-
       const response = await api.post(`/alerts/enrich`, requestData);
       alert.ticket_url = data.ticket_url;
       handleClose();
@@ -207,7 +206,7 @@ const AlertAssignTicketModal = ({
               />
             </div>
             <div className="mt-6 flex gap-2">
-              <Button color="orange" type="submit">
+              <Button color="orange" type="submit" disabled={isSubmitting}>
                 <Text>Assign Ticket</Text>
               </Button>
               <Button

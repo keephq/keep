@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
 
 export default async function InstallFromOAuth({
   params,
@@ -30,7 +30,10 @@ export default async function InstallFromOAuth({
       }
     );
     return redirect("/providers?oauth=success");
-  } catch (error) {
-    return redirect(`/providers?oauth=failure&reason=${error}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return redirect(
+      `/providers?oauth=failure&reason=${encodeURIComponent(errorMessage)}`
+    );
   }
 }

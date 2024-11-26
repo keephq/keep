@@ -7,8 +7,6 @@ import {
   FieldValues,
 } from "react-hook-form";
 import Modal from "@/components/ui/Modal";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useProviders } from "utils/hooks/useProviders";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";

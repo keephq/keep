@@ -68,9 +68,13 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.success("Incident created successfully");
         return result as IncidentDto;
       } catch (error) {
-        toast.error(
-          "Failed to create incident, please contact us if this issue persists."
-        );
+        if (error instanceof KeepApiError) {
+          toast.error(
+            "Failed to create incident, please contact us if this issue persists."
+          );
+        } else {
+          toast.error("An unknown error occurred while creating the incident.");
+        }
         throw error;
       }
     },

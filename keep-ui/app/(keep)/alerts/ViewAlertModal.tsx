@@ -2,8 +2,6 @@ import { AlertDto } from "./models"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
 import { Button, Icon, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
@@ -39,14 +37,15 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         const response = await api.post(`/alerts/unenrich`, requestData);
 
         toast.success(`${key} un-enriched successfully!`);
-        await mutate();
       } catch (error) {
         if (error instanceof KeepApiError) {
-          toast.error(error.message || `Failed to un-enriched ${key}`);
+          toast.error(error.message || `Failed to unenrich ${key}`);
         } else {
           // Handle unexpected error
-          toast.error("An unexpected error occurred");
+          toast.error(`Failed to unenrich ${key}: Unexpected error occurred`);
         }
+      } finally {
+        await mutate();
       }
     }
   };

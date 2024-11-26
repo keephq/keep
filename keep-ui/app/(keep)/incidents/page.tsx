@@ -4,7 +4,7 @@ import {
   GetIncidentsParams,
 } from "@/entities/incidents/api/incidents";
 import { PaginatedIncidentsDto } from "@/entities/incidents/model";
-import { createServerApiClient } from "@/shared/lib/api/getServerApiClient";
+import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
 
 const defaultIncidentsParams: GetIncidentsParams = {
   confirmed: true,

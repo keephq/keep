@@ -10,13 +10,13 @@ import { useGroups } from "utils/hooks/useGroups";
 import { useConfig } from "utils/hooks/useConfig";
 import UsersSidebar from "./users-sidebar";
 import { User } from "@/app/(keep)/settings/models";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { UsersTable } from "./users-table";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { toast } from "react-toastify";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 interface Props {
   currentUser?: AuthUser;
-  selectedTab: string;
   groupsAllowed: boolean;
   userCreationAllowed: boolean;
 }
@@ -27,7 +27,6 @@ export interface Config {
 
 export default function UsersSettings({
   currentUser,
-  selectedTab,
   groupsAllowed,
   userCreationAllowed,
 }: Props) {
@@ -101,6 +100,11 @@ export default function UsersSettings({
 
         await mutateUsers();
       } catch (error) {
+        toast.error(
+          error instanceof KeepApiError
+            ? error.message
+            : "Failed to delete user"
+        );
         console.error("Error deleting user:", error);
       }
     }

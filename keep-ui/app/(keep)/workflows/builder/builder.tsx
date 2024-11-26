@@ -114,7 +114,12 @@ function Builder({
         window.location.assign("/workflows");
       })
       .catch((error) => {
-        toast.error("Failed to update workflow", { position: "top-left" });
+        toast.error(
+          error instanceof KeepApiError
+            ? error.message
+            : "Failed to add workflow",
+          { position: "top-left" }
+        );
       });
   };
 

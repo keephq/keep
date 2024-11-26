@@ -17,7 +17,6 @@ export default function UserTab({
       currentUser={currentUser}
       groupsAllowed={groupsAllowed}
       userCreationAllowed={userCreationAllowed}
-      selectedTab="users"
     />
   );
 }

@@ -34,8 +34,8 @@ export const useTopology = (
   const pollTopology = useTopologyPollingContext();
 
   const url = api.isReady()
-    ? null
-    : buildTopologyUrl({ providerIds, services, environment });
+    ? buildTopologyUrl({ providerIds, services, environment })
+    : null;
 
   const { data, error, mutate } = useSWR<TopologyService[]>(
     url,
