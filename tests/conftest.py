@@ -134,21 +134,21 @@ def is_mysql_responsive(host, port, user, password, database):
 
 
 @pytest.fixture(scope="session")
-def mysql_container(docker_ip, docker_services, worker_id):
+def mysql_container(docker_ip, docker_services):
     try:
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
-            yield f"mysql+pymysql://root:keep@localhost:3306/keep-{worker_id}"
+            yield "mysql+pymysql://root:keep@localhost:3306/keep"
             return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
             check=lambda: is_mysql_responsive(
-                "127.0.0.1", 3306, "root", "keep", f"keep-{worker_id}"
+                "127.0.0.1", 3306, "root", "keep", "keep"
             ),
         )
         # set this as environment variable
-        yield f"mysql+pymysql://root:keep@localhost:3306/keep-{worker_id}"
+        yield f"mysql+pymysql://root:keep@localhost:3306/keep"
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
