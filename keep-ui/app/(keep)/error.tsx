@@ -9,7 +9,7 @@ import "./error.css";
 import { useEffect } from "react";
 import { Title, Subtitle } from "@tremor/react";
 import { Button, Text } from "@tremor/react";
-import { KeepApiError } from "@/shared/lib/KeepApiError";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 import * as Sentry from "@sentry/nextjs";
 import { useSignOut } from "@/shared/lib/useSignOut";
 

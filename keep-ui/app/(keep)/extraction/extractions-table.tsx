@@ -18,8 +18,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { ExtractionRule } from "./model";
@@ -27,6 +25,7 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
 
@@ -51,9 +50,8 @@ export default function RulesTable({
   extractions: mappings,
   editCallback,
 }: Props) {
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useMappings();
-  const apiUrl = useApiUrl();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
@@ -183,21 +181,17 @@ export default function RulesTable({
 
   const deleteExtraction = (extractionId: number) => {
     if (confirm("Are you sure you want to delete this rule?")) {
-      fetch(`${apiUrl}/extraction/${extractionId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
+      api
+        .delete(`/extraction/${extractionId}`)
+        .then(() => {
           mutate();
           toast.success("Extraction deleted successfully");
-        } else {
+        })
+        .catch(() => {
           toast.error(
             "Failed to delete extraction rule, contact us if this persists"
           );
-        }
-      });
+        });
     }
   };
 

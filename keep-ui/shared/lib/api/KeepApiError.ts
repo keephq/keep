@@ -4,11 +4,12 @@ export class KeepApiError extends Error {
   url: string;
   proposedResolution: string;
   statusCode: number | undefined;
-
+  responseJson: any;
   constructor(
     message: string,
     url: string,
     proposedResolution: string,
+    responseJson: any,
     statusCode?: number
   ) {
     super(message);
@@ -16,6 +17,7 @@ export class KeepApiError extends Error {
     this.url = url;
     this.proposedResolution = proposedResolution;
     this.statusCode = statusCode;
+    this.responseJson = responseJson;
   }
 
   toString() {

@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Button } from "@tremor/react";
-import { getSession } from "next-auth/react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
@@ -10,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { SilencedDoorbellNotification } from "@/components/icons";
 import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
 import CreateIncidentWithAIModal from "./alert-create-incident-ai-modal";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   selectedRowIds: string[];
@@ -32,7 +31,7 @@ export default function AlertActions({
 }: Props) {
   const router = useRouter();
   const { useAllPresets } = usePresets();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const { mutate: presetsMutator } = useAllPresets({
     revalidateOnFocus: false,
   });
@@ -61,16 +60,11 @@ export default function AlertActions({
         ""
       );
       const options = [{ value: formattedCel, label: "CEL" }];
-      const session = await getSession();
-      const response = await fetch(`${apiUrl}/preset`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: newPresetName, options: options }),
-      });
-      if (response.ok) {
+      try {
+        const response = await api.post(`/preset`, {
+          name: newPresetName,
+          options: options,
+        });
         toast(`Preset ${newPresetName} created!`, {
           position: "top-left",
           type: "success",
@@ -78,7 +72,7 @@ export default function AlertActions({
         presetsMutator();
         clearRowSelection();
         router.replace(`/alerts/${newPresetName}`);
-      } else {
+      } catch (error) {
         toast(`Error creating preset ${newPresetName}`, {
           position: "top-left",
           type: "error",

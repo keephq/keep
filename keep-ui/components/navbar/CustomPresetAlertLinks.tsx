@@ -1,7 +1,6 @@
 import { CSSProperties, useEffect, useState } from "react";
 import { Session } from "next-auth";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { usePresets } from "utils/hooks/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,6 +25,7 @@ const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
 import clsx from "clsx";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 type PresetAlertProps = {
   preset: Preset;
@@ -98,7 +98,7 @@ export const CustomPresetAlertLinks = ({
   session,
   selectedTags,
 }: CustomPresetAlertLinksProps) => {
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } =
     usePresets();
@@ -177,14 +177,9 @@ export const CustomPresetAlertLinks = ({
     );
 
     if (isDeleteConfirmed) {
-      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      });
+      try {
+        await api.delete(`/preset/${presetId}`);
 
-      if (response.ok) {
         toast(`Preset ${presetName} deleted!`, {
           position: "top-left",
           type: "success",
@@ -198,6 +193,11 @@ export const CustomPresetAlertLinks = ({
         );
 
         router.push("/alerts/feed"); // Redirect to feed
+      } catch (error) {
+        toast(`Error deleting preset ${presetName}: ${error}`, {
+          position: "top-left",
+          type: "error",
+        });
       }
     }
   };

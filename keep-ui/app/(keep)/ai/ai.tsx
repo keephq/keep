@@ -1,21 +1,19 @@
 "use client";
+
 import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
 import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
-import { useEffect, useState, useRef, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { AILogs } from "./model";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export default function Ai() {
-  const { data: aistats, isLoading } = useAIStats();
-  const { data: session } = useSession();
+  const api = useApi();
+  const { data: aistats } = useAIStats();
   const [text, setText] = useState("");
   const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
   const [newText, setNewText] = useState("Mine incidents");
   const [animate, setAnimate] = useState(false);
-  const onlyOnce = useRef(false);
-  const apiUrl = useApiUrl();
 
   const mutateAILogs = (logs: AILogs) => {
     setBasicAlgorithmLog(logs.log);
@@ -43,15 +41,9 @@ export default function Ai() {
     e.preventDefault();
     setAnimate(true);
     setNewText("Mining 🚀🚀🚀 ...");
-    const response = await fetch(`${apiUrl}/incidents/mine`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
-    if (!response.ok) {
+    try {
+      const response = await api.post(`/incidents/mine`, {});
+    } catch (error) {
       toast.error(
         "Failed to mine incidents, please contact us if this issue persists."
       );

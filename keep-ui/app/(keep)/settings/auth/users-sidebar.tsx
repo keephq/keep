@@ -18,12 +18,12 @@ import {
 } from "react-hook-form";
 import { useRoles } from "utils/hooks/useRoles";
 import { useGroups } from "utils/hooks/useGroups";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { User, Group } from "@/app/(keep)/settings/models";
 import { AuthType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
 import Select from "@/components/ui/Select";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface UserSidebarProps {
   isOpen: boolean;
@@ -70,12 +70,11 @@ const UsersSidebar = ({
     },
   });
 
-  const { data: session } = useSession();
+  const api = useApi();
   const { data: roles = [] } = useRoles();
   const { data: groups = [], mutate: mutateGroups } = useGroups();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { data: configData } = useConfig();
-  const apiUrl = useApiUrl();
   const authType = configData?.AUTH_TYPE as AuthType;
 
   useEffect(() => {
@@ -110,39 +109,28 @@ const UsersSidebar = ({
     setIsSubmitting(true);
     clearErrors("root.serverError");
 
-    const method = isNewUser ? "POST" : "PUT";
+    const method = isNewUser ? "post" : "put";
     const url = isNewUser
-      ? `${apiUrl}/auth/users`
-      : `${apiUrl}/auth/users/${
-          identifierType === "email" ? user?.email : user?.name
-        }`;
+      ? "/auth/users"
+      : `/auth/users/${identifierType === "email" ? user?.email : user?.name}`;
     try {
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      await api[method](url, data);
 
-      if (response.ok) {
-        await mutateUsers();
-        await mutateGroups();
-        handleClose();
-      } else {
-        const errorData = await response.json();
+      await mutateUsers();
+      await mutateGroups();
+      handleClose();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
         setError("root.serverError", {
           type: "manual",
-          message:
-            errorData.detail || errorData.message || "Failed to save user",
+          message: error.message || "Failed to save user",
+        });
+      } else {
+        setError("root.serverError", {
+          type: "manual",
+          message: "An unexpected error occurred",
         });
       }
-    } catch (error) {
-      setError("root.serverError", {
-        type: "manual",
-        message: "An unexpected error occurred",
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -384,8 +372,8 @@ const UsersSidebar = ({
                     {isSubmitting
                       ? "Saving..."
                       : isNewUser
-                      ? "Create User"
-                      : "Save"}
+                        ? "Create User"
+                        : "Save"}
                   </Button>
                 )}
               </div>

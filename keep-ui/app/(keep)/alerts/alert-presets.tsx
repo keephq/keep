@@ -10,20 +10,16 @@ import {
   Switch,
   Text,
 } from "@tremor/react";
-import { useApiUrl, useConfig } from "utils/hooks/useConfig";
+import { useConfig } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { usePresets } from "utils/hooks/usePresets";
 import { useTags } from "utils/hooks/useTags";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
-import QueryBuilder, {
-  formatQuery,
-  parseCEL,
-  RuleGroupType,
-  DefaultRuleGroupType,
-} from "react-querybuilder";
+import { formatQuery, parseCEL, RuleGroupType } from "react-querybuilder";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { MultiValue } from "react-select";
 import {
@@ -36,8 +32,6 @@ import { TbSparkles } from "react-icons/tb";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { Tooltip } from "@/shared/ui/Tooltip";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
-
-type OptionType = { value: string; label: string };
 
 interface TagOption {
   id?: number;
@@ -178,12 +172,11 @@ export default function AlertPresets({
   presetPrivate = false,
   presetNoisy = false,
 }: Props) {
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const { useAllPresets } = usePresets();
   const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
     revalidateOnFocus: false,
   });
-  const { data: session } = useSession();
   const { data: tags = [], mutate: mutateTags } = useTags();
   const router = useRouter();
 
@@ -265,19 +258,19 @@ export default function AlertPresets({
         `You are about to delete preset ${presetNameFromApi}, are you sure?`
       )
     ) {
-      const response = await fetch(`${apiUrl}/preset/${presetId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-      if (response.ok) {
+      try {
+        const response = await api.delete(`/preset/${presetId}`);
         toast(`Preset ${presetNameFromApi} deleted!`, {
           position: "top-left",
           type: "success",
         });
         presetsMutator();
         router.push("/alerts/feed");
+      } catch (error) {
+        toast(`Error deleting preset ${presetNameFromApi}`, {
+          position: "top-left",
+          type: "error",
+        });
       }
     }
   }
@@ -285,44 +278,40 @@ export default function AlertPresets({
   async function addOrUpdatePreset() {
     if (!presetName) return;
 
-    const sqlQuery = formatQuery(parseCEL(presetCEL), {
-      format: "parameterized_named",
-      parseNumbers: true,
-    });
-
-    const response = await fetch(
-      selectedPreset?.id
-        ? `${apiUrl}/preset/${selectedPreset?.id}`
-        : `${apiUrl}/preset`,
-      {
-        method: selectedPreset?.id ? "PUT" : "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
+    let sqlQuery;
+    try {
+      sqlQuery = formatQuery(parseCEL(presetCEL), {
+        format: "parameterized_named",
+        parseNumbers: true,
+      });
+    } catch (error) {
+      toast.error("Failed to parse the CEL query");
+      return;
+    }
+    const body = {
+      name: presetName,
+      options: [
+        {
+          label: "CEL",
+          value: presetCEL,
         },
-        body: JSON.stringify({
-          name: presetName,
-          options: [
-            {
-              label: "CEL",
-              value: presetCEL,
-            },
-            {
-              label: "SQL",
-              value: sqlQuery,
-            },
-          ],
-          is_private: isPrivate,
-          is_noisy: isNoisy,
-          tags: selectedTags.map((tag) => ({
-            id: tag.id,
-            name: tag.name,
-          })),
-        }),
-      }
-    );
+        {
+          label: "SQL",
+          value: sqlQuery,
+        },
+      ],
+      is_private: isPrivate,
+      is_noisy: isNoisy,
+      tags: selectedTags.map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+      })),
+    };
 
-    if (response.ok) {
+    try {
+      const response = selectedPreset?.id
+        ? await api.put(`/preset/${selectedPreset?.id}`, body)
+        : await api.post(`/preset`, body);
       setIsModalOpen(false);
       await presetsMutator();
       await mutateTags();
@@ -336,6 +325,12 @@ export default function AlertPresets({
           type: "success",
         }
       );
+    } catch (error) {
+      if (error instanceof KeepApiError) {
+        toast.error(error.message || "Failed to update preset");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   }
 

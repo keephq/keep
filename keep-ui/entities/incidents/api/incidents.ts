@@ -1,6 +1,5 @@
 import { IncidentDto, PaginatedIncidentsDto } from "@/entities/incidents/model";
-import { fetcher } from "@/utils/fetcher";
-import { Session } from "next-auth";
+import { ApiClient } from "@/shared/lib/api/ApiClient";
 
 interface Filters {
   status: string[];
@@ -18,7 +17,7 @@ export type GetIncidentsParams = {
   filters: Filters | {};
 };
 
-export function buildIncidentsUrl(apiUrl: string, params: GetIncidentsParams) {
+export function buildIncidentsUrl(params: GetIncidentsParams) {
   const filtersParams = new URLSearchParams();
 
   Object.entries(params.filters).forEach(([key, value]) => {
@@ -31,31 +30,16 @@ export function buildIncidentsUrl(apiUrl: string, params: GetIncidentsParams) {
     }
   });
 
-  return `${apiUrl}/incidents?confirmed=${params.confirmed}&limit=${params.limit}&offset=${params.offset}&sorting=${
+  return `/incidents?confirmed=${params.confirmed}&limit=${params.limit}&offset=${params.offset}&sorting=${
     params.sorting.desc ? "-" : ""
   }${params.sorting.id}&${filtersParams.toString()}`;
 }
 
-export async function getIncidents(
-  apiUrl: string,
-  session: Session | null,
-  params: GetIncidentsParams
-) {
-  if (!session) {
-    return null;
-  }
-  const url = buildIncidentsUrl(apiUrl, params);
-  return (await fetcher(
-    url,
-    session.accessToken
-  )) as Promise<PaginatedIncidentsDto>;
+export async function getIncidents(api: ApiClient, params: GetIncidentsParams) {
+  const url = buildIncidentsUrl(params);
+  return await api.get<PaginatedIncidentsDto>(url);
 }
 
-export async function getIncident(
-  apiUrl: string,
-  session: Session | null,
-  id: string
-) {
-  const url = `${apiUrl}/incidents/${id}`;
-  return (await fetcher(url, session?.accessToken)) as IncidentDto;
+export async function getIncident(api: ApiClient, id: string) {
+  return await api.get<IncidentDto>(`/incidents/${id}`);
 }

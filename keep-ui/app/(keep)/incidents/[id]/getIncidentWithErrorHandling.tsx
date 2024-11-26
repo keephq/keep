@@ -1,8 +1,7 @@
 import { getIncident } from "@/entities/incidents/api/incidents";
-import { getApiURL } from "@/utils/apiUrl";
-import { auth } from "@/auth";
+import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
 import { notFound } from "next/navigation";
-import { KeepApiError } from "@/shared/lib/KeepApiError";
+import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 import { IncidentDto } from "@/entities/incidents/model";
 
 export async function getIncidentWithErrorHandling(
@@ -11,9 +10,8 @@ export async function getIncidentWithErrorHandling(
   // @ts-ignore ignoring since not found will be handled by nextjs
 ): Promise<IncidentDto> {
   try {
-    const session = await auth();
-    const apiUrl = getApiURL();
-    const incident = await getIncident(apiUrl, session, id);
+    const api = await createServerApiClient();
+    const incident = await getIncident(api, id);
     return incident;
   } catch (error) {
     if (error instanceof KeepApiError && error.statusCode === 404 && redirect) {
