@@ -134,21 +134,21 @@ def is_mysql_responsive(host, port, user, password, database):
 
 
 @pytest.fixture(scope="session")
-def mysql_container(docker_ip, docker_services):
+def mysql_container(docker_ip, docker_services, worker_id):
     try:
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
             print("Running in Github Actions or SKIP_DOCKER is set, skipping mysql")
-            yield "mysql+pymysql://root:keep@localhost:3306/keep"
+            yield f"mysql+pymysql://root:keep@localhost:3306/keep-{worker_id}"
             return
         docker_services.wait_until_responsive(
             timeout=60.0,
             pause=0.1,
             check=lambda: is_mysql_responsive(
-                "127.0.0.1", 3306, "root", "keep", "keep"
+                "127.0.0.1", 3306, "root", "keep", f"keep-{worker_id}"
             ),
         )
         # set this as environment variable
-        yield "mysql+pymysql://root:keep@localhost:3306/keep"
+        yield f"mysql+pymysql://root:keep@localhost:3306/keep-{worker_id}"
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
@@ -281,7 +281,6 @@ def is_keycloak_responsive(host, port, user, password):
         # Try to connect to Keycloak
         from keycloak import KeycloakAdmin
 
-        print(KeycloakAdmin)
         keycloak_admin = KeycloakAdmin(
             server_url=f"http://{host}:{port}/auth/admin",
             username=user,
@@ -364,14 +363,14 @@ def elastic_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def elastic_client(request):
+def elastic_client(request, worker_id):
     # this is so if any other module initialized Elasticsearch, it will be deleted
     ElasticClient._instance = None
     os.environ["ELASTIC_ENABLED"] = "true"
     os.environ["ELASTIC_USER"] = "elastic"
     os.environ["ELASTIC_PASSWORD"] = "keeptests"
     os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
+    os.environ["ELASTIC_INDEX_SUFFIX"] = f"test-{worker_id}"
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient(
         tenant_id=SINGLE_TENANT_UUID,
