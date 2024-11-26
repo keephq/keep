@@ -1,27 +1,12 @@
 import os
-import requests
 import json
-import logging
-from typing import Optional
-from datetime import datetime
-from typing import List
-from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
-from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
-from sqlalchemy.engine.url import make_url
-from sqlalchemy_utils import UUIDType
-from sqlmodel import JSON, TEXT, Column, DateTime, Field, Index, Relationship, SQLModel
+from uuid import uuid4
 
-from keep.api.consts import RUNNING_IN_CLOUD_RUN
-from keep.api.core.config import config
-from keep.api.models.alert import IncidentSeverity, IncidentStatus
-from keep.api.models.db.tenant import Tenant
-from enum import Enum, IntEnum
+from sqlalchemy import ForeignKey
+from sqlmodel import Field, SQLModel
 from pydantic import BaseModel, Json
 
-from pydantic import BaseModel
 
 class ExternalAI(BaseModel):
     """

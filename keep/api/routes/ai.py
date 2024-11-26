@@ -1,9 +1,6 @@
 import logging
-from typing import List
-from typing import Any
-from pydantic import BaseModel, Json
 
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Depends
 
 from keep.api.core.db import (
     get_alerts_count,
