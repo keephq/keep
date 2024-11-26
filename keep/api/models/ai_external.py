@@ -67,7 +67,7 @@ class ExternalAIDto(BaseModel):
                     "back_api_key": back_api_key,
                     "back_api_url": os.environ.get("KEEP_API_URL"),
                 },
-                timeout=0.5  # 1 second timeout, intentionally short because it's blocking and we don't care about response.
+                timeout=0.5  # intentionally short because it's blocking and we don't care about response.
             )
             response.raise_for_status()
         except Exception as e:
