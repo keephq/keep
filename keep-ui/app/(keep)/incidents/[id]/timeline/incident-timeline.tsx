@@ -261,32 +261,6 @@ const IncidentTimelineNoAlerts: React.FC = () => {
   );
 };
 
-const SeverityLegend: React.FC<{ alerts: AlertDto[] }> = ({ alerts }) => {
-  const severityCounts = alerts.reduce(
-    (acc, alert) => {
-      acc[alert.severity!] = (acc[alert.severity!] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
-  return (
-    <div className="flex flex-col gap-2 p-4">
-      {Object.entries(severityCounts).map(([severity, count]) => (
-        <div key={severity} className="flex items-center gap-2">
-          <div
-            className={`w-4 h-4 rounded-full ${
-              severityColors[severity as keyof typeof severityColors]
-            }`}
-          />
-          <span className="capitalize">{severity}</span>
-          <span className="text-gray-500">({count})</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export default function IncidentTimeline({
   incident,
 }: {
@@ -339,15 +313,18 @@ export default function IncidentTimeline({
       let formatString: string;
 
       // Determine scale and format based on total duration
-      const durationInDays = differenceInDays(paddedEndTime, startTime);
+      const durationInDays = Math.ceil(totalDuration / (1000 * 60 * 60 * 24)); // Calculate days including partial days
       const durationInHours = differenceInHours(paddedEndTime, startTime);
       const durationInMinutes = differenceInMinutes(paddedEndTime, startTime);
+      console.log(
+        `Duration in days: ${durationInDays}, duration in hours: ${durationInHours}, duration in minutes: ${durationInMinutes}`
+      );
 
-      if (durationInDays > 3) {
+      if (durationInDays >= 1) {
         timeScale = "days";
         formatString = "MMM dd";
         intervalCount = Math.min(durationInDays + 1, 12);
-      } else if (durationInHours > 24) {
+      } else if (12 < durationInHours && durationInHours < 23) {
         timeScale = "hours";
         formatString = "MMM dd HH:mm";
         intervalCount = Math.min(Math.ceil(durationInHours / 2), 12);
@@ -472,8 +449,12 @@ export default function IncidentTimeline({
           {/* Time labels - Now sticky at bottom */}
           <div className="sticky bottom-0 bg-white border-t">
             <div
-              className="relative"
-              style={{ height: "50px", paddingLeft: "40px" }}
+              className="relative overflow-hidden"
+              style={{
+                height: "50px",
+                paddingLeft: "40px",
+                paddingRight: "40px",
+              }}
             >
               {intervals.map((time, index) => (
                 <div
