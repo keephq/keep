@@ -31,6 +31,8 @@ from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 
+PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.json")
+
 logger = logging.getLogger(__name__)
 
 
@@ -221,7 +223,7 @@ class ProvidersFactory:
         return methods
 
     @staticmethod
-    def get_all_providers() -> list[Provider]:
+    def get_all_providers(ignore_cache_file: bool = False) -> list[Provider]:
         """
         Get all the providers.
 
@@ -232,6 +234,22 @@ class ProvidersFactory:
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
             logger.debug("Using cached providers")
+            return ProvidersFactory._loaded_providers_cache
+
+        if os.path.exists(PROVIDERS_CACHE_FILE) and not ignore_cache_file:
+            logger.info(
+                "Loading providers from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
+            with open(PROVIDERS_CACHE_FILE, "r") as f:
+                providers_cache = json.load(f)
+                ProvidersFactory._loaded_providers_cache = [
+                    Provider(**provider) for provider in providers_cache
+                ]
+            logger.info(
+                "Providers loaded from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -416,14 +434,14 @@ class ProvidersFactory:
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
-            provider: Provider = next(
+            provider: Provider | None = next(
                 filter(
                     lambda provider: provider.type == p.type,
                     all_providers,
                 ),
                 None,
             )
-            if not provider:
+            if provider is None:
                 logger.warning(f"Installed provider {p.type} does not exist anymore?")
                 continue
             provider_copy = provider.copy()
@@ -433,6 +451,7 @@ class ProvidersFactory:
             provider_copy.last_pull_time = p.last_pull_time
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
+            provider_copy.installed = True
             try:
                 provider_auth = {"name": p.name}
                 if include_details:

@@ -304,7 +304,7 @@ def get_installed_providers(keep_api_key, keep_api_url):
         headers={"x-api-key": keep_api_key},
     )
     response.raise_for_status()
-    return response.json()['installed_providers']
+    return response.json()["installed_providers"]
 
 
 def simulate_alerts(
@@ -316,8 +316,8 @@ def simulate_alerts(
     clean_old_incidents=False,
 ):
     logger.info("Simulating alerts...")
-    
-    GENERATE_DEDUPLICATIONS = True
+
+    GENERATE_DEDUPLICATIONS = False
 
     providers = [
         "prometheus",
@@ -341,9 +341,13 @@ def simulate_alerts(
     existing_providers_to_their_ids = {}
 
     for existing_provider in existing_installed_providers:
-        if existing_provider['type'] in providers:
-            existing_providers_to_their_ids[existing_provider['type']] = existing_provider['id']
-    logger.info(f"Existing installed existing_providers_to_their_ids: {existing_providers_to_their_ids}")
+        if existing_provider["type"] in providers:
+            existing_providers_to_their_ids[existing_provider["type"]] = (
+                existing_provider["id"]
+            )
+    logger.info(
+        f"Existing installed existing_providers_to_their_ids: {existing_providers_to_their_ids}"
+    )
 
     if demo_correlation_rules:
         logger.info("Creating correlation rules...")
@@ -371,8 +375,12 @@ def simulate_alerts(
             send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
 
             if provider_type in existing_providers_to_their_ids:
-                send_alert_url_params["provider_id"] = existing_providers_to_their_ids[provider_type]
-            logger.info(f"Provider type: {provider_type}, send_alert_url_params now are: {send_alert_url_params}")
+                send_alert_url_params["provider_id"] = existing_providers_to_their_ids[
+                    provider_type
+                ]
+            logger.info(
+                f"Provider type: {provider_type}, send_alert_url_params now are: {send_alert_url_params}"
+            )
 
             provider = provider_classes[provider_type]
             alert = provider.simulate_alert()
@@ -392,10 +400,16 @@ def simulate_alerts(
 
                     if "provider_id" not in send_alert_url_params:
                         send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
+                    else:
+                        alert["environment"] = random.choice(
+                            ["prod-01", "prod-02", "prod-03"]
+                        )
 
                     prepared_request = PreparedRequest()
                     prepared_request.prepare_url(send_alert_url, send_alert_url_params)
-                    logger.info(f"Sending alert to {prepared_request.url} with url params {send_alert_url_params}")
+                    logger.info(
+                        f"Sending alert to {prepared_request.url} with url params {send_alert_url_params}"
+                    )
 
                     response = requests.post(
                         prepared_request.url,
@@ -423,11 +437,13 @@ def simulate_alerts(
         time.sleep(sleep_interval)
 
 
-def launch_demo_mode_thread(keep_api_url=None, keep_api_key=None) -> threading.Thread | None:
+def launch_demo_mode_thread(
+    keep_api_url=None, keep_api_key=None
+) -> threading.Thread | None:
     if not KEEP_LIVE_DEMO_MODE:
         logger.info("Not launching the demo mode.")
         return
-    
+
     logger.info("Launching demo mode.")
 
     if keep_api_key is None:

@@ -12,13 +12,13 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
-    create_incident_from_dto,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import IncidentDto, IncidentDtoIn
@@ -36,7 +36,6 @@ if ee_enabled:
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
     sys.path.insert(0, path_with_ee)
-    from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa
 else:
     ALGORITHM_VERBOSE_NAME = NotImplemented
 

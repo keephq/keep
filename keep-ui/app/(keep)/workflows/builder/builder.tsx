@@ -110,7 +110,6 @@ function Builder({
       Authorization: `Bearer ${accessToken}`,
     };
     const body = stringify(buildAlert(definition.value));
-    debugger;
     fetch(url, { method, headers, body })
       .then((response) => {
         if (response.ok) {

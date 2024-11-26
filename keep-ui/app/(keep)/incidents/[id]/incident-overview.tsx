@@ -1,15 +1,19 @@
 "use client";
 
-import type { IncidentDto } from "@/entities/incidents/model";
-import React from "react";
-import { useIncident } from "@/utils/hooks/useIncidents";
+import {
+  useIncidentActions,
+  type IncidentDto,
+  type PaginatedIncidentAlertsDto,
+} from "@/entities/incidents/model";
+import React, { useState } from "react";
+import { useIncident, useIncidentAlerts } from "@/utils/hooks/useIncidents";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronDown } from "react-icons/io5";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import Markdown from "react-markdown";
 import { Badge, Callout } from "@tremor/react";
-import { Link } from "@/components/ui";
+import { Button, Link } from "@/components/ui";
 import { IncidentChangeStatusSelect } from "@/features/change-incident-status";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, FieldHeader } from "@/shared/ui";
@@ -19,6 +23,16 @@ import {
 } from "@/features/same-incidents-in-the-past/";
 import { StatusIcon } from "@/entities/incidents/ui/statuses";
 import clsx from "clsx";
+import { TbSparkles } from "react-icons/tb";
+import {
+  CopilotTask,
+  useCopilotAction,
+  useCopilotContext,
+  useCopilotReadable,
+} from "@copilotkit/react-core";
+import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
+import { AlertDto } from "../../alerts/models";
+import { useRouter } from "next/navigation";
 
 interface Props {
   incident: IncidentDto;
@@ -29,15 +43,58 @@ function Summary({
   summary,
   collapsable,
   className,
+  alerts,
+  incident,
 }: {
   title: string;
   summary: string;
   collapsable?: boolean;
   className?: string;
+  alerts: AlertDto[];
+  incident: IncidentDto;
 }) {
+  const [generatedSummary, setGeneratedSummary] = useState("");
+  const { updateIncident } = useIncidentActions();
+  const context = useCopilotContext();
+  useCopilotReadable({
+    description: "The incident alerts",
+    value: alerts,
+  });
+  useCopilotReadable({
+    description: "The incident title",
+    value: incident.user_generated_name ?? incident.ai_generated_name,
+  });
+  useCopilotAction({
+    name: "setGeneratedSummary",
+    description: "Set the generated summary",
+    parameters: [
+      { name: "summary", type: "string", description: "The generated summary" },
+    ],
+    handler: async ({ summary }) => {
+      await updateIncident(
+        incident.id,
+        {
+          user_summary: summary,
+        },
+        true
+      );
+      setGeneratedSummary(summary);
+    },
+  });
+  const task = new CopilotTask({
+    instructions:
+      "Generate a short concise summary of the incident based on the context of the alerts and the title of the incident. Don't repeat prompt.",
+  });
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const executeTask = async () => {
+    setGeneratingSummary(true);
+    await task.run(context);
+    setGeneratingSummary(false);
+  };
+
   const formatedSummary = (
     <Markdown remarkPlugins={[remarkRehype]} rehypePlugins={[rehypeRaw]}>
-      {summary}
+      {summary ?? generatedSummary}
     </Markdown>
   );
 
@@ -62,9 +119,20 @@ function Summary({
     );
   }
 
-  return (
-    //TODO: suggest generate summary if it's empty
-    summary ? <div>{formatedSummary}</div> : <p>No summary yet</p>
+  return summary || generatedSummary ? (
+    <div>{formatedSummary}</div>
+  ) : (
+    <Button
+      variant="secondary"
+      onClick={executeTask}
+      className="mt-2.5"
+      disabled={generatingSummary}
+      loading={generatingSummary}
+      icon={TbSparkles}
+      size="xs"
+    >
+      AI Summary
+    </Button>
   );
 }
 
@@ -104,6 +172,7 @@ function MergedCallout({
 }
 
 export function IncidentOverview({ incident: initialIncidentData }: Props) {
+  const router = useRouter();
   const { data: fetchedIncident } = useIncident(initialIncidentData.id, {
     fallbackData: initialIncidentData,
     revalidateOnMount: false,
@@ -114,6 +183,28 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
   const notNullServices = incident.services.filter(
     (service) => service !== "null"
   );
+  const {
+    data: alerts,
+    isLoading: _alertsLoading,
+    error: alertsError,
+  } = useIncidentAlerts(incident.id, 20, 0);
+  const environments = Array.from(
+    new Set(
+      alerts?.items
+        .filter((alert) => alert.environment)
+        .map((alert) => alert.environment)
+    )
+  );
+
+  if (!alerts || _alertsLoading) {
+    return <IncidentOverviewSkeleton />;
+  }
+
+  const filterBy = (key: string, value: string) => {
+    router.push(
+      `/alerts/feed?cel=${key}%3D%3D${encodeURIComponent(`"${value}"`)}`
+    );
+  };
 
   return (
     // Adding padding bottom to visually separate from the tabs
@@ -122,12 +213,19 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div className="max-w-2xl">
             <FieldHeader>Summary</FieldHeader>
-            <Summary title="Summary" summary={summary} />
+            <Summary
+              title="Summary"
+              summary={summary}
+              alerts={alerts.items}
+              incident={incident}
+            />
             {incident.user_summary && incident.generated_summary ? (
               <Summary
                 title="AI version"
                 summary={incident.generated_summary}
                 collapsable={true}
+                alerts={alerts.items}
+                incident={incident}
               />
             ) : null}
             {incident.merged_into_incident_id && (
@@ -142,13 +240,45 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             {notNullServices.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {notNullServices.map((service) => (
-                  <Badge key={service} size="sm">
+                  <Badge
+                    key={service}
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={() => filterBy("service", service)}
+                  >
                     {service}
                   </Badge>
                 ))}
               </div>
             ) : (
               "No services involved"
+            )}
+            <FieldHeader>Affected environments</FieldHeader>
+            {environments.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {environments.map((env) => (
+                  <Badge
+                    key={env}
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={() => filterBy("environment", env)}
+                  >
+                    {env}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              "No environments involved"
+            )}
+            {incident.rule_fingerprint !== "none" && (
+              <>
+                <FieldHeader>Grouped by</FieldHeader>
+                <div className="flex flex-wrap gap-1">
+                  <Badge size="sm" className="cursor-pointer">
+                    {incident.rule_fingerprint}
+                  </Badge>
+                </div>
+              </>
             )}
           </div>
           <div>

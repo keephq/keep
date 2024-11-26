@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime
 from typing import List
@@ -14,7 +13,6 @@ from fastapi import (
     Response,
 )
 from pusher import Pusher
-from pydantic import BaseModel, Field  # noqa
 from pydantic.types import UUID
 from sqlmodel import Session
 
@@ -57,7 +55,6 @@ from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
-from keep.api.utils.import_ee import mine_incidents_and_create_objects
 from keep.api.utils.pagination import (
     AlertWithIncidentLinkMetadataPaginatedResultsDto,
     IncidentsPaginatedResultsDto,
@@ -737,48 +734,6 @@ async def commit_with_ai(
             logger.error(f"Failed to notify client: {str(e)}")
 
     return committed_incidents
-
-
-### Deprecated? ###
-
-
-@router.post(
-    "/mine",
-    description="Create incidents using historical alerts",
-    include_in_schema=False,
-)
-def mine(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
-    ),
-    alert_lower_timestamp: datetime = None,
-    alert_upper_timestamp: datetime = None,
-    use_n_historical_alerts: int = None,
-    incident_lower_timestamp: datetime = None,
-    incident_upper_timestamp: datetime = None,
-    use_n_historical_incidents: int = None,
-    pmi_threshold: float = None,
-    knee_threshold: float = None,
-    min_incident_size: int = None,
-    incident_similarity_threshold: float = None,
-) -> dict:
-    result = asyncio.run(
-        mine_incidents_and_create_objects(
-            ctx=None,
-            tenant_id=authenticated_entity.tenant_id,
-            alert_lower_timestamp=alert_lower_timestamp,
-            alert_upper_timestamp=alert_upper_timestamp,
-            use_n_historical_alerts=use_n_historical_alerts,
-            incident_lower_timestamp=incident_lower_timestamp,
-            incident_upper_timestamp=incident_upper_timestamp,
-            use_n_historical_incidents=use_n_historical_incidents,
-            pmi_threshold=pmi_threshold,
-            knee_threshold=knee_threshold,
-            min_incident_size=min_incident_size,
-            incident_similarity_threshold=incident_similarity_threshold,
-        )
-    )
-    return result
 
 
 @router.post(

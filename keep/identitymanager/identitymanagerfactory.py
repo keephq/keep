@@ -105,13 +105,14 @@ class IdentityManagerFactory:
                 )
             # look for the module in ee
             except ModuleNotFoundError:
-                module = importlib.import_module(
-                    f"ee.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
-                )
-            except ModuleNotFoundError:
-                raise NotImplementedError(
-                    f"{manager_class.__name__} for {manager_type} not implemented"
-                )
+                try:
+                    module = importlib.import_module(
+                        f"ee.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
+                    )
+                except ModuleNotFoundError:
+                    raise NotImplementedError(
+                        f"{manager_class} for {manager_type} not implemented"
+                    )
             # look for the class that contains the manager_class in its name
             for _attr in dir(module):
                 if manager_class in _attr.lower() and "base" not in _attr.lower():
@@ -121,7 +122,7 @@ class IdentityManagerFactory:
             return manager_class(*args, **kwargs)
         except (ImportError, AttributeError):
             raise NotImplementedError(
-                f"{manager_class.__name__} for {manager_type} not implemented"
+                f"{manager_class} for {manager_type} not implemented"
             )
 
     @staticmethod
