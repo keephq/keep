@@ -32,6 +32,7 @@ interface Props {
   setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   isInSidebar?: boolean;
+  setIsIncidentSelectorOpen?: (open: boolean) => void;
 }
 
 export default function AlertMenu({
@@ -43,6 +44,7 @@ export default function AlertMenu({
   setChangeStatusAlert,
   presetName,
   isInSidebar,
+  setIsIncidentSelectorOpen,
 }: Props) {
   const router = useRouter();
   const apiUrl = useApiUrl();
@@ -333,6 +335,24 @@ export default function AlertMenu({
           </button>
         )}
       </Menu.Item>
+      {setIsIncidentSelectorOpen && (
+        <Menu.Item>
+          {({ active }) => (
+            <button
+              onClick={() => {
+                setIsIncidentSelectorOpen(true);
+                handleCloseMenu();
+              }}
+              className={`${
+                active ? "bg-slate-200" : "text-gray-900"
+              } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+            >
+              <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+              Associate with Incident
+            </button>
+          )}
+        </Menu.Item>
+      )}
     </>
   );
 

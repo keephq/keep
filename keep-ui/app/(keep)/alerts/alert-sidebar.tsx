@@ -23,6 +23,7 @@ type AlertSidebarProps = {
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[] | null) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
+  setIsIncidentSelectorOpen: (open: boolean) => void;
 };
 
 const AlertSidebar = ({
@@ -32,6 +33,7 @@ const AlertSidebar = ({
   setRunWorkflowModalAlert,
   setDismissModalAlert,
   setChangeStatusAlert,
+  setIsIncidentSelectorOpen,
 }: AlertSidebarProps) => {
   const { useAlertAudit } = useAlerts();
   const {
@@ -86,6 +88,7 @@ const AlertSidebar = ({
                   setRunWorkflowModalAlert={setRunWorkflowModalAlert}
                   setDismissModalAlert={setDismissModalAlert}
                   setChangeStatusAlert={setChangeStatusAlert}
+                  setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
                 />
                 <Divider />
                 <Dialog.Title

@@ -155,6 +155,8 @@ export function AlertTable({
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
 
   const filteredAlerts = alerts.filter((alert) => {
     // First apply tab filter
@@ -291,6 +293,8 @@ export function AlertTable({
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
+            setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+            isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
           <CopilotKit runtimeUrl="/api/copilotkit">
@@ -382,6 +386,17 @@ export function AlertTable({
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
         setDismissModalAlert={setDismissModalAlert}
         setChangeStatusAlert={setChangeStatusAlert}
+        setIsIncidentSelectorOpen={() => {
+          if (selectedAlert) {
+            table
+              .getRowModel()
+              .rows.find(
+                (row) => row.original.fingerprint === selectedAlert.fingerprint
+              )
+              ?.toggleSelected();
+            setIsIncidentSelectorOpen(true);
+          }
+        }}
       />
     </div>
   );
