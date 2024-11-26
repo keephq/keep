@@ -444,7 +444,7 @@ export default function AlertPresets({
               size="lg"
               variant="secondary"
               color="orange"
-              onClick={() => setIsModalOpen(false)}
+              onClick={handleModalClose}
               tooltip="Close"
             >
               Close

@@ -272,7 +272,7 @@ export const useAlertTableCols = (
       enableSorting: false,
       enableResizing: false,
       cell: (context) => (
-        <div className="flex items-center justify-start">
+        <div className="flex items-center justify-center">
           {(context.getValue() ?? []).map((source, index) => {
             let imagePath = `/icons/${source}-icon.png`;
             if (source.includes("@")) {
@@ -293,8 +293,8 @@ export const useAlertTableCols = (
         </div>
       ),
       meta: {
-        tdClassName: "!p-0 w-4 sm:w-6 !box-border",
-        thClassName: "!p-0 w-4 sm:w-6 !box-border",
+        tdClassName: "!p-0 w-4 sm:w-8 !box-border",
+        thClassName: "!p-0 w-4 sm:w-8 !box-border",
       },
     }),
     // Name column butted up against source
