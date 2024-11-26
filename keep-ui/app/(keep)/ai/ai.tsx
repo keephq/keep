@@ -68,7 +68,7 @@ export default function Ai() {
         <div>
           <Title>AI Plugins</Title>
           <Subtitle>
-            External AI engines can be plugged in and configured here.
+            For correlation, summarization, and enrichment
           </Subtitle>
         </div>
       </div>
@@ -89,19 +89,18 @@ export default function Ai() {
                     className="mr-4 rounded-lg"
                   />
                   <div>
-                    <Title>No AI plugged in to your environment.</Title>
+                    <Title>No AI enabled for this tenant</Title>
                     <p className="pt-2">
-                      AI plugins can seamlessly correlate, enrich, and summarize
-                      your alerts and incidents by leveraging the complete
-                      context within Keep. This includes detailed information
-                      like topology, runbooks, and other valuable data, allowing
+                      AI plugins can correlate, enrich, or summarize
+                      your alerts and incidents by leveraging the 
+                      the context within Keep allowing
                       you to gain deeper insights and respond more effectively.
                     </p>
                     <p className="pt-2">
-                      Plus, AI plugins can even run in air-gapped environments.
-                      You can train models on-premises using your own data, so
-                      there is no need to share anything with third-party
-                      providers like OpenAI—keeping your data secure and
+                      By the way, AI plugins are designed to work even in air-gapped environments.
+                      You can train models using your data, so
+                      there is no need to share information with third-party
+                      providers like OpenAI. Keep your data secure and
                       private.
                     </p>
                     <p className="pt-2">
