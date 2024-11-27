@@ -13,7 +13,6 @@ from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.testing import fixture
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
@@ -149,7 +148,7 @@ def mysql_container(docker_ip, docker_services):
             ),
         )
         # set this as environment variable
-        yield f"mysql+pymysql://root:keep@localhost:3306/keep"
+        yield "mysql+pymysql://root:keep@localhost:3306/keep"
     except Exception:
         print("Exception occurred while waiting for MySQL to be responsive")
     finally:
@@ -206,8 +205,8 @@ actions:
 """
     workflow_data = [
         Workflow(
-            id=f"test-id-1",
-            name=f"test-id-1",
+            id="test-id-1",
+            name="test-id-1",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -215,8 +214,8 @@ actions:
             workflow_raw=mock_raw_workflow.format("test-id-1"),
         ),
         Workflow(
-            id=f"test-id-2",
-            name=f"test-id-2",
+            id="test-id-2",
+            name="test-id-2",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -224,8 +223,8 @@ actions:
             workflow_raw=mock_raw_workflow.format("test-id-2"),
         ),
         WorkflowExecution(
-            id=f"test-execution-id-1",
-            workflow_id=f"test-id-1",
+            id="test-execution-id-1",
+            workflow_id="test-id-1",
             tenant_id=SINGLE_TENANT_UUID,
             triggered_by="keep-test",
             status="success",
@@ -234,7 +233,7 @@ actions:
         ),
         WorkflowToAlertExecution(
             id=1,
-            workflow_execution_id=f"test-execution-id-1",
+            workflow_execution_id="test-execution-id-1",
             alert_fingerprint="mock_alert",
             event_id="mock_event_id",
         ),
