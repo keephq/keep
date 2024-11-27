@@ -8,8 +8,21 @@ import NextAuth from "next-auth";
 
 const { auth } = NextAuth(authConfig);
 
+// Helper function to detect mobile devices
+function isMobileDevice(userAgent: string): boolean {
+  return /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+    userAgent
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+
+  // Check if request is from mobile device
+  const userAgent = request.headers.get("user-agent") || "";
+  if (isMobileDevice(userAgent)) {
+    return NextResponse.redirect(new URL("/mobile", request.url));
+  }
 
   const session = await auth();
   const role = session?.userRole;
