@@ -27,7 +27,8 @@ export default function MobileLanding() {
 
         {/* Description */}
         <Text className="text-center">
-          We're not supporting mobile devices yet, but we're working on it!
+          We&apos;re not supporting mobile devices yet, but we&apos;re working
+          on it!
         </Text>
 
         {/* GitHub Button - Now a client component */}
