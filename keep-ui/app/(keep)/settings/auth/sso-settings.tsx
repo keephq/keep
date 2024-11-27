@@ -11,11 +11,9 @@ import {
   TableHeaderCell,
   TableRow,
   Button,
-  Icon,
 } from "@tremor/react";
-import { fetcher } from "utils/fetcher";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "@/app/(keep)/loading";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface SSOProvider {
   id: string;
@@ -23,18 +21,13 @@ interface SSOProvider {
   connected: boolean;
 }
 
-interface Props {
-  accessToken: string;
-  selectedTab: string;
-}
-
-const SSOSettings: React.FC<Props> = ({ accessToken }) => {
-  const apiUrl = useApiUrl();
+const SSOSettings = () => {
+  const api = useApi();
   const { data, error } = useSWR<{
     sso: boolean;
     providers: SSOProvider[];
     wizardUrl: string;
-  }>(`${apiUrl}/settings/sso`, (url: string) => fetcher(url, accessToken));
+  }>(`/settings/sso`, (url: string) => api.get(url));
 
   if (!data) return <Loading />;
   if (error) return <div>Error loading SSO settings: {error.message}</div>;

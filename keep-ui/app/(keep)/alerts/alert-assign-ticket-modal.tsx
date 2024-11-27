@@ -1,13 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import Select, { components } from "react-select";
 import { Button, TextInput, Text } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "../providers/providers";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface AlertAssignTicketModalProps {
   handleClose: () => void;
@@ -38,14 +37,12 @@ const AlertAssignTicketModal = ({
   ticketingProviders,
   alert,
 }: AlertAssignTicketModalProps) => {
+  const api = useApi();
   const {
     handleSubmit,
     control,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormData>();
-  // get the token
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
 
   // if this modal should not be open, do nothing
   if (!alert) return null;
@@ -61,25 +58,9 @@ const AlertAssignTicketModal = ({
         },
         fingerprint: alert.fingerprint,
       };
-
-      const response = await fetch(`${apiUrl}/alerts/enrich`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (response.ok) {
-        // Handle success
-        console.log("Ticket assigned successfully");
-        alert.ticket_url = data.ticket_url;
-        handleClose();
-      } else {
-        // Handle error
-        console.error("Failed to assign ticket");
-      }
+      const response = await api.post(`/alerts/enrich`, requestData);
+      alert.ticket_url = data.ticket_url;
+      handleClose();
     } catch (error) {
       // Handle unexpected error
       console.error("An unexpected error occurred");
@@ -225,7 +206,7 @@ const AlertAssignTicketModal = ({
               />
             </div>
             <div className="mt-6 flex gap-2">
-              <Button color="orange" type="submit">
+              <Button color="orange" type="submit" disabled={isSubmitting}>
                 <Text>Assign Ticket</Text>
               </Button>
               <Button

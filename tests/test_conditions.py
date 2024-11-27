@@ -86,7 +86,7 @@ def test_threshold_condition_invalid_threshold_value():
         condition_name="mock",
         condition_config={"compare_type": "gt"},
     )
-    with pytest.raises(Exception, match="Invalid values for threshold") as e:
+    with pytest.raises(Exception, match="Invalid values for threshold") as _:
         threshold_condition.apply("200000000000x", 100)
 
 

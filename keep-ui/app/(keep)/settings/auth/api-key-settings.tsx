@@ -15,19 +15,18 @@ import {
 import Loading from "@/app/(keep)/loading";
 import { CopyBlock, a11yLight } from "react-code-blocks";
 import useSWR from "swr";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { KeyIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { fetcher } from "utils/fetcher";
 import { useState } from "react";
 import { AuthType } from "utils/authenticationType";
 import CreateApiKeyModal from "../create-api-key-modal";
 import { useRoles } from "utils/hooks/useRoles";
-import { getSession } from "next-auth/react";
 import { mutate } from "swr";
 import { UpdateIcon } from "@radix-ui/react-icons";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
-  accessToken: string;
   selectedTab: string;
 }
 
@@ -44,25 +43,18 @@ interface ApiKeyResponse {
   apiKeys: ApiKey[];
 }
 
-interface Config {
-  AUTH_TYPE: string;
-}
-
-export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
-  const apiUrl = useApiUrl();
+export default function ApiKeySettings({ selectedTab }: Props) {
+  const { data: configData } = useConfig();
+  const api = useApi();
   const { data, error, isLoading } = useSWR<ApiKeyResponse>(
-    selectedTab === "api-key" ? `${apiUrl}/settings/apikeys` : null,
+    selectedTab === "api-key" ? "/settings/apikeys" : null,
     async (url) => {
-      const response = await fetcher(url, accessToken);
+      const response = await api.get(url);
       setApiKeys(response.apiKeys);
       return response;
     },
     { revalidateOnFocus: false }
   );
-
-  const { data: configData } = useSWR<Config>("/api/config", fetcher, {
-    revalidateOnFocus: false,
-  });
 
   const { data: roles = [] } = useRoles();
 
@@ -93,19 +85,11 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
     );
 
     if (confirmed) {
-      const session = await getSession();
-      const res = await fetch(`${apiUrl}/settings/apikey`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ apiKeyId: apiKeyId }),
-      });
-      if (res.ok) {
-        mutate(`${apiUrl}/settings/apikeys`);
-      } else {
-        alert("Something went wrong! Please try again.");
+      try {
+        const res = await api.put(`/settings/apikey`, { apiKeyId });
+        mutate(`/settings/apikeys`);
+      } catch (error) {
+        showErrorToast(error, "Failed to regenerate API key");
       }
     }
   };
@@ -117,17 +101,11 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
     );
 
     if (confirmed) {
-      const session = await getSession();
-      const res = await fetch(`${apiUrl}/settings/apikey/${apiKeyId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
-        },
-      });
-      if (res.ok) {
-        mutate(`${apiUrl}/settings/apikeys`);
-      } else {
-        alert("Something went wrong! Please try again.");
+      try {
+        const res = await api.delete(`/settings/apikey/${apiKeyId}`);
+        mutate(`/settings/apikeys`);
+      } catch (error) {
+        showErrorToast(error, "Failed to delete API key");
       }
     }
   };
@@ -230,9 +208,7 @@ export default function ApiKeySettings({ accessToken, selectedTab }: Props) {
       <CreateApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setApiKeyModalOpen(false)}
-        accessToken={accessToken}
         setApiKeys={setApiKeys}
-        apiUrl={apiUrl!}
         roles={roles}
       />
     </div>

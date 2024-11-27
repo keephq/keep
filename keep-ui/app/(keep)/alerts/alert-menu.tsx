@@ -12,9 +12,6 @@ import {
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { IoNotificationsOffOutline } from "react-icons/io5";
-
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Link from "next/link";
 import { ProviderMethod } from "@/app/(keep)/providers/providers";
 import { AlertDto } from "./models";
@@ -22,16 +19,18 @@ import { useFloating } from "@floating-ui/react";
 import { useProviders } from "utils/hooks/useProviders";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useRouter } from "next/navigation";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface Props {
   alert: AlertDto;
-  isMenuOpen: boolean;
-  setIsMenuOpen: (key: string) => void;
+  isMenuOpen?: boolean;
+  setIsMenuOpen?: (key: string) => void;
   setRunWorkflowModalAlert?: (alert: AlertDto) => void;
   setDismissModalAlert?: (alert: AlertDto[]) => void;
   setChangeStatusAlert?: (alert: AlertDto) => void;
   presetName: string;
   isInSidebar?: boolean;
+  setIsIncidentSelectorOpen?: (open: boolean) => void;
 }
 
 export default function AlertMenu({
@@ -43,9 +42,10 @@ export default function AlertMenu({
   setChangeStatusAlert,
   presetName,
   isInSidebar,
+  setIsIncidentSelectorOpen,
 }: Props) {
+  const api = useApi();
   const router = useRouter();
-  const apiUrl = useApiUrl();
   const {
     data: { installed_providers: installedProviders } = {
       installed_providers: [],
@@ -54,8 +54,6 @@ export default function AlertMenu({
 
   const { usePresetAlerts } = useAlerts();
   const { mutate } = usePresetAlerts(presetName, { revalidateOnMount: false });
-
-  const { data: session } = useSession();
 
   const { refs, x, y } = useFloating();
 
@@ -94,15 +92,8 @@ export default function AlertMenu({
         "After assigning this alert to yourself, you won't be able to unassign it until someone else assigns it to himself. Are you sure you want to continue?"
       )
     ) {
-      const res = await fetch(
-        `${apiUrl}/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
+      const res = await api.post(
+        `/alerts/${fingerprint}/assign/${alert.lastReceived.toISOString()}`
       );
       if (res.ok) {
         await mutate();
@@ -145,11 +136,11 @@ export default function AlertMenu({
   const canAssign = true; // TODO: keep track of assignments for auditing
 
   const handleMenuToggle = () => {
-    setIsMenuOpen(alert.fingerprint);
+    setIsMenuOpen!(alert.fingerprint);
   };
 
   const handleCloseMenu = () => {
-    setIsMenuOpen("");
+    setIsMenuOpen!("");
   };
 
   useEffect(() => {
@@ -168,8 +159,8 @@ export default function AlertMenu({
       <Menu.Item>
         {({ active }) => (
           <button
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
+            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+              isInSidebar ? "text-nowrap" : ""
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
             onClick={() => {
               setRunWorkflowModalAlert?.(alert);
@@ -181,21 +172,24 @@ export default function AlertMenu({
           </button>
         )}
       </Menu.Item>
-      <Menu.Item>
-        {({ active }) => (
-          <Link
-            href={`/workflows/builder?alertName=${encodeURIComponent(
-              alertName
-            )}&alertSource=${alertSource}`}
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
-            } group flex items-center rounded-md px-2 py-2 text-xs`}
-          >
-            <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-            Create Workflow
-          </Link>
-        )}
-      </Menu.Item>
+      {!isInSidebar && (
+        <Menu.Item>
+          {({ active }) => (
+            <Link
+              href={`/workflows/builder?alertName=${encodeURIComponent(
+                alertName
+              )}&alertSource=${alertSource}`}
+              className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+                isInSidebar ? "text-nowrap" : ""
+              } group flex items-center rounded-md px-2 py-2 text-xs`}
+            >
+              <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+              Workflow
+            </Link>
+          )}
+        </Menu.Item>
+      )}
+
       <Menu.Item>
         {({ active }) => (
           <button
@@ -208,8 +202,8 @@ export default function AlertMenu({
               );
               handleCloseMenu();
             }}
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
+            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+              isInSidebar ? "text-nowrap" : ""
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <ArchiveBoxIcon className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -222,7 +216,7 @@ export default function AlertMenu({
           <button
             onClick={() => {
               router.replace(
-                `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`,
+                `/alerts/${presetName}?alertPayloadFingerprint=${alert.fingerprint}&enrich=true`
               );
               handleCloseMenu();
             }}
@@ -230,7 +224,10 @@ export default function AlertMenu({
               active ? "bg-slate-200" : "text-gray-900"
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
-            <AdjustmentsHorizontalIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            <AdjustmentsHorizontalIcon
+              className="mr-2 h-4 w-4"
+              aria-hidden="true"
+            />
             Enrich
           </button>
         )}
@@ -243,8 +240,8 @@ export default function AlertMenu({
                 callAssignEndpoint();
                 handleCloseMenu();
               }}
-              className={`${
-                active ? "bg-slate-200" : "text-gray-900"
+              className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+                isInSidebar ? "text-nowrap" : ""
               } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
             >
               <UserPlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -257,8 +254,8 @@ export default function AlertMenu({
         {({ active }) => (
           <button
             onClick={openAlertPayloadModal}
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
+            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+              isInSidebar ? "text-nowrap" : ""
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -267,7 +264,7 @@ export default function AlertMenu({
         )}
       </Menu.Item>
       {provider?.methods && provider.methods.length > 0 && (
-        <div className="px-1 py-1">
+        <div className={`px-1 py-1 ${isInSidebar ? "flex text-nowrap" : ""}`}>
           {provider.methods.map((method) => {
             const methodEnabled = isMethodEnabled(method);
             return (
@@ -318,8 +315,8 @@ export default function AlertMenu({
               setChangeStatusAlert?.(alert);
               handleCloseMenu();
             }}
-            className={`${
-              active ? "bg-slate-200" : "text-gray-900"
+            className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+              isInSidebar ? "text-nowrap" : ""
             } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
           >
             <ChevronDoubleRightIcon
@@ -330,6 +327,24 @@ export default function AlertMenu({
           </button>
         )}
       </Menu.Item>
+      {setIsIncidentSelectorOpen && (
+        <Menu.Item>
+          {({ active }) => (
+            <button
+              onClick={() => {
+                setIsIncidentSelectorOpen(true);
+                handleCloseMenu();
+              }}
+              className={`${active ? "bg-slate-200" : "text-gray-900"} ${
+                isInSidebar ? "text-nowrap" : ""
+              } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
+            >
+              <PlusIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+              Correlate Incident
+            </button>
+          )}
+        </Menu.Item>
+      )}
     </>
   );
 
@@ -375,8 +390,10 @@ export default function AlertMenu({
           )}
         </Menu>
       ) : (
-        <Menu>
-          <div className="flex space-x-2">{menuItems}</div>
+        <Menu as="div" className="w-full">
+          <div className="flex space-x-2 w-full overflow-x-scroll">
+            {menuItems}
+          </div>
         </Menu>
       )}
     </>

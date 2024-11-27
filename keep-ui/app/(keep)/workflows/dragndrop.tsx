@@ -1,10 +1,9 @@
 import React, { useRef, useState } from "react";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
 
 const FileUpload: React.FC = () => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -13,29 +12,22 @@ const FileUpload: React.FC = () => {
     formData.append("file", files[0]);
 
     try {
-      const response = await fetch(`${apiUrl}/workflows`, {
+      const response = await api.request("/workflows", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
         body: formData,
       });
 
-      if (response.ok) {
-        setError(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        window.location.reload();
-      } else {
-        const errorMessage = await response.text();
-        setError(errorMessage);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+      setError(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
+      window.location.reload();
     } catch (error) {
-      setError("An error occurred during file upload");
+      if (error instanceof KeepApiError) {
+        setError(error.message);
+      } else {
+        setError("An error occurred during file upload");
+      }
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Card, Button, Title, Subtitle, TextInput } from "@tremor/react";
 import useSWR from "swr";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { fetcher } from "utils/fetcher";
 import Loading from "@/app/(keep)/loading";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
 
 interface SMTPSettings {
   host: string;
@@ -31,7 +31,6 @@ interface TestResult {
 }
 
 interface Props {
-  accessToken: string;
   selectedTab: string;
 }
 
@@ -39,7 +38,7 @@ const isValidPort = (port: number) => {
   return !isNaN(port) && port > 0 && port <= 65535;
 };
 
-export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
+export default function SMTPSettingsForm({ selectedTab }: Props) {
   const [settings, setSettings] = useState<SMTPSettings>({
     host: "",
     port: 25,
@@ -56,7 +55,7 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
   const [shouldFetch, setShouldFetch] = useState(true);
   const [smtpInstalled, setSmtpInstalled] = useState(false);
   const [deleteSuccessful, setDeleteSuccessful] = useState(false);
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const validateSaveFields = () => {
     const newErrors: SMTPSettingsErrors = {};
@@ -78,7 +77,9 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
   };
 
   const shouldFetchUrl =
-    shouldFetch && selectedTab === "smtp" ? `${apiUrl}/settings/smtp` : null;
+    api.isReady() && shouldFetch && selectedTab === "smtp"
+      ? "/settings/smtp"
+      : null;
 
   // Use the useSWR hook to fetch the settings
   const {
@@ -87,7 +88,7 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
     isValidating: isLoading,
   } = useSWR(
     shouldFetchUrl, // Update with your actual endpoint
-    (url) => fetcher(url, accessToken), // Ensure you have an accessToken variable available
+    (url) => api.get(url),
     { revalidateOnFocus: false }
   );
 
@@ -114,14 +115,8 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
   }
 
   const onDelete = async () => {
-    const response = await fetch(`${apiUrl}/settings/smtp`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (response.ok) {
+    try {
+      const response = await api.delete(`/settings/smtp`);
       // If the delete was successful
       setDeleteSuccessful(true);
       setSettings({
@@ -133,11 +128,14 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
         from_email: "",
         to_email: "",
       });
-    } else {
+    } catch (error) {
       // If the delete failed
       setDeleteSuccessful(false);
-      const errorData = await response.json(); // assuming the server sends JSON with an error message
-      setErrorMessage(errorData.message || "An error occurred while deleting.");
+      if (error instanceof KeepApiError) {
+        setErrorMessage(error.message || "An error occurred while deleting.");
+      } else {
+        setErrorMessage("An unexpected error occurred");
+      }
     }
   };
 
@@ -149,69 +147,58 @@ export default function SMTPSettingsForm({ accessToken, selectedTab }: Props) {
     if (!payload.to_email) {
       delete payload.to_email; // Remove 'to_email' if it's empty
     }
-    const response = await fetch(`${apiUrl}/settings/smtp`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    if (response.ok) {
+    try {
+      const response = await api.post(`/settings/smtp`, payload);
       // If the save was successful
       setSaveSuccessful(true);
       setSmtpInstalled(true);
-    } else {
+    } catch (error) {
       // If the save failed
       setSaveSuccessful(false);
-      const errorData = await response.json(); // assuming the server sends JSON with an error message
-      setErrorMessage(errorData.message || "An error occurred while saving.");
+      if (error instanceof KeepApiError) {
+        setErrorMessage(error.message || "An error occurred while saving.");
+      } else {
+        setErrorMessage("An unexpected error occurred");
+      }
     }
   };
 
   const onTest = async () => {
     try {
       if (!validateTestFields()) return;
-      const response = await fetch(`${apiUrl}/settings/smtp/test`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(settings),
-      });
+      const result = await api.post(`/settings/smtp/test`);
 
-      if (response.status === 200) {
-        // If status is 200, show success
-        const result = await response.json();
-        setTestResult({
-          status: true,
-          message: "Success!",
-          logs: result.logs || [],
-        });
-      } else if (response.status === 400) {
-        // If status is 400, show message/logs from the response
-        const result = await response.json();
-        setTestResult({
-          status: false,
-          message: result.message || "Error occurred.",
-          logs: result.logs || [],
-        });
+      setTestResult({
+        status: true,
+        message: "Success!",
+        logs: result.logs || [],
+      });
+    } catch (error) {
+      if (error instanceof KeepApiError) {
+        if (error.statusCode === 400) {
+          // If status is 400, show message/logs from the response
+          const result = error.responseJson;
+          setTestResult({
+            status: false,
+            message: result.message || "Error occurred.",
+            logs: result.logs || [],
+          });
+        } else {
+          // For any other status, show a static message
+          setTestResult({
+            status: false,
+            message: "Failed to connect to server or process the request.",
+            logs: [],
+          });
+        }
       } else {
-        // For any other status, show a static message
+        // If the request fails to reach the server or there's a network error
         setTestResult({
           status: false,
           message: "Failed to connect to server or process the request.",
           logs: [],
         });
       }
-    } catch (error) {
-      // If the request fails to reach the server or there's a network error
-      setTestResult({
-        status: false,
-        message: "Failed to connect to server or process the request.",
-        logs: [],
-      });
     }
   };
 

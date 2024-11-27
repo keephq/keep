@@ -2,10 +2,8 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Card, Callout } from "@tremor/react";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loader from "./loader";
 import { Provider } from "../../providers/providers";
-import { KeepApiError } from "@/shared/lib/KeepApiError";
 import { useProviders } from "utils/hooks/useProviders";
 
 const Builder = dynamic(() => import("./builder"), {
@@ -13,7 +11,6 @@ const Builder = dynamic(() => import("./builder"), {
 });
 
 interface Props {
-  accessToken: string;
   fileContents: string | null;
   fileName: string;
   enableButtons: () => void;
@@ -27,7 +24,6 @@ interface Props {
 }
 
 export function BuilderCard({
-  accessToken,
   fileContents,
   fileName,
   enableButtons,
@@ -43,17 +39,8 @@ export function BuilderCard({
   const [installedProviders, setInstalledProviders] = useState<
     Provider[] | null
   >(null);
-  const apiUrl = useApiUrl();
 
   const { data, error, isLoading } = useProviders();
-
-  if (error) {
-    throw new KeepApiError(
-      "The builder has failed to load providers",
-      `${apiUrl}/providers`,
-      `Failed to query ${apiUrl}/providers, is Keep API up?`
-    );
-  }
 
   useEffect(() => {
     if (data && !providers && !installedProviders) {
@@ -94,7 +81,6 @@ export function BuilderCard({
           triggerSave={triggerSave}
           triggerRun={triggerRun}
           workflow={workflow}
-          accessToken={accessToken}
           workflowId={workflowId}
           isPreview={isPreview}
         />
