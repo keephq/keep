@@ -600,6 +600,7 @@ def launch_demo_mode_thread(
 if __name__ == "__main__":
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
     keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
+    get_or_create_correlation_rules(keep_api_key, keep_api_url)
     simulate_alerts(
         keep_api_url=keep_api_url,
         keep_api_key=keep_api_key,
