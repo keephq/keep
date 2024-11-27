@@ -467,7 +467,7 @@ async def add_alerts_to_incident(
 ):
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
-    await incident_bl.add_alerts_to_incident(incident_id, alert_ids)
+    await incident_bl.add_alerts_to_incident(incident_id, alert_ids, is_created_by_ai)
     return Response(status_code=202)
 
 

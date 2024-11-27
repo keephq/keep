@@ -6,6 +6,7 @@ import Loading from "@/app/(keep)/loading";
 import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -114,9 +115,7 @@ export default function ProvidersPage({
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
       const reason = JSON.parse(searchParams.reason);
-      toast.error(`Failed to install provider: ${reason.detail}`, {
-        position: toast.POSITION.TOP_LEFT,
-      });
+      showErrorToast(new Error(`Failed to install provider: ${reason.detail}`));
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {
         position: toast.POSITION.TOP_LEFT,

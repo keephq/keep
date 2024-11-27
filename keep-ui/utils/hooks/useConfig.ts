@@ -1,5 +1,5 @@
 import { ConfigContext } from "@/app/config-provider";
-import { getApiUrlFromConfig } from "@/shared/lib/api/getApiUrlFromConfig";
+import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { useContext } from "react";
 
 export const useConfig = () => {

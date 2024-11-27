@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { KeyedMutator } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export function IncidentActivityComment({
   incident,
@@ -26,7 +27,7 @@ export function IncidentActivityComment({
       setComment("");
       mutator();
     } catch (error) {
-      toast.error("Failed to add comment", { position: "top-right" });
+      showErrorToast(error, "Failed to add comment");
     }
   }, [api, incident.id, incident.status, comment, mutator]);
 

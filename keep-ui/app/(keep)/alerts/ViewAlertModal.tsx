@@ -6,7 +6,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -38,12 +38,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
 
         toast.success(`${key} un-enriched successfully!`);
       } catch (error) {
-        if (error instanceof KeepApiError) {
-          toast.error(error.message || `Failed to unenrich ${key}`);
-        } else {
-          // Handle unexpected error
-          toast.error(`Failed to unenrich ${key}: Unexpected error occurred`);
-        }
+        showErrorToast(error, `Failed to unenrich ${key}`);
       } finally {
         await mutate();
       }
@@ -95,7 +90,7 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
         await navigator.clipboard.writeText(JSON.stringify(alert, null, 2));
         toast.success("Alert copied to clipboard!");
       } catch (err) {
-        toast.error("Failed to copy alert.");
+        showErrorToast(err, "Failed to copy alert.");
       }
     }
   };

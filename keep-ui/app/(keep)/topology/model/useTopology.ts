@@ -3,7 +3,6 @@ import useSWR, { SWRConfiguration } from "swr";
 import { useEffect } from "react";
 import { buildTopologyUrl } from "@/app/(keep)/topology/api";
 import { useTopologyPollingContext } from "@/app/(keep)/topology/model/TopologyPollingContext";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const TOPOLOGY_URL = `/topology`;

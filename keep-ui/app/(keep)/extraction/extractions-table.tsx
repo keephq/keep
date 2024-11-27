@@ -26,6 +26,7 @@ import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const columnHelper = createColumnHelper<ExtractionRule>();
 
@@ -187,10 +188,8 @@ export default function RulesTable({
           mutate();
           toast.success("Extraction deleted successfully");
         })
-        .catch(() => {
-          toast.error(
-            "Failed to delete extraction rule, contact us if this persists"
-          );
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to delete extraction rule");
         });
     }
   };

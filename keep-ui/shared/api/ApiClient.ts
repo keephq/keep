@@ -1,7 +1,7 @@
 import { InternalConfig } from "@/types/internal-config";
 import { Session } from "next-auth";
-import { KeepApiError } from "./KeepApiError";
-import { getApiUrlFromConfig } from "./getApiUrlFromConfig";
+import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
+import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
 
 export class ApiClient {
@@ -39,13 +39,23 @@ export class ApiClient {
             response.status
           );
         }
-        throw new KeepApiError(
-          `${data.message || data.detail}`,
-          url,
-          `Please try again. If the problem persists, please contact support.`,
-          data,
-          response.status
-        );
+        if (response.status === 403 && data.detail.includes("Read only")) {
+          throw new KeepApiReadOnlyError(
+            "Application is in read-only mode",
+            url,
+            "The application is currently in read-only mode. Modifications are not allowed.",
+            { readOnly: true },
+            403
+          );
+        } else {
+          throw new KeepApiError(
+            `${data.message || data.detail}`,
+            url,
+            `Please try again. If the problem persists, please contact support.`,
+            data,
+            response.status
+          );
+        }
       }
       throw new Error("An error occurred while fetching the data.");
     }
@@ -64,6 +74,17 @@ export class ApiClient {
   ): Promise<T> {
     if (!this.config) {
       throw new Error("No config found");
+    }
+
+    // Add read-only check for modification requests
+    if (this.config.READ_ONLY && requestInit.method !== "GET") {
+      throw new KeepApiReadOnlyError(
+        "Application is in read-only mode",
+        url,
+        "The application is currently in read-only mode. Modifications are not allowed.",
+        { readOnly: true },
+        403
+      );
     }
 
     const apiUrl = this.isServer

@@ -32,7 +32,8 @@ import useStore, {
 } from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import "./page.css";
 
 interface Props {
@@ -113,13 +114,8 @@ function Builder({
       .then(() => {
         window.location.assign("/workflows");
       })
-      .catch((error) => {
-        toast.error(
-          error instanceof KeepApiError
-            ? error.message
-            : "Failed to add workflow",
-          { position: "top-left" }
-        );
+      .catch((error: any) => {
+        showErrorToast(error, "Failed to add workflow");
       });
   };
 

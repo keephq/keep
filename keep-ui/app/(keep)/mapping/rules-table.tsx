@@ -22,6 +22,7 @@ import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -120,8 +121,8 @@ export default function RulesTable({ mappings, editCallback }: Props) {
           mutate();
           toast.success("Rule deleted successfully");
         })
-        .catch(() => {
-          toast.error("Failed to delete rule, contact us if this persists");
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to delete rule");
         });
     }
   };

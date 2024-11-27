@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 
 export default function WorkflowsPage() {
   const api = useApi();

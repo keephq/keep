@@ -32,7 +32,7 @@ import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
 import { useTopology } from "@/app/(keep)/topology/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   editRule: MappingRule | null;
@@ -147,13 +147,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       mutate();
       toast.success("Mapping created successfully");
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to create mapping");
-      } else {
-        toast.error(
-          "Failed to create mapping, please contact us if this issue persists."
-        );
-      }
+      showErrorToast(error, "Failed to create mapping");
     }
   };
 
@@ -175,13 +169,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
       mutate();
       toast.success("Mapping updated successfully");
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to update mapping");
-      } else {
-        toast.error(
-          "Failed to update mapping, please contact us if this issue persists."
-        );
-      }
+      showErrorToast(error, "Failed to update mapping");
     }
   };
 

@@ -1,5 +1,5 @@
 import { IncidentDto, PaginatedIncidentsDto } from "@/entities/incidents/model";
-import { ApiClient } from "@/shared/lib/api/ApiClient";
+import { ApiClient } from "@/shared/api";
 
 interface Filters {
   status: string[];

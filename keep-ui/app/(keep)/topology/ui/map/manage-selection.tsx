@@ -11,9 +11,9 @@ import {
   TopologyServiceMinimal,
   TopologyNode,
 } from "@/app/(keep)/topology/model";
-import { toast } from "react-toastify";
 import { TopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export function ManageSelection({ className }: { className?: string }) {
   const { setSelectedObjectId } = useContext(TopologySearchContext);
@@ -81,7 +81,7 @@ export function ManageSelection({ className }: { className?: string }) {
         setSelectedObjectId(updatedApplication.id);
       },
       (error) => {
-        toast.error("Failed to update application");
+        showErrorToast(error, "Failed to update application");
       }
     );
   };
@@ -103,7 +103,7 @@ export function ManageSelection({ className }: { className?: string }) {
         setSelectedApplication(null);
         setIsModalOpen(false);
       } catch (error) {
-        toast.error("Failed to delete application");
+        showErrorToast(error, "Failed to delete application");
       }
     },
     [removeApplication]

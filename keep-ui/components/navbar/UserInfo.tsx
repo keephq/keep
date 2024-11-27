@@ -16,7 +16,7 @@ import UserAvatar from "./UserAvatar";
 import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
-import { useSignOut } from "@/shared/lib/useSignOut";
+import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
