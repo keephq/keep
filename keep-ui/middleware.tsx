@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
 
   // Check if request is from mobile device
   const userAgent = request.headers.get("user-agent") || "";
-  if (isMobileDevice(userAgent)) {
+  if (isMobileDevice(userAgent) && !pathname.startsWith("/mobile")) {
     return NextResponse.redirect(new URL("/mobile", request.url));
   }
 
@@ -43,6 +43,11 @@ export async function middleware(request: NextRequest) {
 
   // Allow API routes to pass through
   if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // Allow Mobile routes to pass through
+  if (pathname.startsWith("/mobile")) {
     return NextResponse.next();
   }
 
