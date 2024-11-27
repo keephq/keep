@@ -1,7 +1,6 @@
 workflow:
   id: businesshours
-  strategy: parallel
-  description: demonstrates how to automatically suppress alerts
+  description: demonstrate how to do smth only when it's business hours
   triggers:
     - type: alert
     - type: manual
