@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytest
 import pytz
+from freezegun import freeze_time
 
 import keep.functions as functions
 from keep.api.bl.enrichments_bl import EnrichmentsBl
@@ -509,3 +510,105 @@ def test_firing_time_with_manual_resolve(create_alert):
     # It should override the dispoable status, but show only the time since the last firing
     result = functions.get_firing_time(alert, "m", tenant_id=SINGLE_TENANT_UUID)
     assert abs(float(result) - 30) < 1  # Allow for small time differences
+
+
+def test_is_business_hours():
+    """
+    Test the default business hours (8-20) with different times
+    """
+    # Test during business hours
+    business_time = datetime.datetime(
+        2024, 3, 27, 14, 30, tzinfo=datetime.timezone.utc
+    )  # 14:30
+    assert functions.is_business_hours(business_time) == True
+
+    # Test before business hours
+    early_time = datetime.datetime(
+        2024, 3, 27, 7, 30, tzinfo=datetime.timezone.utc
+    )  # 7:30
+    assert functions.is_business_hours(early_time) == False
+
+    # Test after business hours
+    late_time = datetime.datetime(
+        2024, 3, 27, 20, 30, tzinfo=datetime.timezone.utc
+    )  # 20:30
+    assert functions.is_business_hours(late_time) == False
+
+    # Test exactly at start hour
+    start_time = datetime.datetime(
+        2024, 3, 27, 8, 0, tzinfo=datetime.timezone.utc
+    )  # 8:00
+    assert functions.is_business_hours(start_time) == True
+
+    # Test exactly at end hour
+    end_time = datetime.datetime(
+        2024, 3, 27, 20, 0, tzinfo=datetime.timezone.utc
+    )  # 20:00
+    assert functions.is_business_hours(end_time) == False
+
+
+def test_is_business_hours_custom_hours():
+    """
+    Test custom business hours (9-17)
+    """
+    test_time = datetime.datetime(
+        2024, 3, 27, 8, 30, tzinfo=datetime.timezone.utc
+    )  # 8:30
+    assert functions.is_business_hours(test_time, start_hour=9, end_hour=17) == False
+
+    test_time = datetime.datetime(
+        2024, 3, 27, 12, 30, tzinfo=datetime.timezone.utc
+    )  # 12:30
+    assert functions.is_business_hours(test_time, start_hour=9, end_hour=17) == True
+
+
+def test_is_business_hours_invalid_hours():
+    """
+    Test with invalid hour inputs
+    """
+    test_time = datetime.datetime(2024, 3, 27, 12, 30, tzinfo=datetime.timezone.utc)
+
+    with pytest.raises(ValueError):
+        functions.is_business_hours(test_time, start_hour=24, end_hour=17)
+
+    with pytest.raises(ValueError):
+        functions.is_business_hours(test_time, start_hour=8, end_hour=-1)
+
+
+def test_is_business_hours_string_input():
+    """
+    Test with string datetime input
+    """
+    assert functions.is_business_hours("2024-03-27T14:30:00Z") == True
+    assert functions.is_business_hours("2024-03-27T06:30:00Z") == False
+
+
+def test_is_business_hours_invalid_string():
+    """
+    Test with invalid string datetime input
+    """
+    assert functions.is_business_hours("invalid datetime") == False
+
+
+def test_is_business_hours_no_params():
+    """
+    Test with no parameters by mocking the current time
+    """
+    # Test during business hours
+    with freeze_time("2024-03-27 10:00:00"):
+        assert functions.is_business_hours() == True
+
+    # Test before business hours
+    with freeze_time("2024-03-27 06:00:00"):
+        assert functions.is_business_hours() == False
+
+    # Test after business hours
+    with freeze_time("2024-03-27 22:00:00"):
+        assert functions.is_business_hours() == False
+
+    # Test at the boundaries
+    with freeze_time("2024-03-27 08:00:00"):
+        assert functions.is_business_hours() == True
+
+    with freeze_time("2024-03-27 19:59:59"):
+        assert functions.is_business_hours() == True

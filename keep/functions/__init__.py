@@ -392,3 +392,40 @@ def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
         return True
     else:
         return False
+
+
+def is_business_hours(time_to_check=None, start_hour=8, end_hour=20):
+    """
+    Check if the given time or current time is between start_hour and end_hour
+
+    Args:
+        time_to_check (str | datetime.datetime, optional): Time to check.
+            If None, current UTC time will be used.
+        start_hour (int, optional): Start hour in 24-hour format. Defaults to 8 (8:00 AM)
+        end_hour (int, optional): End hour in 24-hour format. Defaults to 20 (8:00 PM)
+
+    Returns:
+        bool: True if time is between start_hour and end_hour, False otherwise
+
+    Raises:
+        ValueError: If start_hour or end_hour are not between 0 and 23
+    """
+    # Validate hour inputs
+    if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
+        raise ValueError("Hours must be between 0 and 23")
+
+    # If no time provided, use current UTC time
+    if time_to_check is None:
+        dt = utcnow()
+    else:
+        # Convert string to datetime if needed
+        dt = to_utc(time_to_check) if isinstance(time_to_check, str) else time_to_check
+
+    if not dt:  # Handle case where parsing failed
+        return False
+
+    # Get just the hour (in 24-hour format)
+    hour = dt.hour
+
+    # Check if hour is between start_hour and end_hour
+    return start_hour <= hour < end_hour
