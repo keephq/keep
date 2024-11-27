@@ -371,7 +371,7 @@ def elastic_client(request):
     os.environ["ELASTIC_USER"] = "elastic"
     os.environ["ELASTIC_PASSWORD"] = "keeptests"
     os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-    os.environ["ELASTIC_INDEX_SUFFIX"] = f"test"
+    os.environ["ELASTIC_INDEX_SUFFIX"] = "test"
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient(
         tenant_id=SINGLE_TENANT_UUID,
