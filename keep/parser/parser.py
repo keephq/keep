@@ -228,7 +228,7 @@ class Parser:
         # Load installed providers
         all_providers = ProvidersFactory.get_all_providers()
         installed_providers = ProvidersFactory.get_installed_providers(
-            tenant_id=tenant_id, all_providers=all_providers
+            tenant_id=tenant_id, all_providers=all_providers, override_readonly=True
         )
         for provider in installed_providers:
             self.logger.debug("Loading provider", extra={"provider_id": provider.id})

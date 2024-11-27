@@ -10,6 +10,7 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
+from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_enrichment, get_previous_execution_id
@@ -19,6 +20,8 @@ from keep.api.models.alert import AlertDto, IncidentDto
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
+
+READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 
 class WorkflowStatus(enum.Enum):
@@ -107,7 +110,12 @@ class WorkflowScheduler:
         workflow_execution_id: str,
         event_context=None,
     ):
+        if READ_ONLY_MODE:
+            # This is because sometimes workflows takes 0 seconds and the executions chart is not updated properly.
+            self.logger.debug("Sleeping for 3 seconds in favor of read only mode")
+            time.sleep(3)
         self.logger.info(f"Running workflow {workflow.workflow_id}...")
+
         try:
             if isinstance(event_context, AlertDto):
                 # set the event context, e.g. the event that triggered the workflow

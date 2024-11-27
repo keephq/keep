@@ -427,6 +427,7 @@ class ProvidersFactory:
         tenant_id: str,
         all_providers: list[Provider] | None = None,
         include_details: bool = True,
+        override_readonly: bool = False,
     ) -> list[Provider]:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
@@ -462,7 +463,7 @@ class ProvidersFactory:
                             secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                         )
                     )
-                if READ_ONLY_MODE:
+                if READ_ONLY_MODE and not override_readonly:
                     if "authentication" in provider_auth:
                         provider_auth["authentication"] = {
                             key: "demo"
