@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Preset } from "@/app/(keep)/alerts/models";
 import useSWR, { SWRConfiguration } from "swr";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -7,6 +7,19 @@ import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
 import { useSearchParams } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
+
+interface EnhancedPreset extends Preset {
+  lastLocalUpdate?: number;
+  lastServerFetch?: number;
+}
+
+const STATIC_PRESETS = [
+  "feed",
+  "deleted",
+  "dismissed",
+  "without-incident",
+  "groups",
+];
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const api = useApi();
@@ -29,22 +42,25 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   const staticPresetsOrderRef = useRef(staticPresetsOrderFromLS);
   const { bind, unbind } = useWebsocket();
 
-  // Maps are used to find if the local preset is more recent than the server preset
-  const lastServerFetchByPresetId = useRef<Map<string, Date>>(new Map());
-  const lastLocalUpdateByPresetId = useRef<Map<string, Date>>(new Map());
-  // Version is used to trigger a re-render when the local preset is more recent than the server preset
-  const [lastLocalVersion, setLastLocalVersion] = useState(0);
-
   useEffect(() => {
     presetsOrderRef.current = presetsOrderFromLS;
     staticPresetsOrderRef.current = staticPresetsOrderFromLS;
   }, [presetsOrderFromLS, staticPresetsOrderFromLS]);
 
   const updateLocalPresets = (newPresets: Preset[]) => {
+    const now = new Date();
+    const enhancedNewPresets = newPresets.map((preset) => ({
+      ...preset,
+      lastLocalUpdate: now.getTime(),
+    }));
+
     if (newPresetsRef) {
-      newPresetsRef.current = newPresets;
+      newPresetsRef.current = enhancedNewPresets;
     }
-    const updatePresets = (currentPresets: Preset[], newPresets: Preset[]) => {
+    const updatePresets = (
+      currentPresets: EnhancedPreset[],
+      newPresets: EnhancedPreset[]
+    ) => {
       const newPresetMap = new Map(newPresets.map((p) => [p.id, p]));
       let updatedPresets = new Map(currentPresets.map((p) => [p.id, p]));
 
@@ -57,12 +73,16 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
             alerts_count: currentPreset.alerts_count + newPreset.alerts_count,
             created_by: newPreset.created_by,
             is_private: newPreset.is_private,
+            lastLocalUpdate: newPreset.lastLocalUpdate,
+            lastServerFetch: newPreset.lastServerFetch,
           });
         } else {
           // If the preset is not in the current presets, add it
           updatedPresets.set(newPresetId, {
             ...newPreset,
             alerts_count: newPreset.alerts_count,
+            lastServerFetch: newPreset.lastServerFetch,
+            lastLocalUpdate: newPreset.lastLocalUpdate,
           });
         }
       });
@@ -71,20 +91,16 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     setPresetsOrderFromLS((current) =>
       updatePresets(
         presetsOrderRef.current,
-        newPresets.filter((p) => !["feed"].includes(p.name))
+        enhancedNewPresets.filter((p) => !["feed"].includes(p.name))
       )
     );
+
     setStaticPresetsOrderFromLS((current) =>
       updatePresets(
         staticPresetsOrderRef.current,
-        newPresets.filter((p) => ["feed"].includes(p.name))
+        enhancedNewPresets.filter((p) => ["feed"].includes(p.name))
       )
     );
-    const now = new Date();
-    newPresets.forEach((p) => {
-      lastLocalUpdateByPresetId.current.set(p.id, now);
-    });
-    setLastLocalVersion((v) => v + 1);
   };
 
   useSWRSubscription(
@@ -123,51 +139,43 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
               useFilters && filters && isDashBoard ? `?${filters}` : ""
             }`
           : null,
-      (url) => api.get(url),
+      async (url) => {
+        const data = await api.get(url);
+        const now = new Date();
+        // Enhance the fetched presets with timestamp of last server fetch
+        return data.map((preset: Preset) => ({
+          ...preset,
+          lastServerFetch: now.getTime(),
+        }));
+      },
       {
         ...options,
         onSuccess: (data) => {
-          if (data) {
-            const dynamicPresets = data.filter(
-              (p) =>
-                ![
-                  "feed",
-                  "deleted",
-                  "dismissed",
-                  "without-incident",
-                  "groups",
-                ].includes(p.name)
-            );
-            const staticPresets = data.filter((p) =>
-              [
-                "feed",
-                "deleted",
-                "dismissed",
-                "without-incident",
-                "groups",
-              ].includes(p.name)
-            );
-
-            //if it is dashboard we don't need to merge with local storage.
-            //if we need to merge. we need maintain multiple local storage for each dahboard view which make it very complex to maintain.(if we have more dashboards)
-            if (isDashBoard) {
-              return;
-            }
-            mergePresetsWithLocalStorage(
-              dynamicPresets,
-              presetsOrderFromLS,
-              setPresetsOrderFromLS
-            );
-            mergePresetsWithLocalStorage(
-              staticPresets,
-              staticPresetsOrderFromLS,
-              setStaticPresetsOrderFromLS
-            );
-            const now = new Date();
-            data.forEach((p) => {
-              lastServerFetchByPresetId.current.set(p.id, now);
-            });
+          if (!data) {
+            return;
           }
+          const dynamicPresets = data.filter(
+            (p) => !STATIC_PRESETS.includes(p.name)
+          );
+          const staticPresets = data.filter((p) =>
+            STATIC_PRESETS.includes(p.name)
+          );
+
+          //if it is dashboard we don't need to merge with local storage.
+          //if we need to merge. we need maintain multiple local storage for each dahboard view which make it very complex to maintain.(if we have more dashboards)
+          if (isDashBoard) {
+            return;
+          }
+          mergePresetsWithLocalStorage(
+            dynamicPresets,
+            presetsOrderFromLS,
+            setPresetsOrderFromLS
+          );
+          mergePresetsWithLocalStorage(
+            staticPresets,
+            staticPresetsOrderFromLS,
+            setStaticPresetsOrderFromLS
+          );
         },
       }
     );
@@ -251,26 +259,32 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   // It could happen because we update the local preset when we receive an "async-presets" event.
   const useLatestStaticPresets = (options?: SWRConfiguration) => {
     const { data: presets, ...rest } = useStaticPresets(options);
-    const mergedPresets = useMemo(() => {
-      if (presets === undefined) {
-        return staticPresetsOrderFromLS;
+
+    // Compare timestamps
+    const getLatestPreset = (serverPreset: EnhancedPreset) => {
+      const localPreset = staticPresetsOrderFromLS.find(
+        (lp) => lp.id === serverPreset.id
+      ) as EnhancedPreset;
+
+      if (!localPreset?.lastLocalUpdate || !serverPreset.lastServerFetch) {
+        return serverPreset;
       }
-      return presets?.map((p) => {
-        const lastUpdated = lastLocalUpdateByPresetId.current.get(p.id);
-        const fetchedFromServerAt = lastServerFetchByPresetId.current.get(p.id);
-        if (
-          lastUpdated &&
-          fetchedFromServerAt &&
-          lastUpdated > fetchedFromServerAt
-        ) {
-          // Local wins
-          return staticPresetsOrderFromLS.find((lp) => lp.id === p.id) ?? p;
-        }
-        // Server wins
-        return p;
-      });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [presets, lastLocalVersion]);
+
+      return localPreset.lastLocalUpdate > serverPreset.lastServerFetch
+        ? localPreset
+        : serverPreset;
+    };
+
+    // If no server presets, use local
+    if (!presets) {
+      return {
+        data: staticPresetsOrderFromLS,
+        ...rest,
+      };
+    }
+
+    // Compare and merge presets
+    const mergedPresets = presets.map(getLatestPreset);
 
     return {
       data: mergedPresets,
