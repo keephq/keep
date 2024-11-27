@@ -394,25 +394,49 @@ def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
         return False
 
 
-def is_business_hours(time_to_check=None, start_hour=8, end_hour=20):
+def is_business_hours(
+    time_to_check=None,
+    start_hour=8,
+    end_hour=20,
+    business_days=(0, 1, 2, 3, 4),  # Mon = 0, Sun = 6
+    timezone=pytz.UTC,
+):
     """
     Check if the given time or current time is between start_hour and end_hour
+    and falls on a business day
 
     Args:
         time_to_check (str | datetime.datetime, optional): Time to check.
             If None, current UTC time will be used.
         start_hour (int, optional): Start hour in 24-hour format. Defaults to 8 (8:00 AM)
         end_hour (int, optional): End hour in 24-hour format. Defaults to 20 (8:00 PM)
+        business_days (tuple, optional): Days of week considered as business days.
+            Monday=0 through Sunday=6. Defaults to Mon-Fri (0,1,2,3,4)
+        timezone (pytz.timezone, optional): Timezone to evaluate the time in.
+            Defaults to UTC.
 
     Returns:
-        bool: True if time is between start_hour and end_hour, False otherwise
+        bool: True if time is between start_hour and end_hour on a business day
 
     Raises:
         ValueError: If start_hour or end_hour are not between 0 and 23
+        ValueError: If business_days contains invalid day numbers
     """
     # Validate hour inputs
     if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
         raise ValueError("Hours must be between 0 and 23")
+
+    # Strict validation for business_days
+    try:
+        invalid_days = [day for day in business_days if not (0 <= day <= 6)]
+        if invalid_days:
+            raise ValueError(
+                f"Invalid business days: {invalid_days}. Days must be between 0 (Monday) and 6 (Sunday)"
+            )
+    except TypeError:
+        raise ValueError(
+            "business_days must be an iterable of integers between 0 and 6"
+        )
 
     # If no time provided, use current UTC time
     if time_to_check is None:
@@ -422,6 +446,16 @@ def is_business_hours(time_to_check=None, start_hour=8, end_hour=20):
         dt = to_utc(time_to_check) if isinstance(time_to_check, str) else time_to_check
 
     if not dt:  # Handle case where parsing failed
+        return False
+
+    # Convert to specified timezone
+    dt = dt.astimezone(timezone)
+
+    # Get weekday (Monday = 0, Sunday = 6)
+    weekday = dt.weekday()
+
+    # Check if it's a business day
+    if weekday not in business_days:
         return False
 
     # Get just the hour (in 24-hour format)

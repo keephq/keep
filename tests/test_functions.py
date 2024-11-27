@@ -612,3 +612,148 @@ def test_is_business_hours_no_params():
 
     with freeze_time("2024-03-27 19:59:59"):
         assert functions.is_business_hours() == True
+
+
+def test_is_business_hours_weekdays():
+    """
+    Test business days with default Mon-Fri
+    """
+    # Monday 10 AM (should be True)
+    with freeze_time("2024-03-25 10:00:00"):  # Monday
+        assert functions.is_business_hours() == True
+
+    # Saturday 10 AM (should be False)
+    with freeze_time("2024-03-23 10:00:00"):  # Saturday
+        assert functions.is_business_hours() == False
+
+    # Sunday 10 AM (should be False)
+    with freeze_time("2024-03-24 10:00:00"):  # Sunday
+        assert functions.is_business_hours() == False
+
+
+def test_is_business_hours_custom_days():
+    """
+    Test with custom business days (Tue-Sat)
+    """
+    test_time = datetime.datetime(
+        2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc
+    )  # Monday
+    assert (
+        functions.is_business_hours(test_time, business_days=(1, 2, 3, 4, 5)) == False
+    )
+
+    test_time = datetime.datetime(
+        2024, 3, 23, 10, 0, tzinfo=datetime.timezone.utc
+    )  # Saturday
+    assert functions.is_business_hours(test_time, business_days=(1, 2, 3, 4, 5)) == True
+
+
+def test_is_business_hours_timezone():
+    """
+    Test with different timezones
+    """
+    # 10 AM UTC = 6 AM EDT (before business hours in EDT)
+    est_tz = pytz.timezone("America/New_York")
+    with freeze_time("2024-03-25 10:00:00"):
+        assert functions.is_business_hours(timezone=est_tz) == False
+
+    # 2 PM UTC = 10 AM EDT (during business hours in EDT)
+    with freeze_time("2024-03-25 14:00:00"):
+        assert functions.is_business_hours(timezone=est_tz) == True
+
+
+def test_is_business_hours_invalid_days():
+    """
+    Test with invalid business days
+    """
+    test_time = datetime.datetime(2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc)
+
+    # Test with days outside valid range
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=(7, 8, 9))
+    assert "Invalid business days" in str(exc_info.value)
+
+    # Test with negative days
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=(-1, 0, 1))
+    assert "Invalid business days" in str(exc_info.value)
+
+    # Test with non-iterable
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=42)
+    assert "business_days must be an iterable" in str(exc_info.value)
+
+    # Test with invalid types in iterable
+    with pytest.raises(ValueError) as exc_info:
+        functions.is_business_hours(test_time, business_days=(1, "tuesday", 3))
+    assert "business_days must be an iterable of integers" in str(exc_info.value)
+
+
+def test_is_business_hours_all_combinations():
+    """
+    Test various combinations of parameters
+    """
+    tokyo_tz = pytz.timezone("Asia/Tokyo")
+    test_time = datetime.datetime(2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc)
+
+    # Custom hours, days, and timezone
+    assert (
+        functions.is_business_hours(
+            test_time,
+            start_hour=9,
+            end_hour=17,
+            business_days=(0, 1, 2, 3),  # Mon-Thu
+            timezone=tokyo_tz,
+        )
+        == False
+    )  # 10 UTC = 19 JST (after business hours)
+
+    # Weekend with extended hours
+    assert (
+        functions.is_business_hours(
+            test_time,
+            start_hour=0,
+            end_hour=23,
+            business_days=(5, 6),  # Sat-Sun only
+            timezone=pytz.UTC,
+        )
+        == False
+    )  # It's a Monday
+
+
+def test_is_business_hours_edge_cases():
+    """
+    Test edge cases with timezones and day boundaries
+    """
+    ny_tz = pytz.timezone("America/New_York")
+
+    # Test exactly at timezone day boundary
+    edge_time = datetime.datetime(
+        2024, 3, 25, 4, 0, tzinfo=datetime.timezone.utc
+    )  # Midnight EDT
+    assert functions.is_business_hours(edge_time, timezone=ny_tz) == False
+
+    # Test exactly at business hours start
+    with freeze_time("2024-03-25 12:00:00"):  # 8 AM EDT
+        assert functions.is_business_hours(timezone=ny_tz) == True
+
+    # Test exactly at business hours end
+    with freeze_time("2024-03-26 00:00:00"):  # 8 PM EDT previous day
+        assert functions.is_business_hours(timezone=ny_tz) == False
+
+
+def test_is_business_hours_string_input_with_timezone():
+    """
+    Test string datetime input with timezone handling
+    """
+    paris_tz = pytz.timezone("Europe/Paris")
+
+    # 2 PM UTC = 4 PM Paris
+    assert (
+        functions.is_business_hours("2024-03-25T14:00:00Z", timezone=paris_tz) == True
+    )
+
+    # 8 PM UTC = 10 PM Paris
+    assert (
+        functions.is_business_hours("2024-03-25T20:00:00Z", timezone=paris_tz) == False
+    )
