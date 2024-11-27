@@ -20,7 +20,11 @@ export async function middleware(request: NextRequest) {
 
   // Check if request is from mobile device
   const userAgent = request.headers.get("user-agent") || "";
-  if (isMobileDevice(userAgent) && !pathname.startsWith("/mobile")) {
+  if (
+    isMobileDevice(userAgent) &&
+    !pathname.startsWith("/mobile") &&
+    process.env.KEEP_READ_ONLY === "true"
+  ) {
     return NextResponse.redirect(new URL("/mobile", request.url));
   }
 
