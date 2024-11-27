@@ -92,13 +92,18 @@ jobs:
 
       - name: Run unit tests and report coverage
         run: |
+          poetry run coverage run --branch -m pytest -n auto --non-integration --ignore=tests/e2e_tests/
+
+
+      - name: Run integration tests and report coverage
+        run: |
           # Add a step to wait for MySQL to be fully up and running
           until nc -z 127.0.0.1 3306; do
             echo "waiting for MySQL..."
             sleep 1
           done
           echo "MySQL is up and running!"
-          poetry run coverage run --branch -m pytest -n auto --ignore=tests/e2e_tests/
+          poetry run coverage run --branch -m pytest --non-integration --ignore=tests/e2e_tests/
 
       - name: Convert coverage results to JSON (for CodeCov support)
         env:
