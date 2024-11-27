@@ -1,206 +1,253 @@
 "use client";
 
-import { Card, List, ListItem, Title, Subtitle } from "@tremor/react";
-import { useAIStats, usePollAILogs } from "utils/hooks/useAI";
+import { Card, Title, Subtitle } from "@tremor/react";
+import { useAIStats, UseAIActions } from "utils/hooks/useAI";
 import { toast } from "react-toastify";
-import { useEffect, useState, FormEvent } from "react";
-import { AILogs } from "./model";
-import { useApi } from "@/shared/lib/hooks/useApi";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import debounce from "lodash.debounce";
+
+function RangeInputWithLabel({
+  setting,
+  onChange,
+}: {
+  setting: any;
+  onChange: (newValue: number) => void;
+}) {
+  const [value, setValue] = useState(setting.value);
+
+  // Create a memoized debounced function
+  const debouncedOnChange = useMemo(
+    () => debounce((value: number) => onChange(value), 1000),
+    [onChange]
+  );
+
+  // Cleanup the debounced function on unmount
+  useEffect(() => {
+    return () => {
+      debouncedOnChange.cancel();
+    };
+  }, [debouncedOnChange]);
+
+  return (
+    <div>
+      <p>Value: {value}</p>
+      <input
+        type="range"
+        className="bg-orange-500 accent-orange-500"
+        step={(setting.max - setting.min) / 100}
+        min={setting.min}
+        max={setting.max}
+        value={value}
+        onChange={(e) => {
+          const newValue =
+            setting.type === "float"
+              ? parseFloat(e.target.value)
+              : parseInt(e.target.value, 10);
+          setValue(newValue);
+          debouncedOnChange(newValue);
+        }}
+      />
+    </div>
+  );
+}
 
 export default function Ai() {
-  const api = useApi();
-  const { data: aistats } = useAIStats();
-  const [text, setText] = useState("");
-  const [basicAlgorithmLog, setBasicAlgorithmLog] = useState("");
-  const [newText, setNewText] = useState("Mine incidents");
-  const [animate, setAnimate] = useState(false);
+  const { data: aistats, isLoading, mutate: refetchAIStats } = useAIStats();
+  const { updateAISettings } = UseAIActions();
 
-  const mutateAILogs = (logs: AILogs) => {
-    setBasicAlgorithmLog(logs.log);
-  };
-  usePollAILogs(mutateAILogs);
-
+  // TODO: use pollingInterval instead
   useEffect(() => {
-    let index = 0;
-
     const interval = setInterval(() => {
-      setText(newText.slice(0, index + 1));
-      index++;
+      refetchAIStats();
+    }, 5000);
 
-      if (index === newText.length) {
-        clearInterval(interval);
-      }
-    }, 100);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [newText]);
-
-  const mineIncidents = async (e: FormEvent) => {
-    e.preventDefault();
-    setAnimate(true);
-    setNewText("Mining 🚀🚀🚀 ...");
-    try {
-      const response = await api.post(`/incidents/mine`, {});
-    } catch (error) {
-      toast.error(
-        "Failed to mine incidents, please contact us if this issue persists."
-      );
-    }
-
-    setAnimate(false);
-    setNewText("Mine incidents");
-  };
+    return () => clearInterval(interval);
+  }, [refetchAIStats]);
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-full">
       <div className="flex justify-between items-center">
         <div>
-          <Title>AI Correlation</Title>
-          <Subtitle>
-            Correlating alerts to incidents based on past alerts, incidents, and
-            the other data.
-          </Subtitle>
+          <Title>AI Plugins</Title>
+          <Subtitle>For correlation, summarization, and enrichment</Subtitle>
         </div>
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto">
         <div>
-          {aistats?.is_mining_enabled == false && (
-            <div>
-              <div className="prose-2xl">👋 You are almost there!</div>
-              AI Correlation is coming soon. Make sure you have enough data
-              collected to prepare.
-              <div className="max-w-md mt-10 flex justify-items-start justify-start">
-                <List>
-                  <ListItem>
-                    <span>
-                      Connect an incident source to dump incidents, or create 10
-                      incidents manually
-                    </span>
-                    <span>
-                      {aistats?.incidents_count &&
-                      aistats?.incidents_count >= 10 ? (
-                        <div>✅</div>
-                      ) : (
-                        <div>⏳</div>
-                      )}
-                    </span>
-                  </ListItem>
-                  <ListItem>
-                    <span>Collect 100 alerts</span>
-                    <span>
-                      {aistats?.alerts_count && aistats?.alerts_count >= 100 ? (
-                        <div>✅</div>
-                      ) : (
-                        <div>⏳</div>
-                      )}
-                    </span>
-                  </ListItem>
-                  <ListItem>
-                    <span>Collect alerts for more than 3 days</span>
-                    <span>
-                      {aistats?.first_alert_datetime &&
-                      new Date(aistats.first_alert_datetime) <
-                        new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) ? (
-                        <div>✅</div>
-                      ) : (
-                        <div>⏳</div>
-                      )}
-                    </span>
-                  </ListItem>
-                </List>
-              </div>
-            </div>
-          )}
-          {aistats?.is_mining_enabled && (
-            <div>
-              <div className="grid grid-cols-2 gap-4 mt-6">
+          <div>
+            <div className="grid grid-cols-1 gap-4">
+              {isLoading ? (
+                <p>Loading algorithms and their settings...</p>
+              ) : null}
+              {aistats?.algorithm_configs?.length === 0 && (
+                <div className="flex flex-row">
+                  <Image
+                    src="/keep_sleeping.png"
+                    alt="AI"
+                    width={300}
+                    height={300}
+                    className="mr-4 rounded-lg"
+                  />
+                  <div>
+                    <Title>No AI enabled for this tenant</Title>
+                    <p className="pt-2">
+                      AI plugins can correlate, enrich, or summarize your alerts
+                      and incidents by leveraging the the context within Keep
+                      allowing you to gain deeper insights and respond more
+                      effectively.
+                    </p>
+                    <p className="pt-2">
+                      By the way, AI plugins are designed to work even in
+                      air-gapped environments. You can train models using your
+                      data, so there is no need to share information with
+                      third-party providers like OpenAI. Keep your data secure
+                      and private.
+                    </p>
+                    <p className="pt-2">
+                      <a
+                        href="https://www.keephq.dev/meet-keep"
+                        className="text-orange-500 underline"
+                      >
+                        Talk to us to get access!
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
+              {aistats?.algorithm_configs?.map((algorithm_config, index) => (
                 <Card
-                  className={
-                    "p-4 flex flex-col justify-between w-full border-white border-2"
-                  }
+                  key={index}
+                  className="p-4 flex flex-col justify-between w-full border-white border-2"
                 >
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
-                    {aistats?.algorithm_verbose_name}
+                    {algorithm_config.algorithm.name}
                   </h3>
                   <p className="text-sm">
-                    Basic algorithm combining algorithmical methods to correlate
-                    alerts to incidents and Large Language Models to provide
-                    incident summary.
+                    {algorithm_config.algorithm.description}
                   </p>
-
-                  <div className="mt-4">
-                    <Subtitle>Log:</Subtitle>
-                    {!basicAlgorithmLog && <p>No recent logs found.</p>}
-                    {basicAlgorithmLog}
-                  </div>
-
-                  <button
-                    className={
-                      (animate && "animate-pulse") +
-                      " w-full text-white mt-2 pt-2 pb-2 pr-2 rounded-xl transition-all duration-500 bg-gradient-to-tl from-amber-800 via-amber-600 to-amber-400 bg-size-200 bg-pos-0 hover:bg-pos-100"
-                    }
-                    onClick={mineIncidents}
-                  >
-                    <div className="flex flex-row p-2">
-                      <div className="p-2">
-                        {animate && (
-                          <svg
-                            className="animate-spin h-6 w-6 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                        )}
-                        {!animate && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            className="w-6 h-6"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"
+                  <div className="flex flex-row">
+                    <Card className="m-2 mt-4 p-2">
+                      {algorithm_config.settings.map((setting: any) => (
+                        <div key={setting} className="mt-2">
+                          {setting.name}
+                          <p className="text-sm text-gray-500">
+                            {setting.description}
+                          </p>
+                          {setting.type === "bool" ? (
+                            <input
+                              type="checkbox"
+                              id={`checkbox-${index}`}
+                              name={`checkbox-${index}`}
+                              checked={setting.value}
+                              onChange={(e) => {
+                                const newValue = e.target.checked;
+                                setting.value = newValue;
+                                algorithm_config.settings_proposed_by_algorithm =
+                                  null;
+                                updateAISettings(
+                                  algorithm_config.algorithm_id,
+                                  algorithm_config
+                                );
+                                toast.success("Settings updated successfully!");
+                                refetchAIStats();
+                              }}
+                              className="mt-2 bg-orange-500 accent-orange-500"
                             />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="pt-2">{text}</div>
-                    </div>
-                  </button>
+                          ) : null}
+                          {setting.type === "float" ? (
+                            <RangeInputWithLabel
+                              key={setting.value}
+                              setting={setting}
+                              onChange={(newValue) => {
+                                setting.value = newValue;
+                                algorithm_config.settings_proposed_by_algorithm =
+                                  null;
+                                updateAISettings(
+                                  algorithm_config.algorithm_id,
+                                  algorithm_config
+                                );
+                                toast.success("Settings updated successfully!");
+                                refetchAIStats();
+                              }}
+                            />
+                          ) : null}
+                          {setting.type === "int" ? (
+                            <RangeInputWithLabel
+                              key={setting.value}
+                              setting={setting}
+                              onChange={(newValue) => {
+                                setting.value = newValue;
+                                algorithm_config.settings_proposed_by_algorithm =
+                                  null;
+                                updateAISettings(
+                                  algorithm_config.algorithm_id,
+                                  algorithm_config
+                                );
+                                toast.success("Settings updated successfully!");
+                                refetchAIStats();
+                              }}
+                            />
+                          ) : null}
+                        </div>
+                      ))}
+                    </Card>
+
+                    {algorithm_config.settings_proposed_by_algorithm &&
+                      JSON.stringify(algorithm_config.settings) !==
+                        JSON.stringify(
+                          algorithm_config.settings_proposed_by_algorithm
+                        ) && (
+                        <Card className="m-2 mt-4 p-2">
+                          <Title>The new settings proposal</Title>
+                          <p className="text-sm">
+                            The last time the model was trained and used for
+                            inference, it suggested a configuration update.
+                            However, please note that a configuration update
+                            might not be very effective if the data quantity or
+                            quality is low. For more details, please refer to
+                            the logs below.
+                          </p>
+                          {algorithm_config.settings_proposed_by_algorithm.map(
+                            (proposed_setting: any, idx: number) => (
+                              <div key={idx} className="mt-2">
+                                <p className="text-sm">
+                                  {proposed_setting.name}:{" "}
+                                  {String(proposed_setting.value)}
+                                </p>
+                              </div>
+                            )
+                          )}
+                          <button
+                            className="mt-2 p-2 bg-orange-500 text-white rounded"
+                            onClick={() => {
+                              algorithm_config.settings =
+                                algorithm_config.settings_proposed_by_algorithm;
+                              algorithm_config.settings_proposed_by_algorithm =
+                                null;
+                              updateAISettings(
+                                algorithm_config.algorithm_id,
+                                algorithm_config
+                              );
+                              refetchAIStats();
+                              toast.success("Settings updated successfully!");
+                            }}
+                          >
+                            Apply proposed settings
+                          </button>
+                        </Card>
+                      )}
+                  </div>
+                  <h4 className="text-md font-medium mt-4">Execution logs:</h4>
+                  <pre className="text-sm bg-gray-100 p-2 rounded break-words whitespace-pre-wrap">
+                    {algorithm_config.feedback_logs
+                      ? algorithm_config.feedback_logs
+                      : "Algorithm not executed yet."}
+                  </pre>
                 </Card>
-                <Card
-                  className={"p-4 flex flex-col w-full border-white border-2"}
-                >
-                  <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
-                    Summarization v0.1
-                  </h3>
-                  <p className="text-sm top-0">
-                    Using LLMs to provide a human-readable incident summary.
-                  </p>
-                </Card>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </Card>
     </main>

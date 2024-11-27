@@ -1,5 +1,5 @@
 import PageClient from "../page.client";
-import { createServerApiClient } from "@/shared/lib/api/createServerApiClient";
+import { createServerApiClient } from "@/shared/api/server";
 
 type WorkflowRawResponse = {
   workflow_raw: string;

@@ -20,6 +20,7 @@ import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;
@@ -89,9 +90,7 @@ export default function CreateOrUpdateExtractionRule({
       mutate();
       toast.success("Extraction rule created successfully");
     } catch (error) {
-      toast.error(
-        "Failed to create extraction rule, please contact us if this issue persists."
-      );
+      showErrorToast(error, "Failed to create extraction rule");
     }
   };
 
@@ -112,9 +111,7 @@ export default function CreateOrUpdateExtractionRule({
       mutate();
       toast.success("Extraction updated successfully");
     } catch (error) {
-      toast.error(
-        "Failed to update extraction, please contact us if this issue persists."
-      );
+      showErrorToast(error, "Failed to update extraction");
     }
   };
 

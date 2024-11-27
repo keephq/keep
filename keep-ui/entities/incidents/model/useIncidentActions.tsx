@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Status } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;
@@ -68,13 +68,10 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.success("Incident created successfully");
         return result as IncidentDto;
       } catch (error) {
-        if (error instanceof KeepApiError) {
-          toast.error(
-            "Failed to create incident, please contact us if this issue persists."
-          );
-        } else {
-          toast.error("An unknown error occurred while creating the incident.");
-        }
+        showErrorToast(
+          error,
+          "Failed to create incident, please contact us if this issue persists."
+        );
         throw error;
       }
     },
@@ -99,9 +96,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
 
         return result;
       } catch (error) {
-        toast.error(
-          "Failed to update incident, please contact us if this issue persists."
-        );
+        showErrorToast(error, "Failed to update incident");
       }
     },
     [api, mutateIncident, mutateIncidentsList]
@@ -113,7 +108,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
       destinationIncident: IncidentDto
     ) => {
       if (!sourceIncidents.length || !destinationIncident) {
-        toast.error("Please select incidents to merge.");
+        showErrorToast(new Error("Please select incidents to merge."));
         return;
       }
 
@@ -126,13 +121,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         mutateIncidentsList();
         return result;
       } catch (error) {
-        if (error instanceof KeepApiError) {
-          toast.error(
-            "Failed to merge incidents, please contact us if this issue persists."
-          );
-        } else {
-          toast.error("An error occurred while merging incidents.");
-        }
+        showErrorToast(error, "Failed to merge incidents");
       }
     },
     [api, mutateIncidentsList]
@@ -152,7 +141,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.success("Incident deleted successfully");
         return true;
       } catch (error) {
-        toast.error("Failed to delete incident, contact us if this persists");
+        showErrorToast(error, "Failed to delete incident");
         return false;
       }
     },
@@ -162,7 +151,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
   const changeStatus = useCallback(
     async (incidentId: string, status: Status, comment?: string) => {
       if (!status) {
-        toast.error("Please select a new status.");
+        showErrorToast(new Error("Please select a new status."));
         return;
       }
 
@@ -176,13 +165,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         mutateIncidentsList();
         return result;
       } catch (error) {
-        if (error instanceof KeepApiError) {
-          toast.error(
-            "Failed to change incident status, please contact us if this issue persists."
-          );
-        } else {
-          toast.error("An error occurred while changing incident status.");
-        }
+        showErrorToast(error, "Failed to change incident status");
       }
     },
     [api, mutateIncidentsList]
@@ -198,13 +181,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
         toast.success("Predicted incident confirmed successfully");
         return result;
       } catch (error) {
-        if (error instanceof KeepApiError) {
-          toast.error(
-            "Failed to confirm predicted incident, please contact us if this issue persists."
-          );
-        } else {
-          toast.error("An error occurred while confirming predicted incident.");
-        }
+        showErrorToast(error, "Failed to confirm predicted incident");
       }
     },
     [api, mutateIncident, mutateIncidentsList]

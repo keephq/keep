@@ -4,7 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useTopology } from "./useTopology";
 import { useRevalidateMultiple } from "@/utils/state";
 import { TOPOLOGY_URL } from "./useTopology";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 type UseTopologyApplicationsOptions = {

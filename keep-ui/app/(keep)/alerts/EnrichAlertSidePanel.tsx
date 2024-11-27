@@ -1,11 +1,11 @@
-import {AlertDto} from "./models";
-import {Dialog, Transition} from "@headlessui/react";
-import React, {Fragment, useEffect, useState} from "react";
-import {Button, TextInput} from "@tremor/react";
-import {useSession} from "next-auth/react";
-import {useApiUrl} from "utils/hooks/useConfig";
-import {toast} from "react-toastify";
-import SidePanel from "@/components/SidePanel"
+import { AlertDto } from "./models";
+import { Dialog, Transition } from "@headlessui/react";
+import React, { Fragment, useEffect, useState } from "react";
+import { Button, TextInput } from "@tremor/react";
+import { toast } from "react-toastify";
+import SidePanel from "@/components/SidePanel";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface EnrichAlertModalProps {
   alert: AlertDto | null | undefined;
@@ -15,13 +15,12 @@ interface EnrichAlertModalProps {
 }
 
 const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
-                                                                 alert,
-                                                                 isOpen,
-                                                                 handleClose,
-                                                                 mutate,
-                                                               }) => {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  alert,
+  isOpen,
+  handleClose,
+  mutate,
+}) => {
+  const api = useApi();
 
   const [customFields, setCustomFields] = useState<
     { key: string; value: string }[]
@@ -41,10 +40,10 @@ const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
   const updateCustomField = (
     index: number,
     field: "key" | "value",
-    value: string,
+    value: string
   ) => {
     setCustomFields((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
 
@@ -67,7 +66,7 @@ const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
         customFields.length === preEnrichedFields.length &&
         customFields.every((field) => {
           const matchingField = preEnrichedFields.find(
-            (preField) => preField.key === field.key,
+            (preField) => preField.key === field.key
           );
           return matchingField && matchingField.value === field.value;
         });
@@ -92,7 +91,7 @@ const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
           }
           return acc;
         },
-        {} as Record<string, string>,
+        {} as Record<string, string>
       );
     };
     setFinalData(calculateFinalData());
@@ -121,38 +120,24 @@ const EnrichAlertSidePanel: React.FC<EnrichAlertModalProps> = ({
       }
     });
 
-    let fieldsUnEnrichedSuccessfully = true;
+    let fieldsUnEnrichedSuccessfully = unEnrichedFields.length === 0;
 
-    if (unEnrichedFields.length != 0) {
-      const unEnrichmentResponse = await fetch(`${apiUrl}/alerts/unenrich`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({
+    try {
+      if (unEnrichedFields.length != 0) {
+        const unEnrichmentResponse = await api.post("/alerts/unenrich", {
           fingerprint: alert?.fingerprint,
           enrichments: unEnrichedFields,
-        }),
-      });
-      fieldsUnEnrichedSuccessfully = unEnrichmentResponse.ok;
-    }
+        });
+        fieldsUnEnrichedSuccessfully = true;
+      }
 
-    const response = await fetch(`${apiUrl}/alerts/enrich`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      body: JSON.stringify(requestData),
-    });
+      const response = await api.post("/alerts/enrich", requestData);
 
-    if (response.ok && fieldsUnEnrichedSuccessfully) {
       toast.success("Alert enriched successfully");
       await mutate();
       handleClose();
-    } else {
-      toast.error("Failed to enrich alert");
+    } catch (error) {
+      showErrorToast(error, "Failed to enrich alert");
     }
   };
 

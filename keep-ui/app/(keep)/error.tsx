@@ -9,9 +9,9 @@ import "./error.css";
 import { useEffect } from "react";
 import { Title, Subtitle } from "@tremor/react";
 import { Button, Text } from "@tremor/react";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 import * as Sentry from "@sentry/nextjs";
-import { useSignOut } from "@/shared/lib/useSignOut";
+import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 
 export default function ErrorComponent({
   error,

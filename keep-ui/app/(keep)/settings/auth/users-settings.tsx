@@ -12,8 +12,7 @@ import UsersSidebar from "./users-sidebar";
 import { User } from "@/app/(keep)/settings/models";
 import { UsersTable } from "./users-table";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { toast } from "react-toastify";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   currentUser?: AuthUser;
@@ -100,12 +99,7 @@ export default function UsersSettings({
 
         await mutateUsers();
       } catch (error) {
-        toast.error(
-          error instanceof KeepApiError
-            ? error.message
-            : "Failed to delete user"
-        );
-        console.error("Error deleting user:", error);
+        showErrorToast(error, "Failed to delete user");
       }
     }
   };

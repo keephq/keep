@@ -3,12 +3,10 @@ import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
 import { useWorkflows } from "utils/hooks/useWorkflows";
 import { useState } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   alert: AlertDto | null | undefined;
@@ -47,13 +45,7 @@ export default function AlertRunWorkflowModal({ alert, handleClose }: Props) {
         `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`
       );
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to start workflow", {
-          position: "top-left",
-        });
-      } else {
-        toast.error("An unexpected error occurred", { position: "top-left" });
-      }
+      showErrorToast(error, "Failed to start workflow");
     } finally {
       clearAndClose();
     }

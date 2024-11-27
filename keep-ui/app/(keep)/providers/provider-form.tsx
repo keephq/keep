@@ -51,7 +51,8 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -283,10 +284,8 @@ const ProviderForm = ({
           mutate();
           setRefreshLoading(false);
         })
-        .catch(() => {
-          toast.error(
-            "Failed to revalidate scopes, contact us if this persists"
-          );
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to revalidate scopes");
           setRefreshLoading(false);
         });
     }
@@ -300,8 +299,8 @@ const ProviderForm = ({
           mutate();
           closeModal();
         })
-        .catch(() => {
-          toast.error(`Failed to delete ${provider.type} 😢`);
+        .catch((error: any) => {
+          showErrorToast(error, `Failed to delete ${provider.type} 😢`);
         });
     }
   }
@@ -419,7 +418,10 @@ const ProviderForm = ({
         body,
       })
       .then((jsonResponse) => jsonResponse)
-      .catch((error) => {
+      .catch((error: unknown) => {
+        if (error instanceof KeepApiReadOnlyError) {
+          throw "You're in read-only mode";
+        }
         if (error instanceof KeepApiError) {
           const errorData = error.responseJson;
           // If the response is not okay, throw the error message
@@ -460,7 +462,7 @@ const ProviderForm = ({
           mutate();
         })
         .catch((error) => {
-          toast.error("Failed to update provider", { position: "top-left" });
+          showErrorToast(error, "Failed to update provider");
           const updatedFormErrors = error.toString();
           setFormErrors(updatedFormErrors);
           onFormChange(formValues, updatedFormErrors);

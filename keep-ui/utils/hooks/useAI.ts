@@ -1,9 +1,8 @@
-import { AILogs, AIStats } from "@/app/(keep)/ai/model";
-import useSWR, { SWRConfiguration } from "swr";
-
 import { useWebsocket } from "./usePusher";
 import { useCallback, useEffect } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { AIConfig, AILogs, AIStats } from "@/app/(keep)/ai/model";
+import useSWR, { SWRConfiguration } from "swr";
 
 export const useAIStats = (
   options: SWRConfiguration = {
@@ -35,3 +34,25 @@ export const usePollAILogs = (mutateAILogs: (logs: AILogs) => void) => {
     };
   }, [bind, unbind, handleIncoming]);
 };
+
+type UseAIActionsValue = {
+  updateAISettings: (algorithm_id: string, settings: AIConfig) => Promise<AIStats>;
+};
+
+export function UseAIActions(): UseAIActionsValue {
+
+  const api = useApi();
+
+  const updateAISettings = async (algorithm_id:string, settings: AIConfig): Promise<AIStats> => {
+    const response = await api.put<AIStats>(`/ai/${algorithm_id}/settings`, settings);
+
+    if (!response) {
+      throw new Error("Failed to update AI settings");
+    }
+    return response;
+  };
+  
+  return {
+    updateAISettings: updateAISettings,
+  };
+}

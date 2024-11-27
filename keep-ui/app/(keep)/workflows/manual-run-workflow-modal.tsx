@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { IncidentDto } from "@/entities/incidents/model";
 import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   alert?: AlertDto | null | undefined;
@@ -54,9 +55,7 @@ export default function ManualRunWorkflowModal({
         `/workflows/${selectedWorkflowId}/runs/${workflow_execution_id}`
       );
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to start workflow";
-      toast.error(message, { position: "top-left" });
+      showErrorToast(error, "Failed to start workflow");
     }
     clearAndClose();
   };

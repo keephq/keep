@@ -9,7 +9,7 @@ import {
 import { Text, Button, TextInput, Callout, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
 import { Role } from "@/app/(keep)/settings/models";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
+import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface RoleSidebarProps {

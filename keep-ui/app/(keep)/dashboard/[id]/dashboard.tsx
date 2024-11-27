@@ -22,8 +22,8 @@ import {
   useDashboardMetricWidgets,
 } from "@/utils/hooks/useDashboardMetricWidgets";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import "../styles.css";
-import { KeepApiError } from "@/shared/lib/api/KeepApiError";
 
 const DASHBOARD_FILTERS = [
   {
@@ -173,13 +173,7 @@ const DashboardPage = () => {
       mutateDashboard();
       toast.success("Dashboard saved successfully");
     } catch (error) {
-      if (error instanceof KeepApiError) {
-        toast.error(error.message || "Failed to save dashboard", {
-          position: "top-left",
-        });
-      } else {
-        toast.error("An unexpected error occurred", { position: "top-left" });
-      }
+      showErrorToast(error, "Failed to save dashboard");
     }
   };
 
