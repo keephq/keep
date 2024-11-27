@@ -92,7 +92,7 @@ jobs:
 
       - name: Run unit tests and report coverage
         run: |
-          poetry run coverage run --branch -m pytest -n 12 --non-integration --ignore=tests/e2e_tests/
+          poetry run coverage run --branch -m pytest -n auto --non-integration --ignore=tests/e2e_tests/
 
 
       - name: Run integration tests and report coverage

@@ -243,7 +243,8 @@ actions:
     session.commit()
 
     with patch("keep.api.core.db.engine", mock_engine):
-        yield session
+        with patch("keep.api.core.db_utils.create_db_engine", return_value=mock_engine):
+            yield session
 
     import logging
 
