@@ -1,0 +1,15 @@
+workflow:
+  id: businesshours
+  description: demonstrate how to do smth only when it's business hours
+  triggers:
+    - type: alert
+    - type: manual
+  actions:
+    - name: dismiss-alert
+      if: "keep.is_business_hours(timezone='America/New_York')"
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: buisnesshours
+              value: "true"

@@ -28,6 +28,7 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
+from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
@@ -410,11 +411,12 @@ def __handle_formatted_events(
             },
         )
 
-    
     pusher_client = get_pusher_client() if notify_client else None
+    # Get the notification cache
+    pusher_cache = get_notification_cache()
 
     # Tell the client to poll alerts
-    if pusher_client:
+    if pusher_client and pusher_cache.should_notify(tenant_id, "poll-alerts"):
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -425,8 +427,12 @@ def __handle_formatted_events(
         except Exception:
             logger.exception("Failed to tell client to poll alerts")
             pass
-    
-    if incidents and pusher_client:
+
+    if (
+        incidents
+        and pusher_client
+        and pusher_cache.should_notify(tenant_id, "incident-change")
+    ):
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -440,7 +446,7 @@ def __handle_formatted_events(
     # send with pusher
     if not pusher_client:
         return
-    
+
     try:
         presets = get_all_presets_dtos(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
