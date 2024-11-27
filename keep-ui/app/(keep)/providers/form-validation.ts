@@ -35,25 +35,28 @@ const error = (msg: string) => ({ success: false, msg });
 const urlError = error("Please provide a valid URL");
 const protocolError = error("A valid URL protocol is required");
 const relProtocolError = error("A protocol-relavie URL is not allowed");
+const multiProtocolError = error("URL cannot have more than one protocol");
 const missingPortError = error("A URL with a port number is required");
 const portError = error("Invalid port number");
 const hostError = error("Invalid URL host");
 const hostWildcardError = error("Wildcard in URL host is not allowed");
-const multihostError = error("Multiple hosts are not allowed.");
+const multihostError = error("Multiple hosts are not allowed");
+const multihostProtocolError = error("Invalid multihost protocol");
 const tldError = error(
   "URL must contain a valid TLD e.g .com, .io, .dev, .net"
 );
 
-function getProtocolError(opts: URLOptions["protocols"]) {
-  if (opts.length === 1)
-    return error(`A URL with \`${opts[0]}\` protocol is required`);
-  if (opts.length === 2)
+function getProtocolError(protocols: URLOptions["protocols"]) {
+  if (protocols.length === 0) return protocolError;
+  if (protocols.length === 1)
+    return error(`A URL with \`${protocols[0]}\` protocol is required`);
+  if (protocols.length === 2)
     return error(
-      `A URL with \`${opts[0]}\` or \`${opts[1]}\` protocol is required`
+      `A URL with \`${protocols[0]}\` or \`${protocols[1]}\` protocol is required`
     );
-  const lst = opts.length - 1;
+  const lst = protocols.length - 1;
   const wrap = (acc: string, p: string) => acc + `\`${p}\``;
-  const optsStr = opts.reduce(
+  const optsStr = protocols.reduce(
     (acc, p, i) =>
       i === lst
         ? wrap(acc, p)
@@ -158,14 +161,16 @@ function isURL(str: string, options?: Partial<URLOptions>): ValidatorRes {
 
   // extract protocol & validate
   split = url.split("://");
+  if (split.length > 2) return multiProtocolError;
   if (split.length > 1) {
-    const protocol = split?.shift()?.toLowerCase() ?? "";
+    const protocol = split.shift()?.toLowerCase() ?? "";
     if (opts.protocols.length && opts.protocols.indexOf(protocol) === -1)
       return getProtocolError(opts.protocols);
-  } else if (opts.requireProtocol && opts.protocols.length) {
+    if (protocol.includes(",")) return multihostProtocolError;
+    url = split.join("://");
+  } else if (opts.requireProtocol) {
     return getProtocolError(opts.protocols);
-  } else if (split.length > 2 || opts.requireProtocol) return protocolError;
-  url = split.join("://");
+  }
 
   split = url.split("/");
   url = split.shift() ?? "";
