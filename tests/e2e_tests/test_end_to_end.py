@@ -36,6 +36,7 @@ import string
 import sys
 from datetime import datetime
 
+import pytest
 from playwright.sync_api import expect
 
 # Running the tests in GitHub Actions:
@@ -44,6 +45,20 @@ from playwright.sync_api import expect
 
 # os.environ["PLAYWRIGHT_HEADLESS"] = "false"
 
+
+@pytest.fixture(scope="session")
+def browserx():
+    from playwright.sync_api import sync_playwright
+
+    headless = False
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=headless)
+        context = browser.new_context()
+        page = context.new_page()
+        page.set_default_timeout(5000)
+        yield page
+        context.close()
+        browser.close()
 
 def setup_console_listener(page, log_entries):
     """Set up console listener to capture logs."""
@@ -129,7 +144,6 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         save_failure_artifacts(browser, log_entries)
         raise
 
-
 def test_providers_page_is_accessible(browser):
     """
     Test to check if the providers page is accessible
@@ -178,14 +192,15 @@ def test_provider_validation(browser):
     """
     Test field validation for provider fields.
     """
-    browser.goto(
-        "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
-    )
+    # browser = browserx
+    browser.goto("http://localhost:3000/signin")
+    # browser.goto("http://localhost:3000/providers")
     # using Kibana Provider
-    browser.goto("http://localhost:3000/providers")
+    browser.get_by_role("link", name="Providers").click()
     browser.locator("button:has-text('Kibana'):has-text('alert')").click()
     # test required fields
     connect_btn = browser.get_by_role("button", name="Connect", exact=True)
+    cancel_btn = browser.get_by_role("button", name="Cancel", exact=True)
     error_msg = browser.locator("p.tremor-TextInput-errorMessage")
     connect_btn.click()
     expect(error_msg).to_have_count(3)
@@ -193,83 +208,67 @@ def test_provider_validation(browser):
     browser.get_by_placeholder("Enter provider name").fill("random name")
     browser.get_by_placeholder("Enter api_key").fill("random api key")
     browser.get_by_placeholder("Enter kibana_host").fill("invalid url")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter kibana_host").fill("http://localhost")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
     browser.get_by_placeholder("Enter kibana_host").fill(
         "https://keep.kb.us-central1.gcp.cloud.es.io"
     )
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
     # test `port` field validation
     browser.get_by_placeholder("Enter kibana_port").fill("invalid port")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter kibana_port").fill("0")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter kibana_port").fill("65_536")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter kibana_port").fill("9243")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
+    cancel_btn.click()
 
     # using Teams Provider
-    browser.goto("http://localhost:3000/providers")
     browser.locator("button:has-text('Teams'):has-text('messaging')").click()
     # test `https_url` field validation
     browser.get_by_placeholder("Enter provider name").fill("random name")
     browser.get_by_placeholder("Enter webhook_url").fill("random url")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter webhook_url").fill("http://localhost")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter webhook_url").fill("http://example.com")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter webhook_url").fill("https://example.com")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
+    cancel_btn.click()
 
     # using Site24x7 Provider
-    browser.goto("http://localhost:3000/providers")
     browser.locator("button:has-text('Site24x7'):has-text('alert')").click()
     # test `tld` field validation
     browser.get_by_placeholder("Enter provider name").fill("random name")
     browser.get_by_placeholder("Enter zohoRefreshToken").fill("random")
     browser.get_by_placeholder("Enter zohoClientId").fill("random")
     browser.get_by_placeholder("Enter zohoClientSecret").fill("random")
-    browser.get_by_placeholder("Enter zohoAccountTLD").fill("")
-    connect_btn.click()
-    expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter zohoAccountTLD").fill("random")
-    connect_btn.click()
+    expect(error_msg).to_have_count(1)
+    browser.get_by_placeholder("Enter zohoAccountTLD").fill("")
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter zohoAccountTLD").fill(".com")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
+    cancel_btn.click()
 
     # using MongoDB Provider
-    browser.goto("http://localhost:3000/providers")
     browser.locator("button:has-text('MongoDB'):has-text('data')").click()
     # test `any_url` field validation
     browser.get_by_placeholder("Enter provider name").fill("random name")
     browser.get_by_placeholder("Enter host").fill("random")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter host").fill("host.com:5000")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter host").fill("mongodb://host.com:3000")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
+    cancel_btn.click()
 
     # using Postgres provider
-    browser.goto("http://localhost:3000/providers")
+    browser.get_by_role("link", name="Providers").click()
     browser.locator("button:has-text('PostgreSQL'):has-text('data')").click()
     # test `no_scheme_url` field validation
     # - on the frontend: url with/without scheme validates.
@@ -278,11 +277,8 @@ def test_provider_validation(browser):
     browser.get_by_placeholder("Enter username").fill("username")
     browser.get_by_placeholder("Enter password").fill("password")
     browser.get_by_placeholder("Enter host").fill("*.")
-    connect_btn.click()
     expect(error_msg).to_have_count(1)
     browser.get_by_placeholder("Enter host").fill("localhost:5000")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()
     browser.get_by_placeholder("Enter host").fill("https://host.com:3000")
-    connect_btn.click()
     expect(error_msg).to_be_hidden()

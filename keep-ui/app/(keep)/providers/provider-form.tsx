@@ -319,7 +319,14 @@ const ProviderForm = ({
       });
     }
 
-    if (Object.keys(inputErrors).includes(key) && value !== "") {
+    if (
+      value == undefined ||
+      typeof value === "boolean" ||
+      (typeof value === "object" && value instanceof File === false)
+    )
+      return;
+
+    if (validate({ [key]: value })) {
       const updatedInputErrors = { ...inputErrors };
       delete updatedInputErrors[key];
       setInputErrors(updatedInputErrors);
@@ -334,8 +341,14 @@ const ProviderForm = ({
     }));
   };
 
-  function validate() {
-    const validation = zodSchema.safeParse(formValues);
+  function validate(data?: ProviderFormData) {
+    let schema = zodSchema;
+    if (data) {
+      schema = zodSchema.pick(
+        Object.fromEntries(Object.keys(data).map((field) => [field, true]))
+      );
+    }
+    const validation = schema.safeParse(data ?? formValues);
     if (validation.success) return true;
     const errors: InputErrors = {};
     Object.entries(validation.error.format()).forEach(([field, err]) => {
