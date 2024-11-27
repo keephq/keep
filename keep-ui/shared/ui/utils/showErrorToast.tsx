@@ -25,6 +25,6 @@ export function showErrorToast(
   } else if (error instanceof KeepApiError) {
     toast.error(customMessage || error.message, options);
   } else {
-    toast.error(`${customMessage + ": " || ""}Unknown error}`, options);
+    toast.error(`${customMessage + ": " || ""}Unknown error`, options);
   }
 }
