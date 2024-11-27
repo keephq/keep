@@ -34,7 +34,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   const { data: tags = [] } = useTags();
 
-  // Get all presets including feed preset and localStorage state
+  // Get latest static presets (merged local and server presets)
   const { useLatestStaticPresets } = usePresets();
   const { data: staticPresets = [] } = useLatestStaticPresets({
     revalidateIfStale: true,
@@ -74,11 +74,8 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       return 0;
     }
 
-    // First try to get from server data
-    const serverPreset = staticPresets?.find(
-      (preset) => preset.name === "feed"
-    );
-    return serverPreset?.alerts_count ?? undefined;
+    const feedPreset = staticPresets?.find((preset) => preset.name === "feed");
+    return feedPreset?.alerts_count ?? undefined;
   })();
 
   return (
