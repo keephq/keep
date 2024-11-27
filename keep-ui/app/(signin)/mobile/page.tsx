@@ -23,12 +23,14 @@ export default function MobileLanding() {
         />
 
         {/* Main Message */}
-        <Title className="text-center">Mobile Support Coming Soon!</Title>
+        <Title className="text-center">
+          Playground Mobile Support Coming Soon!
+        </Title>
 
         {/* Description */}
         <Text className="text-center">
-          We&apos;re not supporting mobile devices yet, but we&apos;re working
-          on it!
+          Playground is not supported on mobile devices yet, but we&apos;re
+          working on it!
         </Text>
 
         {/* GitHub Button - Now a client component */}
