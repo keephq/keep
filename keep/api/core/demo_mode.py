@@ -27,10 +27,10 @@ KEEP_LIVE_DEMO_MODE = os.environ.get("KEEP_LIVE_DEMO_MODE", "false").lower() == 
 
 correlation_rules_to_create = [
     {
-        "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%mq%"}},
+        "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%MQ%"}},
         "groupDescription": "This rule groups all alerts related to MQ.",
         "ruleName": "Message queue is getting filled up",
-        "celQuery": '(name.contains("mq"))',
+        "celQuery": '(name.contains("MQ"))',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
         "groupingCriteria": [],
@@ -39,16 +39,17 @@ correlation_rules_to_create = [
     },
     {
         "sqlQuery": {
-            "sql": "((name like :name_1) or (name = :name_2) or (name like :name_3))",
+            "sql": "((name like :name_1) or (name = :name_2) or (name like :name_3)) or (name = :name_4)",
             "params": {
-                "name_1": "%network_latency_high%",
-                "name_2": "high_cpu_usage",
-                "name_3": "%database_connection_failure%",
+                "name_1": "%NetworkLatencyHigh%",
+                "name_2": "HighCPUUsage",
+                "name_3": "%NetworkLatencyIsHigh%",
+                "name_4": "Failed to load product catalog",
             },
         },
         "groupDescription": "This rule groups alerts from multiple sources.",
         "ruleName": "Application issue caused by DB load",
-        "celQuery": '(name.contains("network_latency_high")) || (name == "high_cpu_usage") || (name.contains("database_connection_failure"))',
+        "celQuery": '(name.contains("NetworkLatencyHigh")) || (name == "HighCPUUsage") || (name.contains("NetworkLatencyIsHigh")) || (name == "Failed to load product catalog")',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
         "groupingCriteria": [],
@@ -319,16 +320,25 @@ def simulate_alerts(
 
     GENERATE_DEDUPLICATIONS = False
 
-    providers = [
-        "prometheus",
-        "grafana",
-        "cloudwatch",
-        "datadog",
+    providers_config = [
+        {"type": "prometheus", "weight": 3},
+        {"type": "grafana", "weight": 1},
+        {"type": "cloudwatch", "weight": 1},
+        {"type": "datadog", "weight": 1},
+        {"type": "sentry", "weight": 2},
+        # {"type": "signalfx", "weight": 1},
+        {"type": "gcpmonitoring", "weight": 1},
     ]
 
+    # Normalize weights
+    total_weight = sum(p["weight"] for p in providers_config)
+    normalized_weights = [p["weight"] / total_weight for p in providers_config]
+
+    providers = [p["type"] for p in providers_config]
+
     providers_to_randomize_fingerprint_for = [
-        "cloudwatch",
-        "datadog",
+        # "cloudwatch",
+        # "datadog",
     ]
 
     provider_classes = {
@@ -370,8 +380,10 @@ def simulate_alerts(
 
             send_alert_url_params = {}
 
-            # choose provider
-            provider_type = random.choice(providers)
+            # choose provider based on weights
+            provider_type = random.choices(providers, weights=normalized_weights, k=1)[
+                0
+            ]
             send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
 
             if provider_type in existing_providers_to_their_ids:
@@ -474,3 +486,14 @@ def launch_demo_mode_thread(
 
     logger.info("Demo mode launched.")
     return thread
+
+
+if __name__ == "__main__":
+    keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
+    keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
+    simulate_alerts(
+        keep_api_url=keep_api_url,
+        keep_api_key=keep_api_key,
+        sleep_interval=1,
+        demo_correlation_rules=True,
+    )
