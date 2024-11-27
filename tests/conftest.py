@@ -13,6 +13,7 @@ from dotenv import find_dotenv, load_dotenv
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.testing import fixture
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
@@ -592,3 +593,65 @@ def create_alert(db_session):
         )
 
     return _create_alert
+
+
+def pytest_addoption(parser):
+    """
+    Adds configuration options for integration tests
+    """
+
+    parser.addoption(
+        "--integration", action="store_const", const=True,
+        dest="run_integration")
+    parser.addoption(
+        "--non-integration", action="store_const", const=True,
+        dest="run_non_integration")
+
+
+def pytest_configure(config):
+    """
+    Adds markers for integration tests
+    """
+    config.addinivalue_line(
+        "markers", "integration: mark test to run only if integrations tests enabled"
+    )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """
+    Checks whether tests should be skipped based on integration settings
+    """
+
+    run_integration = item.config.getoption("run_integration")
+    run_non_integration = item.config.getoption("run_non_integration")
+
+    if run_integration and run_non_integration is None:
+        run_non_integration = False
+    if run_non_integration and run_integration is None:
+        run_integration = False
+
+    if item.get_closest_marker("integration"):
+        if run_integration in (None, True):
+            return
+        pytest.skip("Integration tests skipped")
+    else:
+        if run_non_integration in (None, True):
+            return
+        pytest.skip("Non-Integration tests skipped")
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        fixturenames = getattr(item, "fixturenames", ())
+        if "elastic_client" in fixturenames:
+            item.add_marker("integration")
+        elif "keycloak_client" in fixturenames:
+            item.add_marker("integration")
+        elif (
+                hasattr(item, "callspec")
+                and "db_session" in item.callspec.params
+                and item.callspec.params["db_session"]
+                and "db" in item.callspec.params["db_session"]
+        ):
+            item.add_marker("integration")
