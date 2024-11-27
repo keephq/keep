@@ -35,7 +35,42 @@ function ServiceDetailsTooltip({
           <span>{data.description}</span>
         </div>
       )}
-      {/* Add more fields here as needed */}
+      {data.team && (
+        <div>
+          <p className="text-gray-500">Team</p>
+          <span>{data.team}</span>
+        </div>
+      )}
+      {data.email && (
+        <div>
+          <p className="text-gray-500">Email</p>
+          <span>{data.email}</span>
+        </div>
+      )}
+      {data.slack && (
+        <div>
+          <p className="text-gray-500">Slack</p>
+          <span>{data.slack}</span>
+        </div>
+      )}
+      {data.ip_address && (
+        <div>
+          <p className="text-gray-500">IP Address</p>
+          <span>{data.ip_address}</span>
+        </div>
+      )}
+      {data.mac_address && (
+        <div>
+          <p className="text-gray-500">MAC Address</p>
+          <span>{data.mac_address}</span>
+        </div>
+      )}
+      {data.manufacturer && (
+        <div>
+          <p className="text-gray-500">Manufacturer</p>
+          <span>{data.manufacturer}</span>
+        </div>
+      )}
     </div>
   );
 }
