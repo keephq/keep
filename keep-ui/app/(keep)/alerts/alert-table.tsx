@@ -273,9 +273,9 @@ export function AlertTable({
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col gap-4">
       {/* Add padding to account for any top nav/header */}
-      <div className="pt-4 px-4 flex-none">
+      <div className="px-4 flex-none">
         <TitleAndFilters
           table={table}
           alerts={alerts}
@@ -285,7 +285,7 @@ export function AlertTable({
       </div>
 
       {/* Make actions/presets section fixed height */}
-      <div className="h-12 px-4 flex-none">
+      <div className="h-14 px-4 flex-none">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
@@ -310,7 +310,7 @@ export function AlertTable({
       </div>
 
       {/* Main content area - uses flex-grow to fill remaining space */}
-      <div className="flex-grow overflow-hidden px-4 pb-4">
+      <div className="flex-grow px-4 pb-4">
         <div className="h-full flex gap-6">
           {/* Facets sidebar */}
           <div className="w-32 min-w-[12rem] overflow-y-auto">
