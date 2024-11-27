@@ -94,17 +94,6 @@ const invertedSeverityMapping = Object.entries(severityMapping).reduce<{
   return acc;
 }, {});
 
-const customSeveritySortFn = (rowA: any, rowB: any) => {
-  // Adjust the way to access severity values according to your data structure
-  const severityValueA = rowA.original?.severity; // or rowA.severity;
-  const severityValueB = rowB.original?.severity; // or rowB.severity;
-
-  // Use the inverted mapping to get ranks
-  const rankA = invertedSeverityMapping[severityValueA] || 0;
-  const rankB = invertedSeverityMapping[severityValueB] || 0;
-
-  return rankA > rankB ? 1 : rankA < rankB ? -1 : 0;
-};
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
@@ -272,7 +261,7 @@ export const useAlertTableCols = (
       enableSorting: false,
       enableResizing: false,
       cell: (context) => (
-        <div className="flex items-center justify-start">
+        <div className="flex items-center justify-center">
           {(context.getValue() ?? []).map((source, index) => {
             let imagePath = `/icons/${source}-icon.png`;
             if (source.includes("@")) {
@@ -293,8 +282,8 @@ export const useAlertTableCols = (
         </div>
       ),
       meta: {
-        tdClassName: "!p-0 w-4 sm:w-6 !box-border",
-        thClassName: "!p-0 w-4 sm:w-6 !box-border",
+        tdClassName: "!p-0 w-4 sm:w-8 !box-border",
+        thClassName: "!p-0 w-4 sm:w-8 !box-border",
       },
     }),
     // Name column butted up against source
@@ -303,7 +292,7 @@ export const useAlertTableCols = (
       header: "Name",
       minSize: 330,
       cell: (context) => (
-        <div className="flex items-center">
+        <div>
           <AlertName
             alert={context.row.original}
             setNoteModalAlert={setNoteModalAlert}

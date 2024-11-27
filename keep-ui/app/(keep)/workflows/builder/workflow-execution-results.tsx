@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import {
   Accordion,
   AccordionBody,
@@ -7,8 +8,6 @@ import {
   Card,
   Title,
 } from "@tremor/react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import {
@@ -20,12 +19,12 @@ import {
   TableRow,
 } from "@tremor/react";
 import useSWR from "swr";
-import { fetcher } from "../../../../utils/fetcher";
 import {
   WorkflowExecution,
   WorkflowExecutionFailure,
   isWorkflowExecution,
 } from "./types";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface WorkflowResultsProps {
   workflow_id: string;
@@ -36,18 +35,17 @@ export default function WorkflowExecutionResults({
   workflow_id,
   workflow_execution_id,
 }: WorkflowResultsProps) {
-  const apiUrl = useApiUrl();
-  const { data: session, status, update } = useSession();
+  const api = useApi();
   const [refreshInterval, setRefreshInterval] = useState(1000);
   const [checks, setChecks] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const { data: executionData, error: executionError } = useSWR(
-    status === "authenticated"
-      ? `${apiUrl}/workflows/${workflow_id}/runs/${workflow_execution_id}`
+    api.isReady()
+      ? `/workflows/${workflow_id}/runs/${workflow_execution_id}`
       : null,
     async (url) => {
-      const fetchedData = await fetcher(url, session?.accessToken!);
+      const fetchedData = await api.get(url);
       if (fetchedData.status === "in_progress") {
         setChecks((c) => c + 1);
       }
@@ -211,8 +209,8 @@ export function ExecutionResults({
                         log.message?.includes("NOT to run")
                           ? "bg-red-100"
                           : log.message?.includes("evaluated to run")
-                          ? "bg-green-100"
-                          : ""
+                            ? "bg-green-100"
+                            : ""
                       }`}
                       key={index}
                     >

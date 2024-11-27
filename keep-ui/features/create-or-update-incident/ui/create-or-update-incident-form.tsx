@@ -80,13 +80,17 @@ export function CreateOrUpdateIncidentForm({
       );
       exitEditMode();
     } else {
-      const newIncident = await addIncident({
-        user_generated_name: incidentName,
-        user_summary: incidentUserSummary,
-        assignee: incidentAssignee,
-      });
-      createCallback?.(newIncident.id);
-      exitEditMode();
+      try {
+        const newIncident = await addIncident({
+          user_generated_name: incidentName,
+          user_summary: incidentUserSummary,
+          assignee: incidentAssignee,
+        });
+        createCallback?.(newIncident.id);
+        exitEditMode();
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 

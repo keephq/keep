@@ -1,3 +1,4 @@
+import { InternalConfig } from "@/types/internal-config";
 import { getApiURL } from "@/utils/apiUrl";
 import {
   AuthType,
@@ -6,7 +7,7 @@ import {
   SINGLE_TENANT,
 } from "@/utils/authenticationType";
 
-export function getConfig() {
+export function getConfig(): InternalConfig {
   let authType = process.env.AUTH_TYPE;
   // Backward compatibility
   if (authType === MULTI_TENANT) {
@@ -54,7 +55,7 @@ export function getConfig() {
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
     READ_ONLY: process.env.KEEP_READ_ONLY === "true",
-    OPEN_AI_API_KEY_SET: !!process.env.OPEN_AI_API_KEY,
+    OPEN_AI_API_KEY_SET: !!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY,
     // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
   };

@@ -1,18 +1,17 @@
 "use client";
+
 import { Callout, Card } from "@tremor/react";
-import React, { useEffect, useState } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import React, { useState } from "react";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import Loading from "@/app/(keep)/loading";
 import { useRouter } from "next/navigation";
 import { Workflow } from "../models";
 import SideNavBar from "./side-nav-bar";
 import useSWR from "swr";
-import { fetcher } from "@/utils/fetcher";
 import BuilderModalContent from "../builder/builder-modal";
 import PageClient from "../builder/page.client";
-import { useApiUrl } from "@/utils/hooks/useConfig";
 import WorkflowOverview from "./workflow-overview";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export default function WorkflowDetailPage({
   params,
@@ -20,29 +19,17 @@ export default function WorkflowDetailPage({
   params: { workflow_id: string };
 }) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const api = useApi();
   const [navlink, setNavLink] = useState("overview");
-
-  const apiUrl = useApiUrl();
 
   const {
     data: workflow,
     isLoading,
     error,
   } = useSWR<Partial<Workflow>>(
-    () => (session ? `${apiUrl}/workflows/${params.workflow_id}` : null),
-    (url: string) => fetcher(url, session?.accessToken)
+    api.isReady() ? `/workflows/${params.workflow_id}` : null,
+    (url: string) => api.get(url)
   );
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/signin");
-    }
-  }, [status, router]);
-
-  // Render loading state if session is loading
-  // If the user is unauthenticated, display a loading state until the side effect is processed; after that, it will automatically redirect.
-  if (status === "loading" || status === "unauthenticated") return <Loading />;
 
   // Handle error state for fetching workflow data
   if (isLoading) return <Loading />;

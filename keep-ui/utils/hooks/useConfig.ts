@@ -1,4 +1,5 @@
 import { ConfigContext } from "@/app/config-provider";
+import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { useContext } from "react";
 
 export const useConfig = () => {
@@ -15,11 +16,5 @@ export const useConfig = () => {
 
 export const useApiUrl = () => {
   const { data: config } = useConfig();
-
-  if (config?.API_URL_CLIENT) {
-    return config.API_URL_CLIENT;
-  }
-
-  // can't access the API directly
-  return "/backend";
+  return getApiUrlFromConfig(config);
 };

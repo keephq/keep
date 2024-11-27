@@ -8,13 +8,13 @@ import {
 } from "react-hook-form";
 import { Text, Button, TextInput, Callout, Badge } from "@tremor/react";
 import { IoMdClose } from "react-icons/io";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { Role } from "@/app/(keep)/settings/models";
+import { KeepApiError } from "@/shared/api";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface RoleSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;
-  accessToken: string;
   selectedRole: Role | null;
   resources: string[];
   mutateRoles: () => void;
@@ -23,11 +23,11 @@ interface RoleSidebarProps {
 const RoleSidebar = ({
   isOpen,
   toggle,
-  accessToken,
   selectedRole,
   resources,
   mutateRoles,
 }: RoleSidebarProps) => {
+  const api = useApi();
   const {
     control,
     handleSubmit,
@@ -47,7 +47,6 @@ const RoleSidebar = ({
     {}
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const apiUrl = useApiUrl();
 
   useEffect(() => {
     if (isOpen && selectedRole) {
@@ -158,37 +157,26 @@ const RoleSidebar = ({
               .map(([action, _]) => `${action}:${resource}`)
           ),
       };
-      // url includes the role id if it is an edit operation
-      const url = selectedRole
-        ? `${apiUrl}/auth/roles/${selectedRole.id}`
-        : `${apiUrl}/auth/roles`;
-      // add id to the body if it is an edit operation
-      const response = await fetch(url, {
-        method: selectedRole ? "PUT" : "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newRole),
-      });
+      const response = selectedRole
+        ? await api.put(`/auth/roles/${selectedRole.id}`, newRole)
+        : await api.post("/auth/roles", newRole);
 
-      if (response.ok) {
-        console.log("Role saved:", newRole);
-        reset();
-        handleToggle();
-        await mutateRoles();
-      } else {
-        const errorData = await response.json();
+      console.log("Role saved:", newRole);
+      reset();
+      handleToggle();
+      await mutateRoles();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
         setError("root.serverError", {
           type: "manual",
-          message: errorData.message || "Failed to save role",
+          message: error.message || "Failed to save role",
+        });
+      } else {
+        setError("root.serverError", {
+          type: "manual",
+          message: "An unexpected error occurred",
         });
       }
-    } catch (error) {
-      setError("root.serverError", {
-        type: "manual",
-        message: "An unexpected error occurred",
-      });
     } finally {
       setIsSubmitting(false);
     }

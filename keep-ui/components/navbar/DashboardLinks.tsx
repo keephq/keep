@@ -1,4 +1,5 @@
 "use client";
+
 import {
   DndContext,
   useSensor,
@@ -7,28 +8,22 @@ import {
   TouchSensor,
   rectIntersection,
 } from "@dnd-kit/core";
-import { SortableContext, arrayMove } from "@dnd-kit/sortable";
+import { arrayMove, SortableContext } from "@dnd-kit/sortable";
 import { usePathname, useRouter } from "next/navigation";
-import { DashboardLink } from "./DashboardLink";
 import { Subtitle, Button, Badge, Text } from "@tremor/react";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import clsx from "clsx";
 import { useDashboards } from "utils/hooks/useDashboards";
-import { useApiUrl } from "utils/hooks/useConfig";
-
-import { Session } from "next-auth";
+import { useApi } from "@/shared/lib/hooks/useApi";
 import { PlusIcon } from "@radix-ui/react-icons";
+import { DashboardLink } from "./DashboardLink";
 
-type DashboardProps = {
-  session: Session | null;
-};
-
-export const DashboardLinks = ({ session }: DashboardProps) => {
+export const DashboardLinks = () => {
   const { dashboards = [], isLoading, error, mutate } = useDashboards();
-  const pathname = usePathname();
+  const api = useApi();
   const router = useRouter();
-  const apiUrl = useApiUrl();
+  const pathname = usePathname();
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor));
 
@@ -52,12 +47,7 @@ export const DashboardLinks = ({ session }: DashboardProps) => {
     );
     if (isDeleteConfirmed) {
       try {
-        await fetch(`${apiUrl}/dashboard/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-          },
-        });
+        await api.delete(`/dashboard/${id}`);
         mutate(
           dashboards.filter((dashboard) => dashboard.id !== id),
           false

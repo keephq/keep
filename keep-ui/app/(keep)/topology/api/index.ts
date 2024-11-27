@@ -1,6 +1,5 @@
-import { fetcher } from "@/utils/fetcher";
-import { Session } from "next-auth";
 import { TopologyApplication, TopologyService } from "../model/models";
+import { ApiClient } from "@/shared/api";
 
 export function buildTopologyUrl({
   providerIds,
@@ -28,19 +27,13 @@ export function buildTopologyUrl({
   return `${baseUrl}?${params.toString()}`;
 }
 
-export async function getApplications(apiUrl: string, session: Session | null) {
-  if (!session) {
-    return null;
-  }
-  const url = `${apiUrl}/topology/applications`;
-  return (await fetcher(url, session.accessToken)) as Promise<
-    TopologyApplication[]
-  >;
+export async function getApplications(api: ApiClient) {
+  const url = `/topology/applications`;
+  return await api.get<TopologyApplication[]>(url);
 }
 
-export function getTopology(
-  apiUrl: string,
-  session: Session | null,
+export async function getTopology(
+  api: ApiClient,
   {
     providerIds,
     services,
@@ -51,11 +44,6 @@ export function getTopology(
     environment?: string;
   }
 ) {
-  if (!session) {
-    return null;
-  }
   const url = buildTopologyUrl({ providerIds, services, environment });
-  return fetcher(apiUrl + url, session.accessToken) as Promise<
-    TopologyService[]
-  >;
+  return await api.get<TopologyService[]>(url);
 }

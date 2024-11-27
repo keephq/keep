@@ -17,7 +17,6 @@ import {
   TabPanels,
   TabPanel,
 } from "@tremor/react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import {
   ChangeEvent,
   FormEvent,
@@ -28,11 +27,12 @@ import {
 } from "react";
 import { usePapaParse } from "react-papaparse";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { MappingRule } from "./models";
 import { CreateableSearchSelect } from "@/components/ui/CreateableSearchSelect";
 import { useTopology } from "@/app/(keep)/topology/model";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   editRule: MappingRule | null;
@@ -40,7 +40,7 @@ interface Props {
 }
 
 export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useMappings();
   const [tabIndex, setTabIndex] = useState<number>(0);
   const [mapName, setMapName] = useState<string>("");
@@ -54,7 +54,6 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   const [priority, setPriority] = useState<number>(0);
   const editMode = editRule !== null;
   const inputFile = useRef<HTMLInputElement>(null);
-  const apiUrl = useApiUrl();
 
   // This useEffect runs whenever an `Edit` button is pressed in the table, and populates the form with the mapping data that needs to be edited.
   useEffect(() => {
@@ -134,13 +133,8 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
 
   const addRule = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await fetch(`${apiUrl}/mapping`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      const response = await api.post("/mapping", {
         priority: priority,
         name: mapName,
         description: mapDescription,
@@ -148,29 +142,20 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         type: mappingType,
         matchers: selectedLookupAttributes.map((attr) => attr.trim()),
         rows: mappingType === "csv" ? parsedData : null,
-      }),
-    });
-    if (response.ok) {
+      });
       clearForm();
       mutate();
       toast.success("Mapping created successfully");
-    } else {
-      toast.error(
-        "Failed to create mapping, please contact us if this issue persists."
-      );
+    } catch (error) {
+      showErrorToast(error, "Failed to create mapping");
     }
   };
 
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateRule = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await fetch(`${apiUrl}/mapping/${editRule?.id}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      const response = await api.put(`/mapping/${editRule?.id}`, {
         id: editRule?.id,
         priority: priority,
         name: mapName,
@@ -179,16 +164,12 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         type: mappingType,
         matchers: selectedLookupAttributes.map((attr) => attr.trim()),
         rows: mappingType === "csv" ? parsedData : null,
-      }),
-    });
-    if (response.ok) {
+      });
       exitEditMode();
       mutate();
       toast.success("Mapping updated successfully");
-    } else {
-      toast.error(
-        "Failed to update mapping, please contact us if this issue persists."
-      );
+    } catch (error) {
+      showErrorToast(error, "Failed to update mapping");
     }
   };
 
