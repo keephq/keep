@@ -653,7 +653,7 @@ def test_is_business_hours_timezone():
     Test with different timezones
     """
     # 10 AM UTC = 6 AM EDT (before business hours in EDT)
-    est_tz = pytz.timezone("America/New_York")
+    est_tz = "America/New_York"
     with freeze_time("2024-03-25 10:00:00"):
         assert functions.is_business_hours(timezone=est_tz) == False
 
@@ -693,7 +693,7 @@ def test_is_business_hours_all_combinations():
     """
     Test various combinations of parameters
     """
-    tokyo_tz = pytz.timezone("Asia/Tokyo")
+    tokyo_tz = "Asia/Tokyo"
     test_time = datetime.datetime(2024, 3, 25, 10, 0, tzinfo=datetime.timezone.utc)
 
     # Custom hours, days, and timezone
@@ -715,7 +715,7 @@ def test_is_business_hours_all_combinations():
             start_hour=0,
             end_hour=23,
             business_days=(5, 6),  # Sat-Sun only
-            timezone=pytz.UTC,
+            timezone="UTC",
         )
         == False
     )  # It's a Monday
@@ -725,7 +725,7 @@ def test_is_business_hours_edge_cases():
     """
     Test edge cases with timezones and day boundaries
     """
-    ny_tz = pytz.timezone("America/New_York")
+    ny_tz = "America/New_York"
 
     # Test exactly at timezone day boundary
     edge_time = datetime.datetime(
@@ -746,7 +746,7 @@ def test_is_business_hours_string_input_with_timezone():
     """
     Test string datetime input with timezone handling
     """
-    paris_tz = pytz.timezone("Europe/Paris")
+    paris_tz = "Europe/Paris"
 
     # 2 PM UTC = 4 PM Paris
     assert (

@@ -399,7 +399,7 @@ def is_business_hours(
     start_hour=8,
     end_hour=20,
     business_days=(0, 1, 2, 3, 4),  # Mon = 0, Sun = 6
-    timezone=pytz.UTC,
+    timezone="UTC",
 ):
     """
     Check if the given time or current time is between start_hour and end_hour
@@ -412,8 +412,8 @@ def is_business_hours(
         end_hour (int, optional): End hour in 24-hour format. Defaults to 20 (8:00 PM)
         business_days (tuple, optional): Days of week considered as business days.
             Monday=0 through Sunday=6. Defaults to Mon-Fri (0,1,2,3,4)
-        timezone (pytz.timezone, optional): Timezone to evaluate the time in.
-            Defaults to UTC.
+        timezone (str, optional): Timezone name (e.g., 'UTC', 'America/New_York', 'Europe/London').
+            Defaults to 'UTC'.
 
     Returns:
         bool: True if time is between start_hour and end_hour on a business day
@@ -421,6 +421,7 @@ def is_business_hours(
     Raises:
         ValueError: If start_hour or end_hour are not between 0 and 23
         ValueError: If business_days contains invalid day numbers
+        ValueError: If timezone string is invalid
     """
     # Validate hour inputs
     if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
@@ -438,6 +439,12 @@ def is_business_hours(
             "business_days must be an iterable of integers between 0 and 6"
         )
 
+    # Validate and convert timezone string to pytz timezone
+    try:
+        tz = pytz.timezone(timezone)
+    except pytz.exceptions.UnknownTimeZoneError:
+        raise ValueError(f"Invalid timezone: {timezone}")
+
     # If no time provided, use current UTC time
     if time_to_check is None:
         dt = utcnow()
@@ -449,7 +456,7 @@ def is_business_hours(
         return False
 
     # Convert to specified timezone
-    dt = dt.astimezone(timezone)
+    dt = dt.astimezone(tz)
 
     # Get weekday (Monday = 0, Sunday = 6)
     weekday = dt.weekday()
