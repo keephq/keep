@@ -1,0 +1,16 @@
+workflow:
+  id: businesshours
+  strategy: parallel
+  description: demonstrates how to automatically suppress alerts
+  triggers:
+    - type: alert
+    - type: manual
+  actions:
+    - name: dismiss-alert
+      if: "keep.is_business_hours(timezone='America/New_York')"
+      provider:
+        type: mock
+        with:
+          enrich_alert:
+            - key: buisnesshours
+              value: "true"
