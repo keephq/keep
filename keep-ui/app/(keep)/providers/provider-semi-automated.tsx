@@ -1,13 +1,12 @@
 import useSWR from "swr";
 import { Provider } from "./providers";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { fetcher } from "utils/fetcher";
 import { Subtitle, Title, Text, Icon } from "@tremor/react";
 import { CopyBlock, a11yLight, railscast } from "react-code-blocks";
 import Image from "next/image";
 import { ArrowLongRightIcon } from "@heroicons/react/24/outline";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface WebhookSettings {
   webhookDescription: string;
@@ -17,14 +16,13 @@ interface WebhookSettings {
 
 interface Props {
   provider: Provider;
-  accessToken: string;
 }
 
-export const ProviderSemiAutomated = ({ provider, accessToken }: Props) => {
-  const apiUrl = useApiUrl();
+export const ProviderSemiAutomated = ({ provider }: Props) => {
+  const api = useApi();
   const { data, error, isLoading } = useSWR<WebhookSettings>(
-    `${apiUrl}/providers/${provider.type}/webhook`,
-    (url: string) => fetcher(url, accessToken)
+    `/providers/${provider.type}/webhook`,
+    (url: string) => api.get(url)
   );
 
   if (isLoading) return <div>Loading...</div>;

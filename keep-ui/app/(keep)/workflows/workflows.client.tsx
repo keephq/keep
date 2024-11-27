@@ -8,10 +8,7 @@ import {
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { fetcher } from "../../../utils/fetcher";
 import { Workflow, MockWorkflow } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "@/app/(keep)/loading";
 import React from "react";
 import WorkflowsEmptyState from "./noworfklows";
@@ -21,11 +18,12 @@ import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
 
 export default function WorkflowsPage() {
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const router = useRouter();
-  const { data: session, status, update } = useSession();
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,10 +43,8 @@ export default function WorkflowsPage() {
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
-    status === "authenticated"
-      ? `${apiUrl}/workflows?is_v2=${isSwitchOn}`
-      : null,
-    (url: string) => fetcher(url, session?.accessToken!)
+    api.isReady() ? `/workflows?is_v2=${isSwitchOn}` : null,
+    (url: string) => api.get(url)
   );
 
   /**
@@ -63,8 +59,8 @@ export default function WorkflowsPage() {
     error: mockError,
     isLoading: mockLoading,
   } = useSWR<MockWorkflow[]>(
-    status === "authenticated" ? `${apiUrl}/workflows/random-templates` : null,
-    (url: string) => fetcher(url, session?.accessToken!)
+    api.isReady() ? `/workflows/random-templates` : null,
+    (url: string) => api.get(url)
   );
 
   if (isLoading || !data) return <Loading />;
@@ -85,31 +81,24 @@ export default function WorkflowsPage() {
   const onDrop = async (files: any) => {
     const fileUpload = async (formData: FormData, reload: boolean) => {
       try {
-        const response = await fetch(`${apiUrl}/workflows`, {
+        const response = await api.request(`/workflows`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
           body: formData,
         });
 
-        if (response.ok) {
-          setFileError(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-          if (reload) {
-            window.location.reload();
-          }
-        } else {
-          const errorMessage = await response.text();
-          setFileError(errorMessage);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
+        setFileError(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        if (reload) {
+          window.location.reload();
         }
       } catch (error) {
-        setFileError("An error occurred during file upload");
+        if (error instanceof KeepApiError) {
+          setFileError(error.message);
+        } else {
+          setFileError("An error occurred during file upload");
+        }
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }

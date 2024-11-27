@@ -1,4 +1,4 @@
-import {  useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Dialog } from "@headlessui/react";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import {
@@ -22,10 +22,10 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Providers } from "@/app/(keep)/providers/providers";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { KeyedMutator } from "swr";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
+import { Providers } from "@/app/(keep)/providers/providers";
 import SidePanel from "@/components/SidePanel";
 
 interface ProviderOption {
@@ -40,7 +40,7 @@ interface DeduplicationSidebarProps {
   selectedDeduplicationRule: DeduplicationRule | null;
   onSubmit: (data: Partial<DeduplicationRule>) => Promise<void>;
   mutateDeduplicationRules: KeyedMutator<DeduplicationRule[]>;
-  providers: { installed_providers: Providers, linked_providers: Providers };
+  providers: { installed_providers: Providers; linked_providers: Providers };
 }
 
 const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
@@ -49,7 +49,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   selectedDeduplicationRule,
   onSubmit,
   mutateDeduplicationRules,
-  providers
+  providers,
 }) => {
   const {
     control,
@@ -73,10 +73,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { data: deduplicationFields = {} } = useDeduplicationFields();
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const alertProviders = useMemo(
     () =>
@@ -152,7 +151,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
     setIsSubmitting(true);
     clearErrors();
     try {
-      let url = `${apiUrl}/deduplications`;
+      let url = "/deduplications";
 
       if (selectedDeduplicationRule && selectedDeduplicationRule.id) {
         url += `/${selectedDeduplicationRule.id}`;
@@ -163,32 +162,27 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           ? "POST"
           : "PUT";
 
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const response =
+        method === "POST"
+          ? await api.post(url, data)
+          : await api.put(url, data);
 
-      if (response.ok) {
-        console.log("Deduplication rule saved:", data);
-        reset();
-        handleToggle();
-        await mutateDeduplicationRules();
-      } else {
-        const errorData = await response.json();
+      console.log("Deduplication rule saved:", data);
+      reset();
+      handleToggle();
+      await mutateDeduplicationRules();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
         setError("root.serverError", {
           type: "manual",
-          message: errorData.message || "Failed to save deduplication rule",
+          message: error.message || "Failed to save deduplication rule",
+        });
+      } else {
+        setError("root.serverError", {
+          type: "manual",
+          message: "An unexpected error occurred",
         });
       }
-    } catch (error) {
-      setError("root.serverError", {
-        type: "manual",
-        message: "An unexpected error occurred",
-      });
     } finally {
       setIsSubmitting(false);
     }

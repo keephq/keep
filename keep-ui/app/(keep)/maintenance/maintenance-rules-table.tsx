@@ -17,13 +17,13 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { MaintenanceRule } from "./model";
 import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const columnHelper = createColumnHelper<MaintenanceRule>();
 
@@ -36,8 +36,7 @@ export default function MaintenanceRulesTable({
   maintenanceRules,
   editCallback,
 }: Props) {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -124,20 +123,14 @@ export default function MaintenanceRulesTable({
 
   const deleteMaintenanceRule = (maintenanceRuleId: number) => {
     if (confirm("Are you sure you want to delete this maintenance rule?")) {
-      fetch(`${apiUrl}/maintenance/${maintenanceRuleId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
+      api
+        .delete(`/maintenance/${maintenanceRuleId}`)
+        .then(() => {
           toast.success("Maintenance rule deleted successfully");
-        } else {
-          toast.error(
-            "Failed to delete maintenance rule, contact us if this persists"
-          );
-        }
-      });
+        })
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to delete maintenance rule");
+        });
     }
   };
 

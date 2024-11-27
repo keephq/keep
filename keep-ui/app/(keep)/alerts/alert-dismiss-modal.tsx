@@ -15,15 +15,15 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-quill/dist/quill.snow.css";
 import { AlertDto } from "./models";
-import { format, set, isSameDay, isAfter, addMinutes } from "date-fns";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
+import { set, isSameDay, isAfter } from "date-fns";
 import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { toast } from "react-toastify";
 const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "./alert-dismiss-modal.css";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   preset: string;
@@ -48,8 +48,7 @@ export default function AlertDismissModal({
     revalidateOnMount: false,
   });
 
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   // Ensuring that the useEffect hook is called consistently
   useEffect(() => {
     const now = new Date();
@@ -97,28 +96,21 @@ export default function AlertDismissModal({
         },
         fingerprint: alert.fingerprint,
       };
-      return fetch(`${apiUrl}/alerts/enrich`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify(requestData),
-      });
+      return api.post(`/alerts/enrich`, requestData);
     });
 
-    const responses = await Promise.all(requests);
-    const responsesOk = responses.every((response) => response.ok);
-    if (responsesOk) {
+    try {
+      const responses = await Promise.all(requests);
       toast.success(`${alerts.length} alerts dismissed successfully!`, {
         position: "top-right",
       });
       await alertsMutator();
-      clearAndClose();
-    } else {
+      await presetsMutator();
+    } catch (error) {
+      showErrorToast(error, "Failed to dismiss alerts");
+    } finally {
       clearAndClose();
     }
-    await presetsMutator();
   };
 
   const clearAndClose = () => {

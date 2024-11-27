@@ -6,10 +6,10 @@ const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@tremor/react";
-import { useApiUrl } from "utils/hooks/useConfig";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { AlertDto } from "./models";
 import Modal from "@/components/ui/Modal";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface AlertNoteModalProps {
   handleClose: () => void;
@@ -17,6 +17,7 @@ interface AlertNoteModalProps {
 }
 
 const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
+  const api = useApi();
   const [noteContent, setNoteContent] = useState<string>("");
 
   useEffect(() => {
@@ -24,9 +25,6 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
       setNoteContent(alert.note || "");
     }
   }, [alert]);
-  // get the session
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
 
   // if this modal should not be open, do nothing
   if (!alert) return null;
@@ -66,26 +64,11 @@ const AlertNoteModal = ({ handleClose, alert }: AlertNoteModalProps) => {
         },
         fingerprint: alert.fingerprint,
       };
-      const response = await fetch(`${apiUrl}/alerts/enrich`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify(requestData),
-      });
+      const response = await api.post(`/alerts/enrich`, requestData);
 
-      if (response.ok) {
-        // Handle success
-        console.log("Note saved successfully");
-        handleNoteClose();
-      } else {
-        // Handle error
-        console.error("Failed to save note");
-      }
+      handleNoteClose();
     } catch (error) {
-      // Handle unexpected error
-      console.error("An unexpected error occurred");
+      showErrorToast(error, "Failed to save note");
     }
   };
 

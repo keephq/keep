@@ -1,23 +1,23 @@
 "use client";
 import { defaultProvider, Provider } from "./providers";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { KeepApiError } from "@/shared/lib/KeepApiError";
-import { useApiUrl } from "utils/hooks/useConfig";
 import ProvidersTiles from "./providers-tiles";
 import React, { useState, useEffect } from "react";
 import Loading from "@/app/(keep)/loading";
 import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
 import { useProviders } from "@/utils/hooks/useProviders";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [installedProviders, setInstalledProviders] = useState<Provider[]>([]);
   const [linkedProviders, setLinkedProviders] = useState<Provider[]>([]); // Added state for linkedProviders
-  const { data: session, status } = useSession();
 
   const { data, error } = useProviders();
+
+  if (error) {
+    throw error;
+  }
 
   const isLocalhost = data && data.is_localhost;
   const toastShownKey = "localhostToastShown";
@@ -88,9 +88,7 @@ export const useFetchProviders = () => {
     installedProviders,
     linkedProviders, // Include linkedProviders in the returned object
     setInstalledProviders,
-    status,
     error,
-    session,
     isLocalhost,
   };
 };
@@ -105,44 +103,30 @@ export default function ProvidersPage({
     installedProviders,
     linkedProviders,
     setInstalledProviders,
-    status,
-    error,
-    session,
     isLocalhost,
   } = useFetchProviders();
+
   const {
     providersSearchString,
     providersSelectedTags,
     providersSelectedCategories,
   } = useFilterContext();
-  const apiUrl = useApiUrl();
-  const router = useRouter();
+
   useEffect(() => {
     if (searchParams?.oauth === "failure") {
       const reason = JSON.parse(searchParams.reason);
-      toast.error(`Failed to install provider: ${reason.detail}`, {
-        position: toast.POSITION.TOP_LEFT,
-      });
+      showErrorToast(new Error(`Failed to install provider: ${reason.detail}`));
     } else if (searchParams?.oauth === "success") {
       toast.success("Successfully installed provider", {
         position: toast.POSITION.TOP_LEFT,
       });
     }
   }, [searchParams]);
-  if (error) {
-    throw new KeepApiError(
-      error.message,
-      `${apiUrl}/providers`,
-      error.proposedResolution,
-      error.statusCode
-    );
-  }
-  if (status === "loading") return <Loading />;
-  if (status === "unauthenticated") {
-    router.push("/signin");
-  }
-  if (!providers || !installedProviders || providers.length <= 0)
+
+  if (!providers || !installedProviders || providers.length <= 0) {
+    // TODO: skeleton loader
     return <Loading />;
+  }
 
   const searchProviders = (provider: Provider) => {
     return (

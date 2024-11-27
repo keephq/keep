@@ -1,12 +1,11 @@
 import { TopologyApplication } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
 import useSWR, { SWRConfiguration } from "swr";
-import { fetcher } from "@/utils/fetcher";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useCallback, useMemo } from "react";
 import { useTopology } from "./useTopology";
 import { useRevalidateMultiple } from "@/utils/state";
 import { TOPOLOGY_URL } from "./useTopology";
+import { KeepApiError } from "@/shared/api";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 type UseTopologyApplicationsOptions = {
   initialData?: TopologyApplication[];
@@ -22,13 +21,12 @@ export function useTopologyApplications(
     },
   }
 ) {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
   const revalidateMultiple = useRevalidateMultiple();
   const { topologyData, mutate: mutateTopology } = useTopology();
   const { data, error, isLoading, mutate } = useSWR<TopologyApplication[]>(
-    !session ? null : TOPOLOGY_APPLICATIONS_URL,
-    (url: string) => fetcher(apiUrl + url, session!.accessToken),
+    TOPOLOGY_APPLICATIONS_URL,
+    (url) => api.get(url),
     {
       fallbackData: initialData,
       ...options,
@@ -39,27 +37,19 @@ export function useTopologyApplications(
 
   const addApplication = useCallback(
     async (application: Omit<TopologyApplication, "id">) => {
-      const response = await fetch(`${apiUrl}/topology/applications`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify(application),
-      });
-      if (response.ok) {
-        console.log("mutating on success");
+      try {
+        const result = await api.post("/topology/applications", application);
         revalidateMultiple([TOPOLOGY_URL, TOPOLOGY_APPLICATIONS_URL]);
-      } else {
+        return result as TopologyApplication;
+      } catch (error) {
         // Rollback optimistic update on error
         throw new Error("Failed to add application", {
-          cause: response.statusText,
+          cause:
+            error instanceof KeepApiError ? error.message : "Unknown error",
         });
       }
-      const json = await response.json();
-      return json as TopologyApplication;
     },
-    [apiUrl, revalidateMultiple, session?.accessToken]
+    [api, revalidateMultiple]
   );
 
   const updateApplication = useCallback(
@@ -87,36 +77,29 @@ export function useTopologyApplications(
           })
         );
       }
-      const response = await fetch(
-        `${apiUrl}/topology/applications/${application.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-          body: JSON.stringify(application),
-        }
-      );
-      if (response.ok) {
+      try {
+        const result = await api.put(
+          `/topology/applications/${application.id}`,
+          application
+        );
         revalidateMultiple([TOPOLOGY_URL, TOPOLOGY_APPLICATIONS_URL]);
-      } else {
+        return result as TopologyApplication;
+      } catch (error) {
         // Rollback optimistic update on error
         mutate(applications, false);
         mutateTopology(topologyData, false);
         throw new Error("Failed to update application", {
-          cause: response.statusText,
+          cause:
+            error instanceof KeepApiError ? error.message : "Unknown error",
         });
       }
-      return response;
     },
     [
-      apiUrl,
+      api,
       applications,
       mutate,
       mutateTopology,
       revalidateMultiple,
-      session?.accessToken,
       topologyData,
     ]
   );
@@ -143,34 +126,28 @@ export function useTopologyApplications(
           })
         );
       }
-      const response = await fetch(
-        `${apiUrl}/topology/applications/${applicationId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        }
-      );
-      if (response.ok) {
+      try {
+        const result = await api.delete(
+          `/topology/applications/${applicationId}`
+        );
         revalidateMultiple([TOPOLOGY_URL, TOPOLOGY_APPLICATIONS_URL]);
-      } else {
+        return result;
+      } catch (error) {
         // Rollback optimistic update on error
         mutate(applications, false);
         mutateTopology(topologyData, false);
         throw new Error("Failed to delete application", {
-          cause: response.statusText,
+          cause:
+            error instanceof KeepApiError ? error.message : "Unknown error",
         });
       }
-      return response;
     },
     [
-      apiUrl,
+      api,
       applications,
       mutate,
       mutateTopology,
       revalidateMultiple,
-      session?.accessToken,
       topologyData,
     ]
   );
