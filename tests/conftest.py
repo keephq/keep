@@ -157,7 +157,7 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request, worker_id):
+def db_session(request):
     # Create a database connection
     os.environ["DB_ECHO"] = "true"
     if (
@@ -206,8 +206,8 @@ actions:
 """
     workflow_data = [
         Workflow(
-            id=f"test-id-1-{worker_id}",
-            name=f"test-id-1-{worker_id}",
+            id=f"test-id-1",
+            name=f"test-id-1",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -215,8 +215,8 @@ actions:
             workflow_raw=mock_raw_workflow.format("test-id-1"),
         ),
         Workflow(
-            id=f"test-id-2-{worker_id}",
-            name=f"test-id-2-{worker_id}",
+            id=f"test-id-2",
+            name=f"test-id-2",
             tenant_id=SINGLE_TENANT_UUID,
             description="test workflow",
             created_by="test@keephq.dev",
@@ -224,8 +224,8 @@ actions:
             workflow_raw=mock_raw_workflow.format("test-id-2"),
         ),
         WorkflowExecution(
-            id=f"test-execution-id-1-{worker_id}",
-            workflow_id=f"test-id-1-{worker_id}",
+            id=f"test-execution-id-1",
+            workflow_id=f"test-id-1",
             tenant_id=SINGLE_TENANT_UUID,
             triggered_by="keep-test",
             status="success",
@@ -234,7 +234,7 @@ actions:
         ),
         WorkflowToAlertExecution(
             id=1,
-            workflow_execution_id=f"test-execution-id-1-{worker_id}",
+            workflow_execution_id=f"test-execution-id-1",
             alert_fingerprint="mock_alert",
             event_id="mock_event_id",
         ),
@@ -364,14 +364,14 @@ def elastic_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def elastic_client(request, worker_id):
+def elastic_client(request):
     # this is so if any other module initialized Elasticsearch, it will be deleted
     ElasticClient._instance = None
     os.environ["ELASTIC_ENABLED"] = "true"
     os.environ["ELASTIC_USER"] = "elastic"
     os.environ["ELASTIC_PASSWORD"] = "keeptests"
     os.environ["ELASTIC_HOSTS"] = "http://localhost:9200"
-    os.environ["ELASTIC_INDEX_SUFFIX"] = f"test-{worker_id}"
+    os.environ["ELASTIC_INDEX_SUFFIX"] = f"test"
     request.getfixturevalue("elastic_container")
     elastic_client = ElasticClient(
         tenant_id=SINGLE_TENANT_UUID,

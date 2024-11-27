@@ -9,9 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 # Just a fake random tenant id
-TEST_WORKER_ID = os.environ.get("PYTEST_XDIST_WORKER", "master")
-SINGLE_TENANT_UUID = f"keep-{TEST_WORKER_ID}"
-SINGLE_TENANT_EMAIL = f"admin-{TEST_WORKER_ID}@keephq"
+SINGLE_TENANT_UUID = f"keep"
+SINGLE_TENANT_EMAIL = f"admin@keephq"
 PUSHER_DISABLED = os.environ.get("PUSHER_DISABLED", "false") == "true"
 
 
