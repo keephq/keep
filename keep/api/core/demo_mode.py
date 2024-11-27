@@ -474,3 +474,7 @@ def launch_demo_mode_thread(
 
     logger.info("Demo mode launched.")
     return thread
+
+
+if __name__ == "__main__":
+    simulate_alerts()
