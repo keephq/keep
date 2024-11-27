@@ -13,13 +13,7 @@ interface EnhancedPreset extends Preset {
   lastServerFetch?: number;
 }
 
-const STATIC_PRESETS = [
-  "feed",
-  "deleted",
-  "dismissed",
-  "without-incident",
-  "groups",
-];
+const STATIC_PRESETS = ["feed"];
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
   const api = useApi();
@@ -91,14 +85,14 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     setPresetsOrderFromLS((current) =>
       updatePresets(
         presetsOrderRef.current,
-        enhancedNewPresets.filter((p) => !["feed"].includes(p.name))
+        enhancedNewPresets.filter((p) => !STATIC_PRESETS.includes(p.name))
       )
     );
 
     setStaticPresetsOrderFromLS((current) =>
       updatePresets(
         staticPresetsOrderRef.current,
-        enhancedNewPresets.filter((p) => ["feed"].includes(p.name))
+        enhancedNewPresets.filter((p) => STATIC_PRESETS.includes(p.name))
       )
     );
   };
@@ -220,14 +214,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
       mutate,
     } = useFetchAllPresets(options);
     const filteredPresets = presets?.filter(
-      (preset) =>
-        ![
-          "feed",
-          "deleted",
-          "dismissed",
-          "groups",
-          "without-incident",
-        ].includes(preset.name)
+      (preset) => !STATIC_PRESETS.includes(preset.name)
     );
     return {
       data: filteredPresets,
@@ -245,7 +232,7 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
       mutate,
     } = useFetchAllPresets(options);
     const staticPresets = presets?.filter((preset) =>
-      ["feed", "deleted", "dismissed", "groups"].includes(preset.name)
+      STATIC_PRESETS.includes(preset.name)
     );
     return {
       data: staticPresets,
