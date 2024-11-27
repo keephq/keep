@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Preset } from "@/app/(keep)/alerts/models";
 import useSWR, { SWRConfiguration } from "swr";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -6,7 +6,6 @@ import { useConfig } from "./useConfig";
 import useSWRSubscription from "swr/subscription";
 import { useWebsocket } from "./usePusher";
 import { useSearchParams } from "next/navigation";
-import { useRevalidateMultiple } from "../state";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const usePresets = (type?: string, useFilters?: boolean) => {
@@ -29,7 +28,12 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
   const presetsOrderRef = useRef(presetsOrderFromLS);
   const staticPresetsOrderRef = useRef(staticPresetsOrderFromLS);
   const { bind, unbind } = useWebsocket();
-  const revalidateMultiple = useRevalidateMultiple();
+
+  // Maps are used to find if the local preset is more recent than the server preset
+  const lastServerFetchByPresetId = useRef<Map<string, Date>>(new Map());
+  const lastLocalUpdateByPresetId = useRef<Map<string, Date>>(new Map());
+  // Version is used to trigger a re-render when the local preset is more recent than the server preset
+  const [lastLocalVersion, setLastLocalVersion] = useState(0);
 
   useEffect(() => {
     presetsOrderRef.current = presetsOrderFromLS;
@@ -62,7 +66,6 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
           });
         }
       });
-
       return Array.from(updatedPresets.values());
     };
     setPresetsOrderFromLS((current) =>
@@ -77,6 +80,11 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
         newPresets.filter((p) => ["feed"].includes(p.name))
       )
     );
+    const now = new Date();
+    newPresets.forEach((p) => {
+      lastLocalUpdateByPresetId.current.set(p.id, now);
+    });
+    setLastLocalVersion((v) => v + 1);
   };
 
   useSWRSubscription(
@@ -89,8 +97,6 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     (_, { next }) => {
       const newPresets = (newPresets: Preset[]) => {
         updateLocalPresets(newPresets);
-        // update the presets aggregated endpoint for the sidebar
-        revalidateMultiple(["/preset"]);
         next(null, {
           presets: newPresets,
           isAsyncLoading: false,
@@ -157,6 +163,10 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
               staticPresetsOrderFromLS,
               setStaticPresetsOrderFromLS
             );
+            const now = new Date();
+            data.forEach((p) => {
+              lastServerFetchByPresetId.current.set(p.id, now);
+            });
           }
         },
       }
@@ -237,9 +247,41 @@ export const usePresets = (type?: string, useFilters?: boolean) => {
     };
   };
 
+  // For each static preset, we check if the local preset is more recent than the server preset.
+  // It could happen because we update the local preset when we receive an "async-presets" event.
+  const useLatestStaticPresets = (options?: SWRConfiguration) => {
+    const { data: presets, ...rest } = useStaticPresets(options);
+    const mergedPresets = useMemo(() => {
+      if (presets === undefined) {
+        return staticPresetsOrderFromLS;
+      }
+      return presets?.map((p) => {
+        const lastUpdated = lastLocalUpdateByPresetId.current.get(p.id);
+        const fetchedFromServerAt = lastServerFetchByPresetId.current.get(p.id);
+        if (
+          lastUpdated &&
+          fetchedFromServerAt &&
+          lastUpdated > fetchedFromServerAt
+        ) {
+          // Local wins
+          return staticPresetsOrderFromLS.find((lp) => lp.id === p.id) ?? p;
+        }
+        // Server wins
+        return p;
+      });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [presets, lastLocalVersion]);
+
+    return {
+      data: mergedPresets,
+      ...rest,
+    };
+  };
+
   return {
     useAllPresets,
     useStaticPresets,
+    useLatestStaticPresets,
     presetsOrderFromLS,
     setPresetsOrderFromLS,
     staticPresetsOrderFromLS,
