@@ -414,3 +414,37 @@ class TestParserUtils:
 
         results = ParserUtils.deep_merge(source, dest)
         assert expected_results == results
+
+
+class TestWorkflowUUIDGeneration:
+    def test_generate_different_uuid_if_id_not_provided(self):
+        parser = Parser()
+        workflow = {"name": "test_workflow"}
+        tenant_id = "test_tenant"
+        generated_id = parser._get_workflow_id(tenant_id, workflow)
+        assert generated_id is not None
+        assert isinstance(generated_id, str)
+        assert len(generated_id) == 36  # UUID length
+
+    def test_use_provided_id(self):
+        parser = Parser()
+        workflow = {"id": "test_id", "name": "test_workflow"}
+        tenant_id = "test_tenant"
+        generated_id = parser._get_workflow_id(tenant_id, workflow)
+        assert generated_id == "test_id"
+
+
+class TestWorkflowInvalidFlag:
+    def test_workflow_invalid_flag(self):
+        parser = Parser()
+        workflow = {"name": "test_workflow", "invalid": True}
+        tenant_id = "test_tenant"
+        parsed_workflow = parser._parse_workflow(tenant_id, workflow, None)
+        assert parsed_workflow.invalid is True
+
+    def test_workflow_valid_flag(self):
+        parser = Parser()
+        workflow = {"name": "test_workflow", "invalid": False}
+        tenant_id = "test_tenant"
+        parsed_workflow = parser._parse_workflow(tenant_id, workflow, None)
+        assert parsed_workflow.invalid is False

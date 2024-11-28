@@ -316,6 +316,8 @@ async def create_workflow(
     workflowstore = WorkflowStore()
     # Create the workflow
     try:
+        if not workflow.get("id"):
+            workflow["id"] = str(uuid.uuid4())
         workflow = workflowstore.create_workflow(
             tenant_id=tenant_id, created_by=created_by, workflow=workflow
         )
@@ -355,6 +357,8 @@ async def create_workflow_from_body(
     workflowstore = WorkflowStore()
     # Create the workflow
     try:
+        if not workflow.get("id"):
+            workflow["id"] = str(uuid.uuid4())
         workflow = workflowstore.create_workflow(
             tenant_id=tenant_id, created_by=created_by, workflow=workflow
         )
@@ -379,9 +383,9 @@ async def create_workflow_from_body(
 
 # Add Mock Workflows (6 Random Workflows on Every Request)
 #    To add mock workflows, a new backend API endpoint has been created: /workflows/random-templates.
-#      1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
-#         shuffled randomly.
-#      2. Response: Only the first 6 files are parsed and sent in the response.
+#       1. Fetching Random Templates: When a request is made to this endpoint, all workflow YAML/YML files are read and
+#          shuffled randomly.
+#       2. Response: Only the first 6 files are parsed and sent in the response.
 @router.get("/random-templates", description="Get random workflow templates")
 def get_random_workflow_templates(
     authenticated_entity: AuthenticatedEntity = Depends(
