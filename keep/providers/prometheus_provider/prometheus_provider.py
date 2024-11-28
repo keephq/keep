@@ -23,6 +23,7 @@ class PrometheusProviderAuthConfig:
             "required": True,
             "description": "Prometheus server URL",
             "hint": "https://prometheus-us-central1.grafana.net/api/prom",
+            "validation": "any_http_url"
         }
     )
     username: str = dataclasses.field(

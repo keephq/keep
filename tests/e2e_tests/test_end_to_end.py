@@ -188,7 +188,9 @@ def test_provider_validation(browser):
     error_msg = browser.locator("p.tremor-TextInput-errorMessage")
     connect_btn.click()
     expect(error_msg).to_have_count(3)
+    cancel_btn.click()
     # test `any_http_url` field validation
+    browser.locator("button:has-text('Kibana'):has-text('alert')").click()
     host_input = browser.get_by_placeholder("Enter kibana_host")
     host_input.fill("invalid url")
     expect(error_msg).to_have_count(1)
