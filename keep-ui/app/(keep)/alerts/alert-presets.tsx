@@ -371,6 +371,7 @@ export default function AlertPresets({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <TextInput
+                  // TODO: don't show error until user tries to save
                   error={!presetName}
                   errorMessage="Preset name is required"
                   placeholder={

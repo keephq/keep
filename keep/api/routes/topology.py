@@ -107,7 +107,7 @@ def update_application(
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Updating application",
-        extra={tenant_id: tenant_id, application_id: application_id},
+        extra={"tenant_id": tenant_id, "application_id": str(application_id)},
     )
     try:
         return TopologiesService.update_application_by_id(
