@@ -198,6 +198,9 @@ receivers:
                     description=alert["annotations"]["description"],
                     message=alert["annotations"]["summary"],
                     status=VictoriametricsProvider.STATUS_MAP[alert["status"]],
+                    severity=VictoriametricsProvider.SEVERITIES_MAP[
+                        alert.get("labels", {}).get("severity", "info")
+                    ],
                     startedAt=alert["startsAt"],
                     url=alert["generatorURL"],
                     source=["victoriametrics"],
