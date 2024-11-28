@@ -89,6 +89,7 @@ class GrafanaProvider(BaseProvider):
     # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
     STATUS_MAP = {
         "ok": AlertStatus.RESOLVED,
+        "resolved": AlertStatus.RESOLVED,
         "normal": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
         "alerting": AlertStatus.FIRING,
@@ -513,6 +514,7 @@ class GrafanaProvider(BaseProvider):
         else:
             alert_payload = ALERTS[alert_type]["alerts"][0]
         alert_parameters = ALERTS[alert_type].get("parameters", {})
+        alert_renders = ALERTS[alert_type].get("renders", {})
         # Generate random data for parameters
         for parameter, parameter_options in alert_parameters.items():
             if "." in parameter:
@@ -524,6 +526,15 @@ class GrafanaProvider(BaseProvider):
                 )
             else:
                 alert_payload[parameter] = random.choice(parameter_options)
+
+        # Apply renders
+        for param, choices in alert_renders.items():
+            # replace annotations
+            # HACK
+            param_to_replace = "{{ " + param + " }}"
+            alert_payload["annotations"]["summary"] = alert_payload["annotations"][
+                "summary"
+            ].replace(param_to_replace, random.choice(choices))
 
         # Implement specific Grafana alert structure here
         # For example:
@@ -544,7 +555,7 @@ class GrafanaProvider(BaseProvider):
         return {
             "alerts": [alert_payload],
             "severity": alert_payload.get("labels", {}).get("severity"),
-            "title": "Grafana Alert - {}".format(alert_type),
+            "title": alert_type,
         }
 
 

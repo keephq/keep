@@ -1,17 +1,14 @@
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { SWRConfiguration } from "swr";
-import { fetcher } from "../fetcher";
 import useSWRImmutable from "swr/immutable";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { useApiUrl } from "./useConfig";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useAlertQualityMetrics = (
   fields: string | string[],
   options: SWRConfiguration = {}
 ) => {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const searchParams = useSearchParams();
   const filters = useMemo(() => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -25,10 +22,10 @@ export const useAlertQualityMetrics = (
   // TODO: Proper type needs to be defined.
   return useSWRImmutable<Record<string, Record<string, any>>>(
     () =>
-      session
-        ? `${apiUrl}/alerts/quality/metrics${filters ? `?${filters}` : ""}`
+      api.isReady()
+        ? `/alerts/quality/metrics${filters ? `?${filters}` : ""}`
         : null,
-    (url) => fetcher(url, session?.accessToken),
+    (url) => api.get(url),
     options
   );
 };

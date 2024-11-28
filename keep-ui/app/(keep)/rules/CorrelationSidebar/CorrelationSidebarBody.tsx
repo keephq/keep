@@ -1,5 +1,4 @@
 import { Button, Callout, Icon } from "@tremor/react";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
@@ -9,12 +8,13 @@ import { CorrelationGroups } from "./CorrelationGroups";
 import { CorrelationSubmission } from "./CorrelationSubmission";
 import { Link } from "@/components/ui";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { useRules } from "utils/hooks/useRules";
 import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export const TIMEFRAME_UNITS_TO_SECONDS = {
   seconds: (amount: number) => amount,
@@ -32,7 +32,7 @@ export const CorrelationSidebarBody = ({
   toggle,
   defaultValue,
 }: CorrelationSidebarBodyProps) => {
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   const methods = useForm<CorrelationFormType>({
     defaultValues: defaultValue,
@@ -45,7 +45,6 @@ export const CorrelationSidebarBody = ({
     : 0;
 
   const { mutate } = useRules();
-  const { data: session } = useSession();
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,34 +73,28 @@ export const CorrelationSidebarBody = ({
       resolveOn,
     } = correlationFormData;
 
-    if (session) {
-      const response = await fetch(
-        `${apiUrl}/rules${selectedId ? `/${selectedId}` : ""}`,
-        {
-          method: selectedId ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({
-            sqlQuery: formatQuery(query, "parameterized_named"),
-            groupDescription: description,
-            ruleName: name,
-            celQuery: formatQuery(query, "cel"),
-            timeframeInSeconds,
-            timeUnit: timeUnit,
-            groupingCriteria: alertsFound.length ? groupedAttributes : [],
-            requireApprove: requireApprove,
-            resolveOn: resolveOn,
-          }),
-        }
-      );
+    const body = {
+      sqlQuery: formatQuery(query, "parameterized_named"),
+      groupDescription: description,
+      ruleName: name,
+      celQuery: formatQuery(query, "cel"),
+      timeframeInSeconds,
+      timeUnit: timeUnit,
+      groupingCriteria: alertsFound.length ? groupedAttributes : [],
+      requireApprove: requireApprove,
+      resolveOn: resolveOn,
+    };
 
-      if (response.ok) {
-        toggle();
-        mutate();
-        router.replace("/rules");
-      }
+    try {
+      const response = selectedId
+        ? await api.put(`/rules/${selectedId}`, body)
+        : await api.post("/rules", body);
+
+      toggle();
+      mutate();
+      router.replace("/rules");
+    } catch (error) {
+      showErrorToast(error, "Failed to create correlation rule");
     }
   };
 

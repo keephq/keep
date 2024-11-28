@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+// TODO: is it safe to remove these imports?
 import { getToken } from "next-auth/jwt";
 import type { JWT } from "next-auth/jwt";
 import { getApiURL } from "@/utils/apiUrl";
@@ -7,8 +8,25 @@ import NextAuth from "next-auth";
 
 const { auth } = NextAuth(authConfig);
 
+// Helper function to detect mobile devices
+function isMobileDevice(userAgent: string): boolean {
+  return /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+    userAgent
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+
+  // Check if request is from mobile device
+  const userAgent = request.headers.get("user-agent") || "";
+  if (
+    isMobileDevice(userAgent) &&
+    !pathname.startsWith("/mobile") &&
+    process.env.KEEP_READ_ONLY === "true"
+  ) {
+    return NextResponse.redirect(new URL("/mobile", request.url));
+  }
 
   const session = await auth();
   const role = session?.userRole;
@@ -29,6 +47,11 @@ export async function middleware(request: NextRequest) {
 
   // Allow API routes to pass through
   if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // Allow Mobile routes to pass through
+  if (pathname.startsWith("/mobile")) {
     return NextResponse.next();
   }
 

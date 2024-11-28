@@ -1,7 +1,5 @@
 import React, { useState, useRef, useMemo } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { Provider, ProviderAuthConfig } from "./providers";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Image from "next/image";
 import {
   Title,
@@ -41,7 +39,6 @@ import {
   PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { installWebhook } from "../../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
 import Link from "next/link";
@@ -52,6 +49,9 @@ import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { getZodSchema } from "./form-validation";
 import TimeAgo from "react-timeago";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -209,23 +209,32 @@ const ProviderForm = ({
     [provider]
   );
 
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
-  const { data: session } = useSession();
-  const accessToken =
-    session != null &&
-    "accessToken" in session &&
-    typeof session.accessToken === "string"
-      ? session.accessToken
-      : undefined;
-  if (!accessToken) {
-    toast.error("Please log in to continue");
-    return;
+  function installWebhook(provider: Provider) {
+    return toast.promise(
+      api
+        .post(`/providers/install/webhook/${provider.type}/${provider.id}`)
+        .catch((error) => Promise.reject({ data: error })),
+      {
+        pending: "Webhook installing 🤞",
+        success: `${provider.type} webhook installed 👌`,
+        error: {
+          render({ data }) {
+            // When the promise reject, data will contains the error
+            return `Webhook installation failed 😢 Error: ${
+              (data as any).message
+            }`;
+          },
+        },
+      },
+      {
+        position: toast.POSITION.TOP_LEFT,
+      }
+    );
   }
 
-  const callInstallWebhook = async () => {
-    await installWebhook(provider, accessToken, apiUrl);
-  };
+  const callInstallWebhook = async () => await installWebhook(provider);
 
   async function handleOauth() {
     const verifier = generateRandomString();
@@ -258,42 +267,31 @@ const ProviderForm = ({
 
   function revalidateScopes() {
     setRefreshLoading(true);
-    fetch(`${apiUrl}/providers/${provider.id}/scopes`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }).then((response) => {
-      if (response.ok) {
-        response.json().then((newValidatedScopes) => {
-          setProviderValidatedScopes(newValidatedScopes);
-          provider.validatedScopes = newValidatedScopes;
-          mutate();
-          setRefreshLoading(false);
-        });
-      } else {
+    api
+      .post(`/providers/${provider.id}/scopes`)
+      .then((newValidatedScopes) => {
+        setProviderValidatedScopes(newValidatedScopes);
+        provider.validatedScopes = newValidatedScopes;
+        mutate();
         setRefreshLoading(false);
-      }
-    });
+      })
+      .catch((error: any) => {
+        showErrorToast(error, "Failed to revalidate scopes");
+        setRefreshLoading(false);
+      });
   }
 
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
-      const response = await fetch(
-        `${apiUrl}/providers/${provider.type}/${provider.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      if (response.ok) {
-        mutate();
-        closeModal();
-      } else {
-        toast.error(`Failed to delete ${provider.type} 😢`);
-      }
+      api
+        .delete(`/providers/${provider.type}/${provider.id}`)
+        .then(() => {
+          mutate();
+          closeModal();
+        })
+        .catch((error: any) => {
+          showErrorToast(error, `Failed to delete ${provider.type} 😢`);
+        });
     }
   }
 
@@ -326,7 +324,8 @@ const ProviderForm = ({
     )
       return;
 
-    if (validate({ [key]: value })) {
+    const isValid = validate({ [key]: value });
+    if (isValid) {
       const updatedInputErrors = { ...inputErrors };
       delete updatedInputErrors[key];
       setInputErrors(updatedInputErrors);
@@ -371,9 +370,7 @@ const ProviderForm = ({
   };
 
   async function submit(requestUrl: string, method: string = "POST") {
-    const headers = {
-      Authorization: `Bearer ${accessToken}`,
-    };
+    const headers: Record<string, string> = {};
 
     let body;
     if (Object.values(formValues).some((value) => value instanceof File)) {
@@ -389,20 +386,25 @@ const ProviderForm = ({
       body = formData;
     } else {
       // Standard JSON for non-file submissions
-      Object.assign(headers, { "Content-Type": "application/json" });
+      headers["Content-Type"] = "application/json";
       body = JSON.stringify(formValues);
     }
 
-    return fetch(requestUrl, {
+    return api.request(requestUrl, {
       method: method,
       headers: headers,
       body: body,
     });
   }
 
-  async function handleSubmitError(response: Response) {
-    const status = response.status;
-    const data = await response.json();
+  async function handleSubmitError(apiError: unknown) {
+    if (apiError instanceof KeepApiReadOnlyError) {
+      setFormErrors("You're in read-only mode");
+      return;
+    }
+    if (apiError instanceof KeepApiError === false) return;
+    const data = apiError.responseJson;
+    const status = apiError.statusCode;
     const error =
       "detail" in data ? data.detail : "message" in data ? data.message : data;
     if (status === 409) {
@@ -412,16 +414,16 @@ const ProviderForm = ({
     } else if (status === 412) {
       setProviderValidatedScopes(error);
       setFormErrors(
-        `Provider scopes validation failed: ${JSON.stringify(error, null, 4)}`
+        `${provider.type} scopes are invalid: ${JSON.stringify(error, null, 4)}`
       );
     } else {
-      setCustomError(
+      setApiError(
         typeof error === "object" ? JSON.stringify(error) : error.toString()
       );
     }
   }
 
-  function setCustomError(error: string) {
+  function setApiError(error: string) {
     if (error.includes("SyntaxError")) {
       setFormErrors(
         "Bad response from API: Check the backend logs for more details"
@@ -439,45 +441,45 @@ const ProviderForm = ({
     if (provider.webhook_required) callInstallWebhook();
     if (!validate()) return;
     setIsLoading(true);
-    const response = await submit(`${apiUrl}/providers/${provider.id}`, "PUT");
-    if (response.ok) {
-      setIsLoading(false);
-      toast.success("Updated provider successfully", {
-        position: "top-left",
+    submit(`/providers/${provider.id}`, "PUT")
+      .then(() => {
+        setIsLoading(false);
+        toast.success("Updated provider successfully", {
+          position: "top-left",
+        });
+        mutate();
+      })
+      .catch((error) => {
+        showErrorToast("Failed to update provider");
+        handleSubmitError(error);
+        setIsLoading(false);
       });
-      mutate();
-    } else {
-      toast.error("Failed to update provider", { position: "top-left" });
-      handleSubmitError(response);
-      setIsLoading(false);
-    }
   }
 
   async function handleConnectClick() {
     if (!validate()) return;
     setIsLoading(true);
     onConnectChange?.(true, false);
-    const response = await submit(`${apiUrl}/providers/install`);
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Connect Result:", data);
-      setIsLoading(false);
-      onConnectChange?.(false, true);
-      if (
-        formValues.install_webhook &&
-        provider.can_setup_webhook &&
-        accessToken &&
-        !isLocalhost
-      ) {
-        // mutate after webhook installation
-        await installWebhook(data as Provider, accessToken, apiUrl);
-      }
-      mutate();
-    } else {
-      handleSubmitError(response);
-      setIsLoading(false);
-      onConnectChange?.(false, false);
-    }
+    submit(`/providers/install`)
+      .then(async (data) => {
+        console.log("Connect Result:", data);
+        setIsLoading(false);
+        onConnectChange?.(false, true);
+        if (
+          formValues.install_webhook &&
+          provider.can_setup_webhook &&
+          !isLocalhost
+        ) {
+          // mutate after webhook installation
+          await installWebhook(data as Provider);
+        }
+        mutate();
+      })
+      .catch((error) => {
+        handleSubmitError(error);
+        setIsLoading(false);
+        onConnectChange?.(false, false);
+      });
   }
 
   const installOrUpdateWebhookEnabled = provider.scopes
@@ -782,10 +784,7 @@ const ProviderForm = ({
             </>
           )}
           {provider.supports_webhook && (
-            <ProviderSemiAutomated
-              provider={provider}
-              accessToken={accessToken ?? ""}
-            />
+            <ProviderSemiAutomated provider={provider} />
           )}
           {formErrors && (
             <Callout

@@ -14,7 +14,7 @@ import {
   SortingState,
   getSortedRowModel,
 } from "@tanstack/react-table";
-
+import { CopilotKit } from "@copilotkit/react-core";
 import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -54,6 +54,9 @@ interface Props {
   isMenuColDisplayed?: boolean;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[] | null) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
 }
 
 export function AlertTable({
@@ -69,6 +72,9 @@ export function AlertTable({
   isRefreshAllowed = true,
   setDismissedModalAlert,
   mutateAlerts,
+  setRunWorkflowModalAlert,
+  setDismissModalAlert,
+  setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
 
@@ -149,6 +155,8 @@ export function AlertTable({
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
 
   const filteredAlerts = alerts.filter((alert) => {
     // First apply tab filter
@@ -285,15 +293,19 @@ export function AlertTable({
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
+            setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+            isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <AlertPresets
-            table={table}
-            presetNameFromApi={presetName}
-            isLoading={isAsyncLoading}
-            presetPrivate={presetPrivate}
-            presetNoisy={presetNoisy}
-          />
+          <CopilotKit runtimeUrl="/api/copilotkit">
+            <AlertPresets
+              table={table}
+              presetNameFromApi={presetName}
+              isLoading={isAsyncLoading}
+              presetPrivate={presetPrivate}
+              presetNoisy={presetNoisy}
+            />
+          </CopilotKit>
         )}
       </div>
 
@@ -371,6 +383,20 @@ export function AlertTable({
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
         alert={selectedAlert}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+        setChangeStatusAlert={setChangeStatusAlert}
+        setIsIncidentSelectorOpen={() => {
+          if (selectedAlert) {
+            table
+              .getRowModel()
+              .rows.find(
+                (row) => row.original.fingerprint === selectedAlert.fingerprint
+              )
+              ?.toggleSelected();
+            setIsIncidentSelectorOpen(true);
+          }
+        }}
       />
     </div>
   );

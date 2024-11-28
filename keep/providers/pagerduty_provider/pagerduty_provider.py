@@ -29,7 +29,6 @@ from keep.providers.base.base_provider import (
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
-
 # Todo: think about splitting in to PagerdutyIncidentsProvider and PagerdutyAlertsProvider
 # Read this: https://community.pagerduty.com/forum/t/create-incident-using-python/3596/3
 
@@ -452,10 +451,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         }
 
         r = requests.post(url, headers=headers, data=json.dumps(payload))
-        r.raise_for_status()
-        response = r.json()
-        self.logger.info("Incident triggered")
-        return response
+        try:
+            r.raise_for_status()
+            response = r.json()
+            self.logger.info("Incident triggered")
+            return response
+        except Exception as e:
+            self.logger.error(
+                "Failed to trigger incident",
+                extra={"response_text": r.text},
+            )
+            raise e
 
     def dispose(self):
         """

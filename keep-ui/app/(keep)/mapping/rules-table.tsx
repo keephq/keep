@@ -18,11 +18,11 @@ import {
   ExpandedState,
 } from "@tanstack/react-table";
 import { MdRemoveCircle, MdModeEdit } from "react-icons/md";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { useState } from "react";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 const columnHelper = createColumnHelper<MappingRule>();
 
@@ -32,9 +32,8 @@ interface Props {
 }
 
 export default function RulesTable({ mappings, editCallback }: Props) {
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useMappings();
-  const apiUrl = useApiUrl();
   const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const columns = [
@@ -116,19 +115,15 @@ export default function RulesTable({ mappings, editCallback }: Props) {
 
   const deleteRule = (ruleId: number) => {
     if (confirm("Are you sure you want to delete this rule?")) {
-      fetch(`${apiUrl}/mapping/${ruleId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
+      api
+        .delete(`/mapping/${ruleId}`)
+        .then(() => {
           mutate();
           toast.success("Rule deleted successfully");
-        } else {
-          toast.error("Failed to delete rule, contact us if this persists");
-        }
-      });
+        })
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to delete rule");
+        });
     }
   };
 

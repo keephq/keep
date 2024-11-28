@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.30.0"
+version = "0.30.3"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -101,6 +101,7 @@ ruff = "^0.1.6"
 pytest-docker = "^2.0.1"
 playwright = "^1.44.0"
 
+freezegun = "^1.5.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

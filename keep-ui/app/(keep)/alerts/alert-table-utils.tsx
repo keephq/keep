@@ -24,15 +24,17 @@ import {
 import { AlertSeverityBorder } from "./alert-severity-border";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 
+import { useConfig } from "utils/hooks/useConfig";
+
 export const DEFAULT_COLS = [
   "severity",
   "checkbox",
   "noise",
+  "source",
   "name",
   "description",
   "status",
   "lastReceived",
-  "source",
   "alertMenu",
 ];
 export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
@@ -92,17 +94,6 @@ const invertedSeverityMapping = Object.entries(severityMapping).reduce<{
   return acc;
 }, {});
 
-const customSeveritySortFn = (rowA: any, rowB: any) => {
-  // Adjust the way to access severity values according to your data structure
-  const severityValueA = rowA.original?.severity; // or rowA.severity;
-  const severityValueB = rowB.original?.severity; // or rowB.severity;
-
-  // Use the inverted mapping to get ranks
-  const rankA = invertedSeverityMapping[severityValueA] || 0;
-  const rankB = invertedSeverityMapping[severityValueB] || 0;
-
-  return rankA > rankB ? 1 : rankA < rankB ? -1 : 0;
-};
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
@@ -132,6 +123,9 @@ export const useAlertTableCols = (
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
   const [currentOpenMenu, setCurrentOpenMenu] = useState("");
+  const { data: configData } = useConfig();
+  // check if noisy alerts are enabled
+  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.display({
@@ -179,21 +173,26 @@ export const useAlertTableCols = (
   return [
     columnHelper.display({
       id: "severity",
-      maxSize: 4,
+      maxSize: 2,
       header: () => <></>,
       cell: (context) => (
         <AlertSeverityBorder severity={context.row.original.severity} />
       ),
       meta: {
-        tdClassName: "p-0",
-        thClassName: "p-0",
+        tdClassName: "w-1 !p-0",
+        thClassName: "w-1 !p-0",
       },
     }),
     ...(isCheckboxDisplayed
       ? [
           columnHelper.display({
             id: "checkbox",
-            size: 46,
+            maxSize: 32,
+            minSize: 32,
+            meta: {
+              tdClassName: "w-6 !py-2 !pl-2 !pr-1",
+              thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
+            },
             header: (context) => (
               <AlertTableCheckbox
                 checked={context.table.getIsAllRowsSelected()}
@@ -212,52 +211,98 @@ export const useAlertTableCols = (
         ]
       : ([] as ColumnDef<AlertDto>[])),
     // noisy column
-    columnHelper.display({
-      id: "noise",
-      size: 5,
-      header: () => <></>,
-      cell: (context) => {
-        // Get the status of the alert
-        const status = context.row.original.status;
-        const isNoisy = context.row.original.isNoisy;
+    ...(noisyAlertsEnabled
+      ? [
+          columnHelper.display({
+            id: "noise",
+            size: 5,
+            header: () => <></>,
+            cell: (context) => {
+              // Get the status of the alert
+              const status = context.row.original.status;
+              const isNoisy = context.row.original.isNoisy;
 
-        // Return null if presetNoisy is not true
-        if (!presetNoisy && !isNoisy) {
-          return null;
-        } else if (presetNoisy) {
-          // Decide which icon to display based on the status
-          if (status === "firing") {
-            return <Icon icon={MdOutlineNotificationsActive} color="red" />;
-          } else {
-            return <Icon icon={MdOutlineNotificationsOff} color="red" />;
-          }
-        }
-        // else, noisy alert in non noisy preset
-        else {
-          if (status === "firing") {
-            return <Icon icon={MdOutlineNotificationsActive} color="red" />;
-          } else {
-            return null;
-          }
-        }
-      },
-      meta: {
-        tdClassName: "p-0",
-        thClassName: "p-0",
-      },
+              // Return null if presetNoisy is not true
+              if (!presetNoisy && !isNoisy) {
+                return null;
+              } else if (presetNoisy) {
+                // Decide which icon to display based on the status
+                if (status === "firing") {
+                  return (
+                    <Icon icon={MdOutlineNotificationsActive} color="red" />
+                  );
+                } else {
+                  return <Icon icon={MdOutlineNotificationsOff} color="red" />;
+                }
+              }
+              // else, noisy alert in non noisy preset
+              else {
+                if (status === "firing") {
+                  return (
+                    <Icon icon={MdOutlineNotificationsActive} color="red" />
+                  );
+                } else {
+                  return null;
+                }
+              }
+            },
+            meta: {
+              tdClassName: "p-0",
+              thClassName: "p-0",
+            },
+            enableSorting: false,
+          }),
+        ]
+      : []),
+    // Source column with exact 40px width ( see alert-table-headers )
+    columnHelper.accessor("source", {
+      id: "source",
+      header: () => <></>,
       enableSorting: false,
+      enableResizing: false,
+      cell: (context) => (
+        <div className="flex items-center justify-center">
+          {(context.getValue() ?? []).map((source, index) => {
+            let imagePath = `/icons/${source}-icon.png`;
+            if (source.includes("@")) {
+              imagePath = "/icons/mailgun-icon.png";
+            }
+            return (
+              <Image
+                className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
+                key={source}
+                alt={source}
+                height={24}
+                width={24}
+                title={source}
+                src={imagePath}
+              />
+            );
+          })}
+        </div>
+      ),
+      meta: {
+        tdClassName: "!p-0 w-4 sm:w-8 !box-border",
+        thClassName: "!p-0 w-4 sm:w-8 !box-border",
+      },
     }),
+    // Name column butted up against source
     columnHelper.display({
       id: "name",
       header: "Name",
-      minSize: 330,
       cell: (context) => (
-        <AlertName
-          alert={context.row.original}
-          setNoteModalAlert={setNoteModalAlert}
-          setTicketModalAlert={setTicketModalAlert}
-        />
+        <div>
+          <AlertName
+            alert={context.row.original}
+            setNoteModalAlert={setNoteModalAlert}
+            setTicketModalAlert={setTicketModalAlert}
+          />
+        </div>
       ),
+      meta: {
+        tdClassName: "!pl-0  w-4 sm:w-8",
+        thClassName: "!pl-1  w-4 sm:w-8", // Small padding for header text only
+      },
     }),
     columnHelper.accessor("description", {
       id: "description",
@@ -271,8 +316,9 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("status", {
       id: "status",
-      minSize: 100,
       header: "Status",
+      maxSize: 80,
+      size: 80,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon
@@ -289,35 +335,13 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      minSize: 100,
+      maxSize: 80,
+      size: 80,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
           {getAlertLastReceieved(context.getValue())}
         </span>
       ),
-    }),
-    columnHelper.accessor("source", {
-      id: "source",
-      header: "Source",
-      minSize: 100,
-      cell: (context) =>
-        (context.getValue() ?? []).map((source, index) => {
-          let imagePath = `/icons/${source}-icon.png`;
-          if (source.includes("@")) {
-            imagePath = "/icons/mailgun-icon.png";
-          }
-          return (
-            <Image
-              className={`inline-block ${index == 0 ? "" : "-ml-2"}`}
-              key={source}
-              alt={source}
-              height={24}
-              width={24}
-              title={source}
-              src={imagePath}
-            />
-          );
-        }),
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",

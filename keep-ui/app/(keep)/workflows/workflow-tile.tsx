@@ -1,8 +1,6 @@
 "use client";
 
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { Workflow, Filter } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { Workflow } from "./models";
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -41,6 +39,7 @@ import {
 } from "react-icons/md";
 import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 function WorkflowMenuSection({
   onDelete,
@@ -264,9 +263,8 @@ export const ProvidersCarousel = ({
 };
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
+  const api = useApi();
   // Create a set to keep track of unique providers
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
@@ -301,19 +299,9 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 
   const handleDeleteClick = async () => {
     try {
-      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-
-      if (response.ok) {
-        // Workflow deleted successfully
-        window.location.reload();
-      } else {
-        console.error("Failed to delete workflow");
-      }
+      await api.delete(`/workflows/${workflow.id}`);
+      // Workflow deleted successfully
+      window.location.reload();
     } catch (error) {
       console.error("An error occurred while deleting workflow", error);
     }
@@ -703,9 +691,8 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 }
 
 export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
+  const api = useApi();
   // Create a set to keep track of unique providers
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
@@ -733,19 +720,10 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
 
   const handleDeleteClick = async () => {
     try {
-      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
+      await api.delete(`/workflows/${workflow.id}`);
 
-      if (response.ok) {
-        // Workflow deleted successfully
-        window.location.reload();
-      } else {
-        console.error("Failed to delete workflow");
-      }
+      // Workflow deleted successfully
+      window.location.reload();
     } catch (error) {
       console.error("An error occurred while deleting workflow", error);
     }

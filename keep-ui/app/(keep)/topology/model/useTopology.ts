@@ -1,11 +1,9 @@
 import { TopologyService } from "@/app/(keep)/topology/model/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import useSWR, { SWRConfiguration } from "swr";
-import { fetcher } from "@/utils/fetcher";
 import { useEffect } from "react";
 import { buildTopologyUrl } from "@/app/(keep)/topology/api";
 import { useTopologyPollingContext } from "@/app/(keep)/topology/model/TopologyPollingContext";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const TOPOLOGY_URL = `/topology`;
 
@@ -31,17 +29,16 @@ export const useTopology = (
     },
   }
 ) => {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const pollTopology = useTopologyPollingContext();
 
-  const url = !session
-    ? null
-    : buildTopologyUrl({ providerIds, services, environment });
+  const url = api.isReady()
+    ? buildTopologyUrl({ providerIds, services, environment })
+    : null;
 
   const { data, error, mutate } = useSWR<TopologyService[]>(
     url,
-    (url: string) => fetcher(apiUrl! + url, session!.accessToken),
+    (url: string) => api.get(url),
     {
       fallbackData,
       ...options,

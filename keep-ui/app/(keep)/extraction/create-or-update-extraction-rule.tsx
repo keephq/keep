@@ -13,14 +13,14 @@ import {
   Switch,
   Badge,
 } from "@tremor/react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { ExtractionRule } from "./model";
 import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;
@@ -31,7 +31,7 @@ export default function CreateOrUpdateExtractionRule({
   extractionToEdit,
   editCallback,
 }: Props) {
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useExtractions();
   const [extractionName, setExtractionName] = useState<string>("");
   const [isPreFormatting, setIsPreFormatting] = useState<boolean>(false);
@@ -41,7 +41,6 @@ export default function CreateOrUpdateExtractionRule({
   const [regex, setRegex] = useState<string>("");
   const [extractedAttributes, setExtractedAttributes] = useState<string[]>([]);
   const [priority, setPriority] = useState<number>(0);
-  const apiUrl = useApiUrl();
   const editMode = extractionToEdit !== null;
 
   useEffect(() => {
@@ -76,13 +75,8 @@ export default function CreateOrUpdateExtractionRule({
 
   const addExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await fetch(`${apiUrl}/extraction`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      const response = await api.post("/extraction", {
         priority: priority,
         name: extractionName,
         description: mapDescription,
@@ -90,50 +84,34 @@ export default function CreateOrUpdateExtractionRule({
         attribute: attribute,
         regex: regex,
         condition: condition,
-      }),
-    });
-    if (response.ok) {
+      });
       exitEditOrCreateMode();
       clearForm();
       mutate();
       toast.success("Extraction rule created successfully");
-    } else {
-      toast.error(
-        "Failed to create extraction rule, please contact us if this issue persists."
-      );
+    } catch (error) {
+      showErrorToast(error, "Failed to create extraction rule");
     }
   };
 
   // This is the function that will be called on submitting the form in the editMode, it sends a PUT request to the backennd.
   const updateExtraction = async (e: FormEvent) => {
     e.preventDefault();
-    const response = await fetch(
-      `${apiUrl}/extraction/${extractionToEdit?.id}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          priority: priority,
-          name: extractionName,
-          description: mapDescription,
-          pre: isPreFormatting,
-          attribute: attribute,
-          regex: regex,
-          condition: condition,
-        }),
-      }
-    );
-    if (response.ok) {
+    try {
+      const response = await api.put(`/extraction/${extractionToEdit?.id}`, {
+        priority: priority,
+        name: extractionName,
+        description: mapDescription,
+        pre: isPreFormatting,
+        attribute: attribute,
+        regex: regex,
+        condition: condition,
+      });
       exitEditOrCreateMode();
       mutate();
       toast.success("Extraction updated successfully");
-    } else {
-      toast.error(
-        "Failed to update extraction, please contact us if this issue persists."
-      );
+    } catch (error) {
+      showErrorToast(error, "Failed to update extraction");
     }
   };
 
