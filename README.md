@@ -627,7 +627,7 @@ A Keep Workflow is a declarative YAML file that automates your alert and inciden
 
 Here's a simple workflow that creates a Jira ticket for every `critical` alert from `sentry` for `payments` and `api` services.
 
-For more worfklows, see [here](https://github.com/keephq/keep/tree/main/examples/workflows).
+For more workflows, see [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ```yaml
 workflow:
