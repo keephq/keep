@@ -110,7 +110,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
 
   const handleClick = () => {
     router.push(
-      `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`"${data.service}"`)}`
+      `/incidents?services={encodeURIComponent(`"${data.display_name}"`)}`
     );
   };
 
