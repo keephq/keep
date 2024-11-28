@@ -113,6 +113,7 @@ class SlackProvider(BaseProvider):
         slack_timestamp="",
         thread_timestamp="",
         attachments=[],
+        username="",
         **kwargs: dict,
     ):
         """
@@ -138,6 +139,7 @@ class SlackProvider(BaseProvider):
                 )
             message = blocks[0].get("text")
         payload = {
+            "channel": channel,
             "text": message,
             "blocks": (
                 json.dumps(blocks)
@@ -151,12 +153,26 @@ class SlackProvider(BaseProvider):
                 if isinstance(attachments, dict) or isinstance(attachments, list)
                 else blocks
             )
+        if username:
+            payload["username"] = username
 
         if self.authentication_config.webhook_url:
-            response = requests.post(
-                self.authentication_config.webhook_url,
-                json=payload,
-            )
+            # If attachments are present, we need to send them as the payload with nothing else
+            # Also, do not encode the payload as json, but as x-www-form-urlencoded
+            # Only reference I found for it is: https://getkeep.slack.com/services/B082F60L9GX?added=1 and
+            # https://stackoverflow.com/questions/42993602/slack-chat-postmessage-attachment-gives-no-text
+            if payload["attachments"]:
+                payload["attachments"] = attachments
+                response = requests.post(
+                    self.authentication_config.webhook_url,
+                    data={"payload": json.dumps(payload)},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+            else:
+                response = requests.post(
+                    self.authentication_config.webhook_url,
+                    json=payload,
+                )
             if not response.ok:
                 raise ProviderException(
                     f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
@@ -164,7 +180,6 @@ class SlackProvider(BaseProvider):
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
-            payload["channel"] = channel
             payload["token"] = self.authentication_config.access_token
             if slack_timestamp == "" and thread_timestamp == "":
                 self.logger.info("Sending a new message to Slack")
@@ -266,47 +281,13 @@ if __name__ == "__main__":
         ],
         attachments=[
             {
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*Alternative hotel options*",
-                        },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "<https://example.com|Bates Motel> :star::star:",
-                        },
-                        "accessory": {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "View",
-                                "emoji": True,
-                            },
-                            "value": "view_alternate_1",
-                        },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "<https://example.com|The Great Northern Hotel> :star::star::star::star:",
-                        },
-                        "accessory": {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "View",
-                                "emoji": True,
-                            },
-                            "value": "view_alternate_2",
-                        },
-                    },
-                ]
+                "fallback": "Plain-text summary of the attachment.",
+                "color": "#2eb886",
+                "title": "Slack API Documentation",
+                "title_link": "https://api.slack.com/",
+                "text": "Optional text that appears within the attachment",
+                "footer": "Slack API",
+                "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
             }
         ],
     )
