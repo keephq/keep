@@ -318,13 +318,15 @@ const ProviderForm = ({
     }
 
     if (
-      value == undefined ||
       typeof value === "boolean" ||
       (typeof value === "object" && value instanceof File === false)
     )
       return;
 
-    const isValid = validate({ [key]: value });
+    const isValid = validate({
+      [key]:
+        typeof value === "string" && value.length === 0 ? undefined : value,
+    });
     if (isValid) {
       const updatedInputErrors = { ...inputErrors };
       delete updatedInputErrors[key];
@@ -355,7 +357,7 @@ const ProviderForm = ({
         ? (errors[field] = err._errors[0])
         : null;
     });
-    setInputErrors(errors);
+    setInputErrors((prev) => ({ ...prev, ...errors }));
     return false;
   }
 
