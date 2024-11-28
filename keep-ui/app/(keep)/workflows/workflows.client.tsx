@@ -11,7 +11,7 @@ import {
 import { Workflow, MockWorkflow } from "./models";
 import Loading from "@/app/(keep)/loading";
 import React from "react";
-import WorkflowsEmptyState from "./noworfklows";
+import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile, { WorkflowTileOld } from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
