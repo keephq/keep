@@ -1,12 +1,16 @@
 import enum
 import importlib
+import logging
 import os
+import time
 from typing import Type
 
 from keep.api.core.config import config
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.identitymanager import BaseIdentityManager
+
+logger = logging.getLogger(__name__)
 
 
 class IdentityManagerTypes(enum.Enum):
@@ -93,6 +97,11 @@ class IdentityManagerFactory:
         Raises:
             NotImplementedError: If the specified manager type or class is not implemented.
         """
+        t = time.time()
+        logger.debug(
+            "Loading manager",
+            extra={"manager_type": manager_type, "manager_class": manager_class},
+        )
         try:
             manager_type = (
                 IdentityManagerFactory._backward_compatible_get_identity_manager(
@@ -113,13 +122,36 @@ class IdentityManagerFactory:
                     raise NotImplementedError(
                         f"{manager_class} for {manager_type} not implemented"
                     )
+            logger.debug(
+                "Imported module",
+                extra={
+                    "manager_type": manager_type,
+                    "manager_class": manager_class,
+                    "time": time.time() - t,
+                },
+            )
             # look for the class that contains the manager_class in its name
             for _attr in dir(module):
                 if manager_class in _attr.lower() and "base" not in _attr.lower():
                     class_name = _attr
                     break
+
+            t = time.time()
+            logger.debug(
+                "Loading class",
+                extra={"manager_type": manager_type, "manager_class": manager_class},
+            )
             manager_class: Type = getattr(module, class_name)
-            return manager_class(*args, **kwargs)
+            resp = manager_class(*args, **kwargs)
+            logger.debug(
+                "Loaded class",
+                extra={
+                    "manager_type": manager_type,
+                    "manager_class": manager_class,
+                    "time": time.time() - t,
+                },
+            )
+            return resp
         except (ImportError, AttributeError):
             raise NotImplementedError(
                 f"{manager_class} for {manager_type} not implemented"

@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import time
 from typing import List, Optional
 
 import celpy
@@ -365,10 +366,18 @@ async def receive_event(
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-
     provider_class = None
     try:
+        t = time.time()
+        logger.debug(
+            "Getting provider class",
+            extra={"provider_type": provider_type},
+        )
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        logger.debug(
+            "Got provider class",
+            extra={"provider_type": provider_type, "time": time.time() - t},
+        )
     except ModuleNotFoundError:
         raise HTTPException(
             status_code=400, detail=f"Provider {provider_type} not found"
@@ -379,7 +388,16 @@ async def receive_event(
         )
 
     # Parse the raw body
+    t = time.time()
+    logger.debug(
+        "Parsing event raw body",
+        extra={"provider_type": provider_type, "time": time.time() - t},
+    )
     event = provider_class.parse_event_raw_body(event)
+    logger.debug(
+        "Parsed event raw body",
+        extra={"provider_type": provider_type, "time": time.time() - t},
+    )
 
     if REDIS:
         redis: ArqRedis = await get_pool()
@@ -403,6 +421,11 @@ async def receive_event(
             },
         )
     else:
+        t = time.time()
+        logger.debug(
+            "Adding task to background tasks",
+            extra={"provider_type": provider_type, "time": time.time() - t},
+        )
         bg_tasks.add_task(
             process_event,
             {},
@@ -413,6 +436,10 @@ async def receive_event(
             authenticated_entity.api_key_name,
             trace_id,
             event,
+        )
+        logger.debug(
+            "Added task to background tasks",
+            extra={"provider_type": provider_type, "time": time.time() - t},
         )
     return Response(status_code=202)
 
