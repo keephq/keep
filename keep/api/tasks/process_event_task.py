@@ -529,6 +529,7 @@ def process_event(
         ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+
     raw_event = copy.deepcopy(event)
     try:
         session = get_session_sync()
@@ -567,6 +568,14 @@ def process_event(
                     "Provider returned None (failed silently), skipping processing"
                 )
                 return
+
+        if isinstance(event, str):
+            extra_dict["raw_event"] = event
+            logger.error(
+                "Event is a string (malformed json?), skipping processing",
+                extra=extra_dict,
+            )
+            return None
 
         # In case when provider_type is not set
         if isinstance(event, dict):
