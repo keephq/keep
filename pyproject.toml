@@ -84,6 +84,7 @@ google-auth = "2.34.0"
 clickhouse-driver = "^0.2.9"
 google-cloud-logging = "^3.11.3"
 json5 = "^0.9.28"
+pytest-xdist = "^3.6.1"
 
 psycopg2-binary = "^2.9.10"
 [tool.poetry.group.dev.dependencies]
