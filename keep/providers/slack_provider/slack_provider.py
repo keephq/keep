@@ -112,6 +112,7 @@ class SlackProvider(BaseProvider):
         channel="",
         slack_timestamp="",
         thread_timestamp="",
+        attachments=[],
         **kwargs: dict,
     ):
         """
@@ -136,10 +137,25 @@ class SlackProvider(BaseProvider):
                     "Message is required - see for example https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml#L16"
                 )
             message = blocks[0].get("text")
+        payload = {
+            "text": message,
+            "blocks": (
+                json.dumps(blocks)
+                if isinstance(blocks, dict) or isinstance(blocks, list)
+                else blocks
+            ),
+        }
+        if attachments:
+            payload["attachments"] = (
+                json.dumps(attachments)
+                if isinstance(attachments, dict) or isinstance(attachments, list)
+                else blocks
+            )
+
         if self.authentication_config.webhook_url:
             response = requests.post(
                 self.authentication_config.webhook_url,
-                json={"text": message, "blocks": blocks},
+                json=payload,
             )
             if not response.ok:
                 raise ProviderException(
@@ -148,31 +164,13 @@ class SlackProvider(BaseProvider):
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
+            payload["channel"] = channel
+            payload["token"] = self.authentication_config.access_token
             if slack_timestamp == "" and thread_timestamp == "":
                 self.logger.info("Sending a new message to Slack")
-                payload = {
-                    "channel": channel,
-                    "text": message,
-                    "blocks": (
-                        json.dumps(blocks)
-                        if isinstance(blocks, dict) or isinstance(blocks, list)
-                        else blocks
-                    ),
-                    "token": self.authentication_config.access_token,
-                }
                 method = "chat.postMessage"
             else:
                 self.logger.info(f"Updating Slack message with ts: {slack_timestamp}")
-                payload = {
-                    "channel": channel,
-                    "text": message,
-                    "blocks": (
-                        json.dumps(blocks)
-                        if isinstance(blocks, dict) or isinstance(blocks, list)
-                        else blocks
-                    ),
-                    "token": self.authentication_config.access_token,
-                }
                 if slack_timestamp:
                     payload["ts"] = slack_timestamp
                     method = "chat.update"
@@ -238,15 +236,77 @@ if __name__ == "__main__":
     )
     provider.notify(
         message="Simple alert showing context with name: John Doe",
-        channel="alerts-playground",
+        channel="C04P7QSG692",
         blocks=[
             {
-                "type": "header",
+                "type": "section",
                 "text": {
-                    "type": "plain_text",
-                    "text": "Alert! :alarm_clock:",
-                    "emoji": True,
+                    "type": "mrkdwn",
+                    "text": "Danny Torrence left the following review for your property:",
                 },
+            },
+            {
+                "type": "section",
+                "block_id": "section567",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "<https://example.com|Overlook Hotel> \n :star: \n Doors had too many axe holes, guest in room 237 was far too rowdy, whole place felt stuck in the 1920s.",
+                },
+                "accessory": {
+                    "type": "image",
+                    "image_url": "https://is5-ssl.mzstatic.com/image/thumb/Purple3/v4/d3/72/5c/d3725c8f-c642-5d69-1904-aa36e4297885/source/256x256bb.jpg",
+                    "alt_text": "Haunted hotel image",
+                },
+            },
+            {
+                "type": "section",
+                "block_id": "section789",
+                "fields": [{"type": "mrkdwn", "text": "*Average Rating*\n1.0"}],
+            },
+        ],
+        attachments=[
+            {
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*Alternative hotel options*",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "<https://example.com|Bates Motel> :star::star:",
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "View",
+                                "emoji": True,
+                            },
+                            "value": "view_alternate_1",
+                        },
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "<https://example.com|The Great Northern Hotel> :star::star::star::star:",
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "View",
+                                "emoji": True,
+                            },
+                            "value": "view_alternate_2",
+                        },
+                    },
+                ]
             }
         ],
     )
