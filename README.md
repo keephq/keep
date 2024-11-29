@@ -244,8 +244,8 @@
   </td>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKume"/><br/>
-          UptimeKume
+            <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
+          UptimeKuma
         </a>
   </td>
   <td align="center" width="150">
