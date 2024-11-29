@@ -466,7 +466,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 "Failed to trigger incident",
                 extra={"response_text": r.text},
             )
-            raise e
+            # This will give us a better error message in Keep workflows
+            raise Exception(r.text) from e
 
     def dispose(self):
         """
