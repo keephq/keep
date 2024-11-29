@@ -403,7 +403,7 @@ export default function IncidentTimeline({
   }
 
   return (
-    <Card className="py-2 px-0" style={{ height: "calc(100vh - 430px)" }}>
+    <Card className="py-2 px-0" style={{ maxHeight: "calc(100vh - 430px)" }}>
       <div className="flex h-full">
         <div
           className={`flex flex-col flex-grow transition-all duration-300 ${
