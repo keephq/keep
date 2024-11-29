@@ -120,6 +120,12 @@ class SplunkProvider(BaseProvider):
             )
             self.logger.debug("Connected to Splunk", extra={"service": service})
 
+            if not self.authentication_config.verify:
+                self.logger.warning(
+                    "SSL verification is disabled - connection is not secure",
+                    extra={"host": self.authentication_config.host}
+                )
+
             if len(service.users) > 1:
                 self.logger.warning(
                     "Splunk provider has more than one user",

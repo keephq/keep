@@ -162,12 +162,10 @@ class JiraProvider(BaseProvider):
 
     @property
     def jira_host(self):
-        host = (
-            self.authentication_config.host
-            if self.authentication_config.host.startswith("https://")
-            else f"https://{self.authentication_config.host}"
-        )
-        return host
+        if self._host:
+            return self._host
+        self._host = str(self.authentication_config.host)
+        return self._host
 
     def dispose(self):
         """

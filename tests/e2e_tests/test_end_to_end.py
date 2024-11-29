@@ -177,112 +177,122 @@ def test_provider_validation(browser):
     """
     Test field validation for provider fields.
     """
-    # browser = browserx
-    browser.goto("http://localhost:3000/signin")
-    # using Kibana Provider
-    browser.get_by_role("link", name="Providers").click()
-    browser.locator("button:has-text('Kibana'):has-text('alert')").click()
-    # test required fields
-    connect_btn = browser.get_by_role("button", name="Connect", exact=True)
-    cancel_btn = browser.get_by_role("button", name="Cancel", exact=True)
-    error_msg = browser.locator("p.tremor-TextInput-errorMessage")
-    connect_btn.click()
-    expect(error_msg).to_have_count(3)
-    cancel_btn.click()
-    # test `any_http_url` field validation
-    browser.locator("button:has-text('Kibana'):has-text('alert')").click()
-    host_input = browser.get_by_placeholder("Enter kibana_host")
-    host_input.fill("invalid url")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("http://localhost")
-    expect(error_msg).to_be_hidden()
-    host_input.fill( "https://keep.kb.us-central1.gcp.cloud.es.io")
-    expect(error_msg).to_be_hidden()
-    # test `port` field validation
-    port_input = browser.get_by_placeholder("Enter kibana_port")
-    port_input.fill("invalid port")
-    expect(error_msg).to_have_count(1)
-    port_input.fill("0")
-    expect(error_msg).to_have_count(1)
-    port_input.fill("65_536")
-    expect(error_msg).to_have_count(1)
-    port_input.fill("9243")
-    expect(error_msg).to_be_hidden()
-    cancel_btn.click()
+    try:
+        browser.goto("http://localhost:3000/signin")
+        # using Kibana Provider
+        browser.get_by_role("link", name="Providers").click()
+        browser.locator("button:has-text('Kibana'):has-text('alert')").click()
+        # test required fields
+        connect_btn = browser.get_by_role("button", name="Connect", exact=True)
+        cancel_btn = browser.get_by_role("button", name="Cancel", exact=True)
+        error_msg = browser.locator("p.tremor-TextInput-errorMessage")
+        connect_btn.click()
+        expect(error_msg).to_have_count(3)
+        cancel_btn.click()
+        # test `any_http_url` field validation
+        browser.locator("button:has-text('Kibana'):has-text('alert')").click()
+        host_input = browser.get_by_placeholder("Enter kibana_host")
+        host_input.fill("invalid url")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("http://localhost")
+        expect(error_msg).to_be_hidden()
+        host_input.fill( "https://keep.kb.us-central1.gcp.cloud.es.io")
+        expect(error_msg).to_be_hidden()
+        # test `port` field validation
+        port_input = browser.get_by_placeholder("Enter kibana_port")
+        port_input.fill("invalid port")
+        expect(error_msg).to_have_count(1)
+        port_input.fill("0")
+        expect(error_msg).to_have_count(1)
+        port_input.fill("65_536")
+        expect(error_msg).to_have_count(1)
+        port_input.fill("9243")
+        expect(error_msg).to_be_hidden()
+        cancel_btn.click()
 
-    # using Teams Provider
-    browser.locator("button:has-text('Teams'):has-text('messaging')").click()
-    # test `https_url` field validation
-    url_input = browser.get_by_placeholder("Enter webhook_url")
-    url_input.fill("random url")
-    expect(error_msg).to_have_count(1)
-    url_input.fill("http://localhost")
-    expect(error_msg).to_have_count(1)
-    url_input.fill("http://example.com")
-    expect(error_msg).to_have_count(1)
-    url_input.fill("https://example.c")
-    expect(error_msg).to_have_count(1)
-    url_input.fill("https://example.com")
-    expect(error_msg).to_be_hidden()
-    cancel_btn.click()
+        # using Teams Provider
+        browser.locator("button:has-text('Teams'):has-text('messaging')").click()
+        # test `https_url` field validation
+        url_input = browser.get_by_placeholder("Enter webhook_url")
+        url_input.fill("random url")
+        expect(error_msg).to_have_count(1)
+        url_input.fill("http://localhost")
+        expect(error_msg).to_have_count(1)
+        url_input.fill("http://example.com")
+        expect(error_msg).to_have_count(1)
+        url_input.fill("https://example.c")
+        expect(error_msg).to_have_count(1)
+        url_input.fill("https://example.com")
+        expect(error_msg).to_be_hidden()
+        cancel_btn.click()
 
-    # using Site24x7 Provider
-    browser.locator("button:has-text('Site24x7'):has-text('alert')").click()
-    # test `tld` field validation
-    tld_input = browser.get_by_placeholder("Enter zohoAccountTLD")
-    tld_input.fill("random")
-    expect(error_msg).to_have_count(1)
-    tld_input.fill("")
-    expect(error_msg).to_have_count(1)
-    tld_input.fill(".com")
-    expect(error_msg).to_be_hidden()
-    cancel_btn.click()
+        # using Site24x7 Provider
+        browser.locator("button:has-text('Site24x7'):has-text('alert')").click()
+        # test `tld` field validation
+        tld_input = browser.get_by_placeholder("Enter zohoAccountTLD")
+        tld_input.fill("random")
+        expect(error_msg).to_have_count(1)
+        tld_input.fill("")
+        expect(error_msg).to_have_count(1)
+        tld_input.fill(".com")
+        expect(error_msg).to_be_hidden()
+        cancel_btn.click()
 
-    # using MongoDB Provider
-    browser.locator("button:has-text('MongoDB'):has-text('data')").click()
-    # test `multihost_url` field validation
-    host_input = browser.get_by_placeholder("Enter host")
-    host_input.fill("random")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("host.com:5000")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("host1.com:5000,host2.com:3000")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("mongodb://host1.com:5000,mongodb+srv://host2.com:3000")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("mongodb://host.com:3000")
-    expect(error_msg).to_be_hidden()
-    host_input.fill("mongodb://localhost:3000,localhost:5000")
-    expect(error_msg).to_be_hidden()
-    cancel_btn.click()
+        # using MongoDB Provider
+        browser.locator("button:has-text('MongoDB'):has-text('data')").click()
+        # test `multihost_url` field validation
+        host_input = browser.get_by_placeholder("Enter host")
+        host_input.fill("random")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("host.com:5000")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("host1.com:5000,host2.com:3000")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("mongodb://host1.com:5000,mongodb+srv://host2.com:3000")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("mongodb://host.com:3000")
+        expect(error_msg).to_be_hidden()
+        host_input.fill("mongodb://localhost:3000,localhost:5000")
+        expect(error_msg).to_be_hidden()
+        cancel_btn.click()
 
-    # using Kafka Provider
-    browser.locator("button:has-text('Kafka'):has-text('queue')").click()
-    # test `no_scheme_multihost_url` field validation
-    host_input = browser.get_by_placeholder("Enter host")
-    host_input.fill("*.")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("host.com:5000")
-    expect(error_msg).to_be_hidden()
-    host_input.fill("host1.com:5000,host2.com:3000")
-    expect(error_msg).to_be_hidden()
-    host_input.fill("http://host1.com:5000,https://host2.com:3000")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("http://host.com:3000")
-    expect(error_msg).to_be_hidden()
-    host_input.fill("mongodb://localhost:3000,localhost:5000")
-    expect(error_msg).to_be_hidden()
-    cancel_btn.click()
+        # using Kafka Provider
+        browser.locator("button:has-text('Kafka'):has-text('queue')").click()
+        # test `no_scheme_multihost_url` field validation
+        host_input = browser.get_by_placeholder("Enter host")
+        host_input.fill("*.")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("host.com:5000")
+        expect(error_msg).to_be_hidden()
+        host_input.fill("host1.com:5000,host2.com:3000")
+        expect(error_msg).to_be_hidden()
+        host_input.fill("http://host1.com:5000,https://host2.com:3000")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("http://host.com:3000")
+        expect(error_msg).to_be_hidden()
+        host_input.fill("mongodb://localhost:3000,localhost:5000")
+        expect(error_msg).to_be_hidden()
+        cancel_btn.click()
 
-
-    # using Postgres provider
-    browser.get_by_role("link", name="Providers").click()
-    browser.locator("button:has-text('PostgreSQL'):has-text('data')").click()
-    # test `no_scheme_url` field validation
-    host_input = browser.get_by_placeholder("Enter host")
-    host_input.fill("*.")
-    expect(error_msg).to_have_count(1)
-    host_input.fill("localhost:5000")
-    expect(error_msg).to_be_hidden()
-    host_input.fill("https://host.com:3000")
-    expect(error_msg).to_be_hidden()
+        # using Postgres provider
+        browser.get_by_role("link", name="Providers").click()
+        browser.locator("button:has-text('PostgreSQL'):has-text('data')").click()
+        # test `no_scheme_url` field validation
+        host_input = browser.get_by_placeholder("Enter host")
+        host_input.fill("*.")
+        expect(error_msg).to_have_count(1)
+        host_input.fill("localhost:5000")
+        expect(error_msg).to_be_hidden()
+        host_input.fill("https://host.com:3000")
+        expect(error_msg).to_be_hidden()
+    except Exception:
+        current_test_name = (
+            "playwright_dump_"
+            + os.path.basename(__file__)[:-3]
+            + "_"
+            + sys._getframe().f_code.co_name
+        )
+        browser.screenshot(path=current_test_name + ".png")
+        with open(current_test_name + ".html", "w") as f:
+            f.write(browser.content())
+        raise

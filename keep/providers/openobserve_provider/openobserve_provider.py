@@ -111,7 +111,7 @@ class OpenobserveProvider(BaseProvider):
         if self.is_installed or self.is_provisioned:
             host = self.config.authentication['openObserveHost']
             if not (host.startswith("http://") or host.startswith("https://")):
-                scheme = "http://" if "localhost" in host else "https://"
+                scheme = "http://" if ("localhost" in host or "127.0.0.1" in host) else "https://"
                 self.config.authentication['openObserveHost'] = scheme + host
 
         self.authentication_config = OpenobserveProviderAuthConfig(

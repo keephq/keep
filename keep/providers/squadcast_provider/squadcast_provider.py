@@ -137,7 +137,15 @@ class SquadcastProvider(BaseProvider):
         )
 
         # append body to additional_json we are doing this way because we don't want to override the core body fields
-        body = json.dumps({**json.loads(additional_json), **json.loads(body)})
+        try:
+            additional_fields = json.loads(additional_json) if additional_json else {}
+            core_fields = json.loads(body)
+            body = json.dumps({**additional_fields, **core_fields})
+        except json.JSONDecodeError as e:
+            raise ProviderConfigException(
+                f"Invalid additional_json format: {str(e)}",
+                provider_id=self.provider_id
+            )
 
         return requests.post(
             self.authentication_config.webhook_url, data=body, headers=headers
