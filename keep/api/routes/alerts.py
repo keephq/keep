@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import time
 from typing import List, Optional
 
 import celpy
@@ -368,7 +369,16 @@ async def receive_event(
 
     provider_class = None
     try:
+        t = time.time()
+        logger.debug(f"Getting provider class for {provider_type}")
         provider_class = ProvidersFactory.get_provider_class(provider_type)
+        logger.debug(
+            "Got provider class",
+            extra={
+                "provider_type": provider_type,
+                "time": time.time() - t,
+            },
+        )
     except ModuleNotFoundError:
         raise HTTPException(
             status_code=400, detail=f"Provider {provider_type} not found"
@@ -379,8 +389,10 @@ async def receive_event(
         )
 
     # Parse the raw body
+    t = time.time()
+    logger.debug("Parsing event raw body")
     event = provider_class.parse_event_raw_body(event)
-
+    logger.debug("Parsed event raw body", extra={"time": time.time() - t})
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
@@ -403,6 +415,8 @@ async def receive_event(
             },
         )
     else:
+        t = time.time()
+        logger.debug("Adding task to process event")
         bg_tasks.add_task(
             process_event,
             {},
@@ -414,6 +428,7 @@ async def receive_event(
             trace_id,
             event,
         )
+        logger.debug("Added task to process event", extra={"time": time.time() - t})
     return Response(status_code=202)
 
 
