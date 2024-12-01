@@ -27,7 +27,6 @@ export default function WorkflowsPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSwitchOn, setIsSwitchOn] = useState<boolean>(true);
 
   // Only fetch data when the user is authenticated
   /**
@@ -43,7 +42,7 @@ export default function WorkflowsPage() {
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
-    api.isReady() ? `/workflows?is_v2=${isSwitchOn}` : null,
+    api.isReady() ? `/workflows?is_v2=true` : null,
     (url: string) => api.get(url)
   );
 
@@ -174,10 +173,6 @@ export default function WorkflowsPage() {
     setIsModalOpen(false);
   }
 
-  const handleSwitchChange = (value: boolean) => {
-    setIsSwitchOn(value);
-  };
-
   return (
     <main className="pt-4">
       <div className="flex justify-between items-center">
@@ -267,30 +262,9 @@ export default function WorkflowsPage() {
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto w-full">
         <div>
-          {/*switch to toggle between new UI and old UI */}
-          <div className="pl-4 flex items-center space-x-3">
-            <Switch
-              id="switch"
-              name="switch"
-              checked={isSwitchOn}
-              onChange={handleSwitchChange}
-            />
-            <label
-              htmlFor="switch"
-              className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
-            >
-              Switch to New UI
-            </label>
-          </div>
           <div>
             {data.length === 0 ? (
-              <WorkflowsEmptyState isNewUI={isSwitchOn} />
-            ) : !isSwitchOn ? (
-              <div className="flex flex-wrap gap-2">
-                {data.map((workflow) => (
-                  <WorkflowTileOld key={workflow.id} workflow={workflow} />
-                ))}
-              </div>
+              <WorkflowsEmptyState isNewUI={true} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full gap-4 p-4">
                 {data.map((workflow) => (
@@ -298,13 +272,12 @@ export default function WorkflowsPage() {
                 ))}
               </div>
             )}
-            {isSwitchOn && (
-              <MockWorkflowCardSection
-                mockWorkflows={mockWorkflows || []}
-                mockError={mockError}
-                mockLoading={mockLoading}
-              />
-            )}
+
+            <MockWorkflowCardSection
+              mockWorkflows={mockWorkflows || []}
+              mockError={mockError}
+              mockLoading={mockLoading}
+            />
           </div>
         </div>
       </Card>

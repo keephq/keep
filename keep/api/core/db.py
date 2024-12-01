@@ -4534,6 +4534,7 @@ def get_activity_report(session: Optional[Session] = None):
         activity_report["tenants_count"] = session.query(Tenant).count()
         activity_report["providers_count"] = session.query(Provider).count()
         activity_report["users_count"] = session.query(User).count()
+        activity_report["rules_count"] = session.query(Rule).count()
         activity_report["last_24_hours_incidents_count"] = (
             session.query(Incident)
             .filter(Incident.creation_time >= last_24_hours)
