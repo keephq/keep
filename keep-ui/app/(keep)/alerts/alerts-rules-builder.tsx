@@ -505,6 +505,10 @@ export const AlertsRulesBuilder = ({
   const convertSQLToCEL = (sql: string): string | null => {
     try {
       const query = parseSQL(sql);
+      // Validate the parsed query
+      if (!query || !query.rules || query.rules.length === 0) {
+        throw new Error("Invalid SQL query: No rules generated.");
+      }
       const formattedCel = formatQuery(query, "cel");
       return formatQuery(parseCEL(formattedCel), "cel");
     } catch (error) {
