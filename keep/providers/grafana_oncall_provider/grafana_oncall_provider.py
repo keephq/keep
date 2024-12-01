@@ -85,8 +85,8 @@ class GrafanaOncallProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         KEEP_INTEGRATION_NAME = "Keep Integration"
 
-        # if self.config.authentication.get("oncall_integration_link") is not None:
-        #     return None
+        if self.config.authentication.get("oncall_integration_link") is not None:
+            return None
 
         # Create Grafana OnCall integration if the integration link is not saved
         headers = {
