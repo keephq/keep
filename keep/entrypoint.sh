@@ -11,5 +11,8 @@ SCRIPT_DIR=$(dirname "$0")
 
 python "$SCRIPT_DIR/server_jobs_bg.py" &
 
+# Build the providers cache
+keep provider build_cache
+
 # Execute the CMD provided in the Dockerfile or as arguments
 exec "$@"
