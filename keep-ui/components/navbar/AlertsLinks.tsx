@@ -34,13 +34,12 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   const { data: tags = [] } = useTags();
 
-  // Get all presets including feed preset and localStorage state
-  const { useStaticPresets, staticPresetsOrderFromLS } = usePresets();
-  const { data: staticPresets = [], error: staticPresetsError } =
-    useStaticPresets({
-      revalidateIfStale: true,
-      revalidateOnFocus: true,
-    });
+  // Get latest static presets (merged local and server presets)
+  const { useLatestStaticPresets } = usePresets();
+  const { data: staticPresets = [] } = useLatestStaticPresets({
+    revalidateIfStale: true,
+    revalidateOnFocus: true,
+  });
 
   const handleTagSelect = (
     newValue: MultiValue<{ value: string; label: string }>,
@@ -61,23 +60,12 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   // Determine if we should show the feed link
   const shouldShowFeed = (() => {
-    // If we have server data, check if feed preset exists
-    if (staticPresets.length > 0) {
-      return staticPresets.some((preset) => preset.name === "feed");
-    }
-
-    // If there's a server error but we have a cached feed preset, show it
-    // This handles temporary API issues while maintaining functionality
-    if (staticPresetsError) {
-      return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
-    }
-
     // For the initial render on the server, always show feed
     if (!isMounted) {
       return true;
     }
 
-    return staticPresetsOrderFromLS?.some((preset) => preset.name === "feed");
+    return staticPresets.some((preset) => preset.name === "feed");
   })();
 
   // Get the current alerts count only if we should show feed
@@ -86,19 +74,8 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
       return 0;
     }
 
-    // First try to get from server data
-    const serverPreset = staticPresets?.find(
-      (preset) => preset.name === "feed"
-    );
-    if (serverPreset) {
-      return serverPreset.alerts_count;
-    }
-
-    // If no server data, get from localStorage
-    const cachedPreset = staticPresetsOrderFromLS?.find(
-      (preset) => preset.name === "feed"
-    );
-    return cachedPreset?.alerts_count ?? undefined;
+    const feedPreset = staticPresets?.find((preset) => preset.name === "feed");
+    return feedPreset?.alerts_count ?? undefined;
   })();
 
   return (

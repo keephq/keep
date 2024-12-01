@@ -428,7 +428,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         self,
         service_id: str,
         title: str,
-        body: dict,
+        body: dict | str,
         requester: str,
         incident_key: str | None = None,
     ):
@@ -439,6 +439,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         url = f"{self.BASE_API_URL}/incidents"
         headers = self.__get_headers(From=requester)
+
+        if isinstance(body, str):
+            body = json.loads(body)
+            if "details" in body and "type" not in body:
+                body["type"] = "incident_body"
 
         payload = {
             "incident": {
@@ -461,7 +466,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 "Failed to trigger incident",
                 extra={"response_text": r.text},
             )
-            raise e
+            # This will give us a better error message in Keep workflows
+            raise Exception(r.text) from e
 
     def dispose(self):
         """

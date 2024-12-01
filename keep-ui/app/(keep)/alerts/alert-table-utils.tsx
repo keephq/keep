@@ -290,7 +290,6 @@ export const useAlertTableCols = (
     columnHelper.display({
       id: "name",
       header: "Name",
-      minSize: 330,
       cell: (context) => (
         <div>
           <AlertName
@@ -301,8 +300,8 @@ export const useAlertTableCols = (
         </div>
       ),
       meta: {
-        tdClassName: "!pl-0",
-        thClassName: "!pl-1", // Small padding for header text only
+        tdClassName: "!pl-0  w-4 sm:w-8",
+        thClassName: "!pl-1  w-4 sm:w-8", // Small padding for header text only
       },
     }),
     columnHelper.accessor("description", {
@@ -317,8 +316,9 @@ export const useAlertTableCols = (
     }),
     columnHelper.accessor("status", {
       id: "status",
-      minSize: 100,
       header: "Status",
+      maxSize: 80,
+      size: 80,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon
@@ -335,7 +335,8 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      minSize: 100,
+      maxSize: 80,
+      size: 80,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
           {getAlertLastReceieved(context.getValue())}

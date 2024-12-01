@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import random
 import time
 import uuid
 from typing import Callable, Optional
@@ -32,6 +33,7 @@ from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+READ_ONLY = config("KEEP_READ_ONLY", default="false") == "true"
 PROVIDER_DISTRIBUTION_ENABLED = config(
     "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
 )
@@ -69,19 +71,29 @@ def get_providers(
     installed_providers = ProvidersService.get_installed_providers(tenant_id)
     if PROVIDER_DISTRIBUTION_ENABLED:
         linked_providers = ProvidersService.get_linked_providers(tenant_id)
-        providers_distribution = get_provider_distribution(tenant_id)
 
-        for provider in linked_providers + installed_providers:
-            provider.alertsDistribution = providers_distribution.get(
-                f"{provider.id}_{provider.type}", {}
-            ).get("alert_last_24_hours", [])
-            last_alert_received = providers_distribution.get(
-                f"{provider.id}_{provider.type}", {}
-            ).get("last_alert_received", None)
-            if last_alert_received and not provider.last_alert_received:
-                provider.last_alert_received = last_alert_received.replace(
-                    tzinfo=datetime.timezone.utc
-                ).isoformat()
+        # generate distribution only if not in read only mode
+        if READ_ONLY:
+            for provider in linked_providers + installed_providers:
+                if "alert" not in provider.tags:
+                    continue
+                provider.alertsDistribution = [
+                    {"hour": i, "number": random.randint(0, 100)} for i in range(0, 24)
+                ]
+                provider.last_alert_received = datetime.datetime.now().isoformat()
+        else:
+            providers_distribution = get_provider_distribution(tenant_id)
+            for provider in linked_providers + installed_providers:
+                provider.alertsDistribution = providers_distribution.get(
+                    f"{provider.id}_{provider.type}", {}
+                ).get("alert_last_24_hours", [])
+                last_alert_received = providers_distribution.get(
+                    f"{provider.id}_{provider.type}", {}
+                ).get("last_alert_received", None)
+                if last_alert_received and not provider.last_alert_received:
+                    provider.last_alert_received = last_alert_received.replace(
+                        tzinfo=datetime.timezone.utc
+                    ).isoformat()
 
     is_localhost = _is_localhost()
 
