@@ -12,7 +12,7 @@ from keep.providers.models.provider_config import ProviderConfig
 @pydantic.dataclasses.dataclass
 class VectordevProviderAuthConfig:
     api_key: str = dataclasses.field(
-        metadata={"required": True, "description": "Zendesk API key", "sensitive": True}
+        metadata={"required": True, "description": "API key", "sensitive": True}
     )
 
 
