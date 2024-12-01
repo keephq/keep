@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "components/ui/Modal";
-import { Button, Textarea, Badge } from "@tremor/react";
+import { Button, Textarea } from "@tremor/react";
 import QueryBuilder, {
   Field,
   Operator,
@@ -19,7 +19,6 @@ import {
   reverseSeverityMapping,
 } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { FiSave } from "react-icons/fi";
 import { TbDatabaseImport } from "react-icons/tb";
 import Select, { components, MenuListProps } from "react-select";
 
@@ -27,6 +26,9 @@ import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
+import { CornerDownLeft } from "lucide-react";
+import { Link } from "@/components/ui";
+import { DocumentTextIcon } from "@heroicons/react/24/outline";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -555,35 +557,107 @@ export const AlertsRulesBuilder = ({
   };
 
   return (
-    <div className="flex flex-col gap-y-2 w-full justify-end">
-      <Modal
-        isOpen={isGUIOpen}
-        onClose={() => setIsGUIOpen(false)}
-        className="w-[50%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
-        title="Query Builder"
-      >
-        <div className="space-y-2 pt-4">
-          <div className="max-h-96 overflow-auto">
-            <QueryBuilder
-              query={query}
-              onQueryChange={(newQuery) => setQuery(newQuery)}
-              fields={fields}
-              addRuleToNewGroups
-              showCombinatorsBetweenRules={false}
-            />
+    <>
+      <div className="flex flex-col gap-y-2 w-full justify-end">
+        {/* Docs */}
+        <div className="flex flex-wrap items-start gap-x-2">
+          <div className="flex flex-wrap gap-2 items-center relative flex-grow">
+            {/* Textarea and error message container */}
+            <div className="flex-grow relative" ref={wrapperRef}>
+              <Textarea
+                ref={textAreaRef}
+                rows={1}
+                className="resize-none overflow-hidden w-full pr-9 min-h-[38px]" // Padding for clear button and height to match the button height
+                value={celRules}
+                onValueChange={onValueChange}
+                onKeyDown={handleKeyDown}
+                placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
+                error={!isValidCEL}
+                onFocus={() => setShowSuggestions(true)}
+              />
+              {celRules && (
+                <button
+                  onClick={handleClearInput}
+                  className="absolute top-0 right-0 w-9 h-[38px] flex items-center justify-center text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              )}
+              {showSuggestions && (
+                <div className="absolute z-10 w-full">
+                  <Select
+                    options={staticOptions}
+                    onChange={handleSelectChange}
+                    menuIsOpen={true}
+                    components={minimal ? undefined : customComponents}
+                    onBlur={() => setShowSuggestions(false)}
+                    styles={customStyles}
+                  />
+                </div>
+              )}
+              {!isValidCEL && (
+                <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
+                  Invalid Common Expression Logic expression.
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1 px-2">
+                <Link
+                  href="https://docs.keephq.dev/overview/presets"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-xs text-tremor-muted"
+                  icon={DocumentTextIcon}
+                >
+                  CEL Documentation
+                </Link>
+                <span className="text-xs text-gray-400">
+                  <CornerDownLeft className="h-3 w-3 mr-1 inline-block" />
+                  Enter to apply
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="inline-flex justify-end">
+
+          {/* Buttons next to the Textarea */}
+          {showSqlImport && (
             <Button
               color="orange"
-              onClick={onGenerateQuery}
-              disabled={!query.rules.length}
+              variant="secondary"
+              type="button"
+              onClick={onImportSQL}
+              icon={TbDatabaseImport}
+              size="sm"
+              tooltip="Import from SQL"
             >
-              Generate Query
+              Import from SQL
             </Button>
-          </div>
+          )}
+          {showSave && (
+            <Button
+              color="orange"
+              size="sm"
+              disabled={!celRules.length}
+              onClick={() => validateAndOpenSaveModal(celRules)}
+              tooltip="Save current filter as a preset"
+            >
+              Save
+            </Button>
+          )}
+          {selectedPreset &&
+            selectedPreset.name &&
+            selectedPreset?.name !== "deleted" &&
+            selectedPreset?.name !== "feed" &&
+            selectedPreset?.name !== "dismissed" &&
+            deletePreset && (
+              <Button
+                icon={TrashIcon}
+                color="orange"
+                title="Delete preset"
+                onClick={async () => await deletePreset(selectedPreset!.id!)}
+              ></Button>
+            )}
         </div>
-      </Modal>
-
+      </div>
       {/* Import SQL */}
       <Modal
         isOpen={isImportSQLOpen}
@@ -612,111 +686,33 @@ export const AlertsRulesBuilder = ({
         </div>
       </Modal>
 
-      {/* Docs */}
-      <div className="flex flex-wrap items-center gap-x-2">
-        <div className="flex flex-wrap gap-2 items-center relative flex-grow">
-          {/* CEL badge and (i) icon container */}
-          <div className="flex items-center space-x-2">
-            <Badge
-              key={"cel"}
-              size="md"
-              className="cursor-pointer"
-              color="orange"
-              tooltip="Click for documentation"
-              onClick={() =>
-                window.open(
-                  "https://docs.keephq.dev/overview/presets",
-                  "_blank"
-                )
-              }
-            >
-              CEL
-            </Badge>
-          </div>
-
-          {/* Textarea and error message container */}
-          <div className="flex-grow relative" ref={wrapperRef}>
-            <Textarea
-              ref={textAreaRef}
-              rows={1}
-              className="resize-none overflow-hidden w-full pr-40" // Provide enough padding to the right
-              value={celRules}
-              onValueChange={onValueChange}
-              onKeyDown={handleKeyDown}
-              placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
-              error={!isValidCEL}
-              onFocus={() => setShowSuggestions(true)}
+      <Modal
+        isOpen={isGUIOpen}
+        onClose={() => setIsGUIOpen(false)}
+        className="w-[50%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
+        title="Query Builder"
+      >
+        <div className="space-y-2 pt-4">
+          <div className="max-h-96 overflow-auto">
+            <QueryBuilder
+              query={query}
+              onQueryChange={(newQuery) => setQuery(newQuery)}
+              fields={fields}
+              addRuleToNewGroups
+              showCombinatorsBetweenRules={false}
             />
-            {showSuggestions && (
-              <div className="absolute z-10 w-full">
-                <Select
-                  options={staticOptions}
-                  onChange={handleSelectChange}
-                  menuIsOpen={true}
-                  components={minimal ? undefined : customComponents}
-                  onBlur={() => setShowSuggestions(false)}
-                  styles={customStyles}
-                />
-              </div>
-            )}
-            {!isValidCEL && (
-              <div className="text-red-500 text-sm absolute bottom-0 left-0 transform translate-y-full">
-                Invalid Common Expression Logic expression.
-              </div>
-            )}
-            {celRules && (
-              <button
-                onClick={handleClearInput}
-                className="absolute right-36 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" // Position to the left of the Enter to apply badge
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            )}
-            <Badge
-              size="md"
+          </div>
+          <div className="inline-flex justify-end">
+            <Button
               color="orange"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2" // Position to the far right inside the padding area
+              onClick={onGenerateQuery}
+              disabled={!query.rules.length}
             >
-              Enter to apply
-            </Badge>
+              Generate Query
+            </Button>
           </div>
         </div>
-
-        {/* Buttons next to the Textarea */}
-        {showSave && (
-          <Button
-            icon={FiSave}
-            color="orange"
-            size="sm"
-            disabled={!celRules.length}
-            onClick={() => validateAndOpenSaveModal(celRules)}
-            tooltip="Save current filter as a view"
-          />
-        )}
-        {selectedPreset &&
-          selectedPreset.name &&
-          selectedPreset?.name !== "deleted" &&
-          selectedPreset?.name !== "feed" &&
-          selectedPreset?.name !== "dismissed" &&
-          deletePreset && (
-            <Button
-              icon={TrashIcon}
-              color="orange"
-              title="Delete preset"
-              onClick={async () => await deletePreset(selectedPreset!.id!)}
-            ></Button>
-          )}
-        {showSqlImport && (
-          <Button
-            color="orange"
-            type="button"
-            onClick={onImportSQL}
-            icon={TbDatabaseImport}
-            size="sm"
-            tooltip="Import from SQL"
-          />
-        )}
-      </div>
-    </div>
+      </Modal>
+    </>
   );
 };

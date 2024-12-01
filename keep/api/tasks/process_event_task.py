@@ -28,6 +28,7 @@ from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
+from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
@@ -38,6 +39,7 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
+KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -387,34 +389,36 @@ def __handle_formatted_events(
 
     incidents = []
     # Now we need to run the rules engine
-    try:
-        rules_engine = RulesEngine(tenant_id=tenant_id)
-        incidents: List[IncidentDto] = rules_engine.run_rules(
-            enriched_formatted_events, session=session
-        )
+    if KEEP_CORRELATION_ENABLED:
+        try:
+            rules_engine = RulesEngine(tenant_id=tenant_id)
+            incidents: List[IncidentDto] = rules_engine.run_rules(
+                enriched_formatted_events, session=session
+            )
 
-        # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
-        # if new grouped incidents were created, we need to push them to the client
-        # if incidents:
-        #     logger.info("Adding group alerts to the workflow manager queue")
-        #     workflow_manager.insert_events(tenant_id, grouped_alerts)
-        #     logger.info("Added group alerts to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run rules engine",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
+            # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
+            # if new grouped incidents were created, we need to push them to the client
+            # if incidents:
+            #     logger.info("Adding group alerts to the workflow manager queue")
+            #     workflow_manager.insert_events(tenant_id, grouped_alerts)
+            #     logger.info("Added group alerts to the workflow manager queue")
+        except Exception:
+            logger.exception(
+                "Failed to run rules engine",
+                extra={
+                    "provider_type": provider_type,
+                    "num_of_alerts": len(formatted_events),
+                    "provider_id": provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
 
-    
     pusher_client = get_pusher_client() if notify_client else None
+    # Get the notification cache
+    pusher_cache = get_notification_cache()
 
     # Tell the client to poll alerts
-    if pusher_client:
+    if pusher_client and pusher_cache.should_notify(tenant_id, "poll-alerts"):
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -425,8 +429,12 @@ def __handle_formatted_events(
         except Exception:
             logger.exception("Failed to tell client to poll alerts")
             pass
-    
-    if incidents and pusher_client:
+
+    if (
+        incidents
+        and pusher_client
+        and pusher_cache.should_notify(tenant_id, "incident-change")
+    ):
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -440,7 +448,7 @@ def __handle_formatted_events(
     # send with pusher
     if not pusher_client:
         return
-    
+
     try:
         presets = get_all_presets_dtos(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
@@ -523,6 +531,7 @@ def process_event(
         ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+
     raw_event = copy.deepcopy(event)
     try:
         session = get_session_sync()
@@ -561,6 +570,14 @@ def process_event(
                     "Provider returned None (failed silently), skipping processing"
                 )
                 return
+
+        if isinstance(event, str):
+            extra_dict["raw_event"] = event
+            logger.error(
+                "Event is a string (malformed json?), skipping processing",
+                extra=extra_dict,
+            )
+            return None
 
         # In case when provider_type is not set
         if isinstance(event, dict):

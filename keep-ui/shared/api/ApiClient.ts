@@ -3,6 +3,10 @@ import { Session } from "next-auth";
 import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
 import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
+import * as Sentry from "@sentry/nextjs";
+
+const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
+const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
 
 export class ApiClient {
   constructor(
@@ -60,11 +64,21 @@ export class ApiClient {
       throw new Error("An error occurred while fetching the data.");
     }
 
+    if (response.headers.get("content-length") === "0") {
+      return null;
+    }
+
     try {
-      return await response.json();
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        return await response.json();
+      }
+      return await response.text();
     } catch (error) {
       console.error(error);
-      return response.text();
+      if (!this.config?.SENTRY_DISABLED) {
+        Sentry.captureException(error);
+      }
+      return null;
     }
   }
 
@@ -77,7 +91,13 @@ export class ApiClient {
     }
 
     // Add read-only check for modification requests
-    if (this.config.READ_ONLY && requestInit.method !== "GET") {
+    if (
+      this.config.READ_ONLY &&
+      !READ_ONLY_ALLOWED_METHODS.includes(requestInit.method || "") &&
+      !READ_ONLY_ALWAYS_ALLOWED_URLS.some((allowedUrl) =>
+        url.startsWith(allowedUrl)
+      )
+    ) {
       throw new KeepApiReadOnlyError(
         "Application is in read-only mode",
         url,
