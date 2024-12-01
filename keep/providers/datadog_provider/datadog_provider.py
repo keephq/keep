@@ -832,6 +832,7 @@ class DatadogProvider(BaseTopologyProvider):
             lastReceived=str(event_time),
             source=["datadog"],
             message=event.get("body"),
+            description=event.get("message"),
             groups=groups,
             severity=severity,
             service=service,
@@ -935,6 +936,16 @@ class DatadogProvider(BaseTopologyProvider):
 
             # Choose a random value for the parameter
             target[param_parts[-1]] = random.choice(choices)
+
+        # Apply renders
+        for param, choices in alert_data.get("renders", {}).items():
+            target = simulated_alert
+            for key, val in target.items():
+                # try to replace
+                param_to_replace = "{{" + param + "}}"
+                choice = random.choice(choices)
+                target[key] = val.replace(param_to_replace, choice)
+            target[param] = choice
 
         simulated_alert["last_updated"] = int(time.time() * 1000)
         simulated_alert["alert_transition"] = random.choice(

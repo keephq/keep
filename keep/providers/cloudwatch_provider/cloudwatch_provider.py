@@ -560,16 +560,25 @@ class CloudwatchProvider(BaseProvider):
 
         # Start with the base payload
         simulated_alert = alert_data["payload"].copy()
-        # Apply variability based on parameters
-        for param, choices in alert_data.get("parameters", {}).items():
-            # Split param on '.' for nested parameters (if any)
-            param_parts = param.split(".")
-            target = simulated_alert
-            for part in param_parts[:-1]:
-                target = target.setdefault(part, {})
 
-            # Choose a random value for the parameter
-            target[param_parts[-1]] = random.choice(choices)
+        # Choose a consistent index for all parameters
+        if "parameters" in alert_data:
+            # Get the minimum length of all parameter choices to avoid index errors
+            min_choices_len = min(
+                len(choices) for choices in alert_data["parameters"].values()
+            )
+            param_index = random.randrange(min_choices_len)
+
+            # Apply variability based on parameters
+            for param, choices in alert_data["parameters"].items():
+                # Split param on '.' for nested parameters (if any)
+                param_parts = param.split(".")
+                target = simulated_alert
+                for part in param_parts[:-1]:
+                    target = target.setdefault(part, {})
+
+                # Use consistent index for all parameters
+                target[param_parts[-1]] = choices[param_index]
 
         # Set StateChangeTime to current time
         simulated_alert["Message"][

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.30.2"
+version = "0.30.6"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -84,6 +84,7 @@ google-auth = "2.34.0"
 clickhouse-driver = "^0.2.9"
 google-cloud-logging = "^3.11.3"
 json5 = "^0.9.28"
+pytest-xdist = "^3.6.1"
 
 psycopg2-binary = "^2.9.10"
 [tool.poetry.group.dev.dependencies]
@@ -101,6 +102,7 @@ ruff = "^0.1.6"
 pytest-docker = "^2.0.1"
 playwright = "^1.44.0"
 
+freezegun = "^1.5.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

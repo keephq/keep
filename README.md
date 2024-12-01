@@ -244,8 +244,8 @@
   </td>
   <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/uptimekuma-provider" target="_blank">
-            <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKume"/><br/>
-          UptimeKume
+            <img width="40" src="keep-ui/public/icons/uptimekuma-icon.png" alt="UptimeKuma"/><br/>
+          UptimeKuma
         </a>
   </td>
   <td align="center" width="150">
@@ -627,7 +627,7 @@ A Keep Workflow is a declarative YAML file that automates your alert and inciden
 
 Here's a simple workflow that creates a Jira ticket for every `critical` alert from `sentry` for `payments` and `api` services.
 
-For more worfklows, see [here](https://github.com/keephq/keep/tree/main/examples/workflows).
+For more workflows, see [here](https://github.com/keephq/keep/tree/main/examples/workflows).
 
 ```yaml
 workflow:

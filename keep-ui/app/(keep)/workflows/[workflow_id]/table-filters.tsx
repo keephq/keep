@@ -180,7 +180,7 @@ export const TableFilters: React.FC<TableFiltersProps> = ({ workflowId }) => {
           value={executionId}
           onChange={onValueChange}
           onKeyDown={handleKeyDown}
-          placeholder="Filter Worfklows..."
+          placeholder="Filter Workflows..."
         />
       </div>
       <div className="flex-1 flex gap-4">
