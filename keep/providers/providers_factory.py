@@ -341,6 +341,8 @@ class ProvidersFactory:
                     "provider_description"
                 )
                 oauth2_url = provider_class.__dict__.get("OAUTH2_URL")
+                logger.info(f"Loading provider {provider_type}, oauth url: {oauth2_url}")
+                
                 docs = provider_class.__doc__
                 can_fetch_topology = issubclass(provider_class, BaseTopologyProvider)
                 can_fetch_incidents = issubclass(provider_class, BaseIncidentProvider)
