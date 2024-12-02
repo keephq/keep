@@ -1,7 +1,13 @@
+from collections import defaultdict
+from copy import deepcopy
 from datetime import datetime
 from enum import Enum
+from itertools import chain
+from typing import List, Dict
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
+from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import JSON, Column, Field, SQLModel
 
 # Currently a rule_definition is a list of SQL expressions
@@ -13,6 +19,12 @@ class ResolveOn(Enum):
     LAST = "last_resolved"
     ALL = "all_resolved"
     NEVER = "never"
+
+
+class CreateIncidentOn(Enum):
+    # the alert was triggered
+    ANY = "any"
+    ALL = "all"
 
 # TODOs/Pitfalls down the road which we hopefully need to address in the future:
 # 1. nested attibtues (event.foo.bar = 1)
@@ -41,3 +53,30 @@ class Rule(SQLModel, table=True):
     item_description: str = None
     require_approve: bool = False
     resolve_on: str = ResolveOn.NEVER.value
+    create_on: str = CreateIncidentOn.ANY.value
+
+
+class RuleEventGroup(SQLModel, table=True):
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    rule_id: UUID = Field(foreign_key="rule.id")
+    tenant_id: str = Field(foreign_key="tenant.id")
+    state: Dict[str, List[UUID | str]] = Field(
+        sa_column=Column(JSON),
+        default_factory=lambda: defaultdict(list)
+    )
+    expires: datetime
+
+    def is_all_conditions_met(self, rule_groups: List[str]):
+        return all([
+            len(self.state.get(condition, []))
+            for condition in rule_groups
+        ])
+
+    def add_alert(self, condition, alert_id):
+        self.state.setdefault(condition, [])
+        self.state[condition].append(alert_id)
+        flag_modified(self, "state")
+
+    def get_all_alerts(self):
+        return list(set(chain(*self.state.values())))
