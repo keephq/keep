@@ -149,3 +149,14 @@ export const defaultProvider: Provider = {
   categories: ["Others"],
   coming_soon: false,
 };
+
+export type ProviderFormKVData = Record<string, string>[];
+export type ProviderFormValue =
+  | string
+  | number
+  | boolean
+  | File
+  | ProviderFormKVData
+  | undefined;
+export type ProviderFormData = Record<string, ProviderFormValue>;
+export type ProviderInputErrors = Record<string, string>;
