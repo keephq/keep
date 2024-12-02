@@ -81,7 +81,7 @@ class RulesEngine:
                     )
 
                     incident = assign_alert_to_incident(
-                        alert_id=event.event_id,
+                        fingerprint=event.fingerprint,
                         incident=incident,
                         tenant_id=self.tenant_id,
                         session=session,
@@ -101,7 +101,7 @@ class RulesEngine:
                     ):
                         should_resolve = True
 
-                    if (
+                    elif (
                         rule.resolve_on == ResolveOn.LAST.value
                         and is_last_incident_alert_resolved(incident, session=session)
                     ):
