@@ -21,13 +21,15 @@ def upgrade() -> None:
 
     with op.batch_alter_table("externalaiconfigandmetadata", schema=None) as batch_op:
         batch_op.alter_column(
-            "settings", existing_type=sa.VARCHAR(), type_=sa.JSON(), nullable=True
+            "settings", existing_type=sa.VARCHAR(), type_=sa.JSON(), nullable=True,
+            postgresql_using="settings::json"
         )
         batch_op.alter_column(
             "settings_proposed_by_algorithm",
             existing_type=sa.VARCHAR(),
             type_=sa.JSON(),
             existing_nullable=True,
+            postgresql_using="settings::json"
         )
         batch_op.alter_column(
             "feedback_logs",
