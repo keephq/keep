@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Handle, NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { useRouter } from "next/navigation";
 import { ServiceNodeType, TopologyService } from "../../model/models";
@@ -6,7 +6,6 @@ import { Badge } from "@tremor/react";
 import { getColorForUUID } from "@/app/(keep)/topology/lib/badge-colors";
 import { clsx } from "clsx";
 import Image from "next/image";
-import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 
 const THRESHOLD = 5;
 
@@ -72,36 +71,32 @@ function ServiceDetailsTooltip({ data }: { data: TopologyService }) {
 }
 
 export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
-  const { data: incidents, mutate: incidentsMutate } = useIncidents(
-    true,
-    25,
-    0,
-    {
-      id: "creation_time",
-      desc: false,
-    },
-    { affected_services: [data.display_name] }
-  );
-  usePollIncidents(incidentsMutate);
   const router = useRouter();
   const [showDetails, setShowDetails] = useState(false);
+  const [isTooltipReady, setIsTooltipReady] = useState(false);
   const [tooltipDirection, setTooltipDirection] = useState<Position>(
     Position.Bottom
   );
-  const nodeRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!showDetails || !nodeRef.current) return;
+    if (!showDetails) {
+      setTooltipDirection(Position.Bottom);
+      setIsTooltipReady(false);
+      return;
+    }
 
-    const rect = nodeRef.current.getBoundingClientRect();
+    const node = document.querySelector(".tooltip-ref");
+    if (!node) return;
+
+    const rect = node.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    console.log(rect.bottom, viewportHeight, rect);
 
-    if (rect.bottom + 150 > viewportHeight) {
+    if (rect.bottom + 10 > viewportHeight) {
       setTooltipDirection(Position.Top);
     } else {
       setTooltipDirection(Position.Bottom);
     }
+    setIsTooltipReady(true);
   }, [showDetails]);
 
   const handleClick = () => {
@@ -110,14 +105,13 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
     );
   };
 
-  const incidentsCount = incidents?.count || 0;
+  const incidentsCount = data.incidents ?? 0;
   const badgeColor =
     incidentsCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
 
   return (
     <>
       <div
-        ref={nodeRef}
         className={clsx(
           "flex flex-col gap-1 bg-white p-4 border-2 border-gray-200 rounded-xl shadow-lg relative transition-colors",
           selected && "border-tremor-brand"
@@ -158,7 +152,11 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
         </div>
       </div>
 
-      <NodeToolbar isVisible={showDetails} position={tooltipDirection}>
+      <NodeToolbar
+        isVisible={showDetails}
+        position={tooltipDirection}
+        className={clsx("tooltip-ref", !isTooltipReady && "invisible")}
+      >
         <ServiceDetailsTooltip data={data} />
       </NodeToolbar>
 
