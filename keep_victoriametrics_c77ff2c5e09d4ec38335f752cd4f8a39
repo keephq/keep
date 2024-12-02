@@ -1,1 +1,0 @@
-{"authentication": {"VMAlertHost": "http://localhost", "VMAlertPort": 1234}, "name": "keepVictoriaMetrics"}
