@@ -593,15 +593,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             )
 
     def _query(self, incident_id: str = None):
-        incidents = self.__get_all_incidents_or_alerts()
-        return (
-            next(
-                [incident for incident in incidents if incident.id == incident_id],
-                None,
-            )
-            if incident_id
-            else incidents
-        )
+        if incident_id:
+            return self._get_specific_incident(incident_id)
+        else:
+            return self.__get_all_incidents_or_alerts()
 
     @staticmethod
     def _format_alert(
@@ -693,6 +688,28 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             service=service,
             labels=metadata,
         )
+
+    def _get_specific_incident(self, incident_id: str):
+        self.logger.info("Getting Incident", extra={"incident_id": incident_id})
+        url = f"{self.BASE_API_URL}/incidents/{incident_id}"
+        params = {
+            "include[]": [
+                "acknowledgers",
+                "agents",
+                "assignees",
+                "conference_bridge",
+                "custom_fields",
+                "escalation_policies",
+                "first_trigger_log_entries",
+                "priorities",
+                "services",
+                "teams",
+                "users",
+            ]
+        }
+        response = requests.get(url, headers=self.__get_headers(), params=params)
+        response.raise_for_status()
+        return response.json()
 
     def __get_all_incidents_or_alerts(self, incident_id: str = None):
         self.logger.info(
