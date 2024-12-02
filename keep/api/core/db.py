@@ -12,7 +12,7 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Tuple, Type, TypedDict, Union
 from uuid import uuid4
 
 import validators
@@ -3461,13 +3461,18 @@ def get_all_same_alert_ids(
         )
         return query.all()
 
+class AlertsDataForIncident(TypedDict):
+    sources: set[str]
+    services: set[str]
+    max_severity: IncidentSeverity
+    count: int
 
 def get_alerts_data_for_incident(
     tenant_id: str,
     alert_ids: List[str | UUID],
     existed_fingerprints: Optional[List[str]] = None,
     session: Optional[Session] = None,
-) -> dict:
+) -> AlertsDataForIncident:
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
     Logic is wrapped to the inner function for better usability with an optional database session
@@ -3518,7 +3523,7 @@ def get_alerts_data_for_incident(
         return {
             "sources": set(sources),
             "services": set(services),
-            "max_severity": max(severities),
+            "max_severity": max(severities) if severities else IncidentSeverity.LOW,
             "count": len(fingerprints),
         }
 
@@ -3858,7 +3863,7 @@ def merge_incidents_to_id(
                 )
             except OperationalError as e:
                 logger.error(
-                    f"Error removing alerts to incident {source_incident.id}: {e}"
+                    f"Error removing alerts from incident {source_incident.id}: {e}"
                 )
             try:
                 add_alerts_to_incident(
@@ -3877,7 +3882,6 @@ def merge_incidents_to_id(
         session.commit()
         session.refresh(destination_incident)
         return merged_incident_ids, skipped_incident_ids, failed_incident_ids
-
 
 def get_alerts_count(
     tenant_id: str,

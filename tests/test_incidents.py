@@ -729,3 +729,58 @@ def test_merge_incidents_app(
     assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
     assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
 """
+
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_split_incident_app(db_session, client, test_app, create_alert):
+    create_alert(
+        "fp1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "fp2",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "fp3",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    alerts = db_session.query(Alert).all()
+    incident_1 = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+    )
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts]
+    )
+
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id)
+    assert len(incident_1.alerts) == 3
+
+
+    incident_2 = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+    )
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id)
+    assert len(incident_2.alerts) == 0
+
+    response = client.post(
+        f"/incidents/{str(incident_1.id)}/split",
+        headers={"x-api-key": "some-key"},
+        json={
+            "alert_ids": [str(alerts[2].id)],
+            "destination_incident_id": str(incident_2.id),
+        },
+    )
+
+    assert response.status_code == 200
+
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id)
+    assert incident_2.alerts[0].id == alerts[2].id
+
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id)
+    assert len(incident_1.alerts) == 2
