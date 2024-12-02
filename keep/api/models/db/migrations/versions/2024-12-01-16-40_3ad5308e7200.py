@@ -1,7 +1,7 @@
 """New types for AI config
 
 Revision ID: 3ad5308e7200
-Revises: 192157fd5788
+Revises: 3f056d747d9e
 Create Date: 2024-12-01 16:40:12.655642
 
 """

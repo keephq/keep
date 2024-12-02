@@ -61,8 +61,6 @@ class AlertToIncident(SQLModel, table=True):
             primary_key=True,
         )
     )
-    # alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
-    # incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
 
     is_created_by_ai: bool = Field(default=False)
 
@@ -111,20 +109,6 @@ class LastAlertToIncident(SQLModel, table=True):
     )
 
 
-    # alert: "Alert" = Relationship(
-    #     back_populates="alert_to_incident_link",
-    #     sa_relationship = relationship(
-    #         "Alert",
-    #         secondary="lastalert",
-    #         primaryjoin=f"""LastAlertToIncident.fingerprint == LastAlert.fingerprint""",
-    #         secondaryjoin="LastAlert.alert_id == Alert.id",
-    #         overlaps="alert,lastalert",
-    #         viewonly=True,
-    #     ),
-    # )
-    # incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
-
-
 class Incident(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
@@ -147,11 +131,6 @@ class Incident(SQLModel, table=True):
     start_time: datetime | None
     end_time: datetime | None
     last_seen_time: datetime | None
-
-    # alert_to_incident_link: List[LastAlertToIncident] = Relationship(
-    #     back_populates="incident",
-    #     sa_relationship_kwargs={"overlaps": "alerts,incidents"},
-    # )
 
     is_predicted: bool = Field(default=False)
     is_confirmed: bool = Field(default=False)

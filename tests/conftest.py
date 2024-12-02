@@ -16,7 +16,6 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
-from keep.api.core.db import set_last_alert
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -587,10 +586,7 @@ def setup_stress_alerts(
     num_alerts = request.param.get(
         "num_alerts", 1000
     )  # Default to 1000 alerts if not specified
-    start_time = time.time()
     alerts = setup_stress_alerts_no_elastic(num_alerts)
-    print(f"time taken to setup {num_alerts} alerts with db: ", time.time() - start_time)
-
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
