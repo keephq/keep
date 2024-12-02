@@ -1,7 +1,7 @@
 """add lastalert and lastalerttoincident table
 
 Revision ID: bdae8684d0b4
-Revises: 620b6c048091
+Revises: 3ad5308e7200
 Create Date: 2024-11-05 22:48:04.733192
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 # revision identifiers, used by Alembic.
 revision = "bdae8684d0b4"
-down_revision = "192157fd5788"
+down_revision = "3ad5308e7200"
 branch_labels = None
 depends_on = None
 
