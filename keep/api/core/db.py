@@ -4580,24 +4580,45 @@ def get_last_alert_by_fingerprint(
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None
 ) -> None:
-    last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session)
+    logger.info(
+        f"Set last alert for `{alert.fingerprint}`"
+    )
+    with existed_or_new_session(session) as session:
+        last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session)
 
-    # To prevent rare, but possible race condition
-    # For example if older alert failed to process
-    # and retried after new one
+        # To prevent rare, but possible race condition
+        # For example if older alert failed to process
+        # and retried after new one
 
-    if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
-        last_alert.timestamp = alert.timestamp
-        last_alert.alert_id = alert.id
-        session.add(last_alert)
-        session.commit()
+        if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
 
-    elif not last_alert:
-        last_alert = LastAlert(
-            tenant_id=tenant_id,
-            fingerprint=alert.fingerprint,
-            timestamp=alert.timestamp,
-            alert_id=alert.id,
-        )
-        session.add(last_alert)
-        session.commit()
+            logger.info(
+                f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+            )
+            last_alert.timestamp = alert.timestamp
+            last_alert.alert_id = alert.id
+            session.add(last_alert)
+            session.commit()
+
+        elif not last_alert:
+            logger.info(
+                f"No last alert for `{alert.fingerprint}`, creating new"
+            )
+            last_alert = LastAlert(
+                tenant_id=tenant_id,
+                fingerprint=alert.fingerprint,
+                timestamp=alert.timestamp,
+                alert_id=alert.id,
+            )
+
+            try:
+                session.add(last_alert)
+                session.commit()
+            except IntegrityError as ex:
+                reason = ex.args[0]
+                if "Duplicate entry" in reason:
+                    logger.info(
+                        f"Duplicate primary key for `{alert.fingerprint}`. Retrying."
+                    )
+                    session.rollback()
+                    return set_last_alert(tenant_id, alert, session)
