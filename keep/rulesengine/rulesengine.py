@@ -95,7 +95,7 @@ class RulesEngine:
                         if rule.create_on == "any" or (rule.create_on == "all" and len(rule_groups) == 1):
 
                             self.logger.info(
-                                f"Single event is enough, so creating incident"
+                                "Single event is enough, so creating incident"
                             )
 
                             incident = create_incident_for_grouping_rule(
@@ -109,7 +109,7 @@ class RulesEngine:
                         elif rule.create_on == "all":
 
                             self.logger.info(
-                                f"Multiple events required for the incident to start"
+                                "Multiple events required for the incident to start"
                             )
 
                             rule_group = self._get_rule_group(rule, session)
@@ -122,7 +122,7 @@ class RulesEngine:
                             ):
 
                                 self.logger.info(
-                                    f"All required events are in the system, so creating incident"
+                                    "All required events are in the system, so creating incident"
                                 )
 
                                 incident = create_incident_for_grouping_rule(
