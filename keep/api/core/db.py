@@ -4385,17 +4385,20 @@ def get_workflow_executions_for_incident_or_alert(
         results = session.execute(final_query).all()
         return results, total_count
 
-
-def is_all_incident_alerts_resolved(
-    incident: Incident, session: Optional[Session] = None
+def is_all_alerts_resolved(
+    alert_ids: Optional[List[str | UUID]] = None,
+    incident: Optional[Incident] = None,
+    session: Optional[Session] = None
 ):
-    return is_all_incident_alerts_in_status(
-        incident, AlertStatus.RESOLVED, session=session
-    )
+    return is_all_alerts_in_status(alert_ids, incident, AlertStatus.RESOLVED, session)
 
-def is_all_incident_alerts_in_status(
-    incident: Incident, status: AlertStatus, session: Optional[Session] = None
-) -> bool:
+
+def is_all_alerts_in_status(
+    alert_ids: Optional[List[str | UUID]] = None,
+    incident: Optional[Incident] = None,
+    status: AlertStatus = AlertStatus.RESOLVED,
+    session: Optional[Session] = None
+):
 
     if incident.alerts_count == 0:
         return False
@@ -4421,18 +4424,30 @@ def is_all_incident_alerts_in_status(
                     Alert.fingerprint == AlertEnrichment.alert_fingerprint,
                 ),
             )
-            .join(
+            .group_by(Alert.fingerprint)
+            .having(func.max(Alert.timestamp))
+        )
+
+        if alert_ids:
+            subquery = subquery.where(Alert.id.in_(alert_ids))
+
+        if incident:
+            subquery = (
+                subquery
+                .join(
                 LastAlertToIncident,
                 and_(
                     LastAlertToIncident.tenant_id == LastAlert.tenant_id,
                     LastAlertToIncident.fingerprint == LastAlert.fingerprint,
                 ),
             )
-            .where(
-                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                LastAlertToIncident.incident_id == incident.id,
+                .where(
+                    LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                    LastAlertToIncident.incident_id == incident.id,
+                )
             )
-        ).subquery()
+
+        subquery = subquery.subquery()
 
         not_in_status_exists = session.query(
             exists(
@@ -4443,10 +4458,10 @@ def is_all_incident_alerts_in_status(
                 .select_from(subquery)
                 .where(
                     or_(
-                        subquery.c.enriched_status != status.value,
+                        subquery.c.enriched_status != status,
                         and_(
                             subquery.c.enriched_status.is_(None),
-                            subquery.c.status != status.value,
+                            subquery.c.status != status,
                         ),
                     )
                 )

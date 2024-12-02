@@ -15,15 +15,13 @@ from keep.api.core.db import (
     get_incident_for_grouping_rule,
     create_incident_for_grouping_rule,
     get_or_create_rule_group_by_rule_id,
-    add_alerts_to_incident
+    add_alerts_to_incident,
+    is_all_alerts_resolved,
+    is_first_incident_alert_resolved,
+    is_last_incident_alert_resolved, is_all_alerts_in_status,
 )
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.core.db import (
-    is_all_incident_alerts_resolved,
-    is_first_incident_alert_resolved,
-    is_last_incident_alert_resolved,
-)
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus, AlertStatus
 from keep.api.models.db.rule import ResolveOn, RuleEventGroup, Rule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
@@ -116,7 +114,12 @@ class RulesEngine:
 
                             rule_group = self._get_rule_group(rule, session)
                             rule_group.add_alert(sub_rule, event.event_id)
-                            if rule_group.is_all_conditions_met(rule_groups):
+
+                            alert_ids = rule_group.get_all_alerts()
+
+                            if rule_group.is_all_conditions_met(rule_groups) and is_all_alerts_in_status(
+                                alert_ids=alert_ids, status=AlertStatus.FIRING, session=session
+                            ):
 
                                 self.logger.info(
                                     f"All required events are in the system, so creating incident"
@@ -128,7 +131,6 @@ class RulesEngine:
                                     rule_fingerprint,
                                     session=session,
                                 )
-                                alert_ids = rule_group.get_all_alerts()
 
                                 incident = add_alerts_to_incident(self.tenant_id, incident, alert_ids, session=session)
 
@@ -160,7 +162,7 @@ class RulesEngine:
 
                         if (
                             rule.resolve_on == ResolveOn.ALL.value
-                            and is_all_incident_alerts_resolved(incident, session=session)
+                            and is_all_alerts_resolved(incident=incident, session=session)
                         ):
                             should_resolve = True
 
