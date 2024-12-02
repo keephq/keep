@@ -1731,8 +1731,8 @@ def delete_rule(tenant_id, rule_id):
 
 
 def get_incident_for_grouping_rule(
-    tenant_id, rule, timeframe, rule_fingerprint, session: Optional[Session] = None
-) -> Incident:
+    tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
+) -> Optional[Incident]:
     # checks if incident with the incident criteria exists, if not it creates it
     #   and then assign the alert to the incident
     with existed_or_new_session(session) as session:
@@ -1751,25 +1751,33 @@ def get_incident_for_grouping_rule(
             enrich_incidents_with_alerts(tenant_id, [incident], session)
             is_incident_expired = max(
                 alert.timestamp for alert in incident._alerts
-            ) < datetime.utcnow() - timedelta(seconds=timeframe)
+            ) < datetime.utcnow() - timedelta(seconds=rule.timeframe)
 
         # if there is no incident with the rule_fingerprint, create it or existed is already expired
         if not incident or is_incident_expired:
-            # Create and add a new incident if it doesn't exist
-            incident = Incident(
-                tenant_id=tenant_id,
-                user_generated_name=f"{rule.name}",
-                rule_id=rule.id,
-                rule_fingerprint=rule_fingerprint,
-                is_predicted=False,
-                is_confirmed=not rule.require_approve,
-            )
-            session.add(incident)
-            session.commit()
-            session.refresh(incident)
+            return None
 
     return incident
 
+
+def create_incident_for_grouping_rule(
+    tenant_id, rule, rule_fingerprint, session: Optional[Session] = None
+):
+
+    with existed_or_new_session(session) as session:
+        # Create and add a new incident if it doesn't exist
+        incident = Incident(
+            tenant_id=tenant_id,
+            user_generated_name=f"{rule.name}",
+            rule_id=rule.id,
+            rule_fingerprint=rule_fingerprint,
+            is_predicted=False,
+            is_confirmed=not rule.require_approve,
+        )
+        session.add(incident)
+        session.commit()
+        session.refresh(incident)
+    return incident
 
 def get_rule(tenant_id, rule_id):
     with Session(engine) as session:
@@ -4380,6 +4388,13 @@ def get_workflow_executions_for_incident_or_alert(
 
 def is_all_incident_alerts_resolved(
     incident: Incident, session: Optional[Session] = None
+):
+    return is_all_incident_alerts_in_status(
+        incident, AlertStatus.RESOLVED, session=session
+    )
+
+def is_all_incident_alerts_in_status(
+    incident: Incident, status: AlertStatus, session: Optional[Session] = None
 ) -> bool:
 
     if incident.alerts_count == 0:
@@ -4419,7 +4434,7 @@ def is_all_incident_alerts_resolved(
             )
         ).subquery()
 
-        not_resolved_exists = session.query(
+        not_in_status_exists = session.query(
             exists(
                 select(
                     subquery.c.enriched_status,
@@ -4428,17 +4443,17 @@ def is_all_incident_alerts_resolved(
                 .select_from(subquery)
                 .where(
                     or_(
-                        subquery.c.enriched_status != AlertStatus.RESOLVED.value,
+                        subquery.c.enriched_status != status.value,
                         and_(
                             subquery.c.enriched_status.is_(None),
-                            subquery.c.status != AlertStatus.RESOLVED.value,
+                            subquery.c.status != status.value,
                         ),
                     )
                 )
             )
         ).scalar()
 
-        return not not_resolved_exists
+        return not not_in_status_exists
 
 
 def is_last_incident_alert_resolved(
@@ -4779,16 +4794,16 @@ def set_last_alert(
                     last_alert.alert_id = alert.id
                     session.add(last_alert)
 
-                elif not last_alert:
-                    logger.info(
-                        f"No last alert for `{alert.fingerprint}`, creating new"
-                    )
-                    last_alert = LastAlert(
-                        tenant_id=tenant_id,
-                        fingerprint=alert.fingerprint,
-                        timestamp=alert.timestamp,
-                        first_timestamp=alert.timestamp,
-                        alert_id=alert.id,
+                    elif not last_alert:
+                        logger.info(
+                            f"No last alert for `{alert.fingerprint}`, creating new"
+                        )
+                        last_alert = LastAlert(
+                            tenant_id=tenant_id,
+                            fingerprint=alert.fingerprint,
+                            timestamp=alert.timestamp,
+                            first_timestamp=alert.timestamp,
+                            alert_id=alert.id,
                         alert_hash=alert.alert_hash,
                     )
 
@@ -4827,3 +4842,33 @@ def set_last_alert(
             )
             # break the retry loop
             break
+
+
+def get_or_create_rule_group_by_rule_id(
+    tenant_id: str,
+    rule_id: str | UUID,
+    timeframe: int,
+    session: Optional[Session] = None
+):
+
+    with existed_or_new_session(session) as session:
+        group = session.query(RuleEventGroup).where(
+            and_(
+                RuleEventGroup.tenant_id == tenant_id,
+                RuleEventGroup.rule_id == rule_id,
+                RuleEventGroup.expires > datetime.utcnow(),
+            )
+        ).first()
+
+        if group is None:
+            group = RuleEventGroup(
+                tenant_id=tenant_id,
+                rule_id=rule_id,
+                expires=datetime.utcnow() + timedelta(seconds=timeframe),
+                state={}
+            )
+            session.add(group)
+            session.commit()
+            session.refresh(group)
+
+        return group
