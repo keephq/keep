@@ -141,7 +141,7 @@ class RulesEngine:
                             else:
 
                                 self.logger.info(
-                                    f"Updating state for rule events group"
+                                    f"Updating state for rule `{rule.name}` events group"
                                 )
 
                                 # Updating rule_group expiration+
