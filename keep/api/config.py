@@ -5,10 +5,14 @@ import keep.api.logging
 from keep.api.api import AUTH_TYPE
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.routes.dashboard import provision_dashboards
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProvidersFactory
+from keep.providers.providers_service import ProvidersService
+from keep.workflowmanager.workflowstore import WorkflowStore
 
 PORT = int(os.environ.get("PORT", 8080))
+PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
 
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
@@ -19,6 +23,17 @@ def on_starting(server=None):
     logger.info("Keep server starting")
 
     migrate_db()
+
+    if PROVISION_RESOURCES:
+        # provision providers from env. relevant only on single tenant.
+        logger.info("Provisioning providers and workflows")
+        ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
+        logger.info("Providers loaded successfully")
+        WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
+        logger.info("Workflows provisioned successfully")
+        provision_dashboards(SINGLE_TENANT_UUID)
+        logger.info("Dashboards provisioned successfully")
+
     # Load this early and use preloading
     # https://www.joelsleppy.com/blog/gunicorn-application-preloading/
     # @tb: 👏 @Matvey-Kuk
