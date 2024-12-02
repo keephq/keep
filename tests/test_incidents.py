@@ -1,5 +1,6 @@
 from datetime import datetime
 from itertools import cycle
+from time import sleep
 
 import pytest
 from sqlalchemy import distinct, func, desc
@@ -40,7 +41,11 @@ def test_get_alerts_data_for_incident(db_session, create_alert):
             },
         )
 
+    sleep(0.5)
+
     alerts = db_session.query(Alert).all()
+
+    assert len(alerts) == 100
 
     unique_fingerprints = db_session.query(
         func.count(distinct(Alert.fingerprint))
@@ -690,7 +695,6 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     assert incident_3.merged_by == "test-user-email"
 
 
-"""
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_merge_incidents_app(
     db_session, client, test_app, setup_stress_alerts_no_elastic, create_alert
@@ -709,9 +713,12 @@ def test_merge_incidents_app(
             datetime.utcnow(),
             {"severity": AlertSeverity.INFO.value},
         )
+    sleep(0.5)
     alerts_1 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-1-")).all()
     )
+    assert len(alerts_1) == 50
+
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
     )
@@ -729,9 +736,12 @@ def test_merge_incidents_app(
             datetime.utcnow(),
             {"severity": AlertSeverity.CRITICAL.value, "service": "second-service"},
         )
+    sleep(0.5)
     alerts_2 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("alert-2-")).all()
     )
+    assert len(alerts_2) == 50
+
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
     )
@@ -740,6 +750,7 @@ def test_merge_incidents_app(
         {"user_generated_name": "test-3", "user_summary": "test-3"},
     )
     alerts_3 = setup_stress_alerts_no_elastic(50)
+    sleep(0.5)
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
     )
@@ -797,4 +808,3 @@ def test_merge_incidents_app(
     ).json()
     assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
     assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
-"""
