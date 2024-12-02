@@ -2,7 +2,7 @@
 
 Revision ID: c6e5594c99f8
 Revises: bdae8684d0b4
-Create Date: 2024-11-25 16:07:33.311541
+Create Date: 2024-12-02 20:42:33.311541
 
 """
 
@@ -46,9 +46,6 @@ def populate_db():
             "fingerprint": fingerprint,
             "tenant_id": tenant_id,
         })
-
-
-
 
 
 def upgrade() -> None:
