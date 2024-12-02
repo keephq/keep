@@ -3,8 +3,9 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
 
 import dataclasses
-import random
+import logging
 from typing import Literal
+from urllib.parse import urlparse, urlsplit, urlunparse
 
 import pydantic
 import requests
@@ -13,6 +14,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
+
+logger = logging.getLogger(__name__)
 
 
 @pydantic.dataclasses.dataclass
@@ -32,7 +35,7 @@ class GrafanaOncallProviderAuthConfig:
         metadata={
             "required": True,
             "description": "Grafana OnCall Host",
-            "hint": "E.g. https://keephq.grafana.net",
+            "hint": "E.g. https://oncall-prod-us-central-0.grafana.net/oncall/ or http://localhost:8000/",
             "validation": "any_http_url",
         },
     )
@@ -46,8 +49,8 @@ class GrafanaOncallProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Grafana OnCall"
     PROVIDER_CATEGORY = ["Incident Management"]
 
-    API_URI = "api/plugins/grafana-incident-app/resources/api"
-    provider_description = "Grafana OnCall is a SaaS incident management solution that helps you resolve incidents faster."
+    API_URI = "api/v1"
+    provider_description = "Grafana OnCall is an oncall management solution."
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -69,90 +72,88 @@ class GrafanaOncallProvider(BaseProvider):
             **self.config.authentication
         )
 
-    @staticmethod
-    def random_color() -> str:
-        return random.randint(0, 255)
+
+    def clean_url(self, url):
+        parsed = urlparse(url)
+        normalized_path = '/'.join(part for part in parsed.path.split('/') if part)
+        _clean_url = urlunparse(parsed._replace(path=f'/{normalized_path}'))
+        return _clean_url
+
+
+    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
+        
+        super().__init__(context_manager, provider_id, config)
+        KEEP_INTEGRATION_NAME = "Keep Integration"
+
+        if self.config.authentication.get("oncall_integration_link") is not None:
+            return None
+
+        # Create Grafana OnCall integration if the integration link is not saved
+        headers = {
+            "Authorization": f"{config.authentication['token']}",
+            "Content-Type": "application/json",
+        }
+        
+        response = requests.post(
+            url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
+            headers=headers,
+            json={
+                "name": KEEP_INTEGRATION_NAME,
+                "type":"webhook"
+            },
+        )
+        existing_integration_link = None
+        if response.status_code == 400:
+            # If integration already exists, get the link
+            if response.json().get("detail") == "An integration with this name already exists for this team":
+                response = requests.get(
+                    url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
+                    headers=headers,
+                )
+                response.raise_for_status()
+                for integration in response.json()['results']:
+                    if integration.get("name") == KEEP_INTEGRATION_NAME:
+                        existing_integration_link = integration.get("link")
+                        break
+        elif response.status_code in [200, 201]:
+            response_json = response.json()
+            existing_integration_link = response_json.get("link")
+        else:
+            logger.error(f"Error installing the provider: {response.status_code}")
+            raise Exception(f"Error installing the provider: {response.status_code}")
+        
+        if "integrations/v1/" in urlsplit(existing_integration_link).path:
+            self.config.authentication["oncall_integration_link"] = existing_integration_link
+        else:
+            Exception("Error creating the integration link, the URL is not OnCall formatted.")
+
 
     def _notify(
         self,
         title: str,
-        roomPrefix: str = "incident",
-        labels: list[str] = ["keep-generated"],
-        isDrill: bool = False,
-        severity: Literal["pending", "minor", "major", "critical"] = "minor",
-        status: Literal["active", "resolved"] = "active",
-        attachCaption: str = "",
-        attachURL: str = "",
-        incidentID: str = "",
+        alert_uid: str | None = None,
+        message: str = "",
+        image_url: str = "",
+        state: Literal["alerting", "resolved"] = "alerting",
+        link_to_upstream_details: str = "",
         **kwargs,
     ):
         headers = {
-            "Authorization": f"Bearer {self.authentication_config.token}",
             "Content-Type": "application/json",
         }
         response = requests.post(
-            url=f"{self.authentication_config.host}/{self.API_URI}/OrgService.GetOrg",
+            url=self.config.authentication["oncall_integration_link"],
             headers=headers,
-            json={},
+            json={
+                "title": title,
+                "message": message,
+                "alert_uid": alert_uid,
+                "image_url": image_url,
+                "state": state,
+                "link_to_upstream_details": link_to_upstream_details,
+            },
         )
         response.raise_for_status()
-        response = response.json()
-        existing_labels = [
-            label.get("label")
-            for label in response.get("org", {}).get("incidentLabels", [])
-        ]
-        if not incidentID:
-            self.logger.info(f'Creating incident "{title}"')
-            labels_obj = []
-            for label in labels:
-                if label not in existing_labels:
-                    response = requests.post(
-                        url=f"{self.authentication_config.host}/{self.API_URI}/OrgService.AddIncidentLabel",
-                        headers=headers,
-                        json={
-                            "incidentLabel": {
-                                "label": label,
-                                "colorHex": "#%02X%02X%02X"
-                                % (
-                                    self.random_color(),
-                                    self.random_color(),
-                                    self.random_color(),
-                                ),
-                                "description": label,
-                            }
-                        },
-                    )
-                labels_obj.append({"label": label})
-            payload = {
-                "attachCaption": attachCaption,
-                "attachURL": attachURL,
-                "isDrill": isDrill,
-                "labels": labels_obj,
-                "roomPrefix": roomPrefix,
-                "severity": severity,
-                "status": status,
-                "title": title,
-            }
-            response = requests.post(
-                url=f"{self.authentication_config.host}/{self.API_URI}/v1/IncidentsService.CreateIncident",
-                headers=headers,
-                json=payload,
-            )
-            response.raise_for_status()
-            self.logger.info(f'Created incident "{title}"')
-        else:
-            self.logger.info(f'Updating incident status for incident "{incidentID}"')
-            payload = {
-                "incidentID": incidentID,
-                "status": status,
-            }
-            response = requests.post(
-                url=f"{self.authentication_config.host}/{self.API_URI}/v1/IncidentsService.UpdateStatus",
-                headers=headers,
-                json=payload,
-            )
-            response.raise_for_status()
-            self.logger.info(f'Updated incident status for incident "{incidentID}"')
         return response.json()
 
 
@@ -180,5 +181,5 @@ if __name__ == "__main__":
         provider_type="oncall",
         provider_config=config,
     )
-    incident = provider.notify("Test Incident")
-    print(incident)
+    alert = provider.notify("Test Alert")
+    print(alert)

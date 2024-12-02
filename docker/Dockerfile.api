@@ -34,8 +34,6 @@ ENV VIRTUAL_ENV="/venv"
 ENV EE_PATH="ee"
 COPY --from=builder /venv /venv
 COPY --from=builder /app/examples /examples
-# Build the providers cache
-RUN keep provider build_cache
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app && \
     chown -R keep:keep /app && \
