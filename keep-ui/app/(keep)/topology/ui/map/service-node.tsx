@@ -10,11 +10,7 @@ import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
 
 const THRESHOLD = 5;
 
-function ServiceDetailsTooltip({
-  data
-}: {
-  data: TopologyService;
-}) {
+function ServiceDetailsTooltip({ data }: { data: TopologyService }) {
   return (
     <div className="py-2 px-3 bg-tremor-background-muted border rounded shadow-lg flex flex-col gap-2 text-xs">
       {data.service && (
@@ -110,7 +106,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
 
   const handleClick = () => {
     router.push(
-      `/incidents?services={encodeURIComponent(`"${data.display_name}"`)}`
+      `/incidents?services={encodeURIComponent("${data.display_name}")}`
     );
   };
 
