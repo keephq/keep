@@ -71,9 +71,9 @@ class RuleEventGroup(SQLModel, table=True):
             for condition in rule_groups
         ])
 
-    def add_alert(self, condition, alert_id):
+    def add_alert(self, condition, fingerprint):
         self.state.setdefault(condition, [])
-        self.state[condition].append(alert_id)
+        self.state[condition].append(fingerprint)
         flag_modified(self, "state")
 
     def get_all_alerts(self):
