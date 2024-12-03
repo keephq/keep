@@ -51,7 +51,7 @@ class VictoriametricsProviderAuthConfig:
         default=8880,
     )
 
-    VMAlertURL: AnyHttpUrl | None =  dataclasses.field(
+    VMAlertURL: AnyHttpUrl | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "The full URL to the VMAlert instance. For example: http://vmalert.mydomain.com:8880",
@@ -195,21 +195,24 @@ receivers:
     ) -> AlertDto | list[AlertDto]:
         alerts = []
         for alert in event["alerts"]:
+            annotations = alert.get("annotations", {})
+            labels = alert.get("labels", {})
+            fingerprint = alert.get("fingerprint")
             alerts.append(
                 AlertDto(
-                    name=alert["labels"]["alertname"],
-                    fingerprint=alert["fingerprint"],
-                    id=alert["fingerprint"],
-                    description=alert["annotations"]["description"],
-                    message=alert["annotations"]["summary"],
+                    name=labels.get("alertname", ""),
+                    fingerprint=fingerprint,
+                    id=fingerprint,
+                    description=annotations.get("description"),
+                    message=annotations.get("summary"),
                     status=VictoriametricsProvider.STATUS_MAP[alert["status"]],
                     severity=VictoriametricsProvider.SEVERITIES_MAP[
                         alert.get("labels", {}).get("severity", "info")
                     ],
-                    startedAt=alert["startsAt"],
-                    url=alert["generatorURL"],
+                    startedAt=alert.get("startsAt"),
+                    url=alert.get("generatorURL"),
                     source=["victoriametrics"],
-                    labels=alert["labels"],
+                    labels=labels,
                     lastReceived=datetime.datetime.now(
                         tz=datetime.timezone.utc
                     ).isoformat(),
