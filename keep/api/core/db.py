@@ -1613,6 +1613,7 @@ def create_rule(
     group_description=None,
     require_approve=False,
     resolve_on=ResolveOn.NEVER.value,
+    create_on=CreateIncidentOn.ANY.value,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -1629,6 +1630,7 @@ def create_rule(
             group_description=group_description,
             require_approve=require_approve,
             resolve_on=resolve_on,
+            create_on=create_on,
         )
         session.add(rule)
         session.commit()
@@ -1648,6 +1650,7 @@ def update_rule(
     grouping_criteria,
     require_approve,
     resolve_on,
+    create_on,
 ):
     with Session(engine) as session:
         rule = session.exec(
@@ -1665,6 +1668,7 @@ def update_rule(
             rule.updated_by = updated_by
             rule.update_time = datetime.utcnow()
             rule.resolve_on = resolve_on
+            rule.create_on = create_on
             session.commit()
             session.refresh(rule)
             return rule
