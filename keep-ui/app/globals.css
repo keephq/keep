@@ -13,8 +13,15 @@ html.workaround-dark {
   & .line-content {
     background-color: #fefefe;
   }
-}
 
+  & .workaround-dark-hidden {
+    display: none;
+  }
+
+  & .workaround-dark-visible {
+    display: block !important;
+  }
+}
 /* https://github.com/vercel/next.js/discussions/13387
  nextjs-portal {
     display: none;

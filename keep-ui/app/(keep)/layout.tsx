@@ -14,6 +14,7 @@ import { auth } from "@/auth";
 import { ThemeScript } from "@/shared/ui/theme/ThemeScript";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
+import { WatchUpdateTheme } from "@/shared/ui/theme/WatchUpdateTheme";
 
 const PostHogPageView = dynamic(() => import("@/shared/ui/PostHogPageView"), {
   ssr: false,
@@ -58,6 +59,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             </NextAuthProvider>
           </PHProvider>
         </ConfigProvider>
+        <WatchUpdateTheme />
 
         {/** footer */}
         {process.env.GIT_COMMIT_HASH && (

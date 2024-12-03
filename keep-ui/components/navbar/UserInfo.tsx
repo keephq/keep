@@ -38,18 +38,12 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
 
   const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
-    <Menu as="li" ref={refs.setReference}>
+    <Menu as="li" ref={refs.setReference} className="w-full">
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
           <UserAvatar image={image} name={name ?? email} />{" "}
           <Subtitle className="truncate">{name ?? email}</Subtitle>
         </span>
-
-        <Icon
-          className="text-gray-700 font-medium px-0"
-          size="xs"
-          icon={AiOutlineRight}
-        />
       </Menu.Button>
 
       <Menu.Items
@@ -59,9 +53,6 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
         as="ul"
       >
         <div className="px-1 py-1 ">
-          <div className="pl-2 py-1">
-            <ThemeControl />
-          </div>
           {userRole !== "noc" && (
             <li>
               <Menu.Item
@@ -140,7 +131,10 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             Docs
           </LinkWithIcon>
         </li>
-        {session && <UserDropdown session={session} />}
+        <div className="flex items-center justify-between">
+          {session && <UserDropdown session={session} />}
+          <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
+        </div>
       </ul>
     </>
   );
