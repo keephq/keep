@@ -1,0 +1,23 @@
+id: 6bc7c72e-ab3d-4913-84dd-08b9323195ae
+description: Teams Adaptive Cards Example
+disabled: false
+triggers:
+  - type: manual
+  - filters:
+      - key: source
+        value: r".*"
+    type: alert
+consts: {}
+name: Keep Teams Adaptive Cards
+owners: []
+services: []
+steps: []
+actions:
+  - name: teams-action
+    provider:
+      config: "{{ providers.teams }}"
+      type: teams
+      with:
+        message: ""
+        sections: '[{"type": "TextBlock", "text": "{{alert.name}}"}, {"type": "TextBlock", "text": "Tal from Keep"}]'
+        typeCard: message
