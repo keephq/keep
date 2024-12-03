@@ -12,6 +12,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -20,13 +21,13 @@ class GrafanaIncidentProviderAuthConfig:
     GrafanaIncidentProviderAuthConfig is a class that allows to authenticate in Grafana Incident.
     """
 
-    host_url: str = dataclasses.field(
+    host_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana Host URL",
             "sensitive": False,
+            "validation": "https_url",
         },
-        default=None,
     )
 
     service_account_token: str = dataclasses.field(

@@ -11,6 +11,7 @@ import pydantic
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -25,15 +26,24 @@ class PostgresProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "Postgres hostname"}
+    host: NoSchemeUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Postgres hostname",
+            "validation": "no_scheme_url",
+        }
     )
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "Postgres database name"},
         default=None,
     )
-    port: str | None = dataclasses.field(
-        default="5432", metadata={"required": False, "description": "Postgres port"}
+    port: UrlPort | None = dataclasses.field(
+        default=5432,
+        metadata={
+            "required": False,
+            "description": "Postgres port",
+            "validation": "port",
+        },
     )
 
 

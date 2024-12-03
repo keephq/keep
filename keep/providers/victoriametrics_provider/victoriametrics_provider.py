@@ -7,11 +7,13 @@ import datetime
 
 import pydantic
 import requests
+from pydantic import AnyHttpUrl
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import UrlPort
 
 
 class ResourceAlreadyExists(Exception):
@@ -25,32 +27,35 @@ class VictoriametricsProviderAuthConfig:
     vmalert authentication configuration.
     """
 
-    VMAlertHost: str | None = dataclasses.field(
+    VMAlertHost: AnyHttpUrl | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "The hostname or IP address where VMAlert is running. This can be a local or remote server address.",
-            "hint": "Example: 'localhost', '192.168.1.100', or 'vmalert.mydomain.com'",
+            "hint": "Example: 'http://localhost', 'http://192.168.1.100', or 'https://vmalert.mydomain.com'",
+            "validation": "any_http_url",
             "config_sub_group": "host",
             "config_main_group": "address",
         },
         default=None,
     )
 
-    VMAlertPort: int = dataclasses.field(
+    VMAlertPort: UrlPort = dataclasses.field(
         metadata={
             "required": False,
             "description": "The port number on which VMAlert is listening. This should match the port configured in your VMAlert setup.",
-            "hint": "Example: 8880 (if VMAlert is set to listen on port 8880), defaults to 8880",
+            "hint": "Example: 8880 (if VMAlert is set to listen on port 8880)",
+            "validation": "port",
             "config_sub_group": "host",
             "config_main_group": "address",
         },
         default=8880,
     )
 
-    VMAlertURL: str | None = dataclasses.field(
+    VMAlertURL: AnyHttpUrl | None =  dataclasses.field(
         metadata={
             "required": False,
             "description": "The full URL to the VMAlert instance. For example: http://vmalert.mydomain.com:8880",
+            "validation": "any_http_url",
             "config_sub_group": "url",
             "config_main_group": "address",
         },

@@ -13,6 +13,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -25,17 +26,27 @@ class SplunkProviderAuthConfig:
         }
     )
 
-    host: str = dataclasses.field(
+    host: NoSchemeUrl = dataclasses.field(
         metadata={
             "description": "Splunk Host (default is localhost)",
+            "validation": "no_scheme_url"
         },
         default="localhost",
     )
-    port: int = dataclasses.field(
+    port: UrlPort = dataclasses.field(
         metadata={
             "description": "Splunk Port (default is 8089)",
+            "validation": "port"
         },
         default=8089,
+    )
+    verify: bool = dataclasses.field(
+        metadata={
+            "description": "Enable SSL verification",
+            "hint": "An `https` protocol will be used if enabled.",
+            "type": "switch"
+        },
+        default=True,
     )
 
 
@@ -104,8 +115,16 @@ class SplunkProvider(BaseProvider):
                 token=self.authentication_config.api_key,
                 host=self.authentication_config.host,
                 port=self.authentication_config.port,
+                scheme='https' if self.authentication_config.verify else 'http',
+                verify=self.authentication_config.verify
             )
             self.logger.debug("Connected to Splunk", extra={"service": service})
+
+            if not self.authentication_config.verify:
+                self.logger.warning(
+                    "SSL verification is disabled - connection is not secure",
+                    extra={"host": self.authentication_config.host}
+                )
 
             if len(service.users) > 1:
                 self.logger.warning(
@@ -214,6 +233,8 @@ class SplunkProvider(BaseProvider):
             token=self.authentication_config.api_key,
             host=self.authentication_config.host,
             port=self.authentication_config.port,
+            scheme='https' if self.authentication_config.verify else 'http',
+            verify=self.authentication_config.verify
         )
         for saved_search in service.saved_searches:
             existing_webhook_url = saved_search["_state"]["content"].get(
