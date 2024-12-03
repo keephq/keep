@@ -4564,10 +4564,11 @@ def get_activity_report(
 
 
 def get_last_alert_by_fingerprint(
-    tenant_id: str, fingerprint: str, session: Optional[Session] = None
+    tenant_id: str, fingerprint: str, session: Optional[Session] = None,
+    for_update: bool = False
 ) -> Optional[LastAlert]:
     with existed_or_new_session(session) as session:
-        return session.exec(
+        query = (
             select(LastAlert)
             .where(
                 and_(
@@ -4575,7 +4576,11 @@ def get_last_alert_by_fingerprint(
                     LastAlert.fingerprint == fingerprint,
                 )
             )
-        ).first()
+        )
+        if for_update:
+            query = query.with_for_update()
+        return session.exec(query).first()
+
 
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None
@@ -4584,41 +4589,31 @@ def set_last_alert(
         f"Set last alert for `{alert.fingerprint}`"
     )
     with existed_or_new_session(session) as session:
-        last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session)
+        with session.begin_nested() as transaction:
+            last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session, for_update=True)
 
-        # To prevent rare, but possible race condition
-        # For example if older alert failed to process
-        # and retried after new one
+            # To prevent rare, but possible race condition
+            # For example if older alert failed to process
+            # and retried after new one
+            if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
 
-        if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
-
-            logger.info(
-                f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
-            )
-            last_alert.timestamp = alert.timestamp
-            last_alert.alert_id = alert.id
-            session.add(last_alert)
-            session.commit()
-
-        elif not last_alert:
-            logger.info(
-                f"No last alert for `{alert.fingerprint}`, creating new"
-            )
-            last_alert = LastAlert(
-                tenant_id=tenant_id,
-                fingerprint=alert.fingerprint,
-                timestamp=alert.timestamp,
-                alert_id=alert.id,
-            )
-
-            try:
+                logger.info(
+                    f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+                )
+                last_alert.timestamp = alert.timestamp
+                last_alert.alert_id = alert.id
                 session.add(last_alert)
-                session.commit()
-            except IntegrityError as ex:
-                reason = ex.args[0]
-                if "Duplicate entry" in reason:
-                    logger.info(
-                        f"Duplicate primary key for `{alert.fingerprint}`. Retrying."
-                    )
-                    session.rollback()
-                    return set_last_alert(tenant_id, alert, session)
+
+            elif not last_alert:
+                logger.info(
+                    f"No last alert for `{alert.fingerprint}`, creating new"
+                )
+                last_alert = LastAlert(
+                    tenant_id=tenant_id,
+                    fingerprint=alert.fingerprint,
+                    timestamp=alert.timestamp,
+                    alert_id=alert.id,
+                )
+
+                session.add(last_alert)
+            transaction.commit()
