@@ -18,11 +18,12 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 
 @pydantic.dataclasses.dataclass
 class PrometheusProviderAuthConfig:
-    url: str = dataclasses.field(
+    url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Prometheus server URL",
             "hint": "https://prometheus-us-central1.grafana.net/api/prom",
+            "validation": "any_http_url"
         }
     )
     username: str = dataclasses.field(

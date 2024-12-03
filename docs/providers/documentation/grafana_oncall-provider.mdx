@@ -1,19 +1,16 @@
 ---
 title: "Grafana OnCall Provider"
-description: "Grafana Oncall Provider is a class that allows to ingest/digest data from Grafana OnCall."
+description: "Grafana Oncall Provider is a class that allows to ingest data to the Grafana OnCall."
 ---
 
 ## Inputs
 
-- **title** (required): The title of the incident.
-- **roomPrefix** (optional): Prefix for the incident room (default: "incident").
-- **labels** (optional): List of labels to associate with the incident (default: ["keep-generated"]).
-- **isDrill** (optional): Whether the incident is a drill or not (default: False).
-- **severity** (optional): Severity of the incident (default: "minor").
-- **status** (optional): Status of the incident (default: "active").
-- **attachCaption** (optional): Caption for any attachment.
-- **attachURL** (optional): URL for any attachment.
-- **incidentID** (optional): ID of an existing incident to update.
+- **title** (required): The title of the alert
+- **message**: The alert description
+- **alert_uid**: Grouping ID which will be used on the OnCall side
+- **image_url**: Image URL
+- **state**: Either "alerting" or "resolved"
+- **link_to_upstream_details**: Link assigned to the alert
 
 ## Outputs
 
@@ -24,78 +21,37 @@ Grafana Oncall Provider does not currently support the `query` function.
 The Grafana Oncall Provider uses API token authentication. You need to provide the following authentication parameters to connect to Grafana OnCall:
 
 - **token** (required): Your Grafana OnCall API Token.
-- **host** (required): The URL of your Grafana OnCall host (e.g., https://keephq.grafana.net).
+- **host** (required): The URL of your Grafana OnCall host (e.g., https://oncall-prod-us-central-0.grafana.net/oncall/ or http://localhost:8000/) please note that in the Grafana Сloud, oncall's API is under `../oncall/`
 
 ## Connecting with the Provider
 
 To connect to Grafana OnCall, you need to create an API Token:
 
-1. Log in to your Grafana OnCall account.
-2. Go to the **API Tokens** page.
-3. Click the **Generate Token** button and provide a name for your token.
-4. Copy the token value and keep it secure.
-5. Add the token value to the `authentication` section in the Grafana Oncall Provider configuration.
+1. Log in to your Grafana account.
+2. Go To "Alerts & IRM" -> OnCall.
+3. Go to the **Settings** page.
+4. Click the **Create** button and provide a name for your token.
+5. Copy the token value and keep it secure.
+6. Add the token value to the `authentication` section in the Grafana Oncall Provider configuration.
 
 ## Notes
 
-- This provider allows you to interact with Grafana OnCall to create or update incidents.
-- The `random_color` function generates a random color for incident labels.
-- The `startTime` and `endTime` parameters use ISO-8601 format.
-- The `notify` function returns information about the incident created or updated.
+- This provider allows you to interact with Grafana OnCall to create alerts.
+- Keep will create "Webhook" type integration called "Keep Integration" inside Grafana OnCall.
 
 Payload example:
 
 ```json
 {
-  "incident": {
-    "incidentID": "4",
-    "severity": "minor",
-    "labels": [
-      {
-        "label": "keep-generated",
-        "description": "keep-generated",
-        "colorHex": "#9E0847"
-      }
-    ],
-    "isDrill": false,
-    "createdTime": "2023-09-10T10:31:58.030369Z",
-    "modifiedTime": "2023-09-10T10:31:58.030369Z",
-    "createdByUser": {
-      "userID": "grafana-incident:user-64fd801847a9191105b3c2df",
-      "name": "Service Account: keep-tests",
-      "photoURL": "https://www.gravatar.com/avatar/dbb34057685b3bc2bdc2a2808ec80772?s=512&d=retro"
-    },
-    "closedTime": "",
-    "durationSeconds": 0,
-    "status": "active",
-    "title": "Test Incident",
-    "overviewURL": "/a/grafana-incident-app/incidents/4/test-incident",
-    "roles": [],
-    "taskList": {
-      "tasks": [
-        {
-          "taskID": "must-choose-severity",
-          "immutable": true,
-          "createdTime": "2023-09-10T10:31:58.005917795Z",
-          "modifiedTime": "2023-09-10T10:31:58.005922353Z",
-          "text": "Specify incident severity",
-          "status": "done",
-          "authorUser": null,
-          "assignedUser": null
-        }
-      ],
-      "todoCount": 0,
-      "doneCount": 1
-    },
-    "summary": "",
-    "heroImagePath": "/api/hero-images/548564/uoKQrUg5gxteZJ6SdFrMOEhBiN6JtLHLmCSqDzDD0SX93NAhe6ChvhLORmTrSqbC2SEzde7YSKa94UcRsoizm45y3nCGv7eq7Zolk0Y5MzDJrhZRkwrksitQm2eR4iEV/v3/4.png",
-    "incidentStart": "2023-09-10T10:31:58.030369Z",
-    "incidentEnd": ""
-  }
+    "alert_uid": "08d6891a-835c-e661-39fa-96b6a9e26552",
+    "title": "The whole system is down",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/e/ee/Grumpy_Cat_by_Gage_Skidmore.jpg",
+    "state": "alerting",
+    "link_to_upstream_details": "https://en.wikipedia.org/wiki/Downtime",
+    "message": "Smth happened. Oh no!"
 }
 ```
 
 ## Useful Links
 
-- [Grafana OnCall](https://keephq.grafana.net)
-- [Grafana OnCall API Documentation](https://keephq.grafana.net/docs/api)
+- [Grafana OnCall Inbound Webhook Integration](https://grafana.com/docs/oncall/latest/configure/integrations/references/webhook/)
