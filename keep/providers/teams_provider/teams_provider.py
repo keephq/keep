@@ -24,7 +24,7 @@ class TeamsProviderAuthConfig:
             "required": True,
             "description": "Teams Webhook Url",
             "sensitive": True,
-            "validation": "https_url"
+            "validation": "https_url",
         }
     )
 
@@ -75,16 +75,16 @@ class TeamsProvider(BaseProvider):
         self.logger.debug("Notifying alert message to Teams")
         webhook_url = self.authentication_config.webhook_url
 
-        if isinstance(sections, str):
+        if sections and isinstance(sections, str):
             try:
                 sections = json.loads(sections)
-            except json.JSONDecodeError as e:
+            except Exception as e:
                 self.logger.error(f"Failed to decode sections string to JSON: {e}")
 
         if attachments and isinstance(attachments, str):
             try:
                 attachments = json.loads(attachments)
-            except json.JSONDecodeError as e:
+            except Exception as e:
                 self.logger.error(f"Failed to decode attachments string to JSON: {e}")
 
         if typeCard == "message":
