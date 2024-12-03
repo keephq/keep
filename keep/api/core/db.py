@@ -4590,6 +4590,7 @@ def set_last_alert(
     )
     with existed_or_new_session(session) as session:
         with session.begin_nested() as transaction:
+            last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session, for_update=True)
 
             # To prevent rare, but possible race condition
             # For example if older alert failed to process
