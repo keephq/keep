@@ -431,6 +431,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         body: dict | str,
         requester: str,
         incident_key: str | None = None,
+        priority: str = "",
     ):
         """Triggers an incident via the V2 REST API using sample data."""
 
@@ -454,6 +455,12 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 "body": body,
             }
         }
+
+        if priority:
+            payload["incident"]["priority"] = {
+                "id": priority,
+                "type": "priority_reference",
+            }
 
         r = requests.post(url, headers=headers, data=json.dumps(payload))
         try:
@@ -568,6 +575,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         source: str = "custom_event",
+        priority: str = "",
         **kwargs: dict,
     ):
         """
@@ -589,7 +597,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             )
         else:
             return self._trigger_incident(
-                service_id, title, alert_body, requester, incident_id
+                service_id, title, alert_body, requester, incident_id, priority
             )
 
     def _query(self, incident_id: str = None):
@@ -606,7 +614,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     ) -> AlertDto:
         # If somebody connected the provider before we refactored it
         old_format_event = event.get("event", {})
-        if old_format_event is not None and isinstance(old_format_event, dict):
+        if (
+            old_format_event is not None
+            and isinstance(old_format_event, dict)
+            and not force_new_format
+        ):
             return PagerdutyProvider._format_alert_old(event)
 
         status = PagerdutyProvider.ALERT_STATUS_MAP.get(event.get("status", "firing"))
