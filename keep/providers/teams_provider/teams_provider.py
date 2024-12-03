@@ -93,24 +93,22 @@ class TeamsProvider(BaseProvider):
             if attachments:
                 payload["attachments"] = attachments
             else:
-                payload["attachments"] = (
-                    [
-                        {
-                            "contentType": "application/vnd.microsoft.card.adaptive",
-                            "contentUrl": None,
-                            "content": {
-                                "$schema": schema,
-                                "type": "AdaptiveCard",
-                                "version": "1.2",
-                                "body": (
-                                    sections
-                                    if sections
-                                    else [{"type": "TextBlock", "text": message}]
-                                ),
-                            },
-                        }
-                    ],
-                )
+                payload["attachments"] = [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "contentUrl": None,
+                        "content": {
+                            "$schema": schema,
+                            "type": "AdaptiveCard",
+                            "version": "1.2",
+                            "body": (
+                                sections
+                                if sections
+                                else [{"type": "TextBlock", "text": message}]
+                            ),
+                        },
+                    }
+                ]
         else:
             # Standard MessageCard format
             payload = {
@@ -127,7 +125,11 @@ class TeamsProvider(BaseProvider):
             )
 
         self.logger.debug("Alert message notified to Teams")
-        return response.json()
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            self.logger.error(f"Failed to decode response from Teams: {response.text}")
+            raise ProviderException("Response from Teams is invalid") from e
 
 
 if __name__ == "__main__":
