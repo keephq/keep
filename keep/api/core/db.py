@@ -4390,15 +4390,15 @@ def get_workflow_executions_for_incident_or_alert(
         return results, total_count
 
 def is_all_alerts_resolved(
-    alert_ids: Optional[List[str | UUID]] = None,
+    fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
     session: Optional[Session] = None
 ):
-    return is_all_alerts_in_status(alert_ids, incident, AlertStatus.RESOLVED, session)
+    return is_all_alerts_in_status(fingerprints, incident, AlertStatus.RESOLVED, session)
 
 
 def is_all_alerts_in_status(
-    alert_ids: Optional[List[str | UUID]] = None,
+    fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
     status: AlertStatus = AlertStatus.RESOLVED,
     session: Optional[Session] = None
@@ -4428,12 +4428,11 @@ def is_all_alerts_in_status(
                     Alert.fingerprint == AlertEnrichment.alert_fingerprint,
                 ),
             )
-            .group_by(Alert.fingerprint)
             .having(func.max(Alert.timestamp))
         )
 
-        if alert_ids:
-            subquery = subquery.where(Alert.id.in_(alert_ids))
+        if fingerprints:
+            subquery = subquery.where(LastAlert.fingerprint.in_(fingerprints))
 
         if incident:
             subquery = (

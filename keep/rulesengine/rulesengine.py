@@ -105,7 +105,7 @@ class RulesEngine:
                                 session=session,
                             )
                             incident = assign_alert_to_incident(
-                                alert_id=event.event_id,
+                                fingerprint=event.fingerprint,
                                 incident=incident,
                                 tenant_id=self.tenant_id,
                                 session=session,
@@ -120,12 +120,12 @@ class RulesEngine:
                             )
 
                             rule_group = self._get_rule_group(rule, session)
-                            rule_group.add_alert(sub_rule, event.event_id)
+                            rule_group.add_alert(sub_rule, event.fingerprint)
 
-                            alert_ids = rule_group.get_all_alerts()
+                            fingerprints = rule_group.get_all_alerts()
 
                             if rule_group.is_all_conditions_met(rule_groups) and is_all_alerts_in_status(
-                                alert_ids=alert_ids, status=AlertStatus.FIRING, session=session
+                                fingerprints=fingerprints, status=AlertStatus.FIRING, session=session
                             ):
 
                                 self.logger.info(
@@ -139,7 +139,7 @@ class RulesEngine:
                                     session=session,
                                 )
 
-                                incident = add_alerts_to_incident(self.tenant_id, incident, alert_ids, session=session)
+                                incident = add_alerts_to_incident(self.tenant_id, incident, fingerprints, session=session)
 
                                 session.delete(rule_group)
                                 session.commit()
