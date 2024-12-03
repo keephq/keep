@@ -2,14 +2,13 @@
 Grafana Provider is a class that allows to ingest/digest data from Grafana.
 """
 
+import dataclasses
 import logging
+from typing import Literal
+from urllib.parse import urlparse, urlsplit, urlunparse
+
 import pydantic
 import requests
-import dataclasses
-
-from typing import Literal
-
-from urllib.parse import urlparse, urlunparse, urlsplit
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -32,11 +31,12 @@ class GrafanaOncallProviderAuthConfig:
             "hint": "Grafana OnCall API Token",
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana OnCall Host",
             "hint": "E.g. https://oncall-prod-us-central-0.grafana.net/oncall/ or http://localhost:8000/",
+            "validation": "any_http_url",
         },
     )
 

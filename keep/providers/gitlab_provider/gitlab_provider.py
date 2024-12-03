@@ -18,12 +18,13 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class GitlabProviderAuthConfig:
     """GitLab authentication configuration."""
 
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "GitLab Host",
             "sensitive": False,
-            "hint": "example.gitlab.com",
+            "hint": "http://example.gitlab.com",
+            "validation": "any_http_url"
         }
     )
 

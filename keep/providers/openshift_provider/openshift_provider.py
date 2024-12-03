@@ -14,17 +14,16 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class OpenshiftProviderAuthConfig:
     """Openshift authentication configuration."""
 
-    api_server: str = dataclasses.field(
-        default=None,
+    api_server: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "name": "api_server",
             "description": "The openshift api server url",
             "required": True,
             "sensitive": False,
+            "validation": "any_http_url"
         },
     )
     token: str = dataclasses.field(
-        default=None,
         metadata={
             "name": "token",
             "description": "The openshift token",
@@ -36,9 +35,10 @@ class OpenshiftProviderAuthConfig:
         default=False,
         metadata={
             "name": "insecure",
-            "description": "Whether to skip tls verification",
+            "description": "Skip TLS verification",
             "required": False,
             "sensitive": False,
+            "type": "switch"
         },
     )
 

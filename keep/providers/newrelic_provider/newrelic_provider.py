@@ -16,6 +16,7 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -37,10 +38,11 @@ class NewrelicProviderAuthConfig:
     account_id: str = dataclasses.field(
         metadata={"required": True, "description": "New Relic account ID"}
     )
-    new_relic_api_url: str = dataclasses.field(
+    new_relic_api_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "New Relic API URL",
+            "validation": "https_url"
         },
         default="https://api.newrelic.com",
     )
@@ -121,20 +123,8 @@ class NewrelicProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for New-Relic provider.
-
-        Raises:
-            ProviderConfigException: user or account is missing in authentication.
-            ProviderConfigException: private key
-            ProviderConfigException: new_relic_api_url must start with https
         """
         self.newrelic_config = NewrelicProviderAuthConfig(**self.config.authentication)
-        if (
-            self.newrelic_config.new_relic_api_url
-            and not self.newrelic_config.new_relic_api_url.startswith("https")
-        ):
-            raise ProviderConfigException(
-                "New Relic API URL must start with https", self.provider_id
-            )
 
     def __make_add_webhook_destination_query(self, url: str, name: str) -> dict:
         query = f"""mutation {{
@@ -173,7 +163,7 @@ class NewrelicProvider(BaseProvider):
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
-        scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
+        scopes = {scope.name: "Invalid" for scope in self.PROVIDER_SCOPES}
         read_scopes = [key for key in scopes.keys() if "read" in key]
 
         try:
