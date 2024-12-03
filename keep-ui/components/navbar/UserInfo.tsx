@@ -9,7 +9,6 @@ import Link from "next/link";
 import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
-import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
 import { Icon, Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
@@ -17,6 +16,7 @@ import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/hooks/useSignOut";
+import { ThemeControl } from "@/shared/ui/theme/ThemeControl";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -58,6 +58,9 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
         as="ul"
       >
         <div className="px-1 py-1 ">
+          <div className="pl-2 py-1">
+            <ThemeControl />
+          </div>
           {userRole !== "noc" && (
             <li>
               <Menu.Item

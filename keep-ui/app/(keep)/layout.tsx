@@ -11,6 +11,7 @@ import { PHProvider } from "../posthog-provider";
 import dynamic from "next/dynamic";
 import ReadOnlyBanner from "../read-only-banner";
 import { auth } from "@/auth";
+import { ThemeScript } from "@/shared/ui/theme/ThemeScript";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -35,6 +36,8 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
+        {/* ThemeScript must be the first thing to avoid flickering */}
+        <ThemeScript />
         <ConfigProvider config={config}>
           <PHProvider>
             <NextAuthProvider session={session}>

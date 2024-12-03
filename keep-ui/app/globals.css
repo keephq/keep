@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* TODO: use proper tailwind/css-variables solution */
+/**
+ * Taken from https://dev.to/jochemstoel/re-add-dark-mode-to-any-website-with-just-a-few-lines-of-code-phl
+ */
+html.workaround-dark {
+  filter: invert(100%) hue-rotate(180deg) contrast(80%) !important;
+  background: #fff;
+
+  & .line-content {
+    background-color: #fefefe;
+  }
+}
+
 /* https://github.com/vercel/next.js/discussions/13387
  nextjs-portal {
     display: none;
