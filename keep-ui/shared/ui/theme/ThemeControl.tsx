@@ -22,9 +22,12 @@ export function ThemeControl({ className }: { className?: string }) {
 
   const updateTheme = (theme: string) => {
     setTheme(theme === "system" ? null : theme);
-    document.documentElement.classList[theme === "dark" ? "add" : "remove"](
-      "workaround-dark"
-    );
+    if (theme !== "system") {
+      document.documentElement.classList[theme === "dark" ? "add" : "remove"](
+        "workaround-dark"
+      );
+      // If system theme is selected, <WatchUpdateTheme /> will handle the rest
+    }
   };
 
   const value = theme === null ? "system" : theme;
