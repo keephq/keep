@@ -251,6 +251,7 @@ def test_incident_attributes(db_session):
         timeunit="seconds",
         definition_cel='(source == "grafana" && labels.label_1 == "a")',
         created_by="test@keephq.dev",
+        create_on="any"
     )
     rules = get_rules_db(SINGLE_TENANT_UUID)
     assert len(rules) == 1

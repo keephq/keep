@@ -104,6 +104,13 @@ class RulesEngine:
                                 rule_fingerprint,
                                 session=session,
                             )
+                            incident = assign_alert_to_incident(
+                                alert_id=event.event_id,
+                                incident=incident,
+                                tenant_id=self.tenant_id,
+                                session=session,
+                            )
+
                             incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
 
                         elif rule.create_on == "all":
