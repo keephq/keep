@@ -125,11 +125,7 @@ class TeamsProvider(BaseProvider):
             )
 
         self.logger.debug("Alert message notified to Teams")
-        try:
-            return response.json()
-        except requests.exceptions.JSONDecodeError as e:
-            self.logger.error(f"Failed to decode response from Teams: {response.text}")
-            raise ProviderException("Response from Teams is invalid") from e
+        return {"response_text": response.text}
 
 
 if __name__ == "__main__":
