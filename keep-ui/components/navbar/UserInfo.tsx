@@ -6,7 +6,6 @@ import { Session } from "next-auth";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthType } from "@/utils/authenticationType";
 import Link from "next/link";
-import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { useFloating } from "@floating-ui/react";
@@ -16,7 +15,9 @@ import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/hooks/useSignOut";
+import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui/theme/ThemeControl";
+import { HiOutlineDocumentText } from "react-icons/hi2";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -105,17 +106,23 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             Providers
           </LinkWithIcon>
         </li>
-        <li>
-          {/* TODO: slows everything down. needs to be replaced */}
-          <DarkModeToggle />
-        </li>
-        <li>
+        <li className="flex items-center gap-2">
           <LinkWithIcon
-            icon={LuSlack}
+            icon={FaSlack}
             href="https://slack.keephq.dev/"
+            className="w-auto pr-3.5"
             target="_blank"
           >
-            Join our Slack
+            Join Slack
+          </LinkWithIcon>
+          <LinkWithIcon
+            icon={HiOutlineDocumentText}
+            iconClassName="w-4"
+            href="https://docs.keephq.dev/"
+            className="w-auto px-3.5"
+            target="_blank"
+          >
+            Docs
           </LinkWithIcon>
         </li>
         {flow?.isCompleted === false && (
