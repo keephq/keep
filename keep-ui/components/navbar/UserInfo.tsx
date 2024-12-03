@@ -101,6 +101,21 @@ export const UserInfo = ({ session }: UserInfoProps) => {
   return (
     <>
       <ul className="space-y-2 p-2">
+        {flow?.isCompleted === false && (
+          <li>
+            <Frigade.ProgressBadge
+              flowId={ONBOARDING_FLOW_ID}
+              onClick={() => setIsOnboardingOpen(true)}
+            />
+            <Onboarding
+              isOpen={isOnboardingOpen}
+              toggle={() => setIsOnboardingOpen(false)}
+              variables={{
+                name: session?.user.name ?? session?.user.email,
+              }}
+            />
+          </li>
+        )}
         <li>
           <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
             Providers
@@ -125,21 +140,6 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             Docs
           </LinkWithIcon>
         </li>
-        {flow?.isCompleted === false && (
-          <li>
-            <Frigade.ProgressBadge
-              flowId={ONBOARDING_FLOW_ID}
-              onClick={() => setIsOnboardingOpen(true)}
-            />
-            <Onboarding
-              isOpen={isOnboardingOpen}
-              toggle={() => setIsOnboardingOpen(false)}
-              variables={{
-                name: session?.user.name ?? session?.user.email,
-              }}
-            />
-          </li>
-        )}
         {session && <UserDropdown session={session} />}
       </ul>
     </>
