@@ -89,26 +89,28 @@ class TeamsProvider(BaseProvider):
 
         if typeCard == "message":
             # Adaptive Card format
-            payload = {
-                "type": "message",
-                "attachments": attachments
-                or [
-                    {
-                        "contentType": "application/vnd.microsoft.card.adaptive",
-                        "contentUrl": None,
-                        "content": {
-                            "$schema": schema,
-                            "type": "AdaptiveCard",
-                            "version": "1.2",
-                            "body": (
-                                sections
-                                if sections
-                                else [{"type": "TextBlock", "text": message}]
-                            ),
-                        },
-                    }
-                ],
-            }
+            payload = {"type": "message"}
+            if attachments:
+                payload["attachments"] = attachments
+            else:
+                payload["attachments"] = (
+                    [
+                        {
+                            "contentType": "application/vnd.microsoft.card.adaptive",
+                            "contentUrl": None,
+                            "content": {
+                                "$schema": schema,
+                                "type": "AdaptiveCard",
+                                "version": "1.2",
+                                "body": (
+                                    sections
+                                    if sections
+                                    else [{"type": "TextBlock", "text": message}]
+                                ),
+                            },
+                        }
+                    ],
+                )
         else:
             # Standard MessageCard format
             payload = {
