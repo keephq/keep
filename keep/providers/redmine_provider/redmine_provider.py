@@ -17,12 +17,13 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class RedmineProviderAuthConfig:
     """Redmine authentication configuration."""
 
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Redmine Host",
             "sensitive": False,
             "hint": "http://localhost:8080",
+            "validation": "any_http_url",
         }
     )
 

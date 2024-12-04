@@ -4,6 +4,7 @@ TeamsProvider is a class that implements the BaseOutputProvider interface for Mi
 
 import dataclasses
 
+import json5 as json
 import pydantic
 import requests
 
@@ -11,17 +12,19 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class TeamsProviderAuthConfig:
     """Teams authentication configuration."""
 
-    webhook_url: str = dataclasses.field(
+    webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Teams Webhook Url",
             "sensitive": True,
+            "validation": "https_url",
         }
     )
 
@@ -51,37 +54,78 @@ class TeamsProvider(BaseProvider):
     def _notify(
         self,
         message="",
-        typeCard="MessageCard",
+        typeCard="message",
         themeColor=None,
         sections=[],
+        schema="http://adaptivecards.io/schemas/adaptive-card.json",
+        attachments=[],
         **kwargs: dict,
     ):
         """
         Notify alert message to Teams using the Teams Incoming Webhook API
-        https://learn.microsoft.com/pt-br/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using?tabs=cURL
 
         Args:
-            kwargs (dict): The providers with context
+            message (str): The message to send
+            typeCard (str): Type of card to send ("MessageCard" or "message" for Adaptive Cards)
+            themeColor (str): Color theme for MessageCard
+            sections (list): Sections for MessageCard or Adaptive Card content
+            attachments (list): Attachments for Adaptive Card
+            **kwargs (dict): Additional arguments
         """
         self.logger.debug("Notifying alert message to Teams")
-
         webhook_url = self.authentication_config.webhook_url
 
-        response = requests.post(
-            webhook_url,
-            json={
+        if sections and isinstance(sections, str):
+            try:
+                sections = json.loads(sections)
+            except Exception as e:
+                self.logger.error(f"Failed to decode sections string to JSON: {e}")
+
+        if attachments and isinstance(attachments, str):
+            try:
+                attachments = json.loads(attachments)
+            except Exception as e:
+                self.logger.error(f"Failed to decode attachments string to JSON: {e}")
+
+        if typeCard == "message":
+            # Adaptive Card format
+            payload = {"type": "message"}
+            if attachments:
+                payload["attachments"] = attachments
+            else:
+                payload["attachments"] = [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "contentUrl": None,
+                        "content": {
+                            "$schema": schema,
+                            "type": "AdaptiveCard",
+                            "version": "1.2",
+                            "body": (
+                                sections
+                                if sections
+                                else [{"type": "TextBlock", "text": message}]
+                            ),
+                        },
+                    }
+                ]
+        else:
+            # Standard MessageCard format
+            payload = {
                 "@type": typeCard,
                 "themeColor": themeColor,
                 "text": message,
                 "sections": sections,
-            },
-        )
+            }
+
+        response = requests.post(webhook_url, json=payload)
         if not response.ok:
             raise ProviderException(
                 f"{self.__class__.__name__} failed to notify alert message to Teams: {response.text}"
             )
 
         self.logger.debug("Alert message notified to Teams")
+        return {"response_text": response.text}
 
 
 if __name__ == "__main__":
@@ -106,12 +150,9 @@ if __name__ == "__main__":
     )
     provider = TeamsProvider(context_manager, provider_id="teams", config=config)
     provider.notify(
-        typeCard="MessageCard",
-        themeColor="0076D7",
-        message="Microsoft Teams alert",
+        typeCard="message",
         sections=[
-            {"name": "Assigned to", "value": "Danilo Vaz"},
-            {"name": "Sum", "value": 10},
-            {"name": "Count", "value": 100},
+            {"type": "TextBlock", "text": "Danilo Vaz"},
+            {"type": "TextBlock", "text": "Tal from Keep"},
         ],
     )
