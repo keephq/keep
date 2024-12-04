@@ -18,12 +18,7 @@ keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def on_starting(server=None):
-    """This function is called by the gunicorn server when it starts"""
-    logger.info("Keep server starting")
-
-    migrate_db()
-
+def provision_resources():
     if PROVISION_RESOURCES:
         # provision providers from env. relevant only on single tenant.
         logger.info("Provisioning providers and workflows")
@@ -33,6 +28,16 @@ def on_starting(server=None):
         logger.info("Workflows provisioned successfully")
         provision_dashboards(SINGLE_TENANT_UUID)
         logger.info("Dashboards provisioned successfully")
+    else:
+        logger.info("Provisioning resources is disabled")
+
+
+def on_starting(server=None):
+    """This function is called by the gunicorn server when it starts"""
+    logger.info("Keep server starting")
+
+    migrate_db()
+    provision_resources()
 
     # Load this early and use preloading
     # https://www.joelsleppy.com/blog/gunicorn-application-preloading/

@@ -43,9 +43,9 @@ def test_app(monkeypatch, request):
 
     # Import and return the app instance
     from keep.api.api import get_app
-    from keep.api.config import on_starting
+    from keep.api.config import provision_resources
 
-    on_starting()
+    provision_resources()
     app = get_app()
 
     # Manually trigger the startup event
