@@ -4423,7 +4423,7 @@ def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigA
                 session.add(algorithm_config)
                 session.commit()
                 algorithm_configs = [algorithm_config]
-    return [ExternalAIConfigAndMetadataDto.from_orm(algorithm_config) for algorithm_config in algorithm_configs]
+        return [ExternalAIConfigAndMetadataDto.from_orm(algorithm_config) for algorithm_config in algorithm_configs]
 
 def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDto:
     with Session(engine) as session:
