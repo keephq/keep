@@ -77,6 +77,7 @@ class LastAlert(SQLModel, table=True):
     fingerprint: str = Field(primary_key=True, index=True)
     alert_id: UUID = Field(foreign_key="alert.id")
     timestamp: datetime = Field(nullable=False, index=True)
+    first_timestamp: datetime = Field(nullable=False, index=True)
 
 
 class LastAlertToIncident(SQLModel, table=True):
@@ -199,7 +200,7 @@ class Incident(SQLModel, table=True):
         ),
     )
 
-    _alerts: List["Alert"] = PrivateAttr()
+    _alerts: List["Alert"] = PrivateAttr(default_factory=list)
 
     class Config:
         arbitrary_types_allowed = True
@@ -236,6 +237,8 @@ class Alert(SQLModel, table=True):
             "uselist": False,
         }
     )
+
+    _incidents: List[Incident] = PrivateAttr(default_factory=list)
 
     __table_args__ = (
         Index(
