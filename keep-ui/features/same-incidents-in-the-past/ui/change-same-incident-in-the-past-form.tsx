@@ -35,8 +35,9 @@ export function ChangeSameIncidentInThePastForm({
       await updateIncident(
         incident.id,
         {
-          // TODO: remove this once the backend supports partial updates
-          ...incident,
+          user_generated_name: incident.user_generated_name,
+          user_summary: incident.user_summary,
+          assignee: incident.assignee,
           same_incident_in_the_past_id: selectedIncidentId,
         },
         false

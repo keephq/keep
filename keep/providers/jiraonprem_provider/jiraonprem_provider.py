@@ -20,12 +20,13 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class JiraonpremProviderAuthConfig:
     """Jira On Prem authentication configuration."""
 
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Jira Host",
             "sensitive": False,
             "hint": "jira.onprem.com",
+            "validation": "any_http_url"
         }
     )
 

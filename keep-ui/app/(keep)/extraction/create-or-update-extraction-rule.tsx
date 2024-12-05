@@ -131,7 +131,7 @@ export default function CreateOrUpdateExtractionRule({
 
   return (
     <form
-      className="py-2"
+      className="py-2 h-full overflow-y-auto"
       onSubmit={editMode ? updateExtraction : addExtraction}
     >
       <Subtitle>Extraction Metadata</Subtitle>

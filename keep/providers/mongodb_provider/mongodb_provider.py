@@ -10,17 +10,20 @@ import pydantic
 from pymongo import MongoClient
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import MultiHostUrl
 
 
 @pydantic.dataclasses.dataclass
 class MongodbProviderAuthConfig:
-    host: str = dataclasses.field(
+    host: MultiHostUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Mongo host_uri",
-            "hint": "any valid mongo host_uri like host:port, user:paassword@host:port?authSource",
+            "hint": "mongodb+srv://host:port, mongodb://host1:port1,host2:port2?authSource",
+            "validation": "multihost_url",
         }
     )
     username: str = dataclasses.field(
@@ -136,6 +139,14 @@ class MongodbProvider(BaseProvider):
         """
         Validates required configuration for MongoDB's provider.
         """
+        host = self.config.authentication["host"]
+        if host is None:
+            raise ProviderConfigException("Please provide a value for `host`")
+        if not host.strip():
+            raise ProviderConfigException("Host cannot be empty")
+        if not (host.startswith("mongodb://") or host.startswith("mongodb+srv://")):
+            host = f"mongodb://{host}"
+
         self.authentication_config = MongodbProviderAuthConfig(
             **self.config.authentication
         )

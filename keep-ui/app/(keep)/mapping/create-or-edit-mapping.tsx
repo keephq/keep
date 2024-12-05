@@ -143,7 +143,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         matchers: selectedLookupAttributes.map((attr) => attr.trim()),
         rows: mappingType === "csv" ? parsedData : null,
       });
-      clearForm();
+      exitEditOrCreateMode();
       mutate();
       toast.success("Mapping created successfully");
     } catch (error) {
@@ -165,7 +165,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         matchers: selectedLookupAttributes.map((attr) => attr.trim()),
         rows: mappingType === "csv" ? parsedData : null,
       });
-      exitEditMode();
+      exitEditOrCreateMode();
       mutate();
       toast.success("Mapping updated successfully");
     } catch (error) {
@@ -173,8 +173,7 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
     }
   };
 
-  // If the mapping is successfully updated or the user cancels the update we exit the editMode and set the editRule in the mapping.tsx to null.
-  const exitEditMode = async () => {
+  const exitEditOrCreateMode = () => {
     editCallback(null);
     clearForm();
   };
@@ -191,7 +190,10 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
   };
 
   return (
-    <form className="max-w-lg py-2" onSubmit={editMode ? updateRule : addRule}>
+    <form
+      className="w-full py-2 h-full overflow-y-auto"
+      onSubmit={editMode ? updateRule : addRule}
+    >
       <Subtitle>Mapping Metadata</Subtitle>
       <div className="mt-2.5">
         <Text>
@@ -326,19 +328,15 @@ export default function CreateOrEditMapping({ editRule, editCallback }: Props) {
         </div>
       </div>
       <div className={"space-x-1 flex flex-row justify-end items-center"}>
-        {/*If we are in the editMode we need an extra cancel button option for the user*/}
-        {editMode ? (
-          <Button
-            color="orange"
-            size="xs"
-            variant="secondary"
-            onClick={exitEditMode}
-          >
-            Cancel
-          </Button>
-        ) : (
-          <></>
-        )}
+        <Button
+          color="orange"
+          size="xs"
+          variant="secondary"
+          onClick={exitEditOrCreateMode}
+        >
+          Cancel
+        </Button>
+
         <Button
           disabled={!submitEnabled()}
           color="orange"
