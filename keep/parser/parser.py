@@ -144,7 +144,7 @@ class Parser:
         self._load_providers_config(
             tenant_id, context_manager, workflow, providers_file, workflow_providers
         )
-        # Parsethe actions (from workflow, actions yaml and database)
+        # Parse the actions (from workflow, actions yaml and database)
         self._load_actions_config(
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
