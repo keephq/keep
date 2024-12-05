@@ -63,11 +63,26 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
       
-      - name: Install Playwright
-        id: install-playwright
-        uses: ./.github/actions/install-playwright
+      - name: Get Playwright version from pyproject.toml
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(poetry run python -c "from playwright import __version__; print(__version__)")
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v3
         with:
-          browsers: chromium webkit
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright and dependencies
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            poetry run playwright install chromium webkit --with-deps
+          else
+            poetry run playwright install-deps
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
