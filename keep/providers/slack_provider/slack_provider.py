@@ -13,20 +13,19 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
-from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class SlackProviderAuthConfig:
     """Slack authentication configuration."""
 
-    webhook_url: HttpsUrl = dataclasses.field(
+    webhook_url: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Slack Webhook Url",
-            "validation": "https_url",
             "sensitive": True,
         },
+        default="",
     )
     access_token: str = dataclasses.field(
         metadata={
