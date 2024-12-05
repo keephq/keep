@@ -625,13 +625,13 @@ def setup_stress_alerts(
 
 @pytest.fixture
 def create_alert(db_session):
-    def _create_alert(fingerprint, status, timestamp, details=None):
+    def _create_alert(fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID):
         details = details or {}
         random_name = "test-{}".format(fingerprint)
         process_event(
             ctx={"job_try": 1},
             trace_id="test",
-            tenant_id=SINGLE_TENANT_UUID,
+            tenant_id=tenant_id,
             provider_id="test",
             provider_type=(
                 details["source"][0] if details and "source" in details and details["source"] else None

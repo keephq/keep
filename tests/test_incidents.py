@@ -24,6 +24,7 @@ from keep.api.models.alert import (
     IncidentStatus,
 )
 from keep.api.models.db.alert import Alert, LastAlertToIncident
+from keep.api.models.db.tenant import Tenant
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -798,3 +799,64 @@ def test_merge_incidents_app(
     assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
     assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
 """
+
+def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
+
+
+    tenant_data = [
+        Tenant(id="tenant_1", name="test-tenant-1", created_by="tests-1@keephq.dev"),
+        Tenant(id="tenant_2", name="test-tenant-2", created_by="tests-2@keephq.dev")
+    ]
+    db_session.add_all(tenant_data)
+    db_session.commit()
+
+    incident_tenant_1 = create_incident_from_dict(
+        "tenant_1", {"user_generated_name": "test", "user_summary": "test"}
+    )
+    incident_tenant_2 = create_incident_from_dict(
+        "tenant_2", {"user_generated_name": "test", "user_summary": "test"}
+    )
+
+    create_alert(
+        "non-unique-fingerprint",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
+        tenant_id="tenant_1"
+    )
+
+    create_alert(
+        "non-unique-fingerprint",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
+        tenant_id="tenant_2"
+    )
+
+    alert_tenant_1 = db_session.query(Alert).filter(Alert.tenant_id == 'tenant_1').first()
+    alert_tenant_2 = db_session.query(Alert).filter(Alert.tenant_id == 'tenant_2').first()
+
+    add_alerts_to_incident_by_incident_id(
+        "tenant_1", incident_tenant_1.id, [alert_tenant_1.fingerprint]
+    )
+    add_alerts_to_incident_by_incident_id(
+        "tenant_2", incident_tenant_2.id, [alert_tenant_2.fingerprint]
+    )
+
+    incident_tenant_1 = get_incident_by_id("tenant_1", incident_tenant_1.id)
+    incident_tenant_1_alerts, total_incident_tenant_1_alerts = get_incident_alerts_by_incident_id(
+        tenant_id="tenant_1",
+        incident_id=incident_tenant_1.id,
+    )
+    assert incident_tenant_1.alerts_count == 1
+    assert total_incident_tenant_1_alerts == 1
+    assert len(incident_tenant_1_alerts) == 1
+
+    incident_tenant_2 = get_incident_by_id("tenant_2", incident_tenant_2.id)
+    incident_tenant_2_alerts, total_incident_tenant_2_alerts = get_incident_alerts_by_incident_id(
+        tenant_id="tenant_2",
+        incident_id=incident_tenant_2.id,
+    )
+    assert incident_tenant_2.alerts_count == 1
+    assert total_incident_tenant_2_alerts == 1
+    assert len(incident_tenant_2_alerts) == 1
