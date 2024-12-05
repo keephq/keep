@@ -21,31 +21,15 @@ depends_on = None
 def populate_db():
     session = Session(op.get_bind())
 
-    timestamps = session.execute("""
-        select 
-            alert.fingerprint, 
-            alert.tenant_id, 
-            min(alert.timestamp) as first_timestamp 
-        from alert 
-        group by 
-            alert.fingerprint, 
-            alert.tenant_id 
+    session.execute("""
+        UPDATE lastalert
+        SET first_timestamp = (
+            SELECT MIN(alert.timestamp)
+            FROM alert
+            WHERE alert.fingerprint = lastalert.fingerprint 
+            AND alert.tenant_id = lastalert.tenant_id
+        )
     """)
-
-    for fingerprint, tenant_id, first_timestamp in timestamps:
-        session.execute("""
-            update 
-                lastalert
-            set
-                lastalert.first_timestamp = :first_timestamp
-            where
-                lastalert.fingerprint = :fingerprint
-                and lastalert.tenant_id = :tenant_id
-        """, {
-            "first_timestamp": first_timestamp.isoformat(),
-            "fingerprint": fingerprint,
-            "tenant_id": tenant_id,
-        })
 
 
 def upgrade() -> None:
