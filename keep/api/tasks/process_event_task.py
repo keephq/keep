@@ -604,9 +604,9 @@ def process_event(
             notify_client,
             timestamp_forced,
         )
-    except Exception:
+    except Exception as e:
         logger.exception(
-            "Error processing event",
+            "Error processing event" + str(e),
             extra=extra_dict,
         )
         # In case of exception, add the alerts to the defect table
