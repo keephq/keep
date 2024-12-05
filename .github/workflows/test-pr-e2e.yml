@@ -63,10 +63,10 @@ jobs:
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
       
-      - name: Get Playwright version from pyproject.toml
+      - name: Get Playwright version from poetry.lock
         id: playwright-version
         run: |
-          PLAYWRIGHT_VERSION=$(poetry run python -c "from playwright import __version__; print(__version__)")
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
           echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright browsers
