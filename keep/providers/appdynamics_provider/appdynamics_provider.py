@@ -45,11 +45,12 @@ class AppdynamicsProviderAuthConfig:
             "hint": "the app instance in which the webhook should be installed",
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "AppDynamics host",
             "hint": "e.g. https://baseball202404101029219.saas.appdynamics.com",
+            "validation": "any_http_url"
         },
     )
 

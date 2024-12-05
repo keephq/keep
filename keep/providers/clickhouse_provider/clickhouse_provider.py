@@ -12,6 +12,7 @@ from clickhouse_driver.dbapi.extras import DictCursor
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -26,11 +27,19 @@ class ClickhouseProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "Clickhouse hostname"}
+    host: NoSchemeUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Clickhouse hostname",
+            "validation": "no_scheme_url",
+        }
     )
-    port: str = dataclasses.field(
-        metadata={"required": True, "description": "Clickhouse port"}
+    port: UrlPort = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Clickhouse port",
+            "validation": "port",
+        }
     )
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "Clickhouse database name"},
@@ -156,6 +165,7 @@ if __name__ == "__main__":
             "password": os.environ.get("CLICKHOUSE_PASSWORD"),
             "host": os.environ.get("CLICKHOUSE_HOST"),
             "database": os.environ.get("CLICKHOUSE_DATABASE"),
+            "port": os.environ.get("CLICKHOUSE_PORT")
         }
     )
     context_manager = ContextManager(

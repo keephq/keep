@@ -14,9 +14,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
-from keep.providers.grafana_provider.grafana_alert_format_description import (
-    GrafanaAlertFormatDescription,
-)
+from keep.providers.grafana_provider.grafana_alert_format_description import \
+    GrafanaAlertFormatDescription
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -35,11 +34,12 @@ class GrafanaProviderAuthConfig:
             "sensitive": True,
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana host",
             "hint": "e.g. https://keephq.grafana.net",
+            "validation": "any_http_url"
         },
     )
 
@@ -111,17 +111,10 @@ class GrafanaProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Grafana provider.
-
         """
         self.authentication_config = GrafanaProviderAuthConfig(
             **self.config.authentication
         )
-        if not self.authentication_config.host.startswith(
-            "https://"
-        ) and not self.authentication_config.host.startswith("http://"):
-            self.authentication_config.host = (
-                f"https://{self.authentication_config.host}"
-            )
 
     def validate_scopes(self) -> dict[str, bool | str]:
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}

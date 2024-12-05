@@ -7,7 +7,6 @@ import inspect
 import logging
 
 import pydantic
-
 # from confluent_kafka import Consumer, KafkaError, KafkaException
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError, NoBrokersAvailable
@@ -16,6 +15,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import NoSchemeMultiHostUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -24,11 +24,12 @@ class KafkaProviderAuthConfig:
     Kafka authentication configuration.
     """
 
-    host: str = dataclasses.field(
+    host: NoSchemeMultiHostUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Kafka host",
-            "hint": "e.g. https://kafka:9092",
+            "hint": "e.g. localhost:9092 or localhost:9092,localhost:8093",
+            "validation": "no_scheme_multihost_url"
         },
     )
     topic: str = dataclasses.field(
@@ -170,7 +171,6 @@ class KafkaProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Kafka provider.
-
         """
         self.authentication_config = KafkaProviderAuthConfig(
             **self.config.authentication

@@ -7,10 +7,7 @@ Create Date: 2024-12-01 16:40:12.655642
 """
 
 import sqlalchemy as sa
-import sqlalchemy_utils
-import sqlmodel
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "3ad5308e7200"
@@ -24,13 +21,15 @@ def upgrade() -> None:
 
     with op.batch_alter_table("externalaiconfigandmetadata", schema=None) as batch_op:
         batch_op.alter_column(
-            "settings", existing_type=sa.VARCHAR(), type_=sa.JSON(), nullable=True
+            "settings", existing_type=sa.VARCHAR(), type_=sa.JSON(), nullable=True,
+            postgresql_using="settings::json"
         )
         batch_op.alter_column(
             "settings_proposed_by_algorithm",
             existing_type=sa.VARCHAR(),
             type_=sa.JSON(),
             existing_nullable=True,
+            postgresql_using="settings::json"
         )
         batch_op.alter_column(
             "feedback_logs",

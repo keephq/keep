@@ -15,6 +15,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -38,13 +39,14 @@ class JiraProviderAuthConfig:
             "documentation_url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/#Create-an-API-token",
         }
     )
-    host: str = dataclasses.field(
+    host: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Atlassian Jira Host",
             "sensitive": False,
             "documentation_url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/#Create-an-API-token",
-            "hint": "keephq.atlassian.net",
+            "hint": "https://keephq.atlassian.net",
+            "validation": "https_url",
         }
     )
 
@@ -99,6 +101,7 @@ class JiraProvider(BaseProvider):
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
+        self._host = None
 
     def validate_scopes(self):
         """
@@ -159,13 +162,17 @@ class JiraProvider(BaseProvider):
         )
 
     @property
-    def jira_host(self):
+    def jira_host(self) -> str:
+        if self._host is not None:
+            return self._host
         host = (
             self.authentication_config.host
             if self.authentication_config.host.startswith("https://")
+            or self.authentication_config.host.startswith("http://")
             else f"https://{self.authentication_config.host}"
         )
-        return host
+        self._host = host
+        return self._host
 
     def dispose(self):
         """
@@ -483,9 +490,7 @@ class JiraProvider(BaseProvider):
             kwargs (dict): The providers with context
         """
         if not ticket_id:
-            request_url = (
-                f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
-            )
+            request_url = f"{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
             response = requests.get(request_url, auth=self.__get_auth(), verify=False)
             if not response.ok:
                 raise ProviderException(

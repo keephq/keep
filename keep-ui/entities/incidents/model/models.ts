@@ -31,6 +31,7 @@ export interface IncidentDto {
   merged_into_incident_id: string;
   merged_by: string;
   merged_at: Date;
+  fingerprint: string;
 }
 
 export interface IncidentCandidateDto {

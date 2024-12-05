@@ -16,6 +16,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
+from keep.api.core.db import set_last_alert
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -333,6 +334,7 @@ def is_elastic_responsive(host, port, user, password):
             basic_auth=(user, password),
         )
         info = elastic_client._client.info()
+        print("Elastic still up now")
         return True if info else False
     except Exception:
         print("Elastic still not up")
@@ -505,6 +507,35 @@ def setup_alerts(elastic_client, db_session, request):
         )
     db_session.add_all(alerts)
     db_session.commit()
+
+    existed_last_alerts = db_session.query(LastAlert).all()
+    existed_last_alerts_dict = {
+        last_alert.fingerprint: last_alert
+        for last_alert in existed_last_alerts
+    }
+
+    last_alerts = []
+    for alert in alerts:
+        if alert.fingerprint in existed_last_alerts_dict:
+            last_alert = existed_last_alerts_dict[alert.fingerprint]
+            last_alert.alert_id = alert.id
+            last_alert.timestamp = alert.timestamp
+            last_alerts.append(
+                last_alert
+            )
+        else:
+            last_alerts.append(
+                LastAlert(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    fingerprint=alert.fingerprint,
+                    timestamp=alert.timestamp,
+                    first_timestamp=alert.timestamp,
+                    alert_id=alert.id,
+                )
+            )
+    db_session.add_all(last_alerts)
+    db_session.commit()
+
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
@@ -547,6 +578,33 @@ def setup_stress_alerts_no_elastic(db_session):
         db_session.add_all(alerts)
         db_session.commit()
 
+        existed_last_alerts = db_session.query(LastAlert).all()
+        existed_last_alerts_dict = {
+            last_alert.fingerprint: last_alert
+            for last_alert in existed_last_alerts
+        }
+        last_alerts = []
+        for alert in alerts:
+            if alert.fingerprint in existed_last_alerts_dict:
+                last_alert = existed_last_alerts_dict[alert.fingerprint]
+                last_alert.alert_id = alert.id
+                last_alert.timestamp=alert.timestamp
+                last_alerts.append(
+                    last_alert
+                )
+            else:
+                last_alerts.append(
+                    LastAlert(
+                        tenant_id=SINGLE_TENANT_UUID,
+                        fingerprint=alert.fingerprint,
+                        timestamp=alert.timestamp,
+                        first_timestamp=alert.timestamp,
+                        alert_id=alert.id,
+                    )
+                )
+        db_session.add_all(last_alerts)
+        db_session.commit()
+
         return alerts
 
     return _setup_stress_alerts_no_elastic
@@ -559,7 +617,6 @@ def setup_stress_alerts(
     num_alerts = request.param.get(
         "num_alerts", 1000
     )  # Default to 1000 alerts if not specified
-
     alerts = setup_stress_alerts_no_elastic(num_alerts)
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
