@@ -68,12 +68,16 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      - name: Set up Keep environment
+      - name: Build Docker images in parallel
         run: |
-          DOCKER_BUILDKIT=1 docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
+          # Start both builds in background
+          docker compose -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build keep-frontend & \
+          docker compose -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build keep-backend & \
+          wait
+
+      - name: Start services
+        run: |
+          docker compose -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
 
       - name: Wait for database to be ready
         run: |
