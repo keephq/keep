@@ -22,10 +22,11 @@ class WebhookProviderAuthConfig:
     Webhook authentication configuration.
     """
 
-    url: str = dataclasses.field(
+    url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Webhook URL",
+            "validation": "any_http_url"
         }
     )
 

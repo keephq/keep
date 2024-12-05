@@ -1,15 +1,26 @@
 export interface ProviderAuthConfig {
-  name: string;
   description: string;
   hint?: string;
   placeholder?: string;
-  validation: string; // regex
+  validation?:
+    | "any_url"
+    | "any_http_url"
+    | "https_url"
+    | "no_scheme_url"
+    | "multihost_url"
+    | "no_scheme_multihost_url"
+    | "port"
+    | "tld";
   required?: boolean;
   value?: string;
+  default: string | number | boolean | null;
+  options?: Array<string | number>;
   sensitive?: boolean;
   hidden?: boolean;
-  type?: string;
+  type?: "select" | "form" | "file" | "switch";
   file_type?: string;
+  config_main_group?: string;
+  config_sub_group?: string;
 }
 
 export interface ProviderMethodParam {
@@ -138,3 +149,14 @@ export const defaultProvider: Provider = {
   categories: ["Others"],
   coming_soon: false,
 };
+
+export type ProviderFormKVData = Record<string, string>[];
+export type ProviderFormValue =
+  | string
+  | number
+  | boolean
+  | File
+  | ProviderFormKVData
+  | undefined;
+export type ProviderFormData = Record<string, ProviderFormValue>;
+export type ProviderInputErrors = Record<string, string>;

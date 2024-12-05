@@ -13,19 +13,20 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
 class SlackProviderAuthConfig:
     """Slack authentication configuration."""
 
-    webhook_url: str = dataclasses.field(
+    webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Slack Webhook Url",
+            "validation": "https_url",
             "sensitive": True,
         },
-        default="",
     )
     access_token: str = dataclasses.field(
         metadata={
@@ -133,20 +134,21 @@ class SlackProvider(BaseProvider):
             },
         )
         if not message:
-            if not blocks:
+            if not blocks and not attachments:
                 raise ProviderException(
                     "Message is required - see for example https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml#L16"
                 )
-            message = blocks[0].get("text")
         payload = {
             "channel": channel,
-            "text": message,
-            "blocks": (
+        }
+        if message:
+            payload["text"] = message
+        if blocks:
+            payload["blocks"] = (
                 json.dumps(blocks)
                 if isinstance(blocks, dict) or isinstance(blocks, list)
                 else blocks
-            ),
-        }
+            )
         if attachments:
             payload["attachments"] = (
                 json.dumps(attachments)
@@ -193,9 +195,17 @@ class SlackProvider(BaseProvider):
                     method = "chat.postMessage"
                     payload["thread_ts"] = thread_timestamp
 
-            response = requests.post(
-                f"{SlackProvider.SLACK_API}/{method}", data=payload
-            )
+            if payload["attachments"]:
+                payload["attachments"] = attachments
+                response = requests.post(
+                    f"{SlackProvider.SLACK_API}/{method}",
+                    data={"payload": json.dumps(payload)},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+            else:
+                response = requests.post(
+                    f"{SlackProvider.SLACK_API}/{method}", data=payload
+                )
 
             response_json = response.json()
             if not response.ok or not response_json.get("ok"):
@@ -250,35 +260,7 @@ if __name__ == "__main__":
         provider_config=config,
     )
     provider.notify(
-        message="Simple alert showing context with name: John Doe",
         channel="C04P7QSG692",
-        blocks=[
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "Danny Torrence left the following review for your property:",
-                },
-            },
-            {
-                "type": "section",
-                "block_id": "section567",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "<https://example.com|Overlook Hotel> \n :star: \n Doors had too many axe holes, guest in room 237 was far too rowdy, whole place felt stuck in the 1920s.",
-                },
-                "accessory": {
-                    "type": "image",
-                    "image_url": "https://is5-ssl.mzstatic.com/image/thumb/Purple3/v4/d3/72/5c/d3725c8f-c642-5d69-1904-aa36e4297885/source/256x256bb.jpg",
-                    "alt_text": "Haunted hotel image",
-                },
-            },
-            {
-                "type": "section",
-                "block_id": "section789",
-                "fields": [{"type": "mrkdwn", "text": "*Average Rating*\n1.0"}],
-            },
-        ],
         attachments=[
             {
                 "fallback": "Plain-text summary of the attachment.",

@@ -46,11 +46,12 @@ class GraylogProviderAuthConfig:
             "sensitive": True,
         },
     )
-    deployment_url: str = dataclasses.field(
+    deployment_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Deployment Url",
             "hint": "Example: http://127.0.0.1:9000",
+            "validation": "any_http_url"
         },
     )
 

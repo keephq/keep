@@ -396,18 +396,18 @@ def perform_demo_ai(keep_api_key, keep_api_url):
         )
         alerts_existing.raise_for_status()
         alerts_existing = alerts_existing.json()
-        alert_ids_to_add = []
+        fingerprints_to_add = []
         for alert in alerts_existing:
             if alert["name"] in FAKE_ALERT_NAMES:
-                alert_ids_to_add.append(alert["event_id"])
+                fingerprints_to_add.append(alert["fingerprint"])
 
-        if len(alert_ids_to_add) > 0:
-            alert_ids_to_add = alert_ids_to_add[:10]
+        if len(fingerprints_to_add) > 0:
+            fingerprints_to_add = fingerprints_to_add[:10]
             
             response = requests.post(
                 f"{keep_api_url}/incidents/{incident_exists['id']}/alerts",
                 headers={"x-api-key": keep_api_key},
-                json=alert_ids_to_add,
+                json=fingerprints_to_add,
             )
             response.raise_for_status()
 
