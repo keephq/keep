@@ -16,6 +16,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
+from keep.api.core.db import set_last_alert
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -506,6 +507,35 @@ def setup_alerts(elastic_client, db_session, request):
         )
     db_session.add_all(alerts)
     db_session.commit()
+
+    existed_last_alerts = db_session.query(LastAlert).all()
+    existed_last_alerts_dict = {
+        last_alert.fingerprint: last_alert
+        for last_alert in existed_last_alerts
+    }
+
+    last_alerts = []
+    for alert in alerts:
+        if alert.fingerprint in existed_last_alerts_dict:
+            last_alert = existed_last_alerts_dict[alert.fingerprint]
+            last_alert.alert_id = alert.id
+            last_alert.timestamp = alert.timestamp
+            last_alerts.append(
+                last_alert
+            )
+        else:
+            last_alerts.append(
+                LastAlert(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    fingerprint=alert.fingerprint,
+                    timestamp=alert.timestamp,
+                    first_timestamp=alert.timestamp,
+                    alert_id=alert.id,
+                )
+            )
+    db_session.add_all(last_alerts)
+    db_session.commit()
+
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
@@ -568,6 +598,7 @@ def setup_stress_alerts_no_elastic(db_session):
                         tenant_id=SINGLE_TENANT_UUID,
                         fingerprint=alert.fingerprint,
                         timestamp=alert.timestamp,
+                        first_timestamp=alert.timestamp,
                         alert_id=alert.id,
                     )
                 )
@@ -594,13 +625,13 @@ def setup_stress_alerts(
 
 @pytest.fixture
 def create_alert(db_session):
-    def _create_alert(fingerprint, status, timestamp, details=None):
+    def _create_alert(fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID):
         details = details or {}
         random_name = "test-{}".format(fingerprint)
         process_event(
             ctx={"job_try": 1},
             trace_id="test",
-            tenant_id=SINGLE_TENANT_UUID,
+            tenant_id=tenant_id,
             provider_id="test",
             provider_type=(
                 details["source"][0] if details and "source" in details and details["source"] else None

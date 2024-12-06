@@ -1061,12 +1061,15 @@ def get_alerts_with_filters(
 ) -> list[Alert]:
     with Session(engine) as session:
         # Create the query
-        query = session.query(Alert)
+        query = (
+            session
+            .query(Alert)
+            .select_from(LastAlert)
+            .join(Alert, LastAlert.alert_id == Alert.id)
+        )
 
         # Apply subqueryload to force-load the alert_enrichment relationship
         query = query.options(subqueryload(Alert.alert_enrichment))
-        if with_incidents:
-            query = query.options(joinedload(Alert.incidents))
 
         # Filter by tenant_id
         query = query.filter(Alert.tenant_id == tenant_id)
@@ -1135,6 +1138,8 @@ def get_alerts_with_filters(
 
         # Execute the query
         alerts = query.all()
+        if with_incidents:
+            alerts = enrich_alerts_with_incidents(tenant_id, alerts, session)
 
     return alerts
 
@@ -1241,62 +1246,37 @@ def get_last_alerts(
     with Session(engine) as session:
         dialect_name = session.bind.dialect.name
 
-        # Subquery that selects the max and min timestamp for each fingerprint
-        subquery = (
-            session.query(
-                Alert.fingerprint,
-                func.max(Alert.timestamp).label("max_timestamp"),
-                func.min(Alert.timestamp).label("min_timestamp"),
-            )
-            .filter(Alert.tenant_id == tenant_id)
-            .group_by(Alert.fingerprint)
-            .subquery()
+        query = (
+            session
+            .query(Alert, LastAlert.first_timestamp.label("startedAt"))
+            .select_from(LastAlert)
+            .join(Alert, LastAlert.alert_id == Alert.id)
         )
 
-        # Apply timeframe filter if provided
         if timeframe:
-            subquery = (
-                session.query(subquery)
-                .filter(
-                    subquery.c.max_timestamp
-                    >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
-                )
-                .subquery()
+            query = query.filter(
+                LastAlert.timestamp >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
             )
 
         # Apply additional filters
         filter_conditions = []
 
         if upper_timestamp is not None:
-            filter_conditions.append(subquery.c.max_timestamp < upper_timestamp)
+            filter_conditions.append(LastAlert.timestamp < upper_timestamp)
 
         if lower_timestamp is not None:
-            filter_conditions.append(subquery.c.max_timestamp >= lower_timestamp)
+            filter_conditions.append(LastAlert.timestamp >= lower_timestamp)
 
         if fingerprints:
-            filter_conditions.append(subquery.c.fingerprint.in_(tuple(fingerprints)))
+            filter_conditions.append(LastAlert.fingerprint.in_(tuple(fingerprints)))
 
         logger.info(f"filter_conditions: {filter_conditions}")
 
         if filter_conditions:
-            subquery = session.query(subquery).filter(*filter_conditions).subquery()
+            query = query.filter(*filter_conditions)
 
         # Main query for alerts
-        query = (
-            session.query(
-                Alert,
-                subquery.c.min_timestamp.label("startedAt"),
-            )
-            .filter(Alert.tenant_id == tenant_id)
-            .join(
-                subquery,
-                and_(
-                    Alert.fingerprint == subquery.c.fingerprint,
-                    Alert.timestamp == subquery.c.max_timestamp,
-                ),
-            )
-            .options(subqueryload(Alert.alert_enrichment))
-        )
+        query = query.filter(Alert.tenant_id == tenant_id).options(subqueryload(Alert.alert_enrichment))
 
         if with_incidents:
             if dialect_name == "sqlite":
@@ -1308,7 +1288,10 @@ def get_last_alerts(
                             cast(LastAlertToIncident.incident_id, String)
                         ).label("incidents"),
                     )
-                    .filter(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .filter(
+                        LastAlertToIncident.tenant_id == tenant_id,
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                    )
                     .group_by(LastAlertToIncident.fingerprint)
                     .subquery()
                 )
@@ -1322,7 +1305,10 @@ def get_last_alerts(
                             cast(LastAlertToIncident.incident_id, String)
                         ).label("incidents"),
                     )
-                    .filter(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .filter(
+                        LastAlertToIncident.tenant_id == tenant_id,
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                    )
                     .group_by(LastAlertToIncident.fingerprint)
                     .subquery()
                 )
@@ -1337,7 +1323,10 @@ def get_last_alerts(
                             ",",
                         ).label("incidents"),
                     )
-                    .filter(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+                    .filter(
+                        LastAlertToIncident.tenant_id == tenant_id,
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                    )
                     .group_by(LastAlertToIncident.fingerprint)
                     .subquery()
                 )
@@ -1985,36 +1974,6 @@ def create_deduplication_event(
         session.commit()
 
 
-def get_all_alerts_by_providers(tenant_id):
-    with Session(engine) as session:
-        # Query to get the count of alerts per provider_id and provider_type
-        query = (
-            select(
-                Alert.provider_id,
-                Alert.provider_type,
-                func.count(Alert.id).label("num_alerts"),
-            )
-            .where(Alert.tenant_id == tenant_id)
-            .group_by(Alert.provider_id, Alert.provider_type)
-        )
-
-        results = session.exec(query).all()
-
-        # Create a dictionary with the number of alerts for each provider
-        stats = {}
-        for result in results:
-            provider_id = result.provider_id
-            provider_type = result.provider_type
-            num_alerts = result.num_alerts
-
-            key = f"{provider_type}_{provider_id}"
-            stats[key] = {
-                "num_alerts": num_alerts,
-            }
-
-    return stats
-
-
 def get_all_deduplication_stats(tenant_id):
     with Session(engine) as session:
         # Query to get all-time deduplication stats
@@ -2181,8 +2140,7 @@ def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
             .filter(
                 Alert.tenant_id == tenant_id,
                 Alert.provider_type != "group",
-                Provider.id
-                == None,  # Filters for alerts with a provider_id not in Provider table
+                Provider.id == None,  # Filters for alerts with a provider_id not in Provider table
             )
             .group_by(Alert.provider_type, Alert.provider_id)
             .all()
@@ -3114,6 +3072,7 @@ def enrich_incidents_with_alerts(tenant_id: str, incidents: List[Incident], sess
             select(LastAlertToIncident.incident_id, Alert)
             .select_from(LastAlert)
             .join(LastAlertToIncident, and_(
+                LastAlertToIncident.tenant_id == LastAlert.tenant_id,
                 LastAlertToIncident.fingerprint == LastAlert.fingerprint,
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
             ))
@@ -3132,6 +3091,33 @@ def enrich_incidents_with_alerts(tenant_id: str, incidents: List[Incident], sess
             incident._alerts = alerts_per_incident[incident.id]
 
         return incidents
+
+
+def enrich_alerts_with_incidents(tenant_id: str, alerts: List[Alert], session: Optional[Session]=None):
+    with existed_or_new_session(session) as session:
+        alert_incidents = session.exec(
+            select(LastAlertToIncident.fingerprint, Incident)
+            .select_from(LastAlert)
+            .join(LastAlertToIncident, and_(
+                LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                LastAlertToIncident.fingerprint == LastAlert.fingerprint,
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+            ))
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
+            .where(
+                LastAlert.tenant_id == tenant_id,
+                LastAlertToIncident.fingerprint.in_([alert.fingerprint for alert in alerts])
+            )
+        ).all()
+
+        incidents_per_alert = defaultdict(list)
+        for alert_id, incident in alert_incidents:
+            incidents_per_alert[alert_id].append(incident)
+
+        for alert in alerts:
+            alert._incidents = incidents_per_alert[incident.id]
+
+        return alerts
 
 
 def get_last_incidents(
@@ -3402,7 +3388,11 @@ def get_incident_alerts_and_links_by_incident_id(
                 LastAlertToIncident,
             )
             .select_from(LastAlertToIncident)
-            .join(LastAlert, LastAlert.fingerprint == LastAlertToIncident.fingerprint)
+            .join(LastAlert, and_(
+                  LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                  LastAlert.fingerprint == LastAlertToIncident.fingerprint
+              )
+            )
             .join(Alert, LastAlert.alert_id == Alert.id)
             .filter(
                 LastAlertToIncident.tenant_id == tenant_id,
@@ -3455,24 +3445,6 @@ def get_future_incidents_by_incident_id(
     return query.all(), total_count
 
 
-def get_all_same_alert_ids(
-    tenant_id: str, alert_ids: List[str | UUID], session: Optional[Session] = None
-):
-    with existed_or_new_session(session) as session:
-        fingerprints_subquery = (
-            session.query(Alert.fingerprint)
-            .where(Alert.tenant_id == tenant_id, col(Alert.id).in_(alert_ids))
-            .subquery()
-        )
-        query = session.scalars(
-            select(Alert.id).where(
-                Alert.tenant_id == tenant_id,
-                col(Alert.fingerprint).in_(fingerprints_subquery),
-            )
-        )
-        return query.all()
-
-
 def get_alerts_data_for_incident(
     tenant_id: str,
     fingerprints: Optional[List[str]] = None,
@@ -3501,7 +3473,10 @@ def get_alerts_data_for_incident(
         alerts_data = session.exec(
             select(*fields)
             .select_from(LastAlert)
-            .join(Alert, LastAlert.alert_id == Alert.id)
+            .join(Alert, and_(
+                LastAlert.tenant_id == Alert.tenant_id,
+                LastAlert.alert_id == Alert.id,
+            ))
             .where(
                 LastAlert.tenant_id == tenant_id,
                 col(LastAlert.fingerprint).in_(fingerprints),
@@ -3574,7 +3549,10 @@ def add_alerts_to_incident(
             existing_fingerprints = set(
                 session.exec(
                     select(LastAlert.fingerprint)
-                    .join(LastAlertToIncident, LastAlertToIncident.fingerprint == LastAlert.fingerprint)
+                    .join(LastAlertToIncident, and_(
+                        LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                        LastAlertToIncident.fingerprint == LastAlert.fingerprint
+                    ))
                     .where(
                         LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                         LastAlertToIncident.tenant_id == tenant_id,
@@ -3638,7 +3616,10 @@ def add_alerts_to_incident(
 
             started_at, last_seen_at = session.exec(
                 select(func.min(Alert.timestamp), func.max(Alert.timestamp))
-                .join(LastAlertToIncident, LastAlertToIncident.fingerprint == Alert.fingerprint)
+                .join(LastAlertToIncident, and_(
+                    LastAlertToIncident.tenant_id == Alert.tenant_id,
+                    LastAlertToIncident.fingerprint == Alert.fingerprint
+                ))
                 .where(
                     LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                     LastAlertToIncident.tenant_id == tenant_id,
@@ -3678,7 +3659,10 @@ def get_last_alerts_for_incidents(
                 LastAlertToIncident.incident_id,
             )
             .select_from(LastAlert)
-            .join(LastAlertToIncident, LastAlert.fingerprint == LastAlertToIncident.fingerprint)
+            .join(LastAlertToIncident, and_(
+                  LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                  LastAlert.fingerprint == LastAlertToIncident.fingerprint
+            ))
             .join(Alert, LastAlert.alert_id == Alert.id)
             .filter(
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
@@ -3739,7 +3723,10 @@ def remove_alerts_to_incident_by_incident_id(
         existed_services_query = (
             select(func.distinct(service_field))
             .select_from(LastAlert)
-            .join(LastAlertToIncident, LastAlert.fingerprint == LastAlertToIncident.fingerprint)
+            .join(LastAlertToIncident, and_(
+                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint
+            ))
             .join(Alert, LastAlert.alert_id == Alert.id)
             .filter(
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
@@ -3754,7 +3741,10 @@ def remove_alerts_to_incident_by_incident_id(
         existed_sources_query = (
             select(col(Alert.provider_type).distinct())
             .select_from(LastAlert)
-            .join(LastAlertToIncident, LastAlert.fingerprint == LastAlertToIncident.fingerprint)
+            .join(LastAlertToIncident, and_(
+                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint
+            ))
             .join(Alert, LastAlert.alert_id == Alert.id)
             .filter(
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
@@ -3779,7 +3769,10 @@ def remove_alerts_to_incident_by_incident_id(
         started_at, last_seen_at = session.exec(
             select(func.min(Alert.timestamp), func.max(Alert.timestamp))
             .select_from(LastAlert)
-            .join(LastAlertToIncident, LastAlert.fingerprint == LastAlertToIncident.fingerprint)
+            .join(LastAlertToIncident, and_(
+                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+            ))
             .join(Alert, LastAlert.alert_id == Alert.id)
             .where(
                 LastAlertToIncident.tenant_id == tenant_id,
@@ -4229,10 +4222,14 @@ def get_workflow_executions_for_incident_or_alert(
                 LastAlert, WorkflowToAlertExecution.alert_fingerprint == LastAlert.fingerprint
             )
             .join(Alert, LastAlert.alert_id == Alert.id)
-            .join(LastAlertToIncident, Alert.fingerprint == LastAlertToIncident.fingerprint)
+            .join(LastAlertToIncident, and_(
+                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint
+            ))
             .where(
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                 LastAlertToIncident.incident_id == incident_id,
+                LastAlert.tenant_id == tenant_id,
             )
         )
 
@@ -4278,9 +4275,15 @@ def is_all_incident_alerts_resolved(
             .select_from(LastAlert)
             .join(Alert, LastAlert.alert_id == Alert.id)
             .outerjoin(
-                AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
+                AlertEnrichment, and_(
+                    Alert.tenant_id == AlertEnrichment.tenant_id,
+                    Alert.fingerprint == AlertEnrichment.alert_fingerprint
+                ),
             )
-            .join(LastAlertToIncident, LastAlertToIncident.fingerprint == LastAlert.fingerprint)
+            .join(LastAlertToIncident, and_(
+                LastAlertToIncident.tenant_id == LastAlert.tenant_id,
+                LastAlertToIncident.fingerprint == LastAlert.fingerprint
+            ))
             .where(
                 LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                 LastAlertToIncident.incident_id == incident.id,
@@ -4339,9 +4342,15 @@ def is_edge_incident_alert_resolved(
             select(Alert.fingerprint, enriched_status_field, status_field)
             .select_from(Alert)
             .outerjoin(
-                AlertEnrichment, Alert.fingerprint == AlertEnrichment.alert_fingerprint
+                AlertEnrichment, and_(
+                    Alert.tenant_id == AlertEnrichment.tenant_id,
+                    Alert.fingerprint == AlertEnrichment.alert_fingerprint
+                )
             )
-            .join(LastAlertToIncident, LastAlertToIncident.fingerprint == Alert.fingerprint)
+            .join(LastAlertToIncident, and_(
+                LastAlertToIncident.tenant_id == Alert.tenant_id,
+                LastAlertToIncident.fingerprint == Alert.fingerprint
+            ))
             .where(LastAlertToIncident.incident_id == incident.id)
             .group_by(Alert.fingerprint)
             .having(func.max(Alert.timestamp))
@@ -4388,7 +4397,10 @@ def get_alerts_metrics_by_provider(
                 *dynamic_field_sums,
             )
             .join(LastAlert, Alert.id == LastAlert.alert_id)
-            .outerjoin(LastAlertToIncident, LastAlert.fingerprint == LastAlertToIncident.fingerprint)
+            .outerjoin(LastAlertToIncident, and_(
+                LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint
+            ))
             .filter(
                 Alert.tenant_id == tenant_id,
             )
@@ -4428,7 +4440,7 @@ def get_or_create_external_ai_settings(tenant_id: str) -> List[ExternalAIConfigA
                 session.add(algorithm_config)
                 session.commit()
                 algorithm_configs = [algorithm_config]
-    return [ExternalAIConfigAndMetadataDto.from_orm(algorithm_config) for algorithm_config in algorithm_configs]
+        return [ExternalAIConfigAndMetadataDto.from_orm(algorithm_config) for algorithm_config in algorithm_configs]
 
 def update_extrnal_ai_settings(tenant_id: str, ai_settings: ExternalAIConfigAndMetadata) -> ExternalAIConfigAndMetadataDto:
     with Session(engine) as session:
@@ -4556,9 +4568,8 @@ def get_activity_report(
             .filter(Workflow.creation_time >= last_24_hours)
             .count()
         )
-        activity_report["last_24_hours_workflows_executed"] = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.started >= last_24_hours).count()
+        activity_report["last_24_hours_workflows_executed"] = (session.query(WorkflowExecution).filter(
+            WorkflowExecution.started >= last_24_hours).count()
 )
     return activity_report
 
@@ -4612,8 +4623,9 @@ def set_last_alert(
                     tenant_id=tenant_id,
                     fingerprint=alert.fingerprint,
                     timestamp=alert.timestamp,
-                    alert_id=alert.id,
-                )
+                    first_timestamp=alert.timestamp,
+                alert_id=alert.id,
+            )
 
                 session.add(last_alert)
             transaction.commit()
