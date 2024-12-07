@@ -1,8 +1,8 @@
 """Add RuleEventGroup
 
 Revision ID: 8d4dc7d44a9c
-Revises: 3f056d747d9e
-Create Date: 2024-11-29 22:18:23.704507
+Revises: c6e5594c99f8
+Create Date: 2024-12-07 22:18:23.704507
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "8d4dc7d44a9c"
-down_revision = "3f056d747d9e"
+down_revision = "c6e5594c99f8"
 branch_labels = None
 depends_on = None
 
