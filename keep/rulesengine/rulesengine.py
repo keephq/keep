@@ -18,7 +18,8 @@ from keep.api.core.db import (
     add_alerts_to_incident,
     is_all_alerts_resolved,
     is_first_incident_alert_resolved,
-    is_last_incident_alert_resolved, is_all_alerts_in_status,
+    is_last_incident_alert_resolved,
+    is_all_alerts_in_status,
 )
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus, AlertStatus
