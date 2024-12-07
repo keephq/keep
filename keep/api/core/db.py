@@ -4404,7 +4404,7 @@ def is_all_alerts_in_status(
     session: Optional[Session] = None
 ):
 
-    if incident.alerts_count == 0:
+    if incident and incident.alerts_count == 0:
         return False
 
     with existed_or_new_session(session) as session:

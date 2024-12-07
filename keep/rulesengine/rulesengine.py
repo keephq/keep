@@ -86,8 +86,14 @@ class RulesEngine:
                         rule_fingerprint,
                         session=session,
                     )
-
-                    if not incident:
+                    if incident:
+                        incident = assign_alert_to_incident(
+                            fingerprint=event.fingerprint,
+                            incident=incident,
+                            tenant_id=self.tenant_id,
+                            session=session,
+                        )
+                    else:
 
                         self.logger.info(
                             f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
@@ -100,22 +106,13 @@ class RulesEngine:
                             incident = self._create_incident_with_alerts(
                                 rule, rule_fingerprint, [event.fingerprint], session=session
                             )
-                            incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
-
                         elif rule.create_on == "all":
                             incident = self._process_event_for_history_based_rule(
                                 event, rule, sub_rule, rule_groups, rule_fingerprint, session
                             )
-                            if incident:
-                                incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
 
-                    else:
-                        incident = assign_alert_to_incident(
-                            fingerprint=event.fingerprint,
-                            incident=incident,
-                            tenant_id=self.tenant_id,
-                            session=session,
-                        )
+                    if incident:
+
                         incident = self._resolve_incident_if_require(rule, incident, session)
                         incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
 
