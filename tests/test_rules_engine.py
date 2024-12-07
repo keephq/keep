@@ -3,9 +3,11 @@ import hashlib
 import json
 import os
 import uuid
+from time import sleep
 
 import pytest
 
+from boom import fingerprint
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import get_incident_alerts_by_incident_id, get_last_incidents, set_last_alert
 from keep.api.core.db import get_rules as get_rules_db
@@ -17,8 +19,8 @@ from keep.api.models.alert import (
     IncidentSeverity,
     IncidentStatus,
 )
-from keep.api.models.db.alert import Alert
-from keep.api.models.db.rule import ResolveOn
+from keep.api.models.db.alert import Alert, Incident
+from keep.api.models.db.rule import ResolveOn, CreateIncidentOn, RuleEventGroup
 from keep.rulesengine.rulesengine import RulesEngine
 
 
@@ -580,6 +582,148 @@ def test_incident_resolution_on_edge(
     )
     assert alert_count == 2
     assert incident.status == IncidentStatus.RESOLVED.value
+
+
+def test_rule_event_groups(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        definition_cel='(severity == "critical") || (severity == "high")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ALL.value,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).count() == 0
+    # But RuleEventGroup
+    assert db_session.query(RuleEventGroup).count() == 1
+    event_group = db_session.query(RuleEventGroup).first()
+    alert_1 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    assert isinstance(event_group.state, dict)
+    assert 'severity == "critical"' in event_group.state
+    assert len(event_group.state['severity == "critical"']) == 1
+    assert event_group.state['severity == "critical"'][0] == alert_1.fingerprint
+
+    create_alert(
+        "Critical Alert 2",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    db_session.refresh(event_group)
+    alert_2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # Still no incident yet
+    assert db_session.query(Incident).count() == 0
+    # And still one RuleEventGroup
+    assert db_session.query(RuleEventGroup).count() == 1
+
+    assert isinstance(event_group.state, dict)
+    assert 'severity == "critical"' in event_group.state
+    assert len(event_group.state['severity == "critical"']) == 2
+    assert event_group.state['severity == "critical"'][0] == alert_1.fingerprint
+    assert event_group.state['severity == "critical"'][1] == alert_2.fingerprint
+
+    create_alert(
+        "High Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+        },
+    )
+    alert_3 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
+    # RuleEventGroup was removed
+    assert db_session.query(RuleEventGroup).count() == 0
+
+    # And incident was started
+    assert db_session.query(Incident).count() == 1
+
+    incident = db_session.query(Incident).first()
+    assert incident.alerts_count == 3
+
+    alerts, alert_count = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=str(incident.id),
+        session=db_session,
+    )
+    assert alert_count == 3
+    assert len(alerts) == 3
+
+    fingerprints = [a.fingerprint for a in alerts]
+
+    assert alert_1.fingerprint in fingerprints
+    assert alert_2.fingerprint in fingerprints
+    assert alert_3.fingerprint in fingerprints
+
+
+def test_rule_event_groups_expires(db_session, create_alert):
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=1,
+        timeunit="seconds",
+        definition_cel='(severity == "critical") || (severity == "high")',
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ALL.value,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # No incident yet
+    assert db_session.query(Incident).count() == 0
+    # One RuleEventGroup
+    assert db_session.query(RuleEventGroup).count() == 1
+
+    sleep(1)
+
+    create_alert(
+        "High Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+        },
+    )
+
+    # Still no incident
+    assert db_session.query(Incident).count() == 0
+    # And now two RuleEventGroup - first one was expired
+    assert db_session.query(RuleEventGroup).count() == 2
+
 
 
 # Next steps:
