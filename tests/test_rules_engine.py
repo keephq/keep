@@ -7,7 +7,6 @@ from time import sleep
 
 import pytest
 
-from boom import fingerprint
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import get_incident_alerts_by_incident_id, get_last_incidents, set_last_alert
 from keep.api.core.db import get_rules as get_rules_db
