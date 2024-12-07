@@ -4304,7 +4304,6 @@ def is_all_alerts_in_status(
                     Alert.fingerprint == AlertEnrichment.alert_fingerprint
                 ),
             )
-            .having(func.max(Alert.timestamp))
         )
 
         if fingerprints:
@@ -4334,10 +4333,10 @@ def is_all_alerts_in_status(
                 .select_from(subquery)
                 .where(
                     or_(
-                        subquery.c.enriched_status != status,
+                        subquery.c.enriched_status != status.value,
                         and_(
                             subquery.c.enriched_status.is_(None),
-                            subquery.c.status != status,
+                            subquery.c.status != status.value,
                         ),
                     )
                 )
