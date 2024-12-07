@@ -8,5 +8,6 @@ export type CorrelationFormType = {
   groupedAttributes: string[];
   requireApprove: boolean;
   resolveOn: "all" | "first" | "last" | "never";
+  createOn: "any" | "all";
   query: RuleGroupType;
 };
