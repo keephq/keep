@@ -23,12 +23,9 @@ const ProvidersTiles = ({
 }) => {
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState(false);
-  const [panelSize, setPanelSize] = useState<number>(40);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null
   );
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const providerType = searchParams?.get("provider_type");
   const providerName = searchParams?.get("provider_name");
@@ -42,53 +39,21 @@ const ProvidersTiles = ({
 
       if (provider) {
         setSelectedProvider(provider);
-        if (providerName) {
-          setFormValues({
-            provider_name: providerName,
-          });
-        }
         setOpenPanel(true);
       }
     }
   }, [providerType, providerName, providers]);
 
-  useEffect(() => {
-    const pageWidth = window.innerWidth;
-
-    if (pageWidth < 640) {
-      setPanelSize(100);
-    } else {
-      setPanelSize(40);
-    }
-  }, [openPanel]);
-
-  const handleFormChange = (
-    updatedFormValues: Record<string, string>,
-    updatedFormErrors: Record<string, string>
-  ) => {
-    setFormValues(updatedFormValues);
-    setFormErrors(updatedFormErrors);
-  };
-
   const handleConnectProvider = (provider: Provider) => {
     // on linked providers, don't open the modal
     if (provider.linked) return;
-
     setSelectedProvider(provider);
-    if (installedProvidersMode) {
-      setFormValues({
-        provider_name: provider.details.name!,
-        ...provider.details?.authentication,
-      });
-    }
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
     setSelectedProvider(null);
-    setFormValues({});
-    setFormErrors({});
   };
 
   const handleConnecting = (isConnecting: boolean, isConnected: boolean) => {
@@ -153,16 +118,15 @@ const ProvidersTiles = ({
       <SlidingPanel
         type={"right"}
         isOpen={openPanel}
-        size={panelSize}
+        size={
+          window.innerWidth < 640 ? 100 : window.innerWidth < 1024 ? 80 : 40
+        }
         backdropClicked={handleCloseModal}
         panelContainerClassName="bg-white z-[100]"
       >
         {selectedProvider && (
           <ProviderForm
             provider={selectedProvider}
-            formData={formValues}
-            formErrorsData={formErrors}
-            onFormChange={handleFormChange}
             onConnectChange={handleConnecting}
             closeModal={handleCloseModal}
             installedProvidersMode={installedProvidersMode}

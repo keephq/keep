@@ -22,29 +22,24 @@ import "./provider-form-scopes.css";
 const ProviderFormScopes = ({
   provider,
   validatedScopes,
-  installedProvidersMode = false,
   refreshLoading,
-  triggerRevalidateScope,
+  onRevalidate,
 }: {
   provider: Provider;
   validatedScopes: { [key: string]: string | boolean };
-  installedProvidersMode?: boolean;
   refreshLoading: boolean;
-  triggerRevalidateScope: any;
+  onRevalidate: () => void;
 }) => {
   return (
     <Accordion className="mb-5" defaultOpen={true}>
       <AccordionHeader>Scopes</AccordionHeader>
       <AccordionBody className="overflow-hidden">
-        {installedProvidersMode && (
+        {provider.installed && (
           <Button
             color="gray"
             size="xs"
             icon={ArrowPathIcon}
-            onClick={(e: any) => {
-              triggerRevalidateScope(Math.floor(Math.random() * 1000));
-              e.preventDefault();
-            }}
+            onClick={onRevalidate}
             variant="secondary"
             loading={refreshLoading}
           >
@@ -88,18 +83,16 @@ const ProviderFormScopes = ({
                           validatedScopes[scope.name] === true // scope is tested and valid
                             ? "emerald"
                             : validatedScopes[scope.name] === undefined // scope was not tested
-                            ? "gray"
-                            : "red" // scope was tested and is a string, meaning it has an error
+                              ? "gray"
+                              : "red" // scope was tested and is a string, meaning it has an error
                         }
-                        className={`truncate ${
-                          isScopeLong ? "max-w-lg" : "max-w-xs"
-                        }`}
+                        className={`truncate ${isScopeLong ? "max-w-lg" : "max-w-xs"}`}
                       >
                         {validatedScopes[scope.name] === true
                           ? "Valid"
                           : validatedScopes[scope.name] === undefined
-                          ? "Not checked"
-                          : validatedScopes[scope.name]}
+                            ? "Not checked"
+                            : validatedScopes[scope.name]}
                       </Badge>
                     </TableCell>
                     <TableCell title={scope.description} className="max-w-xs">

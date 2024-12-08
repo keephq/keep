@@ -7,7 +7,7 @@ import uuid
 import pytest
 
 from keep.api.core.db import create_rule as create_rule_db
-from keep.api.core.db import get_incident_alerts_by_incident_id, get_last_incidents
+from keep.api.core.db import get_incident_alerts_by_incident_id, get_last_incidents, set_last_alert
 from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import (
@@ -63,10 +63,13 @@ def test_sanity(db_session):
         provider_type="test",
         provider_id="test",
         event=alerts[0].dict(),
-        fingerprint="test",
+        fingerprint=alerts[0].fingerprint,
     )
+
     db_session.add(alert)
     db_session.commit()
+
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
     # run the rules engine
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
@@ -110,10 +113,11 @@ def test_sanity_2(db_session):
         provider_type="test",
         provider_id="test",
         event=alerts[0].dict(),
-        fingerprint="test",
+        fingerprint=alerts[0].fingerprint,
     )
     db_session.add(alert)
     db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
     # run the rules engine
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
@@ -158,10 +162,11 @@ def test_sanity_3(db_session):
         provider_type="test",
         provider_id="test",
         event=alerts[0].dict(),
-        fingerprint="test",
+        fingerprint=alerts[0].fingerprint,
     )
     db_session.add(alert)
     db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
     # run the rules engine
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
@@ -206,10 +211,11 @@ def test_sanity_4(db_session):
         provider_type="test",
         provider_id="test",
         event=alerts[0].dict(),
-        fingerprint="test",
+        fingerprint=alerts[0].fingerprint,
     )
     db_session.add(alert)
     db_session.commit()
+    set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
     # run the rules engine
     alerts[0].event_id = alert.id
     results = rules_engine.run_rules(alerts)
@@ -223,7 +229,7 @@ def test_incident_attributes(db_session):
         AlertDto(
             id=str(uuid.uuid4()),
             source=["grafana"],
-            name="grafana-test-alert",
+            name=f"grafana-test-alert-{i}",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
             lastReceived=datetime.datetime.now().isoformat(),
@@ -255,13 +261,15 @@ def test_incident_attributes(db_session):
             provider_type="test",
             provider_id="test",
             event=alert.dict(),
-            fingerprint=hashlib.sha256(json.dumps(alert.dict()).encode()).hexdigest(),
+            fingerprint=alert.fingerprint,
             timestamp=alert.lastReceived,
         )
         for alert in alerts_dto
     ]
     db_session.add_all(alerts)
     db_session.commit()
+    for alert in alerts:
+        set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
 
     for i, alert in enumerate(alerts_dto):
         alert.event_id = alerts[i].id
@@ -283,7 +291,7 @@ def test_incident_severity(db_session):
         AlertDto(
             id=str(uuid.uuid4()),
             source=["grafana"],
-            name="grafana-test-alert",
+            name=f"grafana-test-alert-{i}",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.INFO,
             lastReceived=datetime.datetime.now().isoformat(),
@@ -315,13 +323,15 @@ def test_incident_severity(db_session):
             provider_type="test",
             provider_id="test",
             event=alert.dict(),
-            fingerprint=hashlib.sha256(json.dumps(alert.dict()).encode()).hexdigest(),
+            fingerprint=alert.fingerprint,
             timestamp=alert.lastReceived,
         )
         for alert in alerts_dto
     ]
     db_session.add_all(alerts)
     db_session.commit()
+    for alert in alerts:
+        set_last_alert(SINGLE_TENANT_UUID, alert, db_session)
 
     for i, alert in enumerate(alerts_dto):
         alert.event_id = alerts[i].id

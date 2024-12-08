@@ -21,13 +21,13 @@ class CentreonProviderAuthConfig:
     CentreonProviderAuthConfig is a class that holds the authentication information for the CentreonProvider.
     """
 
-    host_url: str = dataclasses.field(
+    host_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Centreon Host URL",
             "sensitive": False,
+            "validation": "any_http_url",
         },
-        default=None,
     )
 
     api_token: str = dataclasses.field(
@@ -44,7 +44,6 @@ class CentreonProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Centreon"
     PROVIDER_TAGS = ["alert"]
     PROVIDER_CATEGORY = ["Monitoring"]
-
     PROVIDER_SCOPES = [
         ProviderScope(name="authenticated", description="User is authenticated"),
     ]
@@ -148,7 +147,9 @@ class CentreonProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error("Error getting host status from Centreon: %s", e)
-            raise ProviderException(f"Error getting host status from Centreon: {e}")
+            raise ProviderException(
+                f"Error getting host status from Centreon: {e}"
+            ) from e
 
     def __get_service_status(self) -> list[AlertDto]:
         try:
@@ -181,7 +182,9 @@ class CentreonProvider(BaseProvider):
 
         except Exception as e:
             self.logger.error("Error getting service status from Centreon: %s", e)
-            raise ProviderException(f"Error getting service status from Centreon: {e}")
+            raise ProviderException(
+                f"Error getting service status from Centreon: {e}"
+            ) from e
 
     def _get_alerts(self) -> list[AlertDto]:
         alerts = []

@@ -13,6 +13,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -34,12 +35,13 @@ class SquadcastProviderAuthConfig:
         },
         default=None,
     )
-    webhook_url: str | None = dataclasses.field(
+    webhook_url: HttpsUrl | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "Incident webhook url",
             "hint": "https://support.squadcast.com/integrations/incident-webhook-incident-webhook-api",
             "sensitive": True,
+            "validation": "https_url",
         },
         default=None,
     )
@@ -135,7 +137,15 @@ class SquadcastProvider(BaseProvider):
         )
 
         # append body to additional_json we are doing this way because we don't want to override the core body fields
-        body = json.dumps({**json.loads(additional_json), **json.loads(body)})
+        try:
+            additional_fields = json.loads(additional_json) if additional_json else {}
+            core_fields = json.loads(body)
+            body = json.dumps({**additional_fields, **core_fields})
+        except json.JSONDecodeError as e:
+            raise ProviderConfigException(
+                f"Invalid additional_json format: {str(e)}",
+                provider_id=self.provider_id
+            )
 
         return requests.post(
             self.authentication_config.webhook_url, data=body, headers=headers
