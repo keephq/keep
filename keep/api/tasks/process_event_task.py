@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import time
 from typing import List
 
 import dateutil
@@ -43,6 +44,9 @@ KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "tru
 KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
 KEEP_ALERT_FIELDS_ENABLED = (
     os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "false") == "true"
+)
+KEEP_MAINTENANCE_WINDOWS_ENABLED = (
+    os.environ.get("KEEP_MAINTENANCE_WINDOWS_ENABLED", "true") == "true"
 )
 
 logger = logging.getLogger(__name__)
@@ -242,6 +246,7 @@ def __handle_formatted_events(
     provider_id: str | None = None,
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
+    job_id: str | None = None,
 ):
     """
     this is super important function and does five things:
@@ -256,42 +261,45 @@ def __handle_formatted_events(
 
     """
     logger.info(
-        "Asyncronusly adding new alerts to the DB",
+        "Adding new alerts to the DB",
         extra={
             "provider_type": provider_type,
             "num_of_alerts": len(formatted_events),
             "provider_id": provider_id,
             "tenant_id": tenant_id,
+            "job_id": job_id,
         },
     )
 
     # first, check for maintenance windows
-    maintenance_windows_bl = MaintenanceWindowsBl(tenant_id=tenant_id, session=session)
-    if maintenance_windows_bl.maintenance_rules:
-        formatted_events = [
-            event
-            for event in formatted_events
-            if maintenance_windows_bl.check_if_alert_in_maintenance_windows(event)
-            is False
-        ]
-    else:
-        logger.debug(
-            "No maintenance windows configured for this tenant",
-            extra={"tenant_id": tenant_id},
+    if KEEP_MAINTENANCE_WINDOWS_ENABLED:
+        maintenance_windows_bl = MaintenanceWindowsBl(
+            tenant_id=tenant_id, session=session
         )
+        if maintenance_windows_bl.maintenance_rules:
+            formatted_events = [
+                event
+                for event in formatted_events
+                if maintenance_windows_bl.check_if_alert_in_maintenance_windows(event)
+                is False
+            ]
+        else:
+            logger.debug(
+                "No maintenance windows configured for this tenant",
+                extra={"tenant_id": tenant_id},
+            )
 
-    if not formatted_events:
-        logger.info(
-            "No alerts to process after running maintenance windows check",
-            extra={"tenant_id": tenant_id},
-        )
-        return
+        if not formatted_events:
+            logger.info(
+                "No alerts to process after running maintenance windows check",
+                extra={"tenant_id": tenant_id},
+            )
+            return
 
     # second, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
 
     for event in formatted_events:
-        # apply deduplication
         # apply_deduplication set alert_hash and isDuplicate on event
         event = alert_deduplicator.apply_deduplication(event)
 
@@ -526,6 +534,8 @@ def process_event(
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
 ) -> list[Alert]:
+    start_time = time.time()
+    job_id = ctx.get("job_id")
     extra_dict = {
         "tenant_id": tenant_id,
         "provider_type": provider_type,
@@ -533,7 +543,7 @@ def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
-        "job_id": ctx.get("job_id"),
+        "job_id": job_id,
         "raw_event": (
             event if KEEP_STORE_RAW_ALERTS else None
         ),  # Let's log the events if we store it for debugging
@@ -607,11 +617,12 @@ def process_event(
             provider_id,
             notify_client,
             timestamp_forced,
+            job_id,
         )
     except Exception:
         logger.exception(
             "Error processing event",
-            extra=extra_dict,
+            extra={**extra_dict, "processing_time": time.time() - start_time},
         )
         # In case of exception, add the alerts to the defect table
         __save_error_alerts(tenant_id, provider_type, raw_event)
@@ -620,7 +631,10 @@ def process_event(
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
-    logger.info("Event processed", extra=extra_dict)
+    logger.info(
+        "Event processed",
+        extra={**extra_dict, "processing_time": time.time() - start_time},
+    )
 
 
 def __save_error_alerts(
