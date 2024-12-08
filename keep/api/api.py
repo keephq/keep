@@ -70,6 +70,7 @@ HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
+KEEP_DEBUG_TASKS = os.environ.get("KEEP_DEBUG_TASKS", "false") == "true"
 
 AUTH_TYPE = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -92,7 +93,7 @@ requests.Session.request = no_redirect_request
 async def check_pending_tasks(background_tasks: set):
     while True:
         logger.info(f"{len(background_tasks)} background tasks pending")
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
 
 
 async def startup():
@@ -155,7 +156,8 @@ async def shutdown():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     background_tasks = set()
-    asyncio.create_task(check_pending_tasks(background_tasks))
+    if KEEP_DEBUG_TASKS:
+        asyncio.create_task(check_pending_tasks(background_tasks))
 
     # Startup
     await startup()
