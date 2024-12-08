@@ -21,6 +21,7 @@ class Workflow(SQLModel, table=True):
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     provisioned: bool = Field(default=False)
     provisioned_file: Optional[str] = None
+    invalid: bool = Field(default=False)  # P22f5
 
     class Config:
         orm_mode = True
