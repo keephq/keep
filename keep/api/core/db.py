@@ -4715,6 +4715,7 @@ def set_last_alert(
                     timestamp=alert.timestamp,
                     first_timestamp=alert.timestamp,
                     alert_id=alert.id,
+                    alert_hash=alert.alert_hash,
                 )
 
                 session.add(last_alert)
