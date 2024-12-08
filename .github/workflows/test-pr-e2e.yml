@@ -54,7 +54,7 @@ jobs:
 
       - name: Cache dependencies
         id: cache-deps
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
@@ -70,7 +70,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ steps.playwright-version.outputs.version }}
@@ -96,7 +96,7 @@ jobs:
         run: |
           docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
 
-      - name: Wait for database to be ready
+      - name: Wait for services to be ready
         run: |
           # Add commands to wait for the database to be ready
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
