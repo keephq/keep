@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from importlib import metadata
 
 import requests
@@ -93,6 +94,19 @@ def no_redirect_request(self, method, url, **kwargs):
 requests.Session.request = no_redirect_request
 
 
+async def check_pending_tasks(background_tasks: set):
+    while True:
+        logger.info(f"{len(background_tasks)} background tasks pending")
+        await asyncio.sleep(3)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    background_tasks = set()
+    asyncio.create_task(check_pending_tasks(background_tasks))
+    yield {"background_tasks": background_tasks}
+
+
 def get_app(
     auth_type: IdentityManagerTypes = IdentityManagerTypes.NOAUTH.value,
 ) -> FastAPI:
@@ -115,6 +129,7 @@ def get_app(
         title="Keep API",
         description="Rest API powering https://platform.keephq.dev and friends 🏄‍♀️",
         version=KEEP_VERSION,
+        lifespan=lifespan,
     )
 
     @app.get("/")

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -5,6 +6,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from typing import List, Optional
 
 import celpy
@@ -18,6 +20,7 @@ from fastapi import (
     Request,
     Response,
 )
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
@@ -261,6 +264,58 @@ def assign_alert(
     return {"status": "ok"}
 
 
+def discard_task(
+    trace_id: str,
+    job_id: str,
+    task: asyncio.Task,
+    running_tasks: set,
+    started_time: float,
+):
+    running_tasks.discard(task)
+    logger.info(
+        "Task completed",
+        extra={
+            "job_id": job_id,
+            "processing_time": time.time() - started_time,
+            "trace_id": trace_id,
+        },
+    )
+
+
+def create_process_event_task(
+    bg_tasks: BackgroundTasks,
+    job_id: str,
+    tenant_id: str,
+    provider_type: str | None,
+    provider_id: str | None,
+    fingerprint: str,
+    api_key_name: str | None,
+    trace_id: str,
+    event: AlertDto | list[AlertDto] | dict,
+    running_tasks: set,
+) -> None:
+    logger.info("Adding task", extra={"job_id": job_id, "trace_id": trace_id})
+    started_time = time.time()
+    task = asyncio.create_task(
+        run_in_threadpool(
+            process_event,
+            {"job_id": job_id},
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+        )
+    )
+    bg_tasks.add_task(task)
+    logger.info("Task added", extra={"job_id": job_id, "trace_id": trace_id})
+    task.add_done_callback(
+        lambda task: discard_task(trace_id, job_id, task, running_tasks, started_time)
+    )
+
+
 @router.post(
     "/event",
     description="Receive a generic alert event",
@@ -285,6 +340,7 @@ async def receive_generic_event(
         bg_tasks (BackgroundTasks): Background tasks handler.
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
     """
+    running_tasks: set = request.state.background_tasks
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
@@ -307,9 +363,9 @@ async def receive_generic_event(
             },
         )
     else:
-        bg_tasks.add_task(
-            process_event,
-            {},
+        create_process_event_task(
+            bg_tasks,
+            str(uuid.uuid4()),
             authenticated_entity.tenant_id,
             None,
             None,
@@ -317,6 +373,7 @@ async def receive_generic_event(
             authenticated_entity.api_key_name,
             request.state.trace_id,
             event,
+            running_tasks,
         )
     return Response(status_code=202)
 
@@ -366,7 +423,7 @@ async def receive_event(
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-
+    running_tasks: set = request.state.background_tasks
     provider_class = None
     try:
         t = time.time()
@@ -415,11 +472,9 @@ async def receive_event(
             },
         )
     else:
-        t = time.time()
-        logger.debug("Adding task to process event")
-        bg_tasks.add_task(
-            process_event,
-            {},
+        create_process_event_task(
+            bg_tasks,
+            str(uuid.uuid4()),
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
@@ -427,8 +482,8 @@ async def receive_event(
             authenticated_entity.api_key_name,
             trace_id,
             event,
+            running_tasks,
         )
-        logger.debug("Added task to process event", extra={"time": time.time() - t})
     return Response(status_code=202)
 
 

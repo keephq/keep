@@ -97,7 +97,7 @@ class AlertDeduplicator:
     def apply_deduplication(self, alert: AlertDto) -> bool:
         # IMPOTRANT NOTE TO SOMEONE WORKING ON THIS CODE:
         #   apply_deduplication runs AFTER _format_alert, so you can assume that alert fields are in the expected format.
-        #   you can also safe to assume that alert.fingerprint is set by the provider itself
+        #   you are also safe to assume that alert.fingerprint is set by the provider itself
 
         # get only relevant rules
         rules = self.get_deduplication_rules(

@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import os
 import re
 
 import celpy
@@ -49,6 +50,11 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
 
 
 class EnrichmentsBl:
+
+    ENRICHMENT_DISABLED = (
+        os.environ.get("KEEP_ENRICHMENT_DISABLED", "false").lower() == "true"
+    )
+
     def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
@@ -61,6 +67,10 @@ class EnrichmentsBl:
         """
         Run the extraction rules for the event
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping extraction rules")
+            return event
+
         fingerprint = (
             event.get("fingerprint")
             if isinstance(event, dict)
@@ -189,7 +199,7 @@ class EnrichmentsBl:
         )
         return result
 
-    def run_mapping_rules(self, alert: AlertDto):
+    def run_mapping_rules(self, alert: AlertDto) -> AlertDto:
         """
         Run the mapping rules for the alert.
 
@@ -199,6 +209,10 @@ class EnrichmentsBl:
         Returns:
         - AlertDto: The enriched alert after applying mapping rules.
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping mapping rules")
+            return alert
+
         self.logger.info(
             "Running mapping rules for incoming alert",
             extra={"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
