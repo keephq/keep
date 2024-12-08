@@ -129,7 +129,7 @@ class OpsgenieProvider(BaseProvider):
             priority=priority,
         )
         try:
-            api_instance.create_alert(create_alert_payload)
+            return api_instance.create_alert(create_alert_payload)
         except ApiException:
             self.logger.exception("Failed to create OpsGenie alert")
             raise
@@ -206,7 +206,7 @@ class OpsgenieProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self._create_alert(
+        return self._create_alert(
             user,
             note,
             source,
