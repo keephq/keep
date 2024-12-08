@@ -52,7 +52,6 @@ from keep.api.routes import (
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
-from keep.api.routes.dashboard import provision_dashboards
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
@@ -61,9 +60,7 @@ from keep.identitymanager.identitymanagerfactory import (
 
 # load all providers into cache
 from keep.providers.providers_factory import ProvidersFactory
-from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
@@ -75,7 +72,6 @@ SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
 CONSUMER = os.environ.get("CONSUMER", "true") == "true"
 
 AUTH_TYPE = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value).lower()
-PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
 try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
@@ -185,15 +181,6 @@ def get_app(
     async def on_startup():
         logger.info("Loading providers into cache")
         ProvidersFactory.get_all_providers()
-        if PROVISION_RESOURCES:
-            # provision providers from env. relevant only on single tenant.
-            logger.info("Provisioning providers and workflows")
-            ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
-            logger.info("Providers loaded successfully")
-            WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
-            logger.info("Workflows provisioned successfully")
-            provision_dashboards(SINGLE_TENANT_UUID)
-            logger.info("Dashboards provisioned successfully")
         # Start the services
         logger.info("Starting the services")
         # Start the scheduler

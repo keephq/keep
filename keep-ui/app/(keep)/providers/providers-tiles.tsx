@@ -1,5 +1,5 @@
 "use client";
-import { Icon, Title } from "@tremor/react";
+import { Title } from "@tremor/react";
 import { Providers, Provider } from "./providers";
 import { useEffect, useState } from "react";
 // TODO: replace with custom component, package is not updated for last 4 years
@@ -9,6 +9,7 @@ import ProviderTile from "./provider-tile";
 import "react-sliding-side-panel/lib/index.css";
 import { useSearchParams } from "next/navigation";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { Tooltip } from "@/shared/ui";
 
 const ProvidersTiles = ({
   providers,
@@ -95,12 +96,13 @@ const ProvidersTiles = ({
         <Title>{getSectionTitle()}</Title>
         {linkedProvidersMode && (
           <div className="relative">
-            <Icon
-              icon={QuestionMarkCircleIcon} // Use the appropriate icon for your use case
-              className="text-gray-400 hover:text-gray-600"
-              size="sm"
-              tooltip="Providers that send alerts to Keep and are not installed."
-            />
+            <Tooltip
+              content={
+                <>Providers that send alerts to Keep and are not installed.</>
+              }
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4" />
+            </Tooltip>
           </div>
         )}
       </div>

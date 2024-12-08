@@ -165,8 +165,12 @@ export default function ProviderTile({ provider, onClick }: Props) {
         "min-h-36 tile-basis text-left min-w-0 py-4 px-4 relative group flex justify-around items-center bg-white rounded-lg shadow hover:grayscale-0 gap-3" +
         // Add fixed height only if provider card doesn't have much content
         (!provider.installed && !provider.linked ? " h-32" : "") +
-        (!provider.linked ? "cursor-pointer hover:shadow-lg" : "") +
-        (provider.coming_soon ? " opacity-50 cursor-not-allowed" : "")
+        (!provider.linked
+          ? " cursor-pointer hover:shadow-lg"
+          : " cursor-auto") +
+        (provider.coming_soon && !provider.linked
+          ? " opacity-50 cursor-not-allowed"
+          : "")
       }
       onClick={provider.coming_soon ? undefined : onClick}
       disabled={provider.coming_soon}
@@ -219,7 +223,7 @@ export default function ProviderTile({ provider, onClick }: Props) {
           <div>
             <Title className="capitalize" title={provider.details?.name}>
               {provider.display_name}{" "}
-              {provider.coming_soon && (
+              {provider.coming_soon && !provider.linked && (
                 <span className="text-sm">(Coming Soon)</span>
               )}
             </Title>
