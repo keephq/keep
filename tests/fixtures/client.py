@@ -55,6 +55,7 @@ def test_app(monkeypatch, request):
 def client(test_app, db_session, monkeypatch):
     # disable pusher
     monkeypatch.setenv("PUSHER_DISABLED", "true")
+    monkeypatch.setenv("KEEP_DEBUG_TASKS", "true")
     with TestClient(test_app) as client:
         yield client
 

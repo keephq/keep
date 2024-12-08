@@ -16,7 +16,7 @@ from tests.fixtures.client import client, setup_api_key, test_app  # noqa
     ],
     indirect=True,
 )
-def test_default_deduplication_rule(db_session, client, test_app):
+def test_default_deduplication_rule(db_session, client):
     # insert an alert with some provider_id and make sure that the default deduplication rule is working
     provider_classes = {
         provider: ProvidersFactory.get_provider_class(provider)
