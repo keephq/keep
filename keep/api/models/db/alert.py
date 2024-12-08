@@ -5,7 +5,7 @@ from typing import List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
-from sqlalchemy import ForeignKey, UniqueConstraint, ForeignKeyConstraint
+from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
@@ -71,6 +71,7 @@ class AlertToIncident(SQLModel, table=True):
         default=NULL_FOR_DELETED_AT,
     )
 
+
 class LastAlert(SQLModel, table=True):
 
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
@@ -78,6 +79,7 @@ class LastAlert(SQLModel, table=True):
     alert_id: UUID = Field(foreign_key="alert.id")
     timestamp: datetime = Field(nullable=False, index=True)
     first_timestamp: datetime = Field(nullable=False, index=True)
+    alert_hash: str | None = Field(nullable=True, index=True)
 
 
 class LastAlertToIncident(SQLModel, table=True):
@@ -105,8 +107,9 @@ class LastAlertToIncident(SQLModel, table=True):
     __table_args__ = (
         ForeignKeyConstraint(
             ["tenant_id", "fingerprint"],
-            ["lastalert.tenant_id", "lastalert.fingerprint"]),
-        {}
+            ["lastalert.tenant_id", "lastalert.fingerprint"],
+        ),
+        {},
     )
 
 
