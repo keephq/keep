@@ -50,9 +50,7 @@ import "@xyflow/react/dist/style.css";
 import { areSetsEqual } from "@/utils/helpers";
 import { getLayoutedElements } from "@/app/(keep)/topology/ui/map/getLayoutedElements";
 import { getNodesAndEdgesFromTopologyData } from "@/app/(keep)/topology/ui/map/getNodesAndEdgesFromTopologyData";
-import { Filters } from "@/utils/hooks/useIncidents";
-import { useApi } from "@/shared/lib/hooks/useApi";
-import { IncidentDto, PaginatedIncidentsDto } from "@/entities/incidents/model";
+import { useIncidents } from "@/utils/hooks/useIncidents";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -226,57 +224,7 @@ export function TopologyMap({
 
   const previousNodesIds = useRef<Set<string>>(new Set());
 
-  const [allIncidents, setAllIncidents] = useState<IncidentDto[]>([]);
-
-  const api = useApi();
-
-  useEffect(() => {
-    if (!api.isReady() || !initialTopologyServices) return;
-    const confirmed = true;
-    const filters: Filters | {} = {
-      affected_services: initialTopologyServices.map(
-        (data) => data.display_name
-      ),
-    };
-    const sorting: { id: string; desc: boolean } = {
-      id: "creation_time",
-      desc: false,
-    };
-    const fetchIncidents = async () => {
-      const limit = 25;
-      let offset = 0;
-      let hasMore = true;
-      let accumulatedItems: IncidentDto[] = [];
-
-      // Construct filter params
-      const filtersParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value.length === 0) {
-          filtersParams.delete(key);
-        } else {
-          value.forEach((s: string) => {
-            filtersParams.append(key, s);
-          });
-        }
-      });
-
-      while (hasMore) {
-        const { items, count } = await api.get<PaginatedIncidentsDto>(
-          `/incidents?confirmed=${confirmed}&limit=${limit}&offset=${offset}&sorting=${
-            sorting.desc ? "-" : ""
-          }${sorting.id}&${filtersParams.toString()}`
-        );
-
-        accumulatedItems = [...accumulatedItems, ...items];
-        offset += limit;
-        hasMore = offset < count;
-      }
-
-      setAllIncidents(accumulatedItems);
-    };
-
-    fetchIncidents();
-  }, [api, initialTopologyServices]);
+  const { data: allIncidents } = useIncidents();
 
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
@@ -287,7 +235,7 @@ export function TopologyMap({
       const { nodeMap, edgeMap } = getNodesAndEdgesFromTopologyData(
         topologyData,
         applicationMap,
-        allIncidents
+        allIncidents?.items ?? []
       );
 
       const newNodes = Array.from(nodeMap.values());
