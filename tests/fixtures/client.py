@@ -63,7 +63,8 @@ def test_app(monkeypatch, request):
 def client(test_app, db_session, monkeypatch):
     # disable pusher
     monkeypatch.setenv("PUSHER_DISABLED", "true")
-    return TestClient(test_app)
+    with TestClient(test_app) as client:
+        yield client
 
 
 # Common setup for tests
