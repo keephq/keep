@@ -4,10 +4,11 @@ import { Subtitle } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
 import Image from "next/image";
 import { IoIosArrowDown } from "react-icons/io";
-import useStore, { V2Step } from "./builder-store";
+import useStore from "./builder-store";
 import { FaHandPointer } from "react-icons/fa";
 import { PiDiamondsFourFill } from "react-icons/pi";
 import clsx from "clsx";
+import { V2Step } from "@/app/(keep)/workflows/builder/types";
 
 const GroupedMenu = ({
   name,

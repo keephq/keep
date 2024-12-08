@@ -32,8 +32,7 @@ import { severityMapping } from "./models";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
-import { FacetFilters } from "./alert-table-facet-types";
-import { DynamicFacet } from "./alert-table-facet-dynamic";
+import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 
 interface PresetTab {
   name: string;

@@ -1,14 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import useStore, {
-  Definition,
-  ReactFlowDefinition,
-  V2Step,
-} from "@/app/(keep)/workflows/builder/builder-store";
-import { FlowNode } from "@/app/(keep)/workflows/builder/builder-store";
+import useStore from "@/app/(keep)/workflows/builder/builder-store";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ELK from "elkjs/lib/elk.bundled.js";
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
+import {
+  Definition,
+  FlowNode,
+  ReactFlowDefinition,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
 const layoutOptions = {
   "elk.nodeLabels.placement": "INSIDE V_CENTER H_BOTTOM",
