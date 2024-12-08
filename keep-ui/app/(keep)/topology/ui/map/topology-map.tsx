@@ -50,6 +50,7 @@ import "@xyflow/react/dist/style.css";
 import { areSetsEqual } from "@/utils/helpers";
 import { getLayoutedElements } from "@/app/(keep)/topology/ui/map/getLayoutedElements";
 import { getNodesAndEdgesFromTopologyData } from "@/app/(keep)/topology/ui/map/getNodesAndEdgesFromTopologyData";
+import { useIncidents } from "@/utils/hooks/useIncidents";
 
 const defaultFitViewOptions: FitViewOptions = {
   padding: 0.1,
@@ -223,6 +224,8 @@ export function TopologyMap({
 
   const previousNodesIds = useRef<Set<string>>(new Set());
 
+  const { data: allIncidents } = useIncidents();
+
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
       if (!topologyData) {
@@ -231,7 +234,8 @@ export function TopologyMap({
 
       const { nodeMap, edgeMap } = getNodesAndEdgesFromTopologyData(
         topologyData,
-        applicationMap
+        applicationMap,
+        allIncidents?.items ?? []
       );
 
       const newNodes = Array.from(nodeMap.values());
@@ -262,7 +266,7 @@ export function TopologyMap({
       setNodes(layoutedElements.nodes);
       setEdges(layoutedElements.edges);
     },
-    [topologyData, applicationMap]
+    [topologyData, applicationMap, allIncidents]
   );
 
   useEffect(
