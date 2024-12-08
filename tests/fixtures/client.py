@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import importlib
 import sys
@@ -48,14 +47,7 @@ def test_app(monkeypatch, request):
     provision_resources()
     app = get_app()
 
-    # Manually trigger the startup event
-    for event_handler in app.router.on_startup:
-        asyncio.run(event_handler())
-
     yield app
-
-    for event_handler in app.router.on_shutdown:
-        asyncio.run(event_handler())
 
 
 # Fixture for TestClient using the test_app fixture
@@ -64,7 +56,7 @@ def client(test_app, db_session, monkeypatch):
     # disable pusher
     monkeypatch.setenv("PUSHER_DISABLED", "true")
     with TestClient(test_app) as client:
-        return client
+        yield client
 
 
 # Common setup for tests
