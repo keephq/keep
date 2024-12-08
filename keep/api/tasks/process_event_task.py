@@ -117,7 +117,7 @@ def __save_to_db(
                     user_id="system",
                     description="Alert was deduplicated",
                 )
-            session.add(audit)
+                session.add(audit)
 
         enriched_formatted_events = []
 
