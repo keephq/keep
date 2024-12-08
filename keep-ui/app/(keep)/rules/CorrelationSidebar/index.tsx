@@ -12,6 +12,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
   groupedAttributes: [],
   requireApprove: false,
   resolveOn: "never",
+  createOn: "any",
   query: {
     combinator: "or",
     rules: [
@@ -35,6 +36,7 @@ export type CorrelationForm = {
   groupedAttributes: string[];
   requireApprove: boolean;
   resolveOn: "all" | "first" | "last" | "never";
+  createOn: "any" | "all";
   query: RuleGroupType;
 };
 

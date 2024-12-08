@@ -1,6 +1,7 @@
+import datetime
 import json
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import celpy
 import celpy.c7nlib
@@ -9,15 +10,21 @@ import celpy.celtypes
 import celpy.evaluation
 from sqlmodel import Session
 
-from keep.api.core.db import assign_alert_to_incident, get_incident_for_grouping_rule
-from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.db import (
-    is_all_incident_alerts_resolved,
+    assign_alert_to_incident,
+    get_incident_for_grouping_rule,
+    create_incident_for_grouping_rule,
+    get_or_create_rule_group_by_rule_id,
+    add_alerts_to_incident,
+    is_all_alerts_resolved,
     is_first_incident_alert_resolved,
     is_last_incident_alert_resolved,
+    is_all_alerts_in_status,
 )
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus
-from keep.api.models.db.rule import ResolveOn
+from keep.api.core.db import get_rules as get_rules_db
+from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus, AlertStatus
+from keep.api.models.db.alert import Incident
+from keep.api.models.db.rule import ResolveOn, RuleEventGroup, Rule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
 # Shahar: this is performance enhancment https://github.com/cloud-custodian/cel-python/issues/68
@@ -59,12 +66,13 @@ class RulesEngine:
                     f"Checking if rule {rule.name} apply to event {event.id}"
                 )
                 try:
-                    rule_result = self._check_if_rule_apply(rule, event)
+                    rule_result, sub_rule = self._check_if_rule_apply(rule, event)
                 except Exception:
                     self.logger.exception(
                         f"Failed to evaluate rule {rule.name} on event {event.id}"
                     )
                     continue
+
                 if rule_result:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is relevant"
@@ -75,48 +83,44 @@ class RulesEngine:
                     incident = get_incident_for_grouping_rule(
                         self.tenant_id,
                         rule,
-                        rule.timeframe,
                         rule_fingerprint,
                         session=session,
                     )
+                    if incident:
+                        incident = assign_alert_to_incident(
+                            fingerprint=event.fingerprint,
+                            incident=incident,
+                            tenant_id=self.tenant_id,
+                            session=session,
+                        )
+                    else:
 
-                    incident = assign_alert_to_incident(
-                        fingerprint=event.fingerprint,
-                        incident=incident,
-                        tenant_id=self.tenant_id,
-                        session=session,
-                    )
+                        self.logger.info(
+                            f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
+                        )
 
-                    should_resolve = False
+                        rule_groups = self._extract_subrules(rule.definition_cel)
 
-                    if (
-                        rule.resolve_on == ResolveOn.ALL.value
-                        and is_all_incident_alerts_resolved(incident, session=session)
-                    ):
-                        should_resolve = True
+                        if rule.create_on == "any" or (rule.create_on == "all" and len(rule_groups) == 1):
+                            self.logger.info("Single event is enough, so creating incident")
+                            incident = self._create_incident_with_alerts(
+                                rule, rule_fingerprint, [event.fingerprint], session=session
+                            )
+                        elif rule.create_on == "all":
+                            incident = self._process_event_for_history_based_rule(
+                                event, rule, sub_rule, rule_groups, rule_fingerprint, session
+                            )
 
-                    elif (
-                        rule.resolve_on == ResolveOn.FIRST.value
-                        and is_first_incident_alert_resolved(incident, session=session)
-                    ):
-                        should_resolve = True
+                    if incident:
 
-                    elif (
-                        rule.resolve_on == ResolveOn.LAST.value
-                        and is_last_incident_alert_resolved(incident, session=session)
-                    ):
-                        should_resolve = True
+                        incident = self._resolve_incident_if_require(rule, incident, session)
+                        incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
 
-                    if should_resolve:
-                        incident.status = IncidentStatus.RESOLVED.value
-                        session.add(incident)
-                        session.commit()
-
-                    incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
                 else:
                     self.logger.info(
                         f"Rule {rule.name} on event {event.id} is not relevant"
                     )
+
         self.logger.info("Rules ran successfully")
         # if we don't have any updated groups, we don't need to create any alerts
         if not incidents_dto:
@@ -126,10 +130,100 @@ class RulesEngine:
 
         return list(incidents_dto.values())
 
-    def _extract_subrules(self, expression):
-        # CEL rules looks like '(source == "sentry") && (source == "grafana" && severity == "critical")'
+    def _create_incident_with_alerts(
+        self,
+        rule: Rule,
+        rule_fingerprint: str,
+        fingerprints: List[str],
+        session: Session,
+    ) -> Incident:
+
+        incident = create_incident_for_grouping_rule(
+            self.tenant_id,
+            rule,
+            rule_fingerprint,
+            session=session,
+        )
+        incident = add_alerts_to_incident(
+            self.tenant_id,
+            incident,
+            fingerprints,
+            session=session,
+        )
+
+        return incident
+
+    def _process_event_for_history_based_rule(
+        self,
+        event: AlertDto,
+        rule: Rule,
+        sub_rule: str,
+        rule_groups: List[str],
+        rule_fingerprint: str,
+        session: Session
+    ) -> Optional[Incident]:
+        self.logger.info(
+            "Multiple events required for the incident to start"
+        )
+
+        rule_group = self._get_rule_group(rule, session)
+        rule_group.add_alert(sub_rule, event.fingerprint)
+
+        fingerprints = rule_group.get_all_alerts()
+
+        incident = None
+        if rule_group.is_all_conditions_met(rule_groups) and is_all_alerts_in_status(
+            fingerprints=fingerprints, status=AlertStatus.FIRING, session=session
+        ):
+            self.logger.info("All required events are in the system, so creating incident")
+            incident = self._create_incident_with_alerts(rule, rule_fingerprint, fingerprints, session=session)
+            session.delete(rule_group)
+            session.commit()
+
+        else:
+            self.logger.info(f"Updating state for rule `{rule.name}` events group")
+            # Updating rule_group expiration+
+            rule_group.expires = datetime.datetime.utcnow() + datetime.timedelta(seconds=rule.timeframe)
+            session.add(rule_group)
+            session.commit()
+
+        return incident
+
+    @staticmethod
+    def _resolve_incident_if_require(rule: Rule, incident: Incident, session: Session) -> Incident:
+
+        should_resolve = False
+
+        if (
+            rule.resolve_on == ResolveOn.ALL.value
+            and is_all_alerts_resolved(incident=incident, session=session)
+        ):
+            should_resolve = True
+
+        elif (
+            rule.resolve_on == ResolveOn.FIRST.value
+            and is_first_incident_alert_resolved(incident, session=session)
+        ):
+            should_resolve = True
+
+        elif (
+            rule.resolve_on == ResolveOn.LAST.value
+            and is_last_incident_alert_resolved(incident, session=session)
+        ):
+            should_resolve = True
+
+        if should_resolve:
+            incident.status = IncidentStatus.RESOLVED.value
+            session.add(incident)
+            session.commit()
+
+        return incident
+
+    @staticmethod
+    def _extract_subrules(expression):
+        # CEL rules looks like '(source == "sentry") || (source == "grafana" && severity == "critical")'
         # and we need to extract the subrules
-        sub_rules = expression.split(") && (")
+        sub_rules = expression.split(") || (")
         if len(sub_rules) == 1:
             return sub_rules
         # the first and the last rules will have a ( or ) at the beginning or the end
@@ -161,13 +255,13 @@ class RulesEngine:
             except celpy.evaluation.CELEvalError as e:
                 # this is ok, it means that the subrule is not relevant for this event
                 if "no such member" in str(e):
-                    return False
+                    return False, None
                 # unknown
                 raise
             if r:
-                return True
+                return True, sub_rule
         # no subrules matched
-        return False
+        return False, None
 
     def _calc_rule_fingerprint(self, event: AlertDto, rule):
         # extract all the grouping criteria from the event
@@ -213,7 +307,8 @@ class RulesEngine:
             return "none"
         return ",".join(rule_fingerprint)
 
-    def get_alerts_activation(self, alerts: list[AlertDto]):
+    @staticmethod
+    def get_alerts_activation(alerts: list[AlertDto]):
         activations = []
         for alert in alerts:
             payload = alert.dict()
@@ -288,3 +383,7 @@ class RulesEngine:
                 filtered_alerts.append(alert)
 
         return filtered_alerts
+
+    @staticmethod
+    def _get_rule_group(rule: Rule, session: Session) -> RuleEventGroup:
+        return get_or_create_rule_group_by_rule_id(rule.tenant_id, rule.id, rule.timeframe, session)

@@ -420,6 +420,7 @@ def simulate_alerts(
     demo_topology=False,
     clean_old_incidents=False,
     demo_ai=False,
+    count=None
 ):
     logger.info("Simulating alerts...")
 
@@ -475,6 +476,11 @@ def simulate_alerts(
         logger.info("Topology created.")
 
     while True:
+        if count is not None:
+            count -= 1
+            if count < 0:
+                break
+
         try:
             logger.info("Looping to send alerts...")
 

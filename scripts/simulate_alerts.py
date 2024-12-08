@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 def main():
     parser = argparse.ArgumentParser(description="Simulate alerts for Keep API.")
     parser.add_argument(
+        "--num",
+        action="store",
+        dest="num",
+        type=int,
+        help="Number of alerts to simulate."
+    )
+    parser.add_argument(
         "--full-demo",
         action="store_true",
         help="Run the full demo including correlation rules and topology.",
@@ -39,6 +46,7 @@ def main():
         demo_topology=args.full_demo,
         clean_old_incidents=args.full_demo,
         demo_ai=args.full_demo,
+        count=args.num
     )
 
 if __name__ == "__main__":
