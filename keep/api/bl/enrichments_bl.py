@@ -466,6 +466,10 @@ class EnrichmentsBl:
         """
         Dispose of enrichments from the alert
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping dispose enrichments")
+            return
+
         self.logger.debug("disposing enrichments", extra={"fingerprint": fingerprint})
         enrichments = get_enrichment_with_session(
             self.db_session, self.tenant_id, fingerprint
