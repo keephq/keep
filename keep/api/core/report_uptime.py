@@ -34,7 +34,7 @@ async def report_uptime_to_posthog():
         properties["db_request_duration_ms"] = int((end_time - start_time) * 1000)
         properties["uptime_hours"] = round(((datetime.now() - LAUNCH_TIME).total_seconds()) / 3600)
 
-        ee_enabled = os.environ.get("EE_ENABLED", "false")
+        ee_enabled = os.environ.get("EE_ENABLED", "false").lower() == "true"
         if ee_enabled:
             properties["api_url"] = os.environ.get("KEEP_API_URL")
 
