@@ -14,7 +14,7 @@ ROOT="$(dirname $0)/.."
 # Function to start the processes
 start_processes() {
   for ((i=0; i<NUM_PROCESSES; i++)); do
-    "${ROOT}/venv/bin/python" "${ROOT}/scripts/simulate_alerts.py" &
+    "${ROOT}/.venv/bin/python" "${ROOT}/scripts/simulate_alerts.py" &
     PIDS[$i]=$!
   done
 }
