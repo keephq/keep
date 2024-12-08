@@ -1,0 +1,8 @@
+node_modules
+.next
+.vercel
+.env.*
+.venv/
+.vscode/
+.github/
+.pytest_cache
