@@ -59,6 +59,54 @@ logger = logging.getLogger(__name__)
 REDIS = os.environ.get("REDIS", "false") == "true"
 
 
+async def schedule_event_processing_on_suitable_worker(
+        tenant_id: str,
+        event: AlertDto | list[AlertDto] | dict,
+        bg_tasks: BackgroundTasks,
+        api_key_name: str = None,
+        fingerprint: str = None,
+        trace_id: str = None,
+        provider_type: str = None,
+        provider_id: str = None,
+):
+    if REDIS:
+        redis: ArqRedis = await get_pool()
+        job = await redis.enqueue_job(
+            "async_process_event",
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
+        )
+    else:
+        t = time.time()
+        logger.debug("Adding task to process event")
+        bg_tasks.add_task(
+            process_event,
+            {},
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+        )
+        logger.debug("Added task to process event", extra={"time": time.time() - t})
+
+
 @router.get(
     "",
     description="Get last alerts occurrence",
@@ -260,7 +308,6 @@ def assign_alert(
     )
     return {"status": "ok"}
 
-
 @router.post(
     "/event",
     description="Receive a generic alert event",
@@ -275,7 +322,6 @@ async def receive_generic_event(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -285,39 +331,14 @@ async def receive_generic_event(
         bg_tasks (BackgroundTasks): Background tasks handler.
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
     """
-    if REDIS:
-        redis: ArqRedis = await get_pool()
-        job = await redis.enqueue_job(
-            "async_process_event",
-            authenticated_entity.tenant_id,
-            None,
-            None,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            request.state.trace_id,
-            event,
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
-        )
-        logger.info(
-            "Enqueued job",
-            extra={
-                "job_id": job.job_id,
-                "tenant_id": authenticated_entity.tenant_id,
-                "queue": KEEP_ARQ_QUEUE_BASIC,
-            },
-        )
-    else:
-        bg_tasks.add_task(
-            process_event,
-            {},
-            authenticated_entity.tenant_id,
-            None,
-            None,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            request.state.trace_id,
-            event,
-        )
+    schedule_event_processing_on_suitable_worker(
+        tenant_id=authenticated_entity.tenant_id,
+        api_key_name=authenticated_entity.api_key_name,
+        bg_tasks=bg_tasks,
+        fingerprint=fingerprint,
+        event=event,
+        trace_id=request.state.trace_id,
+    )
     return Response(status_code=202)
 
 
@@ -393,42 +414,17 @@ async def receive_event(
     logger.debug("Parsing event raw body")
     event = provider_class.parse_event_raw_body(event)
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
-    if REDIS:
-        redis: ArqRedis = await get_pool()
-        job = await redis.enqueue_job(
-            "async_process_event",
-            authenticated_entity.tenant_id,
-            provider_type,
-            provider_id,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            trace_id,
-            event,
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
-        )
-        logger.info(
-            "Enqueued job",
-            extra={
-                "job_id": job.job_id,
-                "tenant_id": authenticated_entity.tenant_id,
-                "queue": KEEP_ARQ_QUEUE_BASIC,
-            },
-        )
-    else:
-        t = time.time()
-        logger.debug("Adding task to process event")
-        bg_tasks.add_task(
-            process_event,
-            {},
-            authenticated_entity.tenant_id,
-            provider_type,
-            provider_id,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            trace_id,
-            event,
-        )
-        logger.debug("Added task to process event", extra={"time": time.time() - t})
+
+    schedule_event_processing_on_suitable_worker(
+        tenant_id=authenticated_entity.tenant_id,
+        api_key_name=authenticated_entity.api_key_name,
+        bg_tasks=bg_tasks,
+        fingerprint=fingerprint,
+        event=event,
+        trace_id=trace_id,
+        provider_type=provider_type,
+        provider_id=provider_id,
+    )
     return Response(status_code=202)
 
 

@@ -2,8 +2,11 @@
 Keep Provider is a class that allows to ingest/digest data from Keep.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timezone
+
+from fastapi import BackgroundTasks
 
 from keep.api.core.db import get_alerts_with_filters
 from keep.api.models.alert import AlertDto
@@ -122,6 +125,55 @@ class KeepProvider(BaseProvider):
         return AlertDto(
             **event,
         )
+    
+    def _notify(
+        self,
+        name: str,
+        status: str = None,
+        lastReceived: str = None,
+        environment: str = "undefined",
+        duplicateReason: str = None,
+        service: str = None,
+        message: str = None,
+        description: str = None,
+        severity: str = None,
+        pushed: bool = False,
+        url: str = None,
+        labels: dict = None,
+        ticket_url: str = None,
+        fingerprint: str = None,
+    ):
+        """
+        Send alert to Keep.
+        """
+        alert = AlertDto(
+            name=name,
+            status=status,
+            lastReceived=lastReceived,
+            environment=environment,
+            duplicateReason=duplicateReason,
+            service=service,
+            message=message,
+            description=description,
+            severity=severity,
+            pushed=pushed,
+            url=url,
+            labels=labels,
+            ticket_url=ticket_url,
+            fingerprint=fingerprint,
+        )
+        from keep.api.routes.alerts import schedule_event_processing_on_suitable_worker
+        
+        async def process_event():
+            await schedule_event_processing_on_suitable_worker(
+                tenant_id=self.context_manager.tenant_id,
+                provider_type=self.provider_type,
+                provider_id=self.provider_id,
+                event=alert,
+                bg_tasks=BackgroundTasks(),
+            )
+
+        asyncio.run(process_event())
 
 
 if __name__ == "__main__":
