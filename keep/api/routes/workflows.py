@@ -469,7 +469,7 @@ async def update_workflow_by_id(
         workflow["name"] = workflow_from_db.name
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
-    workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.workflow_raw = yaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
@@ -518,7 +518,7 @@ def get_workflow_by_id(
     try:
         workflow_yaml = yaml.safe_load(workflow.workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
-        final_workflow_raw = yaml.dump(valid_workflow_yaml)
+        final_workflow_raw = yaml.dump(valid_workflow_yaml, width=99999)
         workflow_dto = WorkflowDTO(
             id=workflow.id,
             name=workflow.name,
