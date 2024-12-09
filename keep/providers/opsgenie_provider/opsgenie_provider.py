@@ -72,11 +72,12 @@ class OpsgenieProvider(BaseProvider):
         scopes = {}
         self.logger.info("Validating scopes")
         try:
-            self._create_alert(
+            alert = self._create_alert(
                 user="John Doe",
                 note="Simple alert",
                 message="Simple alert showing context with name: John Doe",
             )
+            self._delete_alert(alert["id"])
             scopes["opsgenie:create"] = True
         except ApiException as e:
             self.logger.exception("Failed to create OpsGenie alert")
@@ -90,6 +91,10 @@ class OpsgenieProvider(BaseProvider):
         self.authentication_config = OpsgenieProviderAuthConfig(
             **self.config.authentication
         )
+
+    def _delete_alert(self, alert_id: str):
+        api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
+        return api_instance.delete_alert(alert_id)
 
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CreateAlertPayload.md
     def _create_alert(
@@ -129,7 +134,10 @@ class OpsgenieProvider(BaseProvider):
             priority=priority,
         )
         try:
-            api_instance.create_alert(create_alert_payload)
+            alert = api_instance.create_alert(create_alert_payload)
+            alert_dict = alert.to_dict()
+            alert_dict["id"] = alert.id
+            return alert_dict
         except ApiException:
             self.logger.exception("Failed to create OpsGenie alert")
             raise
@@ -206,7 +214,7 @@ class OpsgenieProvider(BaseProvider):
         Args:
             kwargs (dict): The providers with context
         """
-        self._create_alert(
+        return self._create_alert(
             user,
             note,
             source,

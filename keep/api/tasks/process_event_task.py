@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import time
 from typing import List
 
 import dateutil
@@ -43,6 +44,15 @@ KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "tru
 KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
 KEEP_ALERT_FIELDS_ENABLED = (
     os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "false") == "true"
+)
+KEEP_MAINTENANCE_WINDOWS_ENABLED = (
+    os.environ.get("KEEP_MAINTENANCE_WINDOWS_ENABLED", "true") == "true"
+)
+KEEP_AUDIT_EVENTS_ENABLED = (
+    os.environ.get("KEEP_AUDIT_EVENTS_ENABLED", "true") == "true"
+)
+KEEP_CALCULATE_START_FIRING_TIME_ENABLED = (
+    os.environ.get("KEEP_CALCULATE_START_FIRING_TIME_ENABLED", "true") == "true"
 )
 
 logger = logging.getLogger(__name__)
@@ -94,28 +104,37 @@ def __save_to_db(
                     provider_type=provider_type,
                 )
                 session.add(alert)
+
         # add audit to the deduplicated events
-        for event in deduplicated_events:
-            audit = AlertAudit(
-                tenant_id=tenant_id,
-                fingerprint=event.fingerprint,
-                status=event.status,
-                action=AlertActionType.DEDUPLICATED.value,
-                user_id="system",
-                description="Alert was deduplicated",
-            )
-            session.add(audit)
+        # TODO: move this to the alert deduplicator
+        if KEEP_AUDIT_EVENTS_ENABLED:
+            for event in deduplicated_events:
+                audit = AlertAudit(
+                    tenant_id=tenant_id,
+                    fingerprint=event.fingerprint,
+                    status=event.status,
+                    action=AlertActionType.DEDUPLICATED.value,
+                    user_id="system",
+                    description="Alert was deduplicated",
+                )
+                session.add(audit)
+
         enriched_formatted_events = []
+
         for formatted_event in formatted_events:
             formatted_event.pushed = True
-            # calculate startFiring time
-            previous_alert = get_alerts_by_fingerprint(
-                tenant_id=tenant_id, fingerprint=formatted_event.fingerprint, limit=1
-            )
-            previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
-            formatted_event.firingStartTime = calculated_start_firing_time(
-                formatted_event, previous_alert
-            )
+
+            if KEEP_CALCULATE_START_FIRING_TIME_ENABLED:
+                # calculate startFiring time
+                previous_alert = get_alerts_by_fingerprint(
+                    tenant_id=tenant_id,
+                    fingerprint=formatted_event.fingerprint,
+                    limit=1,
+                )
+                previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
+                formatted_event.firingStartTime = calculated_start_firing_time(
+                    formatted_event, previous_alert
+                )
 
             enrichments_bl = EnrichmentsBl(tenant_id, session)
             # Dispose enrichments that needs to be disposed
@@ -176,20 +195,22 @@ def __save_to_db(
             session.flush()
             alert_id = alert.id
             formatted_event.event_id = str(alert_id)
-            audit = AlertAudit(
-                tenant_id=tenant_id,
-                fingerprint=formatted_event.fingerprint,
-                action=(
-                    AlertActionType.AUTOMATIC_RESOLVE.value
-                    if formatted_event.status == AlertStatus.RESOLVED.value
-                    else AlertActionType.TIGGERED.value
-                ),
-                user_id="system",
-                description=f"Alert recieved from provider with status {formatted_event.status}",
-            )
-            session.add(audit)
-            alert_dto = AlertDto(**formatted_event.dict())
 
+            if KEEP_AUDIT_EVENTS_ENABLED:
+                audit = AlertAudit(
+                    tenant_id=tenant_id,
+                    fingerprint=formatted_event.fingerprint,
+                    action=(
+                        AlertActionType.AUTOMATIC_RESOLVE.value
+                        if formatted_event.status == AlertStatus.RESOLVED.value
+                        else AlertActionType.TIGGERED.value
+                    ),
+                    user_id="system",
+                    description=f"Alert recieved from provider with status {formatted_event.status}",
+                )
+                session.add(audit)
+
+            alert_dto = AlertDto(**formatted_event.dict())
             set_last_alert(tenant_id, alert, session=session)
 
             # Mapping
@@ -210,8 +231,9 @@ def __save_to_db(
                     setattr(alert_dto, enrichment, value)
             enriched_formatted_events.append(alert_dto)
         session.commit()
+
         logger.info(
-            "Asyncronusly added new alerts to the DB",
+            "Added new alerts to the DB",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),
@@ -222,7 +244,7 @@ def __save_to_db(
         return enriched_formatted_events
     except Exception:
         logger.exception(
-            "Failed to push alerts to the DB",
+            "Failed to add new alerts to the DB",
             extra={
                 "provider_type": provider_type,
                 "num_of_alerts": len(formatted_events),
@@ -242,6 +264,7 @@ def __handle_formatted_events(
     provider_id: str | None = None,
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
+    job_id: str | None = None,
 ):
     """
     this is super important function and does five things:
@@ -256,42 +279,45 @@ def __handle_formatted_events(
 
     """
     logger.info(
-        "Asyncronusly adding new alerts to the DB",
+        "Adding new alerts to the DB",
         extra={
             "provider_type": provider_type,
             "num_of_alerts": len(formatted_events),
             "provider_id": provider_id,
             "tenant_id": tenant_id,
+            "job_id": job_id,
         },
     )
 
     # first, check for maintenance windows
-    maintenance_windows_bl = MaintenanceWindowsBl(tenant_id=tenant_id, session=session)
-    if maintenance_windows_bl.maintenance_rules:
-        formatted_events = [
-            event
-            for event in formatted_events
-            if maintenance_windows_bl.check_if_alert_in_maintenance_windows(event)
-            is False
-        ]
-    else:
-        logger.debug(
-            "No maintenance windows configured for this tenant",
-            extra={"tenant_id": tenant_id},
+    if KEEP_MAINTENANCE_WINDOWS_ENABLED:
+        maintenance_windows_bl = MaintenanceWindowsBl(
+            tenant_id=tenant_id, session=session
         )
+        if maintenance_windows_bl.maintenance_rules:
+            formatted_events = [
+                event
+                for event in formatted_events
+                if maintenance_windows_bl.check_if_alert_in_maintenance_windows(event)
+                is False
+            ]
+        else:
+            logger.debug(
+                "No maintenance windows configured for this tenant",
+                extra={"tenant_id": tenant_id},
+            )
 
-    if not formatted_events:
-        logger.info(
-            "No alerts to process after running maintenance windows check",
-            extra={"tenant_id": tenant_id},
-        )
-        return
+        if not formatted_events:
+            logger.info(
+                "No alerts to process after running maintenance windows check",
+                extra={"tenant_id": tenant_id},
+            )
+            return
 
     # second, filter out any deduplicated events
     alert_deduplicator = AlertDeduplicator(tenant_id)
 
     for event in formatted_events:
-        # apply deduplication
         # apply_deduplication set alert_hash and isDuplicate on event
         event = alert_deduplicator.apply_deduplication(event)
 
@@ -352,29 +378,30 @@ def __handle_formatted_events(
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
     elastic_client = ElasticClient(tenant_id=tenant_id)
-    for alert in enriched_formatted_events:
-        try:
-            logger.debug(
-                "Pushing alert to elasticsearch",
-                extra={
-                    "alert_event_id": alert.event_id,
-                    "alert_fingerprint": alert.fingerprint,
-                },
-            )
-            elastic_client.index_alert(
-                alert=alert,
-            )
-        except Exception:
-            logger.exception(
-                "Failed to push alerts to elasticsearch",
-                extra={
-                    "provider_type": provider_type,
-                    "num_of_alerts": len(formatted_events),
-                    "provider_id": provider_id,
-                    "tenant_id": tenant_id,
-                },
-            )
-            continue
+    if elastic_client.enabled:
+        for alert in enriched_formatted_events:
+            try:
+                logger.debug(
+                    "Pushing alert to elasticsearch",
+                    extra={
+                        "alert_event_id": alert.event_id,
+                        "alert_fingerprint": alert.fingerprint,
+                    },
+                )
+                elastic_client.index_alert(
+                    alert=alert,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to push alerts to elasticsearch",
+                    extra={
+                        "provider_type": provider_type,
+                        "num_of_alerts": len(formatted_events),
+                        "provider_id": provider_id,
+                        "tenant_id": tenant_id,
+                    },
+                )
+                continue
 
     try:
         # Now run any workflow that should run based on this alert
@@ -526,6 +553,8 @@ def process_event(
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
 ) -> list[Alert]:
+    start_time = time.time()
+    job_id = ctx.get("job_id")
     extra_dict = {
         "tenant_id": tenant_id,
         "provider_type": provider_type,
@@ -533,7 +562,7 @@ def process_event(
         "fingerprint": fingerprint,
         "event_type": str(type(event)),
         "trace_id": trace_id,
-        "job_id": ctx.get("job_id"),
+        "job_id": job_id,
         "raw_event": (
             event if KEEP_STORE_RAW_ALERTS else None
         ),  # Let's log the events if we store it for debugging
@@ -598,7 +627,7 @@ def process_event(
             raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
-        return __handle_formatted_events(
+        formatted_events = __handle_formatted_events(
             tenant_id,
             provider_type,
             session,
@@ -607,11 +636,17 @@ def process_event(
             provider_id,
             notify_client,
             timestamp_forced,
+            job_id,
         )
+        logger.info(
+            "Event processed",
+            extra={**extra_dict, "processing_time": time.time() - start_time},
+        )
+        return formatted_events
     except Exception:
         logger.exception(
             "Error processing event",
-            extra=extra_dict,
+            extra={**extra_dict, "processing_time": time.time() - start_time},
         )
         # In case of exception, add the alerts to the defect table
         __save_error_alerts(tenant_id, provider_type, raw_event)
@@ -620,7 +655,6 @@ def process_event(
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
-    logger.info("Event processed", extra=extra_dict)
 
 
 def __save_error_alerts(

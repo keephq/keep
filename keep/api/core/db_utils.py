@@ -101,6 +101,9 @@ DB_MAX_OVERFLOW = config(
 DB_ECHO = config(
     "DATABASE_ECHO", default=False, cast=bool
 )  # pylint: disable=invalid-name
+KEEP_FORCE_CONNECTION_STRING = config(
+    "KEEP_FORCE_CONNECTION_STRING", default=False, cast=bool
+)  # pylint: disable=invalid-name
 
 
 def dumps(_json) -> str:
@@ -122,7 +125,7 @@ def create_db_engine():
     """
     Creates a database engine based on the environment variables.
     """
-    if RUNNING_IN_CLOUD_RUN:
+    if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
         engine = create_engine(
             "mysql+pymysql://",
             creator=__get_conn,
