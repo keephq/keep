@@ -92,13 +92,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Cache the Docker build layers locally
       - name: Cache Docker build layers
         uses: actions/cache@v4
         id: docker-cache
         with:
           path: .buildx-cache
-          key: buildx-cache-${{ hashFiles('**/Dockerfile') }}
+          key: buildx-cache-${{ hashFiles('./docker/Dockerfile.*') }}
           restore-keys: buildx-cache-
 
       - name: Build keep-frontend image
