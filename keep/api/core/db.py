@@ -3014,10 +3014,12 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             if not results:
                 return {}
 
+            assignees, sources, affected_services = results
+
             return {
-                "assignees": list(filter(bool, results.assignees)),
-                "sources": list(filter(bool, results.sources)),
-                "services": list(filter(bool, results.affected_services)),
+                "assignees": list(filter(bool, assignees)) if assignees else [],
+                "sources": list(filter(bool, sources)) if sources else [],
+                "services": list(filter(bool, affected_services)) if affected_services else [],
             }
         return {}
 
