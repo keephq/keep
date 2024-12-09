@@ -98,7 +98,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./keep-ui/Dockerfile
+          file: ./docker/Dockerfile.ui
           load: true
           tags: keep-frontend:latest
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -108,7 +108,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./keep/Dockerfile
+          file: ./docker/Dockerfile.api
           load: true
           tags: keep-backend:latest
           cache-from: type=local,src=/tmp/.buildx-cache
