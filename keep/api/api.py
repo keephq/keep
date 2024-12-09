@@ -92,7 +92,10 @@ requests.Session.request = no_redirect_request
 
 async def check_pending_tasks(background_tasks: set):
     while True:
-        logger.info(f"{len(background_tasks)} background tasks pending")
+        logger.info(
+            f"{len(background_tasks)} background tasks pending",
+            extra={"pending_tasks": len(background_tasks)},
+        )
         await asyncio.sleep(1)
 
 
