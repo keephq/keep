@@ -26,6 +26,12 @@ env:
   EE_ENABLED: true
   DOCKER_BUILDKIT: 1
   BUILDKIT_PROGRESS: plain  # More concise build output
+  AUTH_TYPE: NO_AUTH
+  API_URL: http://keep-backend:8080
+  POSTHOG_DISABLED: true
+  SENTRY_DISABLED: true
+  DATABASE_CONNECTION_STRING: mysql+pymysql://root:keep@keep-database:3306/keep
+  SECRET_MANAGER_DIRECTORY: /app
 
 jobs:
   tests-e2e:
@@ -97,7 +103,7 @@ jobs:
       - name: Build keep-frontend
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ./keep-ui/
           file: ./docker/Dockerfile.ui
           load: true
           tags: keep-frontend:latest
