@@ -17,6 +17,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import UrlPort
 
 
 class ResourceAlreadyExists(Exception):
@@ -45,19 +46,21 @@ class OpenobserveProviderAuthConfig:
             "sensitive": True,
         },
     )
-    openObserveHost: str = dataclasses.field(
+    openObserveHost: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenObserve host url || default: localhost",
-            "hint": "Eg. localhost",
+            "description": "OpenObserve host url",
+            "hint": "e.g. http://localhost",
+            "validation": "any_http_url"
         },
     )
 
-    openObservePort: str = dataclasses.field(
+    openObservePort: UrlPort = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenObserve Host|| default: 5080",
-            "hint": "Eg. 5080",
+            "description": "OpenObserve Port",
+            "hint": "e.g. 5080",
+            "validation": "port"
         },
     )
     organisationID: str = dataclasses.field(
@@ -73,7 +76,7 @@ class OpenobserveProvider(BaseProvider):
     """Install Webhooks and receive alerts from OpenObserve."""
 
     PROVIDER_DISPLAY_NAME = "OpenObserve"
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
@@ -104,17 +107,16 @@ class OpenobserveProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for OpenObserve provider.
-
         """
+        if self.is_installed or self.is_provisioned:
+            host = self.config.authentication['openObserveHost']
+            if not (host.startswith("http://") or host.startswith("https://")):
+                scheme = "http://" if ("localhost" in host or "127.0.0.1" in host) else "https://"
+                self.config.authentication['openObserveHost'] = scheme + host
+
         self.authentication_config = OpenobserveProviderAuthConfig(
             **self.config.authentication
         )
-        if not self.authentication_config.openObserveHost.startswith(
-            "https://"
-        ) and not self.authentication_config.openObserveHost.startswith("http://"):
-            self.authentication_config.openObserveHost = (
-                f"https://{self.authentication_config.openObserveHost}"
-            )
 
     def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
         """

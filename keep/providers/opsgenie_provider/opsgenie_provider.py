@@ -16,7 +16,8 @@ class OpsgenieProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Ops genie api key (https://support.atlassian.com/opsgenie/docs/api-key-management/)",
+            "description": "Ops genie api key",
+            "hint": "https://support.atlassian.com/opsgenie/docs/api-key-management/",
             "sensitive": True,
         },
     )
@@ -32,6 +33,7 @@ class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
+    PROVIDER_CATEGORY = ["Incident Management"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

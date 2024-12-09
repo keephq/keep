@@ -14,6 +14,7 @@ import typing
 from dataclasses import fields
 from typing import get_args
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_consumer_providers,
     get_installed_providers,
@@ -22,10 +23,17 @@ from keep.api.core.db import (
 from keep.api.models.alert import DeduplicationRuleDto
 from keep.api.models.provider import Provider
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider, BaseTopologyProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import (
+    BaseIncidentProvider,
+    BaseProvider,
+    BaseTopologyProvider,
+)
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.models.provider_method import ProviderMethodDTO, ProviderMethodParam
 from keep.secretmanager.secretmanagerfactory import SecretManagerFactory
+
+PROVIDERS_CACHE_FILE = os.environ.get("PROVIDERS_CACHE_FILE", "providers_cache.json")
+READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +46,9 @@ class ProvidersFactory:
     _loaded_providers_cache = None
 
     @staticmethod
-    def get_provider_class(provider_type: str) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
+    def get_provider_class(
+        provider_type: str,
+    ) -> BaseProvider | BaseTopologyProvider | BaseIncidentProvider:
         provider_type_split = provider_type.split(
             "."
         )  # e.g. "cloudwatch.logs" or "cloudwatch.metrics"
@@ -215,7 +225,7 @@ class ProvidersFactory:
         return methods
 
     @staticmethod
-    def get_all_providers() -> list[Provider]:
+    def get_all_providers(ignore_cache_file: bool = False) -> list[Provider]:
         """
         Get all the providers.
 
@@ -226,6 +236,22 @@ class ProvidersFactory:
         # use the cache if exists
         if ProvidersFactory._loaded_providers_cache:
             logger.debug("Using cached providers")
+            return ProvidersFactory._loaded_providers_cache
+
+        if os.path.exists(PROVIDERS_CACHE_FILE) and not ignore_cache_file:
+            logger.info(
+                "Loading providers from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
+            with open(PROVIDERS_CACHE_FILE, "r") as f:
+                providers_cache = json.load(f)
+                ProvidersFactory._loaded_providers_cache = [
+                    Provider(**provider) for provider in providers_cache
+                ]
+            logger.info(
+                "Providers loaded from cache file",
+                extra={"file": PROVIDERS_CACHE_FILE},
+            )
             return ProvidersFactory._loaded_providers_cache
 
         logger.info("Loading providers")
@@ -267,7 +293,8 @@ class ProvidersFactory:
                     and provider_class.__dict__.get("setup_webhook") is not None
                 ) or (
                     issubclass(provider_class, BaseIncidentProvider)
-                    and provider_class.__dict__.get("setup_incident_webhook") is not None
+                    and provider_class.__dict__.get("setup_incident_webhook")
+                    is not None
                 )
                 webhook_required = provider_class.WEBHOOK_INSTALLATION_REQUIRED
                 supports_webhook = (
@@ -376,6 +403,8 @@ class ProvidersFactory:
                         tags=provider_tags,
                         alertExample=alert_example,
                         default_fingerprint_fields=default_fingerprint_fields,
+                        categories=provider_class.PROVIDER_CATEGORY,
+                        coming_soon=provider_class.PROVIDER_COMING_SOON,
                     )
                 )
             except ModuleNotFoundError:
@@ -398,6 +427,7 @@ class ProvidersFactory:
         tenant_id: str,
         all_providers: list[Provider] | None = None,
         include_details: bool = True,
+        override_readonly: bool = False,
     ) -> list[Provider]:
         if all_providers is None:
             all_providers = ProvidersFactory.get_all_providers()
@@ -407,14 +437,14 @@ class ProvidersFactory:
         context_manager = ContextManager(tenant_id=tenant_id)
         secret_manager = SecretManagerFactory.get_secret_manager(context_manager)
         for p in installed_providers:
-            provider: Provider = next(
+            provider: Provider | None = next(
                 filter(
                     lambda provider: provider.type == p.type,
                     all_providers,
                 ),
                 None,
             )
-            if not provider:
+            if provider is None:
                 logger.warning(f"Installed provider {p.type} does not exist anymore?")
                 continue
             provider_copy = provider.copy()
@@ -424,6 +454,7 @@ class ProvidersFactory:
             provider_copy.last_pull_time = p.last_pull_time
             provider_copy.provisioned = p.provisioned
             provider_copy.pulling_enabled = p.pulling_enabled
+            provider_copy.installed = True
             try:
                 provider_auth = {"name": p.name}
                 if include_details:
@@ -432,6 +463,13 @@ class ProvidersFactory:
                             secret_name=f"{tenant_id}_{p.type}_{p.id}", is_json=True
                         )
                     )
+                if READ_ONLY_MODE and not override_readonly:
+                    if "authentication" in provider_auth:
+                        provider_auth["authentication"] = {
+                            key: "demo"
+                            for key in provider_auth["authentication"]
+                            if isinstance(provider_auth["authentication"][key], str)
+                        }
             # Somehow the provider is installed but the secret is missing, probably bug in deletion
             # TODO: solve its root cause
             except Exception:

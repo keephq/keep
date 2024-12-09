@@ -1,6 +1,7 @@
 """
 BigQuery provider.
 """
+
 import dataclasses
 import os
 from typing import Optional
@@ -26,7 +27,7 @@ class BigqueryProviderAuthConfig:
             "sensitive": True,
             "type": "file",
             "name": "service_account_json",
-            "file_type": ".json",  # this is used to filter the file type in the UI
+            "file_type": "application/json",
         },
     )
     project_id: Optional[str] = dataclasses.field(
@@ -46,6 +47,7 @@ class BigqueryProvider(BaseProvider):
     config: ProviderConfig
 
     PROVIDER_DISPLAY_NAME = "BigQuery"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Database"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

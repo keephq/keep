@@ -3,7 +3,7 @@ import Select from "@/components/ui/Select";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useIncidents, usePollIncidents } from "@/utils/hooks/useIncidents";
-import Loading from "@/app/loading";
+import Loading from "@/app/(keep)/loading";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
@@ -35,8 +35,9 @@ export function ChangeSameIncidentInThePastForm({
       await updateIncident(
         incident.id,
         {
-          // TODO: remove this once the backend supports partial updates
-          ...incident,
+          user_generated_name: incident.user_generated_name,
+          user_summary: incident.user_summary,
+          assignee: incident.assignee,
           same_incident_in_the_past_id: selectedIncidentId,
         },
         false

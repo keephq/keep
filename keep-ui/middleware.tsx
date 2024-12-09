@@ -1,57 +1,94 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
-import { getApiURL } from "utils/apiUrl";
+import { NextResponse, type NextRequest } from "next/server";
+// TODO: is it safe to remove these imports?
+import { getToken } from "next-auth/jwt";
+import type { JWT } from "next-auth/jwt";
+import { getApiURL } from "@/utils/apiUrl";
+import { config as authConfig } from "@/auth.config";
+import NextAuth from "next-auth";
 
-export default withAuth(
-  function middleware(req) {
-    const { pathname, searchParams } = new URL(req.url);
-    //  Shahar: This is just for backward compatibility
-    //          **should be removed**
-    // Redirect /backend/ to the API
-    if (pathname.startsWith("/backend/")) {
-      let apiUrl = getApiURL();
-      const newURL = pathname.replace("/backend/", apiUrl + "/");
+const { auth } = NextAuth(authConfig);
 
-      // Convert searchParams back into a query string
-      const queryString = searchParams.toString();
-      const urlWithQuery = queryString ? `${newURL}?${queryString}` : newURL;
+// Helper function to detect mobile devices
+function isMobileDevice(userAgent: string): boolean {
+  return /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+    userAgent
+  );
+}
 
-      console.log(`Redirecting ${pathname} to ${urlWithQuery}`);
-      return NextResponse.rewrite(urlWithQuery);
-    }
+export async function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
 
-    // api routes are ok too
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.next();
-    }
-
-    // If the user's role is 'noc' and they are not on the '/alerts' page, redirect them
-    // todo: should be more robust, but this is a quick solution
-    //       I guess first step should be some mapping ~ {role: [allowed_pages]}
-    //       and the second step would be to get it dymnamically from an API
-    //       or some role-based routing
-    if (req.nextauth.token?.role === "noc" && !pathname.startsWith("/alerts")) {
-      return NextResponse.redirect(new URL("/alerts/feed", req.url));
-    }
-
-    // Continue with the normal flow for other cases
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ req, token }) => {
-        const pathName = req.nextUrl.pathname;
-        if (pathName.startsWith("/backend/")) {
-          return true;
-        }
-        return !!token;
-      },
-    },
+  // Check if request is from mobile device
+  const userAgent = request.headers.get("user-agent") || "";
+  if (
+    isMobileDevice(userAgent) &&
+    !pathname.startsWith("/mobile") &&
+    process.env.KEEP_READ_ONLY === "true"
+  ) {
+    return NextResponse.redirect(new URL("/mobile", request.url));
   }
-);
 
+  const session = await auth();
+  const role = session?.userRole;
+  const isAuthenticated = !!session;
+  // Keep it on header so it can be used in server components
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-url", request.url);
+  // Handle legacy /backend/ redirects
+  if (pathname.startsWith("/backend/")) {
+    const apiUrl = getApiURL();
+    const newURL = pathname.replace("/backend/", apiUrl + "/");
+    const queryString = searchParams.toString();
+    const urlWithQuery = queryString ? `${newURL}?${queryString}` : newURL;
+
+    console.log(`Redirecting ${pathname} to ${urlWithQuery}`);
+    return NextResponse.rewrite(urlWithQuery);
+  }
+
+  // Allow API routes to pass through
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // Allow Mobile routes to pass through
+  if (pathname.startsWith("/mobile")) {
+    return NextResponse.next();
+  }
+
+  // If not authenticated and not on signin page, redirect to signin
+  if (!isAuthenticated && !pathname.startsWith("/signin")) {
+    console.log("Redirecting to signin page because user is not authenticated");
+    return NextResponse.redirect(new URL("/signin", request.url));
+  }
+
+  // If authenticated and on signin page, redirect to incidents
+  if (isAuthenticated && pathname.startsWith("/signin")) {
+    console.log(
+      "Redirecting to incidents because user try to get /signin but already authenticated"
+    );
+    return NextResponse.redirect(new URL("/incidents", request.url));
+  }
+
+  // Role-based routing (NOC users)
+  if (role === "noc" && !pathname.startsWith("/alerts")) {
+    return NextResponse.redirect(new URL("/alerts/feed", request.url));
+  }
+
+  // Allow all other authenticated requests
+  console.log("Allowing request to pass through");
+  console.log("Request URL: ", request.url);
+
+  return NextResponse.next({
+    request: {
+      // Apply new request headers
+      headers: requestHeaders,
+    },
+  });
+}
+
+// Update the matcher to handle static files and public routes
 export const config = {
   matcher: [
-    "/((?!keep_big\\.svg$|gnip\\.webp|signin$|api/aws-marketplace$).*)",
-  ], // Adjust as needed
+    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|monitoring|_next/static|_next/image|favicon\\.ico).*)",
+  ],
 };

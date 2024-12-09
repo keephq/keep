@@ -1,8 +1,6 @@
-  import {useSession} from "next-auth/react";
-  import { useApiUrl } from "./useConfig";
 import useSWR from "swr";
-import {fetcher} from "@/utils/fetcher";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export interface MetricsWidget {
   id: string;
@@ -12,7 +10,7 @@ export interface MetricsWidget {
 
 interface DistributionData {
   hour: string;
-  number: number
+  number: number;
 }
 
 interface DashboardDistributionData {
@@ -20,47 +18,44 @@ interface DashboardDistributionData {
   ipd: DistributionData[];
   apd: DistributionData[];
   wpd: DistributionData[];
-
 }
 
 export const useDashboardMetricWidgets = (useFilters?: boolean) => {
-  const {data: session} = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const searchParams = useSearchParams();
   const filters = searchParams?.toString();
 
-  const {data, error, mutate} = useSWR<DashboardDistributionData>(
-      session ? `${apiUrl}/dashboard/metric-widgets${
-        useFilters && filters ? `?${filters}` : ""
-      }` : null,
-      (url: string) => fetcher(url, session!.accessToken)
-  )
-  console.log(filters)
+  const { data, error, mutate } = useSWR<DashboardDistributionData>(
+    api.isReady()
+      ? `/dashboard/metric-widgets${useFilters && filters ? `?${filters}` : ""}`
+      : null,
+    (url: string) => api.get(url)
+  );
 
-  let widgets: MetricsWidget[] = []
+  let widgets: MetricsWidget[] = [];
   if (data) {
-      widgets = [
+    widgets = [
       {
         id: "mttr",
         name: "MTTR",
-        data: data.mttr
+        data: data.mttr,
       },
       {
         id: "apd",
-        "name": "Alerts/Day",
-        data: data.apd
+        name: "Alerts/Day",
+        data: data.apd,
       },
       {
         id: "ipd",
         name: "Incidents/Day",
-        data: data.ipd
+        data: data.ipd,
       },
       {
         id: "wpd",
         name: "Workflows/Day",
-        data: data.wpd
-      }
+        data: data.wpd,
+      },
     ];
   }
-  return {widgets};
-}
+  return { widgets };
+};

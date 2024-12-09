@@ -20,15 +20,16 @@ from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     get_alerts_by_fingerprint,
-    get_all_presets,
+    get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
+    set_last_alert,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
-from keep.api.models.db.preset import PresetDto
+from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
     convert_db_alerts_to_dto_alerts,
@@ -39,6 +40,10 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
+KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
+KEEP_ALERT_FIELDS_ENABLED = (
+    os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "false") == "true"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +189,9 @@ def __save_to_db(
             )
             session.add(audit)
             alert_dto = AlertDto(**formatted_event.dict())
+
+            set_last_alert(tenant_id, alert, session=session)
+
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
@@ -309,37 +317,38 @@ def __handle_formatted_events(
 
     # let's save all fields to the DB so that we can use them in the future such in deduplication fields suggestions
     # todo: also use it on correlation rules suggestions
-    for enriched_formatted_event in enriched_formatted_events:
-        logger.debug(
-            "Bulk upserting alert fields",
-            extra={
-                "alert_event_id": enriched_formatted_event.event_id,
-                "alert_fingerprint": enriched_formatted_event.fingerprint,
-            },
-        )
-        fields = []
-        for key, value in enriched_formatted_event.dict().items():
-            if isinstance(value, dict):
-                for nested_key in value.keys():
-                    fields.append(f"{key}.{nested_key}")
-            else:
-                fields.append(key)
+    if KEEP_ALERT_FIELDS_ENABLED:
+        for enriched_formatted_event in enriched_formatted_events:
+            logger.debug(
+                "Bulk upserting alert fields",
+                extra={
+                    "alert_event_id": enriched_formatted_event.event_id,
+                    "alert_fingerprint": enriched_formatted_event.fingerprint,
+                },
+            )
+            fields = []
+            for key, value in enriched_formatted_event.dict().items():
+                if isinstance(value, dict):
+                    for nested_key in value.keys():
+                        fields.append(f"{key}.{nested_key}")
+                else:
+                    fields.append(key)
 
-        bulk_upsert_alert_fields(
-            tenant_id=tenant_id,
-            fields=fields,
-            provider_id=enriched_formatted_event.providerId,
-            provider_type=enriched_formatted_event.providerType,
-            session=session,
-        )
+            bulk_upsert_alert_fields(
+                tenant_id=tenant_id,
+                fields=fields,
+                provider_id=enriched_formatted_event.providerId,
+                provider_type=enriched_formatted_event.providerType,
+                session=session,
+            )
 
-        logger.debug(
-            "Bulk upserted alert fields",
-            extra={
-                "alert_event_id": enriched_formatted_event.event_id,
-                "alert_fingerprint": enriched_formatted_event.fingerprint,
-            },
-        )
+            logger.debug(
+                "Bulk upserted alert fields",
+                extra={
+                    "alert_event_id": enriched_formatted_event.event_id,
+                    "alert_fingerprint": enriched_formatted_event.fingerprint,
+                },
+            )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
     elastic_client = ElasticClient(tenant_id=tenant_id)
@@ -388,34 +397,52 @@ def __handle_formatted_events(
 
     incidents = []
     # Now we need to run the rules engine
-    try:
-        rules_engine = RulesEngine(tenant_id=tenant_id)
-        incidents: List[IncidentDto] = rules_engine.run_rules(
-            enriched_formatted_events, session=session
-        )
+    if KEEP_CORRELATION_ENABLED:
+        try:
+            rules_engine = RulesEngine(tenant_id=tenant_id)
+            incidents: List[IncidentDto] = rules_engine.run_rules(
+                enriched_formatted_events, session=session
+            )
 
-        # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
-        # if new grouped incidents were created, we need to push them to the client
-        # if incidents:
-        #     logger.info("Adding group alerts to the workflow manager queue")
-        #     workflow_manager.insert_events(tenant_id, grouped_alerts)
-        #     logger.info("Added group alerts to the workflow manager queue")
-    except Exception:
-        logger.exception(
-            "Failed to run rules engine",
-            extra={
-                "provider_type": provider_type,
-                "num_of_alerts": len(formatted_events),
-                "provider_id": provider_id,
-                "tenant_id": tenant_id,
-            },
-        )
+            # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
+            # if new grouped incidents were created, we need to push them to the client
+            # if incidents:
+            #     logger.info("Adding group alerts to the workflow manager queue")
+            #     workflow_manager.insert_events(tenant_id, grouped_alerts)
+            #     logger.info("Added group alerts to the workflow manager queue")
+        except Exception:
+            logger.exception(
+                "Failed to run rules engine",
+                extra={
+                    "provider_type": provider_type,
+                    "num_of_alerts": len(formatted_events),
+                    "provider_id": provider_id,
+                    "tenant_id": tenant_id,
+                },
+            )
+
+    pusher_client = get_pusher_client() if notify_client else None
+    # Get the notification cache
+    pusher_cache = get_notification_cache()
 
     # Tell the client to poll alerts
-    if notify_client and incidents:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
+    if pusher_client and pusher_cache.should_notify(tenant_id, "poll-alerts"):
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "poll-alerts",
+                "{}",
+            )
+            logger.info("Told client to poll alerts")
+        except Exception:
+            logger.exception("Failed to tell client to poll alerts")
             pass
+
+    if (
+        incidents
+        and pusher_client
+        and pusher_cache.should_notify(tenant_id, "incident-change")
+    ):
         try:
             pusher_client.trigger(
                 f"private-{tenant_id}",
@@ -423,21 +450,19 @@ def __handle_formatted_events(
                 {},
             )
         except Exception:
-            logger.exception("Failed to push alert to the client")
+            logger.exception("Failed to tell the client to pull incidents")
 
     # Now we need to update the presets
     # send with pusher
-    if notify_client:
-        pusher_client = get_pusher_client()
-        if not pusher_client:
-            return
+    if not pusher_client:
+        return
+
     try:
-        presets = get_all_presets(tenant_id)
+        presets = get_all_presets_dtos(tenant_id)
         rules_engine = RulesEngine(tenant_id=tenant_id)
         presets_do_update = []
-        for preset in presets:
+        for preset_dto in presets:
             # filter the alerts based on the search query
-            preset_dto = PresetDto(**preset.to_dict())
             filtered_alerts = rules_engine.filter_alerts(
                 enriched_formatted_events, preset_dto.cel_query
             )
@@ -447,7 +472,7 @@ def __handle_formatted_events(
             presets_do_update.append(preset_dto)
             preset_dto.alerts_count = len(filtered_alerts)
             # update noisy
-            if preset.is_noisy:
+            if preset_dto.is_noisy:
                 firing_filtered_alerts = list(
                     filter(
                         lambda alert: alert.status == AlertStatus.FIRING.value,
@@ -496,7 +521,7 @@ def process_event(
     api_key_name: str | None,
     trace_id: str | None,  # so we can track the job from the request to the digest
     event: (
-        AlertDto | list[AlertDto] | IncidentDto | list[IncidentDto] | dict
+        AlertDto | list[AlertDto] | IncidentDto | list[IncidentDto] | dict | None
     ),  # the event to process, either plain (generic) or from a specific provider
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
@@ -514,6 +539,7 @@ def process_event(
         ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+
     raw_event = copy.deepcopy(event)
     try:
         session = get_session_sync()
@@ -547,6 +573,19 @@ def process_event(
                     "This is a subscription notification message from AWS - skipping processing"
                 )
                 return
+            elif event is None:
+                logger.info(
+                    "Provider returned None (failed silently), skipping processing"
+                )
+                return
+
+        if isinstance(event, str):
+            extra_dict["raw_event"] = event
+            logger.error(
+                "Event is a string (malformed json?), skipping processing",
+                extra=extra_dict,
+            )
+            return None
 
         # In case when provider_type is not set
         if isinstance(event, dict):

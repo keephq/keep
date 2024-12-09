@@ -16,6 +16,7 @@ from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import HttpsUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -33,12 +34,13 @@ class SentryProviderAuthConfig:
     organization_slug: str = dataclasses.field(
         metadata={"required": True, "description": "Sentry organization slug"}
     )
-    api_url: str = dataclasses.field(
+    api_url: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "Sentry API URL",
             "hint": "https://sentry.io/api/0 (see https://docs.sentry.io/api/)",
             "sensitive": False,
+            "validation": "https_url"
         },
         default="https://sentry.io/api/0",
     )
@@ -77,7 +79,7 @@ class SentryProvider(BaseProvider):
         ),
     ]
     DEFAULT_TIMEOUT = 600
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "fatal": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,

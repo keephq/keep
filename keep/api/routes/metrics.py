@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, Response
 
 from keep.api.models.alert import AlertDto
-from keep.api.core.db import get_last_incidents, get_last_alerts_for_incidents
+from keep.api.core.db import get_last_incidents, get_last_alerts_for_incidents, get_workflow_executions_count
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
@@ -24,7 +24,8 @@ def get_metrics(
     """
     This endpoint is used by Prometheus to scrape such metrics from the application:
     - alerts_total {incident_name, incident_id} - The total number of alerts per incident.
-    - open_incidents_total - The total number of open incidents
+    - open_incidents_total - The total number of open incidents.
+    - workflows_executions_total {status} - The total number of workflow executions.
 
     Please note that those metrics are per-tenant and are not designed to be used for the monitoring of the application itself.
 
@@ -91,5 +92,15 @@ def get_metrics(
     export += "# HELP open_incidents_total The total number of open incidents.\r\n"
     export += "# TYPE open_incidents_total counter\n"
     export += f"open_incidents_total {incidents_total}\n"
+
+    workflow_execution_counts = get_workflow_executions_count(
+        tenant_id=tenant_id,
+    )
+
+    export += "\n\n"
+    export += "# HELP workflows_executions_total The total number of workflows.\r\n"
+    export += "# TYPE workflows_executions_total counter\n"
+    export += f"workflows_executions_total {{status=\"success\"}} {workflow_execution_counts['success']}\n"
+    export += f"workflows_executions_total {{status=\"other\"}} {workflow_execution_counts['other']}\n"
 
     return Response(content=export, media_type=CONTENT_TYPE_LATEST)

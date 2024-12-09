@@ -1,17 +1,14 @@
-import { Role } from "app/settings/models";
-import { useSession } from "next-auth/react";
+import { Role } from "@/app/(keep)/settings/models";
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export const useRoles = (options: SWRConfiguration = {}) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWRImmutable<Role[]>(
-    () => (session ? `${apiUrl}/auth/roles` : null),
-    (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/auth/roles" : null,
+    (url) => api.get(url),
     options
   );
 };

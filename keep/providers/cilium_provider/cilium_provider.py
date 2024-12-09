@@ -7,21 +7,24 @@ import pydantic
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseTopologyProvider
-from keep.providers.cilium_provider.grpc.observer_pb2 import FlowFilter, GetFlowsRequest
+from keep.providers.cilium_provider.grpc.observer_pb2 import (FlowFilter,
+                                                              GetFlowsRequest)
 from keep.providers.cilium_provider.grpc.observer_pb2_grpc import ObserverStub
 from keep.providers.models.provider_config import ProviderConfig
+from keep.validation.fields import NoSchemeUrl
 
 
 @pydantic.dataclasses.dataclass
 class CiliumProviderAuthConfig:
     """Cilium authentication configuration."""
 
-    cilium_base_endpoint: str = dataclasses.field(
+    cilium_base_endpoint: NoSchemeUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "The base endpoint of the cilium hubble relay",
             "sensitive": False,
             "hint": "localhost:4245",
+            "validation": "no_scheme_url"
         }
     )
 
@@ -31,6 +34,7 @@ class CiliumProvider(BaseTopologyProvider):
 
     PROVIDER_TAGS = ["topology"]
     PROVIDER_DISPLAY_NAME = "Cilium"
+    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Security"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

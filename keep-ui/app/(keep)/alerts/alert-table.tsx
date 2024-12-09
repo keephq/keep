@@ -1,0 +1,403 @@
+import { useRef, useState } from "react";
+import { Table, Card } from "@tremor/react";
+import { AlertsTableBody } from "./alerts-table-body";
+import { AlertDto } from "./models";
+import {
+  getCoreRowModel,
+  useReactTable,
+  getPaginationRowModel,
+  ColumnDef,
+  ColumnOrderState,
+  VisibilityState,
+  ColumnSizingState,
+  getFilteredRowModel,
+  SortingState,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import { CopilotKit } from "@copilotkit/react-core";
+import AlertPagination from "./alert-pagination";
+import AlertsTableHeaders from "./alert-table-headers";
+import { useLocalStorage } from "utils/hooks/useLocalStorage";
+import {
+  getColumnsIds,
+  getOnlyVisibleCols,
+  DEFAULT_COLS_VISIBILITY,
+  DEFAULT_COLS,
+} from "./alert-table-utils";
+import AlertActions from "./alert-actions";
+import AlertPresets from "./alert-presets";
+import { evalWithContext } from "./alerts-rules-builder";
+import { TitleAndFilters } from "./TitleAndFilters";
+import { severityMapping } from "./models";
+import AlertTabs from "./alert-tabs";
+import AlertSidebar from "./alert-sidebar";
+import { AlertFacets } from "./alert-table-alert-facets";
+import { FacetFilters } from "./alert-table-facet-types";
+import { DynamicFacet } from "./alert-table-facet-dynamic";
+
+interface PresetTab {
+  name: string;
+  filter: string;
+  id?: string;
+}
+interface Props {
+  alerts: AlertDto[];
+  columns: ColumnDef<AlertDto>[];
+  isAsyncLoading?: boolean;
+  presetName: string;
+  presetPrivate?: boolean;
+  presetNoisy?: boolean;
+  presetStatic?: boolean;
+  presetId?: string;
+  presetTabs?: PresetTab[];
+  isRefreshAllowed?: boolean;
+  isMenuColDisplayed?: boolean;
+  setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
+  mutateAlerts?: () => void;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[] | null) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
+}
+
+export function AlertTable({
+  alerts,
+  columns,
+  isAsyncLoading = false,
+  presetName,
+  presetPrivate = false,
+  presetNoisy = false,
+  presetStatic = false,
+  presetId = "",
+  presetTabs = [],
+  isRefreshAllowed = true,
+  setDismissedModalAlert,
+  mutateAlerts,
+  setRunWorkflowModalAlert,
+  setDismissModalAlert,
+  setChangeStatusAlert,
+}: Props) {
+  const a11yContainerRef = useRef<HTMLDivElement>(null);
+
+  const [theme, setTheme] = useLocalStorage(
+    "alert-table-theme",
+    Object.values(severityMapping).reduce<{ [key: string]: string }>(
+      (acc, severity) => {
+        acc[severity] = "bg-white";
+        return acc;
+      },
+      {}
+    )
+  );
+
+  const [facetFilters, setFacetFilters] = useLocalStorage<FacetFilters>(
+    `alertFacetFilters-${presetName}`,
+    {
+      severity: [],
+      status: [],
+      source: [],
+      assignee: [],
+      dismissed: [],
+      incident: [],
+    }
+  );
+
+  const [dynamicFacets, setDynamicFacets] = useLocalStorage<DynamicFacet[]>(
+    `dynamicFacets-${presetName}`,
+    []
+  );
+
+  const handleFacetDelete = (facetKey: string) => {
+    setDynamicFacets((prevFacets) =>
+      prevFacets.filter((df) => df.key !== facetKey)
+    );
+    setFacetFilters((prevFilters) => {
+      const newFilters = { ...prevFilters };
+      delete newFilters[facetKey];
+      return newFilters;
+    });
+  };
+
+  const columnsIds = getColumnsIds(columns);
+
+  const [columnOrder] = useLocalStorage<ColumnOrderState>(
+    `column-order-${presetName}`,
+    DEFAULT_COLS
+  );
+
+  const [columnVisibility] = useLocalStorage<VisibilityState>(
+    `column-visibility-${presetName}`,
+    DEFAULT_COLS_VISIBILITY
+  );
+
+  const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
+    "table-sizes",
+    {}
+  );
+
+  const handleThemeChange = (newTheme: any) => {
+    setTheme(newTheme);
+  };
+
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "noise", desc: true },
+  ]);
+
+  const [tabs, setTabs] = useState([
+    { name: "All", filter: (alert: AlertDto) => true },
+    ...presetTabs.map((tab) => ({
+      name: tab.name,
+      filter: (alert: AlertDto) => evalWithContext(alert, tab.filter),
+      id: tab.id,
+    })),
+    { name: "+", filter: (alert: AlertDto) => true }, // a special tab to add new tabs
+  ]);
+
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
+
+  const filteredAlerts = alerts.filter((alert) => {
+    // First apply tab filter
+    if (!tabs[selectedTab].filter(alert)) {
+      return false;
+    }
+
+    // Then apply facet filters
+    return Object.entries(facetFilters).every(([facetKey, includedValues]) => {
+      // If no values are included, don't filter
+      if (includedValues.length === 0) {
+        return true;
+      }
+
+      let value;
+      if (facetKey.includes(".")) {
+        // Handle nested keys like "labels.job"
+        const [parentKey, childKey] = facetKey.split(".");
+        const parentValue = alert[parentKey as keyof AlertDto];
+
+        if (
+          typeof parentValue === "object" &&
+          parentValue !== null &&
+          !Array.isArray(parentValue) &&
+          !(parentValue instanceof Date)
+        ) {
+          value = (parentValue as Record<string, unknown>)[childKey];
+        }
+      } else {
+        value = alert[facetKey as keyof AlertDto];
+      }
+
+      // Handle source array separately
+      if (facetKey === "source") {
+        const sources = value as string[];
+
+        // Check if n/a is selected and sources is empty/null
+        if (includedValues.includes("n/a")) {
+          return !sources || sources.length === 0;
+        }
+
+        return (
+          Array.isArray(sources) &&
+          sources.some((source) => includedValues.includes(source))
+        );
+      }
+
+      // Handle n/a cases for other facets
+      if (includedValues.includes("n/a")) {
+        return value === null || value === undefined || value === "";
+      }
+
+      // For non-n/a cases, convert value to string for comparison
+      // Skip null/undefined values as they should only match n/a
+      if (value === null || value === undefined || value === "") {
+        return false;
+      }
+
+      return includedValues.includes(String(value));
+    });
+  });
+
+  const table = useReactTable({
+    data: filteredAlerts,
+    columns: columns,
+    state: {
+      columnVisibility: getOnlyVisibleCols(columnVisibility, columnsIds),
+      columnOrder: columnOrder,
+      columnSizing: columnSizing,
+      columnPinning: {
+        left: ["severity", "checkbox", "noise"],
+        right: ["alertMenu"],
+      },
+      sorting: sorting,
+    },
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      pagination: { pageSize: 20 },
+    },
+    globalFilterFn: ({ original }, _id, value) => {
+      return evalWithContext(original, value);
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onColumnSizingChange: setColumnSizing,
+    enableColumnPinning: true,
+    columnResizeMode: "onChange",
+    autoResetPageIndex: false,
+    enableGlobalFilter: true,
+    enableSorting: true,
+  });
+
+  const selectedRowIds = Object.entries(
+    table.getSelectedRowModel().rowsById
+  ).reduce<string[]>((acc, [alertId]) => {
+    return acc.concat(alertId);
+  }, []);
+
+  let showSkeleton =
+    table.getFilteredRowModel().rows.length === 0 && isAsyncLoading;
+  let showEmptyState =
+    table.getFilteredRowModel().rows.length === 0 && !isAsyncLoading;
+
+  const handleRowClick = (alert: AlertDto) => {
+    // if presetName is alert-history, do not open sidebar
+    if (presetName === "alert-history") {
+      return;
+    }
+    setSelectedAlert(alert);
+    setIsSidebarOpen(true);
+  };
+
+  return (
+    // Add h-screen to make it full height and remove the default flex-col gap
+    <div className="h-screen flex flex-col gap-4">
+      {/* Add padding to account for any top nav/header */}
+      <div className="px-4 flex-none">
+        <TitleAndFilters
+          table={table}
+          alerts={alerts}
+          presetName={presetName}
+          onThemeChange={handleThemeChange}
+        />
+      </div>
+
+      {/* Make actions/presets section fixed height */}
+      <div className="h-14 px-4 flex-none">
+        {selectedRowIds.length ? (
+          <AlertActions
+            selectedRowIds={selectedRowIds}
+            alerts={alerts}
+            clearRowSelection={table.resetRowSelection}
+            setDismissModalAlert={setDismissedModalAlert}
+            mutateAlerts={mutateAlerts}
+            setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+            isIncidentSelectorOpen={isIncidentSelectorOpen}
+          />
+        ) : (
+          <CopilotKit runtimeUrl="/api/copilotkit">
+            <AlertPresets
+              table={table}
+              presetNameFromApi={presetName}
+              isLoading={isAsyncLoading}
+              presetPrivate={presetPrivate}
+              presetNoisy={presetNoisy}
+            />
+          </CopilotKit>
+        )}
+      </div>
+
+      {/* Main content area - uses flex-grow to fill remaining space */}
+      <div className="flex-grow px-4 pb-4">
+        <div className="h-full flex gap-6">
+          {/* Facets sidebar */}
+          <div className="w-32 min-w-[12rem] overflow-y-auto">
+            <AlertFacets
+              className="sticky top-0"
+              alerts={alerts}
+              facetFilters={facetFilters}
+              setFacetFilters={setFacetFilters}
+              dynamicFacets={dynamicFacets}
+              setDynamicFacets={setDynamicFacets}
+              onDelete={handleFacetDelete}
+              table={table}
+              showSkeleton={showSkeleton}
+            />
+          </div>
+
+          {/* Table section */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <Card className="h-full flex flex-col p-0">
+              <div className="flex-grow flex flex-col overflow-hidden">
+                {!presetStatic && (
+                  <div className="flex-none">
+                    <AlertTabs
+                      presetId={presetId}
+                      tabs={tabs}
+                      setTabs={setTabs}
+                      selectedTab={selectedTab}
+                      setSelectedTab={setSelectedTab}
+                    />
+                  </div>
+                )}
+
+                <div ref={a11yContainerRef} className="sr-only" />
+
+                {/* Make table wrapper scrollable */}
+                <div className="flex-grow overflow-auto">
+                  <Table className="[&>table]:table-fixed [&>table]:w-full">
+                    <AlertsTableHeaders
+                      columns={columns}
+                      table={table}
+                      presetName={presetName}
+                      a11yContainerRef={a11yContainerRef}
+                    />
+                    <AlertsTableBody
+                      table={table}
+                      showSkeleton={showSkeleton}
+                      showEmptyState={showEmptyState}
+                      theme={theme}
+                      onRowClick={handleRowClick}
+                      presetName={presetName}
+                    />
+                  </Table>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Pagination footer - fixed height */}
+      <div className="h-16 px-4 flex-none pl-[14rem]">
+        <AlertPagination
+          table={table}
+          presetName={presetName}
+          isRefreshAllowed={isRefreshAllowed}
+        />
+      </div>
+
+      <AlertSidebar
+        isOpen={isSidebarOpen}
+        toggle={() => setIsSidebarOpen(false)}
+        alert={selectedAlert}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+        setChangeStatusAlert={setChangeStatusAlert}
+        setIsIncidentSelectorOpen={() => {
+          if (selectedAlert) {
+            table
+              .getRowModel()
+              .rows.find(
+                (row) => row.original.fingerprint === selectedAlert.fingerprint
+              )
+              ?.toggleSelected();
+            setIsIncidentSelectorOpen(true);
+          }
+        }}
+      />
+    </div>
+  );
+}

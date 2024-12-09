@@ -13,23 +13,26 @@ import pydantic
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
 class SmtpProviderAuthConfig:
-    smtp_server: str = dataclasses.field(
+    smtp_server: NoSchemeUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "SMTP Server Address",
             "config_main_group": "authentication",
+            "validation": "no_scheme_url",
         }
     )
 
-    smtp_port: int = dataclasses.field(
+    smtp_port: UrlPort = dataclasses.field(
         metadata={
             "required": True,
             "description": "SMTP port",
             "config_main_group": "authentication",
+            "validation": "port",
         },
         default=587,
     )
@@ -73,6 +76,7 @@ class SmtpProvider(BaseProvider):
             alias="Send Email",
         )
     ]
+    PROVIDER_CATEGORY = ["Collaboration"]
 
     PROVIDER_TAGS = ["messaging"]
     PROVIDER_DISPLAY_NAME = "SMTP"

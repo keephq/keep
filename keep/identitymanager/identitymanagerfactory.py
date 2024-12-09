@@ -1,12 +1,16 @@
 import enum
 import importlib
+import logging
 import os
+import time
 from typing import Type
 
 from keep.api.core.config import config
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authverifierbase import AuthVerifierBase
 from keep.identitymanager.identitymanager import BaseIdentityManager
+
+logger = logging.getLogger(__name__)
 
 
 class IdentityManagerTypes(enum.Enum):
@@ -94,6 +98,8 @@ class IdentityManagerFactory:
             NotImplementedError: If the specified manager type or class is not implemented.
         """
         try:
+            t = time.time()
+            logger.debug(f"Loading {manager_class} for {manager_type}")
             manager_type = (
                 IdentityManagerFactory._backward_compatible_get_identity_manager(
                     manager_type
@@ -105,23 +111,30 @@ class IdentityManagerFactory:
                 )
             # look for the module in ee
             except ModuleNotFoundError:
-                module = importlib.import_module(
-                    f"ee.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
-                )
-            except ModuleNotFoundError:
-                raise NotImplementedError(
-                    f"{manager_class.__name__} for {manager_type} not implemented"
-                )
+                try:
+                    module = importlib.import_module(
+                        f"ee.identitymanager.identity_managers.{manager_type}.{manager_type}_{manager_class}"
+                    )
+                except ModuleNotFoundError:
+                    raise NotImplementedError(
+                        f"{manager_class} for {manager_type} not implemented"
+                    )
+
+            logger.debug(
+                f"Loaded {manager_class} for {manager_type} in {time.time() - t} seconds"
+            )
             # look for the class that contains the manager_class in its name
             for _attr in dir(module):
                 if manager_class in _attr.lower() and "base" not in _attr.lower():
                     class_name = _attr
                     break
             manager_class: Type = getattr(module, class_name)
-            return manager_class(*args, **kwargs)
+            resp = manager_class(*args, **kwargs)
+            logger.debug(f"Found class {class_name} in {time.time() - t} seconds")
+            return resp
         except (ImportError, AttributeError):
             raise NotImplementedError(
-                f"{manager_class.__name__} for {manager_type} not implemented"
+                f"{manager_class} for {manager_type} not implemented"
             )
 
     @staticmethod

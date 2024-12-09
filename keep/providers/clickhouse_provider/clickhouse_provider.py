@@ -6,13 +6,13 @@ import dataclasses
 import os
 
 import pydantic
-
 from clickhouse_driver import connect
 from clickhouse_driver.dbapi.extras import DictCursor
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -21,16 +21,29 @@ class ClickhouseProviderAuthConfig:
         metadata={"required": True, "description": "Clickhouse username"}
     )
     password: str = dataclasses.field(
-        metadata={"required": True, "description": "Clickhouse password", "sensitive": True}
+        metadata={
+            "required": True,
+            "description": "Clickhouse password",
+            "sensitive": True,
+        }
     )
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "Clickhouse hostname"}
+    host: NoSchemeUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Clickhouse hostname",
+            "validation": "no_scheme_url",
+        }
     )
-    port: str = dataclasses.field(
-        metadata={"required": True, "description": "Clickhouse port"}
+    port: UrlPort = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "Clickhouse port",
+            "validation": "port",
+        }
     )
     database: str | None = dataclasses.field(
-        metadata={"required": False, "description": "Clickhouse database name"}, default=None
+        metadata={"required": False, "description": "Clickhouse database name"},
+        default=None,
     )
 
 
@@ -38,6 +51,7 @@ class ClickhouseProvider(BaseProvider):
     """Enrich alerts with data from Clickhouse."""
 
     PROVIDER_DISPLAY_NAME = "Clickhouse"
+    PROVIDER_CATEGORY = ["Database"]
 
     PROVIDER_SCOPES = [
         ProviderScope(
@@ -60,13 +74,13 @@ class ClickhouseProvider(BaseProvider):
         """
         try:
             client = self.__generate_client()
-            
+
             cursor = client.cursor()
-            cursor.execute('SHOW TABLES')
-            
+            cursor.execute("SHOW TABLES")
+
             tables = cursor.fetchall()
             self.logger.info(f"Tables: {tables}")
-            
+
             cursor.close()
             client.close()
 
@@ -88,11 +102,11 @@ class ClickhouseProvider(BaseProvider):
             clickhouse_driver.Connection: Clickhouse connection object
         """
 
-        user=self.authentication_config.username
-        password=self.authentication_config.password
-        host=self.authentication_config.host
-        database=self.authentication_config.database
-        port=self.authentication_config.port
+        user = self.authentication_config.username
+        password = self.authentication_config.password
+        host = self.authentication_config.host
+        database = self.authentication_config.database
+        port = self.authentication_config.port
 
         dsn = f"clickhouse://{user}:{password}@{host}:{port}/{database}"
 
@@ -121,9 +135,7 @@ class ClickhouseProvider(BaseProvider):
         """
         return self._notify(query=query, single_row=single_row, **kwargs)
 
-    def _notify(
-        self, query="", single_row=False, **kwargs: dict
-    ) -> list | tuple:
+    def _notify(self, query="", single_row=False, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the Clickhouse database.
 
@@ -153,6 +165,7 @@ if __name__ == "__main__":
             "password": os.environ.get("CLICKHOUSE_PASSWORD"),
             "host": os.environ.get("CLICKHOUSE_HOST"),
             "database": os.environ.get("CLICKHOUSE_DATABASE"),
+            "port": os.environ.get("CLICKHOUSE_PORT")
         }
     )
     context_manager = ContextManager(
@@ -160,5 +173,7 @@ if __name__ == "__main__":
         workflow_id="test",
     )
     clickhouse_provider = ClickhouseProvider(context_manager, "clickhouse-prod", config)
-    results = clickhouse_provider.query(query="SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1")
+    results = clickhouse_provider.query(
+        query="SELECT * FROM logs_table ORDER BY timestamp DESC LIMIT 1"
+    )
     print(results)

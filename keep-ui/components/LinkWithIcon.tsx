@@ -3,8 +3,8 @@ import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
 import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
-import classNames from "classnames";
-import { Trashcan } from "components/icons";
+import { Trashcan } from "@/components/icons";
+import clsx from "clsx";
 
 type LinkWithIconProps = {
   children: ReactNode;
@@ -16,6 +16,7 @@ type LinkWithIconProps = {
   className?: string;
   testId?: string;
   isExact?: boolean;
+  iconClassName?: string;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -30,6 +31,7 @@ export const LinkWithIcon = ({
   className,
   testId,
   isExact = false,
+  iconClassName,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -40,12 +42,16 @@ export const LinkWithIcon = ({
         restOfLinkProps.href?.toString() || ""
       );
 
-  const iconClasses = classNames("group-hover:text-orange-400", {
-    "text-orange-400": isActive,
-    "text-black": !isActive,
-  });
+  const iconClasses = clsx(
+    "group-hover:text-orange-400",
+    {
+      "text-orange-400": isActive,
+      "text-black": !isActive,
+    },
+    iconClassName
+  );
 
-  const textClasses = classNames("truncate", {
+  const textClasses = clsx("truncate", {
     "text-orange-400": isActive,
     "text-black": !isActive,
   });
@@ -61,7 +67,7 @@ export const LinkWithIcon = ({
 
   return (
     <div
-      className={classNames(
+      className={clsx(
         "flex items-center justify-between text-sm p-1 font-medium rounded-lg focus:ring focus:ring-orange-300 group w-full",
         {
           "bg-stone-200/50": isActive,

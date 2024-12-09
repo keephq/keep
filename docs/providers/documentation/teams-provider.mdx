@@ -1,7 +1,7 @@
 ---
-title: "Teams Provider"
-sidebarTitle: "Teams Provider"
-description: "Teams Provider is a provider that allows to notify alerts to Microsoft Teams chats."
+title: "Microsoft Teams Provider"
+sidebarTitle: "Microsoft Teams Provider"
+description: "Microsoft Teams Provider is a provider that allows to notify alerts to Microsoft Teams chats."
 ---
 
 ## Inputs
@@ -11,14 +11,19 @@ The `notify` function in the `TeamsProvider` class takes the following parameter
 ```python
 kwargs (dict):
     message (str): The message to send. *Required*
-    typeCard (str): The card type. (MessageCard is default)
-    themeColor (str): Hexadecimal color.
-    sections (array): Array of custom informations
+    typeCard (str): The card type. Can be "MessageCard" (legacy) or "message" (for Adaptive Cards). Default is "message"
+    themeColor (str): Hexadecimal color (only used with MessageCard type)
+    sections (array/str): For MessageCard: Array of custom information sections
+                         For Adaptive Cards: Array of card elements following the Adaptive Card schema
+                         Can be provided as a JSON string or array
+    attachments (array/str): Custom attachments array for Adaptive Cards (overrides default attachment structure)
+                            Can be provided as a JSON string or array
+    schema (str): Schema URL for Adaptive Cards. Default is "http://adaptivecards.io/schemas/adaptive-card.json"
 ```
 
 ## Outputs
 
-_No information yet, feel free to contribute it using the "Edit this page" link the bottom of the page_
+The response as JSON, which is the response from the Microsoft Teams API.
 
 ## Authentication Parameters
 
@@ -28,26 +33,159 @@ The TeamsProviderAuthConfig class takes the following parameters:
 
 ## Connecting with the Provider
 
-1. Open the Microsoft Teams application or website and select the team or channel where you want to add the webhook.
-
-2. Click on the three-dot icon next to the team or channel name and select "Connectors" from the dropdown menu.
-
-3. Search for "Incoming Webhook" and click on the "Add" button.
-
-4. Give your webhook a name and an optional icon, then click on the "Create" button.
-
-5. Copy the webhook URL that is generated and save it for later use.
-
-6. Select the options that you want to configure for your webhook, such as the default name and avatar that will be used when posting messages.
-
-7. Click on the "Save" button to save your webhook settings.
-
-You can now use the webhook URL to send messages to the selected channel or team in Microsoft Teams.
+<Tabs>
+  <Tab title="New Teams">
+    1. In the New Teams client, select Teams and navigate to the channel where
+    you want to add an Incoming Webhook. 2. Select More options ••• on the right
+    side of the channel name. 3. Select Manage Channel
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/manage-channel-new-teams.png" />
+    </Frame>
+    <Note>
+      For members who aren't admins of the channel, the Manage channel option is
+      available under the Open channel details option in the upper-right corner
+      of a channel.
+    </Note>
+    4. Select Edit
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/edit-connector-new-teams.png" />
+    </Frame>
+    5. Search for Incoming Webhook and select Add.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/search-add-webhook.png" />
+    </Frame>
+    6. Select Add
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/add-incoming-webhook-lightbox.png#lightbox" />
+    </Frame>
+    7. Provide a name for the webhook and upload an image if necessary. 8. Select
+    Create.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/create-incoming-webhook-new-teams.png" />
+    </Frame>
+    9. Copy and save the unique webhook URL present in the dialog. The URL maps to
+    the channel and you can use it to send information to Teams. 10. Select Done.
+    The webhook is now available in the Teams channel.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/url_1-new-teams.png" />
+    </Frame>
+  </Tab>
+  <Tab title="Classic Teams">
+    1. In the Classic Teams client, select Teams and navigate to the channel
+    where you want to add an Incoming Webhook. 2. Select More options ••• from
+    the upper-right corner. 3. Select Connectors from the dropdown menu.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/connectors_1.png" />
+    </Frame>
+    4. Search for Incoming Webhook and select Add.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/search-add-webhook.png" />
+    </Frame>
+    5. Select Add.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/add-incoming-webhook.png" />
+    </Frame>
+    6. Provide a name for the webhook and upload an image if necessary. 7.
+    Select Create.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/create-incoming-webhook.png" />
+    </Frame>
+    8. Copy and save the unique webhook URL present in the dialog. The URL maps
+    to the channel and you can use it to send information to Teams. 9. Select
+    Done.
+    <Frame>
+      <img src="https://learn.microsoft.com/en-us/microsoftteams/platform/assets/images/url_1.png" />
+    </Frame>
+  </Tab>
+</Tabs>
 
 ## Notes
 
-_No information yet, feel free to contribute it using the "Edit this page" link the bottom of the page_
+When using Adaptive Cards (`typeCard="message"`):
+
+- The `sections` parameter should follow the [Adaptive Cards schema](https://adaptivecards.io/explorer/)
+- `themeColor` is ignored for Adaptive Cards
+- If no sections are provided, the message will be displayed as a simple text block
+- Both `sections` and `attachments` can be provided as JSON strings or arrays
+
+### Workflow Example
+
+You can also find this example in our [examples](https://github.com/keephq/keep/tree/main/examples/workflows/keep-teams-adaptive-cards.yaml) folder in the Keep GitHub repository.
+
+```yaml
+id: 6bc7c72e-ab3d-4913-84dd-08b9323195ae
+description: Teams Adaptive Cards Example
+disabled: false
+triggers:
+  - type: manual
+  - filters:
+      - key: source
+        value: r".*"
+    type: alert
+consts: {}
+name: Keep Teams Adaptive Cards
+owners: []
+services: []
+steps: []
+actions:
+  - name: teams-action
+    provider:
+      config: "{{ providers.teams }}"
+      type: teams
+      with:
+        message: ""
+        sections: '[{"type": "TextBlock", "text": "{{alert.name}}"}, {"type": "TextBlock", "text": "Tal from Keep"}]'
+        typeCard: message
+```
+
+<Note>
+    The sections parameter is a JSON string that follows the Adaptive Cards schema, but can also be an object.
+    If it's a string, it will be parsed as a JSON string.
+</Note>
+
+### Using Sections
+
+```python
+provider.notify(
+    message="Fallback text",
+    typeCard="message",
+    sections=[
+        {
+            "type": "TextBlock",
+            "text": "Hello from Adaptive Card!"
+        },
+        {
+            "type": "Image",
+            "url": "https://example.com/image.jpg"
+        }
+    ]
+)
+```
+
+### Using Custom Attachments
+
+```python
+provider.notify(
+    typeCard="message",
+    attachments=[{
+        "contentType": "application/vnd.microsoft.card.adaptive",
+        "content": {
+            "type": "AdaptiveCard",
+            "version": "1.2",
+            "body": [
+                {
+                    "type": "TextBlock",
+                    "text": "Custom Attachment Example"
+                }
+            ]
+        }
+    }]
+)
+```
 
 ## Useful Links
 
 - https://learn.microsoft.com/pt-br/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook
+- https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using
+- https://adaptivecards.io/explorer/
+- https://adaptivecards.io/schemas/adaptive-card.json

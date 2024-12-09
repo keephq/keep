@@ -240,7 +240,9 @@ class IOHandler:
             if isinstance(tree, ast.Call):
                 func = tree.func
                 args = tree.args
-                # if its another function
+                keywords = tree.keywords  # Get keyword arguments
+
+                # Parse positional args
                 _args = []
                 for arg in args:
                     _arg = None
@@ -250,7 +252,6 @@ class IOHandler:
                         _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
-                    # set is basically {{ value }}
                     elif isinstance(arg, ast.Set) or isinstance(arg, ast.List):
                         _arg = astunparse.unparse(arg).strip()
                         if (
@@ -259,10 +260,6 @@ class IOHandler:
                             or (_arg.startswith("(") and _arg.endswith(")"))
                         ):
                             try:
-                                # TODO(shahargl): when Keep gonna be self hosted, this will be a security issue!!!
-                                # because the user can run any python code need to find a way to limit the functions that can be used
-
-                                # https://github.com/keephq/keep/issues/138
                                 import datetime
 
                                 from dateutil.tz import tzutc
@@ -272,36 +269,85 @@ class IOHandler:
                                 for dependency in self.context_manager.dependencies:
                                     g[dependency.__name__] = dependency
 
-                                # TODO: this is a hack to tzutc in the eval, should be more robust
                                 g["tzutc"] = tzutc
                                 g["datetime"] = datetime
-                                # finally, eval the expression
                                 _arg = eval(_arg, g)
                             except ValueError:
                                 pass
                     else:
                         _arg = arg.id
-                    if _arg:
+                    # if the value is empty '', we still need to pass it to the function
+                    if _arg or _arg == "":
                         _args.append(_arg)
-                # check if we need to inject tenant_id
+
+                # Parse keyword args
+                _kwargs = {}
+                for keyword in keywords:
+                    key = keyword.arg
+                    value = keyword.value
+
+                    if isinstance(value, ast.Call):
+                        _kwargs[key] = _parse(self, value)
+                    elif isinstance(value, ast.Str) or isinstance(value, ast.Constant):
+                        _kwargs[key] = str(value.s)
+                    elif isinstance(value, ast.Dict):
+                        _kwargs[key] = ast.literal_eval(value)
+                    elif isinstance(value, ast.Set) or isinstance(value, ast.List):
+                        parsed_value = astunparse.unparse(value).strip()
+                        if (
+                            (
+                                parsed_value.startswith("[")
+                                and parsed_value.endswith("]")
+                            )
+                            or (
+                                parsed_value.startswith("{")
+                                and parsed_value.endswith("}")
+                            )
+                            or (
+                                parsed_value.startswith("(")
+                                and parsed_value.endswith(")")
+                            )
+                        ):
+                            try:
+                                import datetime
+
+                                from dateutil.tz import tzutc
+
+                                g = globals()
+                                for dependency in self.context_manager.dependencies:
+                                    g[dependency.__name__] = dependency
+
+                                g["tzutc"] = tzutc
+                                g["datetime"] = datetime
+                                _kwargs[key] = eval(parsed_value, g)
+                            except ValueError:
+                                pass
+                    else:
+                        _kwargs[key] = value.id
+
+                # Get the function and its signature
                 keep_func = getattr(keep_functions, func.attr)
                 func_signature = inspect.signature(keep_func)
 
-                kwargs = {}
+                # Add tenant_id if needed
                 if "kwargs" in func_signature.parameters:
-                    kwargs["tenant_id"] = self.context_manager.tenant_id
+                    _kwargs["tenant_id"] = self.context_manager.tenant_id
 
                 try:
-                    val = (
-                        keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
-                    )
-                # try again but with replacing \n with \\n
-                # again - best effort see test_openobserve_rows_bug test
+                    # Call function with both positional and keyword arguments
+                    val = keep_func(*_args, **_kwargs)
                 except ValueError:
-                    _args = [arg.replace("\n", "\\n") for arg in _args]
-                    val = (
-                        keep_func(*_args) if not kwargs else keep_func(*_args, **kwargs)
-                    )
+                    # Handle newline escaping if needed
+                    _args = [
+                        arg.replace("\n", "\\n") if isinstance(arg, str) else arg
+                        for arg in _args
+                    ]
+                    _kwargs = {
+                        k: v.replace("\n", "\\n") if isinstance(v, str) else v
+                        for k, v in _kwargs.items()
+                    }
+                    val = keep_func(*_args, **_kwargs)
+
                 return val
 
         try:
@@ -329,7 +375,17 @@ class IOHandler:
                         .replace("\n", "\\n")
                     )
                     t = self._encode_single_quotes_in_double_quotes(t)
-                    tree = ast.parse(t)
+                    try:
+                        tree = ast.parse(t)
+                    except Exception:
+                        # For strings where ' is used as the delimeter and we failed to escape all ' in the string
+                        # @tb: again, this is not ideal but it's best effort...
+                        t = (
+                            t.replace("('", '("')
+                            .replace("')", '")')
+                            .replace("',", '",')
+                        )
+                        tree = ast.parse(t)
             else:
                 # for strings such as "45%\n", we need to escape
                 tree = ast.parse(token.encode("unicode_escape"))
@@ -509,17 +565,10 @@ class IOHandler:
 if __name__ == "__main__":
     # debug & test
     context_manager = ContextManager("keep")
-    context_manager.event_context = {
-        "ticket_id": "1234",
-        "severity": "high",
-        "ticket_created_at": "2021-09-01T00:00:00Z",
-    }
+    context_manager.event_context = {"tags": {"k1": "v1", "k2": "v2"}}
     iohandler = IOHandler(context_manager)
     res = iohandler.render(
-        iohandler.quote(
-            "not '{{ alert.ticket_id }}' or (('{{ alert.ticket_status }}' in ['Resolved', 'Closed', 'Canceled']) and ('{{ alert.severity }}' == 'critical' or keep.datetime_compare(keep.utcnow(), keep.to_utc('{{ alert.ticket_created_at }}')) > 168))"
-        ),
-        safe=False,
+        'https://www.keephq.dev?keep.join("{{alert.tags}}", "&", "prefix_")'
     )
     from asteval import Interpreter
 

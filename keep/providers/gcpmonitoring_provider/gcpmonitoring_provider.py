@@ -39,7 +39,7 @@ class GcpmonitoringProviderAuthConfig:
             "sensitive": True,
             "type": "file",
             "name": "service_account_json",
-            "file_type": ".json",  # this is used to filter the file type in the UI
+            "file_type": "application/json",  # this is used to filter the file type in the UI
         }
     )
 
@@ -75,7 +75,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         "ERROR": AlertSeverity.HIGH,
         "WARNING": AlertSeverity.WARNING,
     }
-
+    PROVIDER_CATEGORY = ["Monitoring", "Cloud Infrastructure"]
     STATUS_MAP = {
         "CLOSED": AlertStatus.RESOLVED,
         "OPEN": AlertStatus.FIRING,
@@ -194,7 +194,10 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         url = incident.pop("url", "")
         documentation = incident.pop("documentation", {})
         if isinstance(documentation, dict):
-            name = documentation.get("subject")
+            name = (
+                documentation.get("subject", description)
+                or "GCPMontirong Alert (No subject)"
+            )
         else:
             name = "Test notification"
         incident_id = incident.get("incident_id", "")

@@ -6,11 +6,12 @@ import dataclasses
 import json
 import tempfile
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlencode, urljoin
 
 import pydantic
 import requests
+from dateutil import parser
 
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.contextmanager.contextmanager import ContextManager
@@ -29,13 +30,6 @@ class AppdynamicsProviderAuthConfig:
     AppDynamics authentication configuration.
     """
 
-    appDynamicsUsername: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "AppDynamics Username",
-            "hint": "Your Username",
-        },
-    )
     appDynamicsAccountName: str = dataclasses.field(
         metadata={
             "required": True,
@@ -43,14 +37,7 @@ class AppdynamicsProviderAuthConfig:
             "hint": "AppDynamics Account Name",
         },
     )
-    appDynamicsPassword: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Password",
-            "hint": "Password associated with your account",
-            "sensitive": True,
-        },
-    )
+
     appId: str = dataclasses.field(
         metadata={
             "required": True,
@@ -58,20 +45,64 @@ class AppdynamicsProviderAuthConfig:
             "hint": "the app instance in which the webhook should be installed",
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "AppDynamics host",
             "hint": "e.g. https://baseball202404101029219.saas.appdynamics.com",
+            "validation": "any_http_url"
         },
     )
+
+    appDynamicsAccessToken: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "AppDynamics Access Token",
+            "hint": "Access Token",
+            "config_sub_group": "access_token",
+            "config_main_group": "authentication",
+        },
+    )
+
+    appDynamicsUsername: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Username",
+            "hint": "Username associated with your account",
+            "config_sub_group": "basic_auth",
+            "config_main_group": "authentication",
+        },
+    )
+    appDynamicsPassword: Optional[str] = dataclasses.field(
+        default=None,
+        metadata={
+            "description": "Password",
+            "hint": "Password associated with your account",
+            "sensitive": True,
+            "config_sub_group": "basic_auth",
+            "config_main_group": "authentication",
+        },
+    )
+
+    @pydantic.root_validator
+    def check_password_or_token(cls, values):
+        username, password, token = (
+            values.get("appDynamicsUsername"),
+            values.get("appDynamicsPassword"),
+            values.get("appDynamicsAccessToken"),
+        )
+        if not (username and password) and not token:
+            raise ValueError(
+                "Either username/password or access token must be provided"
+            )
+        return values
 
 
 class AppdynamicsProvider(BaseProvider):
     """Install Webhooks and receive alerts from AppDynamics."""
 
     PROVIDER_DISPLAY_NAME = "AppDynamics"
-
+    PROVIDER_CATEGORY = ["Monitoring"]
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
@@ -121,7 +152,7 @@ class AppdynamicsProvider(BaseProvider):
                 f"https://{self.authentication_config.host}"
             )
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(self, paths: List[str] = None, query_params: dict = None, **kwargs):
         """
         Helper method to build the url for AppDynamics api requests.
 
@@ -133,6 +164,7 @@ class AppdynamicsProvider(BaseProvider):
 
         # url = https://baseballxyz.saas.appdynamics.com/rest/api/2/issue/createmeta?projectKeys=key1
         """
+        paths = paths or []
 
         url = urljoin(
             f"{self.authentication_config.host}/controller",
@@ -145,17 +177,43 @@ class AppdynamicsProvider(BaseProvider):
 
         return url
 
+    def get_user_id_by_name(self, name: str) -> Optional[str]:
+        self.logger.info("Getting user ID by name")
+        response = requests.get(
+            url=self.__get_url(paths=["controller/api/rbac/v1/users/"]),
+            headers=self.__get_headers(),
+            auth=self.__get_auth(),
+        )
+        if response.ok:
+            users = response.json()
+            for user in users["users"]:
+                if user["name"].lower() == name.lower():
+                    return user["id"]
+            return None
+        else:
+            self.logger.error(
+                "Error while validating scopes for AppDynamics", extra=response.json()
+            )
+
     def validate_scopes(self) -> dict[str, bool | str]:
         authenticated = False
         administrator = "Missing Administrator Privileges"
         self.logger.info("Validating AppDynamics Scopes")
+
+        user_id = self.get_user_id_by_name(
+            self.authentication_config.appDynamicsAccountName
+        )
+
+        url = self.__get_url(
+            paths=[
+                "controller/api/rbac/v1/users/",
+                user_id,
+            ]
+        )
+
         response = requests.get(
-            url=self.__get_url(
-                paths=[
-                    "controller/api/rbac/v1/users/name",
-                    self.authentication_config.appDynamicsUsername,
-                ]
-            ),
+            url=url,
+            headers=self.__get_headers(),
             auth=self.__get_auth(),
         )
         if response.ok:
@@ -173,16 +231,26 @@ class AppdynamicsProvider(BaseProvider):
                     break
         else:
             self.logger.error(
-                "Error while validating scopes for AppDynamics", extra=response.json()
+                "Error while validating scopes for AppDynamics", extra=response.content
             )
 
         return {"authenticated": authenticated, "administrator": administrator}
 
+    def __get_headers(self):
+        if self.authentication_config.appDynamicsAccessToken:
+            return {
+                "Authorization": f"Bearer {self.authentication_config.appDynamicsAccessToken}",
+            }
+
     def __get_auth(self) -> tuple[str, str]:
-        return (
-            f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
-            self.authentication_config.appDynamicsPassword,
-        )
+        if (
+            self.authentication_config.appDynamicsUsername
+            and self.authentication_config.appDynamicsPassword
+        ):
+            return (
+                f"{self.authentication_config.appDynamicsUsername}@{self.authentication_config.appDynamicsAccountName}",
+                self.authentication_config.appDynamicsPassword,
+            )
 
     def __create_http_response_template(self, keep_api_url: str, api_key: str):
         keep_api_host, keep_api_path = keep_api_url.rsplit("/", 1)
@@ -203,11 +271,12 @@ class AppdynamicsProvider(BaseProvider):
         res = requests.post(
             self.__get_url(paths=["controller/actiontemplate/httprequest"]),
             files={"template": temp},
+            headers=self.__get_headers(),
             auth=self.__get_auth(),
         )
         res = res.json()
         temp.close()
-        if res["success"] == "True":
+        if res["success"] == "True" or res["success"] is True:
             self.logger.info("HTTP Response template Successfully Created")
         else:
             self.logger.info("HTTP Response template creation failed", extra=res)
@@ -228,6 +297,7 @@ class AppdynamicsProvider(BaseProvider):
                     "actions",
                 ]
             ),
+            headers=self.__get_headers(),
             auth=self.__get_auth(),
             json={
                 "actionType": "HTTP_REQUEST",
@@ -272,6 +342,7 @@ class AppdynamicsProvider(BaseProvider):
                     "policies",
                 ]
             ),
+            headers=self.__get_headers(),
             auth=self.__get_auth(),
         )
 
@@ -290,6 +361,7 @@ class AppdynamicsProvider(BaseProvider):
                         policy["id"],
                     ]
                 ),
+                headers=self.__get_headers(),
                 auth=self.__get_auth(),
             ).json()
             if policy_config not in curr_policy["actions"]:
@@ -313,6 +385,7 @@ class AppdynamicsProvider(BaseProvider):
                         policy["id"],
                     ]
                 ),
+                headers=self.__get_headers(),
                 auth=self.__get_auth(),
                 json=curr_policy,
             )
@@ -329,10 +402,16 @@ class AppdynamicsProvider(BaseProvider):
             id=event["id"],
             name=event["name"],
             severity=AppdynamicsProvider.SEVERITIES_MAP.get(event["severity"]),
-            lastReceived=event["lastReceived"],
+            lastReceived=parser.parse(event["lastReceived"]).isoformat(),
             message=event["message"],
             description=event["description"],
             event_id=event["event_id"],
             url=event["url"],
             source=["appdynamics"],
         )
+
+    @staticmethod
+    def parse_event_raw_body(raw_body: bytes | dict) -> dict:
+        if isinstance(raw_body, dict):
+            return raw_body
+        return json.loads(raw_body, strict=False)

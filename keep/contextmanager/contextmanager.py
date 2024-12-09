@@ -6,6 +6,7 @@ from pympler.asizeof import asizeof
 
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.logging import WorkflowLoggerAdapter
+from keep.api.models.alert import AlertDto
 
 
 class ContextManager:
@@ -21,7 +22,7 @@ class ContextManager:
         self.steps_context_size = 0
         self.providers_context = {}
         self.actions_context = {}
-        self.event_context = {}
+        self.event_context: AlertDto = {}
         self.incident_context = {}
         self.foreach_context = {
             "value": None,

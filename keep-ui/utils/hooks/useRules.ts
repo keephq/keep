@@ -1,7 +1,5 @@
-import { useSession } from "next-auth/react";
 import useSWR, { SWRConfiguration } from "swr";
-import { useApiUrl } from "./useConfig";
-import { fetcher } from "utils/fetcher";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export type Rule = {
   id: string;
@@ -25,12 +23,11 @@ export type Rule = {
 };
 
 export const useRules = (options?: SWRConfiguration) => {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
 
   return useSWR<Rule[]>(
-    () => (session ? `${apiUrl}/rules` : null),
-    async (url) => fetcher(url, session?.accessToken),
+    api.isReady() ? "/rules" : null,
+    (url) => api.get(url),
     options
   );
 };

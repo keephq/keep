@@ -1,14 +1,15 @@
 """
 Elasticsearch provider.
 """
+
 import dataclasses
 import json
+import typing
 
 import pydantic
 from elasticsearch import Elasticsearch
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.exceptions.provider_config_exception import ProviderConfigException
 from keep.exceptions.provider_connection_failed import ProviderConnectionFailed
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -26,19 +27,24 @@ class ElasticProviderAuthConfig:
             "sensitive": True,
         }
     )
-    host: str = dataclasses.field(
-        default="", metadata={"required": False, "description": "Elasticsearch host"}
+    host: pydantic.AnyHttpUrl | None = dataclasses.field(
+        default=None,
+        metadata={
+            "required": False,
+            "description": "Elasticsearch host",
+            "validation": "any_http_url",
+        },
     )
-    cloud_id: str = dataclasses.field(
-        default="",
+    cloud_id: typing.Optional[str] = dataclasses.field(
+        default=None,
         metadata={"required": False, "description": "Elasticsearch cloud id"},
     )
 
     @pydantic.root_validator
     def check_host_or_cloud_id(cls, values):
         host, cloud_id = values.get("host"), values.get("cloud_id")
-        if host == "" and cloud_id == "":
-            raise ValueError("either host or cloud_id must be provided")
+        if host is None and cloud_id is None:
+            raise ValueError("Missing host or cloud_id in provider config")
         return values
 
 
@@ -46,6 +52,7 @@ class ElasticProvider(BaseProvider):
     """Enrich alerts with data from Elasticsearch."""
 
     PROVIDER_DISPLAY_NAME = "Elastic"
+    PROVIDER_CATEGORY = ["Monitoring", "Database"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -63,9 +70,9 @@ class ElasticProvider(BaseProvider):
         """
         Initialize the ElasticSearch client for the provider.
         """
-        api_key = self.config.authentication.get("api_key")
-        host = self.config.authentication.get("host")
-        cloud_id = self.config.authentication.get("cloud_id")
+        api_key = self.authentication_config.api_key
+        host = self.authentication_config.host
+        cloud_id = self.authentication_config.cloud_id
 
         # Elastic.co requires you to connect with cloud_id
         if cloud_id:
@@ -84,17 +91,9 @@ class ElasticProvider(BaseProvider):
         """
         Validate the provider config.
         """
-        if not self.config.authentication.get(
-            "host"
-        ) and not self.config.authentication.get("cloud_id"):
-            raise ProviderConfigException(
-                "Missing host or cloud_id in provider config",
-                provider_id=self.provider_id,
-            )
-        if "api_key" not in self.config.authentication:
-            raise ProviderConfigException(
-                "Missing api_key in provider config", provider_id=self.provider_id
-            )
+        self.authentication_config = ElasticProviderAuthConfig(
+            **self.config.authentication
+        )
 
     @staticmethod
     def get_neccessary_config_keys():
@@ -131,13 +130,26 @@ class ElasticProvider(BaseProvider):
 
     def _run_sql_query(self, query: str) -> list[str]:
         response = self.client.sql.query(body={"query": query})
-        import pandas as pd
 
-        results = pd.DataFrame(response["rows"])
+        # @tb: I removed pandas so if we'll have performance issues we can revert to pandas
+        # Original pandas implementation:
+        # import pandas as pd
+        # results = pd.DataFrame(response["rows"])
+        # columns = [col["name"] for col in response["columns"]]
+        # results.rename(
+        #     columns={i: columns[i] for i in range(len(columns))}, inplace=True
+        # )
+        # return results
+
+        # Convert rows to list of dicts with proper column names
         columns = [col["name"] for col in response["columns"]]
-        results.rename(
-            columns={i: columns[i] for i in range(len(columns))}, inplace=True
-        )
+        results = []
+        for row in response["rows"]:
+            result = {}
+            for i, value in enumerate(row):
+                result[columns[i]] = value
+            results.append(result)
+
         return results
 
     def _run_eql_query(self, query: str | dict, index: str) -> list[str]:

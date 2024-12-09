@@ -1,5 +1,5 @@
 // TODO: refactor, move to entities
-import { AlertDto } from "@/app/alerts/models";
+import { AlertDto } from "@/app/(keep)/alerts/models";
 
 export enum Status {
   Firing = "firing",
@@ -31,6 +31,7 @@ export interface IncidentDto {
   merged_into_incident_id: string;
   merged_by: string;
   merged_at: Date;
+  fingerprint: string;
 }
 
 export interface IncidentCandidateDto {

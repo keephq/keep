@@ -1,5 +1,5 @@
 import { toast } from "react-toastify";
-import { Provider } from "../app/providers/providers";
+import { Provider } from "@/app/(keep)/providers/providers";
 import moment from "moment";
 import { twMerge } from "tailwind-merge";
 import { clsx, type ClassValue } from "clsx";
@@ -36,45 +36,6 @@ export function toDateObjectWithFallback(date: string | Date) {
   }
   // If the date is not a valid date, return a date object with the current date time
   return new Date();
-}
-
-export async function installWebhook(
-  provider: Provider,
-  accessToken: string,
-  apiUrl: string
-) {
-  return toast.promise(
-    fetch(
-      `${apiUrl}/providers/install/webhook/${provider.type}/${provider.id}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    ).then((res) => {
-      return res.json().then((data) => {
-        if (!res.ok) {
-          return Promise.reject(data);
-        }
-      });
-    }),
-    {
-      pending: "Webhook installing 🤞",
-      success: `${provider.type} webhook installed 👌`,
-      error: {
-        render({ data }) {
-          // When the promise reject, data will contains the error
-          return `Webhook installation failed 😢 Error: ${
-            (data as any).detail
-          }`;
-        },
-      },
-    },
-    {
-      position: toast.POSITION.TOP_LEFT,
-    }
-  );
 }
 
 export function getAlertLastReceieved(lastRecievedFromAlert: Date) {

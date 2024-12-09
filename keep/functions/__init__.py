@@ -6,6 +6,7 @@ import urllib.parse
 from datetime import timedelta
 from itertools import groupby
 
+import json5
 import pytz
 from dateutil import parser
 from dateutil.parser import ParserError
@@ -115,7 +116,7 @@ def to_timestamp(dt: datetime.datetime | str = "") -> int:
 
 
 def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
-    if t1 is None or t2 is None:
+    if not t1 or not t2:
         return 0
     diff = (t1 - t2).total_seconds() / 3600
     return diff
@@ -173,6 +174,22 @@ def slice(str_to_slice: str, start: int = 0, end: int = 0) -> str:
     if end == 0 or end == "0":
         return str_to_slice[int(start) :]
     return str_to_slice[int(start) : int(end)]
+
+
+def join(
+    iterable: list | dict | str, delimiter: str = ",", prefix: str | None = None
+) -> str:
+    if isinstance(iterable, str):
+        iterable = json5.loads(iterable)
+
+    if isinstance(iterable, dict):
+        if prefix:
+            return delimiter.join([f"{prefix}{k}={v}" for k, v in iterable.items()])
+        return delimiter.join([f"{k}={v}" for k, v in iterable.items()])
+
+    if prefix:
+        return delimiter.join([f"{prefix}{item}" for item in iterable])
+    return delimiter.join([str(item) for item in iterable])
 
 
 def dict_pop(data: str | dict, *args) -> dict:
@@ -375,3 +392,81 @@ def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
         return True
     else:
         return False
+
+
+def is_business_hours(
+    time_to_check=None,
+    start_hour=8,
+    end_hour=20,
+    business_days=(0, 1, 2, 3, 4),  # Mon = 0, Sun = 6
+    timezone="UTC",
+):
+    """
+    Check if the given time or current time is between start_hour and end_hour
+    and falls on a business day
+
+    Args:
+        time_to_check (str | datetime.datetime, optional): Time to check.
+            If None, current UTC time will be used.
+        start_hour (int, optional): Start hour in 24-hour format. Defaults to 8 (8:00 AM)
+        end_hour (int, optional): End hour in 24-hour format. Defaults to 20 (8:00 PM)
+        business_days (tuple, optional): Days of week considered as business days.
+            Monday=0 through Sunday=6. Defaults to Mon-Fri (0,1,2,3,4)
+        timezone (str, optional): Timezone name (e.g., 'UTC', 'America/New_York', 'Europe/London').
+            Defaults to 'UTC'.
+
+    Returns:
+        bool: True if time is between start_hour and end_hour on a business day
+
+    Raises:
+        ValueError: If start_hour or end_hour are not between 0 and 23
+        ValueError: If business_days contains invalid day numbers
+        ValueError: If timezone string is invalid
+    """
+    # Validate hour inputs
+    if not (0 <= start_hour <= 23 and 0 <= end_hour <= 23):
+        raise ValueError("Hours must be between 0 and 23")
+
+    # Strict validation for business_days
+    try:
+        invalid_days = [day for day in business_days if not (0 <= day <= 6)]
+        if invalid_days:
+            raise ValueError(
+                f"Invalid business days: {invalid_days}. Days must be between 0 (Monday) and 6 (Sunday)"
+            )
+    except TypeError:
+        raise ValueError(
+            "business_days must be an iterable of integers between 0 and 6"
+        )
+
+    # Validate and convert timezone string to pytz timezone
+    try:
+        tz = pytz.timezone(timezone)
+    except pytz.exceptions.UnknownTimeZoneError:
+        raise ValueError(f"Invalid timezone: {timezone}")
+
+    # If no time provided, use current UTC time
+    if time_to_check is None:
+        dt = utcnow()
+    else:
+        # Convert string to datetime if needed
+        dt = to_utc(time_to_check) if isinstance(time_to_check, str) else time_to_check
+
+    if not dt:  # Handle case where parsing failed
+        return False
+
+    # Convert to specified timezone
+    dt = dt.astimezone(tz)
+
+    # Get weekday (Monday = 0, Sunday = 6)
+    weekday = dt.weekday()
+
+    # Check if it's a business day
+    if weekday not in business_days:
+        return False
+
+    # Get just the hour (in 24-hour format)
+    hour = dt.hour
+
+    # Check if hour is between start_hour and end_hour
+    return start_hour <= hour < end_hour

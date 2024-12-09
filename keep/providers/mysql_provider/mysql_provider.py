@@ -11,6 +11,7 @@ import pydantic
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.validation.fields import NoSchemeUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -21,8 +22,12 @@ class MysqlProviderAuthConfig:
     password: str = dataclasses.field(
         metadata={"required": True, "description": "MySQL password", "sensitive": True}
     )
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "MySQL hostname"}
+    host: NoSchemeUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "MySQL hostname",
+            "validation": "no_scheme_url",
+        }
     )
     database: str | None = dataclasses.field(
         metadata={"required": False, "description": "MySQL database name"}, default=None
@@ -33,6 +38,7 @@ class MysqlProvider(BaseProvider):
     """Enrich alerts with data from MySQL."""
 
     PROVIDER_DISPLAY_NAME = "MySQL"
+    PROVIDER_CATEGORY = ["Database"]
 
     PROVIDER_SCOPES = [
         ProviderScope(

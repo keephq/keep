@@ -1,12 +1,12 @@
 """
 Kafka Provider is a class that allows to ingest/digest data from Grafana.
 """
+
 import dataclasses
 import inspect
 import logging
 
 import pydantic
-
 # from confluent_kafka import Consumer, KafkaError, KafkaException
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError, NoBrokersAvailable
@@ -15,6 +15,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import NoSchemeMultiHostUrl
 
 
 @pydantic.dataclasses.dataclass
@@ -23,11 +24,12 @@ class KafkaProviderAuthConfig:
     Kafka authentication configuration.
     """
 
-    host: str = dataclasses.field(
+    host: NoSchemeMultiHostUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Kafka host",
-            "hint": "e.g. https://kafka:9092",
+            "hint": "e.g. localhost:9092 or localhost:9092,localhost:8093",
+            "validation": "no_scheme_multihost_url"
         },
     )
     topic: str = dataclasses.field(
@@ -95,6 +97,8 @@ class KafkaProvider(BaseProvider):
     """
     Kafka provider class.
     """
+
+    PROVIDER_CATEGORY = ["Developer Tools", "Queues"]
 
     PROVIDER_DISPLAY_NAME = "Kafka"
     PROVIDER_SCOPES = [
@@ -167,7 +171,6 @@ class KafkaProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Kafka provider.
-
         """
         self.authentication_config = KafkaProviderAuthConfig(
             **self.config.authentication
@@ -186,9 +189,11 @@ class KafkaProvider(BaseProvider):
         if self.authentication_config.username and self.authentication_config.password:
             basic_conf.update(
                 {
-                    "security_protocol": "SASL_SSL"
-                    if self.authentication_config.username
-                    else "PLAINTEXT",
+                    "security_protocol": (
+                        "SASL_SSL"
+                        if self.authentication_config.username
+                        else "PLAINTEXT"
+                    ),
                     "sasl_mechanism": "PLAIN",
                     "sasl_plain_username": self.authentication_config.username,
                     "sasl_plain_password": self.authentication_config.password,

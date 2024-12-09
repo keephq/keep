@@ -10,6 +10,7 @@ from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
 
+from keep.api.core.config import config
 from keep.api.core.db import create_workflow_execution
 from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_enrichment, get_previous_execution_id
@@ -19,6 +20,8 @@ from keep.api.models.alert import AlertDto, IncidentDto
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 from keep.workflowmanager.workflowstore import WorkflowStore
+
+READ_ONLY_MODE = config("KEEP_READ_ONLY", default="false") == "true"
 
 
 class WorkflowStatus(enum.Enum):
@@ -107,7 +110,12 @@ class WorkflowScheduler:
         workflow_execution_id: str,
         event_context=None,
     ):
+        if READ_ONLY_MODE:
+            # This is because sometimes workflows takes 0 seconds and the executions chart is not updated properly.
+            self.logger.debug("Sleeping for 3 seconds in favor of read only mode")
+            time.sleep(3)
         self.logger.info(f"Running workflow {workflow.workflow_id}...")
+
         try:
             if isinstance(event_context, AlertDto):
                 # set the event context, e.g. the event that triggered the workflow
@@ -583,32 +591,30 @@ class WorkflowScheduler:
             or previous_execution.status != WorkflowStatus.ERROR.value
         ):
             workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
-            self.logger.info(
-                f"Sending email to {workflow.created_by} for failed workflow {workflow_id}"
-            )
-
-            # send the email (commented out)
             try:
-                # from keep.api.core.config import config
-                # from keep.api.utils.email_utils import EmailTemplates, send_email
-                # TODO - should be handled
-                # keep_platform_url = config(
-                #     "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
-                # )
-                # error_logs_url = f"{keep_platform_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
-                # send_email(
-                #     to_email=workflow.created_by,
-                #     template_id=EmailTemplates.WORKFLOW_RUN_FAILED,
-                #     workflow_id=workflow_id,
-                #     workflow_name=workflow.name,
-                #     workflow_execution_id=workflow_execution_id,
-                #     error=error,
-                #     url=error_logs_url,
-                # )
-                # self.logger.info(
-                #     f"Email sent to {workflow.created_by} for failed workflow {workflow_id}"
-                # )
-                pass
+                from keep.api.core.config import config
+                from keep.api.utils.email_utils import EmailTemplates, send_email
+
+                keep_platform_url = config(
+                    "KEEP_PLATFORM_URL", default="https://platform.keephq.dev"
+                )
+                error_logs_url = f"{keep_platform_url}/workflows/{workflow_id}/runs/{workflow_execution_id}"
+                self.logger.debug(
+                    f"Sending email to {workflow.created_by} for failed workflow {workflow_id}"
+                )
+                email_sent = send_email(
+                    to_email=workflow.created_by,
+                    template_id=EmailTemplates.WORKFLOW_RUN_FAILED,
+                    workflow_id=workflow_id,
+                    workflow_name=workflow.name,
+                    workflow_execution_id=workflow_execution_id,
+                    error=error,
+                    url=error_logs_url,
+                )
+                if email_sent:
+                    self.logger.info(
+                        f"Email sent to {workflow.created_by} for failed workflow {workflow_id}"
+                    )
             except Exception as e:
                 self.logger.error(
                     f"Failed to send email to {workflow.created_by} for failed workflow {workflow_id}: {e}"

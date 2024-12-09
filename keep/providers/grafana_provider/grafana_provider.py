@@ -7,7 +7,6 @@ import datetime
 
 import pydantic
 import requests
-from grafana_api.model import APIEndpoints
 from packaging.version import Version
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
@@ -15,9 +14,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.base.provider_exceptions import GetAlertException
-from keep.providers.grafana_provider.grafana_alert_format_description import (
-    GrafanaAlertFormatDescription,
-)
+from keep.providers.grafana_provider.grafana_alert_format_description import \
+    GrafanaAlertFormatDescription
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
 
@@ -36,11 +34,12 @@ class GrafanaProviderAuthConfig:
             "sensitive": True,
         },
     )
-    host: str = dataclasses.field(
+    host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Grafana host",
             "hint": "e.g. https://keephq.grafana.net",
+            "validation": "any_http_url"
         },
     )
 
@@ -49,6 +48,7 @@ class GrafanaProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Grafana"
     """Pull/Push alerts from Grafana."""
 
+    PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
     FINGERPRINT_FIELDS = ["fingerprint"]
 
@@ -89,6 +89,7 @@ class GrafanaProvider(BaseProvider):
     # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
     STATUS_MAP = {
         "ok": AlertStatus.RESOLVED,
+        "resolved": AlertStatus.RESOLVED,
         "normal": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
         "alerting": AlertStatus.FIRING,
@@ -110,17 +111,10 @@ class GrafanaProvider(BaseProvider):
     def validate_config(self):
         """
         Validates required configuration for Grafana provider.
-
         """
         self.authentication_config = GrafanaProviderAuthConfig(
             **self.config.authentication
         )
-        if not self.authentication_config.host.startswith(
-            "https://"
-        ) and not self.authentication_config.host.startswith("http://"):
-            self.authentication_config.host = (
-                f"https://{self.authentication_config.host}"
-            )
 
     def validate_scopes(self) -> dict[str, bool | str]:
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
@@ -154,7 +148,7 @@ class GrafanaProvider(BaseProvider):
         return validated_scopes
 
     def get_alerts_configuration(self, alert_id: str | None = None):
-        api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
+        api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.get(api, verify=False, headers=headers)
         if not response.ok:
@@ -171,7 +165,7 @@ class GrafanaProvider(BaseProvider):
 
     def deploy_alert(self, alert: dict, alert_id: str | None = None):
         self.logger.info("Deploying alert")
-        api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/alert-rules"
+        api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
         response = requests.post(api, verify=False, json=alert, headers=headers)
 
@@ -243,7 +237,9 @@ class GrafanaProvider(BaseProvider):
             f"{GrafanaProvider.KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME}-{tenant_id}"
         )
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
-        contacts_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/contact-points"
+        contacts_api = (
+            f"{self.authentication_config.host}/api/v1/provisioning/contact-points"
+        )
         try:
             self.logger.info("Getting contact points")
             all_contact_points = requests.get(
@@ -345,7 +341,9 @@ class GrafanaProvider(BaseProvider):
         # Finally, we need to update the policies to match the webhook
         if setup_alerts:
             self.logger.info("Setting up alerts")
-            policies_api = f"{self.authentication_config.host}{APIEndpoints.ALERTING_PROVISIONING.value}/policies"
+            policies_api = (
+                f"{self.authentication_config.host}/api/v1/provisioning/policies"
+            )
             all_policies = requests.get(
                 policies_api, verify=False, headers=headers
             ).json()
@@ -516,6 +514,7 @@ class GrafanaProvider(BaseProvider):
         else:
             alert_payload = ALERTS[alert_type]["alerts"][0]
         alert_parameters = ALERTS[alert_type].get("parameters", {})
+        alert_renders = ALERTS[alert_type].get("renders", {})
         # Generate random data for parameters
         for parameter, parameter_options in alert_parameters.items():
             if "." in parameter:
@@ -527,6 +526,15 @@ class GrafanaProvider(BaseProvider):
                 )
             else:
                 alert_payload[parameter] = random.choice(parameter_options)
+
+        # Apply renders
+        for param, choices in alert_renders.items():
+            # replace annotations
+            # HACK
+            param_to_replace = "{{ " + param + " }}"
+            alert_payload["annotations"]["summary"] = alert_payload["annotations"][
+                "summary"
+            ].replace(param_to_replace, random.choice(choices))
 
         # Implement specific Grafana alert structure here
         # For example:
@@ -547,7 +555,7 @@ class GrafanaProvider(BaseProvider):
         return {
             "alerts": [alert_payload],
             "severity": alert_payload.get("labels", {}).get("severity"),
-            "title": "Grafana Alert - {}".format(alert_type),
+            "title": alert_type,
         }
 
 

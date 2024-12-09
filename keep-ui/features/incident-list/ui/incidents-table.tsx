@@ -24,8 +24,8 @@ import IncidentTableComponent from "./incident-table-component";
 import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
-import ManualRunWorkflowModal from "@/app/workflows/manual-run-workflow-modal";
-import AlertTableCheckbox from "@/app/alerts/alert-table-checkbox";
+import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
+import AlertTableCheckbox from "@/app/(keep)/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
 import { MergeIncidentsModal } from "@/features/merge-incidents";
 import { IncidentDropdownMenu } from "./incident-dropdown-menu";
@@ -35,6 +35,7 @@ import { useIncidentActions } from "@/entities/incidents/model";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { DateTimeField, TablePagination } from "@/shared/ui";
+import { UserStatefulAvatar } from "@/entities/users/ui";
 
 function SelectedRowActions({
   selectedRowIds,
@@ -228,19 +229,14 @@ export default function IncidentsTable({
     columnHelper.display({
       id: "assignee",
       header: "Assignee",
-      cell: ({ row }) => row.original.assignee,
+      cell: ({ row }) => (
+        <UserStatefulAvatar email={row.original.assignee} size="xs" />
+      ),
     }),
     columnHelper.accessor("creation_time", {
       id: "creation_time",
       header: "Created At",
       cell: ({ row }) => <DateTimeField date={row.original.creation_time} />,
-    }),
-    columnHelper.display({
-      id: "rule_fingerprint",
-      header: "Group by value",
-      cell: ({ row }) => (
-        <div className="text-wrap">{row.original.rule_fingerprint || "-"}</div>
-      ),
     }),
     columnHelper.display({
       id: "actions",

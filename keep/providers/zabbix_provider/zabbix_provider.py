@@ -30,12 +30,13 @@ class ZabbixProviderAuthConfig:
     Zabbix authentication configuration.
     """
 
-    zabbix_frontend_url: str = dataclasses.field(
+    zabbix_frontend_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Zabbix Frontend URL",
             "hint": "https://zabbix.example.com",
             "sensitive": False,
+            "validation": "any_http_url"
         }
     )
     auth_token: str = dataclasses.field(
@@ -53,6 +54,7 @@ class ZabbixProvider(BaseProvider):
     Pull/Push alerts from Zabbix into Keep.
     """
 
+    PROVIDER_CATEGORY = ["Monitoring"]
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
     KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
         "zabbix_provider_script.js"  # zabbix mediatype script file

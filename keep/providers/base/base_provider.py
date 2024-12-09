@@ -19,20 +19,14 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import (
-    get_custom_deduplication_rule,
-    get_enrichments,
-    is_linked_provider,
-)
-from keep.api.models.alert import (
-    AlertDto,
-    AlertSeverity,
-    AlertStatus,
-    IncidentDto,
-)
+from keep.api.core.db import (get_custom_deduplication_rule, get_enrichments,
+                              get_provider_by_name, is_linked_provider)
+from keep.api.models.alert import (AlertDto, AlertSeverity, AlertStatus,
+                                   IncidentDto)
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
-from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
+from keep.api.utils.enrichment_helpers import \
+    parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
@@ -45,6 +39,27 @@ class BaseProvider(metaclass=abc.ABCMeta):
     PROVIDER_SCOPES: list[ProviderScope] = []
     PROVIDER_METHODS: list[ProviderMethod] = []
     FINGERPRINT_FIELDS: list[str] = []
+    PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
+    PROVIDER_CATEGORY: list[
+        Literal[
+            "Monitoring",
+            "Incident Management",
+            "Cloud Infrastructure",
+            "Ticketing",
+            "Identity",
+            "Developer Tools",
+            "Database",
+            "Identity and Access Management",
+            "Security",
+            "Collaboration",
+            "Organizational Tools",
+            "CRM",
+            "Queues",
+            "Others",
+        ]
+    ] = [
+        "Others"
+    ]  # tb: Default category for providers that don't declare a category
     PROVIDER_TAGS: list[
         Literal["alert", "ticketing", "messaging", "data", "queue", "topology"]
     ] = []
@@ -324,7 +339,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         tenant_id: str | None,
         provider_type: str | None,
         provider_id: str | None,
-    ) -> AlertDto | list[AlertDto]:
+    ) -> AlertDto | list[AlertDto] | None:
         logger = logging.getLogger(__name__)
 
         provider_instance: BaseProvider | None = None
@@ -337,7 +352,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     provider_instance = None
                 else:
                     # To prevent circular imports
-                    from keep.providers.providers_factory import ProvidersFactory
+                    from keep.providers.providers_factory import \
+                        ProvidersFactory
 
                     provider_instance: BaseProvider = (
                         ProvidersFactory.get_installed_provider(
@@ -355,6 +371,11 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 )
         logger.debug("Formatting alert")
         formatted_alert = cls._format_alert(event, provider_instance)
+        if formatted_alert is None:
+            logger.debug(
+                "Provider returned None, which means it decided not to format the alert"
+            )
+            return None
         logger.debug("Alert formatted")
         # after the provider calculated the default fingerprint
         #   check if there is a custom deduplication rule and apply
@@ -710,6 +731,24 @@ class BaseProvider(metaclass=abc.ABCMeta):
         simulated_alert = alert_data["payload"].copy()
 
         return simulated_alert
+
+    @property
+    def is_installed(self) -> bool:
+        """
+        Check if provider has been recorded in the database.
+        """
+        provider = get_provider_by_name(self.context_manager.tenant_id, self.config.name)
+        return provider is not None
+
+    @property
+    def is_provisioned(self) -> bool:
+        """
+        Check if provider exist in env provisioning.
+        """
+        from keep.parser.parser import Parser
+        parser = Parser()
+        parser._parse_providers_from_env(self.context_manager)
+        return self.config.name in self.context_manager.providers_context
 
 
 class BaseTopologyProvider(BaseProvider):
