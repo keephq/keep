@@ -15,7 +15,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Rule } from "utils/hooks/useRules";
 import {
-  CorrelationForm,
   CorrelationSidebar,
   DEFAULT_CORRELATION_FORM_VALUES,
 } from "./CorrelationSidebar";
@@ -30,6 +29,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormattedQueryCell } from "./FormattedQueryCell";
 import { DeleteRuleCell } from "./CorrelationSidebar/DeleteRule";
 import { PlusIcon } from "@radix-ui/react-icons";
+import { CorrelationFormType } from "./CorrelationSidebar/types";
 
 const TIMEFRAME_UNITS_FROM_SECONDS = {
   seconds: (amount: number) => amount,
@@ -50,7 +50,7 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
 
   const selectedId = searchParams ? searchParams.get("id") : null;
   const selectedRule = rules.find((rule) => rule.id === selectedId);
-  const correlationFormFromRule: CorrelationForm = useMemo(() => {
+  const correlationFormFromRule: CorrelationFormType = useMemo(() => {
     if (selectedRule) {
       const query = parseCEL(selectedRule.definition_cel);
       const anyCombinator = query.rules.some((rule) => "combinator" in rule);
