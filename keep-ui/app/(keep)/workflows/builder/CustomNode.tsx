@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import NodeMenu from "./NodeMenu";
-import useStore, { FlowNode, V2Step } from "./builder-store";
+import useStore from "./builder-store";
 import Image from "next/image";
 import { GoPlus } from "react-icons/go";
 import { MdNotStarted } from "react-icons/md";
@@ -10,6 +10,7 @@ import { PiDiamondsFourFill, PiSquareLogoFill } from "react-icons/pi";
 import { BiSolidError } from "react-icons/bi";
 import { FaHandPointer } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { FlowNode, V2Step } from "@/app/(keep)/workflows/builder/types";
 
 function IconUrlProvider(data: FlowNode["data"]) {
   const { componentType, type } = data || {};
