@@ -46,8 +46,7 @@ def test_app(monkeypatch, request):
 
     provision_resources()
     app = get_app()
-
-    yield app
+    return app
 
 
 # Fixture for TestClient using the test_app fixture

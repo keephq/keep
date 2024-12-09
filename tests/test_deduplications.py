@@ -1,10 +1,20 @@
 import random
+import time
 import uuid
 
 import pytest
 
 from keep.providers.providers_factory import ProvidersFactory
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
+
+
+def wait_for_alerts(client, num_alerts):
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    print(f"------------- Total alerts: {len(alerts)}")
+    while len(alerts) != num_alerts:
+        time.sleep(1)
+        alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+        print(f"------------- Total alerts: {len(alerts)}")
 
 
 @pytest.mark.parametrize(
@@ -16,7 +26,7 @@ from tests.fixtures.client import client, setup_api_key, test_app  # noqa
     ],
     indirect=True,
 )
-def test_default_deduplication_rule(db_session, client):
+def test_default_deduplication_rule(db_session, client, test_app):
     # insert an alert with some provider_id and make sure that the default deduplication rule is working
     provider_classes = {
         provider: ProvidersFactory.get_provider_class(provider)
@@ -29,6 +39,8 @@ def test_default_deduplication_rule(db_session, client):
             json=alert,
             headers={"x-api-key": "some-api-key"},
         )
+
+    wait_for_alerts(client, 2)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -70,6 +82,8 @@ def test_deduplication_sanity(db_session, client, test_app):
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
+
+    wait_for_alerts(client, 1)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -120,6 +134,8 @@ def test_deduplication_sanity_2(db_session, client, test_app):
                 headers={"x-api-key": "some-api-key"},
             )
 
+    wait_for_alerts(client, 2)
+
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
@@ -133,6 +149,7 @@ def test_deduplication_sanity_2(db_session, client, test_app):
             assert dedup_rule.get("default")
 
 
+@pytest.mark.timeout(20)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -156,6 +173,8 @@ def test_deduplication_sanity_3(db_session, client, test_app):
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
+
+    wait_for_alerts(client, 10)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -186,6 +205,9 @@ def test_custom_deduplication_rule(db_session, client, test_app):
         "/alerts/event/datadog", json=alert1, headers={"x-api-key": "some-api-key"}
     )
 
+    # wait for the background tasks to finish
+    wait_for_alerts(client, 1)
+
     # create a custom deduplication rule and insert alerts that should be deduplicated by this
     custom_rule = {
         "name": "Custom Rule",
@@ -209,6 +231,8 @@ def test_custom_deduplication_rule(db_session, client, test_app):
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
 
+    wait_for_alerts(client, 2)
+
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
@@ -224,6 +248,7 @@ def test_custom_deduplication_rule(db_session, client, test_app):
     assert custom_rule_found
 
 
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -240,6 +265,10 @@ def test_custom_deduplication_rule_behaviour(db_session, client, test_app):
     client.post(
         "/alerts/event/datadog", json=alert1, headers={"x-api-key": "some-api-key"}
     )
+
+    # wait for the background tasks to finish
+    wait_for_alerts(client, 1)
+
     custom_rule = {
         "name": "Custom Rule",
         "description": "Custom Rule Description",
@@ -268,6 +297,14 @@ def test_custom_deduplication_rule_behaviour(db_session, client, test_app):
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
+
+    while not any(
+        [rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0]
+    ):
+        time.sleep(1)
+        deduplication_rules = client.get(
+            "/deduplications", headers={"x-api-key": "some-api-key"}
+        ).json()
 
     custom_rule_found = False
     for dedup_rule in deduplication_rules:
@@ -331,6 +368,12 @@ def test_custom_deduplication_rule_2(db_session, client, test_app):
         json=alert1,
         headers={"x-api-key": "some-api-key"},
     )
+
+    # wait for the background tasks to finish
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    while len(alerts) < 2:
+        time.sleep(1)
+        alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -455,6 +498,8 @@ def test_update_deduplication_rule_linked_provider(db_session, client, test_app)
     response = client.post(
         "/alerts/event/datadog", json=alert1, headers={"x-api-key": "some-api-key"}
     )
+
+    time.sleep(2)
     custom_rule = {
         "name": "Custom Rule",
         "description": "Custom Rule Description",
@@ -557,6 +602,11 @@ def test_delete_deduplication_rule_default(db_session, client, test_app):
         "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
     )
 
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    while len(alerts) != 1:
+        time.sleep(1)
+        alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+
     # try to delete a default deduplication rule
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -627,6 +677,7 @@ def test_full_deduplication(db_session, client, test_app):
 """
 
 
+@pytest.mark.timeout(15)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -652,9 +703,17 @@ def test_partial_deduplication(db_session, client, test_app):
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
 
+    wait_for_alerts(client, 1)
+
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
+
+    while not any([rule for rule in deduplication_rules if rule.get("ingested") == 3]):
+        time.sleep(1)
+        deduplication_rules = client.get(
+            "/deduplications", headers={"x-api-key": "some-api-key"}
+        ).json()
 
     datadog_rule_found = False
     for dedup_rule in deduplication_rules:
@@ -690,6 +749,11 @@ def test_ingesting_alert_without_fingerprint_fields(db_session, client, test_app
         "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
     )
 
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    while len(alerts) != 1:
+        time.sleep(1)
+        alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
@@ -704,6 +768,7 @@ def test_ingesting_alert_without_fingerprint_fields(db_session, client, test_app
     assert datadog_rule_found
 
 
+@pytest.mark.timeout(15)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -729,9 +794,18 @@ def test_deduplication_fields(db_session, client, test_app):
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
 
+    wait_for_alerts(client, 1)
+
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
+
+    while not any([rule for rule in deduplication_rules if rule.get("ingested") == 3]):
+        print("Waiting for deduplication rules to be ingested")
+        time.sleep(1)
+        deduplication_rules = client.get(
+            "/deduplications", headers={"x-api-key": "some-api-key"}
+        ).json()
 
     datadog_rule_found = False
     for dedup_rule in deduplication_rules:
@@ -739,5 +813,4 @@ def test_deduplication_fields(db_session, client, test_app):
             datadog_rule_found = True
             assert dedup_rule.get("ingested") == 3
             assert 66.667 - dedup_rule.get("dedup_ratio") < 0.1  # 0.66666666....7
-
     assert datadog_rule_found
