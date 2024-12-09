@@ -66,9 +66,38 @@ jobs:
       - name: Install playwright
         run: poetry run playwright install
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Set up Docker cache
+        id: docker-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.docker-cache
+          key: docker-${{ runner.os }}-${{ matrix.db_type }}-${{ hashFiles('**/Dockerfile*', '**/poetry.lock', '**/package-lock.json') }}
+          restore-keys: |
+            docker-${{ runner.os }}-${{ matrix.db_type }}-
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Build Docker images
+        uses: docker/bake-action@v5
+        with:
+          workdir: .
+          files: |
+            tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml
+          load: true
+          set: |
+            *.cache-from=type=local,src=/tmp/.docker-cache
+            ${{ steps.docker-cache.outputs.cache-hit != 'true' && '*.cache-to=type=local,dest=/tmp/.docker-cache-new' || '' }}
+
+      - name: Move Docker caches
+        if: always()
+        run: |
+          rm -rf /tmp/.docker-cache || true
+          mv /tmp/.docker-cache-new /tmp/.docker-cache || true
+
+      # Now start the environment (images are already built and cached)
       - name: Set up Keep environment
         run: |
           DOCKER_BUILDKIT=1 docker compose \
