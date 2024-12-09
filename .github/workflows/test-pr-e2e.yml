@@ -86,7 +86,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Set up Docker Cache
+      - name: Cache Docker layers
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
@@ -94,21 +94,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build Docker images in parallel
-        run: |
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            keep-frontend &
-          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from=type=local,src=/tmp/.buildx-cache \
-            --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            keep-backend &
-          wait
+      - name: Build keep-frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep-ui/Dockerfile
+          load: true
+          tags: keep-frontend:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      # This step is necessary to prevent cache growth
+      - name: Build keep-backend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./keep/Dockerfile
+          load: true
+          tags: keep-backend:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
