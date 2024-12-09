@@ -1,75 +1,66 @@
 FROM node:20-alpine AS base
 
-# Dependencies stage
+# Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Use BuildKit cache mount for npm cache
-RUN --mount=type=cache,target=/root/.npm \
-    npm set maxsockets 50
-
-# Copy only package files first
+# Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
+RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
 
-# Use cache mount for npm installs
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
 
-# Builder stage
+# Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-
-# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json ./package.json
-
-# Copy files for building
 COPY . .
 
-# Set build-time variables
-ARG API_URL=http://localhost:8080
-ENV API_URL=${API_URL}
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line in case you want to disable telemetry during the build.
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Use cache mount for Next.js build cache
-RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build
+# If using npm comment out above and use below instead
+ENV API_URL http://localhost:8080
+RUN npm run build
 
-# Production stage
+
+# Production image, copy all the files and run next
 FROM base AS runner
-WORKDIR /app
-
 ARG GIT_COMMIT_HASH=local
 ARG KEEP_VERSION=local
 
+WORKDIR /app
 # Inject the git commit hash into the build
 # This is being injected from the build script
 ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 ENV KEEP_VERSION=${KEEP_VERSION}
 
-# Set runtime environment variables
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
 
-# Copy only the necessary files from builder
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+ENV NODE_ENV production
+# Uncomment the following line in case you want to disable telemetry during runtime.
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY entrypoint.sh ./entrypoint.sh
+COPY entrypoint.sh /app/entrypoint.sh
 
 # as per Openshift guidelines, https://docs.openshift.com/container-platform/4.11/openshift_images/create-images.html#use-uid_create-images
 RUN chgrp -R 0 /app && chmod -R g=u /app
-
 USER nextjs
 
 EXPOSE 3000
+
 ENV PORT 3000
 ENV POSTHOG_KEY=phc_muk9qE3TfZsX3SZ9XxX52kCGJBclrjhkP9JxAQcm1PZ
 ENV POSTHOG_HOST=https://ingest.keephq.dev

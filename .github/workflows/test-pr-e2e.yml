@@ -83,31 +83,14 @@ jobs:
             poetry run playwright install-deps
           fi
 
-      - name: Build Frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./keep-ui
-          file: ./docker/Dockerfile.ui
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          load: true
-          tags: keep-frontend:latest
-
-      - name: Build Backend
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./docker/Dockerfile.api
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          load: true
-          tags: keep-backend:latest
-
-      # Update BuildX cache
-      - name: Move cache
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build Docker images in parallel
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          # Start both builds in background
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build keep-frontend & \
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml build keep-backend & \
+          wait
 
       - name: Start services
         run: |
