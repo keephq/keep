@@ -54,7 +54,6 @@
     "js-yaml": "^4.1.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.460.0",
-    "moment": "^2.29.4",
     "next": "^14.2.13",
     "next-auth": "^5.0.0-beta.25",
     "openai": "^4.73.0",
