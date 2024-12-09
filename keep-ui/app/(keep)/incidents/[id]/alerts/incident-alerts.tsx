@@ -17,11 +17,9 @@ import {
   TableRow,
 } from "@tremor/react";
 import Image from "next/image";
-import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
 import { AlertDto } from "@/app/(keep)/alerts/models";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { getAlertLastReceieved } from "utils/helpers";
 import {
   useIncidentAlerts,
   usePollIncidentAlerts,
@@ -37,7 +35,7 @@ import { TablePagination } from "@/shared/ui";
 import { AlertSeverityBorder } from "@/app/(keep)/alerts/alert-severity-border";
 import { getStatusIcon } from "@/shared/lib/status-utils";
 import { getStatusColor } from "@/shared/lib/status-utils";
-
+import TimeAgo from "react-timeago";
 interface Props {
   incident: IncidentDto;
 }
@@ -180,9 +178,7 @@ export default function IncidentAlerts({ incident }: Props) {
         id: "lastReceived",
         header: "Last Event Time",
         minSize: 100,
-        cell: (context) => (
-          <span>{getAlertLastReceieved(context.getValue())}</span>
-        ),
+        cell: (context) => <TimeAgo date={context.getValue().toISOString()} />,
       }),
       columnHelper.accessor("source", {
         id: "source",
