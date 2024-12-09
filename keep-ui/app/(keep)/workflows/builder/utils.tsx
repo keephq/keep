@@ -2,8 +2,12 @@ import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../../providers/providers";
 import { Action, Alert } from "./alert";
 import { stringify } from "yaml";
-import { V2Properties, V2Step, Definition } from "./builder-store";
 import { v4 as uuidv4 } from "uuid";
+import {
+  Definition,
+  V2Properties,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
 export function getToolboxConfiguration(providers: Provider[]) {
   /**

@@ -10,10 +10,10 @@ import {
   TextInput,
 } from "@tremor/react";
 import { Controller, get, useFormContext } from "react-hook-form";
-import { CorrelationForm as CorrelationFormType } from ".";
 import { AlertDto } from "@/app/(keep)/alerts/models";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
+import { CorrelationFormType } from "./types";
 
 type CorrelationFormProps = {
   alertsFound: AlertDto[];

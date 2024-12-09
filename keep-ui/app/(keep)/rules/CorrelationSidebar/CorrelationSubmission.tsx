@@ -1,9 +1,7 @@
 import { Button } from "@tremor/react";
 import { useSearchParams } from "next/navigation";
 import { useFormContext } from "react-hook-form";
-import { CorrelationForm } from ".";
-import { AlertsFoundBadge } from "./AlertsFoundBadge";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { CorrelationFormType } from "./types";
 
 type CorrelationSubmissionProps = {
   toggle: VoidFunction;
@@ -16,7 +14,7 @@ export const CorrelationSubmission = ({
 }: CorrelationSubmissionProps) => {
   const {
     formState: { isValid },
-  } = useFormContext<CorrelationForm>();
+  } = useFormContext<CorrelationFormType>();
 
   const exceeds14Days = Math.floor(timeframeInSeconds / 86400) > 13;
 

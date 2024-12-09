@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { Edge, useReactFlow } from "@xyflow/react";
-import useStore, {
-  ReactFlowDefinition,
-  V2Step,
-} from "@/app/(keep)/workflows/builder/builder-store";
-import { FlowNode } from "@/app/(keep)/workflows/builder/builder-store";
+import useStore from "@/app/(keep)/workflows/builder/builder-store";
 import dagre, { graphlib } from "@dagrejs/dagre";
 import { processWorkflowV2, getTriggerStep } from "utils/reactFlow";
+import {
+  Definition,
+  FlowNode,
+  ReactFlowDefinition,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
 const getLayoutedElements = (
   nodes: FlowNode[],
