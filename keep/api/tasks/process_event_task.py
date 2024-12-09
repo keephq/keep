@@ -23,6 +23,7 @@ from keep.api.core.db import (
     get_all_presets_dtos,
     get_enrichment_with_session,
     get_session_sync,
+    set_last_alert,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -40,6 +41,9 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failure
 KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
 KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
+KEEP_ALERT_FIELDS_ENABLED = (
+    os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "false") == "true"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +189,9 @@ def __save_to_db(
             )
             session.add(audit)
             alert_dto = AlertDto(**formatted_event.dict())
+
+            set_last_alert(tenant_id, alert, session=session)
+
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(alert_dto)
@@ -310,37 +317,38 @@ def __handle_formatted_events(
 
     # let's save all fields to the DB so that we can use them in the future such in deduplication fields suggestions
     # todo: also use it on correlation rules suggestions
-    for enriched_formatted_event in enriched_formatted_events:
-        logger.debug(
-            "Bulk upserting alert fields",
-            extra={
-                "alert_event_id": enriched_formatted_event.event_id,
-                "alert_fingerprint": enriched_formatted_event.fingerprint,
-            },
-        )
-        fields = []
-        for key, value in enriched_formatted_event.dict().items():
-            if isinstance(value, dict):
-                for nested_key in value.keys():
-                    fields.append(f"{key}.{nested_key}")
-            else:
-                fields.append(key)
+    if KEEP_ALERT_FIELDS_ENABLED:
+        for enriched_formatted_event in enriched_formatted_events:
+            logger.debug(
+                "Bulk upserting alert fields",
+                extra={
+                    "alert_event_id": enriched_formatted_event.event_id,
+                    "alert_fingerprint": enriched_formatted_event.fingerprint,
+                },
+            )
+            fields = []
+            for key, value in enriched_formatted_event.dict().items():
+                if isinstance(value, dict):
+                    for nested_key in value.keys():
+                        fields.append(f"{key}.{nested_key}")
+                else:
+                    fields.append(key)
 
-        bulk_upsert_alert_fields(
-            tenant_id=tenant_id,
-            fields=fields,
-            provider_id=enriched_formatted_event.providerId,
-            provider_type=enriched_formatted_event.providerType,
-            session=session,
-        )
+            bulk_upsert_alert_fields(
+                tenant_id=tenant_id,
+                fields=fields,
+                provider_id=enriched_formatted_event.providerId,
+                provider_type=enriched_formatted_event.providerType,
+                session=session,
+            )
 
-        logger.debug(
-            "Bulk upserted alert fields",
-            extra={
-                "alert_event_id": enriched_formatted_event.event_id,
-                "alert_fingerprint": enriched_formatted_event.fingerprint,
-            },
-        )
+            logger.debug(
+                "Bulk upserted alert fields",
+                extra={
+                    "alert_event_id": enriched_formatted_event.event_id,
+                    "alert_fingerprint": enriched_formatted_event.fingerprint,
+                },
+            )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
     elastic_client = ElasticClient(tenant_id=tenant_id)

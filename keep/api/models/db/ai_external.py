@@ -3,7 +3,7 @@ import json
 
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Column, JSON, Text
 from sqlmodel import Field, SQLModel
 from pydantic import BaseModel, Json
 
@@ -58,9 +58,15 @@ class ExternalAIConfigAndMetadata(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     algorithm_id: str = Field(nullable=False)
     tenant_id: str = Field(ForeignKey("tenant.id"), nullable=False)
-    settings: str = Field(nullable=False)
-    settings_proposed_by_algorithm: str = Field(nullable=True)
-    feedback_logs: str = Field(nullable=True)
+    settings: str = Field(
+        nullable=False, 
+        sa_column=Column(JSON),
+    )
+    settings_proposed_by_algorithm: str = Field(
+        nullable=True,
+        sa_column=Column(JSON),
+    )
+    feedback_logs: str = Field(nullable=True, sa_column=Column(Text))
 
     @property
     def algorithm(self) -> ExternalAI:

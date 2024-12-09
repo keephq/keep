@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.30.6"
+version = "0.31.1"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -48,7 +48,7 @@ posthog = "^3.0.1"
 google-cloud-storage = "^2.10.0"
 auth0-python = "^4.4.1"
 asyncio = "^3.4.3"
-python-multipart = "^0.0.7"
+python-multipart = "^0.0.18"
 kubernetes = "^27.2.0"
 opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
 opentelemetry-instrumentation-sqlalchemy = "^0.41b0"

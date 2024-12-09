@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, UniqueConstraint
+from pydantic import PrivateAttr
+from sqlalchemy import ForeignKey, UniqueConstraint, ForeignKeyConstraint
 from sqlalchemy.dialects.mssql import DATETIME2 as MSSQL_DATETIME2
 from sqlalchemy.dialects.mysql import DATETIME as MySQL_DATETIME
 from sqlalchemy.engine.url import make_url
@@ -60,8 +61,6 @@ class AlertToIncident(SQLModel, table=True):
             primary_key=True,
         )
     )
-    alert: "Alert" = Relationship(back_populates="alert_to_incident_link")
-    incident: "Incident" = Relationship(back_populates="alert_to_incident_link")
 
     is_created_by_ai: bool = Field(default=False)
 
@@ -70,6 +69,44 @@ class AlertToIncident(SQLModel, table=True):
         nullable=True,
         primary_key=True,
         default=NULL_FOR_DELETED_AT,
+    )
+
+class LastAlert(SQLModel, table=True):
+
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
+    fingerprint: str = Field(primary_key=True, index=True)
+    alert_id: UUID = Field(foreign_key="alert.id")
+    timestamp: datetime = Field(nullable=False, index=True)
+    first_timestamp: datetime = Field(nullable=False, index=True)
+
+
+class LastAlertToIncident(SQLModel, table=True):
+    tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    fingerprint: str = Field(primary_key=True)
+    incident_id: UUID = Field(
+        sa_column=Column(
+            UUIDType(binary=False),
+            ForeignKey("incident.id", ondelete="CASCADE"),
+            primary_key=True,
+        )
+    )
+
+    is_created_by_ai: bool = Field(default=False)
+
+    deleted_at: datetime = Field(
+        default_factory=None,
+        nullable=True,
+        primary_key=True,
+        default=NULL_FOR_DELETED_AT,
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "fingerprint"],
+            ["lastalert.tenant_id", "lastalert.fingerprint"]),
+        {}
     )
 
 
@@ -95,26 +132,6 @@ class Incident(SQLModel, table=True):
     start_time: datetime | None
     end_time: datetime | None
     last_seen_time: datetime | None
-
-    # map of attributes to values
-    alerts: List["Alert"] = Relationship(
-        back_populates="incidents",
-        link_model=AlertToIncident,
-        # primaryjoin is used to filter out deleted links for various DB dialects
-        sa_relationship_kwargs={
-            "primaryjoin": f"""and_(AlertToIncident.incident_id == Incident.id,
-                or_(
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
-                ))""",
-            "uselist": True,
-            "overlaps": "alert,incident",
-        },
-    )
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="incident",
-        sa_relationship_kwargs={"overlaps": "alerts,incidents"},
-    )
 
     is_predicted: bool = Field(default=False)
     is_confirmed: bool = Field(default=False)
@@ -183,10 +200,7 @@ class Incident(SQLModel, table=True):
         ),
     )
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if "alerts" not in kwargs:
-            self.alerts = []
+    _alerts: List["Alert"] = PrivateAttr(default_factory=list)
 
     class Config:
         arbitrary_types_allowed = True
@@ -224,23 +238,7 @@ class Alert(SQLModel, table=True):
         }
     )
 
-    incidents: List["Incident"] = Relationship(
-        back_populates="alerts",
-        link_model=AlertToIncident,
-        sa_relationship_kwargs={
-            # primaryjoin is used to filter out deleted links for various DB dialects
-            "primaryjoin": f"""and_(AlertToIncident.alert_id == Alert.id,
-                or_(
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S.%f')}',
-                    AlertToIncident.deleted_at == '{NULL_FOR_DELETED_AT.strftime('%Y-%m-%d %H:%M:%S')}'
-                ))""",
-            "uselist": True,
-            "overlaps": "alert,incident",
-        },
-    )
-    alert_to_incident_link: List[AlertToIncident] = Relationship(
-        back_populates="alert", sa_relationship_kwargs={"overlaps": "alerts,incidents"}
-    )
+    _incidents: List[Incident] = PrivateAttr(default_factory=list)
 
     __table_args__ = (
         Index(

@@ -13,21 +13,26 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
 @pydantic.dataclasses.dataclass
 class SshProviderAuthConfig:
     """SSH authentication configuration."""
 
-    # TODO: validate hostname because it seems pydantic doesn't have a validator for it
-    host: str = dataclasses.field(
-        metadata={"required": True, "description": "SSH hostname"}
+    host: NoSchemeUrl = dataclasses.field(
+        metadata={
+            "required": True,
+            "description": "SSH hostname",
+            "validation": "no_scheme_url",
+        }
     )
     user: str = dataclasses.field(
         metadata={"required": True, "description": "SSH user"}
     )
-    port: int = dataclasses.field(
-        default=22, metadata={"required": False, "description": "SSH port"}
+    port: UrlPort = dataclasses.field(
+        default=22,
+        metadata={"required": False, "description": "SSH port", "validation": "port"},
     )
     pkey: typing.Optional[str] = dataclasses.field(
         default=None,
@@ -36,7 +41,8 @@ class SshProviderAuthConfig:
             "sensitive": True,
             "type": "file",
             "name": "pkey",
-            "file_type": "*",
+            "file_type": "text/plain, application/x-pem-file, application/x-putty-private-key, "
+            + "application/x-ed25519-key, application/pkcs8, application/octet-stream",
             "config_sub_group": "private_key",
             "config_main_group": "authentication",
         },

@@ -16,6 +16,7 @@ type LinkWithIconProps = {
   className?: string;
   testId?: string;
   isExact?: boolean;
+  iconClassName?: string;
 } & LinkProps &
   AnchorHTMLAttributes<HTMLAnchorElement>;
 
@@ -30,6 +31,7 @@ export const LinkWithIcon = ({
   className,
   testId,
   isExact = false,
+  iconClassName,
   ...restOfLinkProps
 }: LinkWithIconProps) => {
   const pathname = usePathname();
@@ -40,10 +42,14 @@ export const LinkWithIcon = ({
         restOfLinkProps.href?.toString() || ""
       );
 
-  const iconClasses = clsx("group-hover:text-orange-400", {
-    "text-orange-400": isActive,
-    "text-black": !isActive,
-  });
+  const iconClasses = clsx(
+    "group-hover:text-orange-400",
+    {
+      "text-orange-400": isActive,
+      "text-black": !isActive,
+    },
+    iconClassName
+  );
 
   const textClasses = clsx("truncate", {
     "text-orange-400": isActive,

@@ -317,8 +317,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("status", {
       id: "status",
       header: "Status",
-      maxSize: 80,
-      size: 80,
+      maxSize: 100,
+      size: 100,
       cell: (context) => (
         <span className="flex items-center gap-1 capitalize">
           <Icon
@@ -335,8 +335,7 @@ export const useAlertTableCols = (
       id: "lastReceived",
       header: "Last Received",
       filterFn: isDateWithinRange,
-      maxSize: 80,
-      size: 80,
+      minSize: 100,
       cell: (context) => (
         <span title={context.getValue().toISOString()}>
           {getAlertLastReceieved(context.getValue())}
