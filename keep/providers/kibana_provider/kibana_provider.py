@@ -18,6 +18,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import UrlPort
 
 
 @pydantic.dataclasses.dataclass
@@ -31,15 +32,21 @@ class KibanaProviderAuthConfig:
             "sensitive": True,
         }
     )
-    kibana_host: str = dataclasses.field(
+    kibana_host: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
-            "description": "Kibana Host (e.g. keep.kb.us-central1.gcp.cloud.es.io)",
+            "description": "Kibana Host",
+            "hint": "https://keep.kb.us-central1.gcp.cloud.es.io",
+            "validation": "any_http_url"
         }
     )
-    kibana_port: str = dataclasses.field(
-        metadata={"required": False, "description": "Kibana Port (defaults to 9243)"},
-        default="9243",
+    kibana_port: UrlPort = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Kibana Port (defaults to 9243)",
+            "validation": "port"
+        },
+        default=9243,
     )
 
 
@@ -213,7 +220,7 @@ class KibanaProvider(BaseProvider):
         headers["Authorization"] = f"ApiKey {self.authentication_config.api_key}"
         headers["kbn-xsrf"] = "reporting"
         response: requests.Response = getattr(requests, method.lower())(
-            f"https://{self.authentication_config.kibana_host}:{self.authentication_config.kibana_port}/{uri}",
+            f"{self.authentication_config.kibana_host}:{self.authentication_config.kibana_port}/{uri}",
             headers=headers,
             **kwargs,
         )
@@ -435,6 +442,12 @@ class KibanaProvider(BaseProvider):
         self.logger.info("Done setting up webhooks")
 
     def validate_config(self):
+        if self.is_installed or self.is_provisioned:
+            host = self.config.authentication['kibana_host']
+            if not (host.startswith("http://") or host.startswith("https://")):
+                scheme = "http://" if ("localhost" in host or "127.0.0.1" in host) else "https://"
+                self.config.authentication['kibana_host'] = scheme + host
+
         self.authentication_config = KibanaProviderAuthConfig(
             **self.config.authentication
         )

@@ -10,7 +10,6 @@ import yaml
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.db import get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
 from keep.step.step_provider_parameter import StepProviderParameter
@@ -142,7 +141,7 @@ class Parser:
         self._load_providers_config(
             tenant_id, context_manager, workflow, providers_file, workflow_providers
         )
-        # Parsethe actions (from workflow, actions yaml and database)
+        # Parse the actions (from workflow, actions yaml and database)
         self._load_actions_config(
             tenant_id, context_manager, workflow, actions_file, workflow_actions
         )
@@ -311,7 +310,7 @@ class Parser:
 
     def _parse_providers_from_workflow(
         self, context_manager: ContextManager, workflow: dict
-    ) -> typing.List[BaseProvider]:
+    ) -> None:
         context_manager.providers_context.update(workflow.get("providers"))
         self.logger.debug("Workflow providers parsed successfully")
 

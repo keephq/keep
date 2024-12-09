@@ -2,8 +2,7 @@ from datetime import datetime
 from itertools import cycle
 
 import pytest
-from sqlalchemy import distinct, func
-from sqlalchemy.orm.exc import DetachedInstanceError
+from sqlalchemy import distinct, func, desc
 
 from keep.api.core.db import (
     IncidentSorting,
@@ -24,7 +23,8 @@ from keep.api.models.alert import (
     IncidentSeverity,
     IncidentStatus,
 )
-from keep.api.models.db.alert import Alert, AlertToIncident
+from keep.api.models.db.alert import Alert, LastAlertToIncident
+from keep.api.models.db.tenant import Tenant
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
 
@@ -50,7 +50,7 @@ def test_get_alerts_data_for_incident(db_session, create_alert):
     assert 100 == db_session.query(func.count(Alert.id)).scalar()
     assert 10 == unique_fingerprints
 
-    data = get_alerts_data_for_incident(SINGLE_TENANT_UUID, [a.id for a in alerts])
+    data = get_alerts_data_for_incident(SINGLE_TENANT_UUID, [a.fingerprint for a in alerts])
     assert data["sources"] == set([f"source_{i}" for i in range(10)])
     assert data["services"] == set([f"service_{i}" for i in range(10)])
     assert data["count"] == unique_fingerprints
@@ -64,16 +64,27 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
     )
 
-    assert len(incident.alerts) == 0
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 0
+    assert total_incident_alerts == 0
 
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [a.id for a in alerts]
+        SINGLE_TENANT_UUID, incident.id, [a.fingerprint for a in alerts]
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    # 110 alerts
-    assert len(incident.alerts) == 110
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 100
+    assert total_incident_alerts == 100
     # But 100 unique fingerprints
     assert incident.alerts_count == 100
 
@@ -86,7 +97,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     service_field = get_json_extract_field(db_session, Alert.event, "service")
 
-    service_0 = db_session.query(Alert.id).filter(service_field == "service_0").all()
+    service_0 = db_session.query(Alert.fingerprint).filter(service_field == "service_0").all()
 
     # Testing unique fingerprints
     more_alerts_with_same_fingerprints = setup_stress_alerts_no_elastic(10)
@@ -94,26 +105,32 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     add_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID,
         incident.id,
-        [a.id for a in more_alerts_with_same_fingerprints],
+        [a.fingerprint for a in more_alerts_with_same_fingerprints],
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
     assert incident.alerts_count == 100
-    assert db_session.query(func.count(AlertToIncident.alert_id)).scalar() == 120
+    assert db_session.query(func.count(LastAlertToIncident.fingerprint)).scalar() == 100
 
     remove_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID,
         incident.id,
         [
-            service_0[0].id,
+            service_0[0].fingerprint,
         ],
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    # 117 because we removed multiple alerts with service_0
-    assert len(incident.alerts) == 117
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 99
+    assert total_incident_alerts == 99
+
     assert "service_0" in incident.affected_services
     assert len(incident.affected_services) == 10
     assert sorted(incident.affected_services) == sorted(
@@ -121,7 +138,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     )
 
     remove_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [a.id for a in service_0]
+        SINGLE_TENANT_UUID, incident.id, [a.fingerprint for a in service_0]
     )
 
     # Removing shouldn't impact links between alert and incident if include_unlinked=True
@@ -138,8 +155,14 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    # 108 because we removed multiple alert with same fingerprints
-    assert len(incident.alerts) == 108
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 90
+    assert total_incident_alerts == 90
+
     assert "service_0" not in incident.affected_services
     assert len(incident.affected_services) == 9
     assert sorted(incident.affected_services) == sorted(
@@ -147,29 +170,36 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     )
 
     source_1 = (
-        db_session.query(Alert.id).filter(Alert.provider_type == "source_1").all()
+        db_session.query(Alert.fingerprint).filter(Alert.provider_type == "source_1").all()
     )
 
     remove_alerts_to_incident_by_incident_id(
         SINGLE_TENANT_UUID,
         incident.id,
         [
-            source_1[0].id,
+            source_1[0].fingerprint,
         ],
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 105
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 89
+    assert total_incident_alerts == 89
+
     assert "source_1" in incident.sources
-    # source_0 was removed together with service_0
+    # source_0 was removed together with service_1
     assert len(incident.sources) == 9
     assert sorted(incident.sources) == sorted(
         ["source_{}".format(i) for i in range(1, 10)]
     )
 
     remove_alerts_to_incident_by_incident_id(
-        "keep", incident.id, [a.id for a in source_1]
+        "keep", incident.id, [a.fingerprint for a in source_1]
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
@@ -213,8 +243,19 @@ def test_get_last_incidents(db_session, create_alert):
             )
             alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
+            create_alert(
+                f"alert-test-2-{i}",
+                AlertStatus(status),
+                datetime.utcnow(),
+                {
+                    "severity": AlertSeverity.from_number(severity),
+                    "service": service,
+                },
+            )
+            alert2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+
             add_alerts_to_incident_by_incident_id(
-                SINGLE_TENANT_UUID, incident.id, [alert.id]
+                SINGLE_TENANT_UUID, incident.id, [alert.fingerprint, alert2.fingerprint]
             )
 
     incidents_default, incidents_default_count = get_last_incidents(SINGLE_TENANT_UUID)
@@ -246,19 +287,14 @@ def test_get_last_incidents(db_session, create_alert):
     for i, j in enumerate(range(5, 10)):
         assert incidents_limit_5_page_2[i].user_generated_name == f"test-{j}"
 
-    # If alerts not preloaded, we will have detached session issue during attempt to get them
-    # Background on this error at: https://sqlalche.me/e/14/bhk3
-    with pytest.raises(DetachedInstanceError):
-        alerts = incidents_confirmed[0].alerts  # noqa
-
     incidents_with_alerts, _ = get_last_incidents(
         SINGLE_TENANT_UUID, is_confirmed=True, with_alerts=True
     )
     for i in range(25):
         if incidents_with_alerts[i].status == IncidentStatus.MERGED.value:
-            assert len(incidents_with_alerts[i].alerts) == 0
+            assert len(incidents_with_alerts[i]._alerts) == 0
         else:
-            assert len(incidents_with_alerts[i].alerts) == 1
+            assert len(incidents_with_alerts[i]._alerts) == 2
 
     # Test sorting
 
@@ -319,11 +355,16 @@ def test_incident_status_change(
         "keep", {"name": "test", "description": "test"}
     )
 
-    add_alerts_to_incident_by_incident_id("keep", incident.id, [a.id for a in alerts])
+    add_alerts_to_incident_by_incident_id(
+        "keep",
+        incident.id,
+        [a.fingerprint for a in alerts],
+        session=db_session
+    )
 
-    incident = get_incident_by_id("keep", incident.id, with_alerts=True)
+    incident = get_incident_by_id("keep", incident.id, with_alerts=True, session=db_session)
 
-    alerts_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+    alerts_dtos = convert_db_alerts_to_dto_alerts(incident._alerts, session=db_session)
     assert (
         len(
             [
@@ -348,10 +389,11 @@ def test_incident_status_change(
     assert data["id"] == str(incident.id)
     assert data["status"] == IncidentStatus.ACKNOWLEDGED.value
 
-    incident = get_incident_by_id("keep", incident.id, with_alerts=True)
+    db_session.expire_all()
+    incident = get_incident_by_id("keep", incident.id, with_alerts=True, session=db_session)
 
     assert incident.status == IncidentStatus.ACKNOWLEDGED.value
-    alerts_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+    alerts_dtos = convert_db_alerts_to_dto_alerts(incident._alerts)
     assert (
         len(
             [
@@ -376,11 +418,12 @@ def test_incident_status_change(
     assert data["id"] == str(incident.id)
     assert data["status"] == IncidentStatus.RESOLVED.value
 
-    incident = get_incident_by_id("keep", incident.id, with_alerts=True)
+    db_session.expire_all()
+    incident = get_incident_by_id("keep", incident.id, with_alerts=True, session=db_session)
 
     assert incident.status == IncidentStatus.RESOLVED.value
     # All alerts are resolved as well
-    alerts_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+    alerts_dtos = convert_db_alerts_to_dto_alerts(incident._alerts, session=db_session)
     assert (
         len(
             [
@@ -475,23 +518,48 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
     )
 
-    assert len(incident.alerts) == 0
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 0
+    assert total_incident_alerts == 0
 
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].id]
+        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].fingerprint]
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 2
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 1
+    last_fp1_alert = (
+        db_session
+        .query(Alert.timestamp)
+        .where(Alert.fingerprint == "fp1")
+        .order_by(desc(Alert.timestamp)).first()
+    )
+    assert incident_alerts[0].timestamp == last_fp1_alert.timestamp
+    assert total_incident_alerts == 1
 
     remove_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].id]
+        SINGLE_TENANT_UUID, incident.id, [fp1_alerts[0].fingerprint]
     )
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
-    assert len(incident.alerts) == 0
+    incident_alerts, total_incident_alerts = get_incident_alerts_by_incident_id(
+        tenant_id=SINGLE_TENANT_UUID,
+        incident_id=incident.id,
+    )
+
+    assert len(incident_alerts) == 0
+    assert total_incident_alerts == 0
 
 
 def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elastic):
@@ -522,7 +590,7 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     )
     alerts_1 = db_session.query(Alert).all()
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts_1]
+        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts_1]
     )
     incident_2 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
@@ -532,19 +600,19 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
         },
     )
     create_alert(
-        "fp20",
+        "fp20-0",
         AlertStatus.FIRING,
         datetime.utcnow(),
         {"severity": AlertSeverity.CRITICAL.value},
     )
     create_alert(
-        "fp20",
+        "fp20-1",
         AlertStatus.FIRING,
         datetime.utcnow(),
         {"severity": AlertSeverity.CRITICAL.value},
     )
     create_alert(
-        "fp20",
+        "fp20-2",
         AlertStatus.FIRING,
         datetime.utcnow(),
         {"severity": AlertSeverity.CRITICAL.value},
@@ -553,7 +621,7 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
         db_session.query(Alert).filter(Alert.fingerprint.startswith("fp20")).all()
     )
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_2.id, [a.id for a in alerts_2]
+        SINGLE_TENANT_UUID, incident_2.id, [a.fingerprint for a in alerts_2]
     )
     incident_3 = create_incident_from_dict(
         SINGLE_TENANT_UUID,
@@ -563,28 +631,28 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
         },
     )
     create_alert(
-        "fp30",
+        "fp30-0",
         AlertStatus.FIRING,
         datetime.utcnow(),
         {"severity": AlertSeverity.WARNING.value},
     )
     create_alert(
-        "fp30",
-        AlertStatus.FIRING,
-        datetime.utcnow(),
-        {"severity": AlertSeverity.WARNING.value},
-    )
-    create_alert(
-        "fp30",
+        "fp30-1",
         AlertStatus.FIRING,
         datetime.utcnow(),
         {"severity": AlertSeverity.INFO.value},
+    )
+    create_alert(
+        "fp30-2",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.WARNING.value},
     )
     alerts_3 = (
         db_session.query(Alert).filter(Alert.fingerprint.startswith("fp30")).all()
     )
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_3.id, [a.id for a in alerts_3]
+        SINGLE_TENANT_UUID, incident_3.id, [a.fingerprint for a in alerts_3]
     )
 
     # before merge
@@ -602,19 +670,21 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
         "test-user-email",
     )
 
+    db_session.expire_all()
+
     incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
-    assert len(incident_1.alerts) == 9
+    assert len(incident_1._alerts) == 8
     assert incident_1.severity == IncidentSeverity.CRITICAL.order
 
     incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
-    assert len(incident_2.alerts) == 0
+    assert len(incident_2._alerts) == 0
     assert incident_2.status == IncidentStatus.MERGED.value
     assert incident_2.merged_into_incident_id == incident_1.id
     assert incident_2.merged_at is not None
     assert incident_2.merged_by == "test-user-email"
 
-    incident_3 = get_incident_by_id(SINGLE_TENANT_UUID, incident_3.id, with_alerts=True)
-    assert len(incident_3.alerts) == 0
+    incident_3 = get_incident_by_id(SINGLE_TENANT_UUID, incident_3.id, with_alerts=True, session=db_session)
+    assert len(incident_3._alerts) == 0
     assert incident_3.status == IncidentStatus.MERGED.value
     assert incident_3.merged_into_incident_id == incident_1.id
     assert incident_3.merged_at is not None
@@ -729,3 +799,64 @@ def test_merge_incidents_app(
     assert incident_3_via_api["status"] == IncidentStatus.MERGED.value
     assert incident_3_via_api["merged_into_incident_id"] == str(incident_1.id)
 """
+
+def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
+
+
+    tenant_data = [
+        Tenant(id="tenant_1", name="test-tenant-1", created_by="tests-1@keephq.dev"),
+        Tenant(id="tenant_2", name="test-tenant-2", created_by="tests-2@keephq.dev")
+    ]
+    db_session.add_all(tenant_data)
+    db_session.commit()
+
+    incident_tenant_1 = create_incident_from_dict(
+        "tenant_1", {"user_generated_name": "test", "user_summary": "test"}
+    )
+    incident_tenant_2 = create_incident_from_dict(
+        "tenant_2", {"user_generated_name": "test", "user_summary": "test"}
+    )
+
+    create_alert(
+        "non-unique-fingerprint",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
+        tenant_id="tenant_1"
+    )
+
+    create_alert(
+        "non-unique-fingerprint",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {},
+        tenant_id="tenant_2"
+    )
+
+    alert_tenant_1 = db_session.query(Alert).filter(Alert.tenant_id == 'tenant_1').first()
+    alert_tenant_2 = db_session.query(Alert).filter(Alert.tenant_id == 'tenant_2').first()
+
+    add_alerts_to_incident_by_incident_id(
+        "tenant_1", incident_tenant_1.id, [alert_tenant_1.fingerprint]
+    )
+    add_alerts_to_incident_by_incident_id(
+        "tenant_2", incident_tenant_2.id, [alert_tenant_2.fingerprint]
+    )
+
+    incident_tenant_1 = get_incident_by_id("tenant_1", incident_tenant_1.id)
+    incident_tenant_1_alerts, total_incident_tenant_1_alerts = get_incident_alerts_by_incident_id(
+        tenant_id="tenant_1",
+        incident_id=incident_tenant_1.id,
+    )
+    assert incident_tenant_1.alerts_count == 1
+    assert total_incident_tenant_1_alerts == 1
+    assert len(incident_tenant_1_alerts) == 1
+
+    incident_tenant_2 = get_incident_by_id("tenant_2", incident_tenant_2.id)
+    incident_tenant_2_alerts, total_incident_tenant_2_alerts = get_incident_alerts_by_incident_id(
+        tenant_id="tenant_2",
+        incident_id=incident_tenant_2.id,
+    )
+    assert incident_tenant_2.alerts_count == 1
+    assert total_incident_tenant_2_alerts == 1
+    assert len(incident_tenant_2_alerts) == 1

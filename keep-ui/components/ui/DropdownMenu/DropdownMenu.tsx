@@ -155,7 +155,10 @@ const MenuComponent = React.forwardRef<
         data-open={isOpen ? "" : undefined}
         data-nested={isNested ? "" : undefined}
         data-focus-inside={hasFocusInside ? "" : undefined}
-        className={isNested ? "DropdownMenuItem" : "DropdownMenuButton"}
+        className={clsx(
+          isNested ? "DropdownMenuItem" : "DropdownMenuButton",
+          props.className
+        )}
         {...getReferenceProps(
           parent.getItemProps({
             ...props,
@@ -237,7 +240,8 @@ const DropdownDropdownMenuItem = React.forwardRef<
       role="DropdownMenuItem"
       className={clsx(
         "DropdownMenuItem",
-        props.variant === "destructive" && "text-red-500"
+        props.variant === "destructive" && "text-red-500",
+        props.className
       )}
       tabIndex={isActive ? 0 : -1}
       disabled={disabled}

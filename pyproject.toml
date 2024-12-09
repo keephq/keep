@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.30.3"
+version = "0.31.1"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -48,7 +48,7 @@ posthog = "^3.0.1"
 google-cloud-storage = "^2.10.0"
 auth0-python = "^4.4.1"
 asyncio = "^3.4.3"
-python-multipart = "^0.0.7"
+python-multipart = "^0.0.18"
 kubernetes = "^27.2.0"
 opentelemetry-exporter-otlp-proto-grpc = "^1.20.0"
 opentelemetry-instrumentation-sqlalchemy = "^0.41b0"
@@ -84,6 +84,7 @@ google-auth = "2.34.0"
 clickhouse-driver = "^0.2.9"
 google-cloud-logging = "^3.11.3"
 json5 = "^0.9.28"
+pytest-xdist = "^3.6.1"
 
 psycopg2-binary = "^2.9.10"
 [tool.poetry.group.dev.dependencies]
