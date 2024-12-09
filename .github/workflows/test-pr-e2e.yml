@@ -92,38 +92,34 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Cache Docker layers
+      # Cache the Docker build layers locally
+      - name: Cache Docker build layers
         uses: actions/cache@v4
+        id: docker-cache
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+          path: .buildx-cache
+          key: buildx-cache-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: buildx-cache-
 
-      - name: Build keep-frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./keep-ui/
-          file: ./docker/Dockerfile.ui
-          load: true
-          tags: keep-frontend:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-
-      - name: Build keep-backend
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./docker/Dockerfile.api
-          load: true
-          tags: keep-backend:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-
-      - name: Move cache
+      - name: Build keep-frontend image
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          docker buildx build \
+            --progress=plain \
+            --cache-from=type=local,src=.buildx-cache \
+            --cache-to=type=local,dest=.buildx-cache,mode=max \
+            -t keep-frontend:latest \
+            -f ./docker/Dockerfile.ui \
+            ./keep-ui
+
+      - name: Build keep-backend image
+        run: |
+          docker buildx build \
+            --progress=plain \
+            --cache-from=type=local,src=.buildx-cache \
+            --cache-to=type=local,dest=.buildx-cache,mode=max \
+            -t keep-backend:latest \
+            -f ./docker/Dockerfile.api \
+            .
 
       - name: Start services
         run: |
