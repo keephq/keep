@@ -62,13 +62,14 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <WatchUpdateTheme />
 
         {/** footer */}
-        {process.env.GIT_COMMIT_HASH && (
-          <div className="fixed right-2.5 bottom-2.5 text-gray-500 text-sm">
-            Build: {process.env.GIT_COMMIT_HASH}
-            <br />
-            Version: {process.env.KEEP_VERSION}
-          </div>
-        )}
+        {process.env.GIT_COMMIT_HASH &&
+          process.env.SHOW_BUILD_INFO !== "false" && (
+            <div className="pointer-events-none fixed right-2.5 bottom-2.5 text-slate-400 opacity-80 text-xs">
+              Build: {process.env.GIT_COMMIT_HASH}
+              <br />
+              Version: {process.env.KEEP_VERSION}
+            </div>
+          )}
       </body>
     </html>
   );
