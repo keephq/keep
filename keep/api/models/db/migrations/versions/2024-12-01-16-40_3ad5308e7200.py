@@ -58,7 +58,10 @@ def downgrade() -> None:
             existing_nullable=True,
         )
         batch_op.alter_column(
-            "settings", existing_type=sa.JSON(), type_=sa.VARCHAR(length=255), nullable=False
+            "settings",
+            existing_type=sa.JSON(),
+            type_=sa.VARCHAR(length=255),
+            nullable=False,
         )
 
     # ### end Alembic commands ###
