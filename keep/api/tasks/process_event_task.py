@@ -627,7 +627,7 @@ def process_event(
             raw_event = [raw_event]
 
         __internal_prepartion(event, fingerprint, api_key_name)
-        return __handle_formatted_events(
+        formatted_events = __handle_formatted_events(
             tenant_id,
             provider_type,
             session,
@@ -638,6 +638,11 @@ def process_event(
             timestamp_forced,
             job_id,
         )
+        logger.info(
+            "Event processed",
+            extra={**extra_dict, "processing_time": time.time() - start_time},
+        )
+        return formatted_events
     except Exception:
         logger.exception(
             "Error processing event",
@@ -650,10 +655,6 @@ def process_event(
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
     finally:
         session.close()
-    logger.info(
-        "Event processed",
-        extra={**extra_dict, "processing_time": time.time() - start_time},
-    )
 
 
 def __save_error_alerts(
