@@ -22,11 +22,6 @@ services:
     build:
       context: ./keep-ui/
       dockerfile: ../docker/Dockerfile.ui
-    x-bake:
-      cache-from:
-        - type=gha,scope=frontend
-      cache-to:
-        - type=gha,mode=max,scope=frontend
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
@@ -40,11 +35,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
-    x-bake:
-      cache-from:
-        - type=gha,scope=backend
-      cache-to:
-        - type=gha,mode=max,scope=backend
     environment:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
