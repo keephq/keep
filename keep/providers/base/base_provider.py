@@ -19,14 +19,17 @@ import opentelemetry.trace as trace
 import requests
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.core.db import (get_custom_deduplication_rule, get_enrichments,
-                              get_provider_by_name, is_linked_provider)
-from keep.api.models.alert import (AlertDto, AlertSeverity, AlertStatus,
-                                   IncidentDto)
+from keep.api.core.db import (
+    get_custom_deduplication_rule,
+    get_enrichments,
+    get_provider_by_name,
+    is_linked_provider,
+)
+from keep.api.logging import ProviderLoggerAdapter
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
-from keep.api.utils.enrichment_helpers import \
-    parse_and_enrich_deleted_and_assignees
+from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assignees
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
@@ -90,13 +93,24 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
-        self.logger = context_manager.get_logger(self.provider_id)
+
+        # Initialize the logger with our custom adapter
+        base_logger = logging.getLogger(self.provider_id)
+        # If logs should be stored on the DB, use the custom adapter
+        if os.environ.get("KEEP_STORE_PROVIDER_LOGS", "false").lower() == "true":
+            self.logger = ProviderLoggerAdapter(
+                base_logger, self, context_manager.tenant_id, provider_id
+            )
+        else:
+            self.logger = base_logger
+
         self.logger.setLevel(
             os.environ.get(
                 "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
                 os.environ.get("LOG_LEVEL", "INFO"),
             )
         )
+
         self.validate_config()
         self.logger.debug(
             "Base provider initialized", extra={"provider": self.__class__.__name__}
@@ -352,8 +366,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                     provider_instance = None
                 else:
                     # To prevent circular imports
-                    from keep.providers.providers_factory import \
-                        ProvidersFactory
+                    from keep.providers.providers_factory import ProvidersFactory
 
                     provider_instance: BaseProvider = (
                         ProvidersFactory.get_installed_provider(
@@ -737,7 +750,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         Check if provider has been recorded in the database.
         """
-        provider = get_provider_by_name(self.context_manager.tenant_id, self.config.name)
+        provider = get_provider_by_name(
+            self.context_manager.tenant_id, self.config.name
+        )
         return provider is not None
 
     @property
@@ -746,6 +761,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Check if provider exist in env provisioning.
         """
         from keep.parser.parser import Parser
+
         parser = Parser()
         parser._parse_providers_from_env(self.context_manager)
         return self.config.name in self.context_manager.providers_context

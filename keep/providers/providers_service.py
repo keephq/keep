@@ -8,8 +8,13 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from keep.api.core.db import engine, get_all_provisioned_providers, get_provider_by_name
-from keep.api.models.db.provider import Provider
+from keep.api.core.db import (
+    engine,
+    get_all_provisioned_providers,
+    get_provider_by_name,
+    get_provider_logs,
+)
+from keep.api.models.db.provider import Provider, ProviderExecutionLog
 from keep.api.models.provider import Provider as ProviderModel
 from keep.contextmanager.contextmanager import ContextManager
 from keep.event_subscriber.event_subscriber import EventSubscriber
@@ -334,3 +339,9 @@ class ProvidersService:
             except Exception:
                 logger.exception(f"Failed to provision provider {provider_name}")
                 continue
+
+    @staticmethod
+    def get_provider_logs(
+        tenant_id: str, provider_id: str
+    ) -> List[ProviderExecutionLog]:
+        return get_provider_logs(tenant_id, provider_id)
