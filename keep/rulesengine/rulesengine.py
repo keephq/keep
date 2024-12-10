@@ -1,4 +1,3 @@
-import datetime
 import json
 import logging
 from typing import Optional, List
@@ -14,7 +13,6 @@ from keep.api.core.db import (
     assign_alert_to_incident,
     get_incident_for_grouping_rule,
     create_incident_for_grouping_rule,
-    get_or_create_rule_group_by_rule_id,
     is_all_alerts_resolved,
     is_first_incident_alert_resolved,
     is_last_incident_alert_resolved,
