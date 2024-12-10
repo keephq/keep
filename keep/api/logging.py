@@ -3,12 +3,17 @@ import inspect
 import logging
 import logging.config
 import os
+import uuid
+from datetime import datetime
+from threading import Timer
 
 # tb: small hack to avoid the InsecureRequestWarning logs
 import urllib3
+from sqlmodel import Session
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
-from keep.api.core.db import push_logs_to_db
+from keep.api.core.db import get_session, push_logs_to_db
+from keep.api.models.db.provider import ProviderExecutionLog
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -28,6 +33,77 @@ class WorkflowDBHandler(logging.Handler):
         log_entries, self.records = [record.__dict__ for record in self.records], []
         # Push log entries to the database
         push_logs_to_db(log_entries)
+
+
+class ProviderDBHandler(logging.Handler):
+    def __init__(self, flush_interval: int = 2):
+        super().__init__()
+        self.records = []
+        self.flush_interval = flush_interval
+        self._flush_timer = None
+
+    def emit(self, record):
+        # Only store provider logs
+        if hasattr(record, "provider_id") and record.provider_id:
+            self.records.append(record)
+
+            # Cancel existing timer if any
+            if self._flush_timer:
+                self._flush_timer.cancel()
+
+            # Start new timer
+            self._flush_timer = Timer(self.flush_interval, self.flush)
+            self._flush_timer.start()
+
+    def flush(self):
+        if not self.records:
+            return
+
+        # Copy records and clear original list to avoid race conditions
+        _records = self.records.copy()
+        self.records = []
+
+        try:
+            session = Session(next(get_session()).bind)
+            log_entries = []
+
+            for record in _records:
+                # if record have execution_id use it, but mostly for future use
+                if hasattr(record, "execution_id"):
+                    execution_id = record.execution_id
+                else:
+                    execution_id = None
+                entry = ProviderExecutionLog(
+                    id=str(uuid.uuid4()),
+                    tenant_id=record.tenant_id,
+                    provider_id=record.provider_id,
+                    timestamp=datetime.fromtimestamp(record.created),
+                    log_message=record.getMessage(),
+                    log_level=record.levelname,
+                    context=getattr(record, "extra", {}),
+                    execution_id=execution_id,
+                )
+                log_entries.append(entry)
+
+            session.add_all(log_entries)
+            session.commit()
+            session.close()
+        except Exception as e:
+            # Use the parent logger to avoid infinite recursion
+            logging.getLogger(__name__).error(
+                f"Failed to flush provider logs: {str(e)}"
+            )
+        finally:
+            # Clear the timer reference
+            self._flush_timer = None
+
+    def close(self):
+        """Cancel timer and flush remaining logs when handler is closed"""
+        if self._flush_timer:
+            self._flush_timer.cancel()
+            self._flush_timer = None
+        self.flush()
+        super().close()
 
 
 class WorkflowLoggerAdapter(logging.LoggerAdapter):
@@ -83,6 +159,38 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         else:
             self.logger.warning("No WorkflowDBHandler found")
         self.logger.info("Workflow logs dumped")
+
+
+class ProviderLoggerAdapter(logging.LoggerAdapter):
+    def __init__(self, logger, provider_instance, tenant_id, provider_id):
+        # Create a new logger specifically for this adapter
+        self.provider_logger = logging.getLogger(f"provider.{provider_id}")
+
+        # Add the ProviderDBHandler only to this specific logger
+        handler = ProviderDBHandler()
+        self.provider_logger.addHandler(handler)
+
+        # Initialize the adapter with the new logger
+        super().__init__(self.provider_logger, {})
+        self.provider_instance = provider_instance
+        self.tenant_id = tenant_id
+        self.provider_id = provider_id
+        self.execution_id = str(uuid.uuid4())
+
+    def process(self, msg, kwargs):
+        kwargs = kwargs.copy() if kwargs else {}
+        if "extra" not in kwargs:
+            kwargs["extra"] = {}
+
+        kwargs["extra"].update(
+            {
+                "tenant_id": self.tenant_id,
+                "provider_id": self.provider_id,
+                "execution_id": self.execution_id,
+            }
+        )
+
+        return msg, kwargs
 
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
