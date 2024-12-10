@@ -44,6 +44,7 @@ jobs:
       - name: Bake Docker images
         uses: depot/bake-action@v1
         with:
+          project: qxmcmqzhnd
           workdir: .
           files: |
             tests/e2e_tests/docker-compose-e2e-mysql.yml
