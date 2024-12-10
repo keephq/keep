@@ -310,6 +310,7 @@ def create_process_event_task(
         )
     )
     bg_tasks.add_task(task)
+    running_tasks.add(task)
     logger.info("Task added", extra={"job_id": job_id, "trace_id": trace_id})
     task.add_done_callback(
         lambda task: discard_task(trace_id, job_id, task, running_tasks, started_time)
