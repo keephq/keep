@@ -1,6 +1,4 @@
-
-
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -26,7 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
 ENV API_URL http://localhost:8080
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=8192" npm run build
 
 
 # Production image, copy all the files and run next
