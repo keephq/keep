@@ -3035,10 +3035,12 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             if not results:
                 return {}
 
+            assignees, sources, affected_services = results
+
             return {
-                "assignees": list(filter(bool, results.assignees)),
-                "sources": list(filter(bool, results.sources)),
-                "services": list(filter(bool, results.affected_services)),
+                "assignees": list(filter(bool, assignees)) if assignees else [],
+                "sources": list(filter(bool, sources)) if sources else [],
+                "services": list(filter(bool, affected_services)) if affected_services else [],
             }
         return {}
 
@@ -4689,38 +4691,46 @@ def get_last_alert_by_fingerprint(
 
 
 def set_last_alert(
-    tenant_id: str, alert: Alert, session: Optional[Session] = None
+    tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
     logger.info(f"Set last alert for `{alert.fingerprint}`")
     with existed_or_new_session(session) as session:
-        last_alert = get_last_alert_by_fingerprint(
-            tenant_id, alert.fingerprint, session, for_update=True
-        )
+        for attempt in range(max_retries):
+            with session.begin_nested() as transaction:
+                try:
+                    last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session, for_update=True)
 
-        # To prevent rare, but possible race condition
-        # For example if older alert failed to process
-        # and retried after new one
-        if last_alert and last_alert.timestamp.replace(
-            tzinfo=tz.UTC
-        ) < alert.timestamp.replace(tzinfo=tz.UTC):
+                    # To prevent rare, but possible race condition
+                    # For example if older alert failed to process
+                    # and retried after new one
+                    if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
 
-            logger.info(
-                f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
-            )
-            last_alert.timestamp = alert.timestamp
-            last_alert.alert_id = alert.id
-            session.add(last_alert)
+                        logger.info(
+                            f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+                        )
+                        last_alert.timestamp = alert.timestamp
+                        last_alert.alert_id = alert.id
+                        session.add(last_alert)
 
-        elif not last_alert:
-            logger.info(f"No last alert for `{alert.fingerprint}`, creating new")
-            last_alert = LastAlert(
-                tenant_id=tenant_id,
-                fingerprint=alert.fingerprint,
-                timestamp=alert.timestamp,
-                first_timestamp=alert.timestamp,
-                alert_id=alert.id,
-                alert_hash=alert.alert_hash,
-            )
+                    elif not last_alert:
+                        logger.info(
+                            f"No last alert for `{alert.fingerprint}`, creating new"
+                        )
+                        last_alert = LastAlert(
+                            tenant_id=tenant_id,
+                            fingerprint=alert.fingerprint,
+                            timestamp=alert.timestamp,
+                            first_timestamp=alert.timestamp,alert_id=alert.id,
+                        )
 
-            session.add(last_alert)
-        session.commit()
+                        session.add(last_alert)
+                    transaction.commit()
+                except OperationalError as ex:
+                    if "Deadlock found" in ex.args[0]:
+
+                        logger.info(
+                            f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
+                        )
+                        transaction.rollback()
+                        if attempt >= max_retries:
+                            raise ex
