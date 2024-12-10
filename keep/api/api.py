@@ -25,6 +25,7 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
     KEEP_ARQ_TASK_POOL_NONE,
 )
+from keep.api.core.db import SINGLE_TENANT_CACHE
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
@@ -94,7 +95,10 @@ async def check_pending_tasks(background_tasks: set):
     while True:
         logger.info(
             f"{len(background_tasks)} background tasks pending",
-            extra={"pending_tasks": len(background_tasks)},
+            extra={
+                "pending_tasks": len(background_tasks),
+                "cache": SINGLE_TENANT_CACHE,
+            },
         )
         await asyncio.sleep(1)
 
@@ -288,4 +292,15 @@ def run(app: FastAPI):
     keep.api.config.on_starting()
 
     # run the server
-    uvicorn.run(app, host=HOST, port=PORT, log_config=logging_config, lifespan="on")
+    workers = os.environ.get("KEEP_WORKERS", None)
+    if workers:
+        uvicorn.run(
+            "keep.api.api:get_app",
+            host=HOST,
+            port=PORT,
+            log_config=logging_config,
+            lifespan="on",
+            workers=2,
+        )
+    else:
+        uvicorn.run(app, host=HOST, port=PORT, log_config=logging_config, lifespan="on")

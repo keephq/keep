@@ -45,7 +45,7 @@ TIMES_TO_RETRY_JOB = 5  # the number of times to retry the job in case of failur
 KEEP_STORE_RAW_ALERTS = os.environ.get("KEEP_STORE_RAW_ALERTS", "false") == "true"
 KEEP_CORRELATION_ENABLED = os.environ.get("KEEP_CORRELATION_ENABLED", "true") == "true"
 KEEP_ALERT_FIELDS_ENABLED = (
-    os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "false") == "true"
+    os.environ.get("KEEP_ALERT_FIELDS_ENABLED", "true") == "true"
 )
 KEEP_MAINTENANCE_WINDOWS_ENABLED = (
     os.environ.get("KEEP_MAINTENANCE_WINDOWS_ENABLED", "true") == "true"

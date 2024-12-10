@@ -69,9 +69,8 @@ def get_providers(
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersService.get_all_providers()
     installed_providers = ProvidersService.get_installed_providers(tenant_id)
+    linked_providers = ProvidersService.get_linked_providers(tenant_id)
     if PROVIDER_DISTRIBUTION_ENABLED:
-        linked_providers = ProvidersService.get_linked_providers(tenant_id)
-
         # generate distribution only if not in read only mode
         if READ_ONLY:
             for provider in linked_providers + installed_providers:

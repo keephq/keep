@@ -1847,6 +1847,11 @@ def get_all_deduplication_rules(tenant_id):
                 AlertDeduplicationRule.tenant_id == tenant_id
             )
         ).all()
+        if tenant_id == SINGLE_TENANT_UUID:
+            for rule in rules:
+                SINGLE_TENANT_CACHE["deduplication_rules"][
+                    f"{rule.provider_id}_{rule.provider_type}"
+                ] = rule
     return rules
 
 
