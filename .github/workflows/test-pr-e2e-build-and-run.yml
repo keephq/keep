@@ -50,7 +50,7 @@ jobs:
 
       - name: Set up Keep environment
         run: |
-          docker compose \
+          DOCKER_BUILDKIT=1 docker compose \
             --project-directory . \
             -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
 
