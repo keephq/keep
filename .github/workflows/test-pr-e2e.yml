@@ -66,6 +66,9 @@ jobs:
       - name: Install playwright
         run: poetry run playwright install
 
+      - name: Expose GitHub Runtime
+        uses: crazy-max/ghaction-github-runtime@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
