@@ -1776,7 +1776,7 @@ def create_incident_for_grouping_rule(
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=False,
-            is_confirmed=not rule.require_approve,
+            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value and not rule.require_approve,
         )
         session.add(incident)
         session.commit()
@@ -4861,31 +4861,3 @@ def set_last_alert(
             break
 
 
-def get_or_create_rule_group_by_rule_id(
-    tenant_id: str,
-    rule_id: str | UUID,
-    timeframe: int,
-    session: Optional[Session] = None
-):
-
-    with existed_or_new_session(session) as session:
-        group = session.query(RuleEventGroup).where(
-            and_(
-                RuleEventGroup.tenant_id == tenant_id,
-                RuleEventGroup.rule_id == rule_id,
-                RuleEventGroup.expires > datetime.utcnow(),
-            )
-        ).first()
-
-        if group is None:
-            group = RuleEventGroup(
-                tenant_id=tenant_id,
-                rule_id=rule_id,
-                expires=datetime.utcnow() + timedelta(seconds=timeframe),
-                state={}
-            )
-            session.add(group)
-            session.commit()
-            session.refresh(group)
-
-        return group
