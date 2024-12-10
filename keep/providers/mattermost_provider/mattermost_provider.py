@@ -13,11 +13,12 @@ from keep.providers.models.provider_config import ProviderConfig
 class MattermostProviderAuthConfig:
     """Mattermost authentication configuration."""
 
-    webhook_url: str = dataclasses.field(
+    webhook_url: pydantic.AnyHttpUrl = dataclasses.field(
         metadata={
             "required": True,
             "description": "Mattermost Webhook Url",
             "sensitive": True,
+            "validation": "any_http_url",
         }
     )
 
@@ -37,8 +38,6 @@ class MattermostProvider(BaseProvider):
         self.authentication_config = MattermostProviderAuthConfig(
             **self.config.authentication
         )
-        if not self.authentication_config.webhook_url:
-            raise Exception("Mattermost webhook URL is required")
 
     def dispose(self):
         """

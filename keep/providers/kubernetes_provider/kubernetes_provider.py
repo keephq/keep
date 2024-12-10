@@ -14,13 +14,14 @@ from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 class KubernetesProviderAuthConfig:
     """Kubernetes authentication configuration."""
 
-    api_server: str = dataclasses.field(
+    api_server: pydantic.AnyHttpUrl = dataclasses.field(
         default=None,
         metadata={
             "name": "api_server",
             "description": "The kubernetes api server url",
             "required": True,
             "sensitive": False,
+            "validation": "any_http_url"
         },
     )
     token: str = dataclasses.field(
@@ -36,9 +37,10 @@ class KubernetesProviderAuthConfig:
         default=True,
         metadata={
             "name": "insecure",
-            "description": "Whether to skip tls verification (default: True)",
+            "description": "Skip TLS verification",
             "required": False,
             "sensitive": False,
+            "type": "switch"
         },
     )
 

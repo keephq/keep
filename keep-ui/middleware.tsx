@@ -1,21 +1,39 @@
 import { NextResponse, type NextRequest } from "next/server";
+// TODO: is it safe to remove these imports?
 import { getToken } from "next-auth/jwt";
 import type { JWT } from "next-auth/jwt";
 import { getApiURL } from "@/utils/apiUrl";
+import { config as authConfig } from "@/auth.config";
+import NextAuth from "next-auth";
+
+const { auth } = NextAuth(authConfig);
+
+// Helper function to detect mobile devices
+function isMobileDevice(userAgent: string): boolean {
+  return /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+    userAgent
+  );
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  // Check if request is from mobile device
+  const userAgent = request.headers.get("user-agent") || "";
+  if (
+    isMobileDevice(userAgent) &&
+    !pathname.startsWith("/mobile") &&
+    process.env.KEEP_READ_ONLY === "true"
+  ) {
+    return NextResponse.redirect(new URL("/mobile", request.url));
+  }
+
+  const session = await auth();
+  const role = session?.userRole;
+  const isAuthenticated = !!session;
   // Keep it on header so it can be used in server components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
-
-  // Get the token using next-auth/jwt with the correct type
-  const token = (await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  })) as JWT | null;
-
   // Handle legacy /backend/ redirects
   if (pathname.startsWith("/backend/")) {
     const apiUrl = getApiURL();
@@ -32,14 +50,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow Mobile routes to pass through
+  if (pathname.startsWith("/mobile")) {
+    return NextResponse.next();
+  }
+
   // If not authenticated and not on signin page, redirect to signin
-  if (!token && !pathname.startsWith("/signin")) {
+  if (!isAuthenticated && !pathname.startsWith("/signin")) {
     console.log("Redirecting to signin page because user is not authenticated");
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  // If authenticated and on signin page, redirect to dashboard
-  if (token && pathname.startsWith("/signin")) {
+  // If authenticated and on signin page, redirect to incidents
+  if (isAuthenticated && pathname.startsWith("/signin")) {
     console.log(
       "Redirecting to incidents because user try to get /signin but already authenticated"
     );
@@ -47,7 +70,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Role-based routing (NOC users)
-  if (token?.role === "noc" && !pathname.startsWith("/alerts")) {
+  if (role === "noc" && !pathname.startsWith("/alerts")) {
     return NextResponse.redirect(new URL("/alerts/feed", request.url));
   }
 

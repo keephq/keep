@@ -112,6 +112,8 @@ class SlackProvider(BaseProvider):
         channel="",
         slack_timestamp="",
         thread_timestamp="",
+        attachments=[],
+        username="",
         **kwargs: dict,
     ):
         """
@@ -131,16 +133,47 @@ class SlackProvider(BaseProvider):
             },
         )
         if not message:
-            if not blocks:
+            if not blocks and not attachments:
                 raise ProviderException(
                     "Message is required - see for example https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml#L16"
                 )
-            message = blocks[0].get("text")
-        if self.authentication_config.webhook_url:
-            response = requests.post(
-                self.authentication_config.webhook_url,
-                json={"text": message, "blocks": blocks},
+        payload = {
+            "channel": channel,
+        }
+        if message:
+            payload["text"] = message
+        if blocks:
+            payload["blocks"] = (
+                json.dumps(blocks)
+                if isinstance(blocks, dict) or isinstance(blocks, list)
+                else blocks
             )
+        if attachments:
+            payload["attachments"] = (
+                json.dumps(attachments)
+                if isinstance(attachments, dict) or isinstance(attachments, list)
+                else blocks
+            )
+        if username:
+            payload["username"] = username
+
+        if self.authentication_config.webhook_url:
+            # If attachments are present, we need to send them as the payload with nothing else
+            # Also, do not encode the payload as json, but as x-www-form-urlencoded
+            # Only reference I found for it is: https://getkeep.slack.com/services/B082F60L9GX?added=1 and
+            # https://stackoverflow.com/questions/42993602/slack-chat-postmessage-attachment-gives-no-text
+            if payload["attachments"]:
+                payload["attachments"] = attachments
+                response = requests.post(
+                    self.authentication_config.webhook_url,
+                    data={"payload": json.dumps(payload)},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+            else:
+                response = requests.post(
+                    self.authentication_config.webhook_url,
+                    json=payload,
+                )
             if not response.ok:
                 raise ProviderException(
                     f"{self.__class__.__name__} failed to notify alert message to Slack: {response.text}"
@@ -148,31 +181,12 @@ class SlackProvider(BaseProvider):
         elif self.authentication_config.access_token:
             if not channel:
                 raise ProviderException("Channel is required (E.g. C12345)")
+            payload["token"] = self.authentication_config.access_token
             if slack_timestamp == "" and thread_timestamp == "":
                 self.logger.info("Sending a new message to Slack")
-                payload = {
-                    "channel": channel,
-                    "text": message,
-                    "blocks": (
-                        json.dumps(blocks)
-                        if isinstance(blocks, dict) or isinstance(blocks, list)
-                        else blocks
-                    ),
-                    "token": self.authentication_config.access_token,
-                }
                 method = "chat.postMessage"
             else:
                 self.logger.info(f"Updating Slack message with ts: {slack_timestamp}")
-                payload = {
-                    "channel": channel,
-                    "text": message,
-                    "blocks": (
-                        json.dumps(blocks)
-                        if isinstance(blocks, dict) or isinstance(blocks, list)
-                        else blocks
-                    ),
-                    "token": self.authentication_config.access_token,
-                }
                 if slack_timestamp:
                     payload["ts"] = slack_timestamp
                     method = "chat.update"
@@ -180,9 +194,17 @@ class SlackProvider(BaseProvider):
                     method = "chat.postMessage"
                     payload["thread_ts"] = thread_timestamp
 
-            response = requests.post(
-                f"{SlackProvider.SLACK_API}/{method}", data=payload
-            )
+            if payload["attachments"]:
+                payload["attachments"] = attachments
+                response = requests.post(
+                    f"{SlackProvider.SLACK_API}/{method}",
+                    data={"payload": json.dumps(payload)},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+            else:
+                response = requests.post(
+                    f"{SlackProvider.SLACK_API}/{method}", data=payload
+                )
 
             response_json = response.json()
             if not response.ok or not response_json.get("ok"):
@@ -237,16 +259,16 @@ if __name__ == "__main__":
         provider_config=config,
     )
     provider.notify(
-        message="Simple alert showing context with name: John Doe",
-        channel="alerts-playground",
-        blocks=[
+        channel="C04P7QSG692",
+        attachments=[
             {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "Alert! :alarm_clock:",
-                    "emoji": True,
-                },
+                "fallback": "Plain-text summary of the attachment.",
+                "color": "#2eb886",
+                "title": "Slack API Documentation",
+                "title_link": "https://api.slack.com/",
+                "text": "Optional text that appears within the attachment",
+                "footer": "Slack API",
+                "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
             }
         ],
     )

@@ -1,8 +1,9 @@
+import os
+
 import unittest
 import json
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentSeverity, IncidentStatus
+from keep.api.models.alert import IncidentSeverity, IncidentStatus
 from keep.providers.pagerduty_provider.pagerduty_provider import PagerdutyProvider
-import os
 
 
 class TestPagerdutyProvider(unittest.TestCase):

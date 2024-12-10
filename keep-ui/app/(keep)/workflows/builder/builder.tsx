@@ -1,4 +1,3 @@
-import "./page.css";
 import { useEffect, useState } from "react";
 import { Callout, Card } from "@tremor/react";
 import { Provider } from "../../providers/providers";
@@ -17,21 +16,26 @@ import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import BuilderWorkflowTestRunModalContent from "./builder-workflow-testrun-modal";
-import { WorkflowExecution, WorkflowExecutionFailure } from "./types";
-import ReactFlowBuilder from "./ReactFlowBuilder";
-import { ReactFlowProvider } from "@xyflow/react";
-import useStore, {
+import {
+  Definition as FlowDefinition,
   ReactFlowDefinition,
   V2Step,
-  Definition as FlowDefinition,
-} from "./builder-store";
+  WorkflowExecution,
+  WorkflowExecutionFailure,
+} from "./types";
+import ReactFlowBuilder from "./ReactFlowBuilder";
+import { ReactFlowProvider } from "@xyflow/react";
+import useStore from "./builder-store";
 import { toast } from "react-toastify";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import "./page.css";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -43,7 +47,6 @@ interface Props {
   triggerRun: number;
   workflow?: string;
   workflowId?: string;
-  accessToken?: string;
   installedProviders?: Provider[] | undefined | null;
   isPreview?: boolean;
 }
@@ -58,10 +61,10 @@ function Builder({
   triggerRun,
   workflow,
   workflowId,
-  accessToken,
   installedProviders,
   isPreview,
 }: Props) {
+  const api = useApi();
   const [definition, setDefinition] = useState(() =>
     wrapDefinitionV2({ sequence: [], properties: {}, isValid: false })
   );
@@ -80,17 +83,13 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
-  const {
-    errorNode,
+  const {  errorNode,
     setErrorNode,
     canDeploy,
     synced,
     setSelectedNode,
     setStepErrors,
-    setGlobalErros,
-  } = useStore();
-  const apiUrl = useApiUrl();
-
+    setGlobalErros, } = useStore();
   const setStepValidationErrorV2 = (
     step: V2Step,
     error: Record<string, string> | null
@@ -123,76 +122,56 @@ function Builder({
   };
 
   const updateWorkflow = () => {
-    const url = `${apiUrl}/workflows/${workflowId}`;
-    const method = "PUT";
-    const headers = {
-      "Content-Type": "text/html",
-      Authorization: `Bearer ${accessToken}`,
-    };
     const body = stringify(buildAlert(definition.value));
-    debugger;
-    fetch(url, { method, headers, body })
-      .then((response) => {
-        if (response.ok) {
-          window.location.assign("/workflows");
-        } else {
-          throw new Error(response.statusText);
-        }
+    api
+      .request(`/workflows/${workflowId}`, {
+        method: "PUT",
+        body,
+        headers: { "Content-Type": "text/html" },
       })
-      .catch((error) => {
-        alert(`Error: ${error}`);
+      .then(() => {
+        window.location.assign("/workflows");
+      })
+      .catch((error: any) => {
+        showErrorToast(error, "Failed to add workflow");
       });
   };
 
   const testRunWorkflow = () => {
-    const url = `${apiUrl}/workflows/test`;
-    const method = "POST";
-    const headers = {
-      "Content-Type": "text/html",
-      Authorization: `Bearer ${accessToken}`,
-    };
-
     setTestRunModalOpen(true);
     const body = stringify(buildAlert(definition.value));
-    fetch(url, { method, headers, body })
-      .then((response) => {
-        if (response.ok) {
-          response.json().then((data) => {
-            setRunningWorkflowExecution({
-              ...data,
-            });
-          });
-        } else {
-          response.json().then((data) => {
-            setRunningWorkflowExecution({
-              error: data?.detail ?? "Unknown error",
-            });
-          });
-        }
+    api
+      .request(`/workflows/test`, {
+        method: "POST",
+        body,
+        headers: { "Content-Type": "text/html" },
+      })
+      .then((data) => {
+        setRunningWorkflowExecution({
+          ...data,
+        });
       })
       .catch((error) => {
-        alert(`Error: ${error}`);
+        setRunningWorkflowExecution({
+          error:
+            error instanceof KeepApiError ? error.message : "Unknown error",
+        });
         setTestRunModalOpen(false);
       });
   };
 
   const addWorkflow = () => {
-    const url = `${apiUrl}/workflows/json`;
-    const method = "POST";
-    const headers = {
-      "Content-Type": "text/html",
-      Authorization: `Bearer ${accessToken}`,
-    };
     const body = stringify(buildAlert(definition.value));
-    fetch(url, { method, headers, body })
-      .then((response) => {
-        if (response.ok) {
-          // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
-          // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
-          window.location.assign("/workflows");
-        } else {
-          throw new Error(response.statusText);
-        }
+    api
+      .request(`/workflows/json`, {
+        method: "POST",
+        body,
+        headers: { "Content-Type": "text/html" },
+      })
+      .then(() => {
+        // This is important because it makes sure we will re-fetch the workflow if we get to this page again.
+        // router.push for instance, optimizes re-render of same pages and we don't want that here because of "cache".
+        window.location.assign("/workflows");
       })
       .catch((error) => {
         alert(`Error: ${error}`);
@@ -231,7 +210,7 @@ function Builder({
       );
     }
     setIsLoading(false);
-  }, [loadedAlertFile, workflow, searchParams]);
+  }, [loadedAlertFile, workflow, searchParams, providers]);
 
   useEffect(() => {
     if (triggerGenerate) {
@@ -279,7 +258,7 @@ function Builder({
         addWorkflow();
       }
     }
-  }, [canDeploy, errorNode, definition?.isValid]);
+  }, [canDeploy, errorNode, definition.isValid, synced, workflowId]);
 
   useEffect(() => {
     enableGenerate(

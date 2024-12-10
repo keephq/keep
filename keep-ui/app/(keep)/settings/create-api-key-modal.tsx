@@ -7,26 +7,24 @@ import {
 } from "react-hook-form";
 import { TextInput, Button, Subtitle, Icon } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { ApiKey } from "./auth/api-key-settings";
 import { Role } from "@/app/(keep)/settings/models";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
+import { ApiKey } from "@/app/(keep)/settings/auth/types";
 
 interface CreateApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  apiUrl: string;
   setApiKeys: React.Dispatch<React.SetStateAction<ApiKey[]>>;
-  accessToken: string;
   roles: Role[];
 }
 
 export default function CreateApiKeyModal({
   isOpen,
   onClose,
-  apiUrl,
   setApiKeys,
-  accessToken,
   roles,
 }: CreateApiKeyModalProps) {
   const {
@@ -38,38 +36,26 @@ export default function CreateApiKeyModal({
     formState: { errors },
   } = useForm();
 
+  const api = useApi();
+
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     try {
-      const response = await fetch(`${apiUrl}/settings/apikey`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const newApiKey = await api.post("/settings/apikey", data);
 
-      if (response.ok) {
-        const newApiKey = await response.json();
-        setApiKeys((prevApiKeys: ApiKey[]) => [...prevApiKeys, newApiKey]);
-        handleClose();
-      } else {
-        const errorData = await response.json();
-        if (errorData.detail) {
-          setError("apiError", { type: "manual", message: errorData.detail });
-        } else {
-          setError("apiError", {
-            type: "manual",
-            message: errorData.message || "Failed to create API Key",
-          });
-        }
-      }
+      setApiKeys((prevApiKeys: ApiKey[]) => [...prevApiKeys, newApiKey]);
+      handleClose();
     } catch (error) {
-      console.log({ error });
-      setError("apiError", {
-        type: "manual",
-        message: "An unexpected error occurred",
-      });
+      if (error instanceof KeepApiError) {
+        setError("apiError", {
+          type: "manual",
+          message: error.message || "Failed to create API Key",
+        });
+      } else {
+        setError("apiError", {
+          type: "manual",
+          message: "Unexpected error occurred",
+        });
+      }
     }
   };
 

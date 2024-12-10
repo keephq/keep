@@ -2,7 +2,6 @@ import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import {
   Text,
-  Subtitle,
   Button,
   TextInput,
   MultiSelect,
@@ -18,8 +17,9 @@ import {
 } from "react-hook-form";
 import { useRoles } from "utils/hooks/useRoles";
 import { useUsers } from "@/entities/users/model/useUsers";
-import { useApiUrl } from "utils/hooks/useConfig";
 import "./multiselect.css";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
 
 interface GroupSidebarProps {
   isOpen: boolean;
@@ -27,7 +27,6 @@ interface GroupSidebarProps {
   group: any;
   isNewGroup: boolean;
   mutateGroups: (data?: any, shouldRevalidate?: boolean) => Promise<any>;
-  accessToken: string;
 }
 
 const GroupsSidebar = ({
@@ -36,7 +35,6 @@ const GroupsSidebar = ({
   group,
   isNewGroup,
   mutateGroups,
-  accessToken,
 }: GroupSidebarProps) => {
   const {
     control,
@@ -57,7 +55,7 @@ const GroupsSidebar = ({
   const { data: roles = [] } = useRoles();
   const { data: users = [], mutate: mutateUsers } = useUsers();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
   useEffect(() => {
     if (isOpen) {
@@ -80,35 +78,24 @@ const GroupsSidebar = ({
     setIsSubmitting(true);
     clearErrors(); // Clear all errors
 
-    const method = isNewGroup ? "POST" : "PUT";
-    const url = isNewGroup
-      ? `${apiUrl}/auth/groups`
-      : `${apiUrl}/auth/groups/${group.id}`;
     try {
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const response = isNewGroup
+        ? await api.post("/auth/groups", data)
+        : await api.put(`/auth/groups/${group.id}`, data);
 
-      if (response.ok) {
-        await mutateGroups();
-        await mutateUsers();
-        handleClose();
-      } else {
-        const errorData = await response.json();
+      await mutateGroups();
+      await mutateUsers();
+      handleClose();
+    } catch (error) {
+      if (error instanceof KeepApiError) {
         setError("root.serverError", {
-          message:
-            errorData.detail || errorData.message || "Failed to save group",
+          message: error.message || "Failed to save group",
+        });
+      } else {
+        setError("root.serverError", {
+          message: "An unexpected error occurred",
         });
       }
-    } catch (error) {
-      setError("root.serverError", {
-        message: "An unexpected error occurred",
-      });
     } finally {
       setIsSubmitting(false);
     }

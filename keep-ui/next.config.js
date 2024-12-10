@@ -49,10 +49,14 @@ const nextConfig = {
         protocol: "https",
         hostname: "ui-avatars.com",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.prod.website-files.com",
+      },
     ],
   },
   compiler: {
-    removeConsole: false,
+    removeConsole: process.env.NODE_ENV === "production",
   },
   output: "standalone",
   productionBrowserSourceMaps:

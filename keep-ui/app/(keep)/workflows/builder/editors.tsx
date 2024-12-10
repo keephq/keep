@@ -17,9 +17,10 @@ import {
   FunnelIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import React, { useCallback, useMemo } from "react";
-import useStore, { V2Properties, FlowNode } from "./builder-store";
-import { useEffect, useRef, useState } from "react";
+import React from "react";
+import useStore from "./builder-store";
+import { useMemo, useEffect, useRef, useState } from "react";
+import { V2Properties, FlowNode } from "@/app/(keep)/workflows/builder/types";
 import {
   useForm,
   Controller,
@@ -38,6 +39,15 @@ import Loading from "../../loading";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+interface keepEditorProps {
+  properties: V2Properties;
+  updateProperty: (key: string, value: any, onlySync?: boolean) => void;
+  providers?: Provider[] | null | undefined;
+  installedProviders?: Provider[] | null | undefined;
+  providerType?: string;
+  type?: string;
+  isV2?: boolean;
+}
 type keepEditorPropsV2 = keepEditorProps & {
   control: any;
   errors: any;
@@ -49,9 +59,12 @@ interface KeyValue {
   value: string;
 }
 
+
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
 }
+
+
 
 export function GlobalEditorV2({
   synced,
@@ -88,16 +101,6 @@ export function GlobalEditorV2({
       />
     </EditorLayout>
   );
-}
-
-interface keepEditorProps {
-  properties: V2Properties;
-  updateProperty: (key: string, value: any, onlySync?: boolean) => void;
-  providers?: Provider[] | null | undefined;
-  installedProviders?: Provider[] | null | undefined;
-  providerType?: string;
-  type?: string;
-  isV2?: boolean;
 }
 
 

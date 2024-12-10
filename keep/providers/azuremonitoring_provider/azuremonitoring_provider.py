@@ -95,7 +95,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
         # Construct the alert object
         alert = AlertDto(
             id=alert_id,
-            name=essentials.get("alertRule", ""),
+            name=essentials.get("alertRule") or "",
             status=status,
             lastReceived=str(event_time),
             source=["azuremonitoring"],

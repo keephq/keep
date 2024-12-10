@@ -14,7 +14,7 @@ import {
   SortingState,
   getSortedRowModel,
 } from "@tanstack/react-table";
-
+import { CopilotKit } from "@copilotkit/react-core";
 import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -32,8 +32,7 @@ import { severityMapping } from "./models";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
-import { FacetFilters } from "./alert-table-facet-types";
-import { DynamicFacet } from "./alert-table-facet-dynamic";
+import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
 
 interface PresetTab {
   name: string;
@@ -54,6 +53,9 @@ interface Props {
   isMenuColDisplayed?: boolean;
   setDismissedModalAlert?: (alert: AlertDto[] | null) => void;
   mutateAlerts?: () => void;
+  setRunWorkflowModalAlert?: (alert: AlertDto) => void;
+  setDismissModalAlert?: (alert: AlertDto[] | null) => void;
+  setChangeStatusAlert?: (alert: AlertDto) => void;
 }
 
 export function AlertTable({
@@ -69,6 +71,9 @@ export function AlertTable({
   isRefreshAllowed = true,
   setDismissedModalAlert,
   mutateAlerts,
+  setRunWorkflowModalAlert,
+  setDismissModalAlert,
+  setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
 
@@ -149,6 +154,8 @@ export function AlertTable({
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
+    useState<boolean>(false);
 
   const filteredAlerts = alerts.filter((alert) => {
     // First apply tab filter
@@ -265,9 +272,9 @@ export function AlertTable({
 
   return (
     // Add h-screen to make it full height and remove the default flex-col gap
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col gap-4">
       {/* Add padding to account for any top nav/header */}
-      <div className="pt-4 px-4 flex-none">
+      <div className="px-4 flex-none">
         <TitleAndFilters
           table={table}
           alerts={alerts}
@@ -277,7 +284,7 @@ export function AlertTable({
       </div>
 
       {/* Make actions/presets section fixed height */}
-      <div className="h-12 px-4 flex-none">
+      <div className="h-14 px-4 flex-none">
         {selectedRowIds.length ? (
           <AlertActions
             selectedRowIds={selectedRowIds}
@@ -285,20 +292,24 @@ export function AlertTable({
             clearRowSelection={table.resetRowSelection}
             setDismissModalAlert={setDismissedModalAlert}
             mutateAlerts={mutateAlerts}
+            setIsIncidentSelectorOpen={setIsIncidentSelectorOpen}
+            isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <AlertPresets
-            table={table}
-            presetNameFromApi={presetName}
-            isLoading={isAsyncLoading}
-            presetPrivate={presetPrivate}
-            presetNoisy={presetNoisy}
-          />
+          <CopilotKit runtimeUrl="/api/copilotkit">
+            <AlertPresets
+              table={table}
+              presetNameFromApi={presetName}
+              isLoading={isAsyncLoading}
+              presetPrivate={presetPrivate}
+              presetNoisy={presetNoisy}
+            />
+          </CopilotKit>
         )}
       </div>
 
       {/* Main content area - uses flex-grow to fill remaining space */}
-      <div className="flex-grow overflow-hidden px-4 pb-4">
+      <div className="flex-grow px-4 pb-4">
         <div className="h-full flex gap-6">
           {/* Facets sidebar */}
           <div className="w-32 min-w-[12rem] overflow-y-auto">
@@ -371,6 +382,20 @@ export function AlertTable({
         isOpen={isSidebarOpen}
         toggle={() => setIsSidebarOpen(false)}
         alert={selectedAlert}
+        setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+        setDismissModalAlert={setDismissModalAlert}
+        setChangeStatusAlert={setChangeStatusAlert}
+        setIsIncidentSelectorOpen={() => {
+          if (selectedAlert) {
+            table
+              .getRowModel()
+              .rows.find(
+                (row) => row.original.fingerprint === selectedAlert.fingerprint
+              )
+              ?.toggleSelected();
+            setIsIncidentSelectorOpen(true);
+          }
+        }}
       />
     </div>
   );

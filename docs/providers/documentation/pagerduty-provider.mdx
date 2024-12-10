@@ -16,6 +16,7 @@ The Pagerduty Provider enables integration with PagerDuty to create, manage, and
 - `body`: dict: Body of the incident.
 - `requester`: str: Requester of the incident.
 - `incident_key`: str | None: Key to identify the incident. If not given, a UUID will be generated.
+- `priority`: str | None: Priority of the incident. Only used when creating an incident and when the priority is set. This should be the priority reference ID.
 
 ## Authentication Parameters
 
@@ -30,6 +31,7 @@ To connect Keep to PagerDuty:
 
 - **Routing Key**: Use for event posting via the PagerDuty Events API.
 - **API Key**: Use for incident creation and management through the PagerDuty Incidents API.
+- **Service Id** (Optional): If provided, keep operates within the service's scope.
 - **OAuth2**: Token management handled automatically by Keep.
 
 <Frame>
@@ -48,28 +50,31 @@ The api_key is used to create incidents using the incidents API.
 ### Enabling OAuth in the open-source version
 
 If you would like to use OAuth in the open-source, where you self-host Keep, you can do so by following these step:
+
 1. Create a PagerDuty account
 2. In the account page, go to **Integrations** > **App Registration**
-<Frame>
-  <img src="/images/pagerduty-app-registration.png" />
-</Frame>
+   <Frame>
+     <img src="/images/pagerduty-app-registration.png" />
+   </Frame>
 3. Click on **New App** blue button on the top right
 4. Fill in the required fields
 5. Select "OAuth 2.0" in the Functionality section and click **Next**
 6. In the Redirect URL, you need to add Keep's PagerDuty OAuth2 redirect URL, which is based on your deployments URL. For example, if Keep is deployed at http://localhost:3000, the redirect URL is http://localhost:3000/providers/oauth2/pagerduty
-<Frame>
-  <img src="/images/pagerduty-redirect-url.png" />
-</Frame>
+   <Frame>
+     <img src="/images/pagerduty-redirect-url.png" />
+   </Frame>
 7. In the Authorization section, select **Scoped OAuth** and select the following scopes:
+
 - Abilities: Read Access
 - Incidents: Read/Write Access
 - Services: Read/Write Access
 - Webhook Subscriptions: Read/Write Access
+
 8. Click on **Register App** blue button on the bottom right
 9. Copy the **Client ID** and **Client Secret** from the OAuth 2.0 Client Information modal and set the `PAGERDUTY_CLIENT_ID` and `PAGERDUTY_CLIENT_SECRET` environment variables in your Keep backend deployment.
-<Frame>
-  <img src="/images/pagerduty-oauth2-credentials.png" />
-</Frame>
+   <Frame>
+     <img src="/images/pagerduty-oauth2-credentials.png" />
+   </Frame>
 
 ## PagerDuty Webhook Integration
 

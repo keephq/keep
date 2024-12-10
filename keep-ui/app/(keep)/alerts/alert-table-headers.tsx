@@ -55,7 +55,12 @@ const DraggableHeaderCell = ({
   });
 
   const dragStyle: CSSProperties = {
-    width: column.getSize(),
+    width:
+      column.id === "checkbox"
+        ? "32px !important"
+        : column.id === "source"
+        ? "40px !important"
+        : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -63,8 +68,8 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-          ? "grabbing"
-          : "grab",
+        ? "grabbing"
+        : "grab",
   };
 
   // TODO: fix multiple pinned columns
@@ -80,7 +85,12 @@ const DraggableHeaderCell = ({
       style={dragStyle}
       ref={setNodeRef}
     >
-      <div className="flex items-center" {...listeners}>
+      <div
+        className={`flex items-center ${
+          column.id === "checkbox" ? "justify-center" : ""
+        }`}
+        {...listeners}
+      >
         {/* Flex container */}
         {children} {/* Column name or text */}
         {column.getCanSort() && ( // Sorting icon to the left
@@ -99,8 +109,8 @@ const DraggableHeaderCell = ({
                 column.getNextSortingOrder() === "asc"
                   ? "Sort ascending"
                   : column.getNextSortingOrder() === "desc"
-                    ? "Sort descending"
-                    : "Clear sort"
+                  ? "Sort descending"
+                  : "Clear sort"
               }
             >
               {/* Icon logic */}

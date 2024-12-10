@@ -8,28 +8,25 @@ import {
   ExclamationCircleIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { fetcher } from "../../../utils/fetcher";
 import { Workflow, MockWorkflow } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loading from "@/app/(keep)/loading";
 import React from "react";
-import WorkflowsEmptyState from "./noworfklows";
+import WorkflowsEmptyState from "./noworkflows";
 import WorkflowTile, { WorkflowTileOld } from "./workflow-tile";
 import { Button, Card, Title } from "@tremor/react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
 
 export default function WorkflowsPage() {
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const router = useRouter();
-  const { data: session, status, update } = useSession();
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSwitchOn, setIsSwitchOn] = useState<boolean>(true);
 
   // Only fetch data when the user is authenticated
   /**
@@ -45,10 +42,8 @@ export default function WorkflowsPage() {
           ->last_execution_started: Used for showing the start time of execution in real-time.
   **/
   const { data, error, isLoading } = useSWR<Workflow[]>(
-    status === "authenticated"
-      ? `${apiUrl}/workflows?is_v2=${isSwitchOn}`
-      : null,
-    (url: string) => fetcher(url, session?.accessToken!)
+    api.isReady() ? `/workflows?is_v2=true` : null,
+    (url: string) => api.get(url)
   );
 
   /**
@@ -63,8 +58,8 @@ export default function WorkflowsPage() {
     error: mockError,
     isLoading: mockLoading,
   } = useSWR<MockWorkflow[]>(
-    status === "authenticated" ? `${apiUrl}/workflows/random-templates` : null,
-    (url: string) => fetcher(url, session?.accessToken!)
+    api.isReady() ? `/workflows/random-templates` : null,
+    (url: string) => api.get(url)
   );
 
   if (isLoading || !data) return <Loading />;
@@ -85,31 +80,24 @@ export default function WorkflowsPage() {
   const onDrop = async (files: any) => {
     const fileUpload = async (formData: FormData, reload: boolean) => {
       try {
-        const response = await fetch(`${apiUrl}/workflows`, {
+        const response = await api.request(`/workflows`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
           body: formData,
         });
 
-        if (response.ok) {
-          setFileError(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-          if (reload) {
-            window.location.reload();
-          }
-        } else {
-          const errorMessage = await response.text();
-          setFileError(errorMessage);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
+        setFileError(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        if (reload) {
+          window.location.reload();
         }
       } catch (error) {
-        setFileError("An error occurred during file upload");
+        if (error instanceof KeepApiError) {
+          setFileError(error.message);
+        } else {
+          setFileError("An error occurred during file upload");
+        }
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -184,10 +172,6 @@ export default function WorkflowsPage() {
     onDrop(event as any);
     setIsModalOpen(false);
   }
-
-  const handleSwitchChange = (value: boolean) => {
-    setIsSwitchOn(value);
-  };
 
   return (
     <main className="pt-4">
@@ -278,30 +262,9 @@ export default function WorkflowsPage() {
       </div>
       <Card className="mt-10 p-4 md:p-10 mx-auto w-full">
         <div>
-          {/*switch to toggle between new UI and old UI */}
-          <div className="pl-4 flex items-center space-x-3">
-            <Switch
-              id="switch"
-              name="switch"
-              checked={isSwitchOn}
-              onChange={handleSwitchChange}
-            />
-            <label
-              htmlFor="switch"
-              className="text-tremor-default text-tremor-content dark:text-dark-tremor-content"
-            >
-              Switch to New UI
-            </label>
-          </div>
           <div>
             {data.length === 0 ? (
-              <WorkflowsEmptyState isNewUI={isSwitchOn} />
-            ) : !isSwitchOn ? (
-              <div className="flex flex-wrap gap-2">
-                {data.map((workflow) => (
-                  <WorkflowTileOld key={workflow.id} workflow={workflow} />
-                ))}
-              </div>
+              <WorkflowsEmptyState isNewUI={true} />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full gap-4 p-4">
                 {data.map((workflow) => (
@@ -309,13 +272,12 @@ export default function WorkflowsPage() {
                 ))}
               </div>
             )}
-            {isSwitchOn && (
-              <MockWorkflowCardSection
-                mockWorkflows={mockWorkflows || []}
-                mockError={mockError}
-                mockLoading={mockLoading}
-              />
-            )}
+
+            <MockWorkflowCardSection
+              mockWorkflows={mockWorkflows || []}
+              mockError={mockError}
+              mockLoading={mockLoading}
+            />
           </div>
         </div>
       </Card>

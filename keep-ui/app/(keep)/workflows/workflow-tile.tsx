@@ -1,8 +1,6 @@
 "use client";
 
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { Workflow, Filter } from "./models";
-import { useApiUrl } from "utils/hooks/useConfig";
+import { Workflow } from "./models";
 import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -41,6 +39,7 @@ import {
 } from "react-icons/md";
 import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 function WorkflowMenuSection({
   onDelete,
@@ -264,16 +263,13 @@ export const ProvidersCarousel = ({
 };
 
 function WorkflowTile({ workflow }: { workflow: Workflow }) {
+  const api = useApi();
   // Create a set to keep track of unique providers
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
     null
   );
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const [openTriggerModal, setOpenTriggerModal] = useState<boolean>(false);
   const alertSource = workflow?.triggers
@@ -293,40 +289,19 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
     // prepopulate it with the name
-    setFormValues({ provider_name: provider.details.name || "" });
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
     setSelectedProvider(null);
-    setFormValues({});
-    setFormErrors({});
-  };
-  // Function to handle form change
-  const handleFormChange = (
-    updatedFormValues: Record<string, string>,
-    updatedFormErrors: Record<string, string>
-  ) => {
-    setFormValues(updatedFormValues);
-    setFormErrors(updatedFormErrors);
   };
 
   const handleDeleteClick = async () => {
     try {
-      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-
-      if (response.ok) {
-        // Workflow deleted successfully
-        window.location.reload();
-      } else {
-        console.error("Failed to delete workflow");
-      }
+      await api.delete(`/workflows/${workflow.id}`);
+      // Workflow deleted successfully
+      window.location.reload();
     } catch (error) {
       console.error("An error occurred while deleting workflow", error);
     }
@@ -672,9 +647,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             {selectedProvider && (
               <ProviderForm
                 provider={selectedProvider}
-                formData={formValues}
-                formErrorsData={formErrors}
-                onFormChange={handleFormChange}
                 onConnectChange={handleConnecting}
                 closeModal={handleCloseModal}
                 installedProvidersMode={selectedProvider.installed}
@@ -719,16 +691,13 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
 }
 
 export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
+  const api = useApi();
   // Create a set to keep track of unique providers
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
   const router = useRouter();
   const [openPanel, setOpenPanel] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<FullProvider | null>(
     null
   );
-  const [formValues, setFormValues] = useState<{ [key: string]: string }>({});
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   const { providers } = useFetchProviders();
   const {
@@ -741,41 +710,20 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
 
   const handleConnectProvider = (provider: FullProvider) => {
     setSelectedProvider(provider);
-    // prepopulate it with the name
-    setFormValues({ provider_name: provider.details.name || "" });
     setOpenPanel(true);
   };
 
   const handleCloseModal = () => {
     setOpenPanel(false);
     setSelectedProvider(null);
-    setFormValues({});
-    setFormErrors({});
-  };
-  // Function to handle form change
-  const handleFormChange = (
-    updatedFormValues: Record<string, string>,
-    updatedFormErrors: Record<string, string>
-  ) => {
-    setFormValues(updatedFormValues);
-    setFormErrors(updatedFormErrors);
   };
 
   const handleDeleteClick = async () => {
     try {
-      const response = await fetch(`${apiUrl}/workflows/${workflow.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
+      await api.delete(`/workflows/${workflow.id}`);
 
-      if (response.ok) {
-        // Workflow deleted successfully
-        window.location.reload();
-      } else {
-        console.error("Failed to delete workflow");
-      }
+      // Workflow deleted successfully
+      window.location.reload();
     } catch (error) {
       console.error("An error occurred while deleting workflow", error);
     }
@@ -1011,9 +959,6 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
           {selectedProvider && (
             <ProviderForm
               provider={selectedProvider}
-              formData={formValues}
-              formErrorsData={formErrors}
-              onFormChange={handleFormChange}
               onConnectChange={handleConnecting}
               closeModal={handleCloseModal}
               installedProvidersMode={selectedProvider.installed}

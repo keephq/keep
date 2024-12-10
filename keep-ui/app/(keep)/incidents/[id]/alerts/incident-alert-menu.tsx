@@ -1,60 +1,48 @@
-import { Button, Icon } from "@tremor/react";
+import { Badge } from "@tremor/react";
 import { AlertDto } from "@/app/(keep)/alerts/models";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { toast } from "react-toastify";
-import { useApiUrl } from "utils/hooks/useConfig";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
-import { LinkSlashIcon } from "@heroicons/react/24/outline";
+import { LiaUnlinkSolid } from "react-icons/lia";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 interface Props {
   incidentId: string;
   alert: AlertDto;
 }
 export default function IncidentAlertMenu({ incidentId, alert }: Props) {
-  const apiUrl = useApiUrl();
-  const { data: session } = useSession();
+  const api = useApi();
   const { mutate } = useIncidentAlerts(incidentId);
 
   function onRemove() {
     if (confirm("Are you sure you want to remove correlation?")) {
-      fetch(`${apiUrl}/incidents/${incidentId}/alerts`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify([alert.event_id]),
-      }).then((response) => {
-        if (response.ok) {
+      api
+        .delete(`/incidents/${incidentId}/alerts`, {
+          body: [alert.fingerprint],
+        })
+        .then(() => {
           toast.success("Alert removed from incident successfully", {
             position: "top-right",
           });
           mutate();
-        } else {
-          toast.error(
-            "Failed to remove alert from incident, please contact us if this issue persists.",
-            {
-              position: "top-right",
-            }
-          );
-        }
-      });
+        })
+        .catch((error: any) => {
+          showErrorToast(error, "Failed to remove alert from incident");
+        });
     }
   }
 
   return (
-    <div className="">
-      <Button
-        variant="light"
-        size="xs"
-        icon={LinkSlashIcon}
+    <div className="flex flex-col">
+      <Badge
+        icon={LiaUnlinkSolid}
         color="red"
         tooltip="Remove correlation"
         className="cursor-pointer"
         onClick={onRemove}
       >
-        Remove correlation
-      </Button>
+        Unlink
+      </Badge>
     </div>
   );
 }

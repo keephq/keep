@@ -1,8 +1,6 @@
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { useApiUrl } from "./useConfig";
 import useSWR from "swr";
-import { fetcher } from "@/utils/fetcher";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useApi } from "@/shared/lib/hooks/useApi";
 
 export interface MetricsWidget {
   id: string;
@@ -23,20 +21,16 @@ interface DashboardDistributionData {
 }
 
 export const useDashboardMetricWidgets = (useFilters?: boolean) => {
-  const { data: session } = useSession();
-  const apiUrl = useApiUrl();
+  const api = useApi();
   const searchParams = useSearchParams();
   const filters = searchParams?.toString();
 
   const { data, error, mutate } = useSWR<DashboardDistributionData>(
-    session
-      ? `${apiUrl}/dashboard/metric-widgets${
-          useFilters && filters ? `?${filters}` : ""
-        }`
+    api.isReady()
+      ? `/dashboard/metric-widgets${useFilters && filters ? `?${filters}` : ""}`
       : null,
-    (url: string) => fetcher(url, session!.accessToken)
+    (url: string) => api.get(url)
   );
-  console.log(filters);
 
   let widgets: MetricsWidget[] = [];
   if (data) {

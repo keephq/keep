@@ -1,16 +1,13 @@
-import { Dispatch, SetStateAction } from "react";
 import {
+  Definition as FlowDefinition,
   ReactFlowDefinition,
   V2Step,
-  Definition as FlowDefinition,
   V2Properties,
-} from "./builder-store";
+} from "@/app/(keep)/workflows/builder/types";
 import {
   getSchemaByStepType,
   getWorkflowPropertiesSchema,
-  requiredMap,
 } from "./utils";
-import _ from "lodash";
 
 export function globalValidatorV2(
   definition: FlowDefinition,

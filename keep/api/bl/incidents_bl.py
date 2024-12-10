@@ -12,13 +12,13 @@ from sqlmodel import Session
 from keep.api.arq_pool import get_pool
 from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
+    create_incident_from_dto,
     delete_incident_by_id,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
-    create_incident_from_dto,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import IncidentDto, IncidentDtoIn
@@ -36,7 +36,6 @@ if ee_enabled:
         str(pathlib.Path(__file__).parent.resolve()) + "/../../../ee/experimental"
     )
     sys.path.insert(0, path_with_ee)
-    from ee.experimental.incident_utils import ALGORITHM_VERBOSE_NAME  # noqa
 else:
     ALGORITHM_VERBOSE_NAME = NotImplemented
 
@@ -94,51 +93,51 @@ class IncidentBl:
         return new_incident_dto
 
     async def add_alerts_to_incident(
-        self, incident_id: UUID, alert_ids: List[UUID]
+        self, incident_id: UUID, alert_fingerprints: List[str], is_created_by_ai: bool = False
     ) -> None:
         self.logger.info(
             "Adding alerts to incident",
-            extra={"incident_id": incident_id, "alert_ids": alert_ids},
+            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
         incident = get_incident_by_id(tenant_id=self.tenant_id, incident_id=incident_id)
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
-        add_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_ids)
+        add_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_fingerprints, is_created_by_ai)
         self.logger.info(
             "Alerts added to incident",
-            extra={"incident_id": incident_id, "alert_ids": alert_ids},
+            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
-        self.__update_elastic(incident_id, alert_ids)
+        self.__update_elastic(incident_id, alert_fingerprints)
         self.logger.info(
             "Alerts pushed to elastic",
-            extra={"incident_id": incident_id, "alert_ids": alert_ids},
+            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
         self.__update_client_on_incident_change(incident_id)
         self.logger.info(
             "Client updated on incident change",
-            extra={"incident_id": incident_id, "alert_ids": alert_ids},
+            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
         incident_dto = IncidentDto.from_db_incident(incident)
         self.__run_workflows(incident_dto, "updated")
         self.logger.info(
             "Workflows run on incident",
-            extra={"incident_id": incident_id, "alert_ids": alert_ids},
+            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
         await self.__generate_summary(incident_id, incident)
         self.logger.info(
             "Summary generated",
-            extra={"incident_id": incident_id, "alert_ids": alert_ids},
+            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
 
-    def __update_elastic(self, incident_id: UUID, alert_ids: List[UUID]):
+    def __update_elastic(self, incident_id: UUID, alert_fingerprints: List[str]):
         try:
             elastic_client = ElasticClient(self.tenant_id)
             if elastic_client.enabled:
                 db_alerts, _ = get_incident_alerts_by_incident_id(
                     tenant_id=self.tenant_id,
                     incident_id=incident_id,
-                    limit=len(alert_ids),
+                    limit=len(alert_fingerprints),
                 )
                 enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
                     db_alerts, with_incidents=True
@@ -193,7 +192,6 @@ class IncidentBl:
                 self.logger.info(
                     f"Summary generation for incident {incident_id} scheduled, job: {job}",
                     extra={
-                        "algorithm": ALGORITHM_VERBOSE_NAME,
                         "tenant_id": self.tenant_id,
                         "incident_id": incident_id,
                     },
@@ -205,7 +203,7 @@ class IncidentBl:
             )
 
     def delete_alerts_from_incident(
-        self, incident_id: UUID, alert_ids: List[UUID]
+        self, incident_id: UUID, alert_fingerprints: List[str]
     ) -> None:
         self.logger.info(
             "Fetching incident",
@@ -218,7 +216,7 @@ class IncidentBl:
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
-        remove_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_ids)
+        remove_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_fingerprints)
 
     def delete_incident(self, incident_id: UUID) -> None:
         self.logger.info(

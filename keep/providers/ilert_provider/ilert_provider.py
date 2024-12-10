@@ -16,6 +16,7 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.providers_factory import ProvidersFactory
+from keep.validation.fields import HttpsUrl
 
 
 class IlertIncidentStatus(str, enum.Enum):
@@ -43,11 +44,12 @@ class IlertProviderAuthConfig:
             "sensitive": True,
         }
     )
-    ilert_host: str = dataclasses.field(
+    ilert_host: HttpsUrl = dataclasses.field(
         metadata={
             "required": False,
             "description": "ILert API host",
             "hint": "https://api.ilert.com/api",
+            "validation": "https_url"
         },
         default="https://api.ilert.com/api",
     )
@@ -104,16 +106,31 @@ class IlertProvider(BaseProvider):
         for scope in self.PROVIDER_SCOPES:
             try:
                 if scope.name == "read_permission":
-                    requests.get(
+                    res = requests.get(
                         f"{self.authentication_config.ilert_host}/incidents",
                         headers={
                             "Authorization": self.authentication_config.ilert_token
                         },
                     )
+                    res.raise_for_status()
                     scopes[scope.name] = True
                 elif scope.name == "write_permission":
-                    # TODO: find a way to validate write_permissions, for now it is always "validated" sucessfully.
-                    scopes[scope.name] = True
+                    res = requests.get(
+                        f"{self.authentication_config.ilert_host}/users/current",
+                        headers={
+                            "Authorization": self.authentication_config.ilert_token
+                        },
+                        timeout=10
+                    )
+                    res.raise_for_status()
+                    data = res.json()
+                    if data['role'] not in ["USER", "ADMIN"]:
+                        warning_msg = f"User role '{data['role']}' has limited permissions"
+                        self.logger.warning(warning_msg)
+                        scopes[scope.name] = warning_msg
+                    else:
+                        self.logger.debug(f"Write permission validated successfully for role: {data['role']}")
+                        scopes[scope.name] = True
             except Exception as e:
                 self.logger.warning(
                     "Failed to validate scope",

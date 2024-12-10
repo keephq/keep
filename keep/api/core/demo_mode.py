@@ -7,9 +7,11 @@ import time
 from datetime import timezone
 from uuid import uuid4
 
+import aiohttp
 import requests
 from dateutil import parser
 from requests.models import PreparedRequest
+from sqlalchemy.util import asyncio
 
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -24,13 +26,16 @@ logging.config.dictConfig(CONFIG)
 logger = logging.getLogger(__name__)
 
 KEEP_LIVE_DEMO_MODE = os.environ.get("KEEP_LIVE_DEMO_MODE", "false").lower() == "true"
+GENERATE_DEDUPLICATIONS = False
+
+REQUESTS_QUEUE = asyncio.Queue()
 
 correlation_rules_to_create = [
     {
-        "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%mq%"}},
+        "sqlQuery": {"sql": "((name like :name_1))", "params": {"name_1": "%MQ%"}},
         "groupDescription": "This rule groups all alerts related to MQ.",
         "ruleName": "Message queue is getting filled up",
-        "celQuery": '(name.contains("mq"))',
+        "celQuery": '(name.contains("MQ"))',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
         "groupingCriteria": [],
@@ -39,16 +44,17 @@ correlation_rules_to_create = [
     },
     {
         "sqlQuery": {
-            "sql": "((name like :name_1) or (name = :name_2) or (name like :name_3))",
+            "sql": "((name like :name_1) or (name = :name_2) or (name like :name_3)) or (name = :name_4)",
             "params": {
-                "name_1": "%network_latency_high%",
-                "name_2": "high_cpu_usage",
-                "name_3": "%database_connection_failure%",
+                "name_1": "%NetworkLatencyHigh%",
+                "name_2": "HighCPUUsage",
+                "name_3": "%NetworkLatencyIsHigh%",
+                "name_4": "Failed to load product catalog",
             },
         },
         "groupDescription": "This rule groups alerts from multiple sources.",
         "ruleName": "Application issue caused by DB load",
-        "celQuery": '(name.contains("network_latency_high")) || (name == "high_cpu_usage") || (name.contains("database_connection_failure"))',
+        "celQuery": '(name.contains("NetworkLatencyHigh")) || (name == "HighCPUUsage") || (name.contains("NetworkLatencyIsHigh")) || (name == "Failed to load product catalog")',
         "timeframeInSeconds": 86400,
         "timeUnit": "hours",
         "groupingCriteria": [],
@@ -304,31 +310,149 @@ def get_installed_providers(keep_api_key, keep_api_url):
         headers={"x-api-key": keep_api_key},
     )
     response.raise_for_status()
-    return response.json()['installed_providers']
+    return response.json()["installed_providers"]
 
 
-def simulate_alerts(
+def perform_demo_ai(keep_api_key, keep_api_url):
+    # Get or create manual Incident
+    incidents_existing = requests.get(
+        f"{keep_api_url}/incidents",
+        headers={"x-api-key": keep_api_key},
+    ) 
+    incidents_existing.raise_for_status()
+    incidents_existing = incidents_existing.json()["items"]
+
+    MANUAL_INCIDENT_NAME = "GPU Cluster issue"
+
+    incident_exists = None
+
+    # Create incident if it doesn't exist 
+
+    for incident in incidents_existing:
+        if incident["user_generated_name"] == MANUAL_INCIDENT_NAME:
+            incident_exists = incident
+
+    if incident_exists is None:
+        response = requests.post(
+            f"{keep_api_url}/incidents",
+            headers={"x-api-key": keep_api_key},
+            json={
+                "user_generated_name": MANUAL_INCIDENT_NAME,
+                "user_summary": "While two other incidents are created because of correlation rules, this incident is created manually and only a few alerts are added to it. AI will correlated it with the rest of alerts automatically.",
+                "severity": "critical",
+                "status": "open",
+                "environment": "prod",
+                "service": "api",
+                "application": "Main App",
+                "description": "This is a manual incident.",
+            },
+        )
+        response.raise_for_status()
+
+    random_number = random.randint(1, 100)
+    if random_number > 90:
+        return
+
+    # Publish alert
+
+    FAKE_ALERT_NAMES = [
+        "HighGPUConsumption",
+        "NotMuchGPUMemoryLeft",
+        "GPUServiceError",
+    ]
+    name = random.choice(FAKE_ALERT_NAMES)
+
+    DESCRIPTIONS = {
+        "HighGPUConsumption": "GPU usage is high",
+        "NotMuchGPUMemoryLeft": "GPU memory latency is high",
+        "GPUServiceError": "GPU service is probably unreachable",
+    }
+
+    response = requests.post(
+        f"{keep_api_url}/alerts/event",
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-API-KEY": keep_api_key,
+        },
+        json={
+            "name": name,
+            "source": ["prometheus"],
+            "description": DESCRIPTIONS[name],
+            "fingerprint": str(uuid4()),
+        },
+    )
+    response.raise_for_status()
+
+    # If incident has not many alerts, correlate
+
+    alerts_in_incident = requests.get(
+        f"{keep_api_url}/incidents/{incident_exists['id']}/alerts",
+        headers={"x-api-key": keep_api_key},
+    )
+    alerts_in_incident.raise_for_status()
+    alerts_in_incident = alerts_in_incident.json()
+
+
+    if len(alerts_in_incident['items']) < 20:
+        alerts_existing = requests.get(
+            f"{keep_api_url}/alerts",
+            headers={"x-api-key": keep_api_key},
+        )
+        alerts_existing.raise_for_status()
+        alerts_existing = alerts_existing.json()
+        fingerprints_to_add = []
+        for alert in alerts_existing:
+            if alert["name"] in FAKE_ALERT_NAMES:
+                fingerprints_to_add.append(alert["fingerprint"])
+
+        if len(fingerprints_to_add) > 0:
+            fingerprints_to_add = fingerprints_to_add[:10]
+            
+            response = requests.post(
+                f"{keep_api_url}/incidents/{incident_exists['id']}/alerts",
+                headers={"x-api-key": keep_api_key},
+                json=fingerprints_to_add,
+            )
+            response.raise_for_status()
+
+
+def simulate_alerts(*args, **kwargs):
+    asyncio.create_task(simulate_alerts_worker(0, keep_api_key, 0))
+    asyncio.run(simulate_alerts_async(*args, **kwargs))
+
+
+async def simulate_alerts_async(
     keep_api_url=None,
     keep_api_key=None,
     sleep_interval=5,
     demo_correlation_rules=False,
     demo_topology=False,
     clean_old_incidents=False,
+    demo_ai=False,
+    target_rps=0
 ):
     logger.info("Simulating alerts...")
-    
-    GENERATE_DEDUPLICATIONS = True
 
-    providers = [
-        "prometheus",
-        "grafana",
-        "cloudwatch",
-        "datadog",
+    providers_config = [
+        {"type": "prometheus", "weight": 3},
+        {"type": "grafana", "weight": 1},
+        {"type": "cloudwatch", "weight": 1},
+        {"type": "datadog", "weight": 1},
+        {"type": "sentry", "weight": 2},
+        # {"type": "signalfx", "weight": 1},
+        {"type": "gcpmonitoring", "weight": 1},
     ]
 
+    # Normalize weights
+    total_weight = sum(p["weight"] for p in providers_config)
+    normalized_weights = [p["weight"] / total_weight for p in providers_config]
+
+    providers = [p["type"] for p in providers_config]
+
     providers_to_randomize_fingerprint_for = [
-        "cloudwatch",
-        "datadog",
+        # "cloudwatch",
+        # "datadog",
     ]
 
     provider_classes = {
@@ -341,9 +465,13 @@ def simulate_alerts(
     existing_providers_to_their_ids = {}
 
     for existing_provider in existing_installed_providers:
-        if existing_provider['type'] in providers:
-            existing_providers_to_their_ids[existing_provider['type']] = existing_provider['id']
-    logger.info(f"Existing installed existing_providers_to_their_ids: {existing_providers_to_their_ids}")
+        if existing_provider["type"] in providers:
+            existing_providers_to_their_ids[existing_provider["type"]] = (
+                existing_provider["id"]
+            )
+    logger.info(
+        f"Existing installed existing_providers_to_their_ids: {existing_providers_to_their_ids}"
+    )
 
     if demo_correlation_rules:
         logger.info("Creating correlation rules...")
@@ -355,6 +483,7 @@ def simulate_alerts(
         get_or_create_topology(keep_api_key, keep_api_url)
         logger.info("Topology created.")
 
+    shoot = 1
     while True:
         try:
             logger.info("Looping to send alerts...")
@@ -364,54 +493,61 @@ def simulate_alerts(
                 remove_old_incidents(keep_api_key, keep_api_url)
                 logger.info("Old incidents removed.")
 
-            send_alert_url_params = {}
+            if demo_ai:
+                perform_demo_ai(keep_api_key, keep_api_url)
 
-            # choose provider
-            provider_type = random.choice(providers)
-            send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
+            # If we want to make stress-testing, we want to prepare more data for faster requesting in workers
+            if target_rps:
+                shoot = target_rps * 100
 
-            if provider_type in existing_providers_to_their_ids:
-                send_alert_url_params["provider_id"] = existing_providers_to_their_ids[provider_type]
-            logger.info(f"Provider type: {provider_type}, send_alert_url_params now are: {send_alert_url_params}")
+            for _ in range(shoot):
 
-            provider = provider_classes[provider_type]
-            alert = provider.simulate_alert()
+                send_alert_url_params = {}
 
-            if provider_type in providers_to_randomize_fingerprint_for:
-                send_alert_url_params["fingerprint"] = str(uuid4())
+                # choose provider based on weights
+                provider_type = random.choices(providers, weights=normalized_weights, k=1)[0]
+                send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
 
-            # Determine number of times to send the same alert
-            num_iterations = 1
-            if GENERATE_DEDUPLICATIONS:
-                num_iterations = random.randint(1, 3)
+                if provider_type in existing_providers_to_their_ids:
+                    send_alert_url_params["provider_id"] = existing_providers_to_their_ids[
+                        provider_type
+                    ]
+                logger.info(
+                    f"Provider type: {provider_type}, send_alert_url_params now are: {send_alert_url_params}"
+                )
 
-            for _ in range(num_iterations):
-                logger.info("Sending alert: {}".format(alert))
-                try:
-                    env = random.choice(["production", "staging", "development"])
+                provider = provider_classes[provider_type]
+                alert = provider.simulate_alert()
 
-                    if "provider_id" not in send_alert_url_params:
-                        send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
+                if provider_type in providers_to_randomize_fingerprint_for:
+                    send_alert_url_params["fingerprint"] = str(uuid4())
+
+                # Determine number of times to send the same alert
+                num_iterations = 1
+                if GENERATE_DEDUPLICATIONS:
+                    num_iterations = random.randint(1, 3)
+
+                env = random.choice(["production", "staging", "development"])
+
+                if "provider_id" not in send_alert_url_params:
+                    send_alert_url_params["provider_id"] = f"{provider_type}-{env}"
+                else:
+                    alert["environment"] = random.choice(
+                        ["prod-01", "prod-02", "prod-03"]
+                    )
+
+                for _ in range(num_iterations):
 
                     prepared_request = PreparedRequest()
                     prepared_request.prepare_url(send_alert_url, send_alert_url_params)
-                    logger.info(f"Sending alert to {prepared_request.url} with url params {send_alert_url_params}")
+                    await REQUESTS_QUEUE.put((prepared_request.url, alert))
+                    if not target_rps:
+                        await asyncio.sleep(sleep_interval)
 
-                    response = requests.post(
-                        prepared_request.url,
-                        headers={"x-api-key": keep_api_key},
-                        json=alert,
-                    )
-                    response.raise_for_status()
-                except requests.exceptions.RequestException as e:
-                    logger.error("Failed to send alert: {}".format(e))
-                    time.sleep(sleep_interval)
-                    continue
+            # Wait until almost prepopulated data was consumed
+            while not REQUESTS_QUEUE.empty():
+                await asyncio.sleep(sleep_interval)
 
-                if not response.ok:
-                    logger.error("Failed to send alert: {}".format(response.text))
-                else:
-                    logger.info("Alert sent successfully")
         except Exception as e:
             logger.exception(
                 "Error in simulate_alerts", extra={"exception_str": str(e)}
@@ -420,14 +556,16 @@ def simulate_alerts(
         logger.info(
             "Sleeping for {} seconds before next iteration".format(sleep_interval)
         )
-        time.sleep(sleep_interval)
+        await asyncio.sleep(sleep_interval)
 
 
-def launch_demo_mode_thread(keep_api_url=None, keep_api_key=None) -> threading.Thread | None:
+def launch_demo_mode_thread(
+    keep_api_url=None, keep_api_key=None
+) -> threading.Thread | None:
     if not KEEP_LIVE_DEMO_MODE:
         logger.info("Not launching the demo mode.")
         return
-    
+
     logger.info("Launching demo mode.")
 
     if keep_api_key is None:
@@ -451,6 +589,7 @@ def launch_demo_mode_thread(keep_api_url=None, keep_api_key=None) -> threading.T
             "demo_correlation_rules": True,
             "demo_topology": True,
             "clean_old_incidents": True,
+            "demo_ai": True,
         },
     )
     thread.daemon = True
@@ -458,3 +597,41 @@ def launch_demo_mode_thread(keep_api_url=None, keep_api_key=None) -> threading.T
 
     logger.info("Demo mode launched.")
     return thread
+
+
+async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
+
+    headers = {"x-api-key": keep_api_key, "Content-type": "application/json"}
+
+    async with aiohttp.ClientSession() as session:
+        total_start = time.time()
+        total_requests = 0
+        while True:
+            start = time.time()
+            url, alert = await REQUESTS_QUEUE.get()
+
+            async with session.post(url, json=alert, headers=headers) as response:
+                total_requests += 1
+                if not response.ok:
+                    logger.error("Failed to send alert: {}".format(response.text))
+                else:
+                    logger.info("Alert sent successfully")
+
+            if rps:
+                delay = 1/rps - (time.time() - start)
+                if delay > 0:
+                    logger.debug('worker %d sleeps, %f', worker_id, delay)
+                    await asyncio.sleep(delay)
+            logger.info('Worker %d RPS: %.2f', worker_id, total_requests / (time.time() - total_start))
+
+
+if __name__ == "__main__":
+    keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
+    keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
+    get_or_create_correlation_rules(keep_api_key, keep_api_url)
+    simulate_alerts(
+        keep_api_url=keep_api_url,
+        keep_api_key=keep_api_key,
+        sleep_interval=1,
+        demo_correlation_rules=True,
+    )

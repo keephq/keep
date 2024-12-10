@@ -2,8 +2,7 @@
 
 import { ApplicationCard } from "./application-card";
 import { Button } from "@/components/ui";
-import { toast } from "react-toastify";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   useTopologyApplications,
   TopologyApplication,
@@ -14,6 +13,7 @@ import {
   useTopologySearchContext,
 } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 type ModalState = {
   isOpen: boolean;
@@ -66,7 +66,7 @@ export function ApplicationsList({
       updateApplication(updatedApplication).then(
         () => {},
         (error) => {
-          toast.error("Failed to update application");
+          showErrorToast(error, "Failed to update application");
         }
       );
     },
@@ -79,7 +79,7 @@ export function ApplicationsList({
         removeApplication(applicationId);
         setModalState(initialModalState);
       } catch (error) {
-        toast.error("Failed to delete application");
+        showErrorToast(error, "Failed to delete application");
       }
     },
     [removeApplication]

@@ -59,6 +59,14 @@ class PagerdutyProviderAuthConfig:
         },
         default="",
     )
+    service_id: str | None = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Service Id (if provided, keep will only operate on this service)",
+            "sensitive": False,
+        },
+        default=None,
+    )
 
 
 class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
@@ -420,9 +428,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         self,
         service_id: str,
         title: str,
-        body: dict,
+        body: dict | str,
         requester: str,
         incident_key: str | None = None,
+        priority: str = "",
     ):
         """Triggers an incident via the V2 REST API using sample data."""
 
@@ -431,6 +440,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         url = f"{self.BASE_API_URL}/incidents"
         headers = self.__get_headers(From=requester)
+
+        if isinstance(body, str):
+            body = json.loads(body)
+            if "details" in body and "type" not in body:
+                body["type"] = "incident_body"
 
         payload = {
             "incident": {
@@ -442,11 +456,25 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             }
         }
 
+        if priority:
+            payload["incident"]["priority"] = {
+                "id": priority,
+                "type": "priority_reference",
+            }
+
         r = requests.post(url, headers=headers, data=json.dumps(payload))
-        r.raise_for_status()
-        response = r.json()
-        self.logger.info("Incident triggered")
-        return response
+        try:
+            r.raise_for_status()
+            response = r.json()
+            self.logger.info("Incident triggered")
+            return response
+        except Exception as e:
+            self.logger.error(
+                "Failed to trigger incident",
+                extra={"response_text": r.text},
+            )
+            # This will give us a better error message in Keep workflows
+            raise Exception(r.text) from e
 
     def dispose(self):
         """
@@ -505,7 +533,14 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                     "incident.triggered",
                     "incident.unacknowledged",
                 ],
-                "filter": {"type": "account_reference"},
+                "filter": (
+                    {
+                        "type": "service_reference",
+                        "id": self.authentication_config.service_id,
+                    }
+                    if self.authentication_config.service_id
+                    else {"type": "account_reference"}
+                ),
             },
         }
         if webhook_exists:
@@ -540,6 +575,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
         event_type: typing.Literal["trigger", "acknowledge", "resolve"] | None = None,
         severity: typing.Literal["critical", "error", "warning", "info"] | None = None,
         source: str = "custom_event",
+        priority: str = "",
         **kwargs: dict,
     ):
         """
@@ -561,19 +597,14 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             )
         else:
             return self._trigger_incident(
-                service_id, title, alert_body, requester, incident_id
+                service_id, title, alert_body, requester, incident_id, priority
             )
 
     def _query(self, incident_id: str = None):
-        incidents = self.__get_all_incidents_or_alerts()
-        return (
-            next(
-                [incident for incident in incidents if incident.id == incident_id],
-                None,
-            )
-            if incident_id
-            else incidents
-        )
+        if incident_id:
+            return self._get_specific_incident(incident_id)
+        else:
+            return self.__get_all_incidents_or_alerts()
 
     @staticmethod
     def _format_alert(
@@ -583,7 +614,11 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
     ) -> AlertDto:
         # If somebody connected the provider before we refactored it
         old_format_event = event.get("event", {})
-        if old_format_event is not None and isinstance(old_format_event, dict):
+        if (
+            old_format_event is not None
+            and isinstance(old_format_event, dict)
+            and not force_new_format
+        ):
             return PagerdutyProvider._format_alert_old(event)
 
         status = PagerdutyProvider.ALERT_STATUS_MAP.get(event.get("status", "firing"))
@@ -666,6 +701,28 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             labels=metadata,
         )
 
+    def _get_specific_incident(self, incident_id: str):
+        self.logger.info("Getting Incident", extra={"incident_id": incident_id})
+        url = f"{self.BASE_API_URL}/incidents/{incident_id}"
+        params = {
+            "include[]": [
+                "acknowledgers",
+                "agents",
+                "assignees",
+                "conference_bridge",
+                "custom_fields",
+                "escalation_policies",
+                "first_trigger_log_entries",
+                "priorities",
+                "services",
+                "teams",
+                "users",
+            ]
+        }
+        response = requests.get(url, headers=self.__get_headers(), params=params)
+        response.raise_for_status()
+        return response.json()
+
     def __get_all_incidents_or_alerts(self, incident_id: str = None):
         self.logger.info(
             "Getting incidents or alerts", extra={"incident_id": incident_id}
@@ -681,14 +738,17 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                     url += f"/{incident_id}/alerts"
                     include = ["teams", "services"]
                     resource = "alerts"
+                params = {
+                    "include[]": include,
+                    "offset": offset,
+                    "limit": 100,
+                }
+                if not incident_id and self.authentication_config.service_id:
+                    params["service_ids[]"] = [self.authentication_config.service_id]
                 response = requests.get(
                     url=url,
                     headers=self.__get_headers(),
-                    params={
-                        "include[]": include,
-                        "offset": offset,
-                        "limit": 100,
-                    },
+                    params=params,
                 )
                 response.raise_for_status()
                 response = response.json()
@@ -699,7 +759,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             paginated_response.extend(response.get(resource, []))
             self.logger.info("Fetched incidents or alerts", extra={"offset": offset})
             # No more results
-            if response.get("more", False) == False:
+            if not response.get("more", False):
                 self.logger.info("No more incidents or alerts")
                 break
         self.logger.info(

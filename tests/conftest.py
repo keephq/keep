@@ -16,6 +16,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session, create_engine
 from starlette_context import context, request_cycle_context
 
+from keep.api.core.db import set_last_alert
 # This import is required to create the tables
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
@@ -243,7 +244,8 @@ actions:
     session.commit()
 
     with patch("keep.api.core.db.engine", mock_engine):
-        yield session
+        with patch("keep.api.core.db_utils.create_db_engine", return_value=mock_engine):
+            yield session
 
     import logging
 
@@ -281,7 +283,6 @@ def is_keycloak_responsive(host, port, user, password):
         # Try to connect to Keycloak
         from keycloak import KeycloakAdmin
 
-        print(KeycloakAdmin)
         keycloak_admin = KeycloakAdmin(
             server_url=f"http://{host}:{port}/auth/admin",
             username=user,
@@ -333,6 +334,7 @@ def is_elastic_responsive(host, port, user, password):
             basic_auth=(user, password),
         )
         info = elastic_client._client.info()
+        print("Elastic still up now")
         return True if info else False
     except Exception:
         print("Elastic still not up")
@@ -505,6 +507,35 @@ def setup_alerts(elastic_client, db_session, request):
         )
     db_session.add_all(alerts)
     db_session.commit()
+
+    existed_last_alerts = db_session.query(LastAlert).all()
+    existed_last_alerts_dict = {
+        last_alert.fingerprint: last_alert
+        for last_alert in existed_last_alerts
+    }
+
+    last_alerts = []
+    for alert in alerts:
+        if alert.fingerprint in existed_last_alerts_dict:
+            last_alert = existed_last_alerts_dict[alert.fingerprint]
+            last_alert.alert_id = alert.id
+            last_alert.timestamp = alert.timestamp
+            last_alerts.append(
+                last_alert
+            )
+        else:
+            last_alerts.append(
+                LastAlert(
+                    tenant_id=SINGLE_TENANT_UUID,
+                    fingerprint=alert.fingerprint,
+                    timestamp=alert.timestamp,
+                    first_timestamp=alert.timestamp,
+                    alert_id=alert.id,
+                )
+            )
+    db_session.add_all(last_alerts)
+    db_session.commit()
+
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
     elastic_client.index_alerts(alerts_dto)
@@ -547,6 +578,33 @@ def setup_stress_alerts_no_elastic(db_session):
         db_session.add_all(alerts)
         db_session.commit()
 
+        existed_last_alerts = db_session.query(LastAlert).all()
+        existed_last_alerts_dict = {
+            last_alert.fingerprint: last_alert
+            for last_alert in existed_last_alerts
+        }
+        last_alerts = []
+        for alert in alerts:
+            if alert.fingerprint in existed_last_alerts_dict:
+                last_alert = existed_last_alerts_dict[alert.fingerprint]
+                last_alert.alert_id = alert.id
+                last_alert.timestamp=alert.timestamp
+                last_alerts.append(
+                    last_alert
+                )
+            else:
+                last_alerts.append(
+                    LastAlert(
+                        tenant_id=SINGLE_TENANT_UUID,
+                        fingerprint=alert.fingerprint,
+                        timestamp=alert.timestamp,
+                        first_timestamp=alert.timestamp,
+                        alert_id=alert.id,
+                    )
+                )
+        db_session.add_all(last_alerts)
+        db_session.commit()
+
         return alerts
 
     return _setup_stress_alerts_no_elastic
@@ -559,7 +617,6 @@ def setup_stress_alerts(
     num_alerts = request.param.get(
         "num_alerts", 1000
     )  # Default to 1000 alerts if not specified
-
     alerts = setup_stress_alerts_no_elastic(num_alerts)
     # add all to elasticsearch
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
@@ -568,13 +625,13 @@ def setup_stress_alerts(
 
 @pytest.fixture
 def create_alert(db_session):
-    def _create_alert(fingerprint, status, timestamp, details=None):
+    def _create_alert(fingerprint, status, timestamp, details=None, tenant_id=SINGLE_TENANT_UUID):
         details = details or {}
         random_name = "test-{}".format(fingerprint)
         process_event(
             ctx={"job_try": 1},
             trace_id="test",
-            tenant_id=SINGLE_TENANT_UUID,
+            tenant_id=tenant_id,
             provider_id="test",
             provider_type=(
                 details["source"][0] if details and "source" in details and details["source"] else None
@@ -593,3 +650,65 @@ def create_alert(db_session):
         )
 
     return _create_alert
+
+
+def pytest_addoption(parser):
+    """
+    Adds configuration options for integration tests
+    """
+
+    parser.addoption(
+        "--integration", action="store_const", const=True,
+        dest="run_integration")
+    parser.addoption(
+        "--non-integration", action="store_const", const=True,
+        dest="run_non_integration")
+
+
+def pytest_configure(config):
+    """
+    Adds markers for integration tests
+    """
+    config.addinivalue_line(
+        "markers", "integration: mark test to run only if integrations tests enabled"
+    )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """
+    Checks whether tests should be skipped based on integration settings
+    """
+
+    run_integration = item.config.getoption("run_integration")
+    run_non_integration = item.config.getoption("run_non_integration")
+
+    if run_integration and run_non_integration is None:
+        run_non_integration = False
+    if run_non_integration and run_integration is None:
+        run_integration = False
+
+    if item.get_closest_marker("integration"):
+        if run_integration in (None, True):
+            return
+        pytest.skip("Integration tests skipped")
+    else:
+        if run_non_integration in (None, True):
+            return
+        pytest.skip("Non-Integration tests skipped")
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        fixturenames = getattr(item, "fixturenames", ())
+        if "elastic_client" in fixturenames:
+            item.add_marker("integration")
+        elif "keycloak_client" in fixturenames:
+            item.add_marker("integration")
+        elif (
+                hasattr(item, "callspec")
+                and "db_session" in item.callspec.params
+                and item.callspec.params["db_session"]
+                and "db" in item.callspec.params["db_session"]
+        ):
+            item.add_marker("integration")

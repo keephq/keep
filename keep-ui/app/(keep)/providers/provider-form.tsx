@@ -1,10 +1,11 @@
-// TODO: refactor this file and separate in to smaller components
-//  There's also a lot of s**t in here, but it works for now 🤷‍♂️
-// @ts-nocheck
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
-import { Provider } from "./providers";
-import { useApiUrl } from "utils/hooks/useConfig";
+import React, { useState, useMemo } from "react";
+import {
+  Provider,
+  ProviderAuthConfig,
+  ProviderFormData,
+  ProviderFormValue,
+  ProviderInputErrors,
+} from "./providers";
 import Image from "next/image";
 import {
   Title,
@@ -14,15 +15,7 @@ import {
   Icon,
   Subtitle,
   Divider,
-  TextInput,
-  Select,
-  SelectItem,
   Card,
-  Tab,
-  TabList,
-  TabGroup,
-  TabPanel,
-  TabPanels,
   Accordion,
   AccordionHeader,
   AccordionBody,
@@ -37,31 +30,37 @@ import {
   ArrowLongRightIcon,
   ArrowLongLeftIcon,
   ArrowTopRightOnSquareIcon,
-  ArrowDownOnSquareIcon,
   GlobeAltIcon,
   DocumentTextIcon,
-  PlusIcon,
-  TrashIcon,
 } from "@heroicons/react/24/outline";
-import { installWebhook } from "../../../utils/helpers";
 import { ProviderSemiAutomated } from "./provider-semi-automated";
 import ProviderFormScopes from "./provider-form-scopes";
 import Link from "next/link";
 import cookieCutter from "@boiseitguru/cookie-cutter";
 import { useSearchParams } from "next/navigation";
 import "./provider-form.css";
-import { useProviders } from "@/utils/hooks/useProviders";
-import TimeAgo from "react-timeago";
 import { toast } from "react-toastify";
+import { useProviders } from "@/utils/hooks/useProviders";
+import { getZodSchema } from "./form-validation";
+import TimeAgo from "react-timeago";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import {
+  base64urlencode,
+  generateRandomString,
+  sha256,
+} from "@/shared/lib/encodings";
+import {
+  FormField,
+  getConfigByMainGroup,
+  getOptionalConfigs,
+  getRequiredConfigs,
+  GroupFields,
+} from "./form-fields";
 
 type ProviderFormProps = {
   provider: Provider;
-  formData: Record<string, string>; // New prop for form data
-  formErrorsData: Record<string, string>; // New prop for form data
-  onFormChange?: (
-    formValues: Record<string, string>,
-    formErrors: Record<string, string>
-  ) => void;
   onConnectChange?: (isConnecting: boolean, isConnected: boolean) => void;
   closeModal: () => void;
   isProviderNameDisabled?: boolean;
@@ -69,79 +68,38 @@ type ProviderFormProps = {
   isLocalhost?: boolean;
 };
 
-function dec2hex(dec) {
-  return ("0" + dec.toString(16)).substr(-2);
-}
+function getInitialFormValues(provider: Provider) {
+  const initialValues: ProviderFormData = {
+    provider_id: provider.id,
+    install_webhook: provider.can_setup_webhook ?? false,
+    pulling_enabled: provider.pulling_enabled,
+  };
 
-function generateRandomString() {
-  var array = new Uint32Array(56 / 2);
-  window.crypto.getRandomValues(array);
-  return Array.from(array, dec2hex).join("");
-}
+  Object.assign(initialValues, {
+    provider_name: provider.details?.name,
+    ...provider.details?.authentication,
+  });
 
-function sha256(plain) {
-  // returns promise ArrayBuffer
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plain);
-  return window.crypto.subtle.digest("SHA-256", data);
-}
-
-function base64urlencode(a) {
-  var str = "";
-  var bytes = new Uint8Array(a);
-  var len = bytes.byteLength;
-  for (var i = 0; i < len; i++) {
-    str += String.fromCharCode(bytes[i]);
+  // Set default values for select & switch inputs
+  for (const [field, config] of Object.entries(provider.config)) {
+    if (field in initialValues) continue;
+    if (config.default === null) continue;
+    if (config.type && ["select", "switch"].includes(config.type))
+      initialValues[field] = config.default;
   }
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  return initialValues;
 }
 
-const DictInput = ({ name, value, onChange, error }) => {
-  const handleEntryChange = (index, field, newValue) => {
-    const newEntries = value.map((entry, i) =>
-      i === index ? { ...entry, [field]: newValue } : entry
-    );
-    onChange(newEntries);
-  };
-
-  const removeEntry = (index) => {
-    const newEntries = value.filter((_, i) => i !== index);
-    onChange(newEntries);
-  };
-
-  return (
-    <div>
-      {value.map((entry, index) => (
-        <div key={index} className="flex items-center mb-2">
-          <TextInput
-            value={entry.key}
-            onChange={(e) => handleEntryChange(index, "key", e.target.value)}
-            placeholder="Key"
-            className="mr-2"
-          />
-          <TextInput
-            value={entry.value}
-            onChange={(e) => handleEntryChange(index, "value", e.target.value)}
-            placeholder="Value"
-            className="mr-2"
-          />
-          <Button
-            icon={TrashIcon}
-            variant="secondary"
-            color="orange"
-            size="xs"
-            onClick={() => removeEntry(index)}
-          />
-        </div>
-      ))}
-    </div>
-  );
+const providerNameFieldConfig: ProviderAuthConfig = {
+  required: true,
+  description: "Provider Name",
+  placeholder: "Enter provider name",
+  default: null,
 };
 
 const ProviderForm = ({
   provider,
-  formData,
-  onFormChange,
   onConnectChange,
   closeModal,
   isProviderNameDisabled,
@@ -151,86 +109,80 @@ const ProviderForm = ({
   console.log("Loading the ProviderForm component");
   const { mutate } = useProviders();
   const searchParams = useSearchParams();
-  const [activeTabsState, setActiveTabsState] = useState({});
-  const initialData = {
-    provider_id: provider.id, // Include the provider ID in formValues
-    ...formData,
-  };
-  if (provider.can_setup_webhook) {
-    initialData["install_webhook"] = provider.can_setup_webhook;
-    if (provider.pulling_enabled) {
-      initialData["pulling_enabled"] = true;
-    }
-  }
-  const [formValues, setFormValues] = useState<{
-    [key: string]: string | boolean;
-  }>(() => {
-    const initialValues = {
-      provider_id: provider.id,
-      ...formData,
-    };
-
-    // Set default values for select inputs
-    Object.entries(provider.config).forEach(([configKey, method]) => {
-      if (
-        method.type === "select" &&
-        method.default &&
-        !initialValues[configKey]
-      ) {
-        initialValues[configKey] = method.default;
-      }
-    });
-
-    if (provider.can_setup_webhook) {
-      initialValues["install_webhook"] = provider.can_setup_webhook;
-      if (provider.pulling_enabled) {
-        initialValues["pulling_enabled"] = provider.pulling_enabled;
-      }
-    }
-    return initialValues;
-  });
-
-  const [formErrors, setFormErrors] = useState<string>(null);
-  const [inputErrors, setInputErrors] = useState<{ [key: string]: boolean }>(
-    {}
+  const [formValues, setFormValues] = useState<ProviderFormData>(() =>
+    getInitialFormValues(provider)
   );
+  const [formErrors, setFormErrors] = useState<string | null>(null);
+  const [inputErrors, setInputErrors] = useState<ProviderInputErrors>({});
   // Related to scopes
   const [providerValidatedScopes, setProviderValidatedScopes] = useState<{
     [key: string]: boolean | string;
   }>(provider.validatedScopes);
-  const [triggerRevalidateScope, setTriggerRevalidateScope] = useState(0);
   const [refreshLoading, setRefreshLoading] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
-  const inputFileRef = useRef(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const requiredConfigs = useMemo(
+    () => getRequiredConfigs(provider.config),
+    [provider]
+  );
+  const optionalConfigs = useMemo(
+    () => getOptionalConfigs(provider.config),
+    [provider]
+  );
+  const groupedConfigs = useMemo(
+    () => getConfigByMainGroup(provider.config),
+    [provider]
+  );
+  const zodSchema = useMemo(
+    () => getZodSchema(provider.config, provider.installed),
+    [provider]
+  );
 
-  const apiUrl = useApiUrl();
+  const api = useApi();
 
-  const { data: session } = useSession();
+  function installWebhook(provider: Provider) {
+    return toast.promise(
+      api
+        .post(`/providers/install/webhook/${provider.type}/${provider.id}`)
+        .catch((error) => Promise.reject({ data: error })),
+      {
+        pending: "Webhook installing 🤞",
+        success: `${provider.type} webhook installed 👌`,
+        error: {
+          render({ data }) {
+            // When the promise reject, data will contains the error
+            return `Webhook installation failed 😢 Error: ${
+              (data as any).message
+            }`;
+          },
+        },
+      },
+      {
+        position: toast.POSITION.TOP_LEFT,
+      }
+    );
+  }
 
-  const accessToken = session?.accessToken;
+  const callInstallWebhook = async () => await installWebhook(provider);
 
-  const callInstallWebhook = async (e: Event) => {
-    e.preventDefault();
-    await installWebhook(provider, accessToken!, apiUrl);
-  };
-
-  async function handleOauth(e: MouseEvent) {
-    e.preventDefault();
+  async function handleOauth() {
     const verifier = generateRandomString();
     cookieCutter.set("verifier", verifier);
-    cookieCutter.set("oauth2_install_webhook", formValues.install_webhook);
-    cookieCutter.set("oauth2_pulling_enabled", formValues.pulling_enabled);
+    cookieCutter.set(
+      "oauth2_install_webhook",
+      formValues.install_webhook?.toString() ?? "false"
+    );
+    cookieCutter.set(
+      "oauth2_pulling_enabled",
+      formValues.pulling_enabled?.toString() ?? "false"
+    );
     const verifierChallenge = base64urlencode(await sha256(verifier));
 
     let oauth2Url = provider.oauth2_url;
-    if (searchParams?.get("domain")) {
+    const domain = searchParams?.get("domain");
+    if (domain) {
       // TODO: this is a hack for Datadog OAuth2 since it can be initiated from different domains
-      oauth2Url = oauth2Url?.replace(
-        "datadoghq.com",
-        searchParams.get("domain")
-      );
+      oauth2Url = oauth2Url?.replace("datadoghq.com", domain);
     }
 
     let url = `${oauth2Url}&redirect_uri=${window.location.origin}/providers/oauth2/${provider.type}&code_challenge=${verifierChallenge}&code_challenge_method=S256`;
@@ -242,109 +194,74 @@ const ProviderForm = ({
     window.location.assign(url);
   }
 
-  useEffect(() => {
-    // Set initial active tabs for each main group
-    const initialActiveTabsState = {};
-    Object.keys(groupedConfigs).forEach((mainGroup) => {
-      const subGroups = getSubGroups(groupedConfigs[mainGroup]);
-      if (subGroups.length > 0) {
-        initialActiveTabsState[mainGroup] = subGroups[0];
-      }
-    });
-    setActiveTabsState(initialActiveTabsState);
-  }, []);
-
-  useEffect(() => {
-    if (triggerRevalidateScope !== 0) {
-      setRefreshLoading(true);
-      fetch(`${apiUrl}/providers/${provider.id}/scopes`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }).then((response) => {
-        if (response.ok) {
-          response.json().then((newValidatedScopes) => {
-            setProviderValidatedScopes(newValidatedScopes);
-            provider.validatedScopes = newValidatedScopes;
-            mutate();
-            setRefreshLoading(false);
-          });
-        } else {
-          setRefreshLoading(false);
-        }
+  function revalidateScopes() {
+    setRefreshLoading(true);
+    api
+      .post(`/providers/${provider.id}/scopes`)
+      .then((newValidatedScopes) => {
+        setProviderValidatedScopes(newValidatedScopes);
+        provider.validatedScopes = newValidatedScopes;
+        mutate();
+        setRefreshLoading(false);
+      })
+      .catch((error: any) => {
+        showErrorToast(error, "Failed to revalidate scopes");
+        setRefreshLoading(false);
       });
-    }
-  }, [triggerRevalidateScope, accessToken, provider.id]);
+  }
 
   async function deleteProvider() {
     if (confirm("Are you sure you want to delete this provider?")) {
-      const response = await fetch(
-        `${apiUrl}/providers/${provider.type}/${provider.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session?.accessToken!}`,
-          },
-        }
-      );
-      if (response.ok) {
-        mutate();
-        closeModal();
-      } else {
-        toast.error(`Failed to delete ${provider.type} 😢`);
-      }
+      api
+        .delete(`/providers/${provider.type}/${provider.id}`)
+        .then(() => {
+          mutate();
+          closeModal();
+        })
+        .catch((error: any) => {
+          showErrorToast(error, `Failed to delete ${provider.type} 😢`);
+        });
     }
   }
 
-  const validateForm = (updatedFormValues) => {
-    const errors = {};
-    for (const [configKey, method] of Object.entries(provider.config)) {
-      if (!formValues[configKey] && method.required) {
-        errors[configKey] = true;
-      }
-      if (
-        "validation" in method &&
-        formValues[configKey] &&
-        !method.validation(updatedFormValues[configKey])
-      ) {
-        errors[configKey] = true;
-      }
-      if (!formValues.provider_name) {
-        errors["provider_name"] = true;
-      }
-    }
-    setInputErrors(errors);
-    return errors;
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, type } = event.target;
-    let value;
-
-    // If the input is a file, retrieve the file object, otherwise retrieve the value
-    if (type === "file") {
-      value = event.target.files?.[0]; // Assumes single file upload
+  function handleFormChange(key: string, value: ProviderFormValue) {
+    if (typeof value === "string" && value.trim().length === 0) {
+      // remove fields with empty string value
+      setFormValues((prev) => {
+        const updated = structuredClone(prev);
+        delete updated[key];
+        return updated;
+      });
     } else {
-      value = event.target.value;
+      setFormValues((prev) => {
+        const prevValue = prev[key];
+        const updatedValues = {
+          ...prev,
+          [key]:
+            Array.isArray(value) && Array.isArray(prevValue)
+              ? [...value]
+              : value,
+        };
+        return updatedValues;
+      });
     }
 
-    setFormValues((prevValues) => {
-      const updatedValues = { ...prevValues, [name]: value };
-      onFormChange(updatedValues, formErrors);
-      return updatedValues;
+    if (
+      typeof value === "boolean" ||
+      (typeof value === "object" && value instanceof File === false)
+    )
+      return;
+
+    const isValid = validate({
+      [key]:
+        typeof value === "string" && value.length === 0 ? undefined : value,
     });
-
-    const updatedFormValues = { ...formValues, [name]: value };
-
-    if (Object.keys(inputErrors).includes(name) && value !== "") {
+    if (isValid) {
       const updatedInputErrors = { ...inputErrors };
-      delete updatedInputErrors[name];
+      delete updatedInputErrors[key];
       setInputErrors(updatedInputErrors);
     }
-
-    onFormChange(updatedFormValues, formErrors);
-  };
+  }
 
   const handleWebhookChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const checked = event.target.checked;
@@ -353,6 +270,25 @@ const ProviderForm = ({
       install_webhook: checked,
     }));
   };
+
+  function validate(data?: ProviderFormData) {
+    let schema = zodSchema;
+    if (data) {
+      schema = zodSchema.pick(
+        Object.fromEntries(Object.keys(data).map((field) => [field, true]))
+      );
+    }
+    const validation = schema.safeParse(data ?? formValues);
+    if (validation.success) return true;
+    const errors: ProviderInputErrors = {};
+    Object.entries(validation.error.format()).forEach(([field, err]) => {
+      err && typeof err === "object" && !Array.isArray(err)
+        ? (errors[field] = err._errors[0])
+        : null;
+    });
+    setInputErrors((prev) => ({ ...prev, ...errors }));
+    return false;
+  }
 
   const handlePullingEnabledChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -364,37 +300,19 @@ const ProviderForm = ({
     }));
   };
 
-  const validate = () => {
-    const errors = validateForm(formValues);
-    if (Object.keys(errors).length === 0) {
-      return true;
-    } else {
-      setFormErrors(
-        `Missing required fields: ${JSON.stringify(
-          Object.keys(errors),
-          null,
-          4
-        )}`
-      );
-      return false;
-    }
-  };
-
-  const submit = (
-    requestUrl: string,
-    method: string = "POST"
-  ): Promise<any> => {
-    let headers = {
-      Authorization: `Bearer ${accessToken}`,
-    };
+  async function submit(requestUrl: string, method: string = "POST") {
+    const headers: Record<string, string> = {};
 
     let body;
-
     if (Object.values(formValues).some((value) => value instanceof File)) {
       // FormData for file uploads
       let formData = new FormData();
       for (let key in formValues) {
-        formData.append(key, formValues[key]);
+        const value = formValues[key];
+        if (!value) continue;
+        value instanceof File
+          ? formData.append(key, value)
+          : formData.append(key, value.toString());
       }
       body = formData;
     } else {
@@ -403,356 +321,102 @@ const ProviderForm = ({
       body = JSON.stringify(formValues);
     }
 
-    return fetch(requestUrl, {
+    return api.request(requestUrl, {
       method: method,
       headers: headers,
       body: body,
-    })
-      .then((response) => {
-        const response_json = response.json();
-        if (!response.ok) {
-          // If the response is not okay, throw the error message
-          return response_json.then((errorData) => {
-            if (response.status === 400) {
-              throw `${errorData.detail}`;
-            }
-            if (response.status === 409) {
-              throw `Provider with name ${formValues.provider_name} already exists`;
-            }
-            const errorDetail = errorData.detail;
-            if (response.status === 412) {
-              setProviderValidatedScopes(errorDetail);
-            }
-            throw `${provider.type} scopes are invalid: ${JSON.stringify(
-              errorDetail,
-              null,
-              4
-            )}`;
-          });
-        }
-        return response_json;
+    });
+  }
+
+  async function handleSubmitError(apiError: unknown) {
+    if (apiError instanceof KeepApiReadOnlyError) {
+      setFormErrors("You're in read-only mode");
+      return;
+    }
+    if (apiError instanceof KeepApiError === false) return;
+    const data = apiError.responseJson;
+    const status = apiError.statusCode;
+    const error =
+      "detail" in data ? data.detail : "message" in data ? data.message : data;
+    if (status === 409) {
+      setFormErrors(
+        `Provider with name ${formValues.provider_name} already exists`
+      );
+    } else if (status === 412) {
+      setProviderValidatedScopes(error);
+      setFormErrors(
+        `${provider.type} scopes are invalid: ${JSON.stringify(error, null, 4)}`
+      );
+    } else {
+      setApiError(
+        typeof error === "object" ? JSON.stringify(error) : error.toString()
+      );
+    }
+  }
+
+  function setApiError(error: string) {
+    if (error.includes("SyntaxError")) {
+      setFormErrors(
+        "Bad response from API: Check the backend logs for more details"
+      );
+    } else if (error.includes("Failed to fetch")) {
+      setFormErrors(
+        "Failed to connect to API: Check provider settings and your internet connection"
+      );
+    } else {
+      setFormErrors(error);
+    }
+  }
+
+  async function handleUpdateClick() {
+    if (provider.webhook_required) callInstallWebhook();
+    if (!validate()) return;
+    setIsLoading(true);
+    submit(`/providers/${provider.id}`, "PUT")
+      .then(() => {
+        setIsLoading(false);
+        toast.success("Updated provider successfully", {
+          position: "top-left",
+        });
+        mutate();
       })
-      .then((data) => {
-        setFormErrors("");
-        return data;
+      .catch((error) => {
+        showErrorToast("Failed to update provider");
+        handleSubmitError(error);
+        setIsLoading(false);
       });
-  };
+  }
 
-  const handleUpdateClick = (e: any) => {
-    if (provider.webhook_required) callInstallWebhook(e);
-    e.preventDefault();
-    if (validate()) {
-      setIsLoading(true);
-      submit(`${apiUrl}/providers/${provider.id}`, "PUT")
-        .then((data) => {
-          setIsLoading(false);
-          toast.success("Updated provider successfully", {
-            position: "top-left",
-          });
-          mutate();
-        })
-        .catch((error) => {
-          toast.error("Failed to update provider", { position: "top-left" });
-          const updatedFormErrors = error.toString();
-          setFormErrors(updatedFormErrors);
-          onFormChange(formValues, updatedFormErrors);
-          setIsLoading(false);
-        });
-    }
-  };
-
-  const handleConnectClick = async () => {
-    if (validate()) {
-      setIsLoading(true);
-      onConnectChange(true, false);
-      submit(`${apiUrl}/providers/install`)
-        .then(async (data) => {
-          console.log("Connect Result:", data);
-          setIsLoading(false);
-          onConnectChange(false, true);
-          if (
-            formValues.install_webhook &&
-            provider.can_setup_webhook &&
-            !isLocalhost
-          ) {
-            // mutate after webhook installation
-            await installWebhook(data as Provider, accessToken, apiUrl);
-          }
-          mutate();
-        })
-        .catch((error) => {
-          const updatedFormErrors = error.toString();
-
-          if (updatedFormErrors.includes("SyntaxError")) {
-            setFormErrors(
-              "Bad response from API: Check the backend logs for more details"
-            );
-          } else if (updatedFormErrors.includes("Failed to fetch")) {
-            setFormErrors(
-              "Failed to connect to API: Check provider settings and your internet connection"
-            );
-          } else {
-            setFormErrors(updatedFormErrors);
-          }
-          onFormChange(formValues, updatedFormErrors);
-          setIsLoading(false);
-          onConnectChange(false, false);
-        });
-    }
-  };
+  async function handleConnectClick() {
+    if (!validate()) return;
+    setIsLoading(true);
+    onConnectChange?.(true, false);
+    submit(`/providers/install`)
+      .then(async (data) => {
+        console.log("Connect Result:", data);
+        setIsLoading(false);
+        onConnectChange?.(false, true);
+        if (
+          formValues.install_webhook &&
+          provider.can_setup_webhook &&
+          !isLocalhost
+        ) {
+          // mutate after webhook installation
+          await installWebhook(data as Provider);
+        }
+        mutate();
+      })
+      .catch((error) => {
+        handleSubmitError(error);
+        setIsLoading(false);
+        onConnectChange?.(false, false);
+      });
+  }
 
   const installOrUpdateWebhookEnabled = provider.scopes
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
-  const addEntry = (fieldName) => (e) => {
-    e.preventDefault();
-    setFormValues((prevValues) => {
-      const currentEntries = prevValues[fieldName] || [];
-      const updatedEntries = [...currentEntries, { key: "", value: "" }];
-      const updatedValues = { ...prevValues, [fieldName]: updatedEntries };
-      onFormChange(updatedValues, formErrors);
-      return updatedValues;
-    });
-  };
-
-  const handleDictInputChange = (fieldName, newValue) => {
-    setFormValues((prevValues) => {
-      const updatedValues = { ...prevValues, [fieldName]: newValue };
-      onFormChange(updatedValues, formErrors);
-      return updatedValues;
-    });
-  };
-
-  const renderFormField = (configKey, method) => {
-    if (method.hidden) return null;
-
-    const renderFieldHeader = () => (
-      <label htmlFor={configKey} className="flex items-center mb-1">
-        <Text className="capitalize">
-          {method.description}
-          {method.required === true && <span className="text-red-400">*</span>}
-        </Text>
-        {method.hint && (
-          <Icon
-            icon={QuestionMarkCircleIcon}
-            variant="simple"
-            color="gray"
-            size="sm"
-            tooltip={`${method.hint}`}
-          />
-        )}
-      </label>
-    );
-
-    switch (method.type) {
-      case "select":
-        return (
-          <>
-            {renderFieldHeader()}
-            <Select
-              id={configKey}
-              name={configKey}
-              value={formValues[configKey] || method.default}
-              onChange={(value) =>
-                handleInputChange({ target: { name: configKey, value } })
-              }
-              placeholder={method.placeholder || `Select ${configKey}`}
-              error={Object.keys(inputErrors).includes(configKey)}
-              disabled={provider.provisioned}
-            >
-              {method.options.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </Select>
-          </>
-        );
-      case "form":
-        return (
-          <div>
-            <div className="flex items-center mb-2">
-              {renderFieldHeader()}
-              <Button
-                className="ml-2"
-                icon={PlusIcon}
-                variant="secondary"
-                color="orange"
-                size="xs"
-                onClick={addEntry(configKey)}
-                disabled={provider.provisioned}
-              >
-                Add Entry
-              </Button>
-            </div>
-            <DictInput
-              name={configKey}
-              value={formValues[configKey] || []}
-              onChange={(value) => handleDictInputChange(configKey, value)}
-              error={Object.keys(inputErrors).includes(configKey)}
-              disabled={provider.provisioned}
-            />
-          </div>
-        );
-      case "file":
-        return (
-          <>
-            {renderFieldHeader()}
-            <Button
-              color="orange"
-              size="md"
-              onClick={(e) => {
-                e.preventDefault();
-                inputFileRef.current.click();
-              }}
-              icon={ArrowDownOnSquareIcon}
-              disabled={provider.provisioned}
-            >
-              {selectedFile
-                ? `File Chosen: ${selectedFile}`
-                : `Upload a ${method.name}`}
-            </Button>
-            <input
-              ref={inputFileRef}
-              type="file"
-              id={configKey}
-              name={configKey}
-              accept={method.file_type}
-              style={{ display: "none" }}
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setSelectedFile(e.target.files[0].name);
-                }
-                handleInputChange(e);
-              }}
-              disabled={provider.provisioned}
-            />
-          </>
-        );
-      default:
-        return (
-          <>
-            {renderFieldHeader()}
-            <TextInput
-              type={method.sensitive ? "password" : method.type}
-              id={configKey}
-              name={configKey}
-              readOnly={method.readOnly}
-              value={formValues[configKey] || ""}
-              onChange={handleInputChange}
-              autoComplete="off"
-              error={Object.keys(inputErrors).includes(configKey)}
-              placeholder={method.placeholder || `Enter ${configKey}`}
-              disabled={provider.provisioned || method.readOnly}
-            />
-          </>
-        );
-    }
-  };
-
-  const requiredConfigs = Object.entries(provider.config)
-    .filter(([_, config]) => config.required && !config.config_main_group)
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-
-  const optionalConfigs = Object.entries(provider.config)
-    .filter(
-      ([_, config]) =>
-        !config.required && !config.hidden && !config.config_main_group
-    )
-    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-
-  const groupConfigsByMainGroup = (configs) => {
-    return Object.entries(configs).reduce((acc, [key, config]) => {
-      const mainGroup = config.config_main_group;
-      if (mainGroup) {
-        if (!acc[mainGroup]) {
-          acc[mainGroup] = {};
-        }
-        acc[mainGroup][key] = config;
-      }
-      return acc;
-    }, {});
-  };
-
-  const groupConfigsBySubGroup = (configs) => {
-    return Object.entries(configs).reduce((acc, [key, config]) => {
-      const subGroup = config.config_sub_group || "default";
-      if (!acc[subGroup]) {
-        acc[subGroup] = {};
-      }
-      acc[subGroup][key] = config;
-      return acc;
-    }, {});
-  };
-
-  const getSubGroups = (configs) => {
-    return [
-      ...new Set(
-        Object.values(configs).map((config) => config.config_sub_group)
-      ),
-    ].filter(Boolean);
-  };
-
-  const renderGroupFields = (groupName, groupConfigs) => {
-    const subGroups = groupConfigsBySubGroup(groupConfigs);
-    const subGroupNames = getSubGroups(groupConfigs);
-
-    if (subGroupNames.length === 0) {
-      // If no subgroups, render fields directly
-      return (
-        <Card className="mt-4">
-          <Title>
-            {groupName.charAt(0).toUpperCase() + groupName.slice(1)}
-          </Title>
-          {Object.entries(groupConfigs).map(([configKey, config]) => (
-            <div className="mt-2.5" key={configKey}>
-              {renderFormField(configKey, config)}
-            </div>
-          ))}
-        </Card>
-      );
-    }
-
-    return (
-      <Card className="mt-4">
-        <Title>{groupName.charAt(0).toUpperCase() + groupName.slice(1)}</Title>
-        <TabGroup
-          className="mt-2"
-          onIndexChange={(index) =>
-            setActiveTabsState((prev) => ({
-              ...prev,
-              [groupName]: subGroupNames[index],
-            }))
-          }
-        >
-          <TabList>
-            {subGroupNames.map((subGroup) => (
-              <Tab key={subGroup}>
-                {subGroup.replace("_", " ").toUpperCase()}
-              </Tab>
-            ))}
-          </TabList>
-          <TabPanels>
-            {subGroupNames.map((subGroup) => (
-              <TabPanel key={subGroup}>
-                {Object.entries(subGroups[subGroup] || {}).map(
-                  ([configKey, config]) => (
-                    <div className="mt-2.5" key={configKey}>
-                      {renderFormField(configKey, config)}
-                    </div>
-                  )
-                )}
-              </TabPanel>
-            ))}
-          </TabPanels>
-        </TabGroup>
-      </Card>
-    );
-  };
-
-  const groupedConfigs = groupConfigsByMainGroup(provider.config);
-  console.log("ProviderForm component loaded");
   return (
     <div className="flex flex-col justify-between p-5">
       <div>
@@ -787,6 +451,7 @@ const ProviderForm = ({
         {provider.provisioned && (
           <div className="w-full mt-4">
             <Callout
+              title=""
               icon={ExclamationTriangleIcon}
               color="orange"
               className="w-full"
@@ -833,13 +498,12 @@ const ProviderForm = ({
             />
           </div>
         )}
-        {provider.scopes?.length > 0 && (
+        {provider.scopes && provider.scopes.length > 0 && (
           <ProviderFormScopes
             provider={provider}
             validatedScopes={providerValidatedScopes}
-            installedProvidersMode={installedProvidersMode}
-            triggerRevalidateScope={setTriggerRevalidateScope}
             refreshLoading={refreshLoading}
+            onRevalidate={revalidateScopes}
           />
         )}
         <form>
@@ -847,6 +511,7 @@ const ProviderForm = ({
             {provider.oauth2_url && !provider.installed ? (
               <>
                 <Button
+                  type="button"
                   color="orange"
                   variant="secondary"
                   icon={ArrowTopRightOnSquareIcon}
@@ -859,43 +524,47 @@ const ProviderForm = ({
             ) : null}
             {Object.keys(provider.config).length > 0 && (
               <>
-                <label htmlFor="provider_name" className="label-container mb-1">
-                  <Text>
-                    Provider Name
-                    <span className="text-red-400">*</span>
-                  </Text>
-                </label>
-                <TextInput
-                  type="text"
+                <FormField
                   id="provider_name"
-                  name="provider_name"
-                  value={formValues.provider_name || ""}
-                  onChange={handleInputChange}
-                  placeholder="Enter provider name"
-                  color="orange"
-                  autoComplete="off"
-                  disabled={isProviderNameDisabled}
-                  error={Object.keys(inputErrors).includes("provider_name")}
+                  config={providerNameFieldConfig}
+                  value={(formValues["provider_name"] ?? "").toString()}
+                  error={inputErrors["provider_name"]}
+                  disabled={isProviderNameDisabled ?? false}
                   title={
                     isProviderNameDisabled
                       ? "This field is disabled because it is pre-filled from the workflow."
                       : ""
                   }
+                  onChange={handleFormChange}
                 />
               </>
             )}
           </div>
           {/* Render required fields */}
-          {Object.entries(requiredConfigs).map(([configKey, config]) => (
-            <div className="mt-2.5" key={configKey}>
-              {renderFormField(configKey, config)}
+          {Object.entries(requiredConfigs).map(([field, config]) => (
+            <div className="mt-2.5" key={field}>
+              <FormField
+                id={field}
+                config={config}
+                value={formValues[field]}
+                error={inputErrors[field]}
+                disabled={provider.provisioned ?? false}
+                onChange={handleFormChange}
+              />
             </div>
           ))}
 
           {/* Render grouped fields */}
-          {Object.entries(groupedConfigs).map(([groupName, groupConfigs]) => (
-            <React.Fragment key={groupName}>
-              {renderGroupFields(groupName, groupConfigs)}
+          {Object.entries(groupedConfigs).map(([name, fields]) => (
+            <React.Fragment key={name}>
+              <GroupFields
+                groupName={name}
+                fields={fields}
+                data={formValues}
+                errors={inputErrors}
+                disabled={provider.provisioned ?? false}
+                onChange={handleFormChange}
+              />
             </React.Fragment>
           ))}
 
@@ -905,13 +574,18 @@ const ProviderForm = ({
               <AccordionHeader>Provider Optional Settings</AccordionHeader>
               <AccordionBody>
                 <Card>
-                  {Object.entries(optionalConfigs).map(
-                    ([configKey, config]) => (
-                      <div className="mt-2.5" key={configKey}>
-                        {renderFormField(configKey, config)}
-                      </div>
-                    )
-                  )}
+                  {Object.entries(optionalConfigs).map(([field, config]) => (
+                    <div className="mt-2.5" key={field}>
+                      <FormField
+                        id={field}
+                        config={config}
+                        value={formValues[field]}
+                        error={inputErrors[field]}
+                        disabled={provider.provisioned ?? false}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  ))}
                 </Card>
               </AccordionBody>
             </Accordion>
@@ -927,7 +601,10 @@ const ProviderForm = ({
                     className="mr-2.5"
                     onChange={handleWebhookChange}
                     checked={
-                      (formValues["install_webhook"] || false) && !isLocalhost
+                      "install_webhook" in formValues &&
+                      typeof formValues["install_webhook"] === "boolean" &&
+                      formValues["install_webhook"] &&
+                      !isLocalhost
                     }
                     disabled={isLocalhost || provider.webhook_required}
                   />
@@ -953,7 +630,7 @@ const ProviderForm = ({
                     name="pulling_enabled"
                     className="mr-2.5"
                     onChange={handlePullingEnabledChange}
-                    checked={formValues["pulling_enabled"] || false}
+                    checked={Boolean(formValues["pulling_enabled"])}
                   />
                   <label
                     htmlFor="pulling_enabled"
@@ -972,6 +649,7 @@ const ProviderForm = ({
                 {isLocalhost && (
                   <span className="text-sm">
                     <Callout
+                      title=""
                       className="mt-4"
                       icon={ExclamationTriangleIcon}
                       color="gray"
@@ -1003,7 +681,7 @@ const ProviderForm = ({
                   name="pulling_enabled"
                   className="mr-2.5"
                   onChange={handlePullingEnabledChange}
-                  checked={formValues["pulling_enabled"] || false}
+                  checked={Boolean(formValues["pulling_enabled"])}
                 />
                 <label htmlFor="pulling_enabled" className="flex items-center">
                   <Text className="capitalize">Pulling Enabled</Text>
@@ -1017,6 +695,7 @@ const ProviderForm = ({
                 </label>
               </div>
               <Button
+                type="button"
                 icon={GlobeAltIcon}
                 onClick={callInstallWebhook}
                 variant="secondary"
@@ -1036,10 +715,7 @@ const ProviderForm = ({
             </>
           )}
           {provider.supports_webhook && (
-            <ProviderSemiAutomated
-              provider={provider}
-              accessToken={accessToken}
-            />
+            <ProviderSemiAutomated provider={provider} />
           )}
           {formErrors && (
             <Callout

@@ -6,17 +6,18 @@ import { Session } from "next-auth";
 import { useConfig } from "utils/hooks/useConfig";
 import { AuthType } from "@/utils/authenticationType";
 import Link from "next/link";
-import { LuSlack } from "react-icons/lu";
 import { AiOutlineRight } from "react-icons/ai";
 import { VscDebugDisconnect } from "react-icons/vsc";
-import DarkModeToggle from "app/dark-mode-toggle";
 import { useFloating } from "@floating-ui/react";
 import { Icon, Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
 import * as Frigade from "@frigade/react";
 import { useState } from "react";
 import Onboarding from "./Onboarding";
-import { useSignOut } from "@/shared/lib/useSignOut";
+import { useSignOut } from "@/shared/lib/hooks/useSignOut";
+import { FaSlack } from "react-icons/fa";
+import { ThemeControl } from "@/shared/ui/theme/ThemeControl";
+import { HiOutlineDocumentText } from "react-icons/hi2";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -37,18 +38,12 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
 
   const isNoAuth = configData?.AUTH_TYPE === AuthType.NOAUTH;
   return (
-    <Menu as="li" ref={refs.setReference}>
+    <Menu as="li" ref={refs.setReference} className="w-full">
       <Menu.Button className="flex items-center justify-between w-full text-sm pl-2.5 pr-2 py-1 text-gray-700 hover:bg-stone-200/50 font-medium rounded-lg hover:text-orange-400 focus:ring focus:ring-orange-300 group capitalize">
         <span className="space-x-3 flex items-center w-full">
           <UserAvatar image={image} name={name ?? email} />{" "}
           <Subtitle className="truncate">{name ?? email}</Subtitle>
         </span>
-
-        <Icon
-          className="text-gray-700 font-medium px-0"
-          size="xs"
-          icon={AiOutlineRight}
-        />
       </Menu.Button>
 
       <Menu.Items
@@ -97,24 +92,6 @@ export const UserInfo = ({ session }: UserInfoProps) => {
   return (
     <>
       <ul className="space-y-2 p-2">
-        <li>
-          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
-            Providers
-          </LinkWithIcon>
-        </li>
-        <li>
-          {/* TODO: slows everything down. needs to be replaced */}
-          <DarkModeToggle />
-        </li>
-        <li>
-          <LinkWithIcon
-            icon={LuSlack}
-            href="https://slack.keephq.dev/"
-            target="_blank"
-          >
-            Join our Slack
-          </LinkWithIcon>
-        </li>
         {flow?.isCompleted === false && (
           <li>
             <Frigade.ProgressBadge
@@ -130,7 +107,34 @@ export const UserInfo = ({ session }: UserInfoProps) => {
             />
           </li>
         )}
-        {session && <UserDropdown session={session} />}
+        <li>
+          <LinkWithIcon href="/providers" icon={VscDebugDisconnect}>
+            Providers
+          </LinkWithIcon>
+        </li>
+        <li className="flex items-center gap-2">
+          <LinkWithIcon
+            icon={FaSlack}
+            href="https://slack.keephq.dev/"
+            className="w-auto pr-3.5"
+            target="_blank"
+          >
+            Join Slack
+          </LinkWithIcon>
+          <LinkWithIcon
+            icon={HiOutlineDocumentText}
+            iconClassName="w-4"
+            href="https://docs.keephq.dev/"
+            className="w-auto px-3.5"
+            target="_blank"
+          >
+            Docs
+          </LinkWithIcon>
+        </li>
+        <div className="flex items-center justify-between">
+          {session && <UserDropdown session={session} />}
+          <ThemeControl className="text-sm size-10 flex items-center justify-center font-medium rounded-lg focus:ring focus:ring-orange-300 hover:!bg-stone-200/50" />
+        </div>
       </ul>
     </>
   );
