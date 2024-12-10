@@ -24,6 +24,14 @@ env:
   POSTGRES_DB: keepdb
   # To test if imports are working properly
   EE_ENABLED: true
+  DOCKER_BUILDKIT: 1
+  BUILDKIT_PROGRESS: plain  # More concise build output
+  AUTH_TYPE: NO_AUTH
+  API_URL: http://keep-backend:8080
+  POSTHOG_DISABLED: true
+  SENTRY_DISABLED: true
+  DATABASE_CONNECTION_STRING: mysql+pymysql://root:keep@keep-database:3306/keep
+  SECRET_MANAGER_DIRECTORY: /app
 
 jobs:
   tests-e2e:
@@ -52,30 +60,71 @@ jobs:
 
       - name: Cache dependencies
         id: cache-deps
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies using poetry
         run: poetry install --no-interaction --no-root --with dev
+      
+      - name: Get Playwright version from poetry.lock
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(grep "playwright" poetry.lock -A 5 | grep "version" | head -n 1 | cut -d'"' -f2)
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Install Playwright dependencies
-        run: npx playwright install --with-deps
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.version }}
 
-      - name: Install playwright
-        run: poetry run playwright install
+      - name: Install Playwright and dependencies
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            poetry run playwright install chromium webkit --with-deps
+          else
+            poetry run playwright install-deps
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Set up Keep environment
-        run: |
-          DOCKER_BUILDKIT=1 docker compose \
-            --project-directory . \
-            -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
+      - name: Cache Docker build layers
+        uses: actions/cache@v4
+        id: docker-cache
+        with:
+          path: .buildx-cache
+          key: buildx-cache-${{ hashFiles('./docker/Dockerfile.*') }}
+          restore-keys: buildx-cache-
 
-      - name: Wait for database to be ready
+      - name: Build keep-frontend image
+        run: |
+          docker buildx build \
+            --progress=plain \
+            --cache-from=type=local,src=.buildx-cache \
+            --cache-to=type=local,dest=.buildx-cache,mode=max \
+            -t keep-frontend:latest \
+            -f ./docker/Dockerfile.ui \
+            ./keep-ui
+
+      - name: Build keep-backend image
+        run: |
+          docker buildx build \
+            --progress=plain \
+            --cache-from=type=local,src=.buildx-cache \
+            --cache-to=type=local,dest=.buildx-cache,mode=max \
+            -t keep-backend:latest \
+            -f ./docker/Dockerfile.api \
+            .
+
+      - name: Start services
+        run: |
+          docker compose --project-directory . -f tests/e2e_tests/docker-compose-e2e-${{ matrix.db_type }}.yml up -d
+
+      - name: Wait for services to be ready
         run: |
           # Add commands to wait for the database to be ready
           if [ "${{ matrix.db_type }}" == "mysql" ]; then
