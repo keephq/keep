@@ -12,7 +12,6 @@ import dateutil
 from arq import Retry
 from fastapi.datastructures import FormData
 from opentelemetry import trace
-from opentelemetry.trace import SpanContext
 from sqlmodel import Session
 
 # internals
@@ -264,7 +263,6 @@ def __handle_formatted_events(
     raw_events: list[dict],
     formatted_events: list[AlertDto],
     tracer: trace.Tracer,
-    span_context: SpanContext,
     provider_id: str | None = None,
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
@@ -295,9 +293,7 @@ def __handle_formatted_events(
 
     # first, check for maintenance windows
     if KEEP_MAINTENANCE_WINDOWS_ENABLED:
-        with tracer.start_as_current_span(
-            "process_event_maintenance_windows_check", span_context=span_context
-        ):
+        with tracer.start_as_current_span("process_event_maintenance_windows_check"):
             maintenance_windows_bl = MaintenanceWindowsBl(
                 tenant_id=tenant_id, session=session
             )
@@ -323,9 +319,7 @@ def __handle_formatted_events(
                 )
                 return
 
-    with tracer.start_as_current_span(
-        "process_event_deduplication", span_context=span_context
-    ):
+    with tracer.start_as_current_span("process_event_deduplication"):
         # second, filter out any deduplicated events
         alert_deduplicator = AlertDeduplicator(tenant_id)
 
@@ -341,9 +335,7 @@ def __handle_formatted_events(
             filter(lambda event: not event.isFullDuplicate, formatted_events)
         )
 
-    with tracer.start_as_current_span(
-        "process_event_save_to_db", span_context=span_context
-    ):
+    with tracer.start_as_current_span("process_event_save_to_db"):
         # save to db
         enriched_formatted_events = __save_to_db(
             tenant_id,
@@ -359,9 +351,7 @@ def __handle_formatted_events(
     # let's save all fields to the DB so that we can use them in the future such in deduplication fields suggestions
     # todo: also use it on correlation rules suggestions
     if KEEP_ALERT_FIELDS_ENABLED:
-        with tracer.start_as_current_span(
-            "process_event_bulk_upsert_alert_fields", span_context=span_context
-        ):
+        with tracer.start_as_current_span("process_event_bulk_upsert_alert_fields"):
             for enriched_formatted_event in enriched_formatted_events:
                 logger.debug(
                     "Bulk upserting alert fields",
@@ -395,9 +385,7 @@ def __handle_formatted_events(
                 )
 
     # after the alert enriched and mapped, lets send it to the elasticsearch
-    with tracer.start_as_current_span(
-        "process_event_push_to_elasticsearch", span_context=span_context
-    ):
+    with tracer.start_as_current_span("process_event_push_to_elasticsearch"):
         elastic_client = ElasticClient(tenant_id=tenant_id)
         if elastic_client.enabled:
             for alert in enriched_formatted_events:
@@ -424,9 +412,7 @@ def __handle_formatted_events(
                     )
                     continue
 
-    with tracer.start_as_current_span(
-        "process_event_push_to_workflows", span_context=span_context
-    ):
+    with tracer.start_as_current_span("process_event_push_to_workflows"):
         try:
             # Now run any workflow that should run based on this alert
             # TODO: this should publish event
@@ -447,9 +433,7 @@ def __handle_formatted_events(
             )
 
     incidents = []
-    with tracer.start_as_current_span(
-        "process_event_run_rules_engine", span_context=span_context
-    ):
+    with tracer.start_as_current_span("process_event_run_rules_engine"):
         # Now we need to run the rules engine
         if KEEP_CORRELATION_ENABLED:
             try:
@@ -475,9 +459,7 @@ def __handle_formatted_events(
                     },
                 )
 
-    with tracer.start_as_current_span(
-        "process_event_notify_client", span_context=span_context
-    ):
+    with tracer.start_as_current_span("process_event_notify_client"):
         pusher_client = get_pusher_client() if notify_client else None
         # Get the notification cache
         pusher_cache = get_notification_cache()
@@ -601,29 +583,22 @@ def process_event(
     logger.info("Processing event", extra=extra_dict)
 
     tracer = trace.get_tracer(__name__)
-    span_context = SpanContext(int(trace_id, 16), None, None)
 
     raw_event = copy.deepcopy(event)
     try:
-        with tracer.start_as_current_span(
-            "process_event_get_db_session", span_context=span_context
-        ):
+        with tracer.start_as_current_span("process_event_get_db_session"):
             # Create a session to be used across the processing task
             session = get_session_sync()
 
         # Pre alert formatting extraction rules
-        with tracer.start_as_current_span(
-            "process_event_pre_alert_formatting", span_context=span_context
-        ):
+        with tracer.start_as_current_span("process_event_pre_alert_formatting"):
             enrichments_bl = EnrichmentsBl(tenant_id, session)
             try:
                 event = enrichments_bl.run_extraction_rules(event, pre=True)
             except Exception:
                 logger.exception("Failed to run pre-formatting extraction rules")
 
-        with tracer.start_as_current_span(
-            "process_event_provider_formatting", span_context=span_context
-        ):
+        with tracer.start_as_current_span("process_event_provider_formatting"):
             if (
                 provider_type is not None
                 and isinstance(event, dict)
@@ -671,9 +646,7 @@ def process_event(
                 event = [event]
                 raw_event = [raw_event]
 
-            with tracer.start_as_current_span(
-                "process_event_internal_preparation", span_context=span_context
-            ):
+            with tracer.start_as_current_span("process_event_internal_preparation"):
                 __internal_prepartion(event, fingerprint, api_key_name)
 
             formatted_events = __handle_formatted_events(
@@ -683,12 +656,10 @@ def process_event(
                 raw_event,
                 event,
                 tracer,
-                span_context,
                 provider_id,
                 notify_client,
                 timestamp_forced,
                 job_id,
-                span_context=span_context,
             )
 
         logger.info(
