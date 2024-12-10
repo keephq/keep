@@ -27,6 +27,8 @@ services:
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
       - SENTRY_DISABLED=true
+    x-bake:
+      depends_on: ["keep-backend"]
 
   keep-backend:
     extends:
