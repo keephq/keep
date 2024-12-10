@@ -38,14 +38,13 @@ jobs:
       - name: Expose GitHub Runtime
         uses: crazy-max/ghaction-github-runtime@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Depot CLI
+        uses: depot/setup-action@v1
+ 
+      - name: Bake Docker images
+        uses: depot/bake-action@v1
         with:
-          driver: docker-container
-
-      - name: Build Docker images
-        uses: docker/bake-action@v5
-        with:
+          project: qxmcmqzhnd
           workdir: .
           files: |
             tests/e2e_tests/docker-compose-e2e-mysql.yml
