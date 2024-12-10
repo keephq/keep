@@ -4596,38 +4596,48 @@ def get_last_alert_by_fingerprint(
 
 
 def set_last_alert(
-    tenant_id: str, alert: Alert, session: Optional[Session] = None
+    tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
     logger.info(
         f"Set last alert for `{alert.fingerprint}`"
     )
     with existed_or_new_session(session) as session:
-        with session.begin_nested() as transaction:
-            last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session, for_update=True)
+        for attempt in range(max_retries):
+            with session.begin_nested() as transaction:
+                try:
+                    last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session, for_update=True)
 
-            # To prevent rare, but possible race condition
-            # For example if older alert failed to process
-            # and retried after new one
-            if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
+                    # To prevent rare, but possible race condition
+                    # For example if older alert failed to process
+                    # and retried after new one
+                    if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
 
-                logger.info(
-                    f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
-                )
-                last_alert.timestamp = alert.timestamp
-                last_alert.alert_id = alert.id
-                session.add(last_alert)
+                        logger.info(
+                            f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+                        )
+                        last_alert.timestamp = alert.timestamp
+                        last_alert.alert_id = alert.id
+                        session.add(last_alert)
 
-            elif not last_alert:
-                logger.info(
-                    f"No last alert for `{alert.fingerprint}`, creating new"
-                )
-                last_alert = LastAlert(
-                    tenant_id=tenant_id,
-                    fingerprint=alert.fingerprint,
-                    timestamp=alert.timestamp,
-                    first_timestamp=alert.timestamp,
-                alert_id=alert.id,
-            )
+                    elif not last_alert:
+                        logger.info(
+                            f"No last alert for `{alert.fingerprint}`, creating new"
+                        )
+                        last_alert = LastAlert(
+                            tenant_id=tenant_id,
+                            fingerprint=alert.fingerprint,
+                            timestamp=alert.timestamp,
+                            first_timestamp=alert.timestamp,alert_id=alert.id,
+                        )
 
-                session.add(last_alert)
-            transaction.commit()
+                        session.add(last_alert)
+                    transaction.commit()
+                except OperationalError as ex:
+                    if "Deadlock found" in ex.args[0]:
+
+                        logger.info(
+                            f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
+                        )
+                        transaction.rollback()
+                        if attempt >= max_retries:
+                            raise ex
