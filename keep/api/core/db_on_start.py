@@ -22,6 +22,7 @@ import alembic.config
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from keep.api.core.db import get_all_deduplication_rules
 from keep.api.core.db_utils import create_db_engine
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -52,6 +53,7 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
             User,
         )
 
+        get_all_deduplication_rules(tenant_id)
         migrate_db()
     except Exception:
         pass
