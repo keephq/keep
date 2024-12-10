@@ -817,7 +817,7 @@ const customSchemaByType = (type?: string) => {
     case "action-slack":
       schema = z.object({
         with: z.object({
-          message: z.string().min(4),
+          message: z.string().min(4, "Message should not be empty"),
         }),
       });
       break;

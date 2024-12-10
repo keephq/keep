@@ -74,6 +74,7 @@ export type V2Step = {
   edgeSource?: string;
   edgeTarget?: string;
   notClickable?: boolean;
+  installed? :boolean;
 };
 export type NodeData = Node["data"] & Record<string, any>;
 export type NodeStepMeta = { id: string; label?: string };

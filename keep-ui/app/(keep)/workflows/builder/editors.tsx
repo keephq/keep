@@ -619,7 +619,6 @@ export function StepEditorV3({
   saveRef: React.MutableRefObject<boolean>;
 }) {
   const deployRef = useRef<HTMLInputElement>(null);
-  const {stepErrors} = useStore();
   const {
     control,
     handleSubmit,
