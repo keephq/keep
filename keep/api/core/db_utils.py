@@ -150,6 +150,7 @@ def create_db_engine():
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
                 echo=DB_ECHO,
+                pool_pre_ping=True if "postgresql" in DB_CONNECTION_STRING else False,
             )
         # SQLite does not support pool_size
         except TypeError:
