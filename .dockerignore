@@ -1,7 +1,10 @@
 docs/*
-keep-ui/node_modules
-keep-ui/.next/*
-keep-ui/.env.local
+**/node_modules
+keep-ui/
+tests/
+**/__pycache__
+*.pyc
+.git
 .venv/
 .vercel/
 .vscode/
