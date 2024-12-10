@@ -4859,5 +4859,3 @@ def set_last_alert(
             )
             # break the retry loop
             break
-
-
