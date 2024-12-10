@@ -586,9 +586,6 @@ def process_event(
     start_time = time.time()
     job_id = ctx.get("job_id")
 
-    tracer = trace.get_tracer(__name__)
-    span_context = SpanContext(int(trace_id, 16), None, None)
-
     extra_dict = {
         "tenant_id": tenant_id,
         "provider_type": provider_type,
@@ -602,6 +599,9 @@ def process_event(
         ),  # Let's log the events if we store it for debugging
     }
     logger.info("Processing event", extra=extra_dict)
+
+    tracer = trace.get_tracer(__name__)
+    span_context = SpanContext(int(trace_id, 16), None, None)
 
     raw_event = copy.deepcopy(event)
     try:
