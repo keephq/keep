@@ -47,9 +47,6 @@ jobs:
           files: |
             tests/e2e_tests/docker-compose-e2e-mysql.yml
           load: true
-          set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
 
       - name: Set up Keep environment
         run: |
