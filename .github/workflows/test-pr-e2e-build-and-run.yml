@@ -44,7 +44,8 @@ jobs:
       - name: Bake Docker images
         uses: depot/bake-action@v1
         with:
-          project: qxmcmqzhnd
+          token: ${{ secrets.DEPOT_TOKEN }}
+          project: ${{ secrets.DEPOT_PROJECT }}
           workdir: .
           files: |
             tests/e2e_tests/docker-compose-e2e-mysql.yml
