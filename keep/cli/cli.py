@@ -587,21 +587,23 @@ def apply(info: Info, file: str):
 @click.option(
     "--fingerprint",
     type=str,
-    help="The fingerprint to query the payload",
-    required=True,
+    help="The fingerprint to query the alert payload",
+    required=False,
 )
 @pass_info
-def run_workflow(info: Info, workflow_id: str, fingerprint: str):
-    """Run a workflow with a specified ID and fingerprint."""
-    # Query the server for payload based on the fingerprint
-    # Replace the following line with your actual logic to fetch the payload
-    payload = _get_alert_by_fingerprint(info.keep_api_url, info.api_key, fingerprint)
+def run_workflow(info: Info, workflow_id: str, fingerprint: str | None):
+    """Run a workflow with a specified ID."""
 
-    if not payload.ok:
-        click.echo(click.style("Error: Failed to fetch alert payload", bold=True))
-        return
+    if fingerprint is not None:
+        payload = _get_alert_by_fingerprint(info.keep_api_url, info.api_key, fingerprint)
 
-    payload = payload.json()
+        if not payload.ok:
+            click.echo(click.style("Error: Failed to fetch alert payload", bold=True))
+            return
+
+        payload = payload.json()
+    else:
+        payload = {}
 
     # Run the workflow with the fetched payload as the request body
     workflow_endpoint = info.keep_api_url + f"/workflows/{workflow_id}/run"
