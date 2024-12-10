@@ -12,6 +12,7 @@ from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_enrichment_with_session,
     get_mapping_rule_by_id,
+    get_session_sync,
     get_topology_data_by_dynamic_matcher,
 )
 from keep.api.core.elastic import ElasticClient
@@ -58,8 +59,9 @@ class EnrichmentsBl:
     def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.db_session = db
-        self.elastic_client = ElasticClient(tenant_id=tenant_id)
+        if not EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.db_session = db or get_session_sync()
+            self.elastic_client = ElasticClient(tenant_id=tenant_id)
 
     def run_extraction_rules(
         self, event: AlertDto | dict, pre=False
