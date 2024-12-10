@@ -52,29 +52,3 @@ class Rule(SQLModel, table=True):
     require_approve: bool = False
     resolve_on: str = ResolveOn.NEVER.value
     create_on: str = CreateIncidentOn.ANY.value
-
-
-class RuleEventGroup(SQLModel, table=True):
-
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    rule_id: UUID = Field(foreign_key="rule.id")
-    tenant_id: str = Field(foreign_key="tenant.id")
-    state: Dict[str, List[UUID | str]] = Field(
-        sa_column=Column(JSON),
-        default_factory=lambda: defaultdict(list)
-    )
-    expires: datetime
-
-    def is_all_conditions_met(self, rule_groups: List[str]):
-        return all([
-            len(self.state.get(condition, []))
-            for condition in rule_groups
-        ])
-
-    def add_alert(self, condition, fingerprint):
-        self.state.setdefault(condition, [])
-        self.state[condition].append(fingerprint)
-        flag_modified(self, "state")
-
-    def get_all_alerts(self):
-        return list(set(chain(*self.state.values())))
