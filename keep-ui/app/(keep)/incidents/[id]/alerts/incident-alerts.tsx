@@ -178,7 +178,8 @@ export default function IncidentAlerts({ incident }: Props) {
         id: "lastReceived",
         header: "Last Event Time",
         minSize: 100,
-        cell: (context) => <TimeAgo date={context.getValue().toISOString()} />,
+        // data is a ISO string
+        cell: (context) => <TimeAgo date={context.getValue()} />,
       }),
       columnHelper.accessor("source", {
         id: "source",

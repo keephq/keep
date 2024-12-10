@@ -335,11 +335,14 @@ export const useAlertTableCols = (
       header: "Last Received",
       filterFn: isDateWithinRange,
       minSize: 100,
-      cell: (context) => (
-        <span title={context.getValue().toISOString()}>
-          <TimeAgo date={context.getValue().toISOString()} />
-        </span>
-      ),
+      // data is a Date object (converted in usePresetAlerts)
+      cell: (context) => {
+        return (
+          <span title={context.getValue().toISOString()}>
+            <TimeAgo date={context.getValue().toISOString()} />
+          </span>
+        );
+      },
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",
