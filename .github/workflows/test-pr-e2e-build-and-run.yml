@@ -1,0 +1,104 @@
+name: Tests (E2E)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'keep/**'
+      - 'keep-ui/**'
+      - 'tests/**'
+
+env:
+  PYTHON_VERSION: 3.11
+  STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
+  # MySQL server environment variables
+  MYSQL_ROOT_PASSWORD: keep
+  MYSQL_DATABASE: keep
+  # Postgres environment variables
+  POSTGRES_USER: keepuser
+  POSTGRES_PASSWORD: keeppassword
+  POSTGRES_DB: keepdb
+  # To test if imports are working properly
+  EE_ENABLED: true
+
+jobs:
+  tests-e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        db_type: [mysql, postgres]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep"
+
+      - name: Expose GitHub Runtime
+        uses: crazy-max/ghaction-github-runtime@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Build Docker images
+        uses: docker/bake-action@v5
+        with:
+          workdir: .
+          files: |
+            tests/e2e_tests/docker-compose-e2e-mysql.yml
+          load: true
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+
+      - name: Set up Keep environment
+        run: |
+          docker compose \
+            --project-directory . \
+            -f tests/e2e_tests/docker-compose-e2e-mysql.yml up -d
+
+      - name: Wait for services to be ready
+        run: |
+          # Add commands to wait for the database to be ready
+          until docker exec $(docker ps -qf "name=keep-database") mysqladmin ping -h "localhost" --silent; do
+            echo "Waiting for MySQL to be ready..."
+            sleep 2
+          done
+
+          # wait to keep backend on port 8080
+          echo "Waiting for Keep backend to be ready..."
+          attempt=0
+          max_attempts=10
+
+          until $(curl --output /dev/null --silent --fail http://localhost:8080/healthcheck); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting... Sometimes Keep can't start because of double-headed migrations, use: 'alembic -c keep/alembic.ini history' to investigate, or check artifacts."
+              exit 1
+            fi
+            echo "Waiting for Keep backend to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+
+          echo "Keep backend is ready!"
+          # wait to the backend
+          echo "Waiting for Keep frontend to be ready..."
+          attempt=0
+          max_attempts=10
+
+          until $(curl --output /dev/null --silent --fail http://localhost:3000/); do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Max attempts reached, exiting..."
+              exit 1
+            fi
+            echo "Waiting for Keep frontend to be ready... (Attempt: $((attempt+1)))"
+            attempt=$((attempt+1))
+            sleep 2
+          done
+
+          # create the state directory
+          # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
+    
