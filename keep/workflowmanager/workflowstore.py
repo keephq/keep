@@ -496,7 +496,9 @@ class WorkflowStore:
                     id=provider_data.id,
                     installed=True,
                 )
-                providers_dto.append(provider_dto)
+                # add only if not already in the list
+                if provider_data.id not in [p.id for p in providers_dto]:
+                    providers_dto.append(provider_dto)
             except KeyError:
                 # Handle case where the provider is not installed
                 try:
