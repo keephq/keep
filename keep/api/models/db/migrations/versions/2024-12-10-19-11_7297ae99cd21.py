@@ -20,7 +20,7 @@ depends_on = None
 def upgrade() -> None:
     with op.batch_alter_table("rule", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("create_on", sqlmodel.sql.sqltypes.AutoString(), nullable=False)
+            sa.Column("create_on", sqlmodel.sql.sqltypes.AutoString(), nullable=False, default="any", server_default="any")
         )
 
     # ### end Alembic commands ###
