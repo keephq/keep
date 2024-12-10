@@ -4674,5 +4674,3 @@ def set_last_alert(
                         transaction.rollback()
                         if attempt >= max_retries:
                             raise ex
-
-
