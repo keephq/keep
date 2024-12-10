@@ -80,12 +80,27 @@ function Builder({
   const [compiledAlert, setCompiledAlert] = useState<Alert | null>(null);
 
   const searchParams = useSearchParams();
-  const { errorNode, setErrorNode, canDeploy, synced } = useStore();
+  const {
+    errorNode,
+    setErrorNode,
+    canDeploy,
+    synced,
+    setSelectedNode,
+    setStepErrors,
+    setGlobalErros,
+  } = useStore();
   const apiUrl = useApiUrl();
 
-  const setStepValidationErrorV2 = (step: V2Step, error: string | null) => {
-    setStepValidationError(error);
-    if (error && step) {
+  const setStepValidationErrorV2 = (
+    step: V2Step,
+    error: Record<string, string> | null
+  ) => {
+    const finalmessage = error ? Object.values(error).join(",") : null;
+    //though it is redundant. for now keeping it
+    setStepValidationError(finalmessage);
+    setStepErrors(error);
+    if (finalmessage && step) {
+      setSelectedNode(step.id);
       return setErrorNode(step.id);
     }
     setErrorNode(null);
@@ -93,10 +108,15 @@ function Builder({
 
   const setGlobalValidationErrorV2 = (
     id: string | null,
-    error: string | null
+    error: Record<string, string> | null
   ) => {
-    setGlobalValidationError(error);
-    if (error && id) {
+    const finalmessage = error ? Object.values(error).join(",") : null;
+    //though it is redundant. for now keeping it
+    setGlobalValidationError(finalmessage);
+    setGlobalErros(error);
+
+    if (finalmessage && id) {
+      setSelectedNode(id);
       return setErrorNode(id);
     }
     setErrorNode(null);
@@ -272,7 +292,7 @@ function Builder({
     stepValidationError,
     globalValidationError,
     enableGenerate,
-    definition.isValid,
+    definition?.isValid,
   ]);
 
   if (isLoading) {
@@ -368,7 +388,10 @@ function Builder({
                     isValid: def?.isValid || false,
                   });
                 }}
-                toolboxConfiguration={getToolboxConfiguration(providers)}
+                toolboxConfiguration={getToolboxConfiguration(
+                  providers,
+                  installedProviders || []
+                )}
               />
             </ReactFlowProvider>
           </div>

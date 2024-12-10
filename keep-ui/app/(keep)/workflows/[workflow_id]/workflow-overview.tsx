@@ -214,7 +214,7 @@ export default function WorkflowOverview({
             </StatsCard>
             <StatsCard>
               <Title>Involved Services</Title>
-              <WorkflowSteps workflow={parsedWorkflowFile} />
+              <WorkflowSteps workflow={parsedWorkflowFile} key={workflow_id}/>
             </StatsCard>
           </div>
           <WorkflowGraph

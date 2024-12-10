@@ -6,7 +6,7 @@ import useStore, {
   ReactFlowDefinition,
   Definition,
 } from "./builder-store";
-import { GlobalEditorV2, StepEditorV2 } from "./editors";
+import { GlobalEditorV2, StepEditorV3 } from "./editors";
 import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { reConstructWorklowToDefinition } from "utils/reactFlow";
@@ -115,7 +115,7 @@ const ReactFlowEditor = ({
     };
     const debouncedHandleDefinitionChange = debounce(
       handleDefinitionChange,
-      300
+      1000
     );
 
     debouncedHandleDefinitionChange();
@@ -155,7 +155,7 @@ const ReactFlowEditor = ({
                 <Divider ref={stepEditorRef} />
               )}
               {!selectedNode?.includes("empty") && !isTrigger && (
-                <StepEditorV2
+                <StepEditorV3
                   providers={providers}
                   installedProviders={installedProviders}
                   setSynced={setSynced}

@@ -4,134 +4,229 @@ import { Action, Alert } from "./alert";
 import { stringify } from "yaml";
 import { V2Properties, V2Step, Definition } from "./builder-store";
 import { v4 as uuidv4 } from "uuid";
+import { z, ZodObject, ZodType, ZodTypeAny } from "zod";
 
-export function getToolboxConfiguration(providers: Provider[]) {
+export const contentTypeOptions = [
+  {
+    key: "application/json",
+    value: "application/json",
+    label: "application/json",
+  },
+  {
+    key: "application/x-www-form-urlencoded",
+    value: "application/x-www-form-urlencoded",
+    label: "application/x-www-form-urlencoded",
+  },
+  {
+    key: "multipart/form-data",
+    value: "multipart/form-data",
+    label: "multipart/form-data",
+  },
+  {
+    key: "text/plain",
+    value: "text/plain",
+    label: "text/plain",
+  },
+];
+
+export const methodOptions = [
+  {
+    value: "GET",
+    key: "GET",
+  },
+  {
+    key: "POST",
+    value: "POST",
+  },
+  {
+    value: "PUT",
+    key: "PUT",
+  },
+  {
+    value: "DELETE",
+    key: "DELETE",
+  },
+  {
+    key: "PATCH",
+    value: "PATCH",
+  },
+];
+
+export const requiredMap = {
+  global: ["name", "description"],
+  "action-http": ["url", "method"],
+} as { [key: string]: string[] };
+
+const triggers = [
+  {
+    type: "manual",
+    componentType: "trigger",
+    name: "Manual",
+    id: "manual",
+    properties: {
+      manual: "true",
+    },
+  },
+  {
+    type: "interval",
+    componentType: "trigger",
+    name: "Interval",
+    id: "interval",
+    properties: {
+      interval: "",
+    },
+  },
+  {
+    type: "alert",
+    componentType: "trigger",
+    name: "Alert",
+    id: "alert",
+    properties: {
+      alert: {
+        source: "",
+      },
+    },
+  },
+  {
+    type: "incident",
+    componentType: "trigger",
+    name: "Incident",
+    id: "incident",
+    properties: {
+      incident: {
+        events: [],
+      },
+    },
+  },
+];
+
+const conditions = [
+  {
+    type: "condition-threshold",
+    componentType: "switch",
+    name: "Threshold",
+    properties: {
+      value: "",
+      compare_to: "",
+    },
+    branches: {
+      true: [],
+      false: [],
+    },
+  },
+  {
+    type: "condition-assert",
+    componentType: "switch",
+    name: "Assert",
+    properties: {
+      value: "",
+      compare_to: "",
+    },
+    branches: {
+      true: [],
+      false: [],
+    },
+  },
+];
+
+const miscs = [
+  {
+    type: "foreach",
+    componentType: "container",
+    name: "Foreach",
+    properties: {},
+    sequence: [],
+  },
+];
+
+const toolsWithoutConfigState = [
+  "action-http",
+  ...triggers.map((trigger) => trigger.type),
+  ...conditions.map((cond) => cond.type),
+  ...miscs.map((misc) => misc.type),
+];
+
+const getStepsActionsFromProviders = (
+  providers: Provider[],
+  installed?: boolean
+) => {
+  return (
+    providers.reduce(
+      ([steps, actions], provider) => {
+        const step = {
+          componentType: "task",
+          properties: {
+            stepParams: provider.query_params!,
+            actionParams: provider.notify_params!,
+          },
+          installed: installed,
+        } as Partial<V2Step>;
+        if (installed) {
+          step.properties = {
+            ...step.properties,
+            config: provider?.details?.name || provider.id,
+          };
+        }
+        if (provider.can_query)
+          steps.push({
+            ...step,
+            type: `step-${provider.type}`,
+            name: installed
+              ? provider?.details?.name || provider.id
+              : `${provider.type}-step`,
+            id: provider.id, // to identify the provider.
+          });
+        if (provider.can_notify)
+          actions.push({
+            ...step,
+            type: `action-${provider.type}`,
+            name: installed
+              ? provider?.details?.name || provider.id
+              : `${provider.type}-action`,
+          });
+        return [steps, actions];
+      },
+      [[] as Partial<V2Step>[], [] as Partial<V2Step>[]]
+    ) || [[], []]
+  );
+};
+
+export function getToolboxConfiguration(
+  providers: Provider[],
+  installedProviders?: Provider[]
+) {
   /**
    * Generates the toolbox items
    */
-  const [steps, actions] = providers.reduce(
-    ([steps, actions], provider) => {
-      const step = {
-        componentType: "task",
-        properties: {
-          stepParams: provider.query_params!,
-          actionParams: provider.notify_params!,
-        },
-      } as Partial<V2Step>;
-      if (provider.can_query)
-        steps.push({
-          ...step,
-          type: `step-${provider.type}`,
-          name: `${provider.type}-step`,
-        });
-      if (provider.can_notify)
-        actions.push({
-          ...step,
-          type: `action-${provider.type}`,
-          name: `${provider.type}-action`,
-        });
-      return [steps, actions];
-    },
-    [[] as Partial<V2Step>[], [] as Partial<V2Step>[]]
+  const [steps, actions] = getStepsActionsFromProviders(providers);
+  const [installedSteps, installedActions] = getStepsActionsFromProviders(
+    installedProviders || [],
+    true
   );
+  const finalSteps = [...steps, ...installedSteps];
+  const finalActionsSteps = [...actions, ...installedActions];
   return {
     groups: [
       {
         name: "Triggers",
-        steps: [
-          {
-            type: "manual",
-            componentType: "trigger",
-            name: "Manual",
-            id: "manual",
-            properties: {
-              manual: "true",
-            },
-          },
-          {
-            type: "interval",
-            componentType: "trigger",
-            name: "Interval",
-            id: "interval",
-            properties: {
-              interval: "",
-            },
-          },
-          {
-            type: "alert",
-            componentType: "trigger",
-            name: "Alert",
-            id: "alert",
-            properties: {
-              alert: {
-                source: "",
-              },
-            },
-          },
-          {
-            type: "incident",
-            componentType: "trigger",
-            name: "Incident",
-            id: "incident",
-            properties: {
-              incident: {
-                events: [],
-              },
-            },
-          },
-        ],
+        steps: triggers,
       },
       {
         name: "Steps",
-        steps: steps,
+        steps: finalSteps,
       },
       {
         name: "Actions",
-        steps: actions,
+        steps: finalActionsSteps,
       },
       {
         name: "Misc",
-        steps: [
-          {
-            type: "foreach",
-            componentType: "container",
-            name: "Foreach",
-            properties: {},
-            sequence: [],
-          },
-        ],
+        steps: miscs,
       },
       // TODO: get conditions from API
       {
         name: "Conditions",
-        steps: [
-          {
-            type: "condition-threshold",
-            componentType: "switch",
-            name: "Threshold",
-            properties: {
-              value: "",
-              compare_to: "",
-            },
-            branches: {
-              true: [],
-              false: [],
-            },
-          },
-          {
-            type: "condition-assert",
-            componentType: "switch",
-            name: "Assert",
-            properties: {
-              value: "",
-              compare_to: "",
-            },
-            branches: {
-              true: [],
-              false: [],
-            },
-          },
-        ],
+        steps: conditions,
       },
     ],
   };
@@ -156,7 +251,8 @@ export function getActionOrStepObj(
       config: (actionOrStep.provider?.config as string)
         ?.replaceAll("{{", "")
         .replaceAll("}}", "")
-        .replaceAll("providers.", ""),
+        .replaceAll("providers.", "")
+        .trim(),
       with: actionOrStep.provider?.with,
       stepParams: provider?.query_params!,
       actionParams: provider?.notify_params!,
@@ -369,7 +465,7 @@ function getActionsFromCondition(
     const withParams = getWithParams(a);
     const providerType = a?.type?.replace("action-", "");
     const providerName =
-      (a?.properties?.config as string)?.trim() || `default-${providerType}`;
+      (a?.properties?.config as string) || `default-${providerType}`;
     const provider = {
       type: a.type.replace("action-", ""),
       config: `{{ providers.${providerName} }}`,
@@ -433,6 +529,7 @@ export function buildAlert(definition: Definition): Alert {
       }
       return step;
     });
+
   // Actions
   let actions = alert.sequence
     .filter((s) => s.type.startsWith("action-"))
@@ -570,3 +667,279 @@ export function wrapDefinitionV2({
     isValid: !!isValid,
   };
 }
+
+const checkValidJson = (value?: string | object, allowEmpty?: boolean) => {
+  try {
+    if (value && Array.isArray(value)) {
+      return false;
+    }
+    if (value && typeof value === "object") {
+      return true;
+    }
+    if (allowEmpty && !value?.trim()) return true;
+    const result = JSON.parse(value || "");
+    if (value && Array.isArray(result)) {
+      return false;
+    }
+    if (typeof result === "object") {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+const bodyBasedMethodSchema = z.object({
+  method: z.enum(["POST", "PUT", "PATCH"]),
+  body: z.union([z.string(), z.object({}).passthrough()]).refine(
+    (value) => {
+      const valid = checkValidJson(value, false);
+      return valid;
+    },
+    { message: "Body must be valid JSON" }
+  ),
+  params: z
+    .union([z.string(), z.object({}).passthrough()])
+    .optional()
+    .refine(
+      (value) => {
+        const valid = checkValidJson(value, true);
+        return valid;
+      },
+      { message: "Params must be valid JSON" }
+    ),
+  headers: z
+    .union([z.string(), z.object({}).passthrough()])
+    .optional()
+    .refine(
+      (value) => {
+        const valid = checkValidJson(value, true);
+        return valid;
+      },
+      { message: "Headers must be valid JSON" }
+    ),
+});
+
+// Schema for `GET` and `DELETE` methods
+const paramsBasedMethodSchema = z.object({
+  method: z.enum(["GET", "DELETE"]),
+  params: z
+    .union([z.string(), z.object({}).passthrough()])
+    .optional()
+    .refine(
+      (value) => {
+        const valid = checkValidJson(value, true);
+        return valid;
+      },
+      { message: "Params must be valid JSON" }
+    ),
+  headers: z
+    .union([z.string(), z.object({}).passthrough()])
+    .optional()
+    .refine(
+      (value) => {
+        const valid = checkValidJson(value, true);
+        return valid;
+      },
+      { message: "Headers must be valid JSON" }
+    ),
+});
+
+export const httpmethodSchema = z.discriminatedUnion("method", [
+  bodyBasedMethodSchema,
+  paramsBasedMethodSchema,
+]);
+
+const standardPropertiestSchema = z
+  .object({
+    name: z.string().min(1, { message: "Unique Identifier is mandatory" }),
+    type: z.string().min(1, { message: "type is mandatory" }),
+    properties: z
+      .object({
+        vars: z.object({}).passthrough().optional(),
+        stepParams: z.array(z.string()).optional().nullable(),
+        actionParams: z.array(z.string()).optional().nullable(),
+        with: z
+          .object({
+            message: z.string().optional().nullable(),
+            description: z.string().optional().nullable(),
+          })
+          .passthrough()
+          .optional()
+          .nullable(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const getUrlSchema = (optional?: boolean) => {
+  if (optional)
+    return z.object({
+      url: z
+        .string({ message: "Invalid url" })
+        .url({ message: "Invalid url" })
+        .optional(),
+    });
+  return z.object({
+    url: z
+      .string()
+      .min(4, { message: "Invalid url" })
+      .url({ message: "Invalid url" }),
+  });
+};
+
+export type FormData = z.infer<ReturnType<typeof getSchemaByStepType>>;
+
+const getConfigSchema = (type?: string) => {
+  //we might need add some key to identify the provider stateless tools. for now doing it like this.
+
+  if (type && toolsWithoutConfigState.includes(type)) {
+    return z.object({ config: z.string().optional() });
+  }
+  return z.object({ config: z.string().min(2, "Provider is mandatory!") });
+};
+
+const customSchemaByType = (type?: string) => {
+  let schema: ZodObject<any> = z.object({});
+  switch (type) {
+    case "action-http":
+      schema = z
+        .object({
+          with: getUrlSchema().and(httpmethodSchema),
+        })
+        .passthrough();
+      break;
+    case "action-slack":
+      schema = z.object({
+        with: z.object({
+          message: z.string().min(4),
+        }),
+      });
+      break;
+    case "condition-threshold":
+      schema = z.object({
+        value: z.string().min(1, "Value is required"),
+        compare_to: z.string().min(1, "Compare to is required"),
+      });
+      break;
+    case "condition-assert":
+      schema = z.object({
+        assert: z.string().min(4, "assert is required(eg:200==200)"),
+      });
+      break;
+    case "foreach":
+      schema = z.object({
+        value: z.string().min(1, "value is required"),
+      });
+      break;
+    default:
+      break; //do nothing
+  }
+
+  return schema.passthrough();
+};
+
+export const getSchemaByStepType = (type?: string) => {
+  // Validation based on type
+  return z
+    .object({
+      properties: customSchemaByType(type).and(getConfigSchema(type)),
+    })
+    .passthrough()
+    .and(standardPropertiestSchema);
+};
+
+export const standardWorkflowPropertiesSchema = z
+  .object({
+    name: z
+      .string()
+      .min(3, "Name is required and should be alteast 3 characters"),
+    id: z.string().min(3, "id is required"),
+    description: z
+      .string()
+      .min(4, "description is required and should be alteast 3 characters"),
+    disbaled: z.enum(["true", "false"]).optional().nullable(),
+    consts: z.object({}).passthrough().optional().nullable(),
+  })
+  .passthrough();
+
+export const intervalSchema = z
+  .object({
+    interval: z
+      .union([z.string(), z.number()])
+      .optional()
+      .nullable()
+      .refine(
+        (val) => {
+          if (!val || !Number(val)) {
+            return false;
+          }
+          return true;
+        },
+        { message: "Interval should be number" }
+      ),
+  })
+  .passthrough();
+
+export const alertSchema = z
+  .object({
+    alert: z
+      .object({})
+      .passthrough()
+      .optional()
+      .nullable()
+      .refine(
+        (data) => {
+          // Check if the object is not empty
+          return Object.values(data || {}).filter((val) => !!val).length > 0;
+        },
+        {
+          message: "Workflow alert trigger cannot be empty.",
+        }
+      ),
+  })
+  .passthrough();
+
+export const incidentSchema = z
+  .object({
+    incident: z
+      .object({
+        events: z
+          .array(
+            z.enum(["created", "updated", "deleted"], {
+              message: "Workflow incident trigger cannot be empty.",
+            })
+          )
+          .optional()
+          .nullable(),
+      })
+      .optional()
+      .nullable()
+      .refine(
+        (val) => {
+          if (val && val?.events?.[0]) {
+            return true;
+          }
+          return false;
+        },
+        { message: "Workflow incident trigger cannot be empty." }
+      ),
+  })
+  .passthrough();
+
+export const getWorkflowPropertiesSchema = (properties: V2Properties) => {
+  let schema: ZodObject<any> = standardWorkflowPropertiesSchema;
+
+  if ("interval" in properties) {
+    schema = standardWorkflowPropertiesSchema.merge(intervalSchema);
+  }
+  if ("alert" in properties) {
+    schema = standardWorkflowPropertiesSchema.merge(alertSchema);
+  }
+  if ("incident" in properties) {
+    schema = standardWorkflowPropertiesSchema.merge(incidentSchema);
+  }
+
+  return schema;
+};

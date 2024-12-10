@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Disclosure } from "@headlessui/react";
-import { Subtitle } from "@tremor/react";
+import { Subtitle, Switch } from "@tremor/react";
 import { IoChevronUp, IoClose } from "react-icons/io5";
 import Image from "next/image";
 import { IoIosArrowDown } from "react-icons/io";
@@ -92,7 +92,7 @@ const GroupedMenu = ({
               {steps.length > 0 &&
                 steps.map((step: any) => (
                   <li
-                    key={step.type}
+                    key={`${step.type}__${step.id || step.name}`}
                     className="dndnode p-2 my-1 border border-gray-300 rounded cursor-pointer truncate flex justify-start gap-2 items-center"
                     onDragStart={(event) => handleDragStart(event, { ...step })}
                     draggable={isDraggable}
@@ -124,7 +124,8 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [open, setOpen] = useState(false);
-  const { toolboxConfiguration, selectedNode, selectedEdge, nodes } =
+  const [showinstalled, setShowInstalled] = useState(true);
+  const { toolboxConfiguration, selectedNode, selectedEdge, nodes, edges } =
     useStore();
 
   useEffect(() => {
@@ -147,17 +148,46 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
     );
 
   const filteredGroups = useMemo(() => {
-    return (
+    const checkInstalled = (step: V2Step, groupName: string) => {
+      if (!showinstalled) {
+        return true;
+      }
+
+      if (["Conditions", "Misc", "Triggers"].includes(groupName)) {
+        return true;
+      }
+
+      return step?.installed;
+    };
+    let finalGroups =
       toolboxConfiguration?.groups?.map((group: any) => ({
         ...group,
         steps: group?.steps?.filter(
           (step: any) =>
+            checkInstalled(step, group.name) &&
             step?.name?.toLowerCase().includes(searchTerm?.toLowerCase()) &&
             !triggerNodeMap[step?.id]
         ),
-      })) || []
-    );
-  }, [toolboxConfiguration, searchTerm, nodes?.length]);
+      })) || [];
+    const selectedAddEdge = edges.find((edge) => edge.id === selectedEdge);
+    if (selectedEdge && selectedAddEdge) {
+      finalGroups = finalGroups.filter(
+        (group: { name: string }) =>
+          (group?.name == "Triggers" &&
+            selectedAddEdge.source === "trigger_start") ||
+          (selectedAddEdge.source !== "trigger_start" &&
+            group?.name !== "Triggers")
+      );
+    }
+    return finalGroups;
+  }, [
+    toolboxConfiguration?.groups,
+    edges,
+    selectedEdge,
+    showinstalled,
+    searchTerm,
+    triggerNodeMap,
+  ]);
 
   const checkForSearchResults =
     searchTerm &&
@@ -177,7 +207,9 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
       <div className="relative h-full flex flex-col">
         {/* Sticky header */}
         <div className="sticky top-0 left-0 z-10">
-          <h1 className="p-3 font-bold">Toolbox</h1>
+          <div className="flex justify-between">
+            <h1 className="p-3 font-bold">Toolbox</h1>
+          </div>
           <div className="flex items-center justify-between p-2 pt-0 border-b-2 bg-white">
             <input
               type="text"
@@ -204,17 +236,28 @@ const DragAndDropSidebar = ({ isDraggable }: { isDraggable?: boolean }) => {
 
         {/* Scrollable list */}
         {(isVisible || checkForSearchResults) && (
-          <div className="flex-1 overflow-y-auto pt-6 space-y-4 overflow-hidden">
-            {filteredGroups.length > 0 &&
-              filteredGroups.map((group: Record<string, any>) => (
-                <GroupedMenu
-                  key={group.name}
-                  name={group.name}
-                  steps={group.steps}
-                  searchTerm={searchTerm}
-                  isDraggable={isDraggable}
-                />
-              ))}
+          <div className="flex-1 overflow-y-auto overflow-hidden">
+            <div className="flex flex-col items-end mr-4">
+              <div>Installed</div>
+              <Switch
+                id="installed"
+                name="Installed"
+                checked={showinstalled}
+                onChange={setShowInstalled}
+              />
+            </div>
+            <div className="space-y-4 pt-4">
+              {filteredGroups.length > 0 &&
+                filteredGroups.map((group: Record<string, any>) => (
+                  <GroupedMenu
+                    key={group.name}
+                    name={group.name}
+                    steps={group.steps}
+                    searchTerm={searchTerm}
+                    isDraggable={isDraggable}
+                  />
+                ))}
+            </div>
           </div>
         )}
       </div>

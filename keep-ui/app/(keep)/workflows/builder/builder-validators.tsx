@@ -3,79 +3,73 @@ import {
   ReactFlowDefinition,
   V2Step,
   Definition as FlowDefinition,
+  V2Properties,
 } from "./builder-store";
+import {
+  getSchemaByStepType,
+  getWorkflowPropertiesSchema,
+  requiredMap,
+} from "./utils";
+import _ from "lodash";
 
 export function globalValidatorV2(
   definition: FlowDefinition,
-  setGlobalValidationError: (id: string | null, error: string | null) => void
+  setGlobalValidationError: (
+    id: string | null,
+    error: Record<string, string> | null
+  ) => void
 ): boolean {
-  const workflowName = definition?.properties?.name;
-  const workflowDescription = definition?.properties?.description;
-  if (!workflowName) {
-    setGlobalValidationError(null, "Workflow name cannot be empty.");
-    return false;
-  }
-  if (!workflowDescription) {
-    setGlobalValidationError(null, "Workflow description cannot be empty.");
+  const properties = definition?.properties;
+  const result = getWorkflowPropertiesSchema(properties).safeParse(properties);
+  const errors = result?.error?.errors;
+  const errorMap =
+    errors?.reduce<Record<string, string>>((obj, error) => {
+      const path = error.path;
+      if (path && path[0] && !obj[path[0]]) {
+        obj[path[0]] = error?.message?.toString();
+      }
+      return obj;
+    }, {}) || null;
+
+  if (!result.success && errorMap) {
+    switch (true) {
+      case "interval" in errorMap:
+        setGlobalValidationError("interval", errorMap);
+        break;
+      case "alert" in errorMap:
+        setGlobalValidationError("alert", errorMap);
+        break;
+      case "incident" in errorMap:
+        setGlobalValidationError("incident", errorMap);
+        break;
+      case "manual" in errorMap:
+        setGlobalValidationError("manual", errorMap);
+        break;
+      default:
+        setGlobalValidationError(null, errorMap);
+    }
     return false;
   }
 
   if (
-    !!definition?.properties &&
-    !definition.properties["manual"] &&
-    !definition.properties["interval"] &&
-    !definition.properties["alert"] &&
-    !definition.properties["incident"]
+    !!properties &&
+    !properties["manual"] &&
+    !properties["interval"] &&
+    !properties["alert"] &&
+    !properties["incident"]
   ) {
-    setGlobalValidationError(
-      "trigger_start",
-      "Workflow Should at least have one trigger."
-    );
-    return false;
-  }
-
-  if (
-    definition?.properties &&
-    "interval" in definition.properties &&
-    !definition.properties.interval
-  ) {
-    setGlobalValidationError("interval", "Workflow interval cannot be empty.");
-    return false;
-  }
-
-  const alertSources = Object.values(definition.properties.alert || {}).filter(
-    Boolean
-  );
-  if (
-    definition?.properties &&
-    definition.properties["alert"] &&
-    alertSources.length == 0
-  ) {
-    setGlobalValidationError(
-      "alert",
-      "Workflow alert trigger cannot be empty."
-    );
-    return false;
-  }
-
-  const incidentActions = Object.values(
-    definition.properties.incident || {}
-  ).filter(Boolean);
-  if (
-    definition?.properties &&
-    definition.properties["incident"] &&
-    incidentActions.length == 0
-  ) {
-    setGlobalValidationError(
-      "incident",
-      "Workflow incident trigger cannot be empty."
-    );
+    setGlobalValidationError("trigger_start", {
+      rule_error: "Workflow Should at least have one trigger.",
+    });
     return false;
   }
 
   const anyStepOrAction = definition?.sequence?.length > 0;
   if (!anyStepOrAction) {
-    setGlobalValidationError(null, "At least 1 step/action is required.");
+    setGlobalValidationError(null, {
+      rule_error: "At least 1 step/action is required.",
+    });
+    return false;
   }
   const anyActionsInMainSequence = (
     definition.sequence[0] as V2Step
@@ -89,10 +83,9 @@ export function globalValidatorV2(
       const sequence = definition?.sequence?.[0]?.sequence || [];
       for (let i = actionIndex + 1; i < sequence.length; i++) {
         if (sequence[i]?.type?.includes("step-")) {
-          setGlobalValidationError(
-            sequence[i].id,
-            "Steps cannot be placed after actions."
-          );
+          setGlobalValidationError(sequence[i].id, {
+            rule_error: "Steps cannot be placed after actions.",
+          });
           return false;
         }
       }
@@ -103,55 +96,135 @@ export function globalValidatorV2(
   return valid;
 }
 
+export const getUniqueKeysFromStep = (properties: V2Properties) => {
+  return [
+    ...new Set([
+      ...(properties.stepParams || []),
+      ...(properties.actionParams || []),
+    ]),
+  ].filter((val) => val);
+};
+
+export const getDefaultWith = (uniqueKeys: string[]) => {
+  return (
+    uniqueKeys?.reduce<V2Properties>((obj, key) => {
+      obj[key] = "";
+      return obj;
+    }, {}) || {}
+  );
+};
+
 export function stepValidatorV2(
   step: V2Step,
-  setStepValidationError: (step: V2Step, error: string | null) => void,
+  setStepValidationError: (
+    step: V2Step,
+    error: null | Record<string, string>
+  ) => void,
   parentSequence?: V2Step,
   definition?: ReactFlowDefinition
 ): boolean {
-  if (step.type.includes("condition-")) {
-    if (!step.name) {
-      setStepValidationError(step, "Step/action name cannot be empty.");
+  const schema = getSchemaByStepType(step.type);
+
+  if (schema) {
+    const unqiuekeys = getUniqueKeysFromStep(step.properties);
+    const defaultWith = getDefaultWith(unqiuekeys);
+    const result = schema.safeParse({
+      ...step,
+      //Property keys are temporarily created to ensure proper validation and meaningful error messages.
+      properties: {
+        ...step.properties,
+        with: { ...defaultWith, ...(step.properties.with || {}) },
+        config: step.properties.config || "",
+      },
+    });
+    if (!result.success) {
+      const errorMap = result.error.errors.reduce<Record<string, string>>(
+        (obj, err) => {
+          const path = err.path.join(".");
+          if (path && !(path in obj)) {
+            obj[path] = err.message?.toString();
+          }
+          return obj;
+        },
+        {}
+      );
+      setStepValidationError(step, errorMap);
       return false;
     }
+  }
+
+  if (step.type === "foreach") {
+    let valid = true;
+    const sequences = step.sequence || [];
+    console.log("enterign thsi foreach", sequences);
+
+    for (let sequence of sequences) {
+      valid = stepValidatorV2(sequence, setStepValidationError);
+      if (!valid) {
+        return false;
+      }
+    }
+    return valid;
+  }
+
+  //TO DO: move this to zod validations
+  if (step.type.includes("condition-")) {
     const branches = (step?.branches || {
       true: [],
       false: [],
     }) as V2Step["branches"];
+
+    const trueBranches = branches?.true || [];
+    const falseBranches = branches?.false || [];
     const onlyActions = branches?.true?.every((step: V2Step) =>
       step.type.includes("action-")
     );
     if (!onlyActions) {
-      setStepValidationError(step, "Conditions can only contain actions.");
+      setStepValidationError(step, {
+        rule_error: "Conditions can only contain actions.",
+      });
       return false;
     }
+
     const conditionHasActions = branches?.true
       ? branches?.true.length > 0
       : false;
     if (!conditionHasActions)
-      setStepValidationError(
-        step,
-        "Conditions must contain at least one action."
-      );
-    const valid = conditionHasActions && onlyActions;
+      setStepValidationError(step, {
+        rule_error: "Conditions must contain at least one action.",
+      });
+    let valid = conditionHasActions && onlyActions;
     if (valid) setStepValidationError(step, null);
+
+    for (let branch of trueBranches) {
+      valid = stepValidatorV2(branch, setStepValidationError);
+      if (!valid) {
+        return false;
+      }
+    }
+
+    for (let branch of falseBranches) {
+      valid = stepValidatorV2(branch, setStepValidationError);
+      if (!valid) {
+        return false;
+      }
+    }
     return valid;
   }
+
   if (step?.componentType === "task") {
-    const valid = step?.name !== "";
-    if (!valid) setStepValidationError(step, "Step name cannot be empty.");
     if (!step?.properties?.with) {
-      setStepValidationError(
-        step,
-        "There is step/action with no parameters configured!"
-      );
+      setStepValidationError(step, {
+        rule_error: "Conditions must contain at least one action.",
+      });
       return false;
     }
-    if (valid && step?.properties?.with) {
+    if (step?.properties?.with) {
       setStepValidationError(step, null);
     }
-    return valid;
+    return true;
   }
+
   setStepValidationError(step, null);
   return true;
 }
