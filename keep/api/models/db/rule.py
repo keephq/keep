@@ -1,11 +1,7 @@
-from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-from itertools import chain
-from typing import List, Dict
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import JSON, Column, Field, SQLModel
 
 # Currently a rule_definition is a list of SQL expressions
