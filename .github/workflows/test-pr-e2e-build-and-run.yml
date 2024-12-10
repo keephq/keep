@@ -1,4 +1,4 @@
-name: Tests (E2E)
+name: Build and up (E2E)
 
 on:
   workflow_dispatch:
@@ -24,9 +24,6 @@ env:
 jobs:
   tests-e2e:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        db_type: [mysql, postgres]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
