@@ -50,6 +50,8 @@ from keep.api.models.alert import (
     IncidentStatusChangeDto,
     MergeIncidentsRequestDto,
     MergeIncidentsResponseDto,
+    SplitIncidentRequestDto,
+    SplitIncidentResponseDto,
 )
 from keep.api.models.db.alert import AlertActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
@@ -257,6 +259,43 @@ def delete_incident(
     incident_bl.delete_incident(incident_id)
     return Response(status_code=202)
 
+@router.post(
+    "/{incident_id}/split",
+    description="Split incident by incident id",
+    response_model=IncidentDto,
+)
+async def split_incident(
+    incident_id: UUID,
+    command: SplitIncidentRequestDto,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+    ),
+    pusher_client: Pusher | None = Depends(get_pusher_client),
+    session: Session = Depends(get_session),
+) -> SplitIncidentResponseDto:
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Splitting incident",
+        extra={
+            "incident_id": incident_id,
+            "tenant_id": tenant_id,
+            "alert_ids": command.alert_ids,
+        },
+    )
+    incident_bl = IncidentBl(tenant_id, session, pusher_client)
+    await incident_bl.add_alerts_to_incident(
+        incident_id=command.destination_incident_id, alert_ids=command.alert_ids
+    )
+    incident_bl.delete_alerts_from_incident(
+        incident_id=incident_id, alert_ids=command.alert_ids
+    )
+    return SplitIncidentResponseDto(
+        destination_incident_id=command.destination_incident_id,
+        # TODO: get moved alert ids or moved count
+        moved_alert_ids=[],
+    )
+
+
 
 @router.post(
     "/merge", description="Merge incidents", response_model=MergeIncidentsResponseDto
@@ -304,7 +343,6 @@ def merge_incidents(
         )
     except DestinationIncidentNotFound as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.get(
     "/{incident_id}/alerts",
