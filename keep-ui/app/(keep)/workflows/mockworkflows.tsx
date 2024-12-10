@@ -164,11 +164,11 @@ export default function MockWorkflowCardSection({
             const workflow = template.workflow;
             return (
               <Card
-                key={index}
+                key={workflow.id}
                 className="p-4 flex flex-col justify-between w-full border-2 border-transparent hover:border-orange-400 "
               >
                 <div>
-                  <WorkflowSteps workflow={workflow} />
+                  <WorkflowSteps workflow={workflow}/>
                   <h3 className="text-lg sm:text-xl font-semibold line-clamp-2">
                     {workflow.name || getNameFromId(workflow.id)}
                   </h3>
