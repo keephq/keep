@@ -573,6 +573,13 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
         headers={"x-api-key": "some-key"},
     )
     alerts = response.json()
+    while alerts[0]["status"] != "firing":
+        time.sleep(0.1)
+        response = client.get(
+            "/preset/feed/alerts",
+            headers={"x-api-key": "some-key"},
+        )
+        alerts = response.json()
     assert len(alerts) == 1
     alert = alerts[0]
     assert alert["status"] == "firing"

@@ -141,6 +141,12 @@ def test_deduplication_sanity_2(db_session, client, test_app):
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
 
+    while not any([rule for rule in deduplication_rules if rule.get("ingested") == 4]):
+        time.sleep(0.1)
+        deduplication_rules = client.get(
+            "/deduplications", headers={"x-api-key": "some-api-key"}
+        ).json()
+
     assert len(deduplication_rules) == 2  # default + datadog
 
     for dedup_rule in deduplication_rules:
