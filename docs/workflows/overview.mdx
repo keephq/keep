@@ -3,55 +3,13 @@ title: "Overview"
 ---
 
 <Note>Need any help with creating a Workflow? Feel free to submit an issue or join our Slack and we will help with that.</Note>
-A Workflow in Keep is a YAML-based configuration file designed to manage, automate, and enrich alerts. Once uploaded to Keep, the workflow can run based on three different types of triggers: manual, alert, or interval. In this document, we'll look into each of these components in detail.
 
-In this section we will review the Workflow components.
+# Workflow Overview
 
-## Triggers
-<Tip>When you run alert with the CLI using `keep run`, the CLI run the alert regardless of the triggers.</Tip>
-A trigger is an event that starts the workflow. It could be a manual trigger, an alert, or an interval depending on your use case.
-Keep support four types of triggers:
-### Manual trigger
-```
-# run manually
-triggers:
-  - type: manual
-```
+Keep workflows are YAML-based configurations that define automated processes for handling alerts, incidents, and other operational tasks. They provide a flexible and powerful way to automate your incident management and alert handling processes.
 
-### Alert trigger
-```
-# run every time alert from cloudwatch triggered
-triggers:
-  - type: alert
-    filters:
-      - key: source
-        value: cloudwatch
-```
+## Key Components
 
-### Incident trigger
-```
-# run when incident get created, update or deleted
-# You can use multiple events, but at least one is required
-triggers:
-  - type: incident
-    events:
-      - created
-      - deleted
-```
+A Keep workflow consists of several key components:
 
-### Interval trigger
-```
-# run every 10 seconds
-triggers:
-  - type: interval
-    value: 10
-```
-
-## Steps
-Steps are optional and define a sequence of actions that fetch or compute data. They are used to add data to the workflow, which can be used in other steps or actions.
-
-## Actions
-An action defines what to do when a workflow is triggered. Actions usually rely on providers for executing specific tasks, like sending a Slack message.
-
-## Conditions
-A condition sets the rules under which an action should be performed. For example, you can set a condition to only trigger an action if certain criteria are met.
+### 1. Workflow Definition

@@ -39,7 +39,8 @@
           "pages": [
             "overview/glossary",
             "platform/alertseverityandstatus",
-            "overview/howdoeskeepgetmyalerts"
+            "overview/howdoeskeepgetmyalerts",
+            "overview/comparisons"
           ]
         }
       ]
@@ -64,44 +65,27 @@
         {
           "group": "Syntax",
           "pages": [
-            "workflows/syntax/basic-syntax",
-            "workflows/syntax/foreach-syntax",
-            "workflows/syntax/context-syntax"
-          ]
-        },
-        {
-          "group": "Conditions",
-          "pages": [
-            "workflows/conditions/what-is-a-condition",
-            "workflows/conditions/threshold",
-            "workflows/conditions/assert",
-            "workflows/conditions/stddev"
-          ]
-        },
-        {
-          "group": "Functions",
-          "pages": [
-            "workflows/functions/what-is-a-function",
-            "workflows/functions/all",
-            "workflows/functions/add-time-to-date",
-            "workflows/functions/diff",
-            "workflows/functions/len",
-            "workflows/functions/split",
-            "workflows/functions/first",
-            "workflows/functions/utcnow",
-            "workflows/functions/to-utc",
-            "workflows/functions/datetime-compare",
-            "workflows/functions/encode",
-            "workflows/functions/last",
-            "workflows/functions/lowercase",
-            "workflows/functions/uppercase"
-          ]
-        },
-        {
-          "group": "Throttles",
-          "pages": [
-            "workflows/throttles/what-is-a-throttle",
-            "workflows/throttles/one-until-resolved"
+            {
+              "group": "General Syntax",
+              "pages": [
+                "workflows/syntax/basic-syntax",
+                "workflows/syntax/foreach-syntax",
+                "workflows/syntax/context-syntax"
+              ]
+            },
+            {
+              "group": "Conditions",
+              "pages": [
+                "workflows/conditions/what-is-a-condition",
+                "workflows/conditions/threshold",
+                "workflows/conditions/assert",
+                "workflows/conditions/stddev"
+              ]
+            },
+            {
+              "group": "Functions",
+              "pages": ["workflows/functions/what-is-a-function"]
+            }
           ]
         },
         {
@@ -110,66 +94,15 @@
             "workflows/examples/multi-step-alert",
             "workflows/examples/reusable-action-alert"
           ]
-        },
-        "workflows/state"
+        }
       ]
-    },
-    {
-      "group": "Deployment",
-      "pages": [
-        "deployment/configuration",
-        {
-          "group": "Authentication",
-          "pages": [
-            "deployment/authentication/overview",
-            "deployment/authentication/no-auth",
-            "deployment/authentication/db-auth",
-            "deployment/authentication/auth0-auth",
-            "deployment/authentication/azuread-auth",
-            "deployment/authentication/keycloak-auth",
-            "deployment/authentication/oauth2proxy-auth"
-          ]
-        },
-        {
-          "group": "Provision",
-          "pages": [
-            "deployment/provision/overview",
-            "deployment/provision/provider",
-            "deployment/provision/workflow",
-            "deployment/provision/dashboard"
-          ]
-        },
-        "deployment/secret-store",
-        {
-          "group": "Deploy On",
-          "pages": [
-            "deployment/docker",
-            {
-              "group": "Kubernetes",
-              "pages": [
-                "deployment/kubernetes/overview",
-                "deployment/kubernetes/installation",
-                "deployment/kubernetes/architecture",
-                "deployment/kubernetes/openshift"
-              ]
-            },
-            "deployment/openshift",
-            "deployment/ecs"
-          ]
-        },
-        "deployment/stress-testing"
-      ]
-    },
-    {
-      "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
     },
     {
       "group": "Providers",
       "pages": [
         "providers/overview",
         "providers/fingerprints",
-        "providers/adding-a-new-provider",
+        "providers/adding-a-new-p rovider",
         "providers/getting-started",
         "providers/what-is-a-provider",
         {
@@ -271,6 +204,56 @@
           ]
         }
       ]
+    },
+    {
+      "group": "Deployment",
+      "pages": [
+        "deployment/configuration",
+        {
+          "group": "Authentication",
+          "pages": [
+            "deployment/authentication/overview",
+            "deployment/authentication/no-auth",
+            "deployment/authentication/db-auth",
+            "deployment/authentication/auth0-auth",
+            "deployment/authentication/azuread-auth",
+            "deployment/authentication/keycloak-auth",
+            "deployment/authentication/oauth2proxy-auth"
+          ]
+        },
+        {
+          "group": "Provision",
+          "pages": [
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow",
+            "deployment/provision/dashboard"
+          ]
+        },
+        "deployment/secret-store",
+        {
+          "group": "Deploy On",
+          "pages": [
+            "deployment/docker",
+            {
+              "group": "Kubernetes",
+              "pages": [
+                "deployment/kubernetes/overview",
+                "deployment/kubernetes/installation",
+                "deployment/kubernetes/architecture",
+                "deployment/kubernetes/openshift"
+              ]
+            },
+            "deployment/openshift",
+            "deployment/ecs"
+          ]
+        },
+        "deployment/stress-testing"
+      ]
+    },
+    {
+      "group": "Development",
+      "pages": ["development/getting-started", "development/external-url"]
     },
     {
       "group": "Keep API",
