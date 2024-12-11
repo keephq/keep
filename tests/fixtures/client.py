@@ -55,6 +55,8 @@ def client(test_app, db_session, monkeypatch):
     # disable pusher
     monkeypatch.setenv("PUSHER_DISABLED", "true")
     monkeypatch.setenv("KEEP_DEBUG_TASKS", "true")
+    monkeypatch.setenv("LOGGING_LEVEL", "DEBUG")
+    monkeypatch.setenv("SQLALCHEMY_WARN_20", "1")
     with TestClient(test_app) as client:
         yield client
 
