@@ -3370,7 +3370,7 @@ def create_incident_from_dict(
 
 def update_incident_from_dto_by_id(
     tenant_id: str,
-    incident_id: str,
+    incident_id: str | UUID,
     updated_incident_dto: IncidentDtoIn | IncidentDto,
     generated_by_ai: bool = False,
 ) -> Optional[Incident]:
@@ -3746,7 +3746,7 @@ def add_alerts_to_incident(
             return incident
 
 
-def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str) -> int:
+def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str | UUID) -> int:
     with Session(engine) as session:
         return session.execute(
             select(func.count(1))

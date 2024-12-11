@@ -80,12 +80,12 @@ class IncidentBl:
             "Incident DTO created",
             extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
         )
-        self.__update_client_on_incident_change()
+        self.update_client_on_incident_change()
         self.logger.info(
             "Client updated on incident change",
             extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
         )
-        self.__run_workflows(new_incident_dto, "created")
+        self.send_workflow_event(new_incident_dto, "created")
         self.logger.info(
             "Workflows run on incident",
             extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
@@ -113,13 +113,13 @@ class IncidentBl:
             "Alerts pushed to elastic",
             extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
-        self.__update_client_on_incident_change(incident_id)
+        self.update_client_on_incident_change(incident_id)
         self.logger.info(
             "Client updated on incident change",
             extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
         incident_dto = IncidentDto.from_db_incident(incident)
-        self.__run_workflows(incident_dto, "updated")
+        self.send_workflow_event(incident_dto, "updated")
         self.logger.info(
             "Workflows run on incident",
             extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
@@ -146,7 +146,7 @@ class IncidentBl:
         except Exception:
             self.logger.exception("Failed to push alert to elasticsearch")
 
-    def __update_client_on_incident_change(self, incident_id: Optional[UUID] = None):
+    def update_client_on_incident_change(self, incident_id: Optional[UUID] = None):
         if self.pusher_client is not None:
             self.logger.info(
                 "Pushing incident change to client",
@@ -162,7 +162,7 @@ class IncidentBl:
                 extra={"incident_id": incident_id, "tenant_id": self.tenant_id},
             )
 
-    def __run_workflows(self, incident_dto: IncidentDto, action: str):
+    def send_workflow_event(self, incident_dto: IncidentDto, action: str) -> None:
         try:
             workflow_manager = WorkflowManager.get_instance()
             workflow_manager.insert_incident(self.tenant_id, incident_dto, action)
@@ -238,17 +238,8 @@ class IncidentBl:
         )
         if not deleted:
             raise HTTPException(status_code=404, detail="Incident not found")
-        self.__update_client_on_incident_change()
-        try:
-            workflow_manager = WorkflowManager.get_instance()
-            self.logger.info("Adding incident to the workflow manager queue")
-            workflow_manager.insert_incident(self.tenant_id, incident_dto, "deleted")
-            self.logger.info("Added incident to the workflow manager queue")
-        except Exception:
-            self.logger.exception(
-                "Failed to run workflows based on incident",
-                extra={"incident_id": incident_dto.id, "tenant_id": self.tenant_id},
-            )
+        self.update_client_on_incident_change()
+        self.send_workflow_event(incident_dto, "deleted")
 
     def update_incident(
         self,
@@ -269,17 +260,6 @@ class IncidentBl:
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
-        new_incident_dto = IncidentDto.from_db_incident(incident)
-        try:
-            workflow_manager = WorkflowManager.get_instance()
-            self.logger.info("Adding incident to the workflow manager queue")
-            workflow_manager.insert_incident(
-                self.tenant_id, new_incident_dto, "updated"
-            )
-            self.logger.info("Added incident to the workflow manager queue")
-        except Exception:
-            self.logger.exception(
-                "Failed to run workflows based on incident",
-                extra={"incident_id": new_incident_dto.id, "tenant_id": self.tenant_id},
-            )
-        return new_incident_dto
+        incident_dto = IncidentDto.from_db_incident(incident)
+        self.send_workflow_event(incident_dto, "updated")
+        return incident_dto
