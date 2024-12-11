@@ -70,7 +70,7 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
   }
 
   if (isValid(start) && isValid(end)) {
-    return isWithinInterval(startOfDay(date), { start, end });
+    return isWithinInterval(date, { start, end });
   }
 
   if (isValid(start)) {

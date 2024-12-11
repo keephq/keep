@@ -16,7 +16,7 @@ import { format } from "date-fns";
 import { type DateRange } from "react-day-picker";
 
 const ONE_MINUTE = 60 * 1000;
-const ONE_HOUR = 60 * 60 * 1000;
+const ONE_HOUR = 60 * ONE_MINUTE;
 const ONE_DAY = 24 * ONE_HOUR;
 
 interface TimeFrame {
