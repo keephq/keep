@@ -6,20 +6,11 @@ import json
 import logging
 import os
 import time
-import uuid
 from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pusher import Pusher
@@ -266,7 +257,6 @@ def assign_alert(
 
 def discard_task(
     trace_id: str,
-    job_id: str,
     task: asyncio.Task,
     running_tasks: set,
     started_time: float,
@@ -275,7 +265,6 @@ def discard_task(
     logger.info(
         "Task completed",
         extra={
-            "job_id": job_id,
             "processing_time": time.time() - started_time,
             "trace_id": trace_id,
         },
@@ -284,7 +273,6 @@ def discard_task(
 
 def create_process_event_task(
     bg_tasks: BackgroundTasks,
-    job_id: str,
     tenant_id: str,
     provider_type: str | None,
     provider_id: str | None,
@@ -293,13 +281,13 @@ def create_process_event_task(
     trace_id: str,
     event: AlertDto | list[AlertDto] | dict,
     running_tasks: set,
-) -> None:
-    logger.info("Adding task", extra={"job_id": job_id, "trace_id": trace_id})
+) -> str:
+    logger.info("Adding task", extra={"trace_id": trace_id})
     started_time = time.time()
     task = asyncio.create_task(
         run_in_threadpool(
             process_event,
-            {"job_id": job_id},
+            {},
             tenant_id,
             provider_type,
             provider_id,
@@ -309,12 +297,13 @@ def create_process_event_task(
             event,
         )
     )
+    task.add_done_callback(
+        lambda task: discard_task(trace_id, task, running_tasks, started_time)
+    )
     bg_tasks.add_task(task)
     running_tasks.add(task)
-    logger.info("Task added", extra={"job_id": job_id, "trace_id": trace_id})
-    task.add_done_callback(
-        lambda task: discard_task(trace_id, job_id, task, running_tasks, started_time)
-    )
+    logger.info("Task added", extra={"trace_id": trace_id})
+    return task.get_name()
 
 
 @router.post(
@@ -363,10 +352,10 @@ async def receive_generic_event(
                 "queue": KEEP_ARQ_QUEUE_BASIC,
             },
         )
+        task_name = job.job_id
     else:
-        create_process_event_task(
+        task_name = create_process_event_task(
             bg_tasks,
-            str(uuid.uuid4()),
             authenticated_entity.tenant_id,
             None,
             None,
@@ -376,7 +365,7 @@ async def receive_generic_event(
             event,
             running_tasks,
         )
-    return Response(status_code=202)
+    return JSONResponse(content={"task_name": task_name}, status_code=202)
 
 
 # https://learn.netdata.cloud/docs/alerts-&-notifications/notifications/centralized-cloud-notifications/webhook#challenge-secret
@@ -472,10 +461,10 @@ async def receive_event(
                 "queue": KEEP_ARQ_QUEUE_BASIC,
             },
         )
+        task_name = job.job_id
     else:
-        create_process_event_task(
+        task_name = create_process_event_task(
             bg_tasks,
-            str(uuid.uuid4()),
             authenticated_entity.tenant_id,
             provider_type,
             provider_id,
@@ -485,7 +474,7 @@ async def receive_event(
             event,
             running_tasks,
         )
-    return Response(status_code=202)
+    return JSONResponse(content={"task_name": task_name}, status_code=202)
 
 
 @router.get(

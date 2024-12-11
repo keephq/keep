@@ -756,10 +756,7 @@ def test_ingesting_alert_without_fingerprint_fields(db_session, client, test_app
         "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
     )
 
-    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
-    while len(alerts) != 1:
-        time.sleep(1)
-        alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    wait_for_alerts(client, 1)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}

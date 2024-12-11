@@ -670,12 +670,12 @@ def process_event(
                 job_id,
             )
 
-        logger.info(
-            "Event processed",
-            extra={**extra_dict, "processing_time": time.time() - start_time},
-        )
-        events_out_counter.inc()
-        return formatted_events
+            logger.info(
+                "Event processed",
+                extra={**extra_dict, "processing_time": time.time() - start_time},
+            )
+            events_out_counter.inc()
+            return formatted_events
     except Exception:
         logger.exception(
             "Error processing event",

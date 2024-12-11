@@ -13,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import validators
 from dateutil.tz import tz
@@ -124,6 +124,13 @@ def get_session_sync() -> Session:
         Session: A database session
     """
     return Session(engine)
+
+
+def __convert_to_uuid(value: str) -> UUID:
+    try:
+        return UUID(value)
+    except ValueError:
+        return None
 
 
 def create_workflow_execution(
@@ -1649,9 +1656,13 @@ def update_rule(
     require_approve,
     resolve_on,
 ):
+    rule_uuid = __convert_to_uuid(rule_id)
+    if not rule_uuid:
+        return False
+
     with Session(engine) as session:
         rule = session.exec(
-            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
+            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
         ).first()
 
         if rule:
@@ -1703,8 +1714,12 @@ def create_alert(tenant_id, provider_type, provider_id, event, fingerprint):
 
 def delete_rule(tenant_id, rule_id):
     with Session(engine) as session:
+        rule_uuid = __convert_to_uuid(rule_id)
+        if not rule_uuid:
+            return False
+
         rule = session.exec(
-            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_id)
+            select(Rule).where(Rule.tenant_id == tenant_id).where(Rule.id == rule_uuid)
         ).first()
 
         if rule:
@@ -1907,10 +1922,14 @@ def update_deduplication_rule(
     ignore_fields: list[str] = [],
     priority: int = 0,
 ):
+    rule_uuid = __convert_to_uuid(rule_id)
+    if not rule_uuid:
+        return False
+
     with Session(engine) as session:
         rule = session.exec(
             select(AlertDeduplicationRule)
-            .where(AlertDeduplicationRule.id == rule_id)
+            .where(AlertDeduplicationRule.id == rule_uuid)
             .where(AlertDeduplicationRule.tenant_id == tenant_id)
         ).first()
         if not rule:
@@ -1934,10 +1953,14 @@ def update_deduplication_rule(
 
 
 def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
+    rule_uuid = __convert_to_uuid(rule_id)
+    if not rule_uuid:
+        return False
+
     with Session(engine) as session:
         rule = session.exec(
             select(AlertDeduplicationRule)
-            .where(AlertDeduplicationRule.id == rule_id)
+            .where(AlertDeduplicationRule.id == rule_uuid)
             .where(AlertDeduplicationRule.tenant_id == tenant_id)
         ).first()
         if not rule:
@@ -1951,6 +1974,11 @@ def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
 def create_deduplication_event(
     tenant_id, deduplication_rule_id, deduplication_type, provider_id, provider_type
 ):
+    if isinstance(deduplication_rule_id, str):
+        deduplication_rule_id = __convert_to_uuid(deduplication_rule_id)
+        if not deduplication_rule_id:
+            return False
+
     with Session(engine) as session:
         deduplication_event = AlertDeduplicationEvent(
             tenant_id=tenant_id,
@@ -2931,8 +2959,10 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                     ).label("affected_services"),
                 )
                 .select_from(Incident)
-                .outerjoin(sources_join, True)
-                .outerjoin(affected_services_join, True)
+                .outerjoin(sources_join, sources_join.c.value.isnot(None))
+                .outerjoin(
+                    affected_services_join, affected_services_join.c.value.isnot(None)
+                )
                 .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
             )
             results = session.exec(query).one_or_none()
@@ -2966,8 +2996,10 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                     ),
                 )
                 .select_from(Incident)
-                .outerjoin(sources_join, True)
-                .outerjoin(affected_services_join, True)
+                .outerjoin(sources_join, sources_join.c.value.isnot(None))
+                .outerjoin(
+                    affected_services_join, affected_services_join.c.value.isnot(None)
+                )
                 .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
             )
 
@@ -3003,8 +3035,10 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
                     ),
                 )
                 .select_from(Incident)
-                .outerjoin(sources_join, True)
-                .outerjoin(affected_services_join, True)
+                .outerjoin(sources_join, sources_join.c.value.isnot(None))
+                .outerjoin(
+                    affected_services_join, affected_services_join.c.value.isnot(None)
+                )
                 .filter(Incident.tenant_id == tenant_id, Incident.is_confirmed == True)
             )
 
@@ -4675,46 +4709,45 @@ def set_last_alert(
     logger.info(f"Set last alert for `{alert.fingerprint}`")
     with existed_or_new_session(session) as session:
         for attempt in range(max_retries):
-            with session.begin_nested() as transaction:
-                try:
-                    last_alert = get_last_alert_by_fingerprint(
-                        tenant_id, alert.fingerprint, session, for_update=True
+            try:
+                last_alert = get_last_alert_by_fingerprint(
+                    tenant_id, alert.fingerprint, session, for_update=True
+                )
+
+                # To prevent rare, but possible race condition
+                # For example if older alert failed to process
+                # and retried after new one
+                if last_alert and last_alert.timestamp.replace(
+                    tzinfo=tz.UTC
+                ) < alert.timestamp.replace(tzinfo=tz.UTC):
+
+                    logger.info(
+                        f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
+                    )
+                    last_alert.timestamp = alert.timestamp
+                    last_alert.alert_id = alert.id
+                    session.add(last_alert)
+
+                elif not last_alert:
+                    logger.info(
+                        f"No last alert for `{alert.fingerprint}`, creating new"
+                    )
+                    last_alert = LastAlert(
+                        tenant_id=tenant_id,
+                        fingerprint=alert.fingerprint,
+                        timestamp=alert.timestamp,
+                        first_timestamp=alert.timestamp,
+                        alert_id=alert.id,
                     )
 
-                    # To prevent rare, but possible race condition
-                    # For example if older alert failed to process
-                    # and retried after new one
-                    if last_alert and last_alert.timestamp.replace(
-                        tzinfo=tz.UTC
-                    ) < alert.timestamp.replace(tzinfo=tz.UTC):
+                    session.add(last_alert)
+                session.commit()
+            except OperationalError as ex:
+                if "Deadlock found" in ex.args[0]:
 
-                        logger.info(
-                            f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
-                        )
-                        last_alert.timestamp = alert.timestamp
-                        last_alert.alert_id = alert.id
-                        session.add(last_alert)
-
-                    elif not last_alert:
-                        logger.info(
-                            f"No last alert for `{alert.fingerprint}`, creating new"
-                        )
-                        last_alert = LastAlert(
-                            tenant_id=tenant_id,
-                            fingerprint=alert.fingerprint,
-                            timestamp=alert.timestamp,
-                            first_timestamp=alert.timestamp,
-                            alert_id=alert.id,
-                        )
-
-                        session.add(last_alert)
-                    transaction.commit()
-                except OperationalError as ex:
-                    if "Deadlock found" in ex.args[0]:
-
-                        logger.info(
-                            f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
-                        )
-                        transaction.rollback()
-                        if attempt >= max_retries:
-                            raise ex
+                    logger.info(
+                        f"Deadlock found while updating lastalert for `{alert.fingerprint}`, retry #{attempt}"
+                    )
+                    session.rollback()
+                    if attempt >= max_retries:
+                        raise ex

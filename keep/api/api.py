@@ -105,6 +105,10 @@ async def check_pending_tasks(background_tasks: set):
 
 
 async def startup():
+    """
+    This runs for every worker on startup.
+    Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+    """
     logger.info("Starting the services")
     # Start the scheduler
     if SCHEDULER:
@@ -137,6 +141,10 @@ async def startup():
 
 
 async def shutdown():
+    """
+    This runs for every worker on shutdown.
+    Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+    """
     logger.info("Shutting down Keep")
     if SCHEDULER:
         logger.info("Stopping the scheduler")
@@ -163,12 +171,20 @@ async def shutdown():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    This runs for every worker on startup and shutdown.
+    Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+    """
+    # create a set of background tasks
     background_tasks = set()
+    # if debug tasks are enabled, create a task to check for pending tasks
     if KEEP_DEBUG_TASKS:
         asyncio.create_task(check_pending_tasks(background_tasks))
 
     # Startup
     await startup()
+
+    # yield the background tasks, this is available for the app to use in request context
     yield {"background_tasks": background_tasks}
 
     # Shutdown
