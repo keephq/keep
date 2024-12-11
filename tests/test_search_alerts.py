@@ -10,6 +10,7 @@ from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.searchengine.searchengine import SearchEngine
+from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
 
