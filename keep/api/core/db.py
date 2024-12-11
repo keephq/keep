@@ -216,14 +216,19 @@ def get_last_completed_execution(
 def get_workflows_that_should_run():
     with Session(engine) as session:
         logger.debug("Checking for workflows that should run")
-        workflows_with_interval = (
-            session.query(Workflow)
-            .filter(Workflow.is_deleted == False)
-            .filter(Workflow.is_disabled == False)
-            .filter(Workflow.interval != None)
-            .filter(Workflow.interval > 0)
-            .all()
-        )
+        workflows_with_interval = []
+        try:
+            workflows_with_interval = (
+                session.exec(Workflow)
+                .filter(Workflow.is_deleted == False)
+                .filter(Workflow.is_disabled == False)
+                .filter(Workflow.interval != None)
+                .filter(Workflow.interval > 0)
+                .all()
+            )
+        except Exception:
+            logger.exception("Failed to get workflows with interval")
+
         logger.debug(f"Found {len(workflows_with_interval)} workflows with interval")
         workflows_to_run = []
         # for each workflow:
