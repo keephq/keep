@@ -218,14 +218,13 @@ def get_workflows_that_should_run():
         logger.debug("Checking for workflows that should run")
         workflows_with_interval = []
         try:
-            workflows_with_interval = (
-                session.exec(Workflow)
+            workflows_with_interval = session.exec(
+                select(Workflow)
                 .filter(Workflow.is_deleted == False)
                 .filter(Workflow.is_disabled == False)
                 .filter(Workflow.interval != None)
                 .filter(Workflow.interval > 0)
-                .all()
-            )
+            ).all()
         except Exception:
             logger.exception("Failed to get workflows with interval")
 
