@@ -107,7 +107,7 @@ def upgrade() -> None:
         "lastalert",
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("alert_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("alert_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("timestamp", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(
             ["alert_id"],
@@ -147,7 +147,9 @@ def upgrade() -> None:
             ["tenant_id"],
             ["tenant.id"],
         ),
-        sa.PrimaryKeyConstraint("tenant_id", "incident_id", "fingerprint", "deleted_at"),
+        sa.PrimaryKeyConstraint(
+            "tenant_id", "incident_id", "fingerprint", "deleted_at"
+        ),
     )
 
     populate_db()
