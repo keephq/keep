@@ -13,28 +13,30 @@ import pydantic
 import requests
 from datadog_api_client import ApiClient, Configuration
 from datadog_api_client.api_client import Endpoint
-from datadog_api_client.exceptions import (ApiException, ForbiddenException,
-                                           NotFoundException)
+from datadog_api_client.exceptions import (
+    ApiException,
+    ForbiddenException,
+    NotFoundException,
+)
 from datadog_api_client.v1.api.events_api import EventsApi
 from datadog_api_client.v1.api.logs_api import LogsApi
 from datadog_api_client.v1.api.metrics_api import MetricsApi
 from datadog_api_client.v1.api.monitors_api import MonitorsApi
-from datadog_api_client.v1.api.webhooks_integration_api import \
-    WebhooksIntegrationApi
+from datadog_api_client.v1.api.webhooks_integration_api import WebhooksIntegrationApi
 from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
-from datadog_api_client.v2.api.service_definition_api import \
-    ServiceDefinitionApi
+from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseTopologyProvider
 from keep.providers.base.provider_exceptions import GetAlertException
-from keep.providers.datadog_provider.datadog_alert_format_description import \
-    DatadogAlertFormatDescription
+from keep.providers.datadog_provider.datadog_alert_format_description import (
+    DatadogAlertFormatDescription,
+)
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
@@ -75,7 +77,7 @@ class DatadogProviderAuthConfig:
             "description": "Datadog API domain",
             "sensitive": False,
             "hint": "https://api.datadoghq.com",
-            "validation": "https_url"
+            "validation": "https_url",
         },
         default="https://api.datadoghq.com",
     )
@@ -796,7 +798,12 @@ class DatadogProvider(BaseTopologyProvider):
         tags_list.remove("monitor")
 
         try:
-            tags = {k: v for k, v in map(lambda tag: tag.split(":"), tags_list)}
+            tags = {}
+            for tag in tags_list:
+                parts = tag.split(":", 1)  # Split only on first ':'
+                if len(parts) == 2:
+                    key, value = parts
+                    tags[key] = value
         except Exception as e:
             logger.error(
                 "Failed to parse tags", extra={"error": str(e), "tags": tags_list}
