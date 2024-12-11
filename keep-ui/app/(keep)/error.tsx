@@ -28,7 +28,11 @@ export default function ErrorComponent({
 
   return (
     <div className="error-container">
-      <Title>An error occurred while fetching data from the backend</Title>
+      <Title>
+        {error instanceof KeepApiError
+          ? "An error occurred while fetching data from the backend"
+          : error.message || "An error occurred"}
+      </Title>
       <div className="code-container">
         <code>
           {error instanceof KeepApiError && (
@@ -37,7 +41,7 @@ export default function ErrorComponent({
               <br />
               Message: {error.message}
               <br />
-              Url: {error.url}
+              URL: {error.url}
             </div>
           )}
         </code>
