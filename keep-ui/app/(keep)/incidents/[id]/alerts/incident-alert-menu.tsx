@@ -17,9 +17,7 @@ export default function IncidentAlertMenu({ incidentId, alert }: Props) {
   function onRemove() {
     if (confirm("Are you sure you want to remove correlation?")) {
       api
-        .delete(`/incidents/${incidentId}/alerts`, {
-          body: [alert.fingerprint],
-        })
+        .delete(`/incidents/${incidentId}/alerts`, [alert.fingerprint])
         .then(() => {
           toast.success("Alert removed from incident successfully", {
             position: "top-right",
