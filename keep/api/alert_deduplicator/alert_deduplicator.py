@@ -31,12 +31,13 @@ DEFAULT_RULE_UUID = "00000000-0000-0000-0000-000000000000"
 
 class AlertDeduplicator:
 
+    DEDUPLICATION_DISTRIBUTION_ENABLED = config(
+        "KEEP_DEDUPLICATION_DISTRIBUTION_ENABLED", cast=bool, default=True
+    )
+
     def __init__(self, tenant_id):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.provider_distribution_enabled = config(
-            "KEEP_PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
-        )
         self.search_engine = SearchEngine(self.tenant_id)
 
     def _apply_deduplication_rule(
@@ -123,7 +124,7 @@ class AlertDeduplicator:
                 },
             )
 
-            if self.provider_distribution_enabled:
+            if AlertDeduplicator.DEDUPLICATION_DISTRIBUTION_ENABLED:
                 if alert.isFullDuplicate or alert.isPartialDuplicate:
                     # create deduplication event
                     create_deduplication_event(
@@ -374,7 +375,7 @@ class AlertDeduplicator:
                 )
             result.append(dedup)
 
-        if self.provider_distribution_enabled:
+        if AlertDeduplicator.DEDUPLICATION_DISTRIBUTION_ENABLED:
             for dedup in result:
                 for pd, stats in deduplication_stats.items():
                     if pd == f"{dedup.provider_id}_{dedup.provider_type}":

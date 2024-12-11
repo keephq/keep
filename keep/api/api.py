@@ -25,7 +25,6 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
     KEEP_ARQ_TASK_POOL_NONE,
 )
-from keep.api.core.db import SINGLE_TENANT_CACHE
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
@@ -99,7 +98,6 @@ async def check_pending_tasks(background_tasks: set):
                 f"{events_in_queue} background tasks pending",
                 extra={
                     "pending_tasks": events_in_queue,
-                    "cache": SINGLE_TENANT_CACHE,
                 },
             )
         await asyncio.sleep(1)

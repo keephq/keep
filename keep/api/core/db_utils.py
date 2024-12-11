@@ -104,6 +104,9 @@ DB_ECHO = config(
 KEEP_FORCE_CONNECTION_STRING = config(
     "KEEP_FORCE_CONNECTION_STRING", default=False, cast=bool
 )  # pylint: disable=invalid-name
+KEEP_DB_PRE_PING_ENABLED = config(
+    "KEEP_DB_PRE_PING_ENABLED", default=False, cast=bool
+)  # pylint: disable=invalid-name
 
 
 def dumps(_json) -> str:
@@ -150,7 +153,7 @@ def create_db_engine():
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
                 echo=DB_ECHO,
-                pool_pre_ping=True if "postgresql" in DB_CONNECTION_STRING else False,
+                pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
             )
         # SQLite does not support pool_size
         except TypeError:

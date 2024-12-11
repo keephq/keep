@@ -22,7 +22,6 @@ import alembic.config
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from keep.api.core.db import get_all_deduplication_rules
 from keep.api.core.db_utils import create_db_engine
 from keep.api.models.db.alert import *  # pylint: disable=unused-wildcard-import
 from keep.api.models.db.dashboard import *  # pylint: disable=unused-wildcard-import
@@ -47,16 +46,9 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
     """
     Creates the single tenant and the default user if they don't exist.
     """
-    try:
-        # if Keep is not multitenant, let's import the User table too:
-        from keep.api.models.db.user import (  # pylint: disable=import-outside-toplevel
-            User,
-        )
+    # if Keep is not multitenant, let's import the User table too:
+    from keep.api.models.db.user import User  # pylint: disable=import-outside-toplevel
 
-        get_all_deduplication_rules(tenant_id)
-        migrate_db()
-    except Exception:
-        pass
     with Session(engine) as session:
         try:
             # check if the tenant exist:

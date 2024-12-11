@@ -91,8 +91,6 @@ ALLOWED_INCIDENT_FILTERS = [
     "assignee",
 ]
 
-SINGLE_TENANT_CACHE = {"deduplication_rules": {}}
-
 
 @contextmanager
 def existed_or_new_session(session: Optional[Session] = None) -> Session:
@@ -1847,20 +1845,10 @@ def get_all_deduplication_rules(tenant_id):
                 AlertDeduplicationRule.tenant_id == tenant_id
             )
         ).all()
-        if tenant_id == SINGLE_TENANT_UUID:
-            for rule in rules:
-                SINGLE_TENANT_CACHE["deduplication_rules"][
-                    f"{rule.provider_id}_{rule.provider_type}"
-                ] = rule
     return rules
 
 
 def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
-    if tenant_id == SINGLE_TENANT_UUID:
-        cache_key = f"{provider_id}_{provider_type}"
-        if cache_key in SINGLE_TENANT_CACHE["deduplication_rules"]:
-            return SINGLE_TENANT_CACHE["deduplication_rules"][cache_key]
-
     with Session(engine) as session:
         rule = session.exec(
             select(AlertDeduplicationRule)
@@ -1868,10 +1856,6 @@ def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
             .where(AlertDeduplicationRule.provider_id == provider_id)
             .where(AlertDeduplicationRule.provider_type == provider_type)
         ).first()
-        if tenant_id == SINGLE_TENANT_UUID:
-            SINGLE_TENANT_CACHE["deduplication_rules"][
-                f"{provider_id}_{provider_type}"
-            ] = rule
     return rule
 
 
@@ -1906,8 +1890,6 @@ def create_deduplication_rule(
         session.add(new_rule)
         session.commit()
         session.refresh(new_rule)
-        if tenant_id == SINGLE_TENANT_UUID:
-            SINGLE_TENANT_CACHE["deduplication_rules"].clear()
     return new_rule
 
 
@@ -1948,9 +1930,6 @@ def update_deduplication_rule(
         session.add(rule)
         session.commit()
         session.refresh(rule)
-
-        if tenant_id == SINGLE_TENANT_UUID:
-            SINGLE_TENANT_CACHE["deduplication_rules"].clear()
     return rule
 
 
@@ -1966,9 +1945,6 @@ def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
 
         session.delete(rule)
         session.commit()
-
-        if tenant_id == SINGLE_TENANT_UUID:
-            SINGLE_TENANT_CACHE["deduplication_rules"].clear()
     return True
 
 
@@ -2302,6 +2278,7 @@ def get_provider_distribution(
                         "last_alert_received": last_alert_timestamp,
                     }
                 else:
+
                     provider_distribution[provider_key]["last_alert_received"] = max(
                         provider_distribution[provider_key]["last_alert_received"],
                         last_alert_timestamp,
@@ -3040,7 +3017,9 @@ def get_incidents_meta_for_tenant(tenant_id: str) -> dict:
             return {
                 "assignees": list(filter(bool, assignees)) if assignees else [],
                 "sources": list(filter(bool, sources)) if sources else [],
-                "services": list(filter(bool, affected_services)) if affected_services else [],
+                "services": (
+                    list(filter(bool, affected_services)) if affected_services else []
+                ),
             }
         return {}
 
@@ -4698,12 +4677,16 @@ def set_last_alert(
         for attempt in range(max_retries):
             with session.begin_nested() as transaction:
                 try:
-                    last_alert = get_last_alert_by_fingerprint(tenant_id, alert.fingerprint, session, for_update=True)
+                    last_alert = get_last_alert_by_fingerprint(
+                        tenant_id, alert.fingerprint, session, for_update=True
+                    )
 
                     # To prevent rare, but possible race condition
                     # For example if older alert failed to process
                     # and retried after new one
-                    if last_alert and last_alert.timestamp.replace(tzinfo=tz.UTC) < alert.timestamp.replace(tzinfo=tz.UTC):
+                    if last_alert and last_alert.timestamp.replace(
+                        tzinfo=tz.UTC
+                    ) < alert.timestamp.replace(tzinfo=tz.UTC):
 
                         logger.info(
                             f"Update last alert for `{alert.fingerprint}`: {last_alert.alert_id} -> {alert.id}"
@@ -4720,7 +4703,8 @@ def set_last_alert(
                             tenant_id=tenant_id,
                             fingerprint=alert.fingerprint,
                             timestamp=alert.timestamp,
-                            first_timestamp=alert.timestamp,alert_id=alert.id,
+                            first_timestamp=alert.timestamp,
+                            alert_id=alert.id,
                         )
 
                         session.add(last_alert)
