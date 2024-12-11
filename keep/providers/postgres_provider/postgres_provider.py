@@ -5,7 +5,7 @@ PostgresProvider is a class that provides a way to read data from Postgres and w
 import dataclasses
 import os
 
-import psycopg2
+import psycopg
 import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -91,7 +91,7 @@ class PostgresProvider(BaseProvider):
         Returns:
             psycopg2 connection object
         """
-        conn = psycopg2.connect(
+        conn = psycopg.connect(
             dbname=self.authentication_config.database,
             user=self.authentication_config.username,
             password=self.authentication_config.password,
