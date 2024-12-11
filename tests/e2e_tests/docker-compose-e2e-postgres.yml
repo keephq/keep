@@ -37,6 +37,7 @@ services:
       - DATABASE_CONNECTION_STRING=postgresql+psycopg://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
+      - SQLALCHEMY_WARN_20=1
     depends_on:
       - keep-database
 

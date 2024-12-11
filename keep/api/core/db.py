@@ -1238,33 +1238,19 @@ def get_last_alerts(
     with_incidents=False,
     fingerprints=None,
 ) -> list[Alert]:
-    """
-    Get the last alert for each fingerprint along with the first time the alert was triggered.
-    Supports MySQL, PostgreSQL, and SQLite databases.
 
-    Args:
-        tenant_id (_type_): The tenant_id to filter the alerts by.
-        provider_id (_type_, optional): The provider id to filter by. Defaults to None.
-        limit (int, optional): The maximum number of alerts to return. Defaults to 1000.
-        timeframe (int, optional): The number of days to look back. Defaults to None.
-        upper_timestamp (datetime, optional): The upper bound for the timestamp filter. Defaults to None.
-        lower_timestamp (datetime, optional): The lower bound for the timestamp filter. Defaults to None.
-        fingerprints (List[str], optional): List of fingerprints to filter by. Defaults to None.
-
-    Returns:
-        List[Alert]: A list of Alert objects including the first time the alert was triggered.
-    """
     with Session(engine) as session:
         dialect_name = session.bind.dialect.name
 
-        query = (
-            session.query(Alert, LastAlert.first_timestamp.label("startedAt"))
+        # Build the base query using select()
+        stmt = (
+            select(Alert, LastAlert.first_timestamp.label("startedAt"))
             .select_from(LastAlert)
             .join(Alert, LastAlert.alert_id == Alert.id)
         )
 
         if timeframe:
-            query = query.filter(
+            stmt = stmt.where(
                 LastAlert.timestamp
                 >= datetime.now(tz=timezone.utc) - timedelta(days=timeframe)
             )
@@ -1284,10 +1270,10 @@ def get_last_alerts(
         logger.info(f"filter_conditions: {filter_conditions}")
 
         if filter_conditions:
-            query = query.filter(*filter_conditions)
+            stmt = stmt.where(*filter_conditions)
 
         # Main query for alerts
-        query = query.filter(Alert.tenant_id == tenant_id).options(
+        stmt = stmt.where(Alert.tenant_id == tenant_id).options(
             subqueryload(Alert.alert_enrichment)
         )
 
@@ -1295,13 +1281,13 @@ def get_last_alerts(
             if dialect_name == "sqlite":
                 # SQLite version - using JSON
                 incidents_subquery = (
-                    session.query(
+                    select(
                         LastAlertToIncident.fingerprint,
                         func.json_group_array(
                             cast(LastAlertToIncident.incident_id, String)
                         ).label("incidents"),
                     )
-                    .filter(
+                    .where(
                         LastAlertToIncident.tenant_id == tenant_id,
                         LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                     )
@@ -1312,13 +1298,13 @@ def get_last_alerts(
             elif dialect_name == "mysql":
                 # MySQL version - using GROUP_CONCAT
                 incidents_subquery = (
-                    session.query(
+                    select(
                         LastAlertToIncident.fingerprint,
                         func.group_concat(
                             cast(LastAlertToIncident.incident_id, String)
                         ).label("incidents"),
                     )
-                    .filter(
+                    .where(
                         LastAlertToIncident.tenant_id == tenant_id,
                         LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                     )
@@ -1329,14 +1315,14 @@ def get_last_alerts(
             elif dialect_name == "postgresql":
                 # PostgreSQL version - using string_agg
                 incidents_subquery = (
-                    session.query(
+                    select(
                         LastAlertToIncident.fingerprint,
                         func.string_agg(
                             cast(LastAlertToIncident.incident_id, String),
                             ",",
                         ).label("incidents"),
                     )
-                    .filter(
+                    .where(
                         LastAlertToIncident.tenant_id == tenant_id,
                         LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
                     )
@@ -1346,20 +1332,20 @@ def get_last_alerts(
             else:
                 raise ValueError(f"Unsupported dialect: {dialect_name}")
 
-            query = query.add_columns(incidents_subquery.c.incidents)
-            query = query.outerjoin(
+            stmt = stmt.add_columns(incidents_subquery.c.incidents)
+            stmt = stmt.outerjoin(
                 incidents_subquery,
                 Alert.fingerprint == incidents_subquery.c.fingerprint,
             )
 
         if provider_id:
-            query = query.filter(Alert.provider_id == provider_id)
+            stmt = stmt.where(Alert.provider_id == provider_id)
 
         # Order by timestamp in descending order and limit the results
-        query = query.order_by(desc(Alert.timestamp)).limit(limit)
+        stmt = stmt.order_by(desc(Alert.timestamp)).limit(limit)
 
         # Execute the query
-        alerts_with_start = query.all()
+        alerts_with_start = session.execute(stmt).all()
 
         # Process results based on dialect
         alerts = []
