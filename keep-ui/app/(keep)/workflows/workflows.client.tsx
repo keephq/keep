@@ -20,11 +20,11 @@ import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 
 export default function WorkflowsPage() {
   const api = useApi();
   const router = useRouter();
-  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -78,14 +78,17 @@ export default function WorkflowsPage() {
   }
 
   const onDrop = async (files: any) => {
-    const fileUpload = async (formData: FormData, reload: boolean) => {
+    const fileUpload = async (
+      formData: FormData,
+      fName: string,
+      reload: boolean
+    ) => {
       try {
         const response = await api.request(`/workflows`, {
           method: "POST",
           body: formData,
         });
 
-        setFileError(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -94,9 +97,9 @@ export default function WorkflowsPage() {
         }
       } catch (error) {
         if (error instanceof KeepApiError) {
-          setFileError(error.message);
+          showErrorToast(error, `Failed to upload ${fName}: ${error.message}`);
         } else {
-          setFileError("An error occurred during file upload");
+          showErrorToast(error, "Failed to upload file");
         }
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -109,11 +112,12 @@ export default function WorkflowsPage() {
 
     for (let i = 0; i < files.target.files.length; i++) {
       const file = files.target.files[i];
+      const fName = file.name;
       formData.set("file", file);
       if (files.target.files.length === i + 1) {
         reload = true;
       }
-      await fileUpload(formData, reload);
+      await fileUpload(formData, fName, reload);
     }
   };
 
