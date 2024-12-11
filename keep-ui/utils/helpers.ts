@@ -1,6 +1,3 @@
-import { toast } from "react-toastify";
-import { Provider } from "@/app/(keep)/providers/providers";
-import moment from "moment";
 import { twMerge } from "tailwind-merge";
 import { clsx, type ClassValue } from "clsx";
 
@@ -36,10 +33,6 @@ export function toDateObjectWithFallback(date: string | Date) {
   }
   // If the date is not a valid date, return a date object with the current date time
   return new Date();
-}
-
-export function getAlertLastReceieved(lastRecievedFromAlert: Date) {
-  return moment(lastRecievedFromAlert).fromNow();
 }
 
 export function cn(...inputs: ClassValue[]) {

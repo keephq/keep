@@ -456,10 +456,20 @@ export const AlertsRulesBuilder = ({
       // check if the CEL is valid by comparing the parsed query with the original CEL
       // remove spaces so that "a && b" is the same as "a&&b"
       const celQuery = formatQuery(parsedCELRulesToQuery, "cel");
+      /*
+      SHAHAR: this is the old way of checking if the CEL is valid
+              I think its over complicated so let's just check if the query is "1 == 1" (which is parse error)
+              I'll leave the old code here for reference
+
       const isValidCEL =
         celQuery.replace(/\s+/g, "") === celRules.replace(/\s+/g, "") ||
         celRules === "";
+      */
+
+      // SHAHAR: new way of checking if the CEL is valid
+      const isValidCEL = celRules == "" || celQuery !== "1 == 1";
       setIsValidCEL(isValidCEL);
+
       // close the menu
       setShowSuggestions(false);
       if (isValidCEL) {
@@ -495,8 +505,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-      ? customFields
-      : [];
+    ? customFields
+    : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);

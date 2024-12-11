@@ -1,10 +1,10 @@
+import { Edge } from "@xyflow/react";
 import {
   FlowNode,
   NodeData,
   V2Properties,
   V2Step,
-} from "@/app/(keep)/workflows/builder/builder-store";
-import { Edge } from "@xyflow/react";
+} from "@/app/(keep)/workflows/builder/types";
 
 function getKeyBasedSquence(step: V2Step, id: string, type: string) {
   return `${step.type}__${id}__empty_${type}`;

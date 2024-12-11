@@ -10,7 +10,6 @@ import { AlertDto } from "./models";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
 import AlertTableCheckbox from "./alert-table-checkbox";
 import AlertName from "./alert-name";
-import { getAlertLastReceieved } from "utils/helpers";
 import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
@@ -23,7 +22,7 @@ import {
 } from "react-icons/md";
 import { AlertSeverityBorder } from "./alert-severity-border";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-
+import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
 
 export const DEFAULT_COLS = [
@@ -336,11 +335,14 @@ export const useAlertTableCols = (
       header: "Last Received",
       filterFn: isDateWithinRange,
       minSize: 100,
-      cell: (context) => (
-        <span title={context.getValue().toISOString()}>
-          {getAlertLastReceieved(context.getValue())}
-        </span>
-      ),
+      // data is a Date object (converted in usePresetAlerts)
+      cell: (context) => {
+        return (
+          <span title={context.getValue().toISOString()}>
+            <TimeAgo date={context.getValue().toISOString()} />
+          </span>
+        );
+      },
     }),
     columnHelper.accessor("assignee", {
       id: "assignee",
