@@ -117,7 +117,7 @@ def get_app(
         version=KEEP_VERSION,
     )
 
-    @app.get("/")
+    @app.get("/", include_in_schema=False)
     async def root():
         """
         App description and version.

@@ -32,26 +32,87 @@
       "group": "Overview",
       "pages": [
         "overview/introduction",
+        "overview/playground",
         "overview/usecases",
-        "overview/comparisons",
-        "overview/keyconcepts",
-        "overview/ruleengine",
-        "overview/presets",
         {
-          "group": "Enrichments",
+          "group": "Key Concepts",
           "pages": [
-            "overview/enrichment/extraction",
-            "overview/enrichment/mapping"
+            "overview/glossary",
+            "platform/alertseverityandstatus",
+            "overview/howdoeskeepgetmyalerts"
           ]
-        },
-        "overview/maintenance-windows",
-        "overview/deduplication",
-        "overview/examples"
+        }
       ]
     },
     {
-      "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
+      "group": "AIOps",
+      "pages": [
+        "overview/correlation",
+        "overview/deduplication",
+        "overview/enrichment/extraction",
+        "overview/enrichment/mapping",
+        "overview/workflow-automation",
+        "overview/servicetopology",
+        "overview/maintenance-windows",
+        "overview/presets"
+      ]
+    },
+    {
+      "group": "Workflow Automation",
+      "pages": [
+        "workflows/overview",
+        {
+          "group": "Syntax",
+          "pages": [
+            "workflows/syntax/basic-syntax",
+            "workflows/syntax/foreach-syntax",
+            "workflows/syntax/context-syntax"
+          ]
+        },
+        {
+          "group": "Conditions",
+          "pages": [
+            "workflows/conditions/what-is-a-condition",
+            "workflows/conditions/threshold",
+            "workflows/conditions/assert",
+            "workflows/conditions/stddev"
+          ]
+        },
+        {
+          "group": "Functions",
+          "pages": [
+            "workflows/functions/what-is-a-function",
+            "workflows/functions/all",
+            "workflows/functions/add-time-to-date",
+            "workflows/functions/diff",
+            "workflows/functions/len",
+            "workflows/functions/split",
+            "workflows/functions/first",
+            "workflows/functions/utcnow",
+            "workflows/functions/to-utc",
+            "workflows/functions/datetime-compare",
+            "workflows/functions/encode",
+            "workflows/functions/last",
+            "workflows/functions/lowercase",
+            "workflows/functions/uppercase"
+          ]
+        },
+        {
+          "group": "Throttles",
+          "pages": [
+            "workflows/throttles/what-is-a-throttle",
+            "workflows/throttles/one-until-resolved"
+          ]
+        },
+        {
+          "group": "Examples",
+          "pages": [
+            "workflows/examples/multi-step-alert",
+            "workflows/examples/reusable-action-alert"
+          ]
+        },
+        "workflows/state"
+      ]
     },
     {
       "group": "Deployment",
@@ -78,31 +139,30 @@
             "deployment/provision/dashboard"
           ]
         },
-        "deployment/secret-manager",
-        "deployment/docker",
+        "deployment/secret-store",
         {
-          "group": "Kubernetes",
+          "group": "Deploy On",
           "pages": [
-            "deployment/kubernetes/overview",
-            "deployment/kubernetes/installation",
-            "deployment/kubernetes/architecture",
-            "deployment/kubernetes/openshift"
+            "deployment/docker",
+            {
+              "group": "Kubernetes",
+              "pages": [
+                "deployment/kubernetes/overview",
+                "deployment/kubernetes/installation",
+                "deployment/kubernetes/architecture",
+                "deployment/kubernetes/openshift"
+              ]
+            },
+            "deployment/openshift",
+            "deployment/ecs"
           ]
         },
-        "deployment/openshift",
-        "deployment/ecs",
         "deployment/stress-testing"
       ]
     },
     {
-      "group": "Platform",
-      "pages": [
-        "platform/overview",
-        "platform/alerts",
-        "platform/alertseverityandstatus",
-        "platform/settings",
-        "platform/support"
-      ]
+      "group": "Development",
+      "pages": ["development/getting-started", "development/external-url"]
     },
     {
       "group": "Providers",
@@ -213,66 +273,8 @@
       ]
     },
     {
-      "group": "Workflows",
-      "pages": [
-        "workflows/overview",
-        {
-          "group": "Syntax",
-          "pages": [
-            "workflows/syntax/basic-syntax",
-            "workflows/syntax/foreach-syntax",
-            "workflows/syntax/context-syntax"
-          ]
-        },
-        {
-          "group": "Conditions",
-          "pages": [
-            "workflows/conditions/what-is-a-condition",
-            "workflows/conditions/threshold",
-            "workflows/conditions/assert",
-            "workflows/conditions/stddev"
-          ]
-        },
-        {
-          "group": "Functions",
-          "pages": [
-            "workflows/functions/what-is-a-function",
-            "workflows/functions/all",
-            "workflows/functions/add-time-to-date",
-            "workflows/functions/diff",
-            "workflows/functions/len",
-            "workflows/functions/split",
-            "workflows/functions/first",
-            "workflows/functions/utcnow",
-            "workflows/functions/to-utc",
-            "workflows/functions/datetime-compare",
-            "workflows/functions/encode",
-            "workflows/functions/last",
-            "workflows/functions/lowercase",
-            "workflows/functions/uppercase"
-          ]
-        },
-        {
-          "group": "Throttles",
-          "pages": [
-            "workflows/throttles/what-is-a-throttle",
-            "workflows/throttles/one-until-resolved"
-          ]
-        },
-        {
-          "group": "Examples",
-          "pages": [
-            "workflows/examples/multi-step-alert",
-            "workflows/examples/reusable-action-alert"
-          ]
-        },
-        "workflows/state"
-      ]
-    },
-    {
       "group": "Keep API",
       "pages": [
-        "api-ref/root",
         {
           "group": "providers",
           "pages": [

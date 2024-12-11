@@ -1,0 +1,72 @@
+---
+title: "Service Topology"
+---
+
+The Service Topology feature in Keep provides a visual representation of your service dependencies, allowing you to quickly understand the relationships between various components in your system. By mapping services and their interactions, you can gain insights into how issues in one service may impact others, enabling faster root-cause analysis and more effective incident resolution.
+
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/servicetopology.png" />
+</Frame>
+
+
+## Key Concepts
+
+- **Nodes**: Represent individual services, applications, or infrastructure components.
+- **Edges**: Show the dependencies and interactions between nodes.
+- **Health Status**: Each node and edge can display a health indicator (e.g., green for healthy, red for issues) based on alerts or metrics.
+- **Dynamic Updates**: The topology updates dynamically to reflect the current state of your system, providing real-time visibility.
+
+## Features
+
+### Visualizing Dependencies
+The service topology graph helps you:
+- Identify critical dependencies between services.
+- Understand how failures in one service propagate through the system.
+- Highlight single points of failure or bottlenecks.
+
+### Real-Time Health Indicators
+Nodes and edges are enriched with health indicators derived from alerts and metrics. This allows you to:
+- Quickly spot issues in your architecture.
+- Prioritize incident resolution based on affected dependencies.
+
+### Filter and Focus
+Use filters to focus on specific parts of the topology, such as:
+- A particular environment (e.g., production, staging).
+- A service group (e.g., all database-related services).
+- Alerts of a specific severity or type.
+
+### Incident Integration
+Service topology integrates seamlessly with Keep’s incident management features. When an incident is triggered, you can:
+- View the affected nodes and their dependencies directly on the topology graph.
+- Analyze how alerts related to the incident are propagating through the system.
+- Use this information to guide remediation efforts.
+
+## Real-World Examples
+
+### Example 1: Identifying Root Causes
+An alert is triggered for a payment processing service. Using the service topology, you can trace the dependency chain and identify that the root cause lies in a downstream database service experiencing high latency.
+
+### Example 2: Analyzing Impact
+A deployment failure is reported in the authentication service. By examining the service topology, you discover that it affects the API gateway and multiple customer-facing services, allowing you to prioritize the incident appropriately.
+
+### Example 3: Tracking Multi-Region Dependencies
+In a multi-region setup, the topology helps you visualize how services in different regions interact. This can be critical for understanding the impact of a regional outage on global services.
+
+## How It Works
+
+1. **Data Ingestion**: Keep collects service dependency data from various sources such as monitoring tools, service meshes, or configuration files.
+2. **Topology Construction**: The collected data is processed to construct a real-time graph of nodes (services) and edges (dependencies).
+3. **Enrichment**: Health indicators and alert statuses are overlaid onto the graph.
+4. **User Interaction**: The topology is presented in an interactive UI, allowing users to filter, zoom, and explore as needed.
+
+## Best Practices
+
+- **Keep It Updated**: Ensure that the data sources used to generate the topology are accurate and regularly updated to reflect changes in your architecture.
+- **Use Filters**: Apply filters to focus on the most relevant parts of the topology, especially during incident response.
+- **Integrate Alerts**: Leverage Keep’s alerting and incident management features to enrich the topology with actionable insights.
+- **Review Regularly**: Periodically review the topology to identify potential risks, such as bottlenecks or over-reliance on specific services.
+
+## Summary
+
+The Service Topology feature is a powerful tool for visualizing and managing the complexity of modern distributed systems. By providing real-time insights into service dependencies and their health, it helps teams identify root causes, assess impact, and resolve incidents more effectively.
