@@ -6,6 +6,7 @@ import abc
 import copy
 import datetime
 import hashlib
+import inspect
 import itertools
 import json
 import logging
@@ -143,15 +144,19 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         return {}
 
-    def notify(self, **kwargs):
+    async def notify(self, **kwargs):
         """
         Output alert message.
 
         Args:
             **kwargs (dict): The provider context (with statement)
         """
-        # trigger the provider
-        results = self._notify(**kwargs)
+        # Trigger the provider, allow async and non-async functions
+        if inspect.iscoroutinefunction(self._notify):
+            results = await self._notify(**kwargs)
+        else:
+            results = self._notify(**kwargs)
+
         self.results.append(results)
         # if the alert should be enriched, enrich it
         enrich_alert = kwargs.get("enrich_alert", [])
@@ -297,9 +302,13 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("query() method not implemented")
 
-    def query(self, **kwargs: dict):
-        # just run the query
-        results = self._query(**kwargs)
+    async def query(self, **kwargs: dict):
+        # Run the query, it may be sync or async
+        if inspect.iscoroutinefunction(self._query):
+            results = await self._query(**kwargs)
+        else:
+            results = self._query(**kwargs)
+        
         self.results.append(results)
         # now add the type of the results to the global context
         if results and isinstance(results, list):

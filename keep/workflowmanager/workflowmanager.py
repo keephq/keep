@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -42,7 +43,7 @@ class WorkflowManager:
         if self.started:
             self.logger.info("Workflow manager already started")
             return
-        await self.scheduler.start()
+        asyncio.create_task(self.scheduler.start())
         self.started = True
 
     def stop(self):
@@ -384,7 +385,7 @@ class WorkflowManager:
                         f"Provider {provider} is a premium provider. You can self-host or contact us to get access to it."
                     )
 
-    def _run_workflow_on_failure(
+    async def _run_workflow_on_failure(
         self, workflow: Workflow, workflow_execution_id: str, error_message: str
     ):
         """
@@ -409,7 +410,7 @@ class WorkflowManager:
                 f"Workflow {workflow.workflow_id} failed with errors: {error_message}"
             )
             workflow.on_failure.provider_parameters = {"message": message}
-            workflow.on_failure.run()
+            await workflow.on_failure.run()
             self.logger.info(
                 "Ran on_failure action for workflow",
                 extra={
@@ -428,7 +429,7 @@ class WorkflowManager:
                 },
             )
 
-    def _run_workflow(
+    async def _run_workflow(
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):
         self.logger.debug(f"Running workflow {workflow.workflow_id}")
@@ -436,9 +437,9 @@ class WorkflowManager:
         results = {}
         try:
             self._check_premium_providers(workflow)
-            errors = workflow.run(workflow_execution_id)
+            errors = await workflow.run(workflow_execution_id)
             if errors:
-                self._run_workflow_on_failure(
+                await self._run_workflow_on_failure(
                     workflow, workflow_execution_id, ", ".join(errors)
                 )
         except Exception as e:
@@ -446,7 +447,7 @@ class WorkflowManager:
                 f"Error running workflow {workflow.workflow_id}",
                 extra={"exception": e, "workflow_execution_id": workflow_execution_id},
             )
-            self._run_workflow_on_failure(workflow, workflow_execution_id, str(e))
+            await self._run_workflow_on_failure(workflow, workflow_execution_id, str(e))
             raise
         finally:
             if not test_run:
@@ -460,7 +461,7 @@ class WorkflowManager:
         if test_run:
             results = self._get_workflow_results(workflow)
         else:
-            self._save_workflow_results(workflow, workflow_execution_id)
+            await self._save_workflow_results(workflow, workflow_execution_id)
 
         return [errors, results]
 
@@ -485,7 +486,7 @@ class WorkflowManager:
             )
         return workflow_results
 
-    def _save_workflow_results(self, workflow: Workflow, workflow_execution_id: str):
+    async def _save_workflow_results(self, workflow: Workflow, workflow_execution_id: str):
         """
         Save the results of the workflow to the DB.
 
@@ -493,6 +494,7 @@ class WorkflowManager:
             workflow (Workflow): The workflow to save.
             workflow_execution_id (str): The workflow execution ID.
         """
+        return None  # Matvey
         self.logger.info(f"Saving workflow {workflow.workflow_id} results")
         workflow_results = {
             action.name: action.provider.results for action in workflow.workflow_actions

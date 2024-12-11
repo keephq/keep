@@ -158,12 +158,14 @@ def export_workflows(
     workflows = workflowstore.get_all_workflows_yamls(tenant_id=tenant_id)
     return workflows
 
+import asyncio
+
 
 @router.post(
     "/{workflow_id}/run",
     description="Run a workflow",
 )
-def run_workflow(
+async def run_workflow(
     workflow_id: str,
     body: Optional[Dict[Any, Any]] = Body(None),
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -172,6 +174,9 @@ def run_workflow(
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
+
+    # Ensure async before returning empty response
+    
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
@@ -207,7 +212,7 @@ def run_workflow(
                 status_code=400,
                 detail="Invalid event format",
             )
-        workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
+        workflow_execution_id = await workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
         )
     except Exception as e:
