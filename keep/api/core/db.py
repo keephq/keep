@@ -1964,11 +1964,27 @@ def delete_deduplication_rule(rule_id: str, tenant_id: str) -> bool:
 def create_deduplication_event(
     tenant_id, deduplication_rule_id, deduplication_type, provider_id, provider_type
 ):
+    logger.debug(
+        "Adding deduplication event",
+        extra={
+            "deduplication_rule_id": deduplication_rule_id,
+            "deduplication_type": deduplication_type,
+            "provider_id": provider_id,
+            "provider_type": provider_type,
+            "tenant_id": tenant_id,
+        },
+    )
     if isinstance(deduplication_rule_id, str):
         deduplication_rule_id = __convert_to_uuid(deduplication_rule_id)
         if not deduplication_rule_id:
+            logger.debug(
+                "Deduplication rule id is not a valid uuid",
+                extra={
+                    "deduplication_rule_id": deduplication_rule_id,
+                    "tenant_id": tenant_id,
+                },
+            )
             return False
-
     with Session(engine) as session:
         deduplication_event = AlertDeduplicationEvent(
             tenant_id=tenant_id,
@@ -1983,6 +1999,13 @@ def create_deduplication_event(
         )
         session.add(deduplication_event)
         session.commit()
+        logger.debug(
+            "Deduplication event added",
+            extra={
+                "deduplication_event_id": deduplication_event.id,
+                "tenant_id": tenant_id,
+            },
+        )
 
 
 def get_all_deduplication_stats(tenant_id):

@@ -30,6 +30,8 @@ class IdentityManagerFactory:
     Factory class for creating identity managers and authentication verifiers.
     """
 
+    _LOADED_MANAGER = None
+
     @staticmethod
     def get_identity_manager(
         tenant_id: str = None,
@@ -98,6 +100,9 @@ class IdentityManagerFactory:
             NotImplementedError: If the specified manager type or class is not implemented.
         """
         try:
+            if IdentityManagerFactory._LOADED_MANAGER:
+                return IdentityManagerFactory._LOADED_MANAGER
+
             t = time.time()
             logger.debug(f"Loading {manager_class} for {manager_type}")
             manager_type = (
@@ -131,6 +136,7 @@ class IdentityManagerFactory:
             manager_class: Type = getattr(module, class_name)
             resp = manager_class(*args, **kwargs)
             logger.debug(f"Found class {class_name} in {time.time() - t} seconds")
+            IdentityManagerFactory._LOADED_MANAGER = resp
             return resp
         except (ImportError, AttributeError):
             raise NotImplementedError(
