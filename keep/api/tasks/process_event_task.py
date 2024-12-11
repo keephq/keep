@@ -28,6 +28,12 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.metrics import (
+    events_error_counter,
+    events_in_counter,
+    events_out_counter,
+    processing_time_summary,
+)
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
 from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
 from keep.api.tasks.notification_cache import get_notification_cache
@@ -551,6 +557,7 @@ def __handle_formatted_events(
     return enriched_formatted_events
 
 
+@processing_time_summary.time()
 def process_event(
     ctx: dict,  # arq context
     tenant_id: str,
@@ -585,6 +592,7 @@ def process_event(
     tracer = trace.get_tracer(__name__)
 
     raw_event = copy.deepcopy(event)
+    events_in_counter.inc()
     try:
         with tracer.start_as_current_span("process_event_get_db_session"):
             # Create a session to be used across the processing task
@@ -666,6 +674,7 @@ def process_event(
             "Event processed",
             extra={**extra_dict, "processing_time": time.time() - start_time},
         )
+        events_out_counter.inc()
         return formatted_events
     except Exception:
         logger.exception(
@@ -674,6 +683,7 @@ def process_event(
         )
         # In case of exception, add the alerts to the defect table
         __save_error_alerts(tenant_id, provider_type, raw_event)
+        events_error_counter.inc()
         # Retrying only if context is present (running the job in arq worker)
         if bool(ctx):
             raise Retry(defer=ctx["job_try"] * TIMES_TO_RETRY_JOB)
