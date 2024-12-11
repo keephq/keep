@@ -9,6 +9,7 @@ import celpy.celtypes
 import celpy.evaluation
 from sqlmodel import Session
 
+from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
     assign_alert_to_incident,
     get_incident_for_grouping_rule,
@@ -19,6 +20,7 @@ from keep.api.core.db import (
     is_all_alerts_in_status, enrich_incidents_with_alerts,
 )
 from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus, AlertStatus
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import ResolveOn, Rule
@@ -75,6 +77,8 @@ class RulesEngine:
                         f"Rule {rule.name} on event {event.id} is relevant"
                     )
 
+                    send_created_event = False
+
                     rule_fingerprint = self._calc_rule_fingerprint(event, rule)
 
                     incident = self._get_or_create_incident(
@@ -105,10 +109,19 @@ class RulesEngine:
                                 incident, rule, session
                             )
 
+                        send_created_event = incident.is_confirmed
+
                     incident = self._resolve_incident_if_require(rule, incident, session)
                     session.add(incident)
                     session.commit()
-                    incidents_dto[incident.id] = IncidentDto.from_db_incident(incident)
+
+                    incident_dto = IncidentDto.from_db_incident(incident)
+                    if send_created_event:
+                        self._send_workflow_event(session, incident_dto, "created")
+                    elif incident.is_confirmed:
+                        self._send_workflow_event(session, incident_dto, "updated")
+
+                    incidents_dto[incident.id] = incident_dto
 
                 else:
                     self.logger.info(
@@ -372,3 +385,11 @@ class RulesEngine:
                 filtered_alerts.append(alert)
 
         return filtered_alerts
+
+    def _send_workflow_event(self, session: Session, incident_dto: IncidentDto, action: str):
+        pusher_client = get_pusher_client()
+        incident_bl = IncidentBl(self.tenant_id, session, pusher_client)
+
+        incident_bl.send_workflow_event(incident_dto, action)
+        incident_bl.update_client_on_incident_change(incident_dto.id)
+
