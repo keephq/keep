@@ -21,6 +21,7 @@ import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { Input } from "@/shared/ui/Input";
 
 export default function WorkflowsPage() {
   const api = useApi();
@@ -212,25 +213,32 @@ export default function WorkflowsPage() {
           onClose={() => setIsModalOpen(false)}
           title="Upload Workflow files"
         >
-          <div className="bg-white p-4 rounded max-w-lg max-h-fit	 mx-auto z-20">
-            <input
-              type="file"
-              id="workflowFile"
-              accept=".yml, .yaml" // accept only yamls
-              multiple
-              onChange={(e) => {
-                onDrop(e);
-                setIsModalOpen(false); // Add this line to close the modal
-              }}
-            />
-
-            <div className="mt-4">
+          <div className="bg-white rounded max-w-lg max-h-fit	 mx-auto z-20">
+            <div className="space-y-2">
+              <Input
+                ref={fileInputRef}
+                id="workflowFile"
+                name="file"
+                type="file"
+                className="mt-2"
+                accept=".yml, .yaml"
+                multiple
+                onChange={(e) => {
+                  onDrop(e);
+                  setIsModalOpen(false); // Add this line to close the modal
+                }}
+              />
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                Only .yml and .yaml files are supported.
+              </p>
+            </div>
+            <div className="mt-4 text-sm">
               <h3>Or just try some from Keep examples:</h3>
-
               <Button
                 className="mt-2"
                 color="orange"
                 size="md"
+                variant="secondary"
                 icon={ArrowRightIcon}
                 onClick={() => handleStaticExampleSelect("slack")}
               >
@@ -241,13 +249,14 @@ export default function WorkflowsPage() {
                 className="mt-2"
                 color="orange"
                 size="md"
+                variant="secondary"
                 icon={ArrowRightIcon}
                 onClick={() => handleStaticExampleSelect("sql")}
               >
                 Run SQL query and send the results as a Slack message
               </Button>
 
-              <p className="mt-4">
+              <p className="mt-2">
                 More examples at{" "}
                 <a
                   href="https://github.com/keephq/keep/tree/main/examples/workflows"
@@ -259,7 +268,14 @@ export default function WorkflowsPage() {
             </div>
 
             <div className="mt-4">
-              <button onClick={() => setIsModalOpen(false)}>Cancel</button>
+              <Button
+                className="mt-2"
+                color="orange"
+                variant="secondary"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </Modal>
