@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -9,15 +10,8 @@ from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
@@ -308,6 +302,58 @@ def assign_alert(
     )
     return {"status": "ok"}
 
+
+def discard_task(
+    trace_id: str,
+    task: asyncio.Task,
+    running_tasks: set,
+    started_time: float,
+):
+    running_tasks.discard(task)
+    logger.info(
+        "Task completed",
+        extra={
+            "processing_time": time.time() - started_time,
+            "trace_id": trace_id,
+        },
+    )
+
+
+def create_process_event_task(
+    bg_tasks: BackgroundTasks,
+    tenant_id: str,
+    provider_type: str | None,
+    provider_id: str | None,
+    fingerprint: str,
+    api_key_name: str | None,
+    trace_id: str,
+    event: AlertDto | list[AlertDto] | dict,
+    running_tasks: set,
+) -> str:
+    logger.info("Adding task", extra={"trace_id": trace_id})
+    started_time = time.time()
+    task = asyncio.create_task(
+        run_in_threadpool(
+            process_event,
+            {},
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+        )
+    )
+    task.add_done_callback(
+        lambda task: discard_task(trace_id, task, running_tasks, started_time)
+    )
+    bg_tasks.add_task(task)
+    running_tasks.add(task)
+    logger.info("Task added", extra={"trace_id": trace_id})
+    return task.get_name()
+
+
 @router.post(
     "/event",
     description="Receive a generic alert event",
@@ -387,7 +433,7 @@ async def receive_event(
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-
+    running_tasks: set = request.state.background_tasks
     provider_class = None
     try:
         t = time.time()

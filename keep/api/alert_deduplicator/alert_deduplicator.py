@@ -14,7 +14,7 @@ from keep.api.core.db import (
     get_alerts_fields,
     get_all_deduplication_rules,
     get_all_deduplication_stats,
-    get_custom_deduplication_rules,
+    get_custom_deduplication_rule,
     get_last_alert_hash_by_fingerprint,
     update_deduplication_rule,
 )
@@ -31,12 +31,16 @@ DEFAULT_RULE_UUID = "00000000-0000-0000-0000-000000000000"
 
 class AlertDeduplicator:
 
+    DEDUPLICATION_DISTRIBUTION_ENABLED = config(
+        "KEEP_DEDUPLICATION_DISTRIBUTION_ENABLED", cast=bool, default=True
+    )
+    CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED = config(
+        "KEEP_CUSTOM_DEDUPLICATION_ENABLED", cast=bool, default=True
+    )
+
     def __init__(self, tenant_id):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.provider_distribution_enabled = config(
-            "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
-        )
         self.search_engine = SearchEngine(self.tenant_id)
 
     def _apply_deduplication_rule(
@@ -97,7 +101,7 @@ class AlertDeduplicator:
     def apply_deduplication(self, alert: AlertDto) -> bool:
         # IMPOTRANT NOTE TO SOMEONE WORKING ON THIS CODE:
         #   apply_deduplication runs AFTER _format_alert, so you can assume that alert fields are in the expected format.
-        #   you can also safe to assume that alert.fingerprint is set by the provider itself
+        #   you are also safe to assume that alert.fingerprint is set by the provider itself
 
         # get only relevant rules
         rules = self.get_deduplication_rules(
@@ -122,26 +126,30 @@ class AlertDeduplicator:
                     "is_partial_duplicate": alert.isPartialDuplicate,
                 },
             )
-            if alert.isFullDuplicate or alert.isPartialDuplicate:
-                # create deduplication event
-                create_deduplication_event(
-                    tenant_id=self.tenant_id,
-                    deduplication_rule_id=rule.id,
-                    deduplication_type="full" if alert.isFullDuplicate else "partial",
-                    provider_id=alert.providerId,
-                    provider_type=alert.providerType,
-                )
-                # we don't need to check the other rules
-                break
-            else:
-                # create none deduplication event, for statistics
-                create_deduplication_event(
-                    tenant_id=self.tenant_id,
-                    deduplication_rule_id=rule.id,
-                    deduplication_type="none",
-                    provider_id=alert.providerId,
-                    provider_type=alert.providerType,
-                )
+
+            if AlertDeduplicator.DEDUPLICATION_DISTRIBUTION_ENABLED:
+                if alert.isFullDuplicate or alert.isPartialDuplicate:
+                    # create deduplication event
+                    create_deduplication_event(
+                        tenant_id=self.tenant_id,
+                        deduplication_rule_id=rule.id,
+                        deduplication_type=(
+                            "full" if alert.isFullDuplicate else "partial"
+                        ),
+                        provider_id=alert.providerId,
+                        provider_type=alert.providerType,
+                    )
+                    # we don't need to check the other rules
+                    break
+                else:
+                    # create none deduplication event, for statistics
+                    create_deduplication_event(
+                        tenant_id=self.tenant_id,
+                        deduplication_rule_id=rule.id,
+                        deduplication_type="none",
+                        provider_id=alert.providerId,
+                        provider_type=alert.providerType,
+                    )
 
         return alert
 
@@ -166,11 +174,15 @@ class AlertDeduplicator:
         self, tenant_id, provider_id, provider_type
     ) -> DeduplicationRuleDto:
         # try to get the rule from the database
-        rules = get_custom_deduplication_rules(tenant_id, provider_id, provider_type)
+        rule = (
+            get_custom_deduplication_rule(tenant_id, provider_id, provider_type)
+            if AlertDeduplicator.CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED
+            else None
+        )
 
-        if not rules:
+        if not rule:
             self.logger.debug(
-                "No custom deduplication rules found, using deafult full deduplication rule",
+                "No custom deduplication rule found, using deafult full deduplication rule",
                 extra={
                     "provider_id": provider_id,
                     "provider_type": provider_type,
@@ -189,12 +201,10 @@ class AlertDeduplicator:
                 "tenant_id": tenant_id,
             },
         )
-        #
-        # check that at least one of them is full deduplication rule
-        full_deduplication_rules = [rule for rule in rules if rule.full_deduplication]
+
         # if full deduplication rule found, return the rules
-        if full_deduplication_rules:
-            return rules
+        if rule.full_deduplication:
+            return [rule]
 
         # if not, assign them the default full deduplication rule ignore fields
         self.logger.info(
@@ -203,13 +213,8 @@ class AlertDeduplicator:
         default_full_dedup_rule = self._get_default_full_deduplication_rule(
             provider_id=provider_id, provider_type=provider_type
         )
-        for rule in rules:
-            if not rule.full_deduplication:
-                self.logger.debug(
-                    "Assigning default full deduplication rule ignore fields",
-                )
-                rule.ignore_fields = default_full_dedup_rule.ignore_fields
-        return rules
+        rule.ignore_fields = default_full_dedup_rule.ignore_fields
+        return [rule]
 
     def _generate_uuid(self, provider_id, provider_type):
         # this is a way to generate a unique uuid for the default deduplication rule per (provider_id, provider_type)
@@ -269,7 +274,11 @@ class AlertDeduplicator:
             provider_id, provider_type = dd.provider_id, dd.provider_type
             dd.id = self._generate_uuid(provider_id, provider_type)
         # get custom deduplication rules
-        custom_deduplications = get_all_deduplication_rules(self.tenant_id)
+        custom_deduplications = (
+            get_all_deduplication_rules(self.tenant_id)
+            if AlertDeduplicator.CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED
+            else []
+        )
         # cast to dto
         custom_deduplications_dto = [
             DeduplicationRuleDto(
@@ -377,7 +386,7 @@ class AlertDeduplicator:
                 )
             result.append(dedup)
 
-        if self.provider_distribution_enabled:
+        if AlertDeduplicator.DEDUPLICATION_DISTRIBUTION_ENABLED:
             for dedup in result:
                 for pd, stats in deduplication_stats.items():
                     if pd == f"{dedup.provider_id}_{dedup.provider_type}":

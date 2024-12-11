@@ -1,4 +1,5 @@
 # test_enrichments.py
+import time
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -46,6 +47,7 @@ def mock_alert_dto():
         severity="high",
         lastReceived="2021-01-01T00:00:00Z",
         source=["test_source"],
+        fingerprint="mock_fingerprint",
         labels={},
     )
 
@@ -519,6 +521,15 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
         json=mock_alert_dto.dict(),
     )
 
+    while (
+        client.get(
+            f"/alerts/{mock_alert_dto.fingerprint}",
+            headers={"x-api-key": "some-key"},
+        ).status_code
+        != 200
+    ):
+        time.sleep(0.1)
+
     # 2. enrich with disposable alert
     response = client.post(
         "/alerts/enrich?dispose_on_new_alert=true",
@@ -537,6 +548,13 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
         headers={"x-api-key": "some-key"},
     )
     alerts = response.json()
+    while alerts[0]["status"] != "acknowledged":
+        response = client.get(
+            "/preset/feed/alerts",
+            headers={"x-api-key": "some-key"},
+        )
+        alerts = response.json()
+
     assert len(alerts) == 1
     alert = alerts[0]
     assert alert["status"] == "acknowledged"

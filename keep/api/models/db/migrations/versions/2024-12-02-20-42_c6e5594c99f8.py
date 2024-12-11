@@ -8,6 +8,7 @@ Create Date: 2024-12-02 20:42:33.311541
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import text
 from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Session
 
@@ -21,15 +22,19 @@ depends_on = None
 def populate_db():
     session = Session(op.get_bind())
 
-    session.execute("""
+    session.execute(
+        text(
+            """
         UPDATE lastalert
         SET first_timestamp = (
             SELECT MIN(alert.timestamp)
             FROM alert
-            WHERE alert.fingerprint = lastalert.fingerprint 
+            WHERE alert.fingerprint = lastalert.fingerprint
             AND alert.tenant_id = lastalert.tenant_id
         )
-    """)
+    """
+        )
+    )
 
 
 def upgrade() -> None:

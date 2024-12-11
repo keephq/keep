@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import importlib
 import sys
@@ -38,19 +37,16 @@ def test_app(monkeypatch, request):
     if "keep.api.api" in sys.modules:
         importlib.reload(sys.modules["keep.api.api"])
 
+    if "keep.api.config" in sys.modules:
+        importlib.reload(sys.modules["keep.api.config"])
+
     # Import and return the app instance
     from keep.api.api import get_app
+    from keep.api.config import provision_resources
 
+    provision_resources()
     app = get_app()
-
-    # Manually trigger the startup event
-    for event_handler in app.router.on_startup:
-        asyncio.run(event_handler())
-
-    yield app
-
-    for event_handler in app.router.on_shutdown:
-        asyncio.run(event_handler())
+    return app
 
 
 # Fixture for TestClient using the test_app fixture
@@ -58,7 +54,9 @@ def test_app(monkeypatch, request):
 def client(test_app, db_session, monkeypatch):
     # disable pusher
     monkeypatch.setenv("PUSHER_DISABLED", "true")
-    return TestClient(test_app)
+    monkeypatch.setenv("KEEP_DEBUG_TASKS", "true")
+    with TestClient(test_app) as client:
+        yield client
 
 
 # Common setup for tests

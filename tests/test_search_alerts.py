@@ -10,7 +10,7 @@ from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.searchengine.searchengine import SearchEngine
-from tests.fixtures.client import client, setup_api_key, test_app  # noqa
+from tests.test_deduplications import wait_for_alerts  # noqa
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
 
@@ -1381,6 +1381,9 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
         headers={"x-api-key": "some-key"},
         json=alert_high_dto.dict(),
     )
+
+    wait_for_alerts(client, 2)
+
     # And add manual enrichment
     client.post(
         "/alerts/enrich",
