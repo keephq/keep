@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'keep/**'
-      - 'keep-ui/**'
-      - 'tests/**'
+      - "keep/**"
+      - "keep-ui/**"
+      - "tests/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}
@@ -123,7 +123,7 @@ jobs:
 
           # create the state directory
           # mkdir -p ./state && chown -R root:root ./state && chmod -R 777 ./state
-    
+
       - name: Run e2e tests and report coverage
         run: |
           poetry run coverage run --branch -m pytest -s tests/e2e_tests/
@@ -147,7 +147,7 @@ jobs:
 
       - name: Upload test artifacts on failure
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: test-artifacts
           path: |
