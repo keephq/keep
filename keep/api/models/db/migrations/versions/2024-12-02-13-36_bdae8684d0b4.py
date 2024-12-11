@@ -10,6 +10,7 @@ import sqlalchemy as sa
 import sqlalchemy_utils
 import sqlmodel
 from alembic import op
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 # revision identifiers, used by Alembic.
@@ -25,7 +26,8 @@ def populate_db():
     session = Session(op.get_bind())
 
     if session.bind.dialect.name == "postgresql":
-        migrate_lastalert_query = """
+        migrate_lastalert_query = text(
+            """
             insert into lastalert (tenant_id, fingerprint, alert_id, timestamp)
                 select alert.tenant_id, alert.fingerprint, alert.id as alert_id, alert.timestamp
                 from alert
@@ -38,8 +40,10 @@ def populate_db():
             on conflict
                 do nothing
         """
+        )
 
-        migrate_lastalerttoincident_query = """
+        migrate_lastalerttoincident_query = text(
+            """
             insert into lastalerttoincident (incident_id, tenant_id, timestamp, fingerprint, is_created_by_ai, deleted_at)
                 select  ati.incident_id, ati.tenant_id, ati.timestamp, lf.fingerprint, ati.is_created_by_ai, ati.deleted_at
                 from alerttoincident as ati
@@ -57,9 +61,11 @@ def populate_db():
             on conflict
                 do nothing
         """
+        )
 
     else:
-        migrate_lastalert_query = """
+        migrate_lastalert_query = text(
+            """
         INSERT INTO lastalert (tenant_id, fingerprint, alert_id, timestamp)
         SELECT
             grouped_alerts.tenant_id,
@@ -80,8 +86,10 @@ def populate_db():
         ) as grouped_alerts
         GROUP BY grouped_alerts.tenant_id, grouped_alerts.fingerprint, grouped_alerts.timestamp;
 """
+        )
 
-        migrate_lastalerttoincident_query = """
+        migrate_lastalerttoincident_query = text(
+            """
         REPLACE INTO lastalerttoincident (incident_id, tenant_id, timestamp, fingerprint, is_created_by_ai, deleted_at)
             select ati.incident_id, ati.tenant_id, ati.timestamp, lf.fingerprint, ati.is_created_by_ai, ati.deleted_at
             from alerttoincident as ati
@@ -96,7 +104,8 @@ def populate_db():
                     group by fingerprint, tenant_id
                 ) as a on alert.fingerprint = a.fingerprint and alert.timestamp = a.last_received and alert.tenant_id = a.tenant_id
             ) as lf on ati.alert_id = lf.id;
-    """
+        """
+        )
 
     session.execute(migrate_lastalert_query)
     session.execute(migrate_lastalerttoincident_query)
