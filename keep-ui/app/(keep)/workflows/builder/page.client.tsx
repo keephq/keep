@@ -1,7 +1,7 @@
 "use client";
 
 import { Title, Button, Subtitle, Badge } from "@tremor/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PlusIcon,
   ArrowDownOnSquareIcon,
@@ -10,6 +10,9 @@ import {
   PlayIcon,
 } from "@heroicons/react/20/solid";
 import { BuilderCard } from "./builder-card";
+import { loadWorkflowYAML } from "./utils";
+import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { YAMLException } from "js-yaml";
 
 export default function PageClient({
   workflow,
@@ -27,6 +30,7 @@ export default function PageClient({
   const [triggerRun, setTriggerRun] = useState(0);
   const [fileContents, setFileContents] = useState<string | null>("");
   const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFileContents(null);
@@ -52,7 +56,20 @@ export default function PageClient({
     reader.onload = (event) => {
       setFileName(fName);
       const contents = event.target!.result as string;
-      setFileContents(contents);
+      try {
+        const parsedWorkflow = loadWorkflowYAML(contents);
+        setFileContents(contents);
+      } catch (error) {
+        if (error instanceof YAMLException) {
+          showErrorToast(error, "Invalid YAML: " + error.message);
+        } else {
+          showErrorToast(error, "Failed to load workflow");
+        }
+        setFileName("");
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
     };
     reader.readAsText(file);
   }
@@ -103,6 +120,7 @@ export default function PageClient({
                 type="file"
                 id="alertFile"
                 style={{ display: "none" }}
+                ref={fileInputRef}
                 onChange={handleFileChange}
               />
             </>
