@@ -1,13 +1,13 @@
 import datetime
 import json
 import logging
-import os
 import re
 
 import celpy
 import chevron
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_enrichment_with_session,
@@ -52,9 +52,7 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
 
 class EnrichmentsBl:
 
-    ENRICHMENT_DISABLED = (
-        os.environ.get("KEEP_ENRICHMENT_DISABLED", "false").lower() == "true"
-    )
+    ENRICHMENT_DISABLED = config("KEEP_ENRICHMENT_DISABLED", default="false", cast=bool)
 
     def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)

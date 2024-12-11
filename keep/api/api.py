@@ -25,6 +25,7 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
     KEEP_ARQ_TASK_POOL_NONE,
 )
+from keep.api.core.config import config
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
@@ -66,17 +67,17 @@ load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
-HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
-PORT = int(os.environ.get("PORT", 8080))
-SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
-CONSUMER = os.environ.get("CONSUMER", "true") == "true"
-KEEP_DEBUG_TASKS = os.environ.get("KEEP_DEBUG_TASKS", "false") == "true"
+HOST = config("KEEP_HOST", default="0.0.0.0")
+PORT = config("PORT", default=8080, cast=int)
+SCHEDULER = config("SCHEDULER", default="true", cast=bool)
+CONSUMER = config("CONSUMER", default="true", cast=bool)
+KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 
-AUTH_TYPE = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value).lower()
+AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
-    KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
+    KEEP_VERSION = config("KEEP_VERSION", default="unknown")
 
 # Monkey patch requests to disable redirects
 original_request = requests.Session.request
@@ -177,7 +178,8 @@ async def lifespan(app: FastAPI):
 def get_app(
     auth_type: IdentityManagerTypes = IdentityManagerTypes.NOAUTH.value,
 ) -> FastAPI:
-    if not os.environ.get("KEEP_API_URL", None):
+    keep_api_url = config("KEEP_API_URL", default=None)
+    if not keep_api_url:
         logger.info(
             "KEEP_API_URL is not set, setting it to default",
             extra={"keep_api_url": f"http://{HOST}:{PORT}"},
@@ -188,7 +190,7 @@ def get_app(
         f"Starting Keep with {os.environ['KEEP_API_URL']} as URL and version {KEEP_VERSION}",
         extra={
             "keep_version": KEEP_VERSION,
-            "keep_api_url": os.environ.get("KEEP_API_URL"),
+            "keep_api_url": keep_api_url,
         },
     )
 
@@ -292,7 +294,7 @@ def run(app: FastAPI):
     keep.api.config.on_starting()
 
     # run the server
-    workers = os.environ.get("KEEP_WORKERS", None)
+    workers = config("KEEP_WORKERS", default=None, cast=int)
     if workers:
         uvicorn.run(
             "keep.api.api:get_app",
