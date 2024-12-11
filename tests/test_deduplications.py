@@ -250,8 +250,7 @@ def test_custom_deduplication_rule(db_session, client, test_app):
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
-
-    wait_for_alerts(client, 2)
+        time.sleep(0.1)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}

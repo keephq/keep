@@ -356,6 +356,14 @@ class AlertDeduplicator:
 
         result = []
         for dedup in final_deduplications:
+            self.logger.debug(
+                "Calculating deduplication stats",
+                extra={
+                    "deduplication_rule_id": dedup.id,
+                    "tenant_id": self.tenant_id,
+                    "deduplication_stats": deduplication_stats,
+                },
+            )
             key = dedup.id
             full_dedup = deduplication_stats.get(key, {"full_dedup_count": 0}).get(
                 "full_dedup_count", 0
