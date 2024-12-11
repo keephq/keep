@@ -34,6 +34,9 @@ class AlertDeduplicator:
     DEDUPLICATION_DISTRIBUTION_ENABLED = config(
         "KEEP_DEDUPLICATION_DISTRIBUTION_ENABLED", cast=bool, default=True
     )
+    CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED = config(
+        "KEEP_CUSTOM_DEDUPLICATION_ENABLED", cast=bool, default=True
+    )
 
     def __init__(self, tenant_id):
         self.logger = logging.getLogger(__name__)
@@ -171,7 +174,11 @@ class AlertDeduplicator:
         self, tenant_id, provider_id, provider_type
     ) -> DeduplicationRuleDto:
         # try to get the rule from the database
-        rule = get_custom_deduplication_rule(tenant_id, provider_id, provider_type)
+        rule = (
+            get_custom_deduplication_rule(tenant_id, provider_id, provider_type)
+            if AlertDeduplicator.CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED
+            else None
+        )
 
         if not rule:
             self.logger.debug(
@@ -267,7 +274,11 @@ class AlertDeduplicator:
             provider_id, provider_type = dd.provider_id, dd.provider_type
             dd.id = self._generate_uuid(provider_id, provider_type)
         # get custom deduplication rules
-        custom_deduplications = get_all_deduplication_rules(self.tenant_id)
+        custom_deduplications = (
+            get_all_deduplication_rules(self.tenant_id)
+            if AlertDeduplicator.CUSTOM_DEDUPLICATION_DISTRIBUTION_ENABLED
+            else []
+        )
         # cast to dto
         custom_deduplications_dto = [
             DeduplicationRuleDto(
