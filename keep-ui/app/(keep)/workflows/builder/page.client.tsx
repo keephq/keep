@@ -76,20 +76,10 @@ export default function PageClient({
   const incrementState = (s: number) => s + 1;
 
   return (
-    <main className="p-4 md:p-5 mx-auto max-w-full h-[98%]">
+    <main className="mx-auto max-w-full h-[98%]">
       <div className="flex justify-between">
         <div className="flex flex-col">
-          <Title>
-            Builder
-            <Badge
-              color="orange"
-              size="xs"
-              tooltip="Slack us if something isn't working properly :)"
-            >
-              Beta
-            </Badge>
-          </Title>
-          <Subtitle>Workflow building kit</Subtitle>
+          <Title>{workflow ? "Edit" : "New"} Workflow</Title>
         </div>
         <div className="flex gap-2">
           {!workflow && (
