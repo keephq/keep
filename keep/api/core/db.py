@@ -19,6 +19,7 @@ import validators
 from dateutil.tz import tz
 from dotenv import find_dotenv, load_dotenv
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from psycopg2.errors import NoActiveSqlTransaction
 from sqlalchemy import (
     String,
     and_,
@@ -4719,7 +4720,7 @@ def get_last_alert_by_fingerprint(
 def set_last_alert(
     tenant_id: str, alert: Alert, session: Optional[Session] = None, max_retries=3
 ) -> None:
-    logger.info(f"Set last alert for `{alert.fingerprint}`")
+    logger.info(f"Seting last alert for `{alert.fingerprint}`")
     with existed_or_new_session(session) as session:
         for attempt in range(max_retries):
             with session.begin_nested() as transaction:
@@ -4765,14 +4766,6 @@ def set_last_alert(
 
                         session.add(last_alert)
                     transaction.commit()
-                    logger.debug(
-                        f"Successfully updated lastalert for `{alert.fingerprint}`",
-                        extra={
-                            "alert_id": alert.id,
-                            "tenant_id": tenant_id,
-                            "fingerprint": alert.fingerprint,
-                        },
-                    )
                 except OperationalError as ex:
                     if "no such savepoint" in ex.args[0]:
                         logger.info(
@@ -4789,3 +4782,22 @@ def set_last_alert(
                         transaction.rollback()
                         if attempt >= max_retries:
                             raise ex
+                except NoActiveSqlTransaction:
+                    logger.exception(
+                        f"No active sql transaction while updating lastalert for `{alert.fingerprint}`, retry #{attempt}",
+                        extra={
+                            "alert_id": alert.id,
+                            "tenant_id": tenant_id,
+                            "fingerprint": alert.fingerprint,
+                        },
+                    )
+            logger.debug(
+                f"Successfully updated lastalert for `{alert.fingerprint}`",
+                extra={
+                    "alert_id": alert.id,
+                    "tenant_id": tenant_id,
+                    "fingerprint": alert.fingerprint,
+                },
+            )
+            # break the retry loop
+            break
