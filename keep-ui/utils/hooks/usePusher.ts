@@ -35,7 +35,13 @@ export const useWebsocket = () => {
       // if relative, get the relative port:
       let port = configData.PUSHER_PORT;
       if (isRelativeHostAndNotLocal) {
-        port = parseInt(window.location.port, 10);
+        // Handle case where port is empty string (default ports 80/443)
+        if (window.location.port) {
+          port = parseInt(window.location.port, 10);
+        } else {
+          // Use default ports based on protocol
+          port = window.location.protocol === "https:" ? 443 : 80;
+        }
       }
 
       console.log(
