@@ -38,12 +38,29 @@
           "group": "Key Concepts",
           "pages": [
             "overview/glossary",
-            "platform/alertseverityandstatus",
+            "overview/cel",
+            "overview/fingerprints",
+            "overview/alertseverityandstatus",
             "overview/howdoeskeepgetmyalerts",
             "overview/comparisons"
           ]
         }
       ]
+    },
+    {
+      "group": "Alerts",
+      "pages": [
+        "alerts/overview",
+        "alerts/table",
+        "alerts/presets",
+        "alerts/actionmenu",
+        "alerts/columns",
+        "alerts/facets"
+      ]
+    },
+    {
+      "group": "Incidents",
+      "pages": ["incidents/overview", "incidents/incidentview"]
     },
     {
       "group": "AIOps",
@@ -52,10 +69,9 @@
         "overview/deduplication",
         "overview/enrichment/extraction",
         "overview/enrichment/mapping",
-        "overview/workflow-automation",
         "overview/servicetopology",
         "overview/maintenance-windows",
-        "overview/presets"
+        "overview/workflow-automation"
       ]
     },
     {
@@ -101,10 +117,7 @@
       "group": "Providers",
       "pages": [
         "providers/overview",
-        "providers/fingerprints",
-        "providers/adding-a-new-p rovider",
-        "providers/getting-started",
-        "providers/what-is-a-provider",
+        "providers/adding-a-new-provider",
         {
           "group": "Supported Providers",
           "pages": [

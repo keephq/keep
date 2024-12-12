@@ -2,14 +2,60 @@
 title: "Overview"
 ---
 
-<Note>Need any help with creating a Workflow? Feel free to submit an issue or join our Slack and we will help with that.</Note>
 
-# Workflow Overview
+##
+Keep Workflow Engine designed to streamline and automate operational tasks by integrating triggers, steps, actions, and conditions. This documentation provides an overview of the core concepts used to define and execute workflows effectively.
 
-Keep workflows are YAML-based configurations that define automated processes for handling alerts, incidents, and other operational tasks. They provide a flexible and powerful way to automate your incident management and alert handling processes.
+- Triggers
+- Steps
+- Actions
+- Conditions
+- Functions
+- Previous Step Context
+- Providers
+- Variables
+- Error Handling
+- Foreach Loops
+- Alert Enrichment
 
-## Key Components
+## Concepts
 
-A Keep workflow consists of several key components:
+### Triggers
 
-### 1. Workflow Definition
+Define how a workflow starts, such as manually, on a schedule, or in response to alerts with optional filters for specific conditions.
+
+### Steps
+
+Represent sequential operations, like querying data or running scripts, using configurable providers.
+
+### Actions
+
+Specify tasks performed after steps, including sending notifications, updating tickets, or invoking external services.
+
+### Conditions
+
+Allow decision-making in actions based on thresholds, assertions, or previous step results.
+
+### Functions
+
+Built-in helpers like datetime_compare or is_business_hours simplify complex operations.
+
+### Previous Step Context
+
+Enables access to and reuse of outputs from earlier steps within actions or conditions.
+
+### Providers
+
+External systems or services (e.g., Slack, Datadog, ServiceNow) integrated into workflows through a standard configuration interface.
+
+### Variables
+
+Use constants, dynamic variables, or contextual data to customize workflow behavior.
+
+### Foreach Loops
+
+Iterate over a list of results from a step to perform repeated actions for each item.
+
+### Alert Enrichment
+
+Add context to alerts, like customer details or ticket metadata, using enrichment mechanisms in steps or actions.
