@@ -38,9 +38,14 @@ def test_app(monkeypatch, request):
     if "keep.api.api" in sys.modules:
         importlib.reload(sys.modules["keep.api.api"])
 
+    if "keep.api.config" in sys.modules:
+        importlib.reload(sys.modules["keep.api.config"])
+
     # Import and return the app instance
     from keep.api.api import get_app
+    from keep.api.config import provision_resources
 
+    provision_resources()
     app = get_app()
 
     # Manually trigger the startup event
