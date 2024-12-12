@@ -2114,11 +2114,10 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
     # to check deduplication
     with Session(engine) as session:
         query = (
-            select(Alert.alert_hash)
-            .where(Alert.tenant_id == tenant_id)
-            .where(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
-            .limit(1)  # Add LIMIT 1 for MSSQL
+            select(LastAlert.alert_hash)
+            .where(LastAlert.tenant_id == tenant_id)
+            .where(LastAlert.fingerprint == fingerprint)
+            .limit(1)
         )
 
         alert_hash = session.exec(query).first()

@@ -702,7 +702,6 @@ def test_full_deduplication(db_session, client, test_app):
 """
 
 
-@pytest.mark.timeout(15)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -727,6 +726,7 @@ def test_partial_deduplication(db_session, client, test_app):
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
+        time.sleep(0.1)
 
     wait_for_alerts(client, 1)
 

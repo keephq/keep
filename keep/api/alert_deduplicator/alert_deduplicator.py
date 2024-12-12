@@ -95,6 +95,15 @@ class AlertDeduplicator:
                 },
             )
             alert.isPartialDuplicate = True
+        else:
+            self.logger.info(
+                "Alert is not deduplicated",
+                extra={
+                    "alert_id": alert.id,
+                    "fingerprint": alert.fingerprint,
+                    "tenant_id": self.tenant_id,
+                },
+            )
 
         return alert
 
