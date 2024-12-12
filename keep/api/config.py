@@ -48,8 +48,6 @@ def on_starting(server=None):
     # Load tenant configuration early
     TenantConfiguration()
 
-    provision_resources()
-
     # Create single tenant if it doesn't exist
     if AUTH_TYPE in [
         IdentityManagerTypes.DB.value,
