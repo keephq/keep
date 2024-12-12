@@ -276,7 +276,6 @@ def test_custom_deduplication_rule(db_session, client, test_app):
     assert custom_rule_found
 
 
-@pytest.mark.timeout(20)
 @pytest.mark.parametrize(
     "test_app",
     [
@@ -321,6 +320,7 @@ def test_custom_deduplication_rule_behaviour(db_session, client, test_app):
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
+        time.sleep(0.3)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}

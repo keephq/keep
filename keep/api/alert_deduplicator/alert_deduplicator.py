@@ -102,6 +102,7 @@ class AlertDeduplicator:
                     "alert_id": alert.id,
                     "fingerprint": alert.fingerprint,
                     "tenant_id": self.tenant_id,
+                    "last_alert_hash_by_fingerprint": last_alert_hash_by_fingerprint,
                 },
             )
 

@@ -2110,7 +2110,7 @@ def get_all_deduplication_stats(tenant_id):
     return stats
 
 
-def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
+def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint) -> str | None:
     # get the last alert for a given fingerprint
     # to check deduplication
     with Session(engine) as session:
@@ -2121,7 +2121,7 @@ def get_last_alert_hash_by_fingerprint(tenant_id, fingerprint):
             .limit(1)
         )
 
-        alert_hash = session.exec(query).first()
+        alert_hash: str | None = session.scalars(query).first()
     return alert_hash
 
 
