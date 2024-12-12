@@ -247,17 +247,20 @@ def test_custom_deduplication_rule(db_session, client, test_app):
     alert = provider.simulate_alert()
 
     for _ in range(2):
+        # shoot two alerts with the same title and message, dedup should be 50%
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
-        time.sleep(0.1)
+        time.sleep(0.3)
 
     deduplication_rules = client.get(
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
 
-    while not any([rule for rule in deduplication_rules if rule.get("ingested") == 2]):
-        time.sleep(1)
+    while not any(
+        [rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0]
+    ):
+        time.sleep(0.1)
         deduplication_rules = client.get(
             "/deduplications", headers={"x-api-key": "some-api-key"}
         ).json()
