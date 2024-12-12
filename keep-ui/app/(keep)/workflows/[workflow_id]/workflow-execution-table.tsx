@@ -24,6 +24,7 @@ import { PiDiamondsFourFill } from "react-icons/pi";
 import { FaHandPointer } from "react-icons/fa";
 import { HiBellAlert } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
+import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 
 interface Pagination {
   limit: number;
@@ -116,7 +117,7 @@ export function getIcon(status: string) {
 export function getTriggerIcon(triggered_by: string) {
   switch (triggered_by) {
     case "Manual":
-      return FaHandPointer;
+      return CursorArrowRaysIcon;
     case "Scheduler":
       return PiDiamondsFourFill;
     case "Alert":
