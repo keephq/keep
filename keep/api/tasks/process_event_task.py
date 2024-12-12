@@ -470,35 +470,14 @@ def __handle_formatted_events(
             if not filtered_alerts:
                 continue
             presets_do_update.append(preset_dto)
-            preset_dto.alerts_count = len(filtered_alerts)
-            # update noisy
-            if preset_dto.is_noisy:
-                firing_filtered_alerts = list(
-                    filter(
-                        lambda alert: alert.status == AlertStatus.FIRING.value,
-                        filtered_alerts,
-                    )
-                )
-                # if there are firing alerts, then do noise
-                if firing_filtered_alerts:
-                    logger.info("Noisy preset is noisy")
-                    preset_dto.should_do_noise_now = True
-            # else if at least one of the alerts has isNoisy and should fire:
-            elif any(
-                alert.isNoisy and alert.status == AlertStatus.FIRING.value
-                for alert in filtered_alerts
-                if hasattr(alert, "isNoisy")
-            ):
-                logger.info("Noisy preset is noisy")
-                preset_dto.should_do_noise_now = True
-            try:
-                pusher_client.trigger(
-                    f"private-{tenant_id}",
-                    "async-presets",
-                    json.dumps([p.dict() for p in presets_do_update], default=str),
-                )
-            except Exception:
-                logger.exception("Failed to send presets via pusher")
+        try:
+            pusher_client.trigger(
+                f"private-{tenant_id}",
+                "poll-presets",
+                json.dumps([p.name.lower() for p in presets_do_update], default=str),
+            )
+        except Exception:
+            logger.exception("Failed to send presets via pusher")
     except Exception:
         logger.exception(
             "Failed to send presets via pusher",

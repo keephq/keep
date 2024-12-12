@@ -38,8 +38,7 @@ export default function PermissionsTab({ isDisabled = false }: Props) {
   const { data: users } = useUsers();
   const { data: groups } = useGroups();
   const { data: roles } = useRoles();
-  const { useAllPresets } = usePresets();
-  const { data: presets } = useAllPresets();
+  const { dynamicPresets: presets } = usePresets();
   const { data: incidents } = useIncidents();
 
   const [loading, setLoading] = useState(true);

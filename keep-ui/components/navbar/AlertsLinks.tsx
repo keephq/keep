@@ -35,8 +35,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   const { data: tags = [] } = useTags();
 
   // Get latest static presets (merged local and server presets)
-  const { useLatestStaticPresets } = usePresets();
-  const { data: staticPresets = [] } = useLatestStaticPresets({
+  const { staticPresets, error: staticPresetsError } = usePresets({
     revalidateIfStale: true,
     revalidateOnFocus: true,
   });
@@ -61,11 +60,11 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
   // Determine if we should show the feed link
   const shouldShowFeed = (() => {
     // For the initial render on the server, always show feed
-    if (!isMounted) {
+    if (!isMounted || (!staticPresets && !staticPresetsError)) {
       return true;
     }
 
-    return staticPresets.some((preset) => preset.name === "feed");
+    return staticPresets?.some((preset) => preset.name === "feed");
   })();
 
   // Get the current alerts count only if we should show feed

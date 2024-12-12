@@ -9,6 +9,7 @@ import { SilencedDoorbellNotification } from "@/components/icons";
 import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
 import CreateIncidentWithAIModal from "./alert-create-incident-ai-modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useRevalidateMultiple } from "@/utils/state";
 
 interface Props {
   selectedRowIds: string[];
@@ -30,11 +31,9 @@ export default function AlertActions({
   isIncidentSelectorOpen,
 }: Props) {
   const router = useRouter();
-  const { useAllPresets } = usePresets();
   const api = useApi();
-  const { mutate: presetsMutator } = useAllPresets({
-    revalidateOnFocus: false,
-  });
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
 
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);

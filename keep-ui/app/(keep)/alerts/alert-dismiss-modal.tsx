@@ -24,6 +24,7 @@ const ReactQuill =
 import "./alert-dismiss-modal.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { useRevalidateMultiple } from "@/utils/state";
 
 interface Props {
   preset: string;
@@ -41,8 +42,8 @@ export default function AlertDismissModal({
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
 
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets();
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { usePresetAlerts } = useAlerts();
   const { mutate: alertsMutator } = usePresetAlerts(presetName, {
     revalidateOnMount: false,

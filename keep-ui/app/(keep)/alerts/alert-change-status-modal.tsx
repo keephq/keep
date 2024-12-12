@@ -20,6 +20,7 @@ import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { useRevalidateMultiple } from "@/utils/state";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
@@ -76,8 +77,8 @@ export default function AlertChangeStatusModal({
 }: Props) {
   const api = useApi();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets();
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { useAllAlerts } = useAlerts();
   const { mutate: alertsMutator } = useAllAlerts(presetName, {
     revalidateOnMount: false,

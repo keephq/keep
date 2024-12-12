@@ -100,62 +100,29 @@ export const CustomPresetAlertLinks = ({
 }: CustomPresetAlertLinksProps) => {
   const api = useApi();
 
-  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } =
-    usePresets();
-  const { data: presets = [], mutate: presetsMutator } = useAllPresets({
+  const {
+    dynamicPresets: presets,
+    mutate: presetsMutator,
+    setLocalDynamicPresets,
+  } = usePresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
 
   const pathname = usePathname();
   const router = useRouter();
-  const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
   // Check for noisy presets and control sound playback
-  const anyNoisyNow = presets.some((preset) => preset.should_do_noise_now);
+  const anyNoisyNow = presets?.some((preset) => preset.should_do_noise_now);
 
-  const checkValidPreset = (preset: Preset) => {
-    if (!preset.is_private) {
-      return true;
-    }
-    return preset && preset.created_by == session?.user?.email;
-  };
-
-  useEffect(() => {
-    const filteredLS = presetsOrderFromLS.filter(
-      (preset) =>
-        ![
-          "feed",
-          "deleted",
-          "dismissed",
-          "without-incident",
-          "groups",
-        ].includes(preset.name)
-    );
-
-    // Combine live presets and local storage order
-    const combinedOrder = presets.reduce<Preset[]>(
-      (acc, preset: Preset) => {
-        if (!acc.find((p) => p.id === preset.id)) {
-          acc.push(preset);
-        }
-        return acc.filter((preset) => checkValidPreset(preset));
-      },
-      [...filteredLS]
-    );
-
-    // Only update state if there's an actual change to prevent infinite loops
-    if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
-      setPresetsOrder(combinedOrder);
-    }
-  }, [presets, presetsOrderFromLS]);
   // Filter presets based on tags, or return all if no tags are selected
   const filteredOrderedPresets =
     selectedTags.length === 0
-      ? presetsOrder
-      : presetsOrder.filter((preset) =>
+      ? presets
+      : presets.filter((preset) =>
           preset.tags.some((tag) => selectedTags.includes(tag.name))
         );
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -188,7 +155,7 @@ export const CustomPresetAlertLinks = ({
         await presetsMutator();
 
         // remove preset from saved order
-        setPresetsOrderFromLS((oldOrder) =>
+        setLocalDynamicPresets((oldOrder) =>
           oldOrder.filter((p) => p.id !== presetId)
         );
 
@@ -209,22 +176,20 @@ export const CustomPresetAlertLinks = ({
       return;
     }
 
-    const fromIndex = presetsOrder.findIndex(
+    const fromIndex = presets.findIndex(
       ({ id }) => id === active.id.toString()
     );
-    const toIndex = presetsOrder.findIndex(
-      ({ id }) => id === over.id.toString()
-    );
+    const toIndex = presets.findIndex(({ id }) => id === over.id.toString());
 
     if (toIndex === -1) {
       return;
     }
 
-    const reorderedCols = [...presetsOrder];
+    const reorderedCols = [...presets];
     const reorderedItem = reorderedCols.splice(fromIndex, 1);
     reorderedCols.splice(toIndex, 0, reorderedItem[0]);
 
-    setPresetsOrderFromLS(reorderedCols);
+    setLocalDynamicPresets(reorderedCols);
   };
 
   return (
@@ -234,7 +199,7 @@ export const CustomPresetAlertLinks = ({
       collisionDetection={rectIntersection}
       onDragEnd={onDragEnd}
     >
-      <SortableContext key="preset-alerts" items={presetsOrder}>
+      <SortableContext key="preset-alerts" items={presets}>
         {filteredOrderedPresets.map((preset) => (
           <PresetAlert
             key={preset.id}

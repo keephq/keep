@@ -173,8 +173,7 @@ export default function AlertPresets({
   presetNoisy = false,
 }: Props) {
   const api = useApi();
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator, data: savedPresets = [] } = useAllPresets({
+  const { dynamicPresets: savedPresets, mutate: presetsMutator } = usePresets({
     revalidateOnFocus: false,
   });
   const { data: tags = [], mutate: mutateTags } = useTags();
@@ -238,7 +237,7 @@ export default function AlertPresets({
     setGeneratingName(false);
   };
 
-  const selectedPreset = savedPresets.find(
+  const selectedPreset = savedPresets?.find(
     (savedPreset) =>
       savedPreset.name.toLowerCase() ===
       decodeURIComponent(presetNameFromApi).toLowerCase()

@@ -76,9 +76,9 @@ export default function Alerts({ presetName }: AlertsProps) {
   const ticketingProviders = useMemo(
     () =>
       providersData.installed_providers.filter((provider) =>
-        provider.tags.includes("ticketing"),
+        provider.tags.includes("ticketing")
       ),
-    [providersData.installed_providers],
+    [providersData.installed_providers]
   );
 
   const searchParams = useSearchParams();
@@ -95,15 +95,13 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [viewEnrichAlertModal, setEnrichAlertModal] =
     useState<AlertDto | null>();
   const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
-  const { useAllPresets } = usePresets();
-
-  const { data: savedPresets = [] } = useAllPresets({
+  const { dynamicPresets: savedPresets = [] } = usePresets({
     revalidateOnFocus: false,
   });
   const presets = [...defaultPresets, ...savedPresets] as const;
 
   const selectedPreset = presets.find(
-    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName),
+    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
   const { data: pollAlerts } = useAlertPolling();

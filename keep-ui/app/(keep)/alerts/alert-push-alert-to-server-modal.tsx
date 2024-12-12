@@ -14,6 +14,7 @@ import { usePresets } from "utils/hooks/usePresets";
 import Select from "@/components/ui/Select";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { useRevalidateMultiple } from "@/utils/state";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;
@@ -31,11 +32,8 @@ const PushAlertToServerModal = ({
   presetName,
 }: PushAlertToServerModalProps) => {
   const [alertSources, setAlertSources] = useState<AlertSource[]>([]);
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets({
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { usePresetAlerts } = useAlerts();
   const { mutate: mutateAlerts } = usePresetAlerts(presetName);
 
