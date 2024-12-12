@@ -726,7 +726,7 @@ def test_partial_deduplication(db_session, client, test_app):
         client.post(
             "/alerts/event/datadog", json=alert, headers={"x-api-key": "some-api-key"}
         )
-        time.sleep(0.1)
+        time.sleep(0.2)
 
     wait_for_alerts(client, 1)
 
