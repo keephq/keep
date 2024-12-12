@@ -1,8 +1,8 @@
 import {
-  Card,
-  Title,
-  Subtitle,
+  Badge,
   Button,
+  Card,
+  Subtitle,
   Table,
   TableBody,
   TableCell,
@@ -10,33 +10,24 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
-  Badge,
+  Title,
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
-import { CopyBlock, a11yLight } from "react-code-blocks";
-import useSWR from "swr";
+import { a11yLight, CopyBlock } from "react-code-blocks";
+import useSWR, { mutate } from "swr";
 import { KeyIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 import { AuthType } from "utils/authenticationType";
 import CreateApiKeyModal from "../create-api-key-modal";
 import { useRoles } from "utils/hooks/useRoles";
-import { mutate } from "swr";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { ApiKey } from "@/app/(keep)/settings/auth/types";
 
 interface Props {
   selectedTab: string;
-}
-
-export interface ApiKey {
-  reference_id: string;
-  secret: string;
-  created_by: string;
-  created_at: string;
-  last_used?: string;
-  role?: string;
 }
 
 interface ApiKeyResponse {

@@ -14,7 +14,12 @@ import DragAndDropSidebar from "./ToolBox";
 import { Provider } from "@/app/(keep)/providers/providers";
 import ReactFlowEditor from "./ReactFlowEditor";
 import "@xyflow/react/dist/style.css";
-import { ReactFlowDefinition, V2Step, Definition } from "./builder-store";
+
+import {
+  Definition,
+  ReactFlowDefinition,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
 const nodeTypes = { custom: CustomNode as any };
 const edgeTypes: EdgeTypesType = {
