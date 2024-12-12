@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Loader from "./loader";
 import { Provider } from "../../providers/providers";
 import { useProviders } from "utils/hooks/useProviders";
+import clsx from "clsx";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -58,7 +59,13 @@ export function BuilderCard({
     );
 
   return (
-    <Card className={`mt-2 p-4 md:p-2 mx-auto ${error ? null : "h-[95%]"}`}>
+    <Card
+      className={clsx(
+        "mt-2 p-0 mx-auto",
+        error ? null : "h-[95%]",
+        workflow ? "h-full" : "h-[95%]"
+      )}
+    >
       {error ? (
         <Callout
           className="mt-4"

@@ -17,10 +17,10 @@ import {
   MapIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/20/solid";
-import "./provider-tile.css";
-import moment from "moment";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { FaCode } from "react-icons/fa";
+import TimeAgo from "react-timeago";
+import "./provider-tile.css";
 
 interface Props {
   provider: Provider;
@@ -235,7 +235,8 @@ export default function ProviderTile({ provider, onClick }: Props) {
             )}
             {provider.last_alert_received ? (
               <Text>
-                Last alert: {moment(provider.last_alert_received).fromNow()}
+                Last alert:{" "}
+                <TimeAgo date={provider.last_alert_received + "Z"} />
               </Text>
             ) : (
               <p></p>

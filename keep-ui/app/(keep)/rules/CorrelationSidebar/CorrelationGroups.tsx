@@ -1,12 +1,12 @@
 import QueryBuilder from "react-querybuilder";
 import { RuleGroup } from "./RuleGroup";
 import { Controller, useFormContext } from "react-hook-form";
-import { CorrelationForm } from ".";
 import { Button } from "@tremor/react";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { CorrelationFormType } from "./types";
 
 export const CorrelationGroups = () => {
-  const { control } = useFormContext<CorrelationForm>();
+  const { control } = useFormContext<CorrelationFormType>();
 
   return (
     <div className="col-span-2">

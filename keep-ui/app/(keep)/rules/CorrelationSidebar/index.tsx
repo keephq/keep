@@ -2,9 +2,9 @@ import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { CorrelationSidebarHeader } from "./CorrelationSidebarHeader";
 import { CorrelationSidebarBody } from "./CorrelationSidebarBody";
-import { RuleGroupType } from "react-querybuilder";
+import { CorrelationFormType } from "./types";
 
-export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
+export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationFormType = {
   name: "",
   description: "",
   timeAmount: 24,
@@ -27,21 +27,10 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationForm = {
   },
 };
 
-export type CorrelationForm = {
-  name: string;
-  description: string;
-  timeAmount: number;
-  timeUnit: "minutes" | "seconds" | "hours" | "days";
-  groupedAttributes: string[];
-  requireApprove: boolean;
-  resolveOn: "all" | "first" | "last" | "never";
-  query: RuleGroupType;
-};
-
 type CorrelationSidebarProps = {
   isOpen: boolean;
   toggle: VoidFunction;
-  defaultValue?: CorrelationForm;
+  defaultValue?: CorrelationFormType;
 };
 
 export const CorrelationSidebar = ({
