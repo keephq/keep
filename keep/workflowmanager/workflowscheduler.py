@@ -65,7 +65,7 @@ class WorkflowScheduler:
             tenant_id = workflow.get("tenant_id")
             workflow_id = workflow.get("workflow_id")
             try:
-                workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
+                workflow = await self.workflow_store.get_workflow(tenant_id, workflow_id)
             except ProviderConfigurationException:
                 self.logger.exception(
                     "Provider configuration is invalid",
@@ -75,7 +75,7 @@ class WorkflowScheduler:
                         "tenant_id": tenant_id,
                     },
                 )
-                self._finish_workflow_execution(
+                await self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
                     workflow_execution_id=workflow_execution_id,
@@ -85,7 +85,7 @@ class WorkflowScheduler:
                 continue
             except Exception as e:
                 self.logger.error(f"Error getting workflow: {e}")
-                self._finish_workflow_execution(
+                await self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
                     workflow_execution_id=workflow_execution_id,
@@ -128,7 +128,7 @@ class WorkflowScheduler:
             )
         except Exception as e:
             self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
-            self._finish_workflow_execution(
+            await self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
@@ -139,7 +139,7 @@ class WorkflowScheduler:
 
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
-            self._finish_workflow_execution(
+            await self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
@@ -147,7 +147,7 @@ class WorkflowScheduler:
                 error="\n".join(str(e) for e in errors),
             )
         else:
-            self._finish_workflow_execution(
+            await self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
@@ -314,13 +314,13 @@ class WorkflowScheduler:
             if not workflow:
                 self.logger.info("Loading workflow")
                 try:
-                    workflow = self.workflow_store.get_workflow(
+                    workflow = await self.workflow_store.get_workflow(
                         workflow_id=workflow_id, tenant_id=tenant_id
                     )
                 # In case the provider are not configured properly
                 except ProviderConfigurationException as e:
                     self.logger.error(f"Error getting workflow: {e}")
-                    self._finish_workflow_execution(
+                    await self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
                         workflow_execution_id=workflow_execution_id,
@@ -330,7 +330,7 @@ class WorkflowScheduler:
                     continue
                 except Exception as e:
                     self.logger.error(f"Error getting workflow: {e}")
-                    self._finish_workflow_execution(
+                    await self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
                         workflow_execution_id=workflow_execution_id,
@@ -421,7 +421,7 @@ class WorkflowScheduler:
                                 "tenant_id": tenant_id,
                             },
                         )
-                        self._finish_workflow_execution(
+                        await self._finish_workflow_execution(
                             tenant_id=tenant_id,
                             workflow_id=workflow_id,
                             workflow_execution_id=workflow_execution_id,
@@ -480,7 +480,7 @@ class WorkflowScheduler:
                             "tenant_id": tenant_id,
                         },
                     )
-                    self._finish_workflow_execution(
+                    await self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
                         workflow_execution_id=workflow_execution_id,
@@ -509,16 +509,10 @@ class WorkflowScheduler:
 
     async def run_workflows(self, workflows: typing.List[Workflow]):
         for workflow in workflows:
-            thread = threading.Thread(
-                target=await self._run_workflows_with_interval,
-                args=[workflow],
-                daemon=True,
-            )
-            thread.start()
-            self.threads.append(thread)
+            asyncio.create_task(self._run_workflows_with_interval(workflow))
         # as long as the stop flag is not set, sleep
         while not self._stop:
-            time.sleep(1)
+            asyncio.sleep(1)
 
     def stop(self):
         self.logger.info("Stopping scheduled workflows")
@@ -552,12 +546,12 @@ class WorkflowScheduler:
                 self.logger.info(
                     f"Sleeping for {workflow.workflow_interval} seconds..."
                 )
-                time.sleep(workflow.workflow_interval)
+                await asyncio.sleep(workflow.workflow_interval)
             else:
                 self.logger.info("Workflow will not run again")
                 break
 
-    def _finish_workflow_execution(
+    async def _finish_workflow_execution(
         self,
         tenant_id: str,
         workflow_id: str,
@@ -583,7 +577,7 @@ class WorkflowScheduler:
             is None  # this means this is the first execution, for example
             or previous_execution.status != WorkflowStatus.ERROR.value
         ):
-            workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
+            workflow = await get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
             try:
                 from keep.api.core.config import config
                 from keep.api.utils.email_utils import EmailTemplates, send_email

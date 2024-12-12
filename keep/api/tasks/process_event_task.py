@@ -1,4 +1,5 @@
 # builtins
+import asyncio
 import copy
 import datetime
 import json
@@ -425,7 +426,7 @@ def __handle_formatted_events(
             workflow_manager = WorkflowManager.get_instance()
             # insert the events to the workflow manager process queue
             logger.info("Adding events to the workflow manager queue")
-            workflow_manager.insert_events(tenant_id, enriched_formatted_events)
+            asyncio.run(workflow_manager.insert_events(tenant_id, enriched_formatted_events))
             logger.info("Added events to the workflow manager queue")
         except Exception:
             logger.exception(

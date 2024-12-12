@@ -70,11 +70,11 @@ class WorkflowManager:
                 return value == str(filter_val)
             return value == filter_val
 
-    def _get_workflow_from_store(self, tenant_id, workflow_model):
+    async def _get_workflow_from_store(self, tenant_id, workflow_model):
         try:
             # get the actual workflow that can be triggered
             self.logger.info("Getting workflow from store")
-            workflow = self.workflow_store.get_workflow(tenant_id, workflow_model.id)
+            workflow = await self.workflow_store.get_workflow(tenant_id, workflow_model.id)
             self.logger.info("Got workflow from store")
             return workflow
         except ProviderConfigurationException:
@@ -110,7 +110,8 @@ class WorkflowManager:
                     f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
                 )
                 continue
-            workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+            workflow = asyncio.run(self._get_workflow_from_store(tenant_id, workflow_model))
+            
             if workflow is None:
                 continue
 
@@ -143,7 +144,7 @@ class WorkflowManager:
                 )
             self.logger.info("Workflow added to run")
 
-    def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
+    async def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
             self.logger.info("Getting all workflows")
             all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
@@ -161,7 +162,7 @@ class WorkflowManager:
                         f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
                     )
                     continue
-                workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+                workflow = await self._get_workflow_from_store(tenant_id, workflow_model)
                 if workflow is None:
                     continue
 

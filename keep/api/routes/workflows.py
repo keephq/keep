@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 import validators
@@ -215,9 +216,15 @@ async def run_workflow(
                 status_code=400,
                 detail="Invalid event format",
             )
-        workflow_execution_id = await workflowmanager.scheduler.handle_manual_event_workflow(
+
+        start_time = time.time()
+        workflows_scheduled = [workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
-        )
+        ) for _ in range(10)]
+        workflow_execution_id = await asyncio.gather(*workflows_scheduled)
+        total_time = time.time() - start_time
+        logger.info(f"Scheduled workflows in {total_time:.2f} seconds")
+        
     except Exception as e:
         logger.exception(
             "Failed to run workflow",
@@ -484,7 +491,7 @@ async def update_workflow_by_id(
 
 
 @router.get("/{workflow_id}/raw", description="Get workflow executions by ID")
-def get_raw_workflow_by_id(
+async def get_raw_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
@@ -495,7 +502,7 @@ def get_raw_workflow_by_id(
     return JSONResponse(
         status_code=200,
         content={
-            "workflow_raw": workflowstore.get_raw_workflow(
+            "workflow_raw": await workflowstore.get_raw_workflow(
                 tenant_id=tenant_id, workflow_id=workflow_id
             )
         },
@@ -503,7 +510,7 @@ def get_raw_workflow_by_id(
 
 
 @router.get("/{workflow_id}", description="Get workflow by ID")
-def get_workflow_by_id(
+async def get_workflow_by_id(
     workflow_id: str,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
@@ -511,7 +518,7 @@ def get_workflow_by_id(
 ):
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = await get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
 
     if not workflow:
         logger.warning(
@@ -572,7 +579,7 @@ def get_workflow_executions_by_alert_fingerprint(
 
 
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
-def get_workflow_runs_by_id(
+async def get_workflow_runs_by_id(
     workflow_id: str,
     tab: int = 1,
     limit: int = 25,
@@ -585,7 +592,7 @@ def get_workflow_runs_by_id(
     ),
 ) -> WorkflowExecutionsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
-    workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow = await get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
     installed_providers = get_installed_providers(tenant_id)
     installed_providers_by_type = {}
     for installed_provider in installed_providers:

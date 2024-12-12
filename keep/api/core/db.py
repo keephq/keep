@@ -133,7 +133,7 @@ def __convert_to_uuid(value: str) -> UUID:
         return None
 
 
-def create_workflow_execution(
+async def create_workflow_execution(
     workflow_id: str,
     tenant_id: str,
     triggered_by: str,
@@ -560,9 +560,10 @@ def get_all_workflows_yamls(tenant_id: str) -> List[str]:
         ).all()
     return workflows
 
-from cachetools import cached, TTLCache
+from cachetools import TTLCache
+from aiocache import cached
 
-@cached(cache=TTLCache(maxsize=100, ttl=10))
+@cached(ttl=60)
 async def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
     with Session(engine) as session:
         # if the workflow id is uuid:
@@ -585,8 +586,8 @@ async def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
     return workflow
 
 
-def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
-    workflow = get_workflow(tenant_id, workflow_id)
+async def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
+    workflow = await get_workflow(tenant_id, workflow_id)
     if not workflow:
         return None
     return workflow.workflow_raw

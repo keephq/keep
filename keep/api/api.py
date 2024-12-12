@@ -4,6 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from importlib import metadata
 
+import anyio
 import requests
 import uvicorn
 from dotenv import find_dotenv, load_dotenv
@@ -90,7 +91,6 @@ def no_redirect_request(self, method, url, **kwargs):
 
 requests.Session.request = no_redirect_request
 
-
 async def check_pending_tasks(background_tasks: set):
     while True:
         events_in_queue = len(background_tasks)
@@ -110,6 +110,20 @@ async def startup():
     Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
     """
     logger.info("Starting the services")
+
+    # Should allow more async threads to run concurrently,
+    # check https://www.youtube.com/watch?v=7jtzjovKQ8A
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    limiter.total_tokens = 1000
+
+    import pyroscope
+    import datetime
+    pyroscope.configure(
+    application_name = "my.python.app", # replace this with some name for your application
+    server_address   = "http://localhost:4040", # replace this with the address of your Pyroscope server
+    tags={"launch_time": datetime.datetime.now().isoformat()}
+    )
+
     # Start the scheduler
     if SCHEDULER:
         logger.info("Starting the scheduler")
