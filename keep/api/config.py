@@ -30,6 +30,8 @@ def provision_resources():
         logger.info("Workflows provisioned successfully")
         provision_dashboards(SINGLE_TENANT_UUID)
         logger.info("Dashboards provisioned successfully")
+    else:
+        logger.info("Provisioning resources is disabled")
 
 
 def on_starting(server=None):
@@ -37,6 +39,8 @@ def on_starting(server=None):
     logger.info("Keep server starting")
 
     migrate_db()
+    provision_resources()
+
     # Load this early and use preloading
     # https://www.joelsleppy.com/blog/gunicorn-application-preloading/
     # @tb: 👏 @Matvey-Kuk
