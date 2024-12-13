@@ -1,0 +1,5 @@
+apiVersion: 1
+serviceAccountTokens:
+  - name: keep-token
+    serviceAccountId: 1
+    secondsToLive: 0
