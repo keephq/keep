@@ -346,6 +346,13 @@ export function generateWorkflow(
   };
 }
 
+export function loadWorkflowYAML(workflowString: string): Definition {
+  const parsedWorkflowFile = load(workflowString, {
+    schema: JSON_SCHEMA,
+  }) as any;
+  return parsedWorkflowFile;
+}
+
 export function parseWorkflow(
   workflowString: string,
   providers: Provider[]

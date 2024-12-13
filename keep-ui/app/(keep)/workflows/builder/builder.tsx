@@ -36,6 +36,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import "./page.css";
+import { YAMLException } from "js-yaml";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -51,6 +52,12 @@ interface Props {
   isPreview?: boolean;
 }
 
+const INITIAL_DEFINITION = wrapDefinitionV2({
+  sequence: [],
+  properties: {},
+  isValid: false,
+});
+
 function Builder({
   loadedAlertFile,
   fileName,
@@ -65,9 +72,7 @@ function Builder({
   isPreview,
 }: Props) {
   const api = useApi();
-  const [definition, setDefinition] = useState(() =>
-    wrapDefinitionV2({ sequence: [], properties: {}, isValid: false })
-  );
+  const [definition, setDefinition] = useState(INITIAL_DEFINITION);
   const [isLoading, setIsLoading] = useState(true);
   const [stepValidationError, setStepValidationError] = useState<string | null>(
     null
@@ -180,34 +185,43 @@ function Builder({
 
   useEffect(() => {
     setIsLoading(true);
-    if (workflow) {
-      setDefinition(
-        wrapDefinitionV2({
-          ...parseWorkflow(workflow, providers),
-          isValid: true,
-        })
-      );
-    } else if (loadedAlertFile == null) {
-      const alertUuid = uuidv4();
-      const alertName = searchParams?.get("alertName");
-      const alertSource = searchParams?.get("alertSource");
-      let triggers = {};
-      if (alertName && alertSource) {
-        triggers = { alert: { source: alertSource, name: alertName } };
+    try {
+      if (workflow) {
+        setDefinition(
+          wrapDefinitionV2({
+            ...parseWorkflow(workflow, providers),
+            isValid: true,
+          })
+        );
+      } else if (loadedAlertFile == null) {
+        const alertUuid = uuidv4();
+        const alertName = searchParams?.get("alertName");
+        const alertSource = searchParams?.get("alertSource");
+        let triggers = {};
+        if (alertName && alertSource) {
+          triggers = { alert: { source: alertSource, name: alertName } };
+        }
+        setDefinition(
+          wrapDefinitionV2({
+            ...generateWorkflow(alertUuid, "", "", false, {}, [], [], triggers),
+            isValid: true,
+          })
+        );
+      } else {
+        const parsedDefinition = parseWorkflow(loadedAlertFile!, providers);
+        setDefinition(
+          wrapDefinitionV2({
+            ...parsedDefinition,
+            isValid: true,
+          })
+        );
       }
-      setDefinition(
-        wrapDefinitionV2({
-          ...generateWorkflow(alertUuid, "", "", false, {}, [], [], triggers),
-          isValid: true,
-        })
-      );
-    } else {
-      setDefinition(
-        wrapDefinitionV2({
-          ...parseWorkflow(loadedAlertFile!, providers),
-          isValid: true,
-        })
-      );
+    } catch (error) {
+      if (error instanceof YAMLException) {
+        showErrorToast(error, "Invalid YAML: " + error.message);
+      } else {
+        showErrorToast(error, "Failed to load workflow");
+      }
     }
     setIsLoading(false);
   }, [loadedAlertFile, workflow, searchParams, providers]);

@@ -25,7 +25,11 @@ import SlidingPanel from "react-sliding-side-panel";
 import { useFetchProviders } from "@/app/(keep)/providers/page.client";
 import { Provider as FullProvider } from "@/app/(keep)/providers/providers";
 import "./workflow-tile.css";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  CursorArrowRaysIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 import AlertTriggerModal from "./workflow-run-with-alert-modal";
 import { formatDistanceToNowStrict } from "date-fns";
 import TimeAgo, { Formatter, Suffix, Unit } from "react-timeago";
@@ -475,7 +479,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
             return onlyIcons ? (
               <Badge key={t} size="xs" color="orange" title={t} {...props}>
                 <div className="flex justify-center items-center">
-                  <FaHandPointer size={16} color="orange" />
+                  <Icon icon={CursorArrowRaysIcon} size="sm" color="orange" />
                 </div>
               </Badge>
             ) : (
@@ -483,7 +487,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 key={t}
                 size="xs"
                 color="orange"
-                icon={FaHandPointer}
+                icon={CursorArrowRaysIcon}
                 title={`Source: ${t}`}
                 {...props}
               >
@@ -526,7 +530,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
         </div>
       )}
       <Card
-        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full hover:border-orange-400 hover:border-2 overflow-hidden"
+        className="relative flex flex-col justify-between bg-white rounded shadow p-2 h-full border-2 border-transparent hover:border-orange-400 overflow-hidden"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -585,7 +589,7 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                     e.stopPropagation();
                     setOpenTriggerModal(true);
                   }}
-                  icon={FaHandPointer}
+                  icon={CursorArrowRaysIcon}
                 >
                   Manual
                 </Button>
