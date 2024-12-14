@@ -14,7 +14,6 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
-import keep.api.core.db
 import keep.api.logging
 import keep.api.observability
 import keep.api.utils.import_ee
@@ -27,6 +26,7 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_NONE,
 )
 from keep.api.core.config import config
+from keep.api.core.db import dispose_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
@@ -113,7 +113,7 @@ async def startup():
     logger.info("Disope existing DB connections")
     # psycopg2.DatabaseError: error with status PGRES_TUPLES_OK and no message from the libpq
     # https://stackoverflow.com/questions/43944787/sqlalchemy-celery-with-scoped-session-error/54751019#54751019
-    keep.api.core.db.engine.dispose()
+    dispose_session()
 
     logger.info("Starting the services")
 

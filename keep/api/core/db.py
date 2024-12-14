@@ -93,6 +93,15 @@ ALLOWED_INCIDENT_FILTERS = [
 ]
 
 
+def dispose_session():
+    logger.info("Disposing engine pool")
+    if engine.dialect.name != "sqlite":
+        engine.dispose()
+        logger.info("Engine pool disposed")
+    else:
+        logger.info("Engine pool is sqlite, not disposing")
+
+
 @contextmanager
 def existed_or_new_session(session: Optional[Session] = None) -> Session:
     if session:
