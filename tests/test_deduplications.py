@@ -43,6 +43,7 @@ def test_default_deduplication_rule(db_session, client, test_app):
             json=alert,
             headers={"x-api-key": "some-api-key"},
         )
+        time.sleep(0.1)
 
     wait_for_alerts(client, 2)
 

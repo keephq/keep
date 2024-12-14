@@ -14,6 +14,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
+import keep.api.core.db
 import keep.api.logging
 import keep.api.observability
 import keep.api.utils.import_ee
@@ -109,6 +110,11 @@ async def startup():
     This runs for every worker on startup.
     Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
     """
+    logger.info("Disope existing DB connections")
+    # psycopg2.DatabaseError: error with status PGRES_TUPLES_OK and no message from the libpq
+    # https://stackoverflow.com/questions/43944787/sqlalchemy-celery-with-scoped-session-error/54751019#54751019
+    keep.api.core.db.engine.dispose()
+
     logger.info("Starting the services")
 
     # Start the scheduler
