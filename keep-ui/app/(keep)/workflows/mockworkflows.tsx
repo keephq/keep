@@ -121,7 +121,7 @@ export default function MockWorkflowCardSection({
   return (
     <div className="pt-10 mt-10 w-full">
       <h2 className="pl-4 text-xl sm:text-2xl font-semibold mb-6">
-        Discover existing workflow templates
+        Discover workflow templates
       </h2>
       {/* TODO: Implement the commented out code block */}
       {/* This is a placeholder comment until the commented out code block is implemented */}

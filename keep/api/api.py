@@ -126,19 +126,27 @@ async def startup():
 
     # Start the scheduler
     if SCHEDULER:
-        logger.info("Starting the scheduler")
-        wf_manager = WorkflowManager.get_instance()
-        await wf_manager.start()
-        logger.info("Scheduler started successfully")
+        try:
+            logger.info("Starting the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            await wf_manager.start()
+            logger.info("Scheduler started successfully")
+        except Exception:
+            logger.exception("Failed to start the scheduler")
+
     # Start the consumer
     if CONSUMER:
-        logger.info("Starting the consumer")
-        event_subscriber = EventSubscriber.get_instance()
-        # TODO: there is some "race condition" since if the consumer starts before the server,
-        #       and start getting events, it will fail since the server is not ready yet
-        #       we should add a "wait" here to make sure the server is ready
-        await event_subscriber.start()
-        logger.info("Consumer started successfully")
+        try:
+            logger.info("Starting the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            # TODO: there is some "race condition" since if the consumer starts before the server,
+            #       and start getting events, it will fail since the server is not ready yet
+            #       we should add a "wait" here to make sure the server is ready
+            await event_subscriber.start()
+            logger.info("Consumer started successfully")
+        except Exception:
+            logger.exception("Failed to start the consumer")
+
     if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
         event_loop = asyncio.get_event_loop()
         if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
@@ -151,6 +159,7 @@ async def startup():
             event_loop.create_task(arq_worker.async_run())
         else:
             raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
+
     logger.info("Services started successfully")
 
 
@@ -332,7 +341,7 @@ def run(app: FastAPI):
             port=PORT,
             log_config=logging_config,
             lifespan="on",
-            workers=2,
+            workers=workers,
         )
     else:
         uvicorn.run(app, host=HOST, port=PORT, log_config=logging_config, lifespan="on")

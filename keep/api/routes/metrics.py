@@ -9,7 +9,7 @@ from keep.api.core.db import (
     get_last_incidents,
     get_workflow_executions_count,
 )
-from keep.api.core.metrics import registry, running_tasks_gauge
+from keep.api.core.metrics import registry
 from keep.api.models.alert import AlertDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -21,13 +21,8 @@ CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
 
 @router.get("/processing", include_in_schema=False)
 async def get_processing_metrics(request: Request):
-    # Set the value of the gauge to the number of running tasks
-    running_tasks: set = request.state.background_tasks
-    running_tasks_gauge.set(len(running_tasks))
-
     # Generate all metrics from the single registry
     metrics = generate_latest(registry)
-
     return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
 
 

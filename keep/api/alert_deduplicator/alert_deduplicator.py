@@ -95,6 +95,16 @@ class AlertDeduplicator:
                 },
             )
             alert.isPartialDuplicate = True
+        else:
+            self.logger.info(
+                "Alert is not deduplicated",
+                extra={
+                    "alert_id": alert.id,
+                    "fingerprint": alert.fingerprint,
+                    "tenant_id": self.tenant_id,
+                    "last_alert_hash_by_fingerprint": last_alert_hash_by_fingerprint,
+                },
+            )
 
         return alert
 
@@ -356,6 +366,14 @@ class AlertDeduplicator:
 
         result = []
         for dedup in final_deduplications:
+            self.logger.debug(
+                "Calculating deduplication stats",
+                extra={
+                    "deduplication_rule_id": dedup.id,
+                    "tenant_id": self.tenant_id,
+                    "deduplication_stats": deduplication_stats,
+                },
+            )
             key = dedup.id
             full_dedup = deduplication_stats.get(key, {"full_dedup_count": 0}).get(
                 "full_dedup_count", 0

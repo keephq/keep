@@ -26,5 +26,17 @@ processing_time_summary = Summary(
 
 # Running tasks metrics
 running_tasks_gauge = Gauge(
-    "running_tasks_total", "Total number of running tasks", registry=registry
+    "running_tasks_current",
+    "Current number of running tasks",
+    registry=registry,
+    multiprocess_mode="livesum",
+)
+
+# Per-process running tasks metrics
+running_tasks_by_process_gauge = Gauge(
+    "running_tasks_by_process",
+    "Current number of running tasks per process",
+    labelnames=["pid"],
+    registry=registry,
+    multiprocess_mode="livesum",
 )

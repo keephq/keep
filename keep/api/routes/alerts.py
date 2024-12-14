@@ -28,6 +28,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
 from keep.api.models.alert import (
     AlertDto,
     DeleteRequestBody,
@@ -309,14 +310,41 @@ def discard_task(
     running_tasks: set,
     started_time: float,
 ):
-    running_tasks.discard(task)
-    logger.info(
-        "Task completed",
-        extra={
-            "processing_time": time.time() - started_time,
-            "trace_id": trace_id,
-        },
-    )
+    try:
+        running_tasks.discard(task)
+        running_tasks_gauge.dec()  # Decrease total counter
+        running_tasks_by_process_gauge.labels(
+            pid=os.getpid()
+        ).dec()  # Decrease process counter
+
+        # Log any exception that occurred in the task
+        if task.exception():
+            logger.error(
+                "Task failed with exception",
+                extra={
+                    "trace_id": trace_id,
+                    "error": str(task.exception()),
+                    "processing_time": time.time() - started_time,
+                },
+            )
+        else:
+            logger.info(
+                "Task completed",
+                extra={
+                    "processing_time": time.time() - started_time,
+                    "trace_id": trace_id,
+                },
+            )
+    except Exception:
+        # Make sure we always decrement both counters even if something goes wrong
+        running_tasks_gauge.dec()
+        running_tasks_by_process_gauge.labels(pid=os.getpid()).dec()
+        logger.exception(
+            "Error in discard_task callback",
+            extra={
+                "trace_id": trace_id,
+            },
+        )
 
 
 def create_process_event_task(
@@ -332,6 +360,10 @@ def create_process_event_task(
 ) -> str:
     logger.info("Adding task", extra={"trace_id": trace_id})
     started_time = time.time()
+    running_tasks_gauge.inc()  # Increase total counter
+    running_tasks_by_process_gauge.labels(
+        pid=os.getpid()
+    ).inc()  # Increase process counter
     task = asyncio.create_task(
         run_in_threadpool(
             process_event,

@@ -612,6 +612,7 @@ def process_event(
                 provider_type is not None
                 and isinstance(event, dict)
                 or isinstance(event, FormData)
+                or isinstance(event, list)
             ):
                 try:
                     provider_class = ProvidersFactory.get_provider_class(provider_type)
