@@ -1,3 +1,4 @@
+import asyncio
 import enum
 import hashlib
 import logging
@@ -47,12 +48,9 @@ class WorkflowScheduler:
         self.logger.info("Starting workflows scheduler")
         # Shahar: fix for a bug in unit tests
         self._stop = False
-        thread = threading.Thread(target=self._start)
-        thread.start()
-        self.threads.append(thread)
-        self.logger.info("Workflows scheduler started")
+        await self._start()
 
-    def _handle_interval_workflows(self):
+    async def _handle_interval_workflows(self):
         workflows = []
         try:
             # get all workflows that should run due to interval
@@ -67,7 +65,7 @@ class WorkflowScheduler:
             tenant_id = workflow.get("tenant_id")
             workflow_id = workflow.get("workflow_id")
             try:
-                workflow = self.workflow_store.get_workflow(tenant_id, workflow_id)
+                workflow = await self.workflow_store.get_workflow(tenant_id, workflow_id)
             except ProviderConfigurationException:
                 self.logger.exception(
                     "Provider configuration is invalid",
@@ -77,7 +75,7 @@ class WorkflowScheduler:
                         "tenant_id": tenant_id,
                     },
                 )
-                self._finish_workflow_execution(
+                await self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
                     workflow_execution_id=workflow_execution_id,
@@ -87,7 +85,7 @@ class WorkflowScheduler:
                 continue
             except Exception as e:
                 self.logger.error(f"Error getting workflow: {e}")
-                self._finish_workflow_execution(
+                await self._finish_workflow_execution(
                     tenant_id=tenant_id,
                     workflow_id=workflow_id,
                     workflow_execution_id=workflow_execution_id,
@@ -102,7 +100,7 @@ class WorkflowScheduler:
             thread.start()
             self.threads.append(thread)
 
-    def _run_workflow(
+    async def _run_workflow(
         self,
         tenant_id,
         workflow_id,
@@ -113,7 +111,8 @@ class WorkflowScheduler:
         if READ_ONLY_MODE:
             # This is because sometimes workflows takes 0 seconds and the executions chart is not updated properly.
             self.logger.debug("Sleeping for 3 seconds in favor of read only mode")
-            time.sleep(3)
+            asyncio.sleep(3)
+            
         self.logger.info(f"Running workflow {workflow.workflow_id}...")
 
         try:
@@ -124,12 +123,12 @@ class WorkflowScheduler:
                 # set the incident context, e.g. the incident that triggered the workflow
                 workflow.context_manager.set_incident_context(event_context)
 
-            errors, _ = self.workflow_manager._run_workflow(
+            errors, _ = await self.workflow_manager._run_workflow(
                 workflow, workflow_execution_id
             )
         except Exception as e:
             self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
-            self._finish_workflow_execution(
+            await self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
@@ -140,7 +139,7 @@ class WorkflowScheduler:
 
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
-            self._finish_workflow_execution(
+            await self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
@@ -148,7 +147,7 @@ class WorkflowScheduler:
                 error="\n".join(str(e) for e in errors),
             )
         else:
-            self._finish_workflow_execution(
+            await self._finish_workflow_execution(
                 tenant_id=tenant_id,
                 workflow_id=workflow_id,
                 workflow_execution_id=workflow_execution_id,
@@ -218,7 +217,7 @@ class WorkflowScheduler:
             "results": results,
         }
 
-    def handle_manual_event_workflow(
+    async def handle_manual_event_workflow(
         self, workflow_id, tenant_id, triggered_by_user, event: [AlertDto | IncidentDto]
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
@@ -235,7 +234,7 @@ class WorkflowScheduler:
                 event_type = "alert"
                 fingerprint = event.fingerprint
 
-            workflow_execution_id = create_workflow_execution(
+            workflow_execution_id = await create_workflow_execution(
                 workflow_id=workflow_id,
                 tenant_id=tenant_id,
                 triggered_by=f"manually by {triggered_by_user}",
@@ -291,7 +290,7 @@ class WorkflowScheduler:
             WorkflowScheduler.MAX_SIZE_SIGNED_INT + 1
         )
 
-    def _handle_event_workflows(self):
+    async def _handle_event_workflows(self):
         # TODO - event workflows should be in DB too, to avoid any state problems.
 
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
@@ -315,13 +314,13 @@ class WorkflowScheduler:
             if not workflow:
                 self.logger.info("Loading workflow")
                 try:
-                    workflow = self.workflow_store.get_workflow(
+                    workflow = await self.workflow_store.get_workflow(
                         workflow_id=workflow_id, tenant_id=tenant_id
                     )
                 # In case the provider are not configured properly
                 except ProviderConfigurationException as e:
                     self.logger.error(f"Error getting workflow: {e}")
-                    self._finish_workflow_execution(
+                    await self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
                         workflow_execution_id=workflow_execution_id,
@@ -331,7 +330,7 @@ class WorkflowScheduler:
                     continue
                 except Exception as e:
                     self.logger.error(f"Error getting workflow: {e}")
-                    self._finish_workflow_execution(
+                    await self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
                         workflow_execution_id=workflow_execution_id,
@@ -422,7 +421,7 @@ class WorkflowScheduler:
                                 "tenant_id": tenant_id,
                             },
                         )
-                        self._finish_workflow_execution(
+                        await self._finish_workflow_execution(
                             tenant_id=tenant_id,
                             workflow_id=workflow_id,
                             workflow_execution_id=workflow_execution_id,
@@ -481,7 +480,7 @@ class WorkflowScheduler:
                             "tenant_id": tenant_id,
                         },
                     )
-                    self._finish_workflow_execution(
+                    await self._finish_workflow_execution(
                         tenant_id=tenant_id,
                         workflow_id=workflow_id,
                         workflow_execution_id=workflow_execution_id,
@@ -489,43 +488,31 @@ class WorkflowScheduler:
                         error=f"Error getting alert by id: {e}",
                     )
                     continue
-            # Last, run the workflow
-            thread = threading.Thread(
-                target=self._run_workflow,
-                args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],
-            )
-            thread.start()
-            self.threads.append(thread)
+            asyncio.create_task(self._run_workflow(tenant_id, workflow_id, workflow, workflow_execution_id, event))
 
-    def _start(self):
+    async def _start(self):
         self.logger.info("Starting workflows scheduler")
         while not self._stop:
             # get all workflows that should run now
             self.logger.debug("Getting workflows that should run...")
             try:
-                self._handle_interval_workflows()
-                self._handle_event_workflows()
+                await self._handle_interval_workflows()
+                await self._handle_event_workflows()
             except Exception:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
                 self.logger.exception("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
-            time.sleep(1)
+            await asyncio.sleep(1)
         self.logger.info("Workflows scheduler stopped")
 
-    def run_workflows(self, workflows: typing.List[Workflow]):
+    async def run_workflows(self, workflows: typing.List[Workflow]):
         for workflow in workflows:
-            thread = threading.Thread(
-                target=self._run_workflows_with_interval,
-                args=[workflow],
-                daemon=True,
-            )
-            thread.start()
-            self.threads.append(thread)
+            asyncio.create_task(self._run_workflows_with_interval(workflow))
         # as long as the stop flag is not set, sleep
         while not self._stop:
-            time.sleep(1)
+            asyncio.sleep(1)
 
     def stop(self):
         self.logger.info("Stopping scheduled workflows")
@@ -535,7 +522,7 @@ class WorkflowScheduler:
             thread.join()
         self.logger.info("Scheduled workflows stopped")
 
-    def _run_workflows_with_interval(
+    async def _run_workflows_with_interval(
         self,
         workflow: Workflow,
     ):
@@ -549,7 +536,7 @@ class WorkflowScheduler:
         while True and not self._stop:
             self.logger.info(f"Running workflow {workflow.workflow_id}...")
             try:
-                self.workflow_manager._run_workflow(workflow, uuid.uuid4())
+                await self.workflow_manager._run_workflow(workflow, uuid.uuid4())
             except Exception:
                 self.logger.exception(
                     f"Failed to run workflow {workflow.workflow_id}..."
@@ -559,12 +546,12 @@ class WorkflowScheduler:
                 self.logger.info(
                     f"Sleeping for {workflow.workflow_interval} seconds..."
                 )
-                time.sleep(workflow.workflow_interval)
+                await asyncio.sleep(workflow.workflow_interval)
             else:
                 self.logger.info("Workflow will not run again")
                 break
 
-    def _finish_workflow_execution(
+    async def _finish_workflow_execution(
         self,
         tenant_id: str,
         workflow_id: str,
@@ -590,7 +577,7 @@ class WorkflowScheduler:
             is None  # this means this is the first execution, for example
             or previous_execution.status != WorkflowStatus.ERROR.value
         ):
-            workflow = get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
+            workflow = await get_workflow_db(tenant_id=tenant_id, workflow_id=workflow_id)
             try:
                 from keep.api.core.config import config
                 from keep.api.utils.email_utils import EmailTemplates, send_email

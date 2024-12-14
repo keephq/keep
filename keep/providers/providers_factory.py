@@ -44,6 +44,7 @@ class ProviderConfigurationException(Exception):
 
 class ProvidersFactory:
     _loaded_providers_cache = None
+    _loaded_deduplication_rules_cache = None
 
     @staticmethod
     def get_provider_class(
@@ -598,6 +599,9 @@ class ProvidersFactory:
         Returns:
             list: The default deduplications for each provider.
         """
+        if ProvidersFactory._loaded_deduplication_rules_cache:
+            return ProvidersFactory._loaded_deduplication_rules_cache
+
         default_deduplications = []
         all_providers = ProvidersFactory.get_all_providers()
 
@@ -624,4 +628,5 @@ class ProvidersFactory:
                 )
                 default_deduplications.append(deduplication_dto)
 
+        ProvidersFactory._loaded_deduplication_rules_cache = default_deduplications
         return default_deduplications

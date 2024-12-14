@@ -2,12 +2,16 @@
 Clickhouse is a class that provides a way to read data from Clickhouse.
 """
 
+from copy import deepcopy
 import dataclasses
 import os
+
+import asyncio
 
 import pydantic
 from clickhouse_driver import connect
 from clickhouse_driver.dbapi.extras import DictCursor
+import clickhouse_connect
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -68,21 +72,18 @@ class ClickhouseProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.client = None
 
+    def dispose(self):
+        pass
+
     def validate_scopes(self):
         """
         Validates that the user has the required scopes to use the provider.
         """
         try:
-            client = self.__generate_client()
+            client = asyncio.run(self.__generate_client())
 
-            cursor = client.cursor()
-            cursor.execute("SHOW TABLES")
-
-            tables = cursor.fetchall()
+            tables = result = asyncio.run(client.query("SHOW TABLES"))
             self.logger.info(f"Tables: {tables}")
-
-            cursor.close()
-            client.close()
 
             scopes = {
                 "connect_to_server": True,
@@ -94,12 +95,9 @@ class ClickhouseProvider(BaseProvider):
             }
         return scopes
 
-    def __generate_client(self):
+    async def __generate_client(self):
         """
         Generates a Clickhouse client.
-
-        Returns:
-            clickhouse_driver.Connection: Clickhouse connection object
         """
 
         user = self.authentication_config.username
@@ -108,15 +106,15 @@ class ClickhouseProvider(BaseProvider):
         database = self.authentication_config.database
         port = self.authentication_config.port
 
-        dsn = f"clickhouse://{user}:{password}@{host}:{port}/{database}"
+        client = await clickhouse_connect.get_async_client(
+            host=host,
+            port=port,
+            user=user,
+            password=password,
+            database=database,
+        )
 
-        return connect(dsn)
-
-    def dispose(self):
-        try:
-            self.client.close()
-        except Exception:
-            self.logger.exception("Error closing Clickhouse connection")
+        return client
 
     def validate_config(self):
         """
@@ -126,36 +124,35 @@ class ClickhouseProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, query="", single_row=False, **kwargs: dict) -> list | tuple:
+    async def _query(self, query="", single_row=False, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the Clickhouse database.
 
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
-        return self._notify(query=query, single_row=single_row, **kwargs)
+        return await self._notify(query=query, single_row=single_row, **kwargs)
 
-    def _notify(self, query="", single_row=False, **kwargs: dict) -> list | tuple:
+    async def _notify(self, query="", single_row=False, **kwargs: dict) -> list | tuple:
         """
         Executes a query against the Clickhouse database.
 
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
-        client = self.__generate_client()
-        cursor = client.cursor(cursor_factory=DictCursor)
+        client = await self.__generate_client()
+        results = await client.query(query, **kwargs)
+        rows = results.result_rows
+        columns = results.column_names
 
-        if kwargs:
-            query = query.format(**kwargs)
+        # Making the results more human readable and compatible with the format we had with sync library before.
+        results = [dict(zip(columns, row)) for row in rows]
 
-        cursor.execute(query)
-        results = cursor.fetchall()
-
-        cursor.close()
         if single_row:
             return results[0]
 
         return results
+        # return {'dt': datetime.datetime(2024, 12, 4, 6, 37, 22), 'customer_id': 99999999, 'total_spent': 19.850000381469727}
 
 
 if __name__ == "__main__":

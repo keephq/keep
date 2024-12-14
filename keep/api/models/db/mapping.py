@@ -29,11 +29,10 @@ class MappingRule(SQLModel, table=True):
         max_length=255,
     )
     # The attributes to match against (e.g. ["service","region"])
-    matchers: list[str] = Field(sa_column=Column(JSON), nullable=False)
+    matchers: list[str] = Field(sa_column=Column(JSON))
     # The rows of the CSV file [{service: "service1", region: "region1", ...}, ...]
     rows: Optional[list[dict]] = Field(
         sa_column=Column(JSON),
-        nullable=True,
     )  # max_length=204800)
     updated_by: Optional[str] = Field(max_length=255, default=None)
     last_updated_at: datetime = Field(default_factory=datetime.utcnow)

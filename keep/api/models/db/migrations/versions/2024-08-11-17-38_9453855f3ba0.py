@@ -34,7 +34,7 @@ def upgrade() -> None:
     op.create_table(
         "presettaglink",
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("preset_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("preset_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tag_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["preset_id"],

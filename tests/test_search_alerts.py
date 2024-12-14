@@ -1311,6 +1311,7 @@ def test_severity_comparisons(
     )
 
 
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_client):
 
@@ -1381,6 +1382,10 @@ def test_alerts_enrichment_in_search(db_session, client, test_app, elastic_clien
         headers={"x-api-key": "some-key"},
         json=alert_high_dto.dict(),
     )
+
+    while len(client.get("/alerts", headers={"x-api-key": "some-key"}).json()) != 2:
+        time.sleep(0.1)
+
     # And add manual enrichment
     client.post(
         "/alerts/enrich",

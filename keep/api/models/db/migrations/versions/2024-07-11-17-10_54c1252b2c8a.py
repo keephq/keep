@@ -1,16 +1,17 @@
 """First migration
 
 Revision ID: 54c1252b2c8a
-Revises: 
+Revises:
 Create Date: 2024-07-11 17:10:10.815182
 
 """
 
+import logging
+
 import sqlalchemy as sa
+import sqlalchemy_utils
 import sqlmodel
 from alembic import op
-import sqlalchemy_utils
-import logging
 
 # revision identifiers, used by Alembic.
 revision = "54c1252b2c8a"
@@ -64,7 +65,7 @@ def _upgrade() -> None:
         "alert",
         sa.Column("timestamp", sa.DateTime(), nullable=False),
         sa.Column("event", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_type", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -83,7 +84,7 @@ def _upgrade() -> None:
     op.create_table(
         "alertdeduplicationfilter",
         sa.Column("fields", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("matcher_cel", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
@@ -95,7 +96,7 @@ def _upgrade() -> None:
     op.create_table(
         "alertenrichment",
         sa.Column("enrichments", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("timestamp", sa.DateTime(), nullable=False),
         sa.Column(
@@ -111,7 +112,7 @@ def _upgrade() -> None:
     op.create_table(
         "alertraw",
         sa.Column("raw_alert", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["tenant_id"],
@@ -223,7 +224,7 @@ def _upgrade() -> None:
     op.create_table(
         "preset",
         sa.Column("options", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("created_by", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("is_private", sa.Boolean(), nullable=True),
@@ -266,7 +267,7 @@ def _upgrade() -> None:
         "rule",
         sa.Column("definition", sa.JSON(), nullable=True),
         sa.Column("grouping_criteria", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("definition_cel", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -309,7 +310,7 @@ def _upgrade() -> None:
     )
     op.create_table(
         "tenantinstallation",
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("bot_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("installed", sa.Boolean(), nullable=False),
@@ -344,7 +345,7 @@ def _upgrade() -> None:
         sa.Column(
             "rule_id", sqlalchemy_utils.types.uuid.UUIDType(binary=False), nullable=True
         ),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("creation_time", sa.DateTime(), nullable=False),
         sa.Column(
@@ -395,7 +396,7 @@ def _upgrade() -> None:
         ),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("timestamp", sa.DateTime(), nullable=False),
-        sa.Column("alert_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("alert_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["alert_id"],
             ["alert.id"],
@@ -441,6 +442,7 @@ def _upgrade() -> None:
     )
     # ### end Alembic commands ###
 
+
 def upgrade() -> None:
     """
     This migration is special because it creates the tables from scratch,
@@ -451,7 +453,9 @@ def upgrade() -> None:
     except Exception as e:
         if "already exists" in str(e):
             logging.warning(str(e))
-            logging.warning("Table already exists, which most likely means that tables has already been created before the migration mechanism was introduced. It's ok!")
+            logging.warning(
+                "Table already exists, which most likely means that tables has already been created before the migration mechanism was introduced. It's ok!"
+            )
         else:
             raise e
 

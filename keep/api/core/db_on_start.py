@@ -46,15 +46,9 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
     """
     Creates the single tenant and the default user if they don't exist.
     """
-    try:
-        # if Keep is not multitenant, let's import the User table too:
-        from keep.api.models.db.user import (  # pylint: disable=import-outside-toplevel
-            User,
-        )
+    # if Keep is not multitenant, let's import the User table too:
+    from keep.api.models.db.user import User  # pylint: disable=import-outside-toplevel
 
-        migrate_db()
-    except Exception:
-        pass
     with Session(engine) as session:
         try:
             # check if the tenant exist:

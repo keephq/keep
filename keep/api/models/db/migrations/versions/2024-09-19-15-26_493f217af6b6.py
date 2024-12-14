@@ -24,10 +24,10 @@ def upgrade() -> None:
         "alertdeduplicationevent",
         sa.Column("timestamp", sa.DateTime(), nullable=False),
         sa.Column("date_hour", sa.DateTime(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column(
-            "deduplication_rule_id", sqlmodel.sql.sqltypes.GUID(), nullable=False
+            "deduplication_rule_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False
         ),
         sa.Column(
             "deduplication_type", sqlmodel.sql.sqltypes.AutoString(), nullable=False
@@ -74,7 +74,7 @@ def upgrade() -> None:
         "alertdeduplicationrule",
         sa.Column("fingerprint_fields", sa.JSON(), nullable=True),
         sa.Column("ignore_fields", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -103,7 +103,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "alertfield",
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("field_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -9,15 +10,8 @@ from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
@@ -34,6 +28,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
 from keep.api.models.alert import (
     AlertDto,
     DeleteRequestBody,
@@ -57,6 +52,54 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 REDIS = os.environ.get("REDIS", "false") == "true"
+
+
+async def schedule_event_processing_on_suitable_worker(
+        tenant_id: str,
+        event: AlertDto | list[AlertDto] | dict,
+        bg_tasks: BackgroundTasks,
+        api_key_name: str = None,
+        fingerprint: str = None,
+        trace_id: str = None,
+        provider_type: str = None,
+        provider_id: str = None,
+):
+    if REDIS:
+        redis: ArqRedis = await get_pool()
+        job = await redis.enqueue_job(
+            "async_process_event",
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+            _queue_name=KEEP_ARQ_QUEUE_BASIC,
+        )
+        logger.info(
+            "Enqueued job",
+            extra={
+                "job_id": job.job_id,
+                "tenant_id": tenant_id,
+                "queue": KEEP_ARQ_QUEUE_BASIC,
+            },
+        )
+    else:
+        t = time.time()
+        logger.debug("Adding task to process event")
+        bg_tasks.add_task(
+            process_event,
+            {},
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+        )
+        logger.debug("Added task to process event", extra={"time": time.time() - t})
 
 
 @router.get(
@@ -261,6 +304,88 @@ def assign_alert(
     return {"status": "ok"}
 
 
+def discard_task(
+    trace_id: str,
+    task: asyncio.Task,
+    running_tasks: set,
+    started_time: float,
+):
+    try:
+        running_tasks.discard(task)
+        running_tasks_gauge.dec()  # Decrease total counter
+        running_tasks_by_process_gauge.labels(
+            pid=os.getpid()
+        ).dec()  # Decrease process counter
+
+        # Log any exception that occurred in the task
+        if task.exception():
+            logger.error(
+                "Task failed with exception",
+                extra={
+                    "trace_id": trace_id,
+                    "error": str(task.exception()),
+                    "processing_time": time.time() - started_time,
+                },
+            )
+        else:
+            logger.info(
+                "Task completed",
+                extra={
+                    "processing_time": time.time() - started_time,
+                    "trace_id": trace_id,
+                },
+            )
+    except Exception:
+        # Make sure we always decrement both counters even if something goes wrong
+        running_tasks_gauge.dec()
+        running_tasks_by_process_gauge.labels(pid=os.getpid()).dec()
+        logger.exception(
+            "Error in discard_task callback",
+            extra={
+                "trace_id": trace_id,
+            },
+        )
+
+
+def create_process_event_task(
+    bg_tasks: BackgroundTasks,
+    tenant_id: str,
+    provider_type: str | None,
+    provider_id: str | None,
+    fingerprint: str,
+    api_key_name: str | None,
+    trace_id: str,
+    event: AlertDto | list[AlertDto] | dict,
+    running_tasks: set,
+) -> str:
+    logger.info("Adding task", extra={"trace_id": trace_id})
+    started_time = time.time()
+    running_tasks_gauge.inc()  # Increase total counter
+    running_tasks_by_process_gauge.labels(
+        pid=os.getpid()
+    ).inc()  # Increase process counter
+    task = asyncio.create_task(
+        run_in_threadpool(
+            process_event,
+            {},
+            tenant_id,
+            provider_type,
+            provider_id,
+            fingerprint,
+            api_key_name,
+            trace_id,
+            event,
+        )
+    )
+    task.add_done_callback(
+        lambda task: discard_task(trace_id, task, running_tasks, started_time)
+    )
+    bg_tasks.add_task(task)
+    running_tasks.add(task)
+    logger.info("Task added", extra={"trace_id": trace_id})
+    return task.get_name()
+
+
 @router.post(
     "/event",
     description="Receive a generic alert event",
@@ -275,7 +400,6 @@ async def receive_generic_event(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    pusher_client: Pusher = Depends(get_pusher_client),
 ):
     """
     A generic webhook endpoint that can be used by any provider to send alerts to Keep.
@@ -285,39 +409,14 @@ async def receive_generic_event(
         bg_tasks (BackgroundTasks): Background tasks handler.
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
     """
-    if REDIS:
-        redis: ArqRedis = await get_pool()
-        job = await redis.enqueue_job(
-            "async_process_event",
-            authenticated_entity.tenant_id,
-            None,
-            None,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            request.state.trace_id,
-            event,
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
-        )
-        logger.info(
-            "Enqueued job",
-            extra={
-                "job_id": job.job_id,
-                "tenant_id": authenticated_entity.tenant_id,
-                "queue": KEEP_ARQ_QUEUE_BASIC,
-            },
-        )
-    else:
-        bg_tasks.add_task(
-            process_event,
-            {},
-            authenticated_entity.tenant_id,
-            None,
-            None,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            request.state.trace_id,
-            event,
-        )
+    schedule_event_processing_on_suitable_worker(
+        tenant_id=authenticated_entity.tenant_id,
+        api_key_name=authenticated_entity.api_key_name,
+        bg_tasks=bg_tasks,
+        fingerprint=fingerprint,
+        event=event,
+        trace_id=request.state.trace_id,
+    )
     return Response(status_code=202)
 
 
@@ -366,7 +465,7 @@ async def receive_event(
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
     trace_id = request.state.trace_id
-
+    running_tasks: set = request.state.background_tasks
     provider_class = None
     try:
         t = time.time()
@@ -393,42 +492,17 @@ async def receive_event(
     logger.debug("Parsing event raw body")
     event = provider_class.parse_event_raw_body(event)
     logger.debug("Parsed event raw body", extra={"time": time.time() - t})
-    if REDIS:
-        redis: ArqRedis = await get_pool()
-        job = await redis.enqueue_job(
-            "async_process_event",
-            authenticated_entity.tenant_id,
-            provider_type,
-            provider_id,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            trace_id,
-            event,
-            _queue_name=KEEP_ARQ_QUEUE_BASIC,
-        )
-        logger.info(
-            "Enqueued job",
-            extra={
-                "job_id": job.job_id,
-                "tenant_id": authenticated_entity.tenant_id,
-                "queue": KEEP_ARQ_QUEUE_BASIC,
-            },
-        )
-    else:
-        t = time.time()
-        logger.debug("Adding task to process event")
-        bg_tasks.add_task(
-            process_event,
-            {},
-            authenticated_entity.tenant_id,
-            provider_type,
-            provider_id,
-            fingerprint,
-            authenticated_entity.api_key_name,
-            trace_id,
-            event,
-        )
-        logger.debug("Added task to process event", extra={"time": time.time() - t})
+
+    schedule_event_processing_on_suitable_worker(
+        tenant_id=authenticated_entity.tenant_id,
+        api_key_name=authenticated_entity.api_key_name,
+        bg_tasks=bg_tasks,
+        fingerprint=fingerprint,
+        event=event,
+        trace_id=trace_id,
+        provider_type=provider_type,
+        provider_id=provider_id,
+    )
     return Response(status_code=202)
 
 
