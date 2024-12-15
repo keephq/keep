@@ -2,60 +2,106 @@
 title: "Overview"
 ---
 
+<Tip>
 
-##
+You can see plenty of fully working examples at our [GitHub repo](https://github.com/keephq/keep/blob/main/examples/workflows/).
+
+</Tip>
+
 Keep Workflow Engine designed to streamline and automate operational tasks by integrating triggers, steps, actions, and conditions. This documentation provides an overview of the core concepts used to define and execute workflows effectively.
 
-- Triggers
-- Steps
-- Actions
-- Conditions
-- Functions
-- Previous Step Context
-- Providers
-- Variables
-- Error Handling
-- Foreach Loops
-- Alert Enrichment
 
-## Concepts
+### General Structure
+
+
+Each workflow compose of:
+1. **metadata** - id, description
+2. **triggers** - when this workflow runs?
+3. **steps/actions** - what this workflow should do?
+
+The general structure of a workflow is:
+
+```yaml
+workflow:
+  id: aks-example
+  description: aks-example
+  triggers:
+    # list of triggers
+    - type: manual
+  steps:
+    # list of steps
+    - name: some-step
+      provider:
+        type: some-provider-type
+        config: "{{ providers.provider_id }}"
+        with:
+          # provider configuration
+    - ...
+  actions:
+    - name: some-action
+      provider:
+        type: some-provider-type
+        with:
+          # provider configuration
+    - ...
+```
+
+Let's dive into building workflows:
+- [Triggers](#triggers)
+- [Steps And Actions](#steps-and-actions)
+- [Conditions](#conditions)
+- [Functions](#functions)
+- [Context](#context)
+- [Providers](#providers)
+- [Variables](#variables)
+- [Foreach Loops](#foreach-loops)
+- [Alert Enrichment](#alert-enrichment)
+
 
 ### Triggers
 
 Define how a workflow starts, such as manually, on a schedule, or in response to alerts with optional filters for specific conditions.
 
-### Steps
+[See syntax](/workflows/syntax/triggers)
+
+### Steps And Actions
 
 Represent sequential operations, like querying data or running scripts, using configurable providers.
 
-### Actions
-
-Specify tasks performed after steps, including sending notifications, updating tickets, or invoking external services.
+[See syntax](/workflows/syntax/steps-and-actions)
 
 ### Conditions
 
 Allow decision-making in actions based on thresholds, assertions, or previous step results.
 
+[See syntax](/workflows/syntax/conditions)
+
 ### Functions
 
 Built-in helpers like datetime_compare or is_business_hours simplify complex operations.
 
-### Previous Step Context
+[See syntax](/workflows/syntax/functions)
+
+### Context
 
 Enables access to and reuse of outputs from earlier steps within actions or conditions.
+
+[See syntax](/workflows/syntax/context)
 
 ### Providers
 
 External systems or services (e.g., Slack, Datadog, ServiceNow) integrated into workflows through a standard configuration interface.
 
-### Variables
-
-Use constants, dynamic variables, or contextual data to customize workflow behavior.
+[See syntax](/workflows/syntax/providers)
 
 ### Foreach Loops
 
 Iterate over a list of results from a step to perform repeated actions for each item.
 
+[See syntax](/workflows/syntax/foreach)
+
 ### Alert Enrichment
 
 Add context to alerts, like customer details or ticket metadata, using enrichment mechanisms in steps or actions.
+
+[See syntax](/workflows/syntax/enrichment)

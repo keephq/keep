@@ -1,15 +1,402 @@
 ---
-title: "Overview"
+title: "Functions"
 ---
 
-<Note>Need any help with creating a Workflow? Feel free to submit an issue or join our Slack and we will help with that.</Note>
+The **Functions** in Keep Workflow Engine are utilities that can be used to manipulate data, check conditions, or perform transformations within workflows. This document provides a brief overview and usage examples for each available function.
 
-# Workflow Overview
+---
 
-Keep workflows are YAML-based configurations that define automated processes for handling alerts, incidents, and other operational tasks. They provide a flexible and powerful way to automate your incident management and alert handling processes.
+## String Functions
 
-## Key Components
+### `uppercase`
 
-A Keep workflow consists of several key components:
+**Description:** Converts a string to uppercase.
 
-### 1. Workflow Definition
+**Example:**
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: "keep.uppercase('hello world')" # Output: "HELLO WORLD"
+```
+
+---
+### `lowercase`
+
+**Description:** Converts a string to lowercase.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: "keep.lowercase('HELLO WORLD')" # Output: "hello world"
+```
+---
+
+### `split`
+
+**Description:** Splits a string into a list using a delimiter.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: "keep.split('a,b,c', ',')" # Output: ["a", "b", "c"]
+```
+
+---
+
+### `strip`
+
+**Description:** Removes leading and trailing whitespace from a string.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.strip("  hello world  ") # Output: "hello world"
+```
+
+---
+
+### `replace`
+
+**Description:** Replaces occurrences of a substring with another string.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.replace("hello world", "world", "Keep") # Output: "hello Keep"
+```
+
+---
+
+### `remove_newlines`
+
+**Description:** Removes all newline and tab characters from a string.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.remove_newlines("hello\nworld\t!") # Output: "helloworld!"
+
+```
+
+---
+
+### `encode`
+
+**Description:** URL-encodes a string.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.encode("hello world") # Output: "hello%20world"
+
+
+```
+
+## List and Dictionary Functions
+
+### `first`
+
+**Description:** Retrieves the first element from a list.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.first([1, 2, 3]) # Output: 1
+
+
+
+```
+
+---
+
+### `last`
+
+**Description:** Retrieves the last element from a list.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.last([1, 2, 3]) # Output: 3
+```
+
+---
+
+### `index`
+
+**Description:**  Retrieves an element at a specific index from a list.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.index(["a", "b", "c"], 1) # Output: "b"
+
+```
+
+---
+
+
+### `join`
+
+**Description:**  Joins a list of elements into a string using a delimiter.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.join(["a", "b", "c"], ",") # Output: "a,b,c"
+
+
+```
+
+---
+
+### `len`
+
+**Description:** Returns the length of a list.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.len([1, 2, 3]) # Output: 3
+
+
+```
+
+---
+
+### `dict_to_key_value_list`
+
+**Description:** Converts a dictionary into a list of key-value pairs.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.dict_to_key_value_list({"a": 1, "b": 2}) # Output: ["a:1", "b:2"]
+```
+
+---
+
+## Date and Time Functions
+
+### `utcnow`
+
+**Description:** Returns the current UTC datetime.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.utcnow()
+```
+
+---
+
+### `utcnowiso`
+
+**Description:** Returns the current UTC datetime in ISO format.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.utcnowiso()
+
+```
+
+---
+
+### `to_utc`
+
+**Description:** Converts a datetime string or object to UTC.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.to_utc("2024-01-01T00:00:00")
+
+```
+
+---
+
+
+### `to_timestamp`
+
+**Description:** Converts a datetime object or string into a Unix timestamp.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.to_timestamp("2024-01-01T00:00:00")
+```
+
+---
+
+
+### `datetime_compare`
+
+**Description:** Compares two datetime objects and returns the difference in hours.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.datetime_compare("2024-01-01T10:00:00", "2024-01-01T00:00:00") # Output: 10.0
+
+```
+
+---
+
+### `is_business_hours`
+
+**Description:** Checks whether a given time falls within business hours.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.is_business_hours(timezone="America/New_York")
+
+```
+
+---
+
+## JSON Functions
+
+### `json_dumps`
+
+**Description:**  Converts a dictionary or string into a formatted JSON string.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.json_dumps({"key": "value"})
+```
+
+---
+
+### `json_loads`
+
+**Description:** Parses a JSON string into a dictionary.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.json_loads('{"key": "value"}')
+
+```
+
+---
+
+## Utility Functions
+
+### `is_first_time`
+
+**Description:** Calculates the firing duration of an alert in specified time units.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.get_firing_time(alert, "m") # Output: "15.0"
+
+```
+
+---
+
+### `is_first_time`
+
+**Description:** Adds time to a date string based on specified time units.
+**Example:**
+
+```yaml
+steps:
+  - name: example-step
+    provider:
+      type: mock
+      with:
+        message: keep.add_time_to_date("2024-01-01", "%Y-%m-%d", "1w 2d") # Output: "2024-01-10"
+
+```
+
+---

@@ -81,34 +81,24 @@
         {
           "group": "Syntax",
           "pages": [
-            {
-              "group": "General Syntax",
-              "pages": [
-                "workflows/syntax/basic-syntax",
-                "workflows/syntax/foreach-syntax",
-                "workflows/syntax/context-syntax"
-              ]
-            },
-            {
-              "group": "Conditions",
-              "pages": [
-                "workflows/conditions/what-is-a-condition",
-                "workflows/conditions/threshold",
-                "workflows/conditions/assert",
-                "workflows/conditions/stddev"
-              ]
-            },
-            {
-              "group": "Functions",
-              "pages": ["workflows/functions/what-is-a-function"]
-            }
+            "workflows/syntax/triggers",
+            "workflows/syntax/steps-and-actions",
+            "workflows/syntax/conditions",
+            "workflows/syntax/functions",
+            "workflows/syntax/context",
+            "workflows/syntax/providers",
+            "workflows/syntax/foreach",
+            "workflows/syntax/enrichment"
           ]
         },
         {
           "group": "Examples",
           "pages": [
-            "workflows/examples/multi-step-alert",
-            "workflows/examples/reusable-action-alert"
+            "workflows/examples/autosupress",
+            "workflows/examples/buisnesshours",
+            "workflows/examples/create-servicenow-tickets",
+            "workflows/examples/highsev",
+            "workflows/examples/update-servicenow-tickets"
           ]
         }
       ]
