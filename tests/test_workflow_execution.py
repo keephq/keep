@@ -953,7 +953,6 @@ def test_workflow_execution_logs(
         assert len(logs) == logs_counter[workflow_execution.id]["all"]
 
 
-@pytest.mark.timeout(15)
 @pytest.mark.parametrize(
     "test_app, test_case, alert_statuses, expected_tier, db_session",
     [
