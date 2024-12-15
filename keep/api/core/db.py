@@ -4484,9 +4484,11 @@ def get_alerts_metrics_by_provider(
     dynamic_field_sums = [
         func.sum(
             case(
-                func.json_extract(Alert.event, f"$.{field}").isnot(None)
-                & (func.json_extract(Alert.event, f"$.{field}") != False),
-                1,
+                (
+                    (func.json_extract(Alert.event, f"$.{field}").isnot(None))
+                    & (func.json_extract(Alert.event, f"$.{field}") != False),
+                    1,
+                ),
                 else_=0,
             )
         ).label(f"{field}_count")
@@ -4500,7 +4502,7 @@ def get_alerts_metrics_by_provider(
                 Alert.provider_id,
                 func.count(Alert.id).label("total_alerts"),
                 func.sum(
-                    case(LastAlertToIncident.fingerprint.isnot(None), 1, else_=0)
+                    case((LastAlertToIncident.fingerprint.isnot(None), 1), else_=0)
                 ).label("correlated_alerts"),
                 *dynamic_field_sums,
             )
@@ -4525,17 +4527,18 @@ def get_alerts_metrics_by_provider(
 
         results = query.group_by(Alert.provider_id, Alert.provider_type).all()
 
-    return {
-        f"{row.provider_id}_{row.provider_type}": {
+    metrics = {}
+    for row in results:
+        key = f"{row.provider_id}_{row.provider_type}"
+        metrics[key] = {
             "total_alerts": row.total_alerts,
             "correlated_alerts": row.correlated_alerts,
             "provider_type": row.provider_type,
-            **{
-                f"{field}_count": getattr(row, f"{field}_count") for field in fields
-            },  # Add field-specific counts
         }
-        for row in results
-    }
+        for field in fields:
+            metrics[key][f"{field}_count"] = getattr(row, f"{field}_count", 0)
+
+    return metrics
 
 
 def get_or_create_external_ai_settings(
