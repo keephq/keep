@@ -63,7 +63,7 @@
     "postcss-nested": "^6.0.1",
     "postcss-selector-parser": "^6.0.12",
     "postcss-value-parser": "^4.2.0",
-    "posthog-js": "^1.194.2",
+    "posthog-js": "^1.200.1",
     "posthog-node": "^3.1.1",
     "pusher-js": "^8.3.0",
     "react": "^18.3.1",
