@@ -31,12 +31,6 @@ class VectordevProvider(BaseProvider):
         "grafana": "grafana",
     }
 
-    # Mapping from vector sources to keep providers
-    SOURCE_TO_PROVIDER_MAP = {
-        "prometheus": "prometheus",
-        "grafana": "grafana",
-    }
-
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
