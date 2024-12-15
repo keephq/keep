@@ -26,6 +26,7 @@ export interface TopologyService {
   application_ids: string[];
   // Added on client to optimize rendering
   applications: TopologyApplicationMinimal[];
+  incidents?: number;
 }
 
 // We need to convert interface to type because only types are allowed in @xyflow/react

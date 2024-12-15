@@ -205,10 +205,10 @@ receivers:
                     id=fingerprint,
                     description=annotations.get("description"),
                     message=annotations.get("summary"),
-                    status=VictoriametricsProvider.STATUS_MAP[alert["status"]],
-                    severity=VictoriametricsProvider.SEVERITIES_MAP[
-                        labels.get("severity", "low")
-                    ],
+                    status=VictoriametricsProvider.STATUS_MAP.get(alert["status"], AlertStatus.FIRING),
+                    severity=VictoriametricsProvider.SEVERITIES_MAP.get(
+                        labels.get("severity", "low"), AlertSeverity.LOW
+                    ),
                     startedAt=alert.get("startsAt"),
                     url=alert.get("generatorURL"),
                     source=["victoriametrics"],

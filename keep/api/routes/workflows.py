@@ -116,6 +116,9 @@ def get_workflows(
 
         # create the workflow DTO
         try:
+            workflow_raw = yaml.safe_load(workflow.workflow_raw)
+            # very big width to avoid line breaks
+            workflow_raw = yaml.dump(workflow_raw, width=99999)
             workflow_dto = WorkflowDTO(
                 id=workflow.id,
                 name=workflow.name,
@@ -128,7 +131,7 @@ def get_workflows(
                 interval=workflow.interval,
                 providers=providers_dto,
                 triggers=triggers,
-                workflow_raw=workflow.workflow_raw,
+                workflow_raw=workflow_raw,
                 revision=workflow.revision,
                 last_updated=workflow.last_updated,
                 last_executions=last_executions,
@@ -470,7 +473,7 @@ async def update_workflow_by_id(
         workflow["name"] = workflow_from_db.name
     workflow_from_db.description = workflow.get("description")
     workflow_from_db.interval = workflow_interval
-    workflow_from_db.workflow_raw = yaml.dump(workflow)
+    workflow_from_db.workflow_raw = yaml.dump(workflow, width=99999)
     workflow_from_db.last_updated = datetime.datetime.now()
     session.add(workflow_from_db)
     session.commit()
@@ -496,7 +499,8 @@ def get_raw_workflow_by_id(
             )
         },
     )
-    
+
+
 @router.get("/{workflow_id}", description="Get workflow by ID")
 def get_workflow_by_id(
     workflow_id: str,
@@ -507,23 +511,22 @@ def get_workflow_by_id(
     tenant_id = authenticated_entity.tenant_id
     # get all workflow
     workflow = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
-    
+
     if not workflow:
         logger.warning(
             f"Tenant tried to get workflow {workflow_id} that does not exist",
             extra={"tenant_id": tenant_id},
         )
         raise HTTPException(404, "Workflow not found")
-    
-    try: 
+
+    try:
         workflow_yaml = yaml.safe_load(workflow.workflow_raw)
         valid_workflow_yaml = {"workflow": workflow_yaml}
-        final_workflow_raw = yaml.dump(valid_workflow_yaml)
+        final_workflow_raw = yaml.dump(valid_workflow_yaml, width=99999)
         workflow_dto = WorkflowDTO(
             id=workflow.id,
             name=workflow.name,
-            description=workflow.description
-            or "[This workflow has no description]",
+            description=workflow.description or "[This workflow has no description]",
             created_by=workflow.created_by,
             creation_time=workflow.creation_time,
             interval=workflow.interval,
@@ -539,7 +542,6 @@ def get_workflow_by_id(
     except yaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
- 
 
 
 @router.get("/executions", description="Get workflow executions by alert fingerprint")
@@ -569,7 +571,7 @@ def get_workflow_executions_by_alert_fingerprint(
 
 
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
-def get_workflow_by_id(
+def get_workflow_runs_by_id(
     workflow_id: str,
     tab: int = 1,
     limit: int = 25,
