@@ -4484,11 +4484,9 @@ def get_alerts_metrics_by_provider(
     dynamic_field_sums = [
         func.sum(
             case(
-                (
-                    func.json_extract(Alert.event, f"$.{field}").isnot(None)
-                    & (func.json_extract(Alert.event, f"$.{field}") != False),
-                    1,
-                ),
+                func.json_extract(Alert.event, f"$.{field}").isnot(None)
+                & (func.json_extract(Alert.event, f"$.{field}") != False),
+                1,
                 else_=0,
             )
         ).label(f"{field}_count")
@@ -4502,7 +4500,7 @@ def get_alerts_metrics_by_provider(
                 Alert.provider_id,
                 func.count(Alert.id).label("total_alerts"),
                 func.sum(
-                    case([(LastAlertToIncident.fingerprint.isnot(None), 1)], else_=0)
+                    case(LastAlertToIncident.fingerprint.isnot(None), 1, else_=0)
                 ).label("correlated_alerts"),
                 *dynamic_field_sums,
             )
