@@ -96,7 +96,7 @@ ALLOWED_INCIDENT_FILTERS = [
 def dispose_session():
     logger.info("Disposing engine pool")
     if engine.dialect.name != "sqlite":
-        engine.dispose()
+        engine.dispose(close=False)
         logger.info("Engine pool disposed")
     else:
         logger.info("Engine pool is sqlite, not disposing")
