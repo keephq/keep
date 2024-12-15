@@ -136,7 +136,7 @@ def get_session_sync() -> Session:
     return Session(engine)
 
 
-def __convert_to_uuid(value: str) -> UUID:
+def __convert_to_uuid(value: str) -> UUID | None:
     try:
         return UUID(value)
     except ValueError:
@@ -3277,6 +3277,10 @@ def get_incident_by_id(
     with_alerts: bool = False,
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
+        if incident_id is None:
+            return None
     with existed_or_new_session(session) as session:
         query = session.query(
             Incident,
@@ -3358,6 +3362,9 @@ def update_incident_from_dto_by_id(
     updated_incident_dto: IncidentDtoIn | IncidentDto,
     generated_by_ai: bool = False,
 ) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
+
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -3409,6 +3416,8 @@ def delete_incident_by_id(
     tenant_id: str,
     incident_id: UUID,
 ) -> bool:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = (
             session.query(Incident)
@@ -3594,6 +3603,8 @@ def add_alerts_to_incident_by_incident_id(
     is_created_by_ai: bool = False,
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with existed_or_new_session(session) as session:
         query = select(Incident).where(
             Incident.tenant_id == tenant_id,
@@ -3773,6 +3784,8 @@ def get_last_alerts_for_incidents(
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, fingerprints: List[str]
 ) -> Optional[int]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -4008,6 +4021,8 @@ def confirm_predicted_incident_by_id(
     tenant_id: str,
     incident_id: UUID | str,
 ):
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -4056,6 +4071,8 @@ def write_tenant_config(tenant_id: str, config: dict) -> None:
 def update_incident_summary(
     tenant_id: str, incident_id: UUID, summary: str
 ) -> Incident:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -4078,6 +4095,8 @@ def update_incident_summary(
 
 
 def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incident:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -4261,6 +4280,8 @@ def change_incident_status_by_id(
     status: IncidentStatus,
     end_time: datetime | None = None,
 ) -> bool:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         stmt = (
             update(Incident)
