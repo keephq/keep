@@ -16,11 +16,11 @@ import {
   XCircleIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
-import { useRevalidateMultiple } from "@/utils/state";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,

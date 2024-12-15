@@ -13,7 +13,7 @@ import CreatableMultiSelect from "@/components/ui/CreatableMultiSelect";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { ActionMeta, MultiValue } from "react-select";
 import { useTags } from "utils/hooks/useTags";
-import { usePresets } from "utils/hooks/usePresets";
+import { usePresets } from "@/entities/presets/model/usePresets";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 import clsx from "clsx";
 
@@ -34,7 +34,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
 
   const { data: tags = [] } = useTags();
 
-  // Get latest static presets (merged local and server presets)
   const { staticPresets, error: staticPresetsError } = usePresets({
     revalidateIfStale: true,
     revalidateOnFocus: true,

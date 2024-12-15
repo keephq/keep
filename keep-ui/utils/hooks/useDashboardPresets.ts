@@ -1,4 +1,4 @@
-import { usePresets } from "./usePresets";
+import { usePresets } from "@/entities/presets/model/usePresets";
 import { useSearchParams } from "next/navigation";
 
 export const useDashboardPreset = () => {

@@ -10,11 +10,11 @@ import Modal from "@/components/ui/Modal";
 import { useProviders } from "utils/hooks/useProviders";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { usePresets } from "utils/hooks/usePresets";
 import Select from "@/components/ui/Select";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { useRevalidateMultiple } from "@/utils/state";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 interface PushAlertToServerModalProps {
   handleClose: () => void;

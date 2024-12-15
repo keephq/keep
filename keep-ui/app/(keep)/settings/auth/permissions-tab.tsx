@@ -4,7 +4,7 @@ import { usePermissions } from "utils/hooks/usePermissions";
 import { useUsers } from "@/entities/users/model/useUsers";
 import { useGroups } from "utils/hooks/useGroups";
 import { useRoles } from "utils/hooks/useRoles";
-import { usePresets } from "utils/hooks/usePresets";
+import { usePresets } from "@/entities/presets/model/usePresets";
 import { useIncidents } from "utils/hooks/useIncidents";
 import Loading from "@/app/(keep)/loading";
 import { PermissionsTable } from "./permissions-table";

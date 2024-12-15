@@ -12,12 +12,7 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
-import {
-  AlertDto,
-  Preset,
-  severityMapping,
-  reverseSeverityMapping,
-} from "./models";
+import { AlertDto, severityMapping, reverseSeverityMapping } from "./models";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import Select, { components, MenuListProps } from "react-select";
@@ -29,6 +24,8 @@ import { toast } from "react-toastify";
 import { CornerDownLeft } from "lucide-react";
 import { Link } from "@/components/ui";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
+import { Preset } from "@/entities/presets/model/types";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -321,6 +318,11 @@ export const AlertsRulesBuilder = ({
   );
   const parsedCELRulesToQuery = parseCEL(celRules);
 
+  const isDynamic =
+    selectedPreset && !STATIC_PRESETS_NAMES.includes(selectedPreset.name);
+
+  const action = isDynamic ? "update" : "create";
+
   const setQueryParam = (key: string, value: string) => {
     const current = new URLSearchParams(
       Array.from(searchParams ? searchParams.entries() : [])
@@ -505,8 +507,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-    ? customFields
-    : [];
+      ? customFields
+      : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);
@@ -648,24 +650,24 @@ export const AlertsRulesBuilder = ({
               size="sm"
               disabled={!celRules.length}
               onClick={() => validateAndOpenSaveModal(celRules)}
-              tooltip="Save current filter as a preset"
+              tooltip={
+                action === "update"
+                  ? "Edit preset"
+                  : "Save current filter as a preset"
+              }
             >
-              Save
+              {action === "update" ? "Edit" : "Save"}
             </Button>
           )}
-          {selectedPreset &&
-            selectedPreset.name &&
-            selectedPreset?.name !== "deleted" &&
-            selectedPreset?.name !== "feed" &&
-            selectedPreset?.name !== "dismissed" &&
-            deletePreset && (
-              <Button
-                icon={TrashIcon}
-                color="orange"
-                title="Delete preset"
-                onClick={async () => await deletePreset(selectedPreset!.id!)}
-              ></Button>
-            )}
+          {isDynamic && deletePreset && (
+            <Button
+              icon={TrashIcon}
+              variant="secondary"
+              color="red"
+              title="Delete preset"
+              onClick={async () => await deletePreset(selectedPreset!.id!)}
+            ></Button>
+          )}
         </div>
       </div>
       {/* Import SQL */}
