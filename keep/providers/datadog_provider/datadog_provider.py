@@ -796,7 +796,7 @@ class DatadogProvider(BaseTopologyProvider):
     ) -> AlertDto:
         tags = event.get("tags", "")
         if isinstance(tags, str):
-            tags_list = tags
+            tags_list = tags.split(",")
             tags_list.remove("monitor")
             tags = {}
 
