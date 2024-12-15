@@ -1,6 +1,7 @@
 import dataclasses
 
 import random
+import json
 
 import pydantic
 
@@ -22,6 +23,13 @@ class VectordevProviderAuthConfig:
 class VectordevProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Vector"
     PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
+    PROVIDER_COMING_SOON = True
+
+    # Mapping from vector sources to keep providers
+    SOURCE_TO_PROVIDER_MAP = {
+        "prometheus": "prometheus",
+        "grafana": "grafana",
+    }
 
     # Mapping from vector sources to keep providers
     SOURCE_TO_PROVIDER_MAP = {
@@ -42,9 +50,35 @@ class VectordevProvider(BaseProvider):
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
-        event_type = event["source_type"]
-        provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[event_type])
-        return provider_class._format_alert(event["event"],provider_instance)
+        try:
+            event_type = event["source_type"]
+            provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[event_type])
+            return provider_class._format_alert(event["event"],provider_instance)
+        except Exception as e:
+            alert_dtos = []
+            if isinstance(event, list):
+                return event
+            else:
+                alerts = event.get("alerts", [event])
+            for e in event:
+                event_json = None
+                try:
+                    event_json = json.loads(e.get("message"))
+                except json.JSONDecodeError:
+                    pass
+                alert_dtos.append(
+                AlertDto(
+                    name="",
+                    host=e.get("host"),
+                    message=e.get("message"),
+                    description=e.get("message"),
+                    lastReceived=e.get("timestamp"),
+                    source_type=e.get("source_type"),
+                    source=["vectordev"],
+                    original_event=event_json,
+                )
+            )
+            return alert_dtos
 
 
     def dispose(self):
