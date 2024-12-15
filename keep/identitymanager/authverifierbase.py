@@ -198,7 +198,6 @@ class AuthVerifierBase:
         """
         self.logger.debug(f"Authorizing entity: {authenticated_entity}")
         self._authorize(authenticated_entity)
-        self.logger.debug("Authorization successful")
 
     def _authorize(self, authenticated_entity: AuthenticatedEntity) -> None:
         """
@@ -218,7 +217,6 @@ class AuthVerifierBase:
                 status_code=403,
                 detail=f"You don't have the required scopes to access this resource [required scopes: {self.scopes}]",
             )
-        self.logger.debug("Authorization successful")
 
     def _extract_api_key(
         self,
