@@ -50,11 +50,13 @@ class VectordevProvider(BaseProvider):
             return provider_class._format_alert(event["event"],provider_instance)
         except Exception as e:
             alert_dtos = []
+            events = []
             if isinstance(event, list):
-                return event
+                events = event
             else:
-                alerts = event.get("alerts", [event])
-            for e in event:
+                events = [event]
+            for event in events:
+                e = event["event"]
                 event_json = None
                 try:
                     event_json = json.loads(e.get("message"))
