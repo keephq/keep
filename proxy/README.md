@@ -42,10 +42,6 @@ HTTP_PROXY=http://proxy:3128
 HTTPS_PROXY=http://proxy:3128
 npm_config_proxy=http://proxy:3128
 npm_config_https_proxy=http://proxy:3128
-
-# If you want Logstash
-LOGSTASH_HOST=logstash-host
-LOGSTASH_PORT=5044
 ```
 
 ### Usage
@@ -67,7 +63,6 @@ docker compose -f docker-compose-proxy.yml up -d
 ```bash
 docker compose -f docker-compose-proxy.yml down
 ```
-
 
 ### Accessing Services
 

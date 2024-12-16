@@ -75,7 +75,6 @@ services:
     networks:
       - internal
 
-
 networks:
   proxy-net:
     driver: bridge
