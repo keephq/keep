@@ -2,7 +2,6 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -319,39 +318,41 @@ def create_preset(
 
 
 @router.delete(
-    "/{uuid}",
+    "/{preset_id}",
     description="Delete a preset for tenant",
 )
 def delete_preset(
-    uuid: str,
+    preset_id: uuid.UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["delete:presets"])
     ),
     session: Session = Depends(get_session),
 ):
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Deleting preset", extra={"uuid": uuid})
+    logger.info("Deleting preset", extra={"uuid": preset_id})
     # Delete links
-    session.query(PresetTagLink).filter(PresetTagLink.preset_id == uuid).delete()
+    session.query(PresetTagLink).filter(PresetTagLink.preset_id == preset_id).delete()
 
     statement = (
-        select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
     )
     preset = session.exec(statement).first()
     if not preset:
         raise HTTPException(404, "Preset not found")
     session.delete(preset)
     session.commit()
-    logger.info("Deleted preset", extra={"uuid": uuid})
+    logger.info("Deleted preset", extra={"uuid": preset_id})
     return {}
 
 
 @router.put(
-    "/{uuid}",
+    "/{preset_id}",
     description="Update a preset for tenant",
 )
 def update_preset(
-    uuid: str,
+    preset_id: uuid.UUID,
     body: CreateOrUpdatePresetDto,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:presets"])
@@ -359,11 +360,11 @@ def update_preset(
     session: Session = Depends(get_session),
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
-    logger.info("Updating preset", extra={"uuid": uuid})
-    if isinstance(uuid, str):
-        uuid = UUID(uuid)
+    logger.info("Updating preset", extra={"uuid": preset_id})
     statement = (
-        select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
+        select(Preset)
+        .where(Preset.tenant_id == tenant_id)
+        .where(Preset.id == preset_id)
     )
     preset = session.exec(statement).first()
     if not preset:
@@ -415,7 +416,7 @@ def update_preset(
 
     session.commit()
     session.refresh(preset)
-    logger.info("Updated preset", extra={"uuid": uuid})
+    logger.info("Updated preset", extra={"uuid": preset_id})
     return PresetDto(**preset.to_dict())
 
 
