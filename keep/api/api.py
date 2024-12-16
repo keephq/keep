@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from importlib import metadata
 
 import requests
@@ -24,6 +25,8 @@ from keep.api.consts import (
     KEEP_ARQ_TASK_POOL_BASIC_PROCESSING,
     KEEP_ARQ_TASK_POOL_NONE,
 )
+from keep.api.core.config import config
+from keep.api.core.db import dispose_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
@@ -52,7 +55,6 @@ from keep.api.routes import (
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
-from keep.api.routes.dashboard import provision_dashboards
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
@@ -60,26 +62,23 @@ from keep.identitymanager.identitymanagerfactory import (
 )
 
 # load all providers into cache
-from keep.providers.providers_factory import ProvidersFactory
-from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowmanager import WorkflowManager
-from keep.workflowmanager.workflowstore import WorkflowStore
 
 load_dotenv(find_dotenv())
 keep.api.logging.setup_logging()
 logger = logging.getLogger(__name__)
 
-HOST = os.environ.get("KEEP_HOST", "0.0.0.0")
-PORT = int(os.environ.get("PORT", 8080))
-SCHEDULER = os.environ.get("SCHEDULER", "true") == "true"
-CONSUMER = os.environ.get("CONSUMER", "true") == "true"
+HOST = config("KEEP_HOST", default="0.0.0.0")
+PORT = config("PORT", default=8080, cast=int)
+SCHEDULER = config("SCHEDULER", default="true", cast=bool)
+CONSUMER = config("CONSUMER", default="true", cast=bool)
+KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
 
-AUTH_TYPE = os.environ.get("AUTH_TYPE", IdentityManagerTypes.NOAUTH.value).lower()
-PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
+AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
     KEEP_VERSION = metadata.version("keep")
 except Exception:
-    KEEP_VERSION = os.environ.get("KEEP_VERSION", "unknown")
+    KEEP_VERSION = config("KEEP_VERSION", default="unknown")
 
 # Monkey patch requests to disable redirects
 original_request = requests.Session.request
@@ -93,10 +92,126 @@ def no_redirect_request(self, method, url, **kwargs):
 requests.Session.request = no_redirect_request
 
 
+async def check_pending_tasks(background_tasks: set):
+    while True:
+        events_in_queue = len(background_tasks)
+        logger.info(
+            f"{events_in_queue} background tasks pending",
+            extra={
+                "pending_tasks": events_in_queue,
+            },
+        )
+        await asyncio.sleep(1)
+
+
+async def startup():
+    """
+    This runs for every worker on startup.
+    Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+    """
+    logger.info("Disope existing DB connections")
+    # psycopg2.DatabaseError: error with status PGRES_TUPLES_OK and no message from the libpq
+    # https://stackoverflow.com/questions/43944787/sqlalchemy-celery-with-scoped-session-error/54751019#54751019
+    dispose_session()
+
+    logger.info("Starting the services")
+
+    # Start the scheduler
+    if SCHEDULER:
+        try:
+            logger.info("Starting the scheduler")
+            wf_manager = WorkflowManager.get_instance()
+            await wf_manager.start()
+            logger.info("Scheduler started successfully")
+        except Exception:
+            logger.exception("Failed to start the scheduler")
+
+    # Start the consumer
+    if CONSUMER:
+        try:
+            logger.info("Starting the consumer")
+            event_subscriber = EventSubscriber.get_instance()
+            # TODO: there is some "race condition" since if the consumer starts before the server,
+            #       and start getting events, it will fail since the server is not ready yet
+            #       we should add a "wait" here to make sure the server is ready
+            await event_subscriber.start()
+            logger.info("Consumer started successfully")
+        except Exception:
+            logger.exception("Failed to start the consumer")
+
+    if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
+        event_loop = asyncio.get_event_loop()
+        if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
+            logger.info("Starting all task pools")
+            basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
+            event_loop.create_task(basic_worker.async_run())
+        elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
+            logger.info("Starting Basic Processing task pool")
+            arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
+            event_loop.create_task(arq_worker.async_run())
+        else:
+            raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
+
+    logger.info("Services started successfully")
+
+
+async def shutdown():
+    """
+    This runs for every worker on shutdown.
+    Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+    """
+    logger.info("Shutting down Keep")
+    if SCHEDULER:
+        logger.info("Stopping the scheduler")
+        wf_manager = WorkflowManager.get_instance()
+        # stop the scheduler
+        try:
+            await wf_manager.stop()
+        # in pytest, there could be race condition
+        except TypeError:
+            pass
+        logger.info("Scheduler stopped successfully")
+    if CONSUMER:
+        logger.info("Stopping the consumer")
+        event_subscriber = EventSubscriber.get_instance()
+        try:
+            await event_subscriber.stop()
+        # in pytest, there could be race condition
+        except TypeError:
+            pass
+        logger.info("Consumer stopped successfully")
+    # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
+    logger.info("Keep shutdown complete")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    This runs for every worker on startup and shutdown.
+    Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+    """
+    # create a set of background tasks
+    background_tasks = set()
+    # if debug tasks are enabled, create a task to check for pending tasks
+    if KEEP_DEBUG_TASKS:
+        logger.info("Starting background task to check for pending tasks")
+        asyncio.create_task(check_pending_tasks(background_tasks))
+
+    # Startup
+    await startup()
+
+    # yield the background tasks, this is available for the app to use in request context
+    yield {"background_tasks": background_tasks}
+
+    # Shutdown
+    await shutdown()
+
+
 def get_app(
     auth_type: IdentityManagerTypes = IdentityManagerTypes.NOAUTH.value,
 ) -> FastAPI:
-    if not os.environ.get("KEEP_API_URL", None):
+    keep_api_url = config("KEEP_API_URL", default=None)
+    if not keep_api_url:
         logger.info(
             "KEEP_API_URL is not set, setting it to default",
             extra={"keep_api_url": f"http://{HOST}:{PORT}"},
@@ -107,7 +222,7 @@ def get_app(
         f"Starting Keep with {os.environ['KEEP_API_URL']} as URL and version {KEEP_VERSION}",
         extra={
             "keep_version": KEEP_VERSION,
-            "keep_api_url": os.environ.get("KEEP_API_URL"),
+            "keep_api_url": keep_api_url,
         },
     )
 
@@ -115,6 +230,7 @@ def get_app(
         title="Keep API",
         description="Rest API powering https://platform.keephq.dev and friends 🏄‍♀️",
         version=KEEP_VERSION,
+        lifespan=lifespan,
     )
 
     @app.get("/")
@@ -181,75 +297,6 @@ def get_app(
     # if any endpoints needed, add them on_start
     identity_manager.on_start(app)
 
-    @app.on_event("startup")
-    async def on_startup():
-        logger.info("Loading providers into cache")
-        ProvidersFactory.get_all_providers()
-        if PROVISION_RESOURCES:
-            # provision providers from env. relevant only on single tenant.
-            logger.info("Provisioning providers and workflows")
-            ProvidersService.provision_providers_from_env(SINGLE_TENANT_UUID)
-            logger.info("Providers loaded successfully")
-            WorkflowStore.provision_workflows_from_directory(SINGLE_TENANT_UUID)
-            logger.info("Workflows provisioned successfully")
-            provision_dashboards(SINGLE_TENANT_UUID)
-            logger.info("Dashboards provisioned successfully")
-        # Start the services
-        logger.info("Starting the services")
-        # Start the scheduler
-        if SCHEDULER:
-            logger.info("Starting the scheduler")
-            wf_manager = WorkflowManager.get_instance()
-            await wf_manager.start()
-            logger.info("Scheduler started successfully")
-        # Start the consumer
-        if CONSUMER:
-            logger.info("Starting the consumer")
-            event_subscriber = EventSubscriber.get_instance()
-            # TODO: there is some "race condition" since if the consumer starts before the server,
-            #       and start getting events, it will fail since the server is not ready yet
-            #       we should add a "wait" here to make sure the server is ready
-            await event_subscriber.start()
-            logger.info("Consumer started successfully")
-        if KEEP_ARQ_TASK_POOL != KEEP_ARQ_TASK_POOL_NONE:
-            event_loop = asyncio.get_event_loop()
-            if KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_ALL:
-                logger.info("Starting all task pools")
-                basic_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
-                event_loop.create_task(basic_worker.async_run())
-            elif KEEP_ARQ_TASK_POOL == KEEP_ARQ_TASK_POOL_BASIC_PROCESSING:
-                logger.info("Starting Basic Processing task pool")
-                arq_worker = get_arq_worker(KEEP_ARQ_QUEUE_BASIC)
-                event_loop.create_task(arq_worker.async_run())
-            else:
-                raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
-        logger.info("Services started successfully")
-
-    @app.on_event("shutdown")
-    async def on_shutdown():
-        logger.info("Shutting down Keep")
-        if SCHEDULER:
-            logger.info("Stopping the scheduler")
-            wf_manager = WorkflowManager.get_instance()
-            # stop the scheduler
-            try:
-                await wf_manager.stop()
-            # in pytest, there could be race condition
-            except TypeError:
-                pass
-            logger.info("Scheduler stopped successfully")
-        if CONSUMER:
-            logger.info("Stopping the consumer")
-            event_subscriber = EventSubscriber.get_instance()
-            try:
-                await event_subscriber.stop()
-            # in pytest, there could be race condition
-            except TypeError:
-                pass
-            logger.info("Consumer stopped successfully")
-        # ARQ workers stops themselves? see "shutdown on SIGTERM" in logs
-        logger.info("Keep shutdown complete")
-
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
         logging.error(
@@ -279,9 +326,15 @@ def run(app: FastAPI):
     keep.api.config.on_starting()
 
     # run the server
-    uvicorn.run(
-        app,
-        host=HOST,
-        port=PORT,
-        log_config=logging_config,
-    )
+    workers = config("KEEP_WORKERS", default=None, cast=int)
+    if workers:
+        uvicorn.run(
+            "keep.api.api:get_app",
+            host=HOST,
+            port=PORT,
+            log_config=logging_config,
+            lifespan="on",
+            workers=workers,
+        )
+    else:
+        uvicorn.run(app, host=HOST, port=PORT, log_config=logging_config, lifespan="on")

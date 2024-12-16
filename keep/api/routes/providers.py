@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 READ_ONLY = config("KEEP_READ_ONLY", default="false") == "true"
 PROVIDER_DISTRIBUTION_ENABLED = config(
-    "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
+    "KEEP_PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
 )
 
 

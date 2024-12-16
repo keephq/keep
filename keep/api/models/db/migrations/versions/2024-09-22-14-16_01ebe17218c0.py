@@ -22,7 +22,7 @@ def upgrade() -> None:
     op.create_table(
         "topologyapplication",
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.ForeignKeyConstraint(
@@ -34,7 +34,7 @@ def upgrade() -> None:
     op.create_table(
         "topologyserviceapplication",
         sa.Column("service_id", sa.Integer(), nullable=False),
-        sa.Column("application_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("application_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["application_id"],
             ["topologyapplication.id"],
