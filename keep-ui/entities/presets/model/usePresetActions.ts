@@ -3,8 +3,10 @@ import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
 import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
 import { useCallback } from "react";
 import { formatQuery, parseCEL } from "react-querybuilder";
-import { PresetCreateUpdateDto } from "./types";
+import { Preset, PresetCreateUpdateDto } from "./types";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { LOCAL_PRESETS_KEY } from "./constants";
 
 function createPresetBody(data: PresetCreateUpdateDto) {
   let sqlQuery;
@@ -14,8 +16,7 @@ function createPresetBody(data: PresetCreateUpdateDto) {
       parseNumbers: true,
     });
   } catch (error) {
-    showErrorToast(error, "Failed to parse the CEL query");
-    return;
+    throw new Error("Failed to parse the CEL query");
   }
   return {
     name: data.name,
@@ -31,6 +32,10 @@ function createPresetBody(data: PresetCreateUpdateDto) {
 
 export function usePresetActions() {
   const api = useApi();
+  const [_, setLocalDynamicPresets] = useLocalStorage<Preset[]>(
+    LOCAL_PRESETS_KEY,
+    []
+  );
   const revalidateMultiple = useRevalidateMultiple();
   const mutatePresetsList = useCallback(
     () => revalidateMultiple(["/preset", "/preset?"]),
@@ -43,9 +48,8 @@ export function usePresetActions() {
 
   const createPreset = useCallback(
     async (data: PresetCreateUpdateDto) => {
-      const body = createPresetBody(data);
-
       try {
+        const body = createPresetBody(data);
         const response = await api.post(`/preset`, body);
         mutatePresetsList();
         mutateTags();
@@ -60,8 +64,8 @@ export function usePresetActions() {
 
   const updatePreset = useCallback(
     async (presetId: string, data: PresetCreateUpdateDto) => {
-      const body = createPresetBody(data);
       try {
+        const body = createPresetBody(data);
         const response = await api.put(`/preset/${presetId}`, body);
         mutatePresetsList();
         mutateTags();
@@ -75,21 +79,25 @@ export function usePresetActions() {
   );
 
   const deletePreset = useCallback(
-    async (presetId: string) => {
-      const presetName = "";
-      if (
-        confirm(`You are about to delete preset ${presetName}, are you sure?`)
-      ) {
-        try {
-          const response = await api.delete(`/preset/${presetId}`);
-          showSuccessToast(`Preset ${presetName} deleted!`);
-          mutatePresetsList();
-        } catch (error) {
-          showErrorToast(error, `Error deleting preset ${presetName}`);
-        }
+    async (presetId: string, presetName: string) => {
+      const isDeleteConfirmed = confirm(
+        `You are about to delete preset ${presetName}. Are you sure?`
+      );
+      if (!isDeleteConfirmed) {
+        return;
+      }
+      try {
+        const response = await api.delete(`/preset/${presetId}`);
+        showSuccessToast(`Preset ${presetName} deleted!`);
+        mutatePresetsList();
+        setLocalDynamicPresets((oldOrder) =>
+          oldOrder.filter((p) => p.id !== presetId)
+        );
+      } catch (error) {
+        showErrorToast(error, `Error deleting preset ${presetName}`);
       }
     },
-    [api, mutatePresetsList]
+    [api, mutatePresetsList, setLocalDynamicPresets]
   );
 
   return {

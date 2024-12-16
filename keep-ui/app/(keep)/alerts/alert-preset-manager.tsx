@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "./alerts-rules-builder";
 import { CreateOrUpdatePresetForm } from "@/features/create-or-update-preset";
-import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresets } from "@/entities/presets/model/usePresets";
@@ -18,7 +17,6 @@ interface Props {
 }
 
 export function AlertPresetManager({ presetName, table }: Props) {
-  const { deletePreset } = usePresetActions();
   const { dynamicPresets } = usePresets({
     revalidateOnFocus: false,
   });
@@ -75,7 +73,6 @@ export function AlertPresetManager({ presetName, table }: Props) {
           defaultQuery=""
           selectedPreset={selectedPreset}
           setIsModalOpen={setIsModalOpen}
-          deletePreset={deletePreset}
           setPresetCEL={setPresetCEL}
         />
       </div>

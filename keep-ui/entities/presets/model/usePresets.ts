@@ -7,7 +7,11 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { useMemo, useCallback } from "react";
 import isEqual from "lodash/isEqual";
 import { Session } from "next-auth";
-import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
+import {
+  LOCAL_PRESETS_KEY,
+  LOCAL_STATIC_PRESETS_KEY,
+  STATIC_PRESETS_NAMES,
+} from "@/entities/presets/model/constants";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { Preset } from "@/entities/presets/model/types";
 import { useHydratedSession } from "@/shared/lib/hooks/useHydratedSession";
@@ -47,9 +51,9 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
   const { data: session } = useHydratedSession();
   const [localDynamicPresets, setLocalDynamicPresets] = useLocalStorage<
     Preset[]
-  >("presets-order", []);
+  >(LOCAL_PRESETS_KEY, []);
   const [localStaticPresets, setLocalStaticPresets] = useLocalStorage<Preset[]>(
-    "static-presets-order",
+    LOCAL_STATIC_PRESETS_KEY,
     []
   );
 
@@ -81,30 +85,35 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
 
   const updateLocalPresets = useCallback(
     (presets: Preset[]) => {
+      // TODO: if the new preset coming from the server is not in the local storage, add it to the local storage
       // Keep the order from the local storage, update the data from the server
-      const newDynamicPresets = localDynamicPresets
-        .filter((preset) => !STATIC_PRESETS_NAMES.includes(preset.name))
-        .map((preset) => {
-          const presetFromData = presets.find((p) => p.id === preset.id);
-          return presetFromData ? { ...preset, ...presetFromData } : null;
-        })
-        .filter((preset): preset is Preset => preset !== null);
+      const newDynamicPresets = combineOrder(
+        presets
+          .filter((preset) => !STATIC_PRESETS_NAMES.includes(preset.name))
+          .filter((preset) => checkPresetAccess(preset, session)),
+        localDynamicPresets
+      );
       // Only update if the array actually changed
       if (!isEqual(newDynamicPresets, localDynamicPresets)) {
         setLocalDynamicPresets(newDynamicPresets);
       }
-      const newStaticPresets = localStaticPresets
-        .filter((preset) => STATIC_PRESETS_NAMES.includes(preset.name))
-        .map((preset) => {
-          const presetFromData = presets.find((p) => p.id === preset.id);
-          return presetFromData ? { ...preset, ...presetFromData } : null;
-        })
-        .filter((preset): preset is Preset => preset !== null);
+      const newStaticPresets = combineOrder(
+        presets
+          .filter((preset) => STATIC_PRESETS_NAMES.includes(preset.name))
+          .filter((preset) => checkPresetAccess(preset, session)),
+        localStaticPresets
+      );
       if (!isEqual(newStaticPresets, localStaticPresets)) {
         setLocalStaticPresets(newStaticPresets);
       }
     },
-    [localDynamicPresets, localStaticPresets]
+    [
+      localDynamicPresets,
+      localStaticPresets,
+      session,
+      setLocalDynamicPresets,
+      setLocalStaticPresets,
+    ]
   );
 
   const {

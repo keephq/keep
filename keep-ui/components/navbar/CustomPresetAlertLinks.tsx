@@ -1,6 +1,4 @@
 import { CSSProperties } from "react";
-import { Session } from "next-auth";
-import { toast } from "react-toastify";
 import { usePresets } from "@/entities/presets/model/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
@@ -24,16 +22,20 @@ const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
 import clsx from "clsx";
-import { useApi } from "@/shared/lib/hooks/useApi";
 import { Preset } from "@/entities/presets/model/types";
+import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 
-type PresetAlertProps = {
+type AlertPresetLinkProps = {
   preset: Preset;
   pathname: string | null;
   deletePreset: (id: string, name: string) => void;
 };
 
-const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
+const AlertPresetLink = ({
+  preset,
+  pathname,
+  deletePreset,
+}: AlertPresetLinkProps) => {
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
 
@@ -90,21 +92,15 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
   );
 };
 type CustomPresetAlertLinksProps = {
-  session: Session;
   selectedTags: string[];
 };
 
 export const CustomPresetAlertLinks = ({
-  session,
   selectedTags,
 }: CustomPresetAlertLinksProps) => {
-  const api = useApi();
+  const { deletePreset } = usePresetActions();
 
-  const {
-    dynamicPresets: presets,
-    mutate: presetsMutator,
-    setLocalDynamicPresets,
-  } = usePresets({
+  const { dynamicPresets: presets, setLocalDynamicPresets } = usePresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
@@ -138,35 +134,10 @@ export const CustomPresetAlertLinks = ({
     })
   );
 
-  const deletePreset = async (presetId: string, presetName: string) => {
-    const isDeleteConfirmed = confirm(
-      `You are about to delete preset ${presetName}. Are you sure?`
-    );
-
-    if (isDeleteConfirmed) {
-      try {
-        await api.delete(`/preset/${presetId}`);
-
-        toast(`Preset ${presetName} deleted!`, {
-          position: "top-left",
-          type: "success",
-        });
-
-        await presetsMutator();
-
-        // remove preset from saved order
-        setLocalDynamicPresets((oldOrder) =>
-          oldOrder.filter((p) => p.id !== presetId)
-        );
-
-        router.push("/alerts/feed"); // Redirect to feed
-      } catch (error) {
-        toast(`Error deleting preset ${presetName}: ${error}`, {
-          position: "top-left",
-          type: "error",
-        });
-      }
-    }
+  const deletePresetAndRedirect = (presetId: string, presetName: string) => {
+    deletePreset(presetId, presetName).then(() => {
+      router.push("/alerts/feed");
+    });
   };
 
   const onDragEnd = (event: DragEndEvent) => {
@@ -201,11 +172,11 @@ export const CustomPresetAlertLinks = ({
     >
       <SortableContext key="preset-alerts" items={presets}>
         {filteredOrderedPresets.map((preset) => (
-          <PresetAlert
+          <AlertPresetLink
             key={preset.id}
             preset={preset}
             pathname={pathname}
-            deletePreset={deletePreset}
+            deletePreset={deletePresetAndRedirect}
           />
         ))}
       </SortableContext>
