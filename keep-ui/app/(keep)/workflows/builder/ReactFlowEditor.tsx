@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { IoMdSettings, IoMdClose } from "react-icons/io";
-import useStore, {
-  V2Properties,
-  V2Step,
-  ReactFlowDefinition,
-  Definition,
-} from "./builder-store";
+import useStore from "./builder-store";
 import { GlobalEditorV2, StepEditorV2 } from "./editors";
 import { Divider } from "@tremor/react";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { reConstructWorklowToDefinition } from "utils/reactFlow";
 import debounce from "lodash.debounce";
+import {
+  Definition,
+  ReactFlowDefinition,
+  V2Properties,
+  V2Step,
+} from "@/app/(keep)/workflows/builder/types";
 
 const ReactFlowEditor = ({
   providers,

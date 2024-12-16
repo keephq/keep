@@ -141,6 +141,11 @@ def test_reprovision_workflow(monkeypatch, db_session, client, test_app):
     for event_handler in app.router.on_startup:
         asyncio.run(event_handler())
 
+    # manually trigger the provision resources
+    from keep.api.config import provision_resources
+
+    provision_resources()
+
     client = TestClient(get_app())
 
     response = client.get("/workflows", headers={"x-api-key": "someapikey"})
@@ -209,6 +214,11 @@ def test_reprovision_provider(monkeypatch, db_session, client, test_app):
     # Manually trigger the startup event
     for event_handler in app.router.on_startup:
         asyncio.run(event_handler())
+
+    # manually trigger the provision resources
+    from keep.api.config import provision_resources
+
+    provision_resources()
 
     client = TestClient(app)
 
@@ -292,6 +302,11 @@ def test_reprovision_dashboard(monkeypatch, db_session, client, test_app):
     # Manually trigger the startup event
     for event_handler in app.router.on_startup:
         asyncio.run(event_handler())
+
+    # manually trigger the provision resources
+    from keep.api.config import provision_resources
+
+    provision_resources()
 
     client = TestClient(app)
 

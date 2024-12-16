@@ -18,9 +18,9 @@ import {
 } from "react-querybuilder";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useFormContext } from "react-hook-form";
-import { CorrelationForm } from ".";
-import { TIMEFRAME_UNITS_TO_SECONDS } from "./CorrelationSidebarBody";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
+import { CorrelationFormType } from "./types";
+import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 
 const DEFAULT_OPERATORS = defaultOperators.filter((operator) =>
   [
@@ -235,7 +235,7 @@ export const RuleFields = ({
     return onPropChange(prop, value, [groupIndex, ruleFieldIndex]);
   };
 
-  const { watch } = useFormContext<CorrelationForm>();
+  const { watch } = useFormContext<CorrelationFormType>();
   const timeframeInSeconds = watch("timeUnit")
     ? TIMEFRAME_UNITS_TO_SECONDS[watch("timeUnit")](+watch("timeAmount"))
     : 0;

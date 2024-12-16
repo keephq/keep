@@ -162,7 +162,7 @@ class SlackProvider(BaseProvider):
             # Also, do not encode the payload as json, but as x-www-form-urlencoded
             # Only reference I found for it is: https://getkeep.slack.com/services/B082F60L9GX?added=1 and
             # https://stackoverflow.com/questions/42993602/slack-chat-postmessage-attachment-gives-no-text
-            if payload["attachments"]:
+            if payload.get("attachments", None):
                 payload["attachments"] = attachments
                 response = requests.post(
                     self.authentication_config.webhook_url,

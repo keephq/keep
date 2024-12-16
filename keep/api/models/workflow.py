@@ -85,7 +85,7 @@ class WorkflowDTO(BaseModel):
         ordered_raw["steps"] = d.get("steps")
         # last, actions
         ordered_raw["actions"] = d.get("actions")
-        return yaml.dump(ordered_raw)
+        return yaml.dump(ordered_raw, width=99999)
 
 
 class WorkflowExecutionLogsDTO(BaseModel):

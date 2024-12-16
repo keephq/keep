@@ -18,8 +18,9 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
-import useStore, { V2Properties } from "./builder-store";
+import useStore from "./builder-store";
 import { useEffect, useRef, useState } from "react";
+import { V2Properties } from "@/app/(keep)/workflows/builder/types";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
