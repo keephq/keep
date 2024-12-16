@@ -18,7 +18,6 @@ The setup consists of several services:
 
 - **Squid Proxy**: Acts as a forward proxy for HTTP/HTTPS traffic
 - **Nginx**: Serves as a reverse proxy/tunnel
-- **Filebeat** (`with-elk` profile): Filebeat container to push keep-backend logs to logstash 
 - **Keep Frontend**: The Keep UI service configured to use the proxy
 - **Keep Backend**: The Keep API service
 - **Keep WebSocket**: The WebSocket server for real-time updates
@@ -69,11 +68,6 @@ docker compose -f docker-compose-proxy.yml up -d
 docker compose -f docker-compose-proxy.yml down
 ```
 
-4. To run with filebeat
-
-```bash
-docker compose -f docker-compose-proxy.yml --profile=with-elk up -d
-```
 
 ### Accessing Services
 

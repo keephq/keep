@@ -14,9 +14,9 @@ filebeat.inputs:
           host: "unix:///var/run/docker.sock"
       - drop_event:
           when.not.contains.container.labels:
-            com_docker_compose_service: "keep-backend"
+            com_docker_compose_service: "keep-backend-elk"
 
 output.logstash:
-  hosts: ["logstash-host:5044"]  # Replace with your Logstash host and port
+  hosts: ["logstash:5044"]  # Replace with your Logstash host and port
 
 logging.level: info  # Set Filebeat logging level
