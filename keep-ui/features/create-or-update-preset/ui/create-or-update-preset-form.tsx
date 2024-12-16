@@ -49,14 +49,12 @@ export function CreateOrUpdatePresetForm({
   const [selectedTags, setSelectedTags] = useState<TagOption[]>(
     presetData.tags ?? []
   );
-  const [newTags, setNewTags] = useState<string[]>([]); // New tags created during the session
 
   const clearForm = () => {
     setPresetName("");
     setIsPrivate(false);
     setIsNoisy(false);
     setSelectedTags([]);
-    setNewTags([]);
   };
 
   const handleCancel = () => {
@@ -68,7 +66,6 @@ export function CreateOrUpdatePresetForm({
 
   const handleCreateTag = (inputValue: string) => {
     const newTag = { name: inputValue };
-    setNewTags((prevTags) => [...prevTags, inputValue]);
     setSelectedTags((prevTags) => [...prevTags, newTag]);
   };
 
