@@ -106,6 +106,7 @@ export interface AlertToWorkflowExecution {
     | "error"
     | "providers_not_configured";
   workflow_started: Date;
+  event_id: string;
 }
 
 export const AlertKnownKeys = [
