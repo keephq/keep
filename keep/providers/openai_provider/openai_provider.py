@@ -49,6 +49,14 @@ class OpenaiProvider(BaseProvider):
         return scopes
 
     def _query(self, prompt, model="gpt-3.5-turbo"):
+        # gpt3.5 turbo has a limit of 16k characters
+        if len(prompt) > 16000:
+            # let's try another model
+            self.logger.info(
+                "Prompt is too long for gpt-3.5-turbo, trying gpt-4o-2024-08-06"
+            )
+            model = "gpt-4o-2024-08-06"
+
         client = OpenAI(
             api_key=self.authentication_config.api_key,
             organization=self.authentication_config.organization_id,

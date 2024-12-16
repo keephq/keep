@@ -44,11 +44,15 @@ export const useWorkflowExecutionsV2 = (
 
   return useSWR<PaginatedWorkflowExecutionDto>(
     api.isReady()
-      ? `/workflows/${workflowId}/runs?v2=true&tab=${tab}&limit=${limit}&offset=${offset}${
+      ? `/workflows/${workflowId}/runs?v2=true&limit=${limit}&offset=${offset}${
           searchParams ? `&${searchParams.toString()}` : ""
         }`
       : null,
-    (url: string) => api.get(url)
+    (url: string) => api.get(url),
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+    }
   );
 };
 
