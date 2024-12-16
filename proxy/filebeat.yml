@@ -1,0 +1,22 @@
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    stream: stdout  # Only capture stdout
+    json.keys_under_root: true  # Parse JSON-formatted logs automatically
+    json.add_error_key: true  # Add error field if JSON parsing fails
+    processors:
+      - decode_json_fields:
+          fields: [ "message" ]  # Try to decode the `message` field as JSON
+          target: ""           # Merge decoded fields at the root level
+          overwrite_keys: true # Overwrite existing keys if present
+      - add_docker_metadata:  # Enrich logs with Docker metadata
+          host: "unix:///var/run/docker.sock"
+      - drop_event:
+          when.not.contains.container.labels:
+            com_docker_compose_service: "keep-backend"
+
+output.logstash:
+  hosts: ["logstash-host:5044"]  # Replace with your Logstash host and port
+
+logging.level: info  # Set Filebeat logging level

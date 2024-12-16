@@ -75,6 +75,22 @@ services:
     networks:
       - internal
 
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:latest
+    container_name: filebeat
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    environment:
+      - LOGSTASH_HOST=${LOGSTASH_HOST}
+      - LOGSTASH_PORT=${LOGSTASH_PORT}
+    command: [ "--strict.perms=false" ]  # Disable strict permissions to avoid permission errors
+    profiles:
+      - with-elk
+
+
 networks:
   proxy-net:
     driver: bridge
