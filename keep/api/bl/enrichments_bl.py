@@ -7,10 +7,12 @@ import celpy
 import chevron
 from sqlmodel import Session
 
+from keep.api.core.config import config
 from keep.api.core.db import enrich_alert as enrich_alert_db
 from keep.api.core.db import (
     get_enrichment_with_session,
     get_mapping_rule_by_id,
+    get_session_sync,
     get_topology_data_by_dynamic_matcher,
 )
 from keep.api.core.elastic import ElasticClient
@@ -49,11 +51,15 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
 
 
 class EnrichmentsBl:
+
+    ENRICHMENT_DISABLED = config("KEEP_ENRICHMENT_DISABLED", default="false", cast=bool)
+
     def __init__(self, tenant_id: str, db: Session | None = None):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.db_session = db
-        self.elastic_client = ElasticClient(tenant_id=tenant_id)
+        if not EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.db_session = db or get_session_sync()
+            self.elastic_client = ElasticClient(tenant_id=tenant_id)
 
     def run_extraction_rules(
         self, event: AlertDto | dict, pre=False
@@ -61,6 +67,10 @@ class EnrichmentsBl:
         """
         Run the extraction rules for the event
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping extraction rules")
+            return event
+
         fingerprint = (
             event.get("fingerprint")
             if isinstance(event, dict)
@@ -189,7 +199,7 @@ class EnrichmentsBl:
         )
         return result
 
-    def run_mapping_rules(self, alert: AlertDto):
+    def run_mapping_rules(self, alert: AlertDto) -> AlertDto:
         """
         Run the mapping rules for the alert.
 
@@ -199,6 +209,10 @@ class EnrichmentsBl:
         Returns:
         - AlertDto: The enriched alert after applying mapping rules.
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping mapping rules")
+            return alert
+
         self.logger.info(
             "Running mapping rules for incoming alert",
             extra={"fingerprint": alert.fingerprint, "tenant_id": self.tenant_id},
@@ -452,6 +466,10 @@ class EnrichmentsBl:
         """
         Dispose of enrichments from the alert
         """
+        if EnrichmentsBl.ENRICHMENT_DISABLED:
+            self.logger.debug("Enrichment is disabled, skipping dispose enrichments")
+            return
+
         self.logger.debug("disposing enrichments", extra={"fingerprint": fingerprint})
         enrichments = get_enrichment_with_session(
             self.db_session, self.tenant_id, fingerprint

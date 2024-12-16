@@ -101,6 +101,12 @@ DB_MAX_OVERFLOW = config(
 DB_ECHO = config(
     "DATABASE_ECHO", default=False, cast=bool
 )  # pylint: disable=invalid-name
+KEEP_FORCE_CONNECTION_STRING = config(
+    "KEEP_FORCE_CONNECTION_STRING", default=False, cast=bool
+)  # pylint: disable=invalid-name
+KEEP_DB_PRE_PING_ENABLED = config(
+    "KEEP_DB_PRE_PING_ENABLED", default=False, cast=bool
+)  # pylint: disable=invalid-name
 
 
 def dumps(_json) -> str:
@@ -122,7 +128,7 @@ def create_db_engine():
     """
     Creates a database engine based on the environment variables.
     """
-    if RUNNING_IN_CLOUD_RUN:
+    if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
         engine = create_engine(
             "mysql+pymysql://",
             creator=__get_conn,
@@ -147,6 +153,7 @@ def create_db_engine():
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
                 echo=DB_ECHO,
+                pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
             )
         # SQLite does not support pool_size
         except TypeError:

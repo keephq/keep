@@ -42,6 +42,9 @@ class WorkflowScheduler:
         self.workflows_to_run = []
         self._stop = False
         self.lock = Lock()
+        self.interval_enabled = (
+            config("WORKFLOWS_INTERVAL_ENABLED", default="true") == "true"
+        )
 
     async def start(self):
         self.logger.info("Starting workflows scheduler")
@@ -54,6 +57,11 @@ class WorkflowScheduler:
 
     def _handle_interval_workflows(self):
         workflows = []
+
+        if not self.interval_enabled:
+            self.logger.debug("Interval workflows are disabled")
+            return
+
         try:
             # get all workflows that should run due to interval
             workflows = get_workflows_that_should_run()

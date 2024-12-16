@@ -23,7 +23,7 @@ def upgrade() -> None:
         "aisuggestion",
         sa.Column("suggestion_input", sa.JSON(), nullable=True),
         sa.Column("suggestion_content", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column(
@@ -68,8 +68,8 @@ def upgrade() -> None:
     op.create_table(
         "aifeedback",
         sa.Column("feedback_content", sa.JSON(), nullable=True),
-        sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-        sa.Column("suggestion_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+        sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+        sa.Column("suggestion_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
         sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("rating", sa.Integer(), nullable=True),
         sa.Column("comment", sqlmodel.sql.sqltypes.AutoString(), nullable=True),

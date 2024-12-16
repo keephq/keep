@@ -212,6 +212,7 @@
       "group": "Deployment",
       "pages": [
         "deployment/configuration",
+        "deployment/monitoring",
         {
           "group": "Authentication",
           "pages": [
