@@ -114,6 +114,8 @@ class WorkflowExecutionDTO(BaseModel):
     error: Optional[str]
     execution_time: Optional[float]
     results: Optional[dict]
+    event_id: Optional[str]
+    event_type: Optional[str]
 
 
 class WorkflowCreateOrUpdateDTO(BaseModel):

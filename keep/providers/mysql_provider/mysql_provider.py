@@ -121,7 +121,11 @@ class MysqlProvider(BaseProvider):
 
         cursor.close()
         if single_row:
-            return results[0]
+            if results:
+                return results[0]
+            else:
+                self.logger.warning("No results found for query: %s", query)
+                raise ValueError(f"Query {query} returned no rows")
 
         return results
 

@@ -7,6 +7,7 @@ import {
   AccordionHeader,
   Card,
   Title,
+  Button,
 } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
@@ -25,6 +26,8 @@ import {
   isWorkflowExecution,
 } from "./types";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import WorkflowDefinitionYAML from "../workflow-definition-yaml";
+import { ApiClient } from "@/shared/api/ApiClient";
 
 interface WorkflowResultsProps {
   workflow_id: string;
@@ -56,23 +59,26 @@ export default function WorkflowExecutionResults({
     }
   );
 
-  // disable refresh interval when execution is complete
+  // Get workflow definition
+  const { data: workflowData } = useSWR(
+    api.isReady() ? `/workflows/${workflow_id}` : null,
+    (url) => api.get(url)
+  );
+
   useEffect(() => {
     if (!executionData) return;
 
-    // if the status is other than in_progress, stop the refresh interval
     if (executionData?.status !== "in_progress") {
       console.log("Stopping refresh interval");
       setRefreshInterval(0);
     }
-    // if there's an error - show it
     if (executionData.error) {
       setError(executionData?.error);
       console.log("Stopping refresh interval");
       setRefreshInterval(0);
     } else if (executionData?.status === "success") {
-      setError(executionData?.error); // should be null
-      setRefreshInterval(0); // Disable refresh interval when execution is complete
+      setError(executionData?.error);
+      setRefreshInterval(0);
     }
   }, [executionData]);
 
@@ -80,7 +86,7 @@ export default function WorkflowExecutionResults({
     console.error("Error fetching execution status", executionError);
   }
 
-  if (status === "loading" || !executionData) return <Loading />;
+  if (!executionData || !workflowData) return <Loading />;
 
   if (executionError) {
     return (
@@ -98,21 +104,29 @@ export default function WorkflowExecutionResults({
   return (
     <ExecutionResults
       executionData={executionData}
+      workflowData={workflowData}
       checks={checks}
-    ></ExecutionResults>
+      api={api}
+    />
   );
 }
 
 export function ExecutionResults({
   executionData,
+  workflowData,
   checks,
+  api,
 }: {
   executionData: WorkflowExecution | WorkflowExecutionFailure;
+  workflowData: any;
   checks?: number;
+  api: ApiClient;
 }) {
   let status: WorkflowExecution["status"] | undefined;
   let logs: WorkflowExecution["logs"] | undefined;
   let results: WorkflowExecution["results"] | undefined;
+  let eventId: string | undefined;
+  let eventType: string | undefined;
 
   const error = executionData.error;
 
@@ -120,113 +134,158 @@ export function ExecutionResults({
     status = executionData.status;
     logs = executionData.logs;
     results = executionData.results;
+    eventId = executionData.event_id;
+    eventType = executionData.event_type;
   }
 
+  const getCurlCommand = () => {
+    let token = api.getToken();
+    let url = api.getApiBaseUrl();
+    return `curl -X POST "${url}/workflows/${workflowData.id}/run?event_type=${eventType}&event_id=${eventId}" \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "Content-Type: application/json"`;
+  };
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(getCurlCommand());
+  };
+
   return (
-    <div>
-      {results && Object.keys(results).length > 0 && (
-        <Card>
-          <Title>Workflow Results</Title>
-          <Table className="w-full">
-            <TableHead>
-              <TableRow>
-                <TableCell className="w-1/4 break-words whitespace-normal">
-                  Action ID
-                </TableCell>
-                <TableCell className="w-3/4 break-words whitespace-normal">
-                  Results
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {Object.entries(results).map(([stepId, stepResults], index) => (
-                <TableRow key={index}>
-                  <TableCell className="w-1/4 break-words whitespace-normal">
-                    {stepId}
-                  </TableCell>
-                  <TableCell className="w-3/4 break-words whitespace-normal max-w-xl">
-                    <Accordion>
-                      <AccordionHeader>Value</AccordionHeader>
-                      <AccordionBody>
-                        <pre className="overflow-scroll">
-                          {JSON.stringify(stepResults, null, 2)}
-                        </pre>
-                      </AccordionBody>
-                    </Accordion>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
+      {/* Error Card */}
+      {error && (
+        <Card className="flex-none">
+          <Callout
+            title="Error during workflow execution"
+            icon={ExclamationCircleIcon}
+            color="rose"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                {error.split("\n").map((line, index) => (
+                  <p key={index}>{line}</p>
+                ))}
+              </div>
+              {eventId && eventType && (
+                <Button color="rose" onClick={copyToClipboard}>
+                  Copy CURL replay
+                </Button>
+              )}
+            </div>
+          </Callout>
         </Card>
       )}
-      <div className={results && Object.keys(results).length > 0 ? "mt-8" : ""}>
-        {status === "in_progress" ? (
-          <div>
-            <div className="flex items-center justify-center">
-              <p>
-                The workflow is in progress, will check again in one second
-                (times checked: {checks})
-              </p>
-            </div>
-            <Loading></Loading>
-          </div>
-        ) : (
-          <>
-            {error && (
-              <Callout
-                className="mt-4 mb-2.5"
-                title="Error during workflow execution"
-                icon={ExclamationCircleIcon}
-                color="rose"
-              >
-                {error
-                  ? error.split("\n").map((line, index) => (
-                      // Render each line as a separate paragraph or div.
-                      // The key is index, which is sufficient for simple lists like this.
-                      <p key={index}>{line}</p>
-                    ))
-                  : "An unknown error occurred during execution."}
-              </Callout>
-            )}
-            <Card>
-              <Title>Workflow Logs</Title>
+
+      {/* Workflow Results Card */}
+      {/*
+      <Card className="flex-none overflow-hidden">
+        <div className="overflow-auto">
+          {results && Object.keys(results).length > 0 && (
+            <div className="mb-4">
+              <Title>Workflow Results</Title>
               <Table className="w-full">
                 <TableHead>
                   <TableRow>
-                    <TableCell className="w-1/3 break-words whitespace-normal">
-                      Timestamp
+                    <TableCell className="w-1/4 break-words whitespace-normal">
+                      Action ID
                     </TableCell>
-                    <TableCell className="w-1/3 break-words whitespace-normal">
-                      Message
+                    <TableCell className="w-3/4 break-words whitespace-normal">
+                      Results
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(logs ?? []).map((log, index) => (
-                    <TableRow
-                      className={`${
-                        log.message?.includes("NOT to run")
-                          ? "bg-red-100"
-                          : log.message?.includes("evaluated to run")
-                            ? "bg-green-100"
-                            : ""
-                      }`}
-                      key={index}
-                    >
-                      <TableCell className="w-1/3 break-words whitespace-normal">
-                        {log.timestamp}
+                  {Object.entries(results).map(([stepId, stepResults], index) => (
+                    <TableRow key={index}>
+                      <TableCell className="w-1/4 break-words whitespace-normal">
+                        {stepId}
                       </TableCell>
-                      <TableCell className="w-1/3 break-words whitespace-normal">
-                        {log.message}
+                      <TableCell className="w-3/4 break-words whitespace-normal max-w-xl">
+                        <Accordion>
+                          <AccordionHeader>Value</AccordionHeader>
+                          <AccordionBody>
+                            <pre className="overflow-auto max-h-48">
+                              {JSON.stringify(stepResults, null, 2)}
+                            </pre>
+                          </AccordionBody>
+                        </Accordion>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </Card>
-          </>
-        )}
+            </div>
+          )}
+        </div>
+      </Card>
+      */}
+
+      {/* Lower Section with Logs and Definition */}
+      <div className="grid grid-cols-2 gap-4 flex-1">
+        {/* Workflow Logs Card */}
+        <Card className="flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            {status === "in_progress" ? (
+              <div>
+                <div className="flex items-center justify-center">
+                  <p>
+                    The workflow is in progress, will check again in one second
+                    (times checked: {checks})
+                  </p>
+                </div>
+                <Loading />
+              </div>
+            ) : (
+              <div>
+                <Title>Workflow Logs</Title>
+                <Table className="w-full">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell className="w-1/3 break-words whitespace-normal">
+                        Timestamp
+                      </TableCell>
+                      <TableCell className="w-2/3 break-words whitespace-normal">
+                        Message
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(logs ?? []).map((log, index) => (
+                      <TableRow
+                        className={`${
+                          log.message?.includes("NOT to run")
+                            ? "bg-red-100"
+                            : log.message?.includes("evaluated to run")
+                            ? "bg-green-100"
+                            : ""
+                        }`}
+                        key={index}
+                      >
+                        <TableCell className="w-1/3 break-words whitespace-normal">
+                          {log.timestamp}
+                        </TableCell>
+                        <TableCell className="w-2/3 break-words whitespace-normal">
+                          {log.message}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Workflow Definition Card */}
+        <Card className="flex flex-col overflow-hidden">
+          <Title>Workflow Definition</Title>
+          <div className="flex-1 mt-4 overflow-auto">
+            <WorkflowDefinitionYAML
+              workflowRaw={workflowData.workflow_raw}
+              executionLogs={logs}
+              executionStatus={status}
+            />
+          </div>
+        </Card>
       </div>
     </div>
   );
