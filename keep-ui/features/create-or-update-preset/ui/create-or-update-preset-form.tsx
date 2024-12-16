@@ -18,7 +18,7 @@ import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 
 interface TagOption {
-  id?: number;
+  id?: string;
   name: string;
 }
 

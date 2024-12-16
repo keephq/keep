@@ -6,7 +6,7 @@ interface Option {
 }
 
 export interface Tag {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -22,10 +22,15 @@ export interface Preset {
   tags: Tag[];
 }
 
+type TagPayload = {
+  id?: string;
+  name: string;
+};
+
 export type PresetCreateUpdateDto = {
   name: string;
   CEL: string;
   isPrivate: boolean;
   isNoisy: boolean;
-  tags: Tag[];
+  tags: TagPayload[];
 };
