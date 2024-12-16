@@ -25,6 +25,8 @@ export interface WorkflowExecution {
   logs?: LogEntry[] | null;
   error?: string | null;
   execution_time?: number;
+  event_id?: string;
+  event_type?: string;
 }
 
 export interface PaginatedWorkflowExecutionDto {
