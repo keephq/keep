@@ -28,8 +28,14 @@ from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflow import Workflow
 
+from aiocache import cached
+from aiocache.serializers import PickleSerializer
+
 
 class WorkflowStore:
+
+    CACHED_WORKFLOWS = {}
+
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
@@ -104,27 +110,32 @@ class WorkflowStore:
         valid_workflow_yaml = {"workflow": workflow_yaml}
         return yaml.dump(valid_workflow_yaml, width=99999)
 
+    # MatveyOptimization
     async def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        workflow = await get_raw_workflow(tenant_id, workflow_id)
-        if not workflow:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Workflow {workflow_id} not found",
-            )
-        workflow_yaml = yaml.safe_load(workflow)
-        workflow = await self.parser.parse(tenant_id, workflow_yaml)
-        if len(workflow) > 1:
-            raise HTTPException(
-                status_code=500,
-                detail=f"More than one workflow with id {workflow_id} found",
-            )
-        elif workflow:
-            return workflow[0]
+        if workflow_id in self.CACHED_WORKFLOWS:
+            return self.CACHED_WORKFLOWS[workflow_id]
         else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Workflow {workflow_id} not found",
-            )
+            workflow = await get_raw_workflow(tenant_id, workflow_id)
+            if not workflow:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Workflow {workflow_id} not found",
+                )
+            workflow_yaml = yaml.safe_load(workflow)
+            workflow = await self.parser.parse(tenant_id, workflow_yaml)
+            if len(workflow) > 1:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"More than one workflow with id {workflow_id} found",
+                )
+            elif workflow:
+                self.CACHED_WORKFLOWS[workflow_id] = workflow[0]
+                return workflow[0]
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Workflow {workflow_id} not found",
+                )
 
     async def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
         logging.info("Parsing workflow from dict", extra={"workflow": workflow})

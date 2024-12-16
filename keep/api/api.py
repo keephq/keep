@@ -240,21 +240,21 @@ def get_app(
     #     tags={"launch_time": datetime.datetime.now().isoformat()}
     # )
 
-    from pyinstrument import Profiler
+    # from pyinstrument import Profiler
 
 
-    PROFILING = True  # Set this from a settings model
+    # PROFILING = True  # Set this from a settings model
 
-    if PROFILING:
-        @app.middleware("http")
-        async def profile_request(request: Request, call_next):
-            profiler = Profiler(async_mode="enabled")
-            profiler.start()
-            result = await call_next(request)
-            profiler.stop()
-            with open("profiler_output.html", "w") as f:
-                f.write(profiler.output_html())
-            return result
+    # if PROFILING:
+    #     @app.middleware("http")
+    #     async def profile_request(request: Request, call_next):
+    #         profiler = Profiler(async_mode="enabled")
+    #         profiler.start()
+    #         result = await call_next(request)
+    #         profiler.stop()
+    #         with open("profiler_output.html", "w") as f:
+    #             f.write(profiler.output_html())
+    #         return result
 
     @app.get("/")
     async def root():
