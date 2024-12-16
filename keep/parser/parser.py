@@ -1,4 +1,5 @@
 import copy
+import functools
 import json
 import logging
 import os
@@ -16,6 +17,10 @@ from keep.workflowmanager.workflow import Workflow, WorkflowStrategy
 
 
 class Parser:
+
+    CACHED_PROVIDERS_CONFIG = {}
+    CACHED_ACTIONS = {}
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
@@ -135,23 +140,36 @@ class Parser:
         workflow_actions: dict = None,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
-        workflow_id = self._get_workflow_id(tenant_id, workflow)
+        # workflow_id = self._get_workflow_id(tenant_id, workflow)  # OptimizationMatvey
 
         context_manager = ContextManager(
             tenant_id=tenant_id,
-            workflow_id=workflow_id,
-            last_workflow_execution=await get_last_workflow_execution_by_workflow_id(
-                tenant_id, workflow_id
-            )
+            workflow_id=None,
+            # workflow_id=workflow_id,
+            last_workflow_execution=None,
+            # last_workflow_execution=await get_last_workflow_execution_by_workflow_id(
+            #     tenant_id, workflow_id
+            # ) # OptimizationMatvey
         )
         # Parse the providers (from the workflow yaml or from the providers directory)
-        self._load_providers_config(
-            tenant_id, context_manager, workflow, providers_file, workflow_providers
-        )
-        # Parse the actions (from workflow, actions yaml and database)
-        self._load_actions_config(
-            tenant_id, context_manager, workflow, actions_file, workflow_actions
-        )
+        # OptimizationMatvey
+        if not tenant_id in self.__class__.CACHED_PROVIDERS_CONFIG:
+            self._load_providers_config(
+                tenant_id, context_manager, json.dumps(workflow), providers_file, workflow_providers
+            )
+            self.__class__.CACHED_PROVIDERS_CONFIG[tenant_id] = context_manager.providers_context
+        else:
+            context_manager.providers_context = self.__class__.CACHED_PROVIDERS_CONFIG[tenant_id]
+
+        # OptimizationMatvey
+        if not tenant_id in self.__class__.CACHED_ACTIONS:
+            self._load_actions_config(
+                tenant_id, context_manager, json.dumps(workflow), actions_file, workflow_actions
+            )
+            self.__class__.CACHED_ACTIONS[tenant_id] = context_manager.actions_context
+        else:
+            context_manager.actions_context = self.__class__.CACHED_ACTIONS[tenant_id]
+
         workflow_id = self._parse_id(workflow)
         workflow_disabled = self.__class__.parse_disabled(workflow)
         workflow_owners = self._parse_owners(workflow)
