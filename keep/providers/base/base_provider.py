@@ -156,6 +156,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             results = await self._notify(**kwargs)
         else:
             results = self._notify(**kwargs)
+            self.logger.warning(f"Provider {self.provider_type} notify method is not async")
 
         self.results.append(results)
         # if the alert should be enriched, enrich it
@@ -308,6 +309,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             results = await self._query(**kwargs)
         else:
             results = self._query(**kwargs)
+            self.logger.warning(f"Provider {self.provider_type} _query method is not async.")
         
         self.results.append(results)
         # now add the type of the results to the global context

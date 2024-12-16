@@ -112,7 +112,7 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
         workflow_yaml = yaml.safe_load(workflow)
-        workflow = self.parser.parse(tenant_id, workflow_yaml)
+        workflow = await self.parser.parse(tenant_id, workflow_yaml)
         if len(workflow) > 1:
             raise HTTPException(
                 status_code=500,
@@ -126,9 +126,9 @@ class WorkflowStore:
                 detail=f"Workflow {workflow_id} not found",
             )
 
-    def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
+    async def get_workflow_from_dict(self, tenant_id: str, workflow: dict) -> Workflow:
         logging.info("Parsing workflow from dict", extra={"workflow": workflow})
-        workflow = self.parser.parse(tenant_id, workflow)
+        workflow = await self.parser.parse(tenant_id, workflow)
         if workflow:
             return workflow[0]
         else:
@@ -158,7 +158,7 @@ class WorkflowStore:
         workflow_yamls = get_all_workflows_yamls(tenant_id)
         return workflow_yamls
 
-    def get_workflows_from_path(
+    async def get_workflows_from_path(
         self,
         tenant_id,
         workflow_path: str | tuple[str],
@@ -181,7 +181,7 @@ class WorkflowStore:
             for workflow_url in workflow_path:
                 workflow_yaml = self._parse_workflow_to_dict(workflow_url)
                 workflows.extend(
-                    self.parser.parse(
+                    await self.parser.parse(
                         tenant_id, workflow_yaml, providers_file, actions_file
                     )
                 )
@@ -193,13 +193,13 @@ class WorkflowStore:
             )
         else:
             workflow_yaml = self._parse_workflow_to_dict(workflow_path)
-            workflows = self.parser.parse(
+            workflows = await self.parser.parse(
                 tenant_id, workflow_yaml, providers_file, actions_file
             )
 
         return workflows
 
-    def _get_workflows_from_directory(
+    async def _get_workflows_from_directory(
         self,
         tenant_id,
         workflows_dir: str,
@@ -222,7 +222,7 @@ class WorkflowStore:
                 )
                 try:
                     workflows.extend(
-                        self.parser.parse(
+                        await self.parser.parse(
                             tenant_id,
                             parsed_workflow_yaml,
                             providers_file,

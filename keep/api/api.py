@@ -10,7 +10,7 @@ import uvicorn
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
@@ -115,14 +115,6 @@ async def startup():
     # check https://www.youtube.com/watch?v=7jtzjovKQ8A
     limiter = anyio.to_thread.current_default_thread_limiter()
     limiter.total_tokens = 1000
-
-    import pyroscope
-    import datetime
-    pyroscope.configure(
-    application_name = "my.python.app", # replace this with some name for your application
-    server_address   = "http://localhost:4040", # replace this with the address of your Pyroscope server
-    tags={"launch_time": datetime.datetime.now().isoformat()}
-    )
 
     # Start the scheduler
     if SCHEDULER:
@@ -239,6 +231,22 @@ def get_app(
         version=KEEP_VERSION,
         lifespan=lifespan,
     )
+
+    # from pyinstrument import Profiler
+
+
+    # PROFILING = True  # Set this from a settings model
+
+    # if PROFILING:
+    #     @app.middleware("http")
+    #     async def profile_request(request: Request, call_next):
+    #         profiler = Profiler(async_mode="enabled")
+    #         profiler.start()
+    #         result = await call_next(request)
+    #         profiler.stop()
+    #         with open("profiler_output.html", "w") as f:
+    #             f.write(profiler.output_html())
+    #         return result
 
     @app.get("/")
     async def root():

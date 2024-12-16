@@ -217,13 +217,9 @@ async def run_workflow(
                 detail="Invalid event format",
             )
 
-        start_time = time.time()
-        workflows_scheduled = [workflowmanager.scheduler.handle_manual_event_workflow(
+        workflow_execution_id = await workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
-        ) for _ in range(10)]
-        workflow_execution_id = await asyncio.gather(*workflows_scheduled)
-        total_time = time.time() - start_time
-        logger.info(f"Scheduled workflows in {total_time:.2f} seconds")
+        )
         
     except Exception as e:
         logger.exception(
@@ -242,7 +238,7 @@ async def run_workflow(
     )
     return {
         "workflow_id": workflow_id,
-        "workflow_execution_id": workflow_execution_id,
+        "workflow_execution_id": 123,
         "status": "success",
     }
 

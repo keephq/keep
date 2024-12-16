@@ -4,6 +4,7 @@ Clickhouse is a class that provides a way to read data from Clickhouse.
 
 from copy import deepcopy
 import dataclasses
+import datetime
 import os
 
 import asyncio
@@ -65,6 +66,7 @@ class ClickhouseProvider(BaseProvider):
             alias="Connect to the server",
         )
     ]
+    SHARED_CLIENT = {}  # Caching the client to avoid creating a new one for each query
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -99,6 +101,8 @@ class ClickhouseProvider(BaseProvider):
         """
         Generates a Clickhouse client.
         """
+        if self.context_manager.tenant_id + self.provider_id in ClickhouseProvider.SHARED_CLIENT:
+            return ClickhouseProvider.SHARED_CLIENT[self.context_manager.tenant_id + self.provider_id]
 
         user = self.authentication_config.username
         password = self.authentication_config.password
@@ -113,6 +117,7 @@ class ClickhouseProvider(BaseProvider):
             password=password,
             database=database,
         )
+        ClickhouseProvider.SHARED_CLIENT[self.context_manager.tenant_id + self.provider_id] = client
 
         return client
 
@@ -123,6 +128,7 @@ class ClickhouseProvider(BaseProvider):
         self.authentication_config = ClickhouseProviderAuthConfig(
             **self.config.authentication
         )
+        return True
 
     async def _query(self, query="", single_row=False, **kwargs: dict) -> list | tuple:
         """
@@ -140,6 +146,7 @@ class ClickhouseProvider(BaseProvider):
         Returns:
             list | tuple: list of results or single result if single_row is True
         """
+        # return {'dt': datetime.datetime(2024, 12, 4, 6, 37, 22), 'customer_id': 99999999, 'total_spent': 19.850000381469727}
         client = await self.__generate_client()
         results = await client.query(query, **kwargs)
         rows = results.result_rows
@@ -152,7 +159,6 @@ class ClickhouseProvider(BaseProvider):
             return results[0]
 
         return results
-        # return {'dt': datetime.datetime(2024, 12, 4, 6, 37, 22), 'customer_id': 99999999, 'total_spent': 19.850000381469727}
 
 
 if __name__ == "__main__":

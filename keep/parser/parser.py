@@ -7,7 +7,7 @@ import typing
 import yaml
 
 from keep.actions.actions_factory import ActionsCRUD
-from keep.api.core.db import get_workflow_id
+from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_workflow_id
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.providers_factory import ProvidersFactory
 from keep.step.step import Step, StepType
@@ -47,7 +47,7 @@ class Parser:
             workflow_id = workflow_name
         return workflow_id
 
-    def parse(
+    async def parse(
         self,
         tenant_id,
         parsed_workflow_yaml: dict,
@@ -71,7 +71,7 @@ class Parser:
                 "workflows"
             ) or parsed_workflow_yaml.get("alerts")
             workflows = [
-                self._parse_workflow(
+                await self._parse_workflow(
                     tenant_id,
                     workflow,
                     providers_file,
@@ -86,7 +86,7 @@ class Parser:
             raw_workflow = parsed_workflow_yaml.get(
                 "workflow"
             ) or parsed_workflow_yaml.get("alert")
-            workflow = self._parse_workflow(
+            workflow = await self._parse_workflow(
                 tenant_id,
                 raw_workflow,
                 providers_file,
@@ -97,7 +97,7 @@ class Parser:
             workflows = [workflow]
         # else, if it stored in the db, it stored without the "workflow" key
         else:
-            workflow = self._parse_workflow(
+            workflow = await self._parse_workflow(
                 tenant_id,
                 parsed_workflow_yaml,
                 providers_file,
@@ -125,7 +125,7 @@ class Parser:
                 )
         return provider_types
 
-    def _parse_workflow(
+    async def _parse_workflow(
         self,
         tenant_id,
         workflow: dict,
@@ -136,9 +136,13 @@ class Parser:
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
+
         context_manager = ContextManager(
             tenant_id=tenant_id,
             workflow_id=workflow_id,
+            last_workflow_execution=await get_last_workflow_execution_by_workflow_id(
+                tenant_id, workflow_id
+            )
         )
         # Parse the providers (from the workflow yaml or from the providers directory)
         self._load_providers_config(

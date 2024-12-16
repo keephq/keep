@@ -155,6 +155,7 @@ class WorkflowScheduler:
                 error=None,
             )
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
+        return True
 
     def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
 
@@ -258,20 +259,14 @@ class WorkflowScheduler:
                 "triggered_by_user": triggered_by_user,
             },
         )
-        with self.lock:
-            event.trigger = "manual"
-            self.workflows_to_run.append(
-                {
-                    "workflow_id": workflow_id,
-                    "workflow_execution_id": workflow_execution_id,
-                    "tenant_id": tenant_id,
-                    "triggered_by": "manual",
-                    "triggered_by_user": triggered_by_user,
-                    "event": event,
-                    "retry": True,
-                }
-            )
-        return workflow_execution_id
+        event.trigger = "manual"
+        workflow = await self.workflow_store.get_workflow(
+            workflow_id=workflow_id, tenant_id=tenant_id
+        )
+        if await self._run_workflow(tenant_id, workflow_id, workflow, workflow_execution_id, event):
+            return workflow_execution_id
+        else:
+            raise Exception("Failed to run workflow")
 
     def _get_unique_execution_number(self, fingerprint=None):
         """
@@ -560,7 +555,7 @@ class WorkflowScheduler:
         error=None,
     ):
         # mark the workflow execution as finished in the db
-        finish_workflow_execution_db(
+        await finish_workflow_execution_db(
             tenant_id=tenant_id,
             workflow_id=workflow_id,
             execution_id=workflow_execution_id,

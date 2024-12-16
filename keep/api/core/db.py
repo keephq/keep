@@ -36,10 +36,11 @@ from sqlalchemy import (
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError, InvalidRequestError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
@@ -81,6 +82,8 @@ load_dotenv(find_dotenv())
 
 
 engine = create_db_engine()
+engine_async = create_db_engine(_async=True)
+
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
@@ -144,7 +147,7 @@ async def create_workflow_execution(
     execution_id: str = None,
     event_type: str = "alert",
 ) -> str:
-    with Session(engine) as session:
+    async with AsyncSession(engine_async) as session:
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
@@ -159,7 +162,7 @@ async def create_workflow_execution(
             )
             session.add(workflow_execution)
             # Ensure the object has an id
-            session.flush()
+            await session.flush()
             execution_id = workflow_execution.id
             if fingerprint and event_type == "alert":
                 workflow_to_alert_execution = WorkflowToAlertExecution(
@@ -176,10 +179,10 @@ async def create_workflow_execution(
                 )
                 session.add(workflow_to_incident_execution)
 
-            session.commit()
+            await session.commit()
             return execution_id
         except IntegrityError:
-            session.rollback()
+            await session.rollback()
             logger.debug(
                 f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
             )
@@ -467,18 +470,19 @@ def get_last_workflow_workflow_to_alert_executions(
     return latest_workflow_to_alert_executions
 
 
-def get_last_workflow_execution_by_workflow_id(
+async def get_last_workflow_execution_by_workflow_id(
     tenant_id: str, workflow_id: str
 ) -> Optional[WorkflowExecution]:
-    with Session(engine) as session:
+    async with AsyncSession(engine_async) as session:
+        q = select(WorkflowExecution).filter(
+            WorkflowExecution.workflow_id == workflow_id
+        ).filter(WorkflowExecution.tenant_id == tenant_id).filter(
+            WorkflowExecution.started >= datetime.now() - timedelta(days=7)
+        ).filter(WorkflowExecution.status == "success").order_by(
+            WorkflowExecution.started.desc()
+        )
         workflow_execution = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.workflow_id == workflow_id)
-            .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
-            .filter(WorkflowExecution.status == "success")
-            .order_by(WorkflowExecution.started.desc())
-            .first()
+            (await session.exec(q)).first()
         )
     return workflow_execution
 
@@ -566,27 +570,25 @@ def get_all_workflows_yamls(tenant_id: str) -> List[str]:
         ).all()
     return workflows
 
-from cachetools import TTLCache
-from aiocache import cached
-
-@cached(ttl=60)
 async def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
-    with Session(engine) as session:
+    async with AsyncSession(engine_async) as session:
         # if the workflow id is uuid:
         if validators.uuid(workflow_id):
-            workflow = session.exec(
+            workflow = await session.exec(
                 select(Workflow)
                 .where(Workflow.tenant_id == tenant_id)
                 .where(Workflow.id == workflow_id)
                 .where(Workflow.is_deleted == False)
-            ).first()
+            )
+            workflow = workflow.first()
         else:
-            workflow = session.exec(
+            workflow = await session.exec(
                 select(Workflow)
                 .where(Workflow.tenant_id == tenant_id)
                 .where(Workflow.name == workflow_id)
                 .where(Workflow.is_deleted == False)
-            ).first()
+            )
+            workflow = workflow.first()
     if not workflow:
         return None
     return workflow
@@ -641,14 +643,14 @@ def get_consumer_providers() -> List[Provider]:
     return providers
 
 
-def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
-    with Session(engine) as session:
-        workflow_execution = session.exec(
+async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
+    async with AsyncSession(engine_async) as session:
+        workflow_execution = (await session.exec(
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id == execution_id)
-        ).first()
+        )).first()
         # some random number to avoid collisions
         if not workflow_execution:
             logger.warning(
@@ -665,7 +667,7 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
         # TODO: logs
-        session.commit()
+        await session.commit()
 
 
 def get_workflow_executions(

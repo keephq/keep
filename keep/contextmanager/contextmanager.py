@@ -1,5 +1,7 @@
 # TODO - refactor context manager to support multitenancy in a more robust way
+import asyncio
 import logging
+from typing import Optional
 
 import click
 from pympler.asizeof import asizeof
@@ -7,10 +9,17 @@ from pympler.asizeof import asizeof
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.logging import WorkflowLoggerAdapter
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.workflow import WorkflowExecution
 
 
 class ContextManager:
-    def __init__(self, tenant_id, workflow_id=None, workflow_execution_id=None):
+    def __init__(
+            self, 
+            tenant_id, 
+            workflow_id=None, 
+            workflow_execution_id=None,
+            last_workflow_execution = Optional[WorkflowExecution]
+        ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(
             self.logger, self, tenant_id, workflow_id, workflow_execution_id
@@ -39,9 +48,10 @@ class ContextManager:
         self.last_workflow_run_time = None
         if self.workflow_id:
             try:
-                last_workflow_execution = get_last_workflow_execution_by_workflow_id(
-                    tenant_id, workflow_id
-                )
+                if last_workflow_execution is None:
+                    last_workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+                        tenant_id, workflow_id
+                    ))
                 if last_workflow_execution is not None:
                     self.last_workflow_execution_results = (
                         last_workflow_execution.results
@@ -235,7 +245,7 @@ class ContextManager:
         self.current_step_vars = _vars
         self.steps_context[step_id]["vars"] = _vars
 
-    def get_last_workflow_run(self, workflow_id):
+    async def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)
 
     def dump(self):
