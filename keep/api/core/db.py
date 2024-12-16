@@ -4811,21 +4811,21 @@ def set_last_alert(
                     last_alert.alert_id = alert.id
                     session.add(last_alert)
 
-                    elif not last_alert:
-                        logger.info(
-                            f"No last alert for `{alert.fingerprint}`, creating new"
-                        )
-                        last_alert = LastAlert(
-                            tenant_id=tenant_id,
-                            fingerprint=alert.fingerprint,
-                            timestamp=alert.timestamp,
-                            first_timestamp=alert.timestamp,
-                            alert_id=alert.id,
-                        alert_hash=alert.alert_hash,
+                elif not last_alert:
+                    logger.info(
+                        f"No last alert for `{alert.fingerprint}`, creating new"
                     )
+                    last_alert = LastAlert(
+                        tenant_id=tenant_id,
+                        fingerprint=alert.fingerprint,
+                        timestamp=alert.timestamp,
+                        first_timestamp=alert.timestamp,
+                        alert_id=alert.id,
+                    alert_hash=alert.alert_hash,
+                )
 
-                    session.add(last_alert)
-                    session.commit()
+                session.add(last_alert)
+                session.commit()
             except OperationalError as ex:
                 if "no such savepoint" in ex.args[0]:
                     logger.info(
