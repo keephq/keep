@@ -359,6 +359,8 @@ def update_preset(
 ) -> PresetDto:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Updating preset", extra={"uuid": uuid})
+    if isinstance(uuid, str):
+        uuid = uuid.UUID(uuid)
     statement = (
         select(Preset).where(Preset.tenant_id == tenant_id).where(Preset.id == uuid)
     )

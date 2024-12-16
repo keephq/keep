@@ -2813,6 +2813,9 @@ def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
 
 
 def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
+    if isinstance(preset_id, str):
+        preset_id = __convert_to_uuid(preset_id)
+
     with Session(engine) as session:
         preset = session.exec(
             select(Preset)
@@ -4145,6 +4148,8 @@ def create_tag(tag: Tag):
 
 
 def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
+    if isinstance(preset_id, str):
+        preset_id = __convert_to_uuid(preset_id)
     with Session(engine) as session:
         tag_preset = PresetTagLink(
             tenant_id=tenant_id,
