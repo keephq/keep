@@ -125,12 +125,7 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   </LinkWithIcon>
                 </li>
               )}
-              {session && isMounted && (
-                <CustomPresetAlertLinks
-                  session={session}
-                  selectedTags={storedTags}
-                />
-              )}
+              <CustomPresetAlertLinks selectedTags={storedTags} />
             </Disclosure.Panel>
           </>
         )}

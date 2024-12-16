@@ -110,9 +110,11 @@ export default function Alerts({ presetName }: AlertsProps) {
     }
   }, [mutateAlerts, pollAlerts]);
 
-  if (!selectedPreset && isPresetsLoading) {
+  if (!selectedPreset || !api.isReady()) {
+    // if we don't have presets data yet, just show loading
     return <Loading />;
   }
+
   if (!selectedPreset) {
     return <NotFound />;
   }
@@ -133,7 +135,20 @@ export default function Alerts({ presetName }: AlertsProps) {
       />
 
       {selectedPreset && (
-        <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
+        <>
+          <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
+          <AlertDismissModal
+            alert={dismissModalAlert}
+            preset={selectedPreset.name}
+            handleClose={() => setDismissModalAlert(null)}
+          />
+          <AlertChangeStatusModal
+            alert={changeStatusAlert}
+            presetName={selectedPreset.name}
+            handleClose={() => setChangeStatusAlert(null)}
+          />
+          <AlertMethodModal presetName={selectedPreset.name} />
+        </>
       )}
       <AlertAssignTicketModal
         handleClose={() => setTicketModalAlert(null)}
@@ -144,20 +159,9 @@ export default function Alerts({ presetName }: AlertsProps) {
         handleClose={() => setNoteModalAlert(null)}
         alert={noteModalAlert ?? null}
       />
-      {selectedPreset && <AlertMethodModal presetName={selectedPreset.name} />}
       <ManualRunWorkflowModal
         alert={runWorkflowModalAlert}
         handleClose={() => setRunWorkflowModalAlert(null)}
-      />
-      <AlertDismissModal
-        alert={dismissModalAlert}
-        preset={selectedPreset.name}
-        handleClose={() => setDismissModalAlert(null)}
-      />
-      <AlertChangeStatusModal
-        alert={changeStatusAlert}
-        presetName={selectedPreset.name}
-        handleClose={() => setChangeStatusAlert(null)}
       />
       <ViewAlertModal
         alert={viewAlertModal}
