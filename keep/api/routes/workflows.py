@@ -342,6 +342,33 @@ async def create_workflow(
         )
 
 
+@router.get("/executions", description="Get workflow executions by alert fingerprint")
+def get_workflow_executions_by_alert_fingerprint(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> list[WorkflowToAlertExecutionDTO]:
+    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
+        latest_workflow_to_alert_executions = (
+            get_last_workflow_workflow_to_alert_executions(
+                session=session, tenant_id=authenticated_entity.tenant_id
+            )
+        )
+
+    return [
+        WorkflowToAlertExecutionDTO(
+            workflow_id=workflow_execution.workflow_execution.workflow_id,
+            workflow_execution_id=workflow_execution.workflow_execution_id,
+            alert_fingerprint=workflow_execution.alert_fingerprint,
+            workflow_status=workflow_execution.workflow_execution.status,
+            workflow_started=workflow_execution.workflow_execution.started,
+            event_id=workflow_execution.event_id,
+        )
+        for workflow_execution in latest_workflow_to_alert_executions
+    ]
+
+
 @router.post(
     "/json",
     description="Create or update a workflow",
@@ -538,32 +565,6 @@ def get_workflow_by_id(
     except yaml.YAMLError:
         logger.exception("Invalid YAML format")
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
-
-
-@router.get("/executions", description="Get workflow executions by alert fingerprint")
-def get_workflow_executions_by_alert_fingerprint(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
-    ),
-    session: Session = Depends(get_session),
-) -> list[WorkflowToAlertExecutionDTO]:
-    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
-        latest_workflow_to_alert_executions = (
-            get_last_workflow_workflow_to_alert_executions(
-                session=session, tenant_id=authenticated_entity.tenant_id
-            )
-        )
-
-    return [
-        WorkflowToAlertExecutionDTO(
-            workflow_id=workflow_execution.workflow_execution.workflow_id,
-            workflow_execution_id=workflow_execution.workflow_execution_id,
-            alert_fingerprint=workflow_execution.alert_fingerprint,
-            workflow_status=workflow_execution.workflow_execution.status,
-            workflow_started=workflow_execution.workflow_execution.started,
-        )
-        for workflow_execution in latest_workflow_to_alert_executions
-    ]
 
 
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")

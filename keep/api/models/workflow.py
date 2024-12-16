@@ -101,6 +101,7 @@ class WorkflowToAlertExecutionDTO(BaseModel):
     alert_fingerprint: str
     workflow_status: str
     workflow_started: datetime
+    event_id: str | None
 
 
 class WorkflowExecutionDTO(BaseModel):
