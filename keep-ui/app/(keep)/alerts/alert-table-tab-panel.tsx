@@ -84,8 +84,6 @@ export default function AlertTableTabPanel({
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
       presetName={preset.name}
-      presetPrivate={preset.is_private}
-      presetNoisy={preset.is_noisy}
       presetStatic={preset.name === "feed"}
       presetId={preset.id}
       presetTabs={presetTabs}

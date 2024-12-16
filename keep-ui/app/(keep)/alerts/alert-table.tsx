@@ -25,7 +25,7 @@ import {
   DEFAULT_COLS,
 } from "./alert-table-utils";
 import AlertActions from "./alert-actions";
-import AlertPresets from "./alert-presets";
+import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
@@ -44,8 +44,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
-  presetPrivate?: boolean;
-  presetNoisy?: boolean;
   presetStatic?: boolean;
   presetId?: string;
   presetTabs?: PresetTab[];
@@ -63,8 +61,6 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
-  presetPrivate = false,
-  presetNoisy = false,
   presetStatic = false,
   presetId = "",
   presetTabs = [],
@@ -296,15 +292,7 @@ export function AlertTable({
             isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <CopilotKit runtimeUrl="/api/copilotkit">
-            <AlertPresets
-              table={table}
-              presetNameFromApi={presetName}
-              isLoading={isAsyncLoading}
-              presetPrivate={presetPrivate}
-              presetNoisy={presetNoisy}
-            />
-          </CopilotKit>
+          <AlertPresetManager table={table} presetName={presetName} />
         )}
       </div>
 

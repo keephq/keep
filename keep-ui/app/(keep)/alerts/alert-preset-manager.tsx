@@ -9,15 +9,15 @@ import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresets } from "@/entities/presets/model/usePresets";
+import { CopilotKit } from "@copilotkit/react-core";
 
 interface Props {
-  presetNameFromApi: string;
+  presetName: string;
+  // TODO: pass specific functions not the whole table?
   table: Table<AlertDto>;
-  presetPrivate?: boolean;
-  presetNoisy?: boolean;
 }
 
-export default function AlertPresets({ presetNameFromApi, table }: Props) {
+export function AlertPresetManager({ presetName, table }: Props) {
   const { deletePreset } = usePresetActions();
   const { dynamicPresets } = usePresets({
     revalidateOnFocus: false,
@@ -26,10 +26,9 @@ export default function AlertPresets({ presetNameFromApi, table }: Props) {
   const selectedPreset = useMemo(() => {
     return dynamicPresets?.find(
       (p) =>
-        p.name.toLowerCase() ===
-        decodeURIComponent(presetNameFromApi).toLowerCase()
+        p.name.toLowerCase() === decodeURIComponent(presetName).toLowerCase()
     ) as Preset | undefined;
-  }, [dynamicPresets, presetNameFromApi]);
+  }, [dynamicPresets, presetName]);
   const [presetCEL, setPresetCEL] = useState("");
 
   // modal
@@ -85,13 +84,15 @@ export default function AlertPresets({ presetNameFromApi, table }: Props) {
         onClose={handleModalClose}
         className="w-[40%] max-w-screen-2xl max-h-[710px] transform overflow-auto ring-tremor bg-white p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
       >
-        <CreateOrUpdatePresetForm
-          key={idToUpdate}
-          presetId={idToUpdate}
-          presetData={presetData}
-          onCreateOrUpdate={onCreateOrUpdatePreset}
-          onCancel={handleModalClose}
-        />
+        <CopilotKit runtimeUrl="/api/copilotkit">
+          <CreateOrUpdatePresetForm
+            key={idToUpdate}
+            presetId={idToUpdate}
+            presetData={presetData}
+            onCreateOrUpdate={onCreateOrUpdatePreset}
+            onCancel={handleModalClose}
+          />
+        </CopilotKit>
       </Modal>
     </>
   );

@@ -14,7 +14,7 @@ import { AlertsCountBadge } from "./alerts-count-badge";
 import { TbSparkles } from "react-icons/tb";
 import { MultiValue } from "react-select";
 import { useTags } from "@/utils/hooks/useTags";
-import { Preset, PresetCreateUpdateDto } from "@/entities/presets/model/types";
+import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 
 interface TagOption {
