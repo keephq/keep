@@ -11,19 +11,25 @@ import {
   edgeLabelBgStyleNoHover,
   edgeMarkerEndNoHover,
 } from "@/app/(keep)/topology/ui/map/styles";
+import { IncidentDto } from "@/entities/incidents/model";
 
 export function getNodesAndEdgesFromTopologyData(
   topologyData: TopologyService[],
-  applicationsMap: Map<string, TopologyApplication>
+  applicationsMap: Map<string, TopologyApplication>,
+  allIncidents: IncidentDto[]
 ) {
   const nodeMap = new Map<string, TopologyNode>();
   const edgeMap = new Map<string, Edge>();
+  const allServices = topologyData.map((data) => data.display_name);
   // Create nodes from service definitions
   for (const service of topologyData) {
+    const numIncidentsToService = allIncidents.filter((incident) =>
+      incident.services.includes(service.display_name)
+    );
     const node: ServiceNodeType = {
       id: service.service.toString(),
       type: "service",
-      data: service,
+      data: { ...service, incidents: numIncidentsToService.length },
       position: { x: 0, y: 0 }, // Dagre will handle the actual positioning
       selectable: true,
     };

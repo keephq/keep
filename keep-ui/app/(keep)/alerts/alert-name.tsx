@@ -4,11 +4,11 @@ import {
   TicketIcon,
   TrashIcon,
   PencilSquareIcon,
-  Cog8ToothIcon,
+  // Cog8ToothIcon,
 } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
 import { AlertDto, AlertToWorkflowExecution } from "./models";
-import { useWorkflowExecutions } from "utils/hooks/useWorkflowExecutions";
+// import { useWorkflowExecutions } from "utils/hooks/useWorkflowExecutions";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -22,7 +22,8 @@ export default function AlertName({
   setTicketModalAlert,
 }: Props) {
   const router = useRouter();
-  const { data: executions } = useWorkflowExecutions();
+  // TODO: fix this so we can show which alert had workflow execution
+  // const { data: executions } = useWorkflowExecutions();
 
   const handleNoteClick = () => {
     if (setNoteModalAlert) {
@@ -38,9 +39,9 @@ export default function AlertName({
     }
   };
 
-  const relevantWorkflowExecution =
-    executions?.find((wf) => wf.alert_fingerprint === alert.fingerprint) ??
-    null;
+  const relevantWorkflowExecution: AlertToWorkflowExecution | null = null;
+  // executions?.find((wf) => wf.alert_fingerprint === alert.fingerprint) ??
+  // null;
 
   const {
     name,
@@ -131,7 +132,7 @@ export default function AlertName({
             variant="solid"
           />
         )}
-        {relevantWorkflowExecution && (
+        {/* {relevantWorkflowExecution && (
           <Icon
             icon={Cog8ToothIcon}
             size="xs"
@@ -139,21 +140,21 @@ export default function AlertName({
               relevantWorkflowExecution.workflow_status === "success"
                 ? "green"
                 : relevantWorkflowExecution.workflow_status === "error"
-                ? "red"
-                : "gray"
+                  ? "red"
+                  : "gray"
             }`}
             tooltip={`${
               relevantWorkflowExecution.workflow_status === "success"
                 ? "Last workflow executed successfully"
                 : relevantWorkflowExecution.workflow_status === "error"
-                ? "Last workflow execution failed"
-                : undefined
+                  ? "Last workflow execution failed"
+                  : undefined
             }`}
             onClick={() => handleWorkflowClick(relevantWorkflowExecution)}
             className="ml-1 cursor-pointer"
             variant="solid"
           />
-        )}
+        )} */}
       </div>
     </div>
   );
