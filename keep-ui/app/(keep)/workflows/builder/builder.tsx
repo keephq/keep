@@ -16,7 +16,6 @@ import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import Modal from "react-modal";
 import { Alert } from "./alert";
 import BuilderModalContent from "./builder-modal";
-import { useApiUrl } from "utils/hooks/useConfig";
 import Loader from "./loader";
 import { stringify } from "yaml";
 import { useSearchParams } from "next/navigation";
@@ -344,6 +343,7 @@ function Builder({
         <BuilderWorkflowTestRunModalContent
           closeModal={closeWorkflowExecutionResultsModal}
           workflowExecution={runningWorkflowExecution}
+          apiClient={api}
         />
       </Modal>
       {generateModalIsOpen || testRunModalOpen ? null : (

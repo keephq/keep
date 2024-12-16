@@ -118,7 +118,7 @@ export function ExecutionResults({
   api,
 }: {
   executionData: WorkflowExecution | WorkflowExecutionFailure;
-  workflowData: any;
+  workflowData?: any;
   checks?: number;
   api: ApiClient;
 }) {
@@ -141,10 +141,13 @@ export function ExecutionResults({
   const getCurlCommand = () => {
     let token = api.getToken();
     let url = api.getApiBaseUrl();
-    return `curl -X POST "${url}/workflows/${workflowData.id}/run?event_type=${eventType}&event_id=${eventId}" \\
+    // Only include workflow ID if workflowData is available
+    const workflowIdParam = workflowData ? `/${workflowData.id}` : "";
+    return `curl -X POST "${url}/workflows${workflowIdParam}/run?event_type=${eventType}&event_id=${eventId}" \\
   -H "Authorization: Bearer ${token}" \\
   -H "Content-Type: application/json"`;
   };
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getCurlCommand());
   };
