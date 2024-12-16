@@ -52,7 +52,7 @@ export function usePresetActions() {
         showSuccessToast(`Preset ${data.name} created!`);
         return response;
       } catch (error) {
-        showErrorToast(error, "Failed to update preset");
+        showErrorToast(error, "Failed to create preset");
       }
     },
     [api, mutatePresetsList, mutateTags]
