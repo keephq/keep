@@ -1589,16 +1589,16 @@ def get_workflow_by_name(tenant_id, workflow_name):
         return workflow
 
 
-def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
-    with Session(engine) as session:
-        previous_execution = session.exec(
+async def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
+    async with AsyncSession(engine_async) as session:
+        previous_execution = (await session.exec(
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id != workflow_execution_id)
             .order_by(WorkflowExecution.started.desc())
             .limit(1)
-        ).first()
+        )).first()
         if previous_execution:
             return previous_execution
         else:

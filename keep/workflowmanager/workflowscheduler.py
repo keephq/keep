@@ -563,7 +563,7 @@ class WorkflowScheduler:
             error=error,
         )
         # get the previous workflow execution id
-        previous_execution = get_previous_execution_id(
+        previous_execution = await get_previous_execution_id(
             tenant_id, workflow_id, workflow_execution_id
         )
         # if error, send an email
