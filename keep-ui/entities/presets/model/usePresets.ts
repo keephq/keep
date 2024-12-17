@@ -20,7 +20,7 @@ type UsePresetsOptions = {
   filters?: string;
 } & SWRConfiguration;
 
-const checkPresetAccess = (preset: Preset, session: Session | null) => {
+const checkPresetAccess = (preset: Preset, session: Session) => {
   if (!preset.is_private) {
     return true;
   }
@@ -85,6 +85,9 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
 
   const updateLocalPresets = useCallback(
     (presets: Preset[]) => {
+      if (!session) {
+        return;
+      }
       // TODO: if the new preset coming from the server is not in the local storage, add it to the local storage
       // Keep the order from the local storage, update the data from the server
       const newDynamicPresets = combineOrder(
@@ -132,15 +135,22 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
   );
 
   const dynamicPresets = useMemo(() => {
-    if (!allPresets) {
+    if (error) {
+      return [];
+    }
+    if (!allPresets || !session) {
       return localDynamicPresets;
     }
     const dynamicPresets = allPresets
       .filter((preset) => !STATIC_PRESETS_NAMES.includes(preset.name))
       .filter((preset) => checkPresetAccess(preset, session));
     return combineOrder(dynamicPresets, localDynamicPresets);
-  }, [allPresets, localDynamicPresets, session]);
+  }, [allPresets, error, localDynamicPresets, session]);
+
   const staticPresets = useMemo(() => {
+    if (error) {
+      return [];
+    }
     if (!allPresets) {
       return localStaticPresets;
     }
@@ -148,7 +158,7 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
       STATIC_PRESETS_NAMES.includes(preset.name)
     );
     return combineOrder(staticPresets, localStaticPresets);
-  }, [allPresets, localStaticPresets]);
+  }, [allPresets, error, localStaticPresets]);
 
   return {
     dynamicPresets,
