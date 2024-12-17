@@ -2189,23 +2189,30 @@ def update_key_last_used(
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
+    # Alert table may be too huge, so cutting the query without mercy
+    LIMIT_BY_ALERTS = 10000
+
     with Session(engine) as session:
-        providers = (
-            session.query(
-                Alert.provider_type,
-                Alert.provider_id,
-                func.max(Alert.timestamp).label("last_alert_timestamp"),
+        alerts_subquery = select(Alert).filter(
+            Alert.tenant_id == tenant_id,
+            Alert.provider_type != "group"
+        ).limit(LIMIT_BY_ALERTS).subquery()
+
+        providers = session.exec(
+            select(
+                alerts_subquery.c.provider_type,
+                alerts_subquery.c.provider_id,
+                func.max(alerts_subquery.c.timestamp).label("last_alert_timestamp")
             )
-            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .select_from(alerts_subquery)
             .filter(
-                Alert.tenant_id == tenant_id,
-                Alert.provider_type != "group",
-                Provider.id
-                == None,  # Filters for alerts with a provider_id not in Provider table
+                ~exists().where(Provider.id == alerts_subquery.c.provider_id)
             )
-            .group_by(Alert.provider_type, Alert.provider_id)
-            .all()
-        )
+            .group_by(
+                alerts_subquery.c.provider_type, 
+                alerts_subquery.c.provider_id
+            )
+        ).all()
 
     return providers
 
