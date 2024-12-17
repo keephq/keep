@@ -14,7 +14,6 @@ import {
   SortingState,
   getSortedRowModel,
 } from "@tanstack/react-table";
-import { CopilotKit } from "@copilotkit/react-core";
 import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -25,7 +24,7 @@ import {
   DEFAULT_COLS,
 } from "./alert-table-utils";
 import AlertActions from "./alert-actions";
-import AlertPresets from "./alert-presets";
+import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
 import { severityMapping } from "./models";
@@ -33,6 +32,7 @@ import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface PresetTab {
   name: string;
@@ -44,8 +44,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
-  presetPrivate?: boolean;
-  presetNoisy?: boolean;
   presetStatic?: boolean;
   presetId?: string;
   presetTabs?: PresetTab[];
@@ -63,8 +61,6 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
-  presetPrivate = false,
-  presetNoisy = false,
   presetStatic = false,
   presetId = "",
   presetTabs = [],
@@ -76,6 +72,8 @@ export function AlertTable({
   setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const { data: configData } = useConfig();
+  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
@@ -137,9 +135,9 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "noise", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>(
+    noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
+  );
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -218,6 +216,10 @@ export function AlertTable({
     });
   });
 
+  const leftPinnedColumns = noisyAlertsEnabled
+    ? ["severity", "checkbox", "noise"]
+    : ["severity", "checkbox"];
+
   const table = useReactTable({
     data: filteredAlerts,
     columns: columns,
@@ -226,7 +228,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: ["severity", "checkbox", "noise"],
+        left: leftPinnedColumns,
         right: ["alertMenu"],
       },
       sorting: sorting,
@@ -296,15 +298,7 @@ export function AlertTable({
             isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <CopilotKit runtimeUrl="/api/copilotkit">
-            <AlertPresets
-              table={table}
-              presetNameFromApi={presetName}
-              isLoading={isAsyncLoading}
-              presetPrivate={presetPrivate}
-              presetNoisy={presetNoisy}
-            />
-          </CopilotKit>
+          <AlertPresetManager table={table} presetName={presetName} />
         )}
       </div>
 
