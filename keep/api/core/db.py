@@ -665,8 +665,8 @@ def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, erro
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
-        #   and then we can remove the [:255] from here
-        workflow_execution.error = error[:255] if error else None
+        #   and then we can remove the [:511] from here
+        workflow_execution.error = error[:511] if error else None
         workflow_execution.execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
@@ -837,7 +837,11 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
                 WorkflowExecution.id == workflow_execution_id,
                 WorkflowExecution.tenant_id == tenant_id,
             )
-            .options(joinedload(WorkflowExecution.logs))
+            .options(
+                joinedload(WorkflowExecution.logs),
+                joinedload(WorkflowExecution.workflow_to_alert_execution),
+                joinedload(WorkflowExecution.workflow_to_incident_execution),
+            )
             .one()
         )
     return execution_with_logs
@@ -1431,6 +1435,18 @@ def get_alert_by_fingerprint_and_event_id(
             .filter(Alert.id == uuid.UUID(event_id))
             .first()
         )
+    return alert
+
+
+def get_alert_by_event_id(tenant_id: str, event_id: str) -> Alert:
+    with Session(engine) as session:
+        query = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.id == uuid.UUID(event_id))
+        )
+        query = query.options(subqueryload(Alert.alert_enrichment))
+        alert = query.first()
     return alert
 
 
@@ -2185,23 +2201,30 @@ def update_key_last_used(
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
+    # Alert table may be too huge, so cutting the query without mercy
+    LIMIT_BY_ALERTS = 10000
+
     with Session(engine) as session:
-        providers = (
-            session.query(
-                Alert.provider_type,
-                Alert.provider_id,
-                func.max(Alert.timestamp).label("last_alert_timestamp"),
+        alerts_subquery = select(Alert).filter(
+            Alert.tenant_id == tenant_id,
+            Alert.provider_type != "group"
+        ).limit(LIMIT_BY_ALERTS).subquery()
+
+        providers = session.exec(
+            select(
+                alerts_subquery.c.provider_type,
+                alerts_subquery.c.provider_id,
+                func.max(alerts_subquery.c.timestamp).label("last_alert_timestamp")
             )
-            .outerjoin(Provider, Alert.provider_id == Provider.id)
+            .select_from(alerts_subquery)
             .filter(
-                Alert.tenant_id == tenant_id,
-                Alert.provider_type != "group",
-                Provider.id
-                == None,  # Filters for alerts with a provider_id not in Provider table
+                ~exists().where(Provider.id == alerts_subquery.c.provider_id)
             )
-            .group_by(Alert.provider_type, Alert.provider_id)
-            .all()
-        )
+            .group_by(
+                alerts_subquery.c.provider_type, 
+                alerts_subquery.c.provider_id
+            )
+        ).all()
 
     return providers
 
@@ -2825,6 +2848,9 @@ def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
 
 
 def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
+    if isinstance(preset_id, str):
+        preset_id = __convert_to_uuid(preset_id)
+
     with Session(engine) as session:
         preset = session.exec(
             select(Preset)
@@ -4157,6 +4183,8 @@ def create_tag(tag: Tag):
 
 
 def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
+    if isinstance(preset_id, str):
+        preset_id = __convert_to_uuid(preset_id)
     with Session(engine) as session:
         tag_preset = PresetTagLink(
             tenant_id=tenant_id,

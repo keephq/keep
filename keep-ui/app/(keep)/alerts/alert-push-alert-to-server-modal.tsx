@@ -80,6 +80,11 @@ const PushAlertToServerModal = ({
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     try {
+      // if type is string, parse it to JSON
+      if (typeof data.alertJson === "string") {
+        data.alertJson = JSON.parse(data.alertJson);
+      }
+
       const response = await api.post(
         `/alerts/event/${data.source.type}`,
         data.alertJson
