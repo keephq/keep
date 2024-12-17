@@ -1,3 +1,4 @@
+import importlib
 import inspect
 import os
 import random
@@ -169,6 +170,7 @@ def db_session(request, monkeypatch):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
         monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
+        importlib.reload(WorkflowExecution)
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
