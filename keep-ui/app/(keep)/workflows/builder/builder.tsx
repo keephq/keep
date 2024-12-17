@@ -360,6 +360,7 @@ function Builder({
         <BuilderWorkflowTestRunModalContent
           closeModal={closeWorkflowExecutionResultsModal}
           workflowExecution={runningWorkflowExecution}
+          apiClient={api}
         />
       </Modal>
       {generateModalIsOpen || testRunModalOpen ? null : (
