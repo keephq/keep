@@ -28,6 +28,21 @@ class Workflow(SQLModel, table=True):
         orm_mode = True
 
 
+def get_status_column():
+    backend = (
+        sqlalchemy.engine.url.make_url(
+            os.environ.get("DATABASE_CONNECTION_STRING")
+        ).get_backend_name()
+        if os.environ.get("DATABASE_CONNECTION_STRING")
+        else None
+    )
+    return (
+        sqlalchemy.text("status(255)")
+        if backend == "mysql"
+        else sqlalchemy.text("status")
+    )
+
+
 class WorkflowExecution(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
@@ -42,22 +57,7 @@ class WorkflowExecution(SQLModel, table=True):
             "workflow_id",
             "tenant_id",
             "started",
-            (
-                sqlalchemy.text("status(255)")
-                if (
-                    lambda: (
-                        (
-                            sqlalchemy.engine.url.make_url(
-                                os.environ.get("DATABASE_CONNECTION_STRING")
-                            ).get_backend_name()
-                        )
-                        if os.environ.get("DATABASE_CONNECTION_STRING")
-                        else None
-                    )
-                )()
-                == "mysql"
-                else sqlalchemy.text("status")
-            ),
+            get_status_column(),
         ),
     )
 
