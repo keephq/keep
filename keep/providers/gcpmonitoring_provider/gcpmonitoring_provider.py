@@ -2,11 +2,13 @@ import dataclasses
 import datetime
 import json
 import logging
+from typing import Optional
 
 import google.api_core
 import google.api_core.exceptions
 import google.cloud.logging
 import pydantic
+from google.cloud import logging_v2
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -41,6 +43,13 @@ class GcpmonitoringProviderAuthConfig:
             "name": "service_account_json",
             "file_type": "application/json",  # this is used to filter the file type in the UI
         }
+    )
+    timeout: Optional[int] = dataclasses.field(
+        default=30,
+        metadata={
+            "required": False,
+            "description": "Query timeout in seconds",
+        },
     )
 
 
@@ -100,6 +109,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             self.authentication_config.service_account_json
         )
         self._client = None
+        self.timeout = self.authentication_config.timeout
 
     def validate_config(self):
         self.authentication_config = GcpmonitoringProviderAuthConfig(
@@ -107,13 +117,18 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         )
 
     def dispose(self):
-        pass
+        if self._client:
+            self._client.transport.close()
 
     def validate_scopes(self) -> dict[str, bool | str]:
         scopes = {}
         # try initializing the client to validate the scopes
         try:
-            self.client.list_entries(max_results=1)
+            # Use a small page size and timeout for validation
+            self.client.list_entries(
+                page_size=1,
+                timeout=10,
+            )
             scopes["roles/logs.viewer"] = True
         except google.api_core.exceptions.PermissionDenied:
             scopes["roles/logs.viewer"] = (
@@ -131,7 +146,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
 
     def __generate_client(self) -> google.cloud.logging.Client:
         if not self._client:
-            self._client = google.cloud.logging.Client.from_service_account_info(
+            self._client = logging_v2.Client.from_service_account_info(
                 self._service_account_data
             )
         return self._client
@@ -143,9 +158,11 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         page_size=1000,
         raw="true",
         project="",
+        timeout=None,
         **kwargs,
     ):
         raw = raw == "true"
+        timeout = timeout or self.timeout
         self.logger.info(
             f"Querying GCP Monitoring with filter: {filter} and timedelta_in_days: {timedelta_in_days}"
         )
@@ -159,25 +176,42 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         if project:
             self.client.project = project
 
-        entries_iterator = self.client.list_entries(filter_=filter, page_size=page_size)
-        entries = []
-        for entry in entries_iterator:
-            if raw:
-                entries.append(entry)
-            else:
-                try:
-                    log_entry = LogEntry(
-                        timestamp=entry.timestamp,
-                        severity=entry.severity,
-                        payload=entry.payload,
-                        http_request=entry.http_request,
-                        payload_exists=entry.payload is not None,
-                        http_request_exists=entry.http_request is not None,
-                    )
-                    entries.append(log_entry)
-                except Exception:
-                    self.logger.error("Error parsing log entry")
-                    continue
+        try:
+            self.logger.info(f"Querying logs with filter: {filter}")
+            entries_iterator = self.client.list_entries(
+                filter_=filter,
+                page_size=page_size,
+                timeout=timeout,
+            )
+            self.logger.info("Querying logs completed")
+            entries = []
+            for entry in entries_iterator:
+                if raw:
+                    entries.append(entry)
+                else:
+                    try:
+                        log_entry = LogEntry(
+                            timestamp=entry.timestamp,
+                            severity=entry.severity,
+                            payload=entry.payload,
+                            http_request=entry.http_request,
+                            payload_exists=entry.payload is not None,
+                            http_request_exists=entry.http_request is not None,
+                        )
+                        entries.append(log_entry)
+                    except Exception:
+                        self.logger.error("Error parsing log entry", exc_info=True)
+                        continue
+
+            self.logger.info(f"Found {len(entries)} entries")
+            return entries
+
+        except google.api_core.exceptions.DeadlineExceeded:
+            self.logger.error(f"Query timed out after {timeout} seconds")
+            raise
+        except Exception as e:
+            self.logger.error(f"Error querying logs: {str(e)}", exc_info=True)
+            raise
 
         self.logger.info(f"Found {len(entries)} entries")
         return entries
