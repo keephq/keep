@@ -47,6 +47,7 @@ export type V2Step = {
   edgeSource?: string;
   edgeTarget?: string;
   notClickable?: boolean;
+  installed?: boolean;
 };
 
 export type NodeData = Node["data"] & Record<string, any>;
@@ -100,6 +101,10 @@ export type FlowState = {
   openGlobalEditor: boolean;
   stepEditorOpenForNode: string | null;
   toolboxConfiguration: Record<string, any>;
+  stepErrors: Record<string,string> | null;
+  globalErrors: Record<string,string> | null;
+  setStepErrors: (error: Record<string,string> | null) => void;
+  setGlobalErros: (error: Record<string,string> | null) => void;
   onNodesChange: OnNodesChange<FlowNode>;
   onEdgesChange: OnEdgesChange<Edge>;
   onConnect: OnConnect;
@@ -290,6 +295,8 @@ function addNodeBetween(
       break;
     }
   }
+  //on adding new node. highlight the added node and update the editor
+  set({selectedNode: newNodeId, stepEditorOpenForNode: newNodeId})
 }
 
 const useStore = create<FlowState>((set, get) => ({
@@ -308,6 +315,10 @@ const useStore = create<FlowState>((set, get) => ({
   errorNode: null,
   synced: true,
   canDeploy: false,
+  stepErrors: null,
+  globalErrors: null,
+  setGlobalErros: (errors:Record<string,string>|null)=>set({globalErrors: errors}),
+  setStepErrors: (errors:Record<string,string>|null)=>set({stepErrors: errors}),
   setCanDeploy: (deploy) => set({ canDeploy: deploy }),
   setSynced: (sync) => set({ synced: sync }),
   setErrorNode: (id) => set({ errorNode: id }),
