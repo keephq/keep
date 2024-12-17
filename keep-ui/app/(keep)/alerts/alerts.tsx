@@ -15,12 +15,12 @@ import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
-import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/(keep)/not-found";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
 import Loading from "../loading";
 import { Preset } from "@/entities/presets/model/types";
+import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 
 const defaultPresets: Preset[] = [
   {

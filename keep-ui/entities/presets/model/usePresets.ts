@@ -1,8 +1,5 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { useConfig } from "@/utils/hooks/useConfig";
-import useSWRSubscription from "swr/subscription";
-import { useWebsocket } from "@/utils/hooks/usePusher";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useMemo, useCallback } from "react";
 import isEqual from "lodash/isEqual";
@@ -12,20 +9,12 @@ import {
   LOCAL_STATIC_PRESETS_KEY,
   STATIC_PRESETS_NAMES,
 } from "@/entities/presets/model/constants";
-import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { Preset } from "@/entities/presets/model/types";
 import { useHydratedSession } from "@/shared/lib/hooks/useHydratedSession";
-import debounce from "lodash.debounce";
 
 type UsePresetsOptions = {
   filters?: string;
 } & SWRConfiguration;
-
-// debounce the revalidation of the presets to avoid too many requests to the server
-const DEBOUNCE_TIME = 2000;
-const debouncedRevalidatePresets = debounce((revalidateMultiple: Function) => {
-  revalidateMultiple(["/preset"], { isExact: true });
-}, DEBOUNCE_TIME);
 
 const checkPresetAccess = (preset: Preset, session: Session) => {
   if (!preset.is_private) {
@@ -54,7 +43,7 @@ const combineOrder = (serverPresets: Preset[], localPresets: Preset[]) => {
 
 export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
   const api = useApi();
-  const { data: configData } = useConfig();
+
   const { data: session } = useHydratedSession();
   const [localDynamicPresets, setLocalDynamicPresets] = useLocalStorage<
     Preset[]
@@ -62,33 +51,6 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
   const [localStaticPresets, setLocalStaticPresets] = useLocalStorage<Preset[]>(
     LOCAL_STATIC_PRESETS_KEY,
     []
-  );
-
-  const { bind, unbind } = useWebsocket();
-  const revalidateMultiple = useRevalidateMultiple();
-
-  useSWRSubscription(
-    () =>
-      configData?.PUSHER_DISABLED === false && api.isReady() ? "presets" : null,
-    (_, { next }) => {
-      const handleIncoming = (presetNamesToUpdate: string[]) => {
-        debouncedRevalidatePresets(revalidateMultiple);
-        next(null, {
-          presetNamesToUpdate,
-          isAsyncLoading: false,
-          lastSubscribedDate: new Date(),
-        });
-      };
-
-      bind("poll-presets", handleIncoming);
-
-      return () => {
-        console.log("Unbinding from presets channel");
-        unbind("poll-presets", handleIncoming);
-        debouncedRevalidatePresets.cancel();
-      };
-    },
-    { revalidateOnFocus: false }
   );
 
   const updateLocalPresets = useCallback(
