@@ -8,7 +8,7 @@ import google.api_core
 import google.api_core.exceptions
 import google.cloud.logging
 import pydantic
-from google.cloud import logging_v2
+from google.cloud.logging_v2.services.logging_service_v2 import LoggingServiceV2Client
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -125,7 +125,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         # try initializing the client to validate the scopes
         try:
             # Use a small page size and timeout for validation
-            self.client.list_entries(
+            self.client.list_log_entries(
                 page_size=1,
                 timeout=10,
             )
@@ -139,14 +139,15 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         return scopes
 
     @property
-    def client(self) -> google.cloud.logging.Client:
+    def client(self) -> LoggingServiceV2Client:
         if self._client is None:
             self._client = self.__generate_client()
         return self._client
 
-    def __generate_client(self) -> google.cloud.logging.Client:
+    def __generate_client(self) -> LoggingServiceV2Client:
         if not self._client:
-            self._client = logging_v2.Client.from_service_account_info(
+
+            self._client = LoggingServiceV2Client.from_service_account_info(
                 self._service_account_data
             )
         return self._client
@@ -178,8 +179,8 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
 
         try:
             self.logger.info(f"Querying logs with filter: {filter}")
-            entries_iterator = self.client.list_entries(
-                filter_=filter,
+            entries_iterator = self.client.list_log_entries(
+                filter=filter,
                 page_size=page_size,
                 timeout=timeout,
             )
