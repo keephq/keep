@@ -140,22 +140,18 @@ export default function Alerts({ presetName }: AlertsProps) {
         mutateAlerts={mutateAlerts}
       />
 
-      {selectedPreset && (
-        <>
-          <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
-          <AlertDismissModal
-            alert={dismissModalAlert}
-            preset={selectedPreset.name}
-            handleClose={() => setDismissModalAlert(null)}
-          />
-          <AlertChangeStatusModal
-            alert={changeStatusAlert}
-            presetName={selectedPreset.name}
-            handleClose={() => setChangeStatusAlert(null)}
-          />
-          <AlertMethodModal presetName={selectedPreset.name} />
-        </>
-      )}
+      <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
+      <AlertDismissModal
+        alert={dismissModalAlert}
+        preset={selectedPreset.name}
+        handleClose={() => setDismissModalAlert(null)}
+      />
+      <AlertChangeStatusModal
+        alert={changeStatusAlert}
+        presetName={selectedPreset.name}
+        handleClose={() => setChangeStatusAlert(null)}
+      />
+      <AlertMethodModal presetName={selectedPreset.name} />
       <AlertAssignTicketModal
         handleClose={() => setTicketModalAlert(null)}
         ticketingProviders={ticketingProviders}
