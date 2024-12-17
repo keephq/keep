@@ -116,7 +116,7 @@ export default function Alerts({ presetName }: AlertsProps) {
     return <Loading />;
   }
 
-  // if we have an error, throw it, error boundary will catch it
+  // if we have an error, throw it, error.tsx will catch it
   if (alertsError) {
     throw alertsError;
   }
