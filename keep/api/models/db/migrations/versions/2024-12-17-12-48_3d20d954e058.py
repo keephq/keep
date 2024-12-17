@@ -24,11 +24,18 @@ def upgrade() -> None:
             ["tenant_id", "workflow_id", sa.desc("started")],
             unique=False,
         )
-        batch_op.create_index(
-            "idx_workflowexecution_workflow_tenant_started_status",
-            ["workflow_id", "tenant_id", sa.desc("started"), "status"],
-            unique=False,
-        )
+        if op.get_bind().dialect.name == "mysql":
+            batch_op.create_index(
+                "idx_workflowexecution_workflow_tenant_started_status",
+                ["workflow_id", "tenant_id", sa.desc("started"), "status(255)"],
+                unique=False,
+            )
+        else:
+            batch_op.create_index(
+                "idx_workflowexecution_workflow_tenant_started_status",
+                ["workflow_id", "tenant_id", sa.desc("started"), "status"],
+                unique=False,
+            )
     # ### end Alembic commands ###
 
 
