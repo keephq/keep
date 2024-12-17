@@ -157,7 +157,7 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request):
+def db_session(request, monkeypatch):
     # Create a database connection
     os.environ["DB_ECHO"] = "true"
     if (
@@ -168,6 +168,7 @@ def db_session(request):
     ):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
+        monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:
