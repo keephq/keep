@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 
@@ -41,7 +42,22 @@ class WorkflowExecution(SQLModel, table=True):
             "workflow_id",
             "tenant_id",
             "started",
-            sqlalchemy.text("status(255)"),
+            (
+                sqlalchemy.text("status(255)")
+                if (
+                    lambda: (
+                        (
+                            sqlalchemy.engine.url.make_url(
+                                os.environ.get("DATABASE_CONNECTION_STRING")
+                            ).get_backend_name()
+                        )
+                        if os.environ.get("DATABASE_CONNECTION_STRING")
+                        else None
+                    )
+                )()
+                == "mysql"
+                else sqlalchemy.text("status")
+            ),
         ),
     )
 
