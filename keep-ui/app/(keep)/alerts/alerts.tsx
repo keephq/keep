@@ -40,6 +40,7 @@ type AlertsProps = {
 };
 
 export default function Alerts({ presetName }: AlertsProps) {
+  const api = useApi();
   const { usePresetAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -66,10 +67,11 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [viewEnrichAlertModal, setEnrichAlertModal] =
     useState<AlertDto | null>();
   const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
-  const { dynamicPresets: savedPresets = [], isLoading: isPresetsLoading } =
+  const { dynamicPresets: savedPresets = [], isLoading: _isPresetsLoading } =
     usePresets({
       revalidateOnFocus: false,
     });
+  const isPresetsLoading = _isPresetsLoading || !api.isReady();
   const presets = [...defaultPresets, ...savedPresets] as const;
 
   const selectedPreset = presets.find(
@@ -84,7 +86,6 @@ export default function Alerts({ presetName }: AlertsProps) {
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
 
-  const api = useApi();
   const isLoading = isAsyncLoading || !api.isReady();
 
   useEffect(() => {
@@ -110,9 +111,14 @@ export default function Alerts({ presetName }: AlertsProps) {
     }
   }, [mutateAlerts, pollAlerts]);
 
-  if (!selectedPreset || !api.isReady()) {
-    // if we don't have presets data yet, just show loading
+  // if we don't have presets data yet, just show loading
+  if (!selectedPreset && isPresetsLoading) {
     return <Loading />;
+  }
+
+  // if we have an error, throw it, error boundary will catch it
+  if (alertsError) {
+    throw alertsError;
   }
 
   if (!selectedPreset) {
