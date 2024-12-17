@@ -23,6 +23,9 @@ type UsePresetsOptions = {
 
 // debounce the revalidation of the presets to avoid too many requests to the server
 const DEBOUNCE_TIME = 2000;
+const debouncedRevalidatePresets = debounce((revalidateMultiple: Function) => {
+  revalidateMultiple(["/preset"], { isExact: true });
+}, DEBOUNCE_TIME);
 
 const checkPresetAccess = (preset: Preset, session: Session) => {
   if (!preset.is_private) {
@@ -64,21 +67,12 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
   const { bind, unbind } = useWebsocket();
   const revalidateMultiple = useRevalidateMultiple();
 
-  // Create a debounced revalidate function
-  const debouncedRevalidate = useMemo(
-    () =>
-      debounce(() => {
-        revalidateMultiple(["/preset"], { isExact: true });
-      }, DEBOUNCE_TIME),
-    [revalidateMultiple]
-  );
-
   useSWRSubscription(
     () =>
       configData?.PUSHER_DISABLED === false && api.isReady() ? "presets" : null,
     (_, { next }) => {
       const handleIncoming = (presetNamesToUpdate: string[]) => {
-        debouncedRevalidate();
+        debouncedRevalidatePresets(revalidateMultiple);
         next(null, {
           presetNamesToUpdate,
           isAsyncLoading: false,
@@ -91,7 +85,7 @@ export const usePresets = ({ filters, ...options }: UsePresetsOptions = {}) => {
       return () => {
         console.log("Unbinding from presets channel");
         unbind("poll-presets", handleIncoming);
-        debouncedRevalidate.cancel();
+        debouncedRevalidatePresets.cancel();
       };
     },
     { revalidateOnFocus: false }
