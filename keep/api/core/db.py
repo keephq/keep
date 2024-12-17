@@ -487,7 +487,7 @@ def get_last_workflow_execution_by_workflow_id(
             session.query(WorkflowExecution)
             .filter(WorkflowExecution.workflow_id == workflow_id)
             .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
             .filter(WorkflowExecution.status == "success")
             .order_by(WorkflowExecution.started.desc())
             .first()

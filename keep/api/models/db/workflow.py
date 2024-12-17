@@ -35,6 +35,13 @@ class WorkflowExecution(SQLModel, table=True):
             "workflow_id",
             "started",
         ),
+        Index(
+            "idx_workflowexecution_workflow_tenant_started_status",
+            "workflow_id",
+            "tenant_id",
+            "started",
+            "status",
+        ),
     )
 
     id: str = Field(default=None, primary_key=True)
