@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
+import sqlalchemy
 from sqlalchemy import TEXT, Index
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
@@ -40,7 +41,7 @@ class WorkflowExecution(SQLModel, table=True):
             "workflow_id",
             "tenant_id",
             "started",
-            "status",
+            sqlalchemy.text("status(255)"),
         ),
     )
 
