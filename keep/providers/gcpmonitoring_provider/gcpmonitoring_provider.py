@@ -180,7 +180,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
         try:
             self.logger.info(f"Querying logs with filter: {filter}")
             entries_iterator = self.client.list_log_entries(
-                filter_=filter,
+                filter=filter,
                 page_size=page_size,
                 timeout=timeout,
             )
