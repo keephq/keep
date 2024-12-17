@@ -27,7 +27,12 @@ def upgrade() -> None:
         if op.get_bind().dialect.name == "mysql":
             batch_op.create_index(
                 "idx_workflowexecution_workflow_tenant_started_status",
-                ["workflow_id", "tenant_id", sa.desc("started"), "status(255)"],
+                [
+                    "workflow_id",
+                    "tenant_id",
+                    sa.desc("started"),
+                    sa.text("status(255)"),
+                ],
                 unique=False,
             )
         else:
