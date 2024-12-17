@@ -1,7 +1,9 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import TEXT
+import sqlalchemy
+from sqlalchemy import TEXT, Index
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
@@ -26,9 +28,37 @@ class Workflow(SQLModel, table=True):
         orm_mode = True
 
 
+def get_status_column():
+    backend = (
+        sqlalchemy.engine.url.make_url(
+            os.environ.get("DATABASE_CONNECTION_STRING")
+        ).get_backend_name()
+        if os.environ.get("DATABASE_CONNECTION_STRING")
+        else None
+    )
+    return (
+        sqlalchemy.text("status(255)")
+        if backend == "mysql"
+        else sqlalchemy.text("status")
+    )
+
+
 class WorkflowExecution(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("workflow_id", "execution_number", "is_running", "timeslot"),
+        Index(
+            "idx_workflowexecution_tenant_workflow_id_timestamp",
+            "tenant_id",
+            "workflow_id",
+            "started",
+        ),
+        Index(
+            "idx_workflowexecution_workflow_tenant_started_status",
+            "workflow_id",
+            "tenant_id",
+            "started",
+            get_status_column(),
+        ),
     )
 
     id: str = Field(default=None, primary_key=True)
