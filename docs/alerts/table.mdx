@@ -1,81 +1,65 @@
 ---
-description: "CEL-Based Alert Filtering"
-title: "Single Pane Of Glass"
+title: "Table"
 ---
 
-With Keep's introduction of CEL (Common Expression Language) for alert filtering, users gain the flexibility to define more complex and precise alert filtering logic. This feature allows the creation of customizable filters using CEL expressions to refine alert visibility based on specific criteria.
+The Alert Table is the central interface for viewing and managing alerts in Keep. It provides a comprehensive view of all alerts with powerful filtering, sorting, and interaction capabilities.
 
-## Introduction
+## Core Features
 
-CEL-based filtering offers a powerful method for users to specify conditions under which alerts should be shown. Through a combination of logical, comparison, and string operations, alerts can be filtered to meet the exact needs of the user, improving the focus and efficiency of alert management.
+### Display and Organization
+- **Real-time Updates**: Live alert feed with automatic updates
+- **Customizable Layout**: Flexible column arrangement and visibility
+- **Responsive Design**: Adapts to different screen sizes and resolutions
+- **Infinite Scroll**: Smooth scrolling through large sets of alerts
 
-## How It Works
+### Interaction Features
+- **Multi-select**: Select multiple alerts for bulk actions
+- **Quick Actions**: Right-click context menu for common operations
+- **Keyboard Navigation**: Efficient keyboard shortcuts for navigation
+- **Drag and Drop**: Reorder columns and resize as needed
 
-1. **CEL Expression Creation**: Users craft CEL expressions that define the filtering criteria for alerts.
-2. **Preset Definition**: These expressions can be saved as presets for easy application to different alert streams.
-3. **Alert Filtering**: When applied, the CEL expressions evaluate each alert against the defined criteria, filtering the alert stream in real-time.
+## Alert Management
 
-## Practical Example
+### Filtering Options
+- **Quick Filters**: Predefined filters for common scenarios
+- **Advanced Filtering**: [CEL-based filtering](/alerts/presets) for complex queries
+- **Saved Views**: Save and share custom filter configurations
+- **Search**: Full-text search across all alert fields
 
-For instance, a user could create a CEL expression to filter alerts by severity and source, such as `severity == 'critical' && service.contains('database')`, ensuring only critical alerts from database services are displayed.
+### Sorting and Grouping
+- **Multi-level Sort**: Sort by multiple columns
+- **Group By**: Group alerts by common attributes
+- **Aggregation**: View summary statistics for alert groups
 
-## Core Concepts
+## Data Interaction
 
-- **CEL Expressions**: The CEL language syntax used to define alert filtering logic.
-- **Presets**: Saved CEL expressions that can be reused across different alert streams.
-- **Real-Time Filtering**: The dynamic application of CEL expressions to incoming alerts.
+### Alert Actions
+- **Status Updates**: Change alert status directly from the table
+- **Assignment**: Assign alerts to team members
+- **Incident Creation**: Create incidents from selected alerts
+- **Bulk Operations**: Perform actions on multiple alerts
 
-## Creating a CEL Expression
-
-There is generally two ways of creating a CEL expression in Keep
-### Importing from an SQL query
-
-1. Click on the "Import from SQL" button
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/import-from-sql.png" />
-</Frame>
-2. Write/Paste your SQL query and hit the "Convert to CEL" button
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/convert-to-cel.png" />
-</Frame>
-Which in turn will generate and apply a valid CEL query:
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/converted-sql-to-cel.png" />
-</Frame>
-
-### Manually creating CEL query
-
-Use the [CEL Language Definition](https://github.com/google/cel-spec/blob/master/doc/langdef.md) documentation to better understand the capabilities of the Common Expression Language
-This is an example of how to query all the alerts that came from `Sentry`
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/valid-sentry-cel.png" />
-</Frame>
-If the CEL syntax you typed in is invalid, an error message will show up (in this case, we used invalid `''` instead of `""`):
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/invalid-sentry-cel.png" />
-</Frame>
-
-## Save Presets
-
-You can save your CEL queries into a `Preset` using the "Save current filter as a view" button
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/save-preset.png" />
-</Frame>
-You can name your `Preset` and configure whether it is "Private" (only the creating user will see this Preset) or account-wide available.
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/save-preset-modal.png" />
-</Frame>
-The `Preset` will then be created and available for you to quickly navigate and used
-<Frame width="100" height="200">
-  <img height="10" src="/images/presets/preset-created.png" />
-</Frame>
+### Data Export
+- **CSV Export**: Export filtered alert data
+- **API Integration**: Access alert data programmatically
+- **Custom Reports**: Generate custom alert reports
 
 ## Best Practices
 
-- **Specificity in Expressions**: Craft expressions that precisely target the desired alerts to avoid filtering out relevant alerts.
-- **Presets Management**: Regularly review and update your presets to align with evolving alerting needs.
-- **Testing Expressions**: Before applying, test CEL expressions to ensure they correctly filter the desired alerts.
+1. **Regular Refresh**: Keep the table updated with latest alerts
+2. **Filter Management**: Create and maintain useful filter presets
+3. **Column Organization**: Arrange columns based on workflow needs
+4. **Bulk Processing**: Use multi-select for efficient alert handling
 
-## Useful Links
-- [Common Expression Language](https://github.com/google/cel-spec?tab=readme-ov-file)
-- [CEL Language Definition](https://github.com/google/cel-spec/blob/master/doc/langdef.md)
+## Tips
+
+- Use keyboard shortcuts for faster navigation
+- Combine filters with saved views for quick access
+- Utilize column customization for different use cases
+- Take advantage of the context menu for quick actions
+
+## Related Features
+
+- [Alert Columns](/alerts/columns)
+- [Action Menu](/alerts/actionmenu)
+- [Alert Presets](/alerts/presets)

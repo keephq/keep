@@ -55,7 +55,8 @@
         "alerts/presets",
         "alerts/actionmenu",
         "alerts/columns",
-        "alerts/facets"
+        "alerts/facets",
+        "alerts/sidebar"
       ]
     },
     {
