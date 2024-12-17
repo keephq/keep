@@ -32,6 +32,7 @@ import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface PresetTab {
   name: string;
@@ -71,6 +72,8 @@ export function AlertTable({
   setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const { data: configData } = useConfig();
+  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
@@ -132,9 +135,9 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "noise", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>(
+    noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
+  );
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -213,6 +216,10 @@ export function AlertTable({
     });
   });
 
+  const leftPinnedColumns = noisyAlertsEnabled
+    ? ["severity", "checkbox", "noise"]
+    : ["severity", "checkbox"];
+
   const table = useReactTable({
     data: filteredAlerts,
     columns: columns,
@@ -221,7 +228,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: ["severity", "checkbox", "noise"],
+        left: leftPinnedColumns,
         right: ["alertMenu"],
       },
       sorting: sorting,
