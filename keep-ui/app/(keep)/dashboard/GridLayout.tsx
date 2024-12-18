@@ -3,8 +3,8 @@ import { Responsive, WidthProvider, Layout } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { LayoutItem, WidgetData } from "./types";
 import "react-grid-layout/css/styles.css";
-import { Preset } from "@/app/(keep)/alerts/models";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
+import { Preset } from "@/entities/presets/model/types";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
