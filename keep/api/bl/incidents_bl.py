@@ -17,7 +17,8 @@ from keep.api.core.db import (
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
-    update_incident_from_dto_by_id, enrich_alerts_with_incidents, get_alerts_by_fingerprint,
+    update_incident_from_dto_by_id,
+    enrich_alerts_with_incidents,
     get_all_alerts_by_fingerprints,
 )
 from keep.api.core.elastic import ElasticClient
