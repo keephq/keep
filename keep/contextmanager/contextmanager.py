@@ -4,6 +4,7 @@ import logging
 import click
 from pympler.asizeof import asizeof
 
+from keep.api.core.config import config
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.logging import WorkflowLoggerAdapter
 from keep.api.models.alert import AlertDto
@@ -58,6 +59,13 @@ class ContextManager:
         self.workflow_execution_id = None
         self._api_key = None
         self.__loggers = {}
+
+    @property
+    def api_url(self):
+        """
+        The URL of the Keep API
+        """
+        return config("KEEP_API_URL")
 
     @property
     def api_key(self):
