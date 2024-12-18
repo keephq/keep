@@ -1,0 +1,70 @@
+---
+title: "Handling High-Severity Sentry Alerts"
+---
+
+<Info>
+
+Link to the [workflow](https://github.com/keephq/keep/blob/main/examples/workflows/create_jira_ticket_upon_alerts.yml).
+
+</Info>
+
+This workflow handles critical alerts from Sentry based on the service they are associated with.
+
+
+
+
+Explanation:
+- Trigger: Activated by critical alerts from Sentry.
+- Actions:
+- - Send a Slack message to the payments team for alerts related to the `payments` service.
+- - Create a Jira ticket for alerts related to the `ftp` service if a ticket ID is not already present.
+
+
+
+```yaml
+workflow:
+  id: sentry-alerts
+  description: handle alerts
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: sentry
+        - key: severity
+          value: critical
+        - key: service
+          value: r"(payments|ftp)"
+  actions:
+    - name: send-slack-message-team-payments
+      if: "'{{ alert.service }}' == 'payments'"
+      provider:
+        type: slack
+        config: "{{ providers.team-payments-slack }}"
+        with:
+          message: |
+            "A new alert from Sentry: Alert: {{ alert.name }} - {{ alert.description }}
+            {{ alert }}"
+    - name: create-jira-ticket-oncall-board
+      if: "'{{ alert.service }}' == 'ftp' and not '{{ alert.ticket_id }}'"
+      provider:
+        type: jira
+        config: "{{ providers.jira }}"
+        with:
+          board_name: "Oncall Board"
+          custom_fields:
+            customfield_10201: "Critical"
+          issuetype: "Task"
+          summary: "{{ alert.name }} - {{ alert.description }} (created by Keep)"
+          description: |
+            "This ticket was created by Keep.
+            Please check the alert details below:
+            {code:json} {{ alert }} {code}"
+          enrich_alert:
+            - key: ticket_type
+              value: jira
+            - key: ticket_id
+              value: results.issue.key
+            - key: ticket_url
+              value: results.ticket_url
+
+```

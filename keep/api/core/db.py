@@ -42,6 +42,7 @@ from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
+from keep.api.core.config import config
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
@@ -91,6 +92,7 @@ ALLOWED_INCIDENT_FILTERS = [
     "affected_services",
     "assignee",
 ]
+KEEP_AUDIT_EVENTS_ENABLED = config("KEEP_AUDIT_EVENTS_ENABLED", cast=bool, default=True)
 
 
 def dispose_session():
@@ -136,7 +138,7 @@ def get_session_sync() -> Session:
     return Session(engine)
 
 
-def __convert_to_uuid(value: str) -> UUID:
+def __convert_to_uuid(value: str) -> UUID | None:
     try:
         return UUID(value)
     except ValueError:
@@ -170,20 +172,21 @@ def create_workflow_execution(
             # Ensure the object has an id
             session.flush()
             execution_id = workflow_execution.id
-            if fingerprint and event_type == "alert":
-                workflow_to_alert_execution = WorkflowToAlertExecution(
-                    workflow_execution_id=execution_id,
-                    alert_fingerprint=fingerprint,
-                    event_id=event_id,
-                )
-                session.add(workflow_to_alert_execution)
-            elif event_type == "incident":
-                workflow_to_incident_execution = WorkflowToIncidentExecution(
-                    workflow_execution_id=execution_id,
-                    alert_fingerprint=fingerprint,
-                    incident_id=event_id,
-                )
-                session.add(workflow_to_incident_execution)
+            if KEEP_AUDIT_EVENTS_ENABLED:
+                if fingerprint and event_type == "alert":
+                    workflow_to_alert_execution = WorkflowToAlertExecution(
+                        workflow_execution_id=execution_id,
+                        alert_fingerprint=fingerprint,
+                        event_id=event_id,
+                    )
+                    session.add(workflow_to_alert_execution)
+                elif event_type == "incident":
+                    workflow_to_incident_execution = WorkflowToIncidentExecution(
+                        workflow_execution_id=execution_id,
+                        alert_fingerprint=fingerprint,
+                        incident_id=event_id,
+                    )
+                    session.add(workflow_to_incident_execution)
 
             session.commit()
             return execution_id
@@ -484,7 +487,7 @@ def get_last_workflow_execution_by_workflow_id(
             session.query(WorkflowExecution)
             .filter(WorkflowExecution.workflow_id == workflow_id)
             .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=7))
+            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
             .filter(WorkflowExecution.status == "success")
             .order_by(WorkflowExecution.started.desc())
             .first()
@@ -650,23 +653,25 @@ def get_consumer_providers() -> List[Provider]:
 def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     with Session(engine) as session:
         workflow_execution = session.exec(
-            select(WorkflowExecution)
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(WorkflowExecution.id == execution_id)
+            select(WorkflowExecution).where(WorkflowExecution.id == execution_id)
         ).first()
         # some random number to avoid collisions
         if not workflow_execution:
             logger.warning(
-                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found."
+                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found.",
+                extra={
+                    "tenant_id": tenant_id,
+                    "workflow_id": workflow_id,
+                    "execution_id": execution_id,
+                },
             )
             raise ValueError("Execution not found")
         workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
-        #   and then we can remove the [:255] from here
-        workflow_execution.error = error[:255] if error else None
+        #   and then we can remove the [:511] from here
+        workflow_execution.error = error[:511] if error else None
         workflow_execution.execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
@@ -837,7 +842,11 @@ def get_workflow_execution(tenant_id: str, workflow_execution_id: str):
                 WorkflowExecution.id == workflow_execution_id,
                 WorkflowExecution.tenant_id == tenant_id,
             )
-            .options(joinedload(WorkflowExecution.logs))
+            .options(
+                joinedload(WorkflowExecution.logs),
+                joinedload(WorkflowExecution.workflow_to_alert_execution),
+                joinedload(WorkflowExecution.workflow_to_incident_execution),
+            )
             .one()
         )
     return execution_with_logs
@@ -1434,6 +1443,18 @@ def get_alert_by_fingerprint_and_event_id(
     return alert
 
 
+def get_alert_by_event_id(tenant_id: str, event_id: str) -> Alert:
+    with Session(engine) as session:
+        query = (
+            session.query(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.id == uuid.UUID(event_id))
+        )
+        query = query.options(subqueryload(Alert.alert_enrichment))
+        alert = query.first()
+    return alert
+
+
 def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
     # get the previous alert for a given fingerprint
     with Session(engine) as session:
@@ -1600,6 +1621,9 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
             .where(WorkflowExecution.id != workflow_execution_id)
+            .where(
+                WorkflowExecution.started >= datetime.now() - timedelta(days=1)
+            )  # no need to check more than 1 day ago
             .order_by(WorkflowExecution.started.desc())
             .limit(1)
         ).first()
@@ -2173,23 +2197,27 @@ def update_key_last_used(
 
 
 def get_linked_providers(tenant_id: str) -> List[Tuple[str, str, datetime]]:
+    # Alert table may be too huge, so cutting the query without mercy
+    LIMIT_BY_ALERTS = 10000
+
     with Session(engine) as session:
-        providers = (
-            session.query(
-                Alert.provider_type,
-                Alert.provider_id,
-                func.max(Alert.timestamp).label("last_alert_timestamp"),
-            )
-            .outerjoin(Provider, Alert.provider_id == Provider.id)
-            .filter(
-                Alert.tenant_id == tenant_id,
-                Alert.provider_type != "group",
-                Provider.id
-                == None,  # Filters for alerts with a provider_id not in Provider table
-            )
-            .group_by(Alert.provider_type, Alert.provider_id)
-            .all()
+        alerts_subquery = (
+            select(Alert)
+            .filter(Alert.tenant_id == tenant_id, Alert.provider_type != "group")
+            .limit(LIMIT_BY_ALERTS)
+            .subquery()
         )
+
+        providers = session.exec(
+            select(
+                alerts_subquery.c.provider_type,
+                alerts_subquery.c.provider_id,
+                func.max(alerts_subquery.c.timestamp).label("last_alert_timestamp"),
+            )
+            .select_from(alerts_subquery)
+            .filter(~exists().where(Provider.id == alerts_subquery.c.provider_id))
+            .group_by(alerts_subquery.c.provider_type, alerts_subquery.c.provider_id)
+        ).all()
 
     return providers
 
@@ -2813,6 +2841,9 @@ def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
 
 
 def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
+    if isinstance(preset_id, str):
+        preset_id = __convert_to_uuid(preset_id)
+
     with Session(engine) as session:
         preset = session.exec(
             select(Preset)
@@ -3277,6 +3308,10 @@ def get_incident_by_id(
     with_alerts: bool = False,
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
+        if incident_id is None:
+            return None
     with existed_or_new_session(session) as session:
         query = session.query(
             Incident,
@@ -3358,6 +3393,9 @@ def update_incident_from_dto_by_id(
     updated_incident_dto: IncidentDtoIn | IncidentDto,
     generated_by_ai: bool = False,
 ) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
+
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -3409,6 +3447,8 @@ def delete_incident_by_id(
     tenant_id: str,
     incident_id: UUID,
 ) -> bool:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = (
             session.query(Incident)
@@ -3594,6 +3634,8 @@ def add_alerts_to_incident_by_incident_id(
     is_created_by_ai: bool = False,
     session: Optional[Session] = None,
 ) -> Optional[Incident]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with existed_or_new_session(session) as session:
         query = select(Incident).where(
             Incident.tenant_id == tenant_id,
@@ -3773,6 +3815,8 @@ def get_last_alerts_for_incidents(
 def remove_alerts_to_incident_by_incident_id(
     tenant_id: str, incident_id: str | UUID, fingerprints: List[str]
 ) -> Optional[int]:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident).where(
@@ -4008,6 +4052,8 @@ def confirm_predicted_incident_by_id(
     tenant_id: str,
     incident_id: UUID | str,
 ):
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -4056,6 +4102,8 @@ def write_tenant_config(tenant_id: str, config: dict) -> None:
 def update_incident_summary(
     tenant_id: str, incident_id: UUID, summary: str
 ) -> Incident:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -4078,6 +4126,8 @@ def update_incident_summary(
 
 
 def update_incident_name(tenant_id: str, incident_id: UUID, name: str) -> Incident:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         incident = session.exec(
             select(Incident)
@@ -4126,6 +4176,8 @@ def create_tag(tag: Tag):
 
 
 def assign_tag_to_preset(tenant_id: str, tag_id: str, preset_id: str):
+    if isinstance(preset_id, str):
+        preset_id = __convert_to_uuid(preset_id)
     with Session(engine) as session:
         tag_preset = PresetTagLink(
             tenant_id=tenant_id,
@@ -4261,6 +4313,8 @@ def change_incident_status_by_id(
     status: IncidentStatus,
     end_time: datetime | None = None,
 ) -> bool:
+    if isinstance(incident_id, str):
+        incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
         stmt = (
             update(Incident)

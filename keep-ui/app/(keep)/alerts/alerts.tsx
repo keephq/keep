@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Preset } from "./models";
 import { useAlerts } from "utils/hooks/useAlerts";
-import { usePresets } from "utils/hooks/usePresets";
+import { usePresets } from "@/entities/presets/model/usePresets";
 import AlertTableTabPanel from "./alert-table-tab-panel";
 import { AlertHistory } from "./alert-history";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
@@ -16,45 +15,17 @@ import AlertDismissModal from "./alert-dismiss-modal";
 import { ViewAlertModal } from "./ViewAlertModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import AlertChangeStatusModal from "./alert-change-status-modal";
-import { useAlertPolling } from "utils/hooks/usePusher";
 import NotFound from "@/app/(keep)/not-found";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import EnrichAlertSidePanel from "@/app/(keep)/alerts/EnrichAlertSidePanel";
+import Loading from "../loading";
+import { Preset } from "@/entities/presets/model/types";
+import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 
 const defaultPresets: Preset[] = [
   {
     id: "feed",
     name: "feed",
-    options: [],
-    is_private: false,
-    is_noisy: false,
-    alerts_count: 0,
-    should_do_noise_now: false,
-    tags: [],
-  },
-  {
-    id: "dismissed",
-    name: "dismissed",
-    options: [],
-    is_private: false,
-    is_noisy: false,
-    alerts_count: 0,
-    should_do_noise_now: false,
-    tags: [],
-  },
-  {
-    id: "groups",
-    name: "groups",
-    options: [],
-    is_private: false,
-    is_noisy: false,
-    alerts_count: 0,
-    should_do_noise_now: false,
-    tags: [],
-  },
-  {
-    id: "without-incident",
-    name: "without-incident",
     options: [],
     is_private: false,
     is_noisy: false,
@@ -69,6 +40,7 @@ type AlertsProps = {
 };
 
 export default function Alerts({ presetName }: AlertsProps) {
+  const api = useApi();
   const { usePresetAlerts } = useAlerts();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
@@ -76,9 +48,9 @@ export default function Alerts({ presetName }: AlertsProps) {
   const ticketingProviders = useMemo(
     () =>
       providersData.installed_providers.filter((provider) =>
-        provider.tags.includes("ticketing"),
+        provider.tags.includes("ticketing")
       ),
-    [providersData.installed_providers],
+    [providersData.installed_providers]
   );
 
   const searchParams = useSearchParams();
@@ -95,15 +67,15 @@ export default function Alerts({ presetName }: AlertsProps) {
   const [viewEnrichAlertModal, setEnrichAlertModal] =
     useState<AlertDto | null>();
   const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
-  const { useAllPresets } = usePresets();
-
-  const { data: savedPresets = [] } = useAllPresets({
-    revalidateOnFocus: false,
-  });
+  const { dynamicPresets: savedPresets = [], isLoading: _isPresetsLoading } =
+    usePresets({
+      revalidateOnFocus: false,
+    });
+  const isPresetsLoading = _isPresetsLoading || !api.isReady();
   const presets = [...defaultPresets, ...savedPresets] as const;
 
   const selectedPreset = presets.find(
-    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName),
+    (preset) => preset.name.toLowerCase() === decodeURIComponent(presetName)
   );
 
   const { data: pollAlerts } = useAlertPolling();
@@ -114,13 +86,11 @@ export default function Alerts({ presetName }: AlertsProps) {
     error: alertsError,
   } = usePresetAlerts(selectedPreset ? selectedPreset.name : "");
 
-  const api = useApi();
   const isLoading = isAsyncLoading || !api.isReady();
 
   useEffect(() => {
     const fingerprint = searchParams?.get("alertPayloadFingerprint");
     const enrich = searchParams?.get("enrich");
-    console.log(enrich, fingerprint);
     if (fingerprint && enrich) {
       const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
       setEnrichAlertModal(alert);
@@ -141,6 +111,16 @@ export default function Alerts({ presetName }: AlertsProps) {
     }
   }, [mutateAlerts, pollAlerts]);
 
+  // if we don't have presets data yet, just show loading
+  if (!selectedPreset && isPresetsLoading) {
+    return <Loading />;
+  }
+
+  // if we have an error, throw it, error.tsx will catch it
+  if (alertsError) {
+    throw alertsError;
+  }
+
   if (!selectedPreset) {
     return <NotFound />;
   }
@@ -160,23 +140,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         mutateAlerts={mutateAlerts}
       />
 
-      {selectedPreset && (
-        <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
-      )}
-      <AlertAssignTicketModal
-        handleClose={() => setTicketModalAlert(null)}
-        ticketingProviders={ticketingProviders}
-        alert={ticketModalAlert ?? null}
-      />
-      <AlertNoteModal
-        handleClose={() => setNoteModalAlert(null)}
-        alert={noteModalAlert ?? null}
-      />
-      {selectedPreset && <AlertMethodModal presetName={selectedPreset.name} />}
-      <ManualRunWorkflowModal
-        alert={runWorkflowModalAlert}
-        handleClose={() => setRunWorkflowModalAlert(null)}
-      />
+      <AlertHistory alerts={alerts} presetName={selectedPreset.name} />
       <AlertDismissModal
         alert={dismissModalAlert}
         preset={selectedPreset.name}
@@ -186,6 +150,20 @@ export default function Alerts({ presetName }: AlertsProps) {
         alert={changeStatusAlert}
         presetName={selectedPreset.name}
         handleClose={() => setChangeStatusAlert(null)}
+      />
+      <AlertMethodModal presetName={selectedPreset.name} />
+      <AlertAssignTicketModal
+        handleClose={() => setTicketModalAlert(null)}
+        ticketingProviders={ticketingProviders}
+        alert={ticketModalAlert ?? null}
+      />
+      <AlertNoteModal
+        handleClose={() => setNoteModalAlert(null)}
+        alert={noteModalAlert ?? null}
+      />
+      <ManualRunWorkflowModal
+        alert={runWorkflowModalAlert}
+        handleClose={() => setRunWorkflowModalAlert(null)}
       />
       <ViewAlertModal
         alert={viewAlertModal}

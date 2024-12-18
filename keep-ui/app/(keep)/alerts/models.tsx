@@ -1,3 +1,5 @@
+import { Preset } from "@/entities/presets/model/types";
+
 export enum Severity {
   Critical = "critical",
   High = "high",
@@ -66,28 +68,6 @@ export interface AlertDto {
   is_created_by_ai?: boolean;
 }
 
-interface Option {
-  readonly label: string;
-  readonly value: string;
-}
-
-export interface Tag {
-  id: number;
-  name: string;
-}
-
-export interface Preset {
-  id: string;
-  name: string;
-  options: Option[];
-  is_private: boolean;
-  is_noisy: boolean;
-  should_do_noise_now: boolean;
-  alerts_count: number;
-  created_by?: string;
-  tags: Tag[];
-}
-
 export function getTabsFromPreset(preset: Preset): any[] {
   const tabsOption = preset.options.find(
     (option) => option.label.toLowerCase() === "tabs"
@@ -106,6 +86,7 @@ export interface AlertToWorkflowExecution {
     | "error"
     | "providers_not_configured";
   workflow_started: Date;
+  event_id: string;
 }
 
 export const AlertKnownKeys = [

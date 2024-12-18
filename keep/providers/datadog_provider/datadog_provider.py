@@ -794,21 +794,29 @@ class DatadogProvider(BaseTopologyProvider):
     def _format_alert(
         event: dict, provider_instance: "BaseTopologyProvider" = None
     ) -> AlertDto:
-        tags_list = event.get("tags", "").split(",")
-        tags_list.remove("monitor")
+        tags = event.get("tags", "")
+        if isinstance(tags, str):
+            tags_list = tags.split(",")
+            tags_list.remove("monitor")
+            tags = {}
 
-        try:
-            tags = {}
-            for tag in tags_list:
-                parts = tag.split(":", 1)  # Split only on first ':'
-                if len(parts) == 2:
-                    key, value = parts
-                    tags[key] = value
-        except Exception as e:
-            logger.error(
-                "Failed to parse tags", extra={"error": str(e), "tags": tags_list}
-            )
-            tags = {}
+            try:
+                for tag in tags_list:
+                    parts = tag.split(":", 1)  # Split only on first ':'
+                    if len(parts) == 2:
+                        key, value = parts
+                        tags[key] = value
+            except Exception as e:
+                logger.error(
+                    "Failed to parse tags", extra={"error": str(e), "tags": tags_list}
+                )
+                tags = {}
+
+        service = None
+        # Always remove monitor tag
+        if isinstance(tags, dict):
+            tags.pop("monitor", None)
+            service = tags.get("service")
 
         event_time = datetime.datetime.fromtimestamp(
             int(event.get("last_updated")) / 1000, tz=datetime.timezone.utc
@@ -821,7 +829,6 @@ class DatadogProvider(BaseTopologyProvider):
         severity = DatadogProvider.SEVERITIES_MAP.get(
             event.get("severity"), AlertSeverity.INFO
         )
-        service = tags.get("service")
 
         url = event.pop("url", None)
 
