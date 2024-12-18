@@ -50,7 +50,9 @@ def test_get_alerts_data_for_incident(db_session, create_alert):
     assert 100 == db_session.query(func.count(Alert.id)).scalar()
     assert 10 == unique_fingerprints
 
-    data = get_alerts_data_for_incident(SINGLE_TENANT_UUID, [a.fingerprint for a in alerts])
+    data = get_alerts_data_for_incident(
+        SINGLE_TENANT_UUID, [a.fingerprint for a in alerts]
+    )
     assert data["sources"] == set([f"source_{i}" for i in range(10)])
     assert data["services"] == set([f"service_{i}" for i in range(10)])
     assert data["count"] == unique_fingerprints
@@ -97,7 +99,9 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 
     service_field = get_json_extract_field(db_session, Alert.event, "service")
 
-    service_0 = db_session.query(Alert.fingerprint).filter(service_field == "service_0").all()
+    service_0 = (
+        db_session.query(Alert.fingerprint).filter(service_field == "service_0").all()
+    )
 
     # Testing unique fingerprints
     more_alerts_with_same_fingerprints = setup_stress_alerts_no_elastic(10)
@@ -170,7 +174,9 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     )
 
     source_1 = (
-        db_session.query(Alert.fingerprint).filter(Alert.provider_type == "source_1").all()
+        db_session.query(Alert.fingerprint)
+        .filter(Alert.provider_type == "source_1")
+        .all()
     )
 
     remove_alerts_to_incident_by_incident_id(
@@ -356,13 +362,12 @@ def test_incident_status_change(
     )
 
     add_alerts_to_incident_by_incident_id(
-        "keep",
-        incident.id,
-        [a.fingerprint for a in alerts],
-        session=db_session
+        "keep", incident.id, [a.fingerprint for a in alerts], session=db_session
     )
 
-    incident = get_incident_by_id("keep", incident.id, with_alerts=True, session=db_session)
+    incident = get_incident_by_id(
+        "keep", incident.id, with_alerts=True, session=db_session
+    )
 
     alerts_dtos = convert_db_alerts_to_dto_alerts(incident._alerts, session=db_session)
     assert (
@@ -390,7 +395,9 @@ def test_incident_status_change(
     assert data["status"] == IncidentStatus.ACKNOWLEDGED.value
 
     db_session.expire_all()
-    incident = get_incident_by_id("keep", incident.id, with_alerts=True, session=db_session)
+    incident = get_incident_by_id(
+        "keep", incident.id, with_alerts=True, session=db_session
+    )
 
     assert incident.status == IncidentStatus.ACKNOWLEDGED.value
     alerts_dtos = convert_db_alerts_to_dto_alerts(incident._alerts)
@@ -419,7 +426,9 @@ def test_incident_status_change(
     assert data["status"] == IncidentStatus.RESOLVED.value
 
     db_session.expire_all()
-    incident = get_incident_by_id("keep", incident.id, with_alerts=True, session=db_session)
+    incident = get_incident_by_id(
+        "keep", incident.id, with_alerts=True, session=db_session
+    )
 
     assert incident.status == IncidentStatus.RESOLVED.value
     # All alerts are resolved as well
@@ -539,10 +548,10 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
 
     assert len(incident_alerts) == 1
     last_fp1_alert = (
-        db_session
-        .query(Alert.timestamp)
+        db_session.query(Alert.timestamp)
         .where(Alert.fingerprint == "fp1")
-        .order_by(desc(Alert.timestamp)).first()
+        .order_by(desc(Alert.timestamp))
+        .first()
     )
     assert incident_alerts[0].timestamp == last_fp1_alert.timestamp
     assert total_incident_alerts == 1
@@ -683,7 +692,9 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     assert incident_2.merged_at is not None
     assert incident_2.merged_by == "test-user-email"
 
-    incident_3 = get_incident_by_id(SINGLE_TENANT_UUID, incident_3.id, with_alerts=True, session=db_session)
+    incident_3 = get_incident_by_id(
+        SINGLE_TENANT_UUID, incident_3.id, with_alerts=True, session=db_session
+    )
     assert len(incident_3._alerts) == 0
     assert incident_3.status == IncidentStatus.MERGED.value
     assert incident_3.merged_into_incident_id == incident_1.id
@@ -825,42 +836,41 @@ def test_split_incident_app(db_session, client, test_app, create_alert):
         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
     )
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_1.id, [a.id for a in alerts]
+        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts]
     )
 
-    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id)
-    assert len(incident_1.alerts) == 3
-
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    assert len(incident_1._alerts) == 3
 
     incident_2 = create_incident_from_dict(
         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
     )
-    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id)
-    assert len(incident_2.alerts) == 0
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    assert len(incident_2._alerts) == 0
 
     response = client.post(
         f"/incidents/{str(incident_1.id)}/split",
         headers={"x-api-key": "some-key"},
         json={
-            "alert_ids": [str(alerts[2].id)],
+            "alert_fingerprints": [alerts[2].fingerprint],
             "destination_incident_id": str(incident_2.id),
         },
     )
 
     assert response.status_code == 200
 
-    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id)
-    assert incident_2.alerts[0].id == alerts[2].id
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    assert incident_2._alerts[0].fingerprint == alerts[2].fingerprint
 
-    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id)
-    assert len(incident_1.alerts) == 2
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    assert len(incident_1._alerts) == 2
+
 
 def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
 
-
     tenant_data = [
         Tenant(id="tenant_1", name="test-tenant-1", created_by="tests-1@keephq.dev"),
-        Tenant(id="tenant_2", name="test-tenant-2", created_by="tests-2@keephq.dev")
+        Tenant(id="tenant_2", name="test-tenant-2", created_by="tests-2@keephq.dev"),
     ]
     db_session.add_all(tenant_data)
     db_session.commit()
@@ -877,7 +887,7 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
         AlertStatus.FIRING,
         datetime.utcnow(),
         {},
-        tenant_id="tenant_1"
+        tenant_id="tenant_1",
     )
 
     create_alert(
@@ -885,11 +895,15 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
         AlertStatus.FIRING,
         datetime.utcnow(),
         {},
-        tenant_id="tenant_2"
+        tenant_id="tenant_2",
     )
 
-    alert_tenant_1 = db_session.query(Alert).filter(Alert.tenant_id == 'tenant_1').first()
-    alert_tenant_2 = db_session.query(Alert).filter(Alert.tenant_id == 'tenant_2').first()
+    alert_tenant_1 = (
+        db_session.query(Alert).filter(Alert.tenant_id == "tenant_1").first()
+    )
+    alert_tenant_2 = (
+        db_session.query(Alert).filter(Alert.tenant_id == "tenant_2").first()
+    )
 
     add_alerts_to_incident_by_incident_id(
         "tenant_1", incident_tenant_1.id, [alert_tenant_1.fingerprint]
@@ -899,18 +913,22 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
     )
 
     incident_tenant_1 = get_incident_by_id("tenant_1", incident_tenant_1.id)
-    incident_tenant_1_alerts, total_incident_tenant_1_alerts = get_incident_alerts_by_incident_id(
-        tenant_id="tenant_1",
-        incident_id=incident_tenant_1.id,
+    incident_tenant_1_alerts, total_incident_tenant_1_alerts = (
+        get_incident_alerts_by_incident_id(
+            tenant_id="tenant_1",
+            incident_id=incident_tenant_1.id,
+        )
     )
     assert incident_tenant_1.alerts_count == 1
     assert total_incident_tenant_1_alerts == 1
     assert len(incident_tenant_1_alerts) == 1
 
     incident_tenant_2 = get_incident_by_id("tenant_2", incident_tenant_2.id)
-    incident_tenant_2_alerts, total_incident_tenant_2_alerts = get_incident_alerts_by_incident_id(
-        tenant_id="tenant_2",
-        incident_id=incident_tenant_2.id,
+    incident_tenant_2_alerts, total_incident_tenant_2_alerts = (
+        get_incident_alerts_by_incident_id(
+            tenant_id="tenant_2",
+            incident_id=incident_tenant_2.id,
+        )
     )
     assert incident_tenant_2.alerts_count == 1
     assert total_incident_tenant_2_alerts == 1

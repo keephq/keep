@@ -3301,7 +3301,6 @@ def get_last_incidents(
 
     return incidents, total_count
 
-
 def get_incident_by_id(
     tenant_id: str,
     incident_id: str | UUID,
@@ -3567,7 +3566,7 @@ def get_alerts_data_for_incident(
     tenant_id: str,
     fingerprints: Optional[List[str]] = None,
     session: Optional[Session] = None,
-) -> AlertsDataForIncident:
+):
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
     Logic is wrapped to the inner function for better usability with an optional database session

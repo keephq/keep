@@ -279,20 +279,19 @@ async def split_incident(
         extra={
             "incident_id": incident_id,
             "tenant_id": tenant_id,
-            "alert_ids": command.alert_ids,
+            "alert_fingerprints": command.alert_fingerprints,
         },
     )
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
     await incident_bl.add_alerts_to_incident(
-        incident_id=command.destination_incident_id, alert_ids=command.alert_ids
+        incident_id=command.destination_incident_id, alert_fingerprints=command.alert_fingerprints
     )
     incident_bl.delete_alerts_from_incident(
-        incident_id=incident_id, alert_ids=command.alert_ids
+        incident_id=incident_id, alert_fingerprints=command.alert_fingerprints
     )
     return SplitIncidentResponseDto(
         destination_incident_id=command.destination_incident_id,
-        # TODO: get moved alert ids or moved count
-        moved_alert_ids=[],
+        moved_alert_fingerprints=command.alert_fingerprints,
     )
 
 
