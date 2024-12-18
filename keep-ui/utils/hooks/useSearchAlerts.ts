@@ -3,7 +3,7 @@ import { AlertDto } from "@/app/(keep)/alerts/models";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { RuleGroupType, formatQuery } from "react-querybuilder";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useRef } from "react";
 
 export const useSearchAlerts = (
   args: { query: RuleGroupType; timeframe: number },
@@ -14,19 +14,23 @@ export const useSearchAlerts = (
   // Create a stable key for our query
   const argsString = useMemo(
     () => JSON.stringify(args),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [args.timeframe, JSON.stringify(args.query)]
   );
+
+  const previousArgsStringRef = useRef<string>(argsString);
 
   const [debouncedArgsString] = useDebouncedValue(argsString, 2000);
   const debouncedArgs = JSON.parse(debouncedArgsString);
 
   const doesTimeframExceed14Days = Math.floor(args.timeframe / 86400) > 13;
 
-  const key = doesTimeframExceed14Days
-    ? null
-    : ["/alerts/search", debouncedArgsString];
+  const key =
+    api.isReady() && !doesTimeframExceed14Days
+      ? ["/alerts/search", debouncedArgsString]
+      : null;
 
-  const swr = useSWR<AlertDto[]>(
+  const { mutate, ...rest } = useSWR<AlertDto[]>(
     key,
     async () =>
       api.post(`/alerts/search`, {
@@ -46,8 +50,11 @@ export const useSearchAlerts = (
 
   // Clear data immediately when query changes, before debounce
   useEffect(() => {
-    swr.mutate(undefined, false);
-  }, [argsString]); // Not debouncedArgsString
+    if (argsString !== previousArgsStringRef.current) {
+      mutate(undefined, false);
+      previousArgsStringRef.current = argsString;
+    }
+  }, [argsString, mutate]); // Not debouncedArgsString
 
-  return swr;
+  return { ...rest, mutate };
 };

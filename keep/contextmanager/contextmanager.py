@@ -2,6 +2,7 @@
 import logging
 
 import click
+import json5
 from pympler.asizeof import asizeof
 
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
@@ -10,7 +11,13 @@ from keep.api.models.alert import AlertDto
 
 
 class ContextManager:
-    def __init__(self, tenant_id, workflow_id=None, workflow_execution_id=None):
+    def __init__(
+        self,
+        tenant_id,
+        workflow_id=None,
+        workflow_execution_id=None,
+        workflow: dict | None = None,
+    ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(
             self.logger, self, tenant_id, workflow_id, workflow_execution_id
@@ -37,16 +44,25 @@ class ContextManager:
         # last workflow context
         self.last_workflow_execution_results = {}
         self.last_workflow_run_time = None
-        if self.workflow_id:
+        if self.workflow_id and workflow:
             try:
-                last_workflow_execution = get_last_workflow_execution_by_workflow_id(
-                    tenant_id, workflow_id
+                # @tb: try to understand if the workflow tries to use last_workflow_results
+                # if so, we need to get the last workflow execution and load it into the context
+                workflow_str = json5.dumps(workflow)
+                last_workflow_results_in_workflow = (
+                    "last_workflow_results" in workflow_str
                 )
-                if last_workflow_execution is not None:
-                    self.last_workflow_execution_results = (
-                        last_workflow_execution.results
+                if last_workflow_results_in_workflow:
+                    last_workflow_execution = (
+                        get_last_workflow_execution_by_workflow_id(
+                            tenant_id, workflow_id
+                        )
                     )
-                    self.last_workflow_run_time = last_workflow_execution.started
+                    if last_workflow_execution is not None:
+                        self.last_workflow_execution_results = (
+                            last_workflow_execution.results
+                        )
+                        self.last_workflow_run_time = last_workflow_execution.started
             except Exception:
                 self.logger.exception("Failed to get last workflow execution")
                 pass

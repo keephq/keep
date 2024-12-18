@@ -121,10 +121,7 @@ export const CorrelationSidebarBody = ({
         </Callout>
       )}
       <FormProvider {...methods}>
-        <form
-          // className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-2"
-          onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
-        >
+        <form onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}>
           <div className="mb-10">
             <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
           </div>
