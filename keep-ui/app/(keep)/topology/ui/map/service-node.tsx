@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Handle, NodeProps, NodeToolbar, Position } from "@xyflow/react";
-import { useAlerts } from "@/utils/hooks/useAlerts";
-import { useAlertPolling } from "@/utils/hooks/usePusher";
 import { useRouter } from "next/navigation";
 import { ServiceNodeType, TopologyService } from "../../model/models";
 import { Badge } from "@tremor/react";
@@ -73,30 +71,43 @@ function ServiceDetailsTooltip({ data }: { data: TopologyService }) {
 }
 
 export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
-  const { useAllAlerts } = useAlerts();
-  const { data: alerts, mutate } = useAllAlerts("feed");
-  const { data: pollAlerts } = useAlertPolling();
   const router = useRouter();
   const [showDetails, setShowDetails] = useState(false);
+  const [isTooltipReady, setIsTooltipReady] = useState(false);
+  const [tooltipDirection, setTooltipDirection] = useState<Position>(
+    Position.Bottom
+  );
 
   useEffect(() => {
-    if (pollAlerts) {
-      mutate();
+    if (!showDetails) {
+      setTooltipDirection(Position.Bottom);
+      setIsTooltipReady(false);
+      return;
     }
-  }, [pollAlerts, mutate]);
 
-  const relevantAlerts = alerts?.filter(
-    (alert) => alert.service === data.service
-  );
+    const node = document.querySelector(".tooltip-ref");
+    if (!node) return;
+
+    const rect = node.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    if (rect.bottom + 10 > viewportHeight) {
+      setTooltipDirection(Position.Top);
+    } else {
+      setTooltipDirection(Position.Bottom);
+    }
+    setIsTooltipReady(true);
+  }, [showDetails]);
 
   const handleClick = () => {
     router.push(
-      `/alerts/feed?cel=service%3D%3D${encodeURIComponent(`"${data.service}"`)}`
+      `/incidents?services={encodeURIComponent("${data.display_name}")}`
     );
   };
 
-  const alertCount = relevantAlerts?.length || 0;
-  const badgeColor = alertCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
+  const incidentsCount = data.incidents ?? 0;
+  const badgeColor =
+    incidentsCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
 
   return (
     <>
@@ -121,12 +132,12 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
           </div>
         )}
         <strong className="text-lg">{data.display_name || data.service}</strong>
-        {alertCount > 0 && (
+        {incidentsCount > 0 && (
           <span
             className={`absolute top-[-20px] right-[-20px] mt-2 mr-2 px-2 py-1 text-white text-xs font-bold rounded-full ${badgeColor} hover:cursor-pointer`}
             onClick={handleClick}
           >
-            {alertCount}
+            {incidentsCount}
           </span>
         )}
         <div className="flex flex-wrap gap-1">
@@ -141,7 +152,11 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
         </div>
       </div>
 
-      <NodeToolbar isVisible={showDetails} position={Position.Bottom}>
+      <NodeToolbar
+        isVisible={showDetails}
+        position={tooltipDirection}
+        className={clsx("tooltip-ref", !isTooltipReady && "invisible")}
+      >
         <ServiceDetailsTooltip data={data} />
       </NodeToolbar>
 

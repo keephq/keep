@@ -85,7 +85,7 @@ class WorkflowDTO(BaseModel):
         ordered_raw["steps"] = d.get("steps")
         # last, actions
         ordered_raw["actions"] = d.get("actions")
-        return yaml.dump(ordered_raw)
+        return yaml.dump(ordered_raw, width=99999)
 
 
 class WorkflowExecutionLogsDTO(BaseModel):
@@ -101,6 +101,7 @@ class WorkflowToAlertExecutionDTO(BaseModel):
     alert_fingerprint: str
     workflow_status: str
     workflow_started: datetime
+    event_id: str | None
 
 
 class WorkflowExecutionDTO(BaseModel):
@@ -114,6 +115,8 @@ class WorkflowExecutionDTO(BaseModel):
     error: Optional[str]
     execution_time: Optional[float]
     results: Optional[dict]
+    event_id: Optional[str]
+    event_type: Optional[str]
 
 
 class WorkflowCreateOrUpdateDTO(BaseModel):

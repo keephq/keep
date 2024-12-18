@@ -1,6 +1,7 @@
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
-import { AlertDto, AlertKnownKeys, Preset, getTabsFromPreset } from "./models";
+import { AlertDto, AlertKnownKeys, getTabsFromPreset } from "./models";
+import { Preset } from "@/entities/presets/model/types";
 
 interface Props {
   alerts: AlertDto[];
@@ -83,8 +84,6 @@ export default function AlertTableTabPanel({
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
       presetName={preset.name}
-      presetPrivate={preset.is_private}
-      presetNoisy={preset.is_noisy}
       presetStatic={preset.name === "feed"}
       presetId={preset.id}
       presetTabs={presetTabs}

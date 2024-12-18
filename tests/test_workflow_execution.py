@@ -737,6 +737,7 @@ actions:
 """
 
 
+@pytest.mark.timeout(15)
 @pytest.mark.parametrize(
     "test_app",
     [

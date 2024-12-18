@@ -1,7 +1,8 @@
 import { SWRConfiguration } from "swr";
 import useSWRImmutable from "swr/immutable";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { Tag } from "@/app/(keep)/alerts/models";
+
+import { Tag } from "@/entities/presets/model/types";
 
 export const useTags = (options: SWRConfiguration = {}) => {
   const api = useApi();

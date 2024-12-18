@@ -15,12 +15,12 @@ interface IncidentUpdatePayload {
   incident_id: string | null;
 }
 
-interface Filters {
-  status: string[];
-  severity: string[];
-  assignees: string[];
-  sources: string[];
-  affected_services: string[];
+export interface Filters {
+  status?: string[];
+  severity?: string[];
+  assignees?: string[];
+  sources?: string[];
+  affected_services?: string[];
 }
 
 export const useIncidents = (

@@ -56,7 +56,7 @@ class WorkflowStore:
             created_by=created_by,
             interval=interval,
             is_disabled=Parser.parse_disabled(workflow),
-            workflow_raw=yaml.dump(workflow),
+            workflow_raw=yaml.dump(workflow, width=99999),
         )
         self.logger.info(f"Workflow {workflow_id} created successfully")
         return workflow
@@ -102,7 +102,7 @@ class WorkflowStore:
         raw_workflow = get_raw_workflow(tenant_id, workflow_id)
         workflow_yaml = yaml.safe_load(raw_workflow)
         valid_workflow_yaml = {"workflow": workflow_yaml}
-        return yaml.dump(valid_workflow_yaml)
+        return yaml.dump(valid_workflow_yaml, width=99999)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
         workflow = get_raw_workflow(tenant_id, workflow_id)
@@ -317,7 +317,7 @@ class WorkflowStore:
                         created_by="system",
                         interval=workflow_interval,
                         is_disabled=workflow_disabled,
-                        workflow_raw=yaml.dump(workflow_yaml),
+                        workflow_raw=yaml.dump(workflow_yaml, width=99999),
                         provisioned=True,
                         provisioned_file=workflow_path,
                     )
@@ -496,7 +496,9 @@ class WorkflowStore:
                     id=provider_data.id,
                     installed=True,
                 )
-                providers_dto.append(provider_dto)
+                # add only if not already in the list
+                if provider_data.id not in [p.id for p in providers_dto]:
+                    providers_dto.append(provider_dto)
             except KeyError:
                 # Handle case where the provider is not installed
                 try:

@@ -9,19 +9,13 @@ import { CorrelationSubmission } from "./CorrelationSubmission";
 import { Link } from "@/components/ui";
 import { ArrowUpRightIcon } from "@heroicons/react/24/outline";
 import { useRules } from "utils/hooks/useRules";
-import { CorrelationForm as CorrelationFormType } from ".";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
-
-export const TIMEFRAME_UNITS_TO_SECONDS = {
-  seconds: (amount: number) => amount,
-  minutes: (amount: number) => 60 * amount,
-  hours: (amount: number) => 3600 * amount,
-  days: (amount: number) => 86400 * amount,
-} as const;
+import { CorrelationFormType } from "./types";
+import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
@@ -127,10 +121,7 @@ export const CorrelationSidebarBody = ({
         </Callout>
       )}
       <FormProvider {...methods}>
-        <form
-          // className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-2"
-          onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
-        >
+        <form onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}>
           <div className="mb-10">
             <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
           </div>

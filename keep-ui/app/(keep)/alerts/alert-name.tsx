@@ -5,11 +5,13 @@ import {
   TrashIcon,
   PencilSquareIcon,
   Cog8ToothIcon,
+  // Cog8ToothIcon,
 } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
 import { AlertDto, AlertToWorkflowExecution } from "./models";
-import { useWorkflowExecutions } from "utils/hooks/useWorkflowExecutions";
+// import { useWorkflowExecutions } from "utils/hooks/useWorkflowExecutions";
 import { useRouter } from "next/navigation";
+import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
 
 interface Props {
   alert: AlertDto;
@@ -39,8 +41,7 @@ export default function AlertName({
   };
 
   const relevantWorkflowExecution =
-    executions?.find((wf) => wf.alert_fingerprint === alert.fingerprint) ??
-    null;
+    executions?.find((wf) => wf.event_id === alert.event_id) ?? null;
 
   const {
     name,

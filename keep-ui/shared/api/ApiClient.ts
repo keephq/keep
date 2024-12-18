@@ -28,6 +28,21 @@ export class ApiClient {
     };
   }
 
+  getToken() {
+    return this.session?.accessToken;
+  }
+
+  getApiBaseUrl() {
+    if (this.isServer) {
+      return getApiURL();
+    }
+    const baseUrl = getApiUrlFromConfig(this.config);
+    if (baseUrl.startsWith("/")) {
+      return `${window.location.origin}${baseUrl}`;
+    }
+    return baseUrl;
+  }
+
   async handleResponse(response: Response, url: string) {
     // Ensure that the fetch was successful
     if (!response.ok) {

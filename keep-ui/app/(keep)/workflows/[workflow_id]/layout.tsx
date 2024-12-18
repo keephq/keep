@@ -1,6 +1,7 @@
 "use client";
-import { ArrowLeftIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
+import { Link } from "@/components/ui";
+import { ArrowRightIcon } from "@heroicons/react/16/solid";
+import { Icon, Subtitle } from "@tremor/react";
 
 export default function Layout({
   children,
@@ -10,16 +11,12 @@ export default function Layout({
   params: { workflow_id: string };
 }) {
   return (
-    <>
-      <div className="flex flex-col mb-4 h-full gap-6">
-        <Link
-          href="/workflows"
-          className="flex items-center text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeftIcon className="h-5 w-5 mr-1" /> Back to Workflows
-        </Link>
-        <div className="flex-1 overflow-auto h-full">{children}</div>
-      </div>
-    </>
+    <div className="flex flex-col mb-4 h-full gap-6">
+      <Subtitle className="text-sm">
+        <Link href="/workflows">All Workflows</Link>{" "}
+        <Icon icon={ArrowRightIcon} color="gray" size="xs" /> Workflow Details
+      </Subtitle>
+      <div className="flex-1 h-full">{children}</div>
+    </div>
   );
 }
