@@ -270,7 +270,7 @@ receivers:
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
         alert_payload["fingerprint"] = fingerprint
         if to_wrap_with_provider_type:
-            return {"source_type": "prometheus", "event": alert_payload}
+            return {"keep_source_type": "prometheus", "event": alert_payload}
 
         return alert_payload
 
