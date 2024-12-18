@@ -137,8 +137,7 @@ class Parser:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
-            tenant_id=tenant_id,
-            workflow_id=workflow_id,
+            tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )
         # Parse the providers (from the workflow yaml or from the providers directory)
         self._load_providers_config(

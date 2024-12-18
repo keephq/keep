@@ -18,6 +18,7 @@ import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui/theme/ThemeControl";
 import { HiOutlineDocumentText } from "react-icons/hi2";
+import { useMounted } from "@/shared/lib/hooks/useMounted";
 
 const ONBOARDING_FLOW_ID = "flow_FHDz1hit";
 
@@ -90,11 +91,12 @@ export const UserInfo = ({ session }: UserInfoProps) => {
 
   const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const isMounted = useMounted();
 
   return (
     <>
       <ul className="space-y-2 p-2">
-        {!config?.FRIGADE_DISABLED && flow?.isCompleted === false && (
+        {isMounted && !config?.FRIGADE_DISABLED && flow?.isCompleted === false && (
           <li>
             <Frigade.ProgressBadge
               flowId={ONBOARDING_FLOW_ID}
