@@ -265,8 +265,9 @@ class ProvidersService:
                 "Being deleted provider of type %s does not have a clean_up method",
                 provider_model.type
             )
-        except Exception:
-            logger.exception("Failed to clean up provider")
+        except Exception as exc:
+            logger.exception(msg="Failed to clean up provider",
+                             extra={ "error_msg": str(exc) })
 
         session.delete(provider_model)
         session.commit()
