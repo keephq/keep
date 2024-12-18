@@ -16,9 +16,14 @@ services:
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    image: keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
+      - KEEP_MEMORY_PROFILING=false
+      - SCHEDULER=true
+      - POSTHOG_DISABLED=true
+    cap_add:
+      - SYS_PTRACE
     volumes:
       - ./state:/state
 

@@ -36,6 +36,8 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
+        self.workflows_models = {}
+        self.workflows = {}
 
     async def start(self):
         """Runs the workflow manager in server mode"""
@@ -145,14 +147,28 @@ class WorkflowManager:
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
         for event in events:
             self.logger.info("Getting all workflows")
-            all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
+
+            if tenant_id in self.workflows:
+                self.logger.info("Using cached workflows")
+                all_workflow_models = self.workflows_models[tenant_id]
+            else:
+                self.workflows[tenant_id] = {}
+                self.workflows_models[tenant_id] = []
+                all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
+                for workflow_model in all_workflow_models:
+                    self.workflows_models[tenant_id].append(workflow_model)
+                    workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+                    if workflow is None:
+                        continue
+                    self.workflows[tenant_id][workflow_model.id] = workflow
+
             self.logger.info(
                 "Got all workflows",
                 extra={
                     "num_of_workflows": len(all_workflow_models),
                 },
             )
-            for workflow_model in all_workflow_models:
+            for workflow_model in self.workflows_models[tenant_id]:
 
                 if workflow_model.is_disabled:
                     self.logger.debug(
@@ -160,7 +176,7 @@ class WorkflowManager:
                         f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
                     )
                     continue
-                workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+                workflow = self.workflows[tenant_id].get(workflow_model.id)
                 if workflow is None:
                     continue
 
@@ -304,6 +320,7 @@ class WorkflowManager:
                     # Lastly, if the workflow should run, add it to the scheduler
                     self.logger.info("Adding workflow to run")
                     with self.scheduler.lock:
+                        # do nothing
                         self.scheduler.workflows_to_run.append(
                             {
                                 "workflow": workflow,
@@ -313,6 +330,7 @@ class WorkflowManager:
                                 "event": event,
                             }
                         )
+
                     self.logger.info("Workflow added to run")
 
     def _get_event_value(self, event, filter_key):

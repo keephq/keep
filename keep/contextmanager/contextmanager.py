@@ -19,9 +19,13 @@ class ContextManager:
         workflow: dict | None = None,
     ):
         self.logger = logging.getLogger(__name__)
+        # SHAHAR: test
         self.logger_adapter = WorkflowLoggerAdapter(
             self.logger, self, tenant_id, workflow_id, workflow_execution_id
         )
+
+        # self.logger_adapter = self.logger
+
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
         self.tenant_id = tenant_id
@@ -93,11 +97,14 @@ class ContextManager:
 
     def set_execution_context(self, workflow_execution_id):
         self.workflow_execution_id = workflow_execution_id
+        # self.logger_adapter.workflow_execution_id = workflow_execution_id
         self.logger_adapter.workflow_execution_id = workflow_execution_id
         for logger in self.__loggers.values():
             logger.workflow_execution_id = workflow_execution_id
 
     def get_logger(self, name=None):
+        # return self.logger
+
         if not name:
             return self.logger_adapter
 
@@ -258,7 +265,11 @@ class ContextManager:
         self.logger.info("Dumping logs to db")
         # dump the workflow logs to the db
         try:
+            # pass
             self.logger_adapter.dump()
+            # avoid circular ref
+            self.logger_adapter.context_manager = None
+            self.logger_adapter = None
         except Exception as e:
             # TODO - should be handled
             self.logger.error(

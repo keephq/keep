@@ -3,6 +3,7 @@ workflow:
   description: console-example
   triggers:
     - type: manual
+    - type: alert
   actions:
     - name: echo
       provider:

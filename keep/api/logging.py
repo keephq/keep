@@ -48,7 +48,7 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         # add the steps/actions context
         # todo: more robust
         # added: protection from big steps context (< 64kb)
-        if self.context_manager.steps_context_size < 1024 * 64:
+        if self.context_manager and self.context_manager.steps_context_size < 1024 * 64:
             extra["context"] = (self.context_manager.steps_context,)
         else:
             extra["context"] = "truncated (context size > 64kb)"

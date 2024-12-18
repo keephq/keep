@@ -529,7 +529,7 @@ class WorkflowScheduler:
                 self.logger.exception("Error getting workflows that should run")
                 pass
             self.logger.debug("Sleeping until next iteration")
-            time.sleep(1)
+            time.sleep(0.1)
         self.logger.info("Workflows scheduler stopped")
 
     def run_workflows(self, workflows: typing.List[Workflow]):
