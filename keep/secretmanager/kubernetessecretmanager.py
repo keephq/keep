@@ -4,7 +4,7 @@ import os
 
 import kubernetes.client
 import kubernetes.config
-from kubernetes.client.rest import ApiException
+from kubernetes.client.exceptions import ApiException
 
 from keep.secretmanager.secretmanager import BaseSecretManager
 
