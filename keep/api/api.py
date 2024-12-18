@@ -73,6 +73,7 @@ PORT = config("PORT", default=8080, cast=int)
 SCHEDULER = config("SCHEDULER", default="true", cast=bool)
 CONSUMER = config("CONSUMER", default="true", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
+KEEP_MEMORY_PROFILING = config("KEEP_MEMORY_PROFILING", default="false", cast=bool)
 
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
@@ -151,6 +152,13 @@ async def startup():
             event_loop.create_task(arq_worker.async_run())
         else:
             raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
+
+    # Enable memory if needed
+    if KEEP_MEMORY_PROFILING:
+        logger.info("Memory profiling enabled")
+        import tracemalloc
+
+        tracemalloc.start()
 
     logger.info("Services started successfully")
 
@@ -288,6 +296,11 @@ def get_app(
     app.include_router(
         deduplications.router, prefix="/deduplications", tags=["deduplications"]
     )
+    # also add the endpoint to get the memory usage
+    if KEEP_MEMORY_PROFILING:
+        from keep.api.routes import memory
+
+        app.include_router(memory.router, prefix="/memory", tags=["memory"])
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
