@@ -1,0 +1,165 @@
+---
+title: "Conditions"
+---
+
+# Conditions
+
+Conditions in Keep Workflow Engine define **logic to evaluate whether a step or action should execute**.
+
+They allow workflows to dynamically adapt based on outputs from previous steps, variables, or custom logic.
+
+Using conditions, you can introduce decision-making into workflows by asserting values, thresholds, or specific states.
+
+<Tip>
+Use sugar syntax: `if`
+
+You can simplify the use of conditions by adding an `if:` field directly to a step or action. This shorthand internally translates to a `conditions` block.
+
+```yaml
+actions:
+  - name: example-action
+    if: "{{ steps.some-step.results.some_value }} > 10"
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+```
+</Tip>
+
+---
+
+## General Structure
+
+### Explicit Conditions Block
+
+```yaml
+actions:
+  - name: example-action
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      condition:
+        - name: check-threshold
+          type: threshold
+          value: "{{ steps.some-step.results.some_value }}"
+          compare_to: 10
+          operator: ">"
+```
+
+## Supported Condition Types
+
+
+### assert
+Checks whether a specific assertion is true.
+
+```yaml
+
+condition:
+  - name: assert-condition
+    type: assert
+    assert: "{{ steps.get-data.results.value }} == 'expected'"
+
+```
+
+### threshold
+Compares a value to a threshold using operators like `>`, `<`,`==`, or `!=`.
+
+```yaml
+condition:
+  - name: threshold-condition
+    type: threshold
+    value: "{{ steps.get-data.results.value }}"
+    compare_to: 100
+    operator: ">"
+```
+
+
+## Examples
+
+### Simple Condition with `if`
+
+```yaml
+actions:
+  - name: notify-slack
+    if: "{{ steps.get-data.results.value }} > 100"
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      with:
+        message: "The value exceeded the threshold!"
+```
+
+### Threshold Condition in Full Syntax
+
+```yaml
+
+actions:
+  - name: notify-slack
+    provider:
+      type: slack
+      config: "{{ providers.slack }}"
+      condition:
+        - name: threshold-condition
+          type: threshold
+          value: "{{ steps.get-data.results.value }}"
+          compare_to: 100
+          operator: ">"
+      with:
+        message: "The value exceeded the threshold!"
+```
+
+### Combining Steps and Actions with Conditions
+
+```yaml
+workflow:
+  id: query-and-alert
+  description: "Query a database and notify only if a threshold is met"
+  steps:
+    - name: get-disk-usage
+      provider:
+        type: mysql
+        config: "{{ providers.mysql-prod }}"
+        with:
+          query: "SELECT disk_usage FROM metrics WHERE server = 'db1'"
+          single_row: true
+
+  actions:
+    - name: notify-slack
+      if: "{{ steps.get-disk-usage.results.disk_usage }} > 90"
+      provider:
+        type: slack
+        config: "{{ providers.slack }}"
+      with:
+        message: "Disk usage is critical: {{ steps.get-disk-usage.results.disk_usage }}%"
+
+```
+
+### Using `assert` for Complex Logic
+
+```yaml
+actions:
+  - name: create-incident
+    condition:
+      - name: assert-condition
+        type: assert
+        assert: "{{ steps.get-alert.results.severity }} == 'critical' and {{ steps.get-alert.results.source }} == 'datadog'"
+    provider:
+      type: servicenow
+      config: "{{ providers.servicenow }}"
+      with:
+        table_name: INCIDENT
+        payload:
+          short_description: "Critical Datadog alert received"
+```
+
+### Foreach + Conditions
+
+```yaml
+actions:
+  - name: process-pods
+    foreach: "{{ steps.get-pods.results }}"
+    if: "{{ foreach.value.status.phase }} == 'Failed'"
+    provider:
+      type: slack
+      with:
+        message: "Pod {{ foreach.value.metadata.name }} has failed!"
+```

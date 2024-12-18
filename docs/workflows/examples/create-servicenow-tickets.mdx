@@ -1,0 +1,49 @@
+---
+title: "Creating ServiceNow Tickets for Alerts"
+---
+
+<Info>
+
+Link to the [workflow](https://github.com/keephq/keep/blob/main/examples/workflows/create_service_now_ticket_upon_alerts.yml).
+
+</Info>
+
+This workflow creates a ServiceNow ticket whenever an alert from Grafana or Prometheus is triggered.
+
+
+Explanation:
+- Trigger: Activated by alerts from Grafana or Prometheus.
+- Action: If the alert does not already have a ticket ID, create a ServiceNow ticket and enrich the alert with details like ticket ID, URL, and status.
+
+
+```yaml
+workflow:
+  id: servicenow
+  description: create a ticket in servicenow when an alert is triggered
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: r"(grafana|prometheus)"
+  actions:
+    - name: create-service-now-ticket
+      if: "not '{{ alert.ticket_id }}' and {{ alert.annotations.ticket_type }}"
+      provider:
+        type: servicenow
+        config: "{{ providers.servicenow }}"
+        with:
+          table_name: "{{ alert.annotations.ticket_type }}"
+          payload:
+            short_description: "{{ alert.name }} - {{ alert.description }} [created by Keep][fingerprint: {{alert.fingerprint}}]"
+            description: "{{ alert.description }}"
+          enrich_alert:
+            - key: ticket_type
+              value: servicenow
+            - key: ticket_id
+              value: results.sys_id
+            - key: ticket_url
+              value: results.link
+            - key: ticket_status
+              value: results.stage
+
+```
