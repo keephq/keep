@@ -1,127 +1,113 @@
 ---
-title: "Incidents Overview"
+title: "Overview"
 ---
 
-Keep's incident management system provides a comprehensive solution for handling, tracking, and resolving operational incidents. This system helps teams effectively manage incidents from detection through resolution.
+Keep's incident management system provides a comprehensive solution for handling, tracking, and resolving operational incidents. This system helps teams effectively manage incidents from detection through resolution, ensuring minimal downtime and efficient collaboration.
 
-## What is an Incident?
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_1.png" />
+</Frame>
 
-An incident in Keep represents a significant event or condition that requires immediate attention and coordinated response from one or more teams. Incidents can be created manually or automatically triggered from correlated alerts.
 
-## Key Features
+### (1) Incident Severity
+Displays the severity of the incident, helping teams prioritize and focus on the most critical issues.
 
-### Incident Creation
-- **Manual Creation**: Create incidents directly through the interface
-- **Alert-Based**: Automatically generate incidents from alerts
-- **Bulk Creation**: Create incidents from multiple alerts
-- **Template Support**: Use predefined templates for common incidents
+### (2) Incident Name
+The unique name or identifier of the incident for easy reference and tracking.
 
-### Incident Management
-- **Status Tracking**: Monitor incident lifecycle
-- **Priority Levels**: Assign and adjust incident priority
-- **Team Assignment**: Route incidents to appropriate teams
-- **Timeline View**: Chronological event tracking
+### (3) Incident Summary (+ AI Summary)
+A brief overview of the incident, optionally enhanced with AI-generated summaries to provide deeper insights.
 
-### Collaboration Tools
-- **Comments and Updates**: Team communication
-- **File Attachments**: Share relevant documents
-- **Integration**: Connect with external tools
-- **Notification System**: Keep stakeholders informed
+### (4) Link Similar Incidents
+Connects related incidents for better visibility into recurring or interconnected issues.
 
-## Incident Lifecycle
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_link.png" />
+</Frame>
 
-1. **Detection**
-   - Alert correlation
-   - Manual reporting
-   - Automated detection
+### (5) Involved Services
+Lists the services affected by the incident, allowing teams to understand the scope of the impact.
 
-2. **Triage**
-   - Initial assessment
-   - Priority assignment
-   - Team routing
+### (6) Affected Environments
+Specifies the environments (e.g., production, staging) impacted by the incident.
 
-3. **Investigation**
-   - Root cause analysis
-   - Impact assessment
-   - Solution planning
+### (7) Run Workflow
+Quickly initiate workflows to address the incident, such as creating tickets, notifying teams, or executing remediation steps.
 
-4. **Resolution**
-   - Implementation of fixes
-   - Verification
-   - Documentation
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_workflow.png" />
+</Frame>
 
-5. **Post-mortem**
-   - Incident review
-   - Lessons learned
-   - Process improvement
 
-## Core Components
+### (8) Edit Incident
+Allows modification of incident details, such as severity, name, or involved services, to keep information up-to-date.
 
-### [Incident View](/incidents/incidentview)
-Detailed incident interface featuring:
-- Incident details
-- Related alerts
-- Timeline
-- Communication tools
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_edit.png" />
+</Frame>
 
-### Status Management
-Track incident states:
-- **New**: Recently created incidents
-- **In Progress**: Active investigation
-- **Resolved**: Solution implemented
-- **Closed**: Fully completed
+### (9) Incident Status
+Indicates the current status of the incident (e.g., open, resolved, acknowledged).
 
-### Priority Levels
-Standardized priority classification:
-- **P1**: Critical - Immediate response required
-- **P2**: High - Urgent attention needed
-- **P3**: Medium - Normal priority
-- **P4**: Low - Non-urgent issues
+### (10) Incident Last Seen At
+Records the most recent timestamp when the incident was observed, providing context for its activity.
 
-## Best Practices
+### (11) Incident Started At
+Indicates when the incident was first detected, helping establish timelines for resolution.
 
-1. **Incident Response**
-   - Follow established procedures
-   - Maintain clear communication
-   - Document all actions
-   - Update stakeholders regularly
+### (12) Incident Assignee
+Displays the individual or team responsible for resolving the incident, promoting accountability.
 
-2. **Team Coordination**
-   - Define clear roles
-   - Establish communication channels
-   - Set response expectations
-   - Track action items
+### (13) Incident Group By Value
+Groups incidents based on a specific attribute, such as service, environment, or severity, for better organization.
 
-3. **Documentation**
-   - Record incident details
-   - Maintain action logs
-   - Document solutions
-   - Create post-mortems
+### (14) Incident Related Alerts
+Lists all alerts linked to the incident, offering a complete view of its underlying causes.
 
-## Integration Capabilities
+### (15) Incident Activity
+Tracks all activities and updates related to the incident, enabling detailed audits and reviews.
 
-- **Alert Systems**: Connect with monitoring tools
-- **Communication**: Integrate with chat and email
-- **Ticketing**: Link with service desk systems
-- **Documentation**: Connect with knowledge bases
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_activity.png" />
+</Frame>
 
-## Getting Started
+### (16) Incident Timeline
+Provides a chronological view of the incident's lifecycle, including updates, actions, and status changes.
 
-1. Set up incident response procedures
-2. Configure notification rules
-3. Define team responsibilities
-4. Create incident templates
-5. Train team members
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_timeline.png" />
+</Frame>
 
-## Tips
+### (17) Incident Topology
+Visualizes the relationships between affected components, services, and infrastructure in a topology map.
 
-- Use templates for consistent handling
-- Maintain up-to-date contact lists
-- Regular process reviews
-- Document lessons learned
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_service.png" />
+</Frame>
 
-## Related Features
+### (18) Incident Workflows
+Lists workflows associated with the incident, showing actions taken or available options for resolution.
 
-- [Incident View](/incidents/incidentview)
-- [Alert Management](/alerts/overview)
-- [Workflow Automation](/overview/workflow-automation)
+### (19) Incident Chat with AI (Incident Copilot)
+Engage with AI-powered chat for guidance, insights, or recommended actions related to the incident.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/incident_copilot.png" />
+</Frame>
+
+### (20) Incident Alert List
+Displays a detailed list of alerts contributing to the incident, with metadata for each alert.
+
+### (21) Incident Alert Link
+Provides quick access to the original monitoring tool for a specific alert.
+
+### (22) Incident Alert Status
+Shows the current status of each alert, such as acknowledged, resolved, or firing.
+
+### (23) Incident Correlation Type
+Indicates how the incident was correlated: manually, via AI, or by rule-based logic.
+
+### (24) Incident Alert Unlink
+Enables unlinking specific alerts from the incident if they are found to be unrelated.
+
+---

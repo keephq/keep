@@ -1,65 +1,69 @@
 ---
-title: "Table"
+title: "Alert Table"
 ---
 
 The Alert Table is the central interface for viewing and managing alerts in Keep. It provides a comprehensive view of all alerts with powerful filtering, sorting, and interaction capabilities.
 
-## Core Features
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_1.png" />
+</Frame>
 
-### Display and Organization
-- **Real-time Updates**: Live alert feed with automatic updates
-- **Customizable Layout**: Flexible column arrangement and visibility
-- **Responsive Design**: Adapts to different screen sizes and resolutions
-- **Infinite Scroll**: Smooth scrolling through large sets of alerts
+### (1) Columns
+Columns in the alert table can be customized to display the most relevant data. Users can select which columns to display and reorder them using drag-and-drop functionality.
 
-### Interaction Features
-- **Multi-select**: Select multiple alerts for bulk actions
-- **Quick Actions**: Right-click context menu for common operations
-- **Keyboard Navigation**: Efficient keyboard shortcuts for navigation
-- **Drag and Drop**: Reorder columns and resize as needed
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_2.png" />
+</Frame>
 
-## Alert Management
 
-### Filtering Options
-- **Quick Filters**: Predefined filters for common scenarios
-- **Advanced Filtering**: [CEL-based filtering](/alerts/presets) for complex queries
-- **Saved Views**: Save and share custom filter configurations
-- **Search**: Full-text search across all alert fields
+### (2) Alert Bulk Action
+Easily select one or more alerts for bulk actions. Actions include options like "assign to incident," "dismiss," or other available workflows.
 
-### Sorting and Grouping
-- **Multi-level Sort**: Sort by multiple columns
-- **Group By**: Group alerts by common attributes
-- **Aggregation**: View summary statistics for alert groups
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_3.png" />
+</Frame>
 
-## Data Interaction
+### (3) Alert Actions Menu
+The actions menu provides quick access to various operations for each alert, such as linking to incidents, creating tickets, or escalating.
 
-### Alert Actions
-- **Status Updates**: Change alert status directly from the table
-- **Assignment**: Assign alerts to team members
-- **Incident Creation**: Create incidents from selected alerts
-- **Bulk Operations**: Perform actions on multiple alerts
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_4.png" />
+</Frame>
 
-### Data Export
-- **CSV Export**: Export filtered alert data
-- **API Integration**: Access alert data programmatically
-- **Custom Reports**: Generate custom alert reports
+### (4) Alert Link
+Each alert includes a badge that links directly to the original alert in the monitoring tool. Clicking this badge opens the alert in its source system for further investigation.
 
-## Best Practices
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_5.png" />
+</Frame>
 
-1. **Regular Refresh**: Keep the table updated with latest alerts
-2. **Filter Management**: Create and maintain useful filter presets
-3. **Column Organization**: Arrange columns based on workflow needs
-4. **Bulk Processing**: Use multi-select for efficient alert handling
+### (5) Alert Ticket
+You can asign ticket to alert. If an alert is associated with a ticket, a ticket badge will be displayed. Clicking on this badge navigates directly to the assigned ticket in the ticketing tool.
 
-## Tips
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_8.png" />
+</Frame>
 
-- Use keyboard shortcuts for faster navigation
-- Combine filters with saved views for quick access
-- Utilize column customization for different use cases
-- Take advantage of the context menu for quick actions
+### (6) Alert Comment
+Users can add comments to any alert to provide additional context or share insights with team members. This improves collaboration and ensures all relevant information is available.
 
-## Related Features
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_9.png" />
+</Frame>
 
-- [Alert Columns](/alerts/columns)
-- [Action Menu](/alerts/actionmenu)
-- [Alert Presets](/alerts/presets)
+### (7) Alert Related Workflows
+View and trigger related workflows for an alert directly from the table. This allows seamless integration with predefined processes like escalation, suppression, or custom automation.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_7.png" />
+</Frame>
+
+
+### (8) Sorting
+The table supports sorting by any column using the "sort" icon. This makes it easy to prioritize or organize alerts based on specific criteria.
+
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_table_sort.gif" />
+</Frame>
+
+---

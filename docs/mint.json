@@ -52,16 +52,14 @@
       "pages": [
         "alerts/overview",
         "alerts/table",
-        "alerts/presets",
         "alerts/actionmenu",
-        "alerts/columns",
-        "alerts/facets",
-        "alerts/sidebar"
+        "alerts/sidebar",
+        "alerts/presets"
       ]
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview", "incidents/incidentview"]
+      "pages": ["incidents/overview"]
     },
     {
       "group": "AIOps",

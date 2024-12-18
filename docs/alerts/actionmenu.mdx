@@ -2,41 +2,39 @@
 title: "Action Menu"
 ---
 
-The Action Menu in Keep provides quick access to common actions that can be performed on alerts. This feature enables users to efficiently manage and interact with alerts through a contextual menu interface.
+# Action Menu
 
-## Overview
+The Action Menu in Keep provides quick access to common actions that can be performed on alerts. This menu enables teams to efficiently manage and interact with alerts directly from the table.
 
-The Action Menu appears when you select one or more alerts in the alerts table, offering context-aware actions that can be performed on the selected alerts.
+<Frame width="100" height="200">
+  <img height="10" src="/images/alert_table_menu_1.png" />
+</Frame>
 
-## Available Actions
+### (1) Run Workflow
+Trigger predefined workflows directly from the Action Menu. This allows automation of actions such as escalating alerts or notifying specific teams.
 
-### Single Alert Actions
-- **View Details**: Open detailed view of the alert
-- **Assign**: Assign the alert to a team member
-- **Change Status**: Update the alert's status
-- **Add to Incident**: Associate the alert with an existing incident
-- **Create Incident**: Create a new incident from the alert
+### (2) Create a New Workflow
+Quickly create a new workflow tailored to the selected alert. This is useful for handling unique cases that require a custom response.
 
-### Bulk Actions
-When multiple alerts are selected:
-- **Bulk Status Update**: Change status for multiple alerts simultaneously
-- **Bulk Assignment**: Assign multiple alerts to a team member
-- **Bulk Incident Association**: Add multiple alerts to an incident
+### (3) View Alert History
+Access the full history of the alert, including changes to its status, comments, and any actions performed. This provides a clear timeline of the alert's lifecycle.
 
-## Best Practices
+### (4) Manually Enrich Alert
+Add custom metadata or details to an alert manually. This can include additional context or information that assists with resolution.
 
-1. **Efficient Selection**: Use shift-click to select multiple consecutive alerts
-2. **Quick Actions**: Utilize keyboard shortcuts for common actions
-3. **Batch Processing**: Group similar alerts for bulk actions
+### (5) Self Assign
+Assign the selected alert to yourself. This is ideal for team members who are taking ownership of specific alerts.
 
-## Tips
+### (6) View Alert
+Open the alert details in the sidebar or dedicated alert view for a deeper dive into its metadata and context.
 
-- Right-click on an alert to quickly access the Action Menu
-- Use keyboard shortcuts for faster navigation
-- Review alert details before taking bulk actions
+### (7) Source-Specific Actions
+Perform actions that are specific to the source of the alert. For example, linking directly to the monitoring tool or executing source-specific workflows.
 
-## Related Features
+### (8) Dismiss Alert
+Mark the alert as dismissed to indicate that no further action is required. This helps in managing and decluttering the alert table.
 
-- [Alert Presets](/alerts/presets)
-- [Alert Table](/alerts/table)
-- [Alert Columns](/alerts/columns)
+### (9) Change Status
+Update the status of the alert (e.g., from "firing" to "acknowledged"). This keeps the team informed about the current state of the alert.
+
+---
