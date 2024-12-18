@@ -417,8 +417,10 @@ def perform_demo_ai(keep_api_key, keep_api_url):
 
 
 def simulate_alerts(*args, **kwargs):
-    asyncio.create_task(simulate_alerts_worker(0, kwargs.get("keep_api_key"), 0))
-    asyncio.run(simulate_alerts_async(*args, **kwargs))
+    loop = asyncio.get_event_loop()
+    loop.create_task(simulate_alerts_worker(0, kwargs.get("keep_api_key"), 0))
+    loop.create_task(simulate_alerts_async(*args, **kwargs))
+    loop.run_forever()
 
 
 async def simulate_alerts_async(
@@ -635,7 +637,7 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
 if __name__ == "__main__":
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
     keep_api_key = os.environ.get("KEEP_READ_ONLY_BYPASS_KEY")
-    get_or_create_correlation_rules(keep_api_key, keep_api_url)
+    # get_or_create_correlation_rules(keep_api_key, keep_api_url)
     simulate_alerts(
         keep_api_url=keep_api_url,
         keep_api_key=keep_api_key,
