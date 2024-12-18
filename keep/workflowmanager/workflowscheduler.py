@@ -36,7 +36,7 @@ class WorkflowScheduler:
 
     def __init__(self, workflow_manager):
         self.logger = logging.getLogger(__name__)
-        self.threads = []
+        self.threads = {}
         self.workflow_manager = workflow_manager
         self.workflow_store = WorkflowStore()
         # all workflows that needs to be run due to alert event
@@ -53,7 +53,8 @@ class WorkflowScheduler:
         self._stop = False
         thread = threading.Thread(target=self._start)
         thread.start()
-        self.threads.append(thread)
+        # store in self.threads by id
+        self.threads[thread.ident] = thread
         self.logger.info("Workflows scheduler started")
 
     def _handle_interval_workflows(self):
@@ -109,7 +110,7 @@ class WorkflowScheduler:
                 args=[tenant_id, workflow_id, workflow, workflow_execution_id],
             )
             thread.start()
-            self.threads.append(thread)
+            self.threads[thread.ident] = thread
 
     def _run_workflow(
         self,
@@ -164,6 +165,14 @@ class WorkflowScheduler:
                 status=WorkflowStatus.SUCCESS,
                 error=None,
             )
+
+        # remove the thread from the threads list
+        try:
+            self.logger.debug(f"Removing thread {threading.get_ident()}")
+            self.threads.pop(threading.get_ident())
+            self.logger.debug(f"Thread {threading.get_ident()} removed")
+        except KeyError:
+            self.logger.error("Thread not found in threads")
         self.logger.info(f"Workflow {workflow.workflow_id} ran")
 
     def handle_workflow_test(self, workflow, tenant_id, triggered_by_user):
@@ -504,7 +513,7 @@ class WorkflowScheduler:
                 args=[tenant_id, workflow_id, workflow, workflow_execution_id, event],
             )
             thread.start()
-            self.threads.append(thread)
+            self.threads[thread.ident] = thread
 
     def _start(self):
         self.logger.info("Starting workflows scheduler")
@@ -531,7 +540,7 @@ class WorkflowScheduler:
                 daemon=True,
             )
             thread.start()
-            self.threads.append(thread)
+            self.threads[thread.ident] = thread
         # as long as the stop flag is not set, sleep
         while not self._stop:
             time.sleep(1)
@@ -540,7 +549,7 @@ class WorkflowScheduler:
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
         # Now wait for the threads to finish
-        for thread in self.threads:
+        for thread in self.threads.values():
             thread.join()
         self.logger.info("Scheduled workflows stopped")
 
