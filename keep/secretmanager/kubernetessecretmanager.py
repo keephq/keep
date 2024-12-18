@@ -32,7 +32,7 @@ class KubernetesSecretManager(BaseSecretManager):
             ApiException: If an error occurs while writing the secret.
         """
         # k8s requirements: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-        secret_name = secret_name.replace("_", "-")
+        secret_name = secret_name.replace("_", "-").lower()
         self.logger.info("Writing secret", extra={"secret_name": secret_name})
 
         body = kubernetes.client.V1Secret(
@@ -70,7 +70,7 @@ class KubernetesSecretManager(BaseSecretManager):
 
     def read_secret(self, secret_name: str, is_json: bool = False) -> str | dict:
         # k8s requirements: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-        secret_name = secret_name.replace("_", "-")
+        secret_name = secret_name.replace("_", "-").lower()
         self.logger.info("Getting secret", extra={"secret_name": secret_name})
         try:
             response = self.api.read_namespaced_secret(
@@ -91,6 +91,7 @@ class KubernetesSecretManager(BaseSecretManager):
             raise
 
     def delete_secret(self, secret_name: str) -> None:
+        secret_name = secret_name.replace("_", "-").lower()
         self.logger.info("Deleting secret", extra={"secret_name": secret_name})
         try:
             self.api.delete_namespaced_secret(
