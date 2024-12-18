@@ -1428,6 +1428,18 @@ def get_alerts_by_fingerprint(
 
     return alerts
 
+def get_all_alerts_by_fingerprints(
+    tenant_id: str, fingerprints: List[str], session: Optional[Session] = None
+) -> List[Alert]:
+    with existed_or_new_session(session) as session:
+        query = (
+            select(Alert)
+            .filter(Alert.tenant_id == tenant_id)
+            .filter(Alert.fingerprint.in_(fingerprints))
+            .order_by(Alert.timestamp.desc())
+        )
+        return session.exec(query).all()
+
 
 def get_alert_by_fingerprint_and_event_id(
     tenant_id: str, fingerprint: str, event_id: str
@@ -3215,11 +3227,11 @@ def enrich_alerts_with_incidents(
         ).all()
 
         incidents_per_alert = defaultdict(list)
-        for alert_id, incident in alert_incidents:
-            incidents_per_alert[alert_id].append(incident)
+        for fingerprint, incident in alert_incidents:
+            incidents_per_alert[fingerprint].append(incident)
 
         for alert in alerts:
-            alert._incidents = incidents_per_alert[incident.id]
+            alert._incidents = incidents_per_alert[alert.fingerprint]
 
         return alerts
 
