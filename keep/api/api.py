@@ -154,11 +154,15 @@ async def startup():
             raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
 
     # Enable memory if needed
+    """
     if KEEP_MEMORY_PROFILING:
         logger.info("Memory profiling enabled")
-        import tracemalloc
+        import –oc
 
         tracemalloc.start()
+        logger.info("Memory profiler started")
+        memory_tracker.start()
+    """
 
     logger.info("Services started successfully")
 
@@ -301,6 +305,7 @@ def get_app(
         from keep.api.routes import memory
 
         app.include_router(memory.router, prefix="/memory", tags=["memory"])
+
     # if its single tenant with authentication, add signin endpoint
     logger.info(f"Starting Keep with authentication type: {AUTH_TYPE}")
     # If we run Keep with SINGLE_TENANT auth type, we want to add the signin endpoint
