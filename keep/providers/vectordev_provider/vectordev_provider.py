@@ -51,17 +51,12 @@ class VectordevProvider(BaseProvider):
             events = event
         else:
             events = [event]
-        try:
-            alert_dtos = []
-            for e in events:
-                event_type = e["keep_source_type"]
-                provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[event_type])
-                alert_dtos.extend(provider_class._format_alert(e["message"],provider_instance))
-            return alert_dtos
-        except Exception as e:
-            logger.error("exception orrcured in vectordev provider: %s", e, exc_info=True)
-            alert_dtos = []
-            for e in events:
+        alert_dtos = []
+        for event in events:
+            if "keep_source_type" in event and event["keep_source_type"] in VectordevProvider.SOURCE_TO_PROVIDER_MAP:
+                provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[event["keep_source_type"])
+                alert_dtos.extend(provider_class._format_alert(event["message"],provider_instance))
+            else:
                 message_str = json.dumps(e.get("message"))
                 alert_dtos.append(
                 AlertDto(
@@ -74,7 +69,7 @@ class VectordevProvider(BaseProvider):
                     original_event=e.get("message"),
                 )
             )
-            return alert_dtos
+        return alert_dtos
 
     def dispose(self):
         """

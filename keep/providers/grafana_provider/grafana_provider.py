@@ -561,7 +561,7 @@ class GrafanaProvider(BaseProvider):
                     "title": alert_type,
                 }
         if to_wrap_with_provider_type:
-            return {"source_type": "grafana", "event": final_payload}
+            return {"keep_source_type": "grafana", "event": final_payload}
         return final_payload
 
 
