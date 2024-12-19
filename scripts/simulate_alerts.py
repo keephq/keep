@@ -36,7 +36,7 @@ async def main():
     SLEEP_INTERVAL = float(
         os.environ.get("SLEEP_INTERVAL", default_sleep_interval)
     )
-    keep_api_key = os.environ.get("KEEP_API_KEY")
+    keep_api_key = os.environ.get("KEEP_API_KEY") or "keepappkey"
     keep_api_url = os.environ.get("KEEP_API_URL") or "http://localhost:8080"
 
     for i in range(args.workers):
