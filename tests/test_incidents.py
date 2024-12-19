@@ -1,8 +1,12 @@
 from datetime import datetime
+from unittest.mock import patch
+
+from fastapi import HTTPException
 from itertools import cycle
+from uuid import uuid4
 
 import pytest
-from sqlalchemy import distinct, func, desc
+from sqlalchemy import distinct, func, desc, and_
 
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
@@ -23,8 +27,10 @@ from keep.api.models.alert import (
     AlertStatus,
     IncidentSeverity,
     IncidentStatus,
+    IncidentDtoIn,
+    IncidentDto,
 )
-from keep.api.models.db.alert import Alert, LastAlertToIncident
+from keep.api.models.db.alert import Alert, LastAlertToIncident, Incident, NULL_FOR_DELETED_AT
 from keep.api.models.db.tenant import Tenant
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from tests.fixtures.client import client, test_app  # noqa
@@ -1017,3 +1023,391 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
     assert incident_tenant_2.alerts_count == 1
     assert total_incident_tenant_2_alerts == 1
     assert len(incident_tenant_2_alerts) == 1
+
+
+class PusherMock:
+
+    def __init__(self):
+        self.triggers = []
+
+    def trigger(self, channel, event_name, data):
+        self.triggers.append((channel, event_name, data))
+
+class WorkflowManagerMock:
+
+    def __init__(self):
+        self.events = []
+
+    def get_instance(self):
+        return self
+
+    def insert_incident(self, tenant_id, incident_dto, action):
+        self.events.append((tenant_id, incident_dto, action))
+
+
+class ElasticClientMock:
+
+    def __init__(self):
+        self.alerts = []
+        self.tenant_id = None
+        self.enabled = True
+
+    def __call__(self, tenant_id):
+        self.tenant_id = tenant_id
+        return self
+
+    def index_alerts(self, alerts):
+        self.alerts.append((self.tenant_id, alerts))
+
+
+def test_incident_bl_create_incident(db_session):
+
+    pusher = PusherMock()
+    workflow_manager = WorkflowManagerMock()
+
+    with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
+        incident_bl = IncidentBl(tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 0
+
+        incident_dto_in = IncidentDtoIn(**{
+            "user_generated_name": "Incident name",
+            "user_summary": "Keep: Incident description",
+            "status": "firing",
+        })
+
+        incident_dto = incident_bl.create_incident(incident_dto_in, generated_from_ai=False)
+        assert isinstance(incident_dto, IncidentDto)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 1
+
+        assert incident_dto.is_confirmed is True
+        assert incident_dto.is_predicted is False
+
+        incident = db_session.query(Incident).get(incident_dto.id)
+        assert incident.user_generated_name == "Incident name"
+        assert incident.status == "firing"
+        assert incident.user_summary == "Keep: Incident description"
+        assert incident.is_confirmed is True
+        assert incident.is_predicted is False
+
+        # Check pusher
+
+        assert len(pusher.triggers) == 1
+        channel, event_name, data = pusher.triggers[0]
+        assert channel == f"private-{SINGLE_TENANT_UUID}"
+        assert event_name == "incident-change"
+        assert isinstance(data, dict)
+        assert "incident_id" in data
+        assert data["incident_id"] is None # For new incidents we don't send incident.id
+
+        # Check workflow manager
+        assert len(workflow_manager.events) == 1
+        wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[0]
+        assert wf_tenant_id == SINGLE_TENANT_UUID
+        assert wf_incident_dto.id == incident_dto.id
+        assert wf_action == "created"
+
+        incident_dto_ai = incident_bl.create_incident(incident_dto_in, generated_from_ai=True)
+        assert isinstance(incident_dto_ai, IncidentDto)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 2
+
+        assert incident_dto_ai.is_confirmed is True
+        assert incident_dto_ai.is_predicted is False
+
+
+def test_incident_bl_update_incident(db_session):
+    pusher = PusherMock()
+    workflow_manager = WorkflowManagerMock()
+
+    with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
+        incident_bl = IncidentBl(
+            tenant_id=SINGLE_TENANT_UUID,
+            session=db_session,
+            pusher_client=pusher
+        )
+        incident_dto_in = IncidentDtoIn(**{
+            "user_generated_name": "Incident name",
+            "user_summary": "Keep: Incident description",
+            "status": "firing",
+        })
+
+        incident_dto = incident_bl.create_incident(incident_dto_in)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 1
+
+        new_incident_dto_in = IncidentDtoIn(**{
+            "user_generated_name": "Not an incident",
+            "user_summary": "Keep: Incident description",
+            "status": "firing",
+        })
+
+        incident_dto_update = incident_bl.update_incident(incident_dto.id, new_incident_dto_in, False)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 1
+
+        assert incident_dto_update.name == "Not an incident"
+
+        incident = db_session.query(Incident).get(incident_dto.id)
+        assert incident.user_generated_name == "Not an incident"
+        assert incident.status == "firing"
+        assert incident.user_summary == "Keep: Incident description"
+
+        # Check error if no incident found
+        with pytest.raises(HTTPException, match="Incident not found"):
+            incident_bl.update_incident(uuid4(), incident_dto_update, False)
+
+        # Check workflowmanager
+        assert len(workflow_manager.events) == 2
+        wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
+        assert wf_tenant_id == SINGLE_TENANT_UUID
+        assert wf_incident_dto.id == incident_dto.id
+        assert wf_action == "updated"
+
+        # Check pusher
+        assert len(pusher.triggers) == 2 # 1 for create, 1 for update
+        channel, event_name, data = pusher.triggers[-1]
+        assert channel == f"private-{SINGLE_TENANT_UUID}"
+        assert event_name == "incident-change"
+        assert isinstance(data, dict)
+        assert "incident_id" in data
+        assert data["incident_id"] == str(incident_dto.id)
+
+
+def test_incident_bl_delete_incident(db_session):
+    pusher = PusherMock()
+    workflow_manager = WorkflowManagerMock()
+
+    with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
+        incident_bl = IncidentBl(
+            tenant_id=SINGLE_TENANT_UUID,
+            session=db_session,
+            pusher_client=pusher
+        )
+        # Check error if no incident found
+        with pytest.raises(HTTPException, match="Incident not found"):
+            incident_bl.delete_incident(uuid4())
+
+        incident_dto_in = IncidentDtoIn(**{
+            "user_generated_name": "Incident name",
+            "user_summary": "Keep: Incident description",
+            "status": "firing",
+        })
+
+        incident_dto = incident_bl.create_incident(incident_dto_in)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 1
+
+        incident_bl.delete_incident(incident_dto.id)
+
+        incidents_count = db_session.query(Incident).count()
+        assert incidents_count == 0
+
+        # Check pusher
+        assert len(pusher.triggers) == 2 # Created, deleted
+
+        channel, event_name, data = pusher.triggers[-1]
+        assert channel == f"private-{SINGLE_TENANT_UUID}"
+        assert event_name == "incident-change"
+        assert isinstance(data, dict)
+        assert "incident_id" in data
+        assert data["incident_id"] is None
+
+        # Check workflow manager
+        assert len(workflow_manager.events) == 2 # Created, deleted
+        wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
+        assert wf_tenant_id == SINGLE_TENANT_UUID
+        assert wf_incident_dto.id == incident_dto.id
+        assert wf_action == "deleted"
+
+
+@pytest.mark.asyncio
+async def test_incident_bl_add_alert_to_incident(db_session, create_alert):
+    pusher = PusherMock()
+    workflow_manager = WorkflowManagerMock()
+    elastic_client = ElasticClientMock()
+
+    with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
+        with patch("keep.api.bl.incidents_bl.ElasticClient", elastic_client):
+            incident_bl = IncidentBl(
+                tenant_id=SINGLE_TENANT_UUID,
+                session=db_session,
+                pusher_client=pusher
+            )
+            incident_dto_in = IncidentDtoIn(**{
+                "user_generated_name": "Incident name",
+                "user_summary": "Keep: Incident description",
+                "status": "firing",
+            })
+
+            incident_dto = incident_bl.create_incident(incident_dto_in)
+
+            incidents_count = db_session.query(Incident).count()
+            assert incidents_count == 1
+
+            with pytest.raises(HTTPException, match="Incident not found"):
+                await incident_bl.add_alerts_to_incident(uuid4(), [], False)
+
+            create_alert(
+                "alert-test-1",
+                AlertStatus("firing"),
+                datetime.utcnow(),
+                {},
+            )
+
+            await incident_bl.add_alerts_to_incident(
+                incident_dto.id,
+                ["alert-test-1"],
+                False
+            )
+
+            alerts_to_incident_count = (
+                db_session
+                .query(LastAlertToIncident)
+                .where(
+                    LastAlertToIncident.incident_id == incident_dto.id
+                )
+                .count()
+            )
+            assert alerts_to_incident_count == 1
+
+            alert_to_incident = (
+                db_session
+                .query(LastAlertToIncident)
+                .where(
+                    LastAlertToIncident.fingerprint == "alert-test-1"
+                )
+                .first()
+            )
+            assert alert_to_incident is not None
+
+            # Check pusher
+            assert len(pusher.triggers) == 2  # Created, update
+
+            channel, event_name, data = pusher.triggers[-1]
+            assert channel == f"private-{SINGLE_TENANT_UUID}"
+            assert event_name == "incident-change"
+            assert isinstance(data, dict)
+            assert "incident_id" in data
+            assert data["incident_id"] == str(incident_dto.id)
+
+            # Check workflow manager
+            assert len(workflow_manager.events) == 2  # Created, update
+            wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
+            assert wf_tenant_id == SINGLE_TENANT_UUID
+            assert wf_incident_dto.id == incident_dto.id
+            assert wf_action == "updated"
+
+            # Check elastic
+            assert len(elastic_client.alerts) == 1
+            el_tenant_id, el_alerts = elastic_client.alerts[-1]
+            assert len(el_alerts) == 1
+            assert el_tenant_id == SINGLE_TENANT_UUID
+            assert el_alerts[-1].fingerprint == "alert-test-1"
+            assert el_alerts[-1].incident == str(incident_dto.id)
+
+
+@pytest.mark.asyncio
+async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert):
+    pusher = PusherMock()
+    workflow_manager = WorkflowManagerMock()
+    elastic_client = ElasticClientMock()
+
+    with patch("keep.api.bl.incidents_bl.WorkflowManager", workflow_manager):
+        with patch("keep.api.bl.incidents_bl.ElasticClient", elastic_client):
+            incident_bl = IncidentBl(
+                tenant_id=SINGLE_TENANT_UUID,
+                session=db_session,
+                pusher_client=pusher
+            )
+            incident_dto_in = IncidentDtoIn(**{
+                "user_generated_name": "Incident name",
+                "user_summary": "Keep: Incident description",
+                "status": "firing",
+            })
+
+            incident_dto = incident_bl.create_incident(incident_dto_in)
+
+            incidents_count = db_session.query(Incident).count()
+            assert incidents_count == 1
+
+            with pytest.raises(HTTPException, match="Incident not found"):
+                incident_bl.delete_alerts_from_incident(uuid4(), [])
+
+            create_alert(
+                "alert-test-1",
+                AlertStatus("firing"),
+                datetime.utcnow(),
+                {},
+            )
+
+            await incident_bl.add_alerts_to_incident(
+                incident_dto.id,
+                ["alert-test-1"],
+                False
+            )
+
+            alerts_to_incident_count = (
+                db_session
+                .query(LastAlertToIncident)
+                .where(
+                    and_(
+                        LastAlertToIncident.incident_id == incident_dto.id,
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                    )
+                )
+                .count()
+            )
+            assert alerts_to_incident_count == 1
+
+            incident_bl.delete_alerts_from_incident(
+                incident_dto.id,
+                ["alert-test-1"],
+            )
+
+            alerts_to_incident_count = (
+                db_session
+                .query(LastAlertToIncident)
+                .where(
+                    and_(
+                        LastAlertToIncident.incident_id == incident_dto.id,
+                        LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT
+                    )
+                )
+                .count()
+            )
+            assert alerts_to_incident_count == 0
+
+            # Check pusher
+            # Created, updated (added event), updated(deleted event)
+            assert len(pusher.triggers) == 3
+
+            channel, event_name, data = pusher.triggers[-1]
+            assert channel == f"private-{SINGLE_TENANT_UUID}"
+            assert event_name == "incident-change"
+            assert isinstance(data, dict)
+            assert "incident_id" in data
+            assert data["incident_id"] == str(incident_dto.id)
+
+            # Check workflow manager
+            # Created, updated (added event), updated(deleted event)
+            assert len(workflow_manager.events) == 3
+            wf_tenant_id, wf_incident_dto, wf_action = workflow_manager.events[-1]
+            assert wf_tenant_id == SINGLE_TENANT_UUID
+            assert wf_incident_dto.id == incident_dto.id
+            assert wf_action == "updated"
+
+            # Check elastic
+            assert len(elastic_client.alerts) == 2
+            el_tenant_id, el_alerts = elastic_client.alerts[-1]
+            assert len(el_alerts) == 1
+            assert el_tenant_id == SINGLE_TENANT_UUID
+            assert el_alerts[-1].fingerprint == "alert-test-1"
+            assert el_alerts[-1].incident is None
