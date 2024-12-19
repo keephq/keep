@@ -871,7 +871,7 @@ def fake_workflow_adapter(
     logger, context_manager, tenant_id, workflow_id, workflow_execution_id
 ):
     adapter = WorkflowLoggerAdapter(
-        logger, context_manager, tenant_id, workflow_id, workflow_execution_id
+        logger, tenant_id, workflow_id, workflow_execution_id
     )
 
     adapter.info = count_logs(adapter, adapter.info)

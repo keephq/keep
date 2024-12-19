@@ -8,9 +8,14 @@ import os
 import urllib3
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
+from keep.api.core.config import config
 from keep.api.core.db import push_logs_to_db
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+WRITE_WORKFLOW_LOGS_TO_DB = config.get(
+    "KEEP_WRITE_WORKFLOW_LOGS_TO_DB", cast=bool, default=True
+)
 
 
 class WorkflowDBHandler(logging.Handler):
@@ -20,7 +25,11 @@ class WorkflowDBHandler(logging.Handler):
 
     def emit(self, record):
         # we want to push only workflow logs to the DB
-        if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
+        if (
+            hasattr(record, "workflow_execution_id")
+            and record.workflow_execution_id
+            and WRITE_WORKFLOW_LOGS_TO_DB
+        ):
             self.records.append(record)
 
     def push_logs_to_db(self):
@@ -31,13 +40,10 @@ class WorkflowDBHandler(logging.Handler):
 
 
 class WorkflowLoggerAdapter(logging.LoggerAdapter):
-    def __init__(
-        self, logger, context_manager, tenant_id, workflow_id, workflow_execution_id
-    ):
+    def __init__(self, logger, tenant_id, workflow_id, workflow_execution_id):
         self.tenant_id = tenant_id
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
-        self.context_manager = context_manager
         super().__init__(logger, None)
 
     def process(self, msg, kwargs):
@@ -45,14 +51,6 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         extra["tenant_id"] = self.tenant_id
         extra["workflow_id"] = self.workflow_id
         extra["workflow_execution_id"] = self.workflow_execution_id
-        # add the steps/actions context
-        # todo: more robust
-        # added: protection from big steps context (< 64kb)
-        if self.context_manager.steps_context_size < 1024 * 64:
-            extra["context"] = (self.context_manager.steps_context,)
-        else:
-            extra["context"] = "truncated (context size > 64kb)"
-
         kwargs["extra"] = extra
         return msg, kwargs
 

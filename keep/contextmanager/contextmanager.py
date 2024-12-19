@@ -20,7 +20,7 @@ class ContextManager:
     ):
         self.logger = logging.getLogger(__name__)
         self.logger_adapter = WorkflowLoggerAdapter(
-            self.logger, self, tenant_id, workflow_id, workflow_execution_id
+            self.logger, tenant_id, workflow_id, workflow_execution_id
         )
         self.workflow_id = workflow_id
         self.workflow_execution_id = workflow_execution_id
@@ -107,7 +107,6 @@ class ContextManager:
         logger = logging.getLogger(name)
         logger_adapter = WorkflowLoggerAdapter(
             logger,
-            self,
             self.tenant_id,
             self.workflow_id,
             self.workflow_execution_id,
@@ -259,6 +258,9 @@ class ContextManager:
         # dump the workflow logs to the db
         try:
             self.logger_adapter.dump()
+            # avoid circular import
+            self.logger_adapter.context_manager = None
+            self.logger_adapter = None
         except Exception as e:
             # TODO - should be handled
             self.logger.error(
