@@ -54,7 +54,7 @@ class VectordevProvider(BaseProvider):
         alert_dtos = []
         for event in events:
             if "keep_source_type" in event and event["keep_source_type"] in VectordevProvider.SOURCE_TO_PROVIDER_MAP:
-                provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[event["keep_source_type"])
+                provider_class = ProvidersFactory.get_provider_class(VectordevProvider.SOURCE_TO_PROVIDER_MAP[event["keep_source_type"]])
                 alert_dtos.extend(provider_class._format_alert(event["message"],provider_instance))
             else:
                 message_str = json.dumps(e.get("message"))
