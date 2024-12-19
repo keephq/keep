@@ -901,59 +901,60 @@ async def test_split_incident(db_session, create_alert):
     assert incident_dest.severity == IncidentSeverity.CRITICAL.order
     assert incident_dest._alerts[0].fingerprint == critical_alert.fingerprint
 
-# @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-# def test_split_incident_app(db_session, client, test_app, create_alert):
-#     create_alert(
-#         "fp1",
-#         AlertStatus.FIRING,
-#         datetime.utcnow(),
-#         {"severity": AlertSeverity.CRITICAL.value},
-#     )
-#     create_alert(
-#         "fp2",
-#         AlertStatus.FIRING,
-#         datetime.utcnow(),
-#         {"severity": AlertSeverity.CRITICAL.value},
-#     )
-#     create_alert(
-#         "fp3",
-#         AlertStatus.FIRING,
-#         datetime.utcnow(),
-#         {"severity": AlertSeverity.CRITICAL.value},
-#     )
-#     alerts = db_session.query(Alert).all()
-#     incident_1 = create_incident_from_dict(
-#         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
-#     )
-#     add_alerts_to_incident_by_incident_id(
-#         SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts]
-#     )
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+@patch("keep.api.bl.incidents_bl.pusher_client")
+def test_split_incident_app(db_session, client, test_app, create_alert):
+    create_alert(
+        "fp1",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "fp2",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    create_alert(
+        "fp3",
+        AlertStatus.FIRING,
+        datetime.utcnow(),
+        {"severity": AlertSeverity.CRITICAL.value},
+    )
+    alerts = db_session.query(Alert).all()
+    incident_1 = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+    )
+    add_alerts_to_incident_by_incident_id(
+        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts]
+    )
 
-#     incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
-#     assert len(incident_1._alerts) == 3
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    assert len(incident_1._alerts) == 3
 
-#     incident_2 = create_incident_from_dict(
-#         SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
-#     )
-#     incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
-#     assert len(incident_2._alerts) == 0
+    incident_2 = create_incident_from_dict(
+        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+    )
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    assert len(incident_2._alerts) == 0
 
-#     response = client.post(
-#         f"/incidents/{str(incident_1.id)}/split",
-#         headers={"x-api-key": "some-key"},
-#         json={
-#             "alert_fingerprints": [alerts[2].fingerprint],
-#             "destination_incident_id": str(incident_2.id),
-#         },
-#     )
+    response = client.post(
+        f"/incidents/{str(incident_1.id)}/split",
+        headers={"x-api-key": "some-key"},
+        json={
+            "alert_fingerprints": [alerts[2].fingerprint],
+            "destination_incident_id": str(incident_2.id),
+        },
+    )
 
-#     assert response.status_code == 200
+    assert response.status_code == 200
 
-#     incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
-#     assert incident_2._alerts[0].fingerprint == alerts[2].fingerprint
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    assert incident_2._alerts[0].fingerprint == alerts[2].fingerprint
 
-#     incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
-#     assert len(incident_1._alerts) == 2
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    assert len(incident_1._alerts) == 2
 
 
 def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
