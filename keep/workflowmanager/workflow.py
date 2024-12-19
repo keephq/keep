@@ -5,6 +5,8 @@ from keep.contextmanager.contextmanager import ContextManager
 from keep.iohandler.iohandler import IOHandler
 from keep.step.step import Step, StepError
 
+# import memory_profiler
+
 
 class WorkflowStrategy(enum.Enum):
     # if a workflow run on the same fingerprint, skip the workflow
@@ -91,6 +93,7 @@ class Workflow:
         self.logger.debug("Actions run")
         return actions_firing, actions_errors
 
+    # @memory_profiler.profile
     def run(self, workflow_execution_id):
         if self.workflow_disabled:
             self.logger.info(f"Skipping disabled workflow {self.workflow_id}")

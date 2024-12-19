@@ -107,6 +107,7 @@ playwright = "^1.44.0"
 
 freezegun = "^1.5.1"
 pytest-timeout = "^2.3.1"
+memory-profiler = "^0.61.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

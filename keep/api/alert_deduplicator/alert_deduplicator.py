@@ -24,7 +24,6 @@ from keep.api.models.alert import (
     DeduplicationRuleRequestDto,
 )
 from keep.providers.providers_factory import ProvidersFactory
-from keep.searchengine.searchengine import SearchEngine
 
 DEFAULT_RULE_UUID = "00000000-0000-0000-0000-000000000000"
 
@@ -41,7 +40,8 @@ class AlertDeduplicator:
     def __init__(self, tenant_id):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.search_engine = SearchEngine(self.tenant_id)
+        # @tb: is this being used anywhere?
+        # self.search_engine = SearchEngine(self.tenant_id)
 
     def _apply_deduplication_rule(
         self, alert: AlertDto, rule: DeduplicationRuleDto

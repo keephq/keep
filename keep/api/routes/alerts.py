@@ -363,6 +363,7 @@ async def receive_generic_event(
         tenant_id (str, optional): Defaults to Depends(verify_api_key).
     """
     running_tasks: set = request.state.background_tasks
+    trace_id = getattr(request.state, "trace_id", "")
     if REDIS:
         redis: ArqRedis = await get_pool()
         job = await redis.enqueue_job(
@@ -372,7 +373,7 @@ async def receive_generic_event(
             None,
             fingerprint,
             authenticated_entity.api_key_name,
-            request.state.trace_id,
+            trace_id,
             event,
             _queue_name=KEEP_ARQ_QUEUE_BASIC,
         )
@@ -393,7 +394,7 @@ async def receive_generic_event(
             None,
             fingerprint,
             authenticated_entity.api_key_name,
-            request.state.trace_id,
+            trace_id,
             event,
             running_tasks,
         )
@@ -444,7 +445,7 @@ async def receive_event(
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
-    trace_id = request.state.trace_id
+    trace_id = getattr(request.state, "trace_id", "")
     running_tasks: set = request.state.background_tasks
     provider_class = None
     try:

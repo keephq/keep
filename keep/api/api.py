@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import tracemalloc
 from contextlib import asynccontextmanager
 from importlib import metadata
 
@@ -73,7 +74,7 @@ PORT = config("PORT", default=8080, cast=int)
 SCHEDULER = config("SCHEDULER", default="true", cast=bool)
 CONSUMER = config("CONSUMER", default="true", cast=bool)
 KEEP_DEBUG_TASKS = config("KEEP_DEBUG_TASKS", default="false", cast=bool)
-
+PROFILE_MEMORY = config("KEEP_PROFILE_MEMORY", default="false", cast=bool)
 AUTH_TYPE = config("AUTH_TYPE", default=IdentityManagerTypes.NOAUTH.value).lower()
 try:
     KEEP_VERSION = metadata.version("keep")
@@ -110,6 +111,10 @@ async def startup():
     Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
     """
     logger.info("Disope existing DB connections")
+
+    if PROFILE_MEMORY:
+        tracemalloc.start(25)
+
     # psycopg2.DatabaseError: error with status PGRES_TUPLES_OK and no message from the libpq
     # https://stackoverflow.com/questions/43944787/sqlalchemy-celery-with-scoped-session-error/54751019#54751019
     dispose_session()
@@ -121,7 +126,7 @@ async def startup():
         try:
             logger.info("Starting the scheduler")
             wf_manager = WorkflowManager.get_instance()
-            await wf_manager.start()
+            wf_manager.start()
             logger.info("Scheduler started successfully")
         except Exception:
             logger.exception("Failed to start the scheduler")
@@ -161,21 +166,26 @@ async def shutdown():
     Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
     """
     logger.info("Shutting down Keep")
+
+    if PROFILE_MEMORY:
+        logger.info("Memory profile:")
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics("traceback")
+        for stat in top_stats[:10]:
+            logger.info("%s memory blocks: %.1f KiB" % (stat.count, stat.size / 1024))
+            for line in stat.traceback.format():
+                logger.info(line)
+
     if SCHEDULER:
         logger.info("Stopping the scheduler")
         wf_manager = WorkflowManager.get_instance()
-        # stop the scheduler
-        try:
-            await wf_manager.stop()
-        # in pytest, there could be race condition
-        except TypeError:
-            pass
+        wf_manager.stop()
         logger.info("Scheduler stopped successfully")
     if CONSUMER:
         logger.info("Stopping the consumer")
         event_subscriber = EventSubscriber.get_instance()
         try:
-            await event_subscriber.stop()
+            event_subscriber.stop()
         # in pytest, there could be race condition
         except TypeError:
             pass
@@ -299,21 +309,27 @@ def get_app(
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
-        logging.error(
-            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}. Tenant ID: {request.state.tenant_id}"
+        trace_id = getattr(request.state, "trace_id", "")
+        tenant_id = getattr(request.state, "tenant_id", "")
+        logger.error(
+            f"An unhandled exception occurred: {exc}, Trace ID: {trace_id}. Tenant ID: {tenant_id}"
         )
         return JSONResponse(
             status_code=500,
             content={
                 "message": "An internal server error occurred.",
-                "trace_id": request.state.trace_id,
+                "trace_id": trace_id,
                 "error_msg": str(exc),
             },
         )
 
     app.add_middleware(LoggingMiddleware)
 
-    keep.api.observability.setup(app)
+    if config("KEEP_OBSERVABILITY", default="true", cast=bool):
+        logger.info("Setting up observability")
+        keep.api.observability.setup(app)
+    else:
+        logger.info("Observability is disabled")
 
     return app
 

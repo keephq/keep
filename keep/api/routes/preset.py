@@ -440,7 +440,7 @@ def get_preset_alerts(
     bg_tasks.add_task(
         pull_data_from_providers,
         authenticated_entity.tenant_id,
-        request.state.trace_id,
+        getattr(request.state, "trace_id", ""),
     )
 
     tenant_id = authenticated_entity.tenant_id

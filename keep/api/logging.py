@@ -55,32 +55,35 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
         return msg, kwargs
 
     def dump(self):
-        self.logger.info("Dumping workflow logs")
-        # TODO - this is a POC level code.
-        # TODO - we should:
-        # TODO - 1. find the right handler to push the logs to the DB
-        # TODO - 2. find a better way to push the logs async (maybe another service)
-        workflow_db_handler = next(
-            iter(
-                [
-                    handler
-                    for handler in (
-                        # tb: for some reason, when running in cloud run, the handler is nested in another handler
-                        #   this needs to be handled in a better way
-                        self.logger.parent.parent.handlers
-                        if RUNNING_IN_CLOUD_RUN
-                        else self.logger.parent.handlers
-                    )
-                    if isinstance(handler, WorkflowDBHandler)
-                ]
-            ),
-            None,
-        )
-        if workflow_db_handler:
-            workflow_db_handler.push_logs_to_db()
+        if WRITE_WORKFLOW_LOGS_TO_DB:
+            self.logger.info("Dumping workflow logs")
+            # TODO - this is a POC level code.
+            # TODO - we should:
+            # TODO - 1. find the right handler to push the logs to the DB
+            # TODO - 2. find a better way to push the logs async (maybe another service)
+            workflow_db_handler = next(
+                iter(
+                    [
+                        handler
+                        for handler in (
+                            # tb: for some reason, when running in cloud run, the handler is nested in another handler
+                            #   this needs to be handled in a better way
+                            self.logger.parent.parent.handlers
+                            if RUNNING_IN_CLOUD_RUN
+                            else self.logger.parent.handlers
+                        )
+                        if isinstance(handler, WorkflowDBHandler)
+                    ]
+                ),
+                None,
+            )
+            if workflow_db_handler:
+                workflow_db_handler.push_logs_to_db()
+            else:
+                self.logger.warning("No WorkflowDBHandler found")
+            self.logger.info("Workflow logs dumped")
         else:
-            self.logger.warning("No WorkflowDBHandler found")
-        self.logger.info("Workflow logs dumped")
+            self.logger.info("Workflow logs are not being dumped to the DB")
 
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")

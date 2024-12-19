@@ -6,6 +6,8 @@ import threading
 import time
 import typing
 import uuid
+
+# import memory_profiler
 from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
@@ -47,13 +49,12 @@ class WorkflowScheduler:
             config("WORKFLOWS_INTERVAL_ENABLED", default="true") == "true"
         )
 
-    async def start(self):
+    def start(self):
         self.logger.info("Starting workflows scheduler")
         # Shahar: fix for a bug in unit tests
         self._stop = False
         thread = threading.Thread(target=self._start)
         thread.start()
-        self.threads[thread.ident] = thread
         self.logger.info("Workflows scheduler started")
 
     def _handle_interval_workflows(self):
@@ -122,6 +123,7 @@ class WorkflowScheduler:
                 "Error removing thread", extra={"thread_id": thread_id, "error": e}
             )
 
+    # @memory_profiler.profile
     def _run_workflow(
         self,
         tenant_id,
@@ -553,7 +555,7 @@ class WorkflowScheduler:
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
         # Now wait for the threads to finish
-        for thread in self.threads:
+        for thread in self.threads.values():
             thread.join()
         self.logger.info("Scheduled workflows stopped")
 

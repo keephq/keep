@@ -467,7 +467,9 @@ async def add_alerts_to_incident(
 ):
     tenant_id = authenticated_entity.tenant_id
     incident_bl = IncidentBl(tenant_id, session, pusher_client)
-    await incident_bl.add_alerts_to_incident(incident_id, alert_fingerprints, is_created_by_ai)
+    await incident_bl.add_alerts_to_incident(
+        incident_id, alert_fingerprints, is_created_by_ai
+    )
     return Response(status_code=202)
 
 
@@ -509,7 +511,7 @@ async def receive_event(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
 ) -> dict[str, str]:
-    trace_id = request.state.trace_id
+    trace_id = getattr(request.state, "trace_id", "")
     logger.info(
         "Received event",
         extra={

@@ -1,6 +1,8 @@
 import logging
 import os
 import re
+
+# import memory_profiler
 import typing
 import uuid
 
@@ -37,12 +39,12 @@ class WorkflowManager:
         self.workflow_store = WorkflowStore()
         self.started = False
 
-    async def start(self):
+    def start(self):
         """Runs the workflow manager in server mode"""
         if self.started:
             self.logger.info("Workflow manager already started")
             return
-        await self.scheduler.start()
+        self.scheduler.start()
         self.started = True
 
     def stop(self):
@@ -428,6 +430,7 @@ class WorkflowManager:
                 },
             )
 
+    # @memory_profiler.profile
     def _run_workflow(
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):
