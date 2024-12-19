@@ -65,6 +65,7 @@ export const CorrelationSidebarBody = ({
       groupedAttributes,
       requireApprove,
       resolveOn,
+      createOn,
     } = correlationFormData;
 
     const body = {
@@ -77,6 +78,7 @@ export const CorrelationSidebarBody = ({
       groupingCriteria: alertsFound.length ? groupedAttributes : [],
       requireApprove: requireApprove,
       resolveOn: resolveOn,
+      createOn: createOn,
     };
 
     try {
