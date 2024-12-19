@@ -33,6 +33,40 @@ from keep.contextmanager.contextmanager import ContextManager
 original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
 
+class PusherMock:
+
+    def __init__(self):
+        self.triggers = []
+
+    def trigger(self, channel, event_name, data):
+        self.triggers.append((channel, event_name, data))
+
+class WorkflowManagerMock:
+
+    def __init__(self):
+        self.events = []
+
+    def get_instance(self):
+        return self
+
+    def insert_incident(self, tenant_id, incident_dto, action):
+        self.events.append((tenant_id, incident_dto, action))
+
+
+class ElasticClientMock:
+
+    def __init__(self):
+        self.alerts = []
+        self.tenant_id = None
+        self.enabled = True
+
+    def __call__(self, tenant_id):
+        self.tenant_id = tenant_id
+        return self
+
+    def index_alerts(self, alerts):
+        self.alerts.append((self.tenant_id, alerts))
+
 
 @pytest.fixture
 def ctx_store() -> dict:

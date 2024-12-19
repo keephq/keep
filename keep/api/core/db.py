@@ -3313,7 +3313,6 @@ def get_last_incidents(
 
     return incidents, total_count
 
-
 def get_incident_by_id(
     tenant_id: str,
     incident_id: str | UUID,
@@ -3574,12 +3573,18 @@ def get_future_incidents_by_incident_id(
 
     return query.all(), total_count
 
+def get_int_severity(input_severity: int | str) -> int:
+    if isinstance(input_severity, int):
+        return input_severity
+    else:
+        return IncidentSeverity(input_severity).order
+
 
 def get_alerts_data_for_incident(
     tenant_id: str,
     fingerprints: Optional[List[str]] = None,
     session: Optional[Session] = None,
-) -> dict:
+):
     """
     Function to prepare aggregated data for incidents from the given list of alert_ids
     Logic is wrapped to the inner function for better usability with an optional database session
@@ -3634,7 +3639,7 @@ def get_alerts_data_for_incident(
         return {
             "sources": set(sources),
             "services": set(services),
-            "max_severity": max(severities),
+            "max_severity": max(severities) if severities else IncidentSeverity.LOW,
             "count": len(alerts_data),
         }
 
@@ -3906,6 +3911,28 @@ def remove_alerts_to_incident_by_incident_id(
         )
         sources_existed = session.exec(existed_sources_query)
 
+        severity_field = get_json_extract_field(session, Alert.event, "severity")
+        # checking if severities of removed alerts are still presented in alerts
+        # which still assigned with the incident
+        updated_severities_query = (
+            select(severity_field)
+            .select_from(LastAlert)
+            .join(
+                LastAlertToIncident,
+                and_(
+                    LastAlert.tenant_id == LastAlertToIncident.tenant_id,
+                    LastAlert.fingerprint == LastAlertToIncident.fingerprint,
+                ),
+            )
+            .join(Alert, LastAlert.alert_id == Alert.id)
+            .filter(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                LastAlertToIncident.incident_id == incident_id,
+            )
+        )
+        updated_severities_result = session.exec(updated_severities_query)
+        updated_severities = [get_int_severity(severity) for severity in updated_severities_result]
+
         # Making lists of services and sources to remove from the incident
         services_to_remove = [
             service
@@ -3946,7 +3973,7 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
-        incident.severity = alerts_data_for_incident["max_severity"].order
+        incident.severity = max(updated_severities) if updated_severities else IncidentSeverity.LOW.order
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
@@ -4011,7 +4038,7 @@ def merge_incidents_to_id(
                 )
             except OperationalError as e:
                 logger.error(
-                    f"Error removing alerts to incident {source_incident.id}: {e}"
+                    f"Error removing alerts from incident {source_incident.id}: {e}"
                 )
             try:
                 add_alerts_to_incident(
@@ -4030,7 +4057,6 @@ def merge_incidents_to_id(
         session.commit()
         session.refresh(destination_incident)
         return merged_incident_ids, skipped_incident_ids, failed_incident_ids
-
 
 def get_alerts_count(
     tenant_id: str,
