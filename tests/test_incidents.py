@@ -33,6 +33,7 @@ from keep.api.models.alert import (
 from keep.api.models.db.alert import Alert, LastAlertToIncident, Incident, NULL_FOR_DELETED_AT
 from keep.api.models.db.tenant import Tenant
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from tests.conftest import ElasticClientMock, PusherMock, WorkflowManagerMock
 from tests.fixtures.client import client, test_app  # noqa
 
 
@@ -902,19 +903,18 @@ async def test_split_incident(db_session, create_alert):
     assert incident_dest._alerts[0].fingerprint == critical_alert.fingerprint
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-@patch("keep.api.bl.incidents_bl.pusher_client")
 def test_split_incident_app(db_session, client, test_app, create_alert):
     create_alert(
         "fp1",
         AlertStatus.FIRING,
         datetime.utcnow(),
-        {"severity": AlertSeverity.CRITICAL.value},
+        {"severity": AlertSeverity.WARNING.value},
     )
     create_alert(
         "fp2",
         AlertStatus.FIRING,
         datetime.utcnow(),
-        {"severity": AlertSeverity.CRITICAL.value},
+        {"severity": AlertSeverity.WARNING.value},
     )
     create_alert(
         "fp3",
@@ -923,38 +923,46 @@ def test_split_incident_app(db_session, client, test_app, create_alert):
         {"severity": AlertSeverity.CRITICAL.value},
     )
     alerts = db_session.query(Alert).all()
+    critical_alert = next(a for a in alerts if a.event["severity"] == AlertSeverity.CRITICAL.value)
     incident_1 = create_incident_from_dict(
-        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+        SINGLE_TENANT_UUID, {"user_generated_name": "Source incident", "user_summary": "Source incident"}
     )
     add_alerts_to_incident_by_incident_id(
-        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts]
+        SINGLE_TENANT_UUID, incident_1.id, [a.fingerprint for a in alerts],
+        session=db_session
     )
 
-    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
+    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True, session=db_session)
     assert len(incident_1._alerts) == 3
 
     incident_2 = create_incident_from_dict(
-        SINGLE_TENANT_UUID, {"user_generated_name": "test", "user_summary": "test"}
+        SINGLE_TENANT_UUID, {"user_generated_name": "Destination incident", "user_summary": "Destination incident"}
     )
-    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
+    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True, session=db_session)
     assert len(incident_2._alerts) == 0
 
     response = client.post(
         f"/incidents/{str(incident_1.id)}/split",
         headers={"x-api-key": "some-key"},
         json={
-            "alert_fingerprints": [alerts[2].fingerprint],
+            "alert_fingerprints": [critical_alert.fingerprint],
             "destination_incident_id": str(incident_2.id),
         },
     )
 
     assert response.status_code == 200
 
-    incident_2 = get_incident_by_id(SINGLE_TENANT_UUID, incident_2.id, with_alerts=True)
-    assert incident_2._alerts[0].fingerprint == alerts[2].fingerprint
+    incident_1_after_via_api = client.get(
+        f"/incidents/{incident_1.id}", headers={"x-api-key": "some-key"}
+    ).json()
+    assert incident_1_after_via_api["severity"] == IncidentSeverity.WARNING.value
+    assert incident_1_after_via_api["alerts_count"] == 2
 
-    incident_1 = get_incident_by_id(SINGLE_TENANT_UUID, incident_1.id, with_alerts=True)
-    assert len(incident_1._alerts) == 2
+    incident_2_after_via_api = client.get(
+        f"/incidents/{incident_2.id}", headers={"x-api-key": "some-key"}
+    ).json()
+    assert incident_2_after_via_api["severity"] == IncidentSeverity.CRITICAL.value
+    assert incident_2_after_via_api["alerts_count"] == 1
 
 
 def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
@@ -1025,40 +1033,6 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
     assert total_incident_tenant_2_alerts == 1
     assert len(incident_tenant_2_alerts) == 1
 
-
-class PusherMock:
-
-    def __init__(self):
-        self.triggers = []
-
-    def trigger(self, channel, event_name, data):
-        self.triggers.append((channel, event_name, data))
-
-class WorkflowManagerMock:
-
-    def __init__(self):
-        self.events = []
-
-    def get_instance(self):
-        return self
-
-    def insert_incident(self, tenant_id, incident_dto, action):
-        self.events.append((tenant_id, incident_dto, action))
-
-
-class ElasticClientMock:
-
-    def __init__(self):
-        self.alerts = []
-        self.tenant_id = None
-        self.enabled = True
-
-    def __call__(self, tenant_id):
-        self.tenant_id = tenant_id
-        return self
-
-    def index_alerts(self, alerts):
-        self.alerts.append((self.tenant_id, alerts))
 
 
 def test_incident_bl_create_incident(db_session):
