@@ -262,7 +262,7 @@ def delete_incident(
 @router.post(
     "/{incident_id}/split",
     description="Split incident by incident id",
-    response_model=IncidentDto,
+    response_model=SplitIncidentResponseDto,
 )
 async def split_incident(
     incident_id: UUID,
