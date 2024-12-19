@@ -417,7 +417,8 @@ def perform_demo_ai(keep_api_key, keep_api_url):
 
 
 def simulate_alerts(*args, **kwargs):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.create_task(simulate_alerts_worker(0, kwargs.get("keep_api_key"), 0))
     loop.create_task(simulate_alerts_async(*args, **kwargs))
     loop.run_forever()
