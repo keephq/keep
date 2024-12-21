@@ -25,6 +25,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
       - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
       - SENTRY_DISABLED=true
 
   keep-backend:
@@ -38,6 +39,7 @@ services:
       - AUTH_TYPE=NO_AUTH
       - DATABASE_CONNECTION_STRING=mysql+pymysql://root:keep@keep-database:3306/keep
       - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
       - SECRET_MANAGER_DIRECTORY=/app
       - SQLALCHEMY_WARN_20=1
     depends_on:

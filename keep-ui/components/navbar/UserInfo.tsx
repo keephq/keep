@@ -87,6 +87,8 @@ type UserInfoProps = {
 };
 
 export const UserInfo = ({ session }: UserInfoProps) => {
+  const { data: config } = useConfig();
+
   const { flow } = Frigade.useFlow(ONBOARDING_FLOW_ID);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const isMounted = useMounted();
@@ -94,7 +96,7 @@ export const UserInfo = ({ session }: UserInfoProps) => {
   return (
     <>
       <ul className="space-y-2 p-2">
-        {isMounted && flow?.isCompleted === false && (
+        {isMounted && !config?.FRIGADE_DISABLED && flow?.isCompleted === false && (
           <li>
             <Frigade.ProgressBadge
               flowId={ONBOARDING_FLOW_ID}
