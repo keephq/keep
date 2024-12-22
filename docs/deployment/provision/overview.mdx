@@ -11,6 +11,8 @@ Keep offers three main provisioning options:
 1. [**Provider Provisioning**](/deployment/provision/provider) - Set up and manage data providers for Keep.
 2. [**Workflow Provisioning**](/deployment/provision/workflow) - Configure and manage workflows within Keep.
 3. [**Dashboard Provisioning**](/deployment/provision/dashboard) - Configure and manage dashboards within Keep.
+4. [**Deduplication rules Provisioning**](/deployment/provision/deduplication-rule) - Configure and manage deduplication rules within Keep.
+
 
 Choosing the right provisioning strategy depends on your specific use case, deployment environment, and scalability requirements. You can read more about each provisioning option in their respective sections.
 
@@ -22,11 +24,12 @@ Choosing the right provisioning strategy depends on your specific use case, depl
 </Tip>
 
 Provisioning in Keep is controlled through environment variables and configuration files. The main environment variables for provisioning are:
+| Provisioning Type      | Environment Variable           | Purpose                                                                 |
+| ---------------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| **Provider**           | `KEEP_PROVIDERS`               | JSON string containing provider configurations                          |
+| **Workflow**           | `KEEP_WORKFLOWS_DIRECTORY`     | Directory path containing workflow configuration files                  |
+| **Dashboard**          | `KEEP_DASHBOARDS`              | JSON string containing dashboard configurations                         |
+| **Deduplication rules**| `KEEP_DEDUPLICATION_RULES`     | Path to JSON file containing deduplication rules configurations or JSON itself |
 
-| Provisioning Type | Environment Variable       | Purpose                                                |
-| ----------------- | -------------------------- | ------------------------------------------------------ |
-| **Provider**      | `KEEP_PROVIDERS`           | JSON string containing provider configurations         |
-| **Workflow**      | `KEEP_WORKFLOWS_DIRECTORY` | Directory path containing workflow configuration files |
-| **Dashboard**     | `KEEP_DASHBOARDS`          | JSON string containing dashboard configurations        |
 
 For more details on each provisioning strategy, including setup instructions and implications, refer to the respective sections.
