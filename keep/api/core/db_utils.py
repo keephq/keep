@@ -131,17 +131,19 @@ def asynchronize_connection_string(connection_string):
     We also may assume some customers hardcoded async drivers to the connection strings
     so we substitute sync drivers to async on the fly.
     """
+    if type(connection_string) != str:
+        return connection_string
+    
     if connection_string.startswith('sqlite:'):
         connection_string = connection_string.replace('sqlite:', 'sqlite+aiosqlite:', 1)
         logging.warning(f"DB connection string updated to: {connection_string}")
         
-    if connection_string.startswith('postgresql:'):
+    if connection_string.startswith('postgresql+psycopg2:'):
         connection_string = connection_string.replace('postgresql+psycopg2:', 'postgresql+psycopg:', 1)
         logging.warning(f"DB connection string updated to: {connection_string}")
         
-    if connection_string.startswith('mysql:'):
-        connection_string = connection_string.replace('postgresql+psycopg2:', 'postgresql+psycopg:', 1)
-        return connection_string.replace('mysql:', 'mysql+asyncmy:', 1)
+    if connection_string.startswith('mysql+pymysql:'):
+        connection_string = connection_string.replace('mysql+pymysql:', 'mysql+asyncmy:', 1)
         
     return connection_string
 
@@ -150,28 +152,34 @@ def create_db_engine(_async=False):
     """
     Creates a database engine based on the environment variables.
     """
-    creator_method = create_engine if not _async else create_async_engine
+    if _async:
+        creator_method = create_async_engine
+        db_connecton_string = asynchronize_connection_string(DB_CONNECTION_STRING)
+    else:
+        creator_method = create_engine
+        db_connecton_string = DB_CONNECTION_STRING
+
     if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
         engine = creator_method(
-            "mysql+pymysql://",
+            "mysql+asyncmy://",
             creator=__get_conn,
             echo=DB_ECHO,
             json_serializer=dumps,
             pool_size=DB_POOL_SIZE,
             max_overflow=DB_MAX_OVERFLOW,
         )
-    elif DB_CONNECTION_STRING == "impersonate":
+    elif db_connecton_string == "impersonate":
         engine = creator_method(
-            "mysql+pymysql://",
+            "mysql+asyncmy://",
             creator=__get_conn_impersonate,
             echo=DB_ECHO,
             json_serializer=dumps,
         )
-    elif DB_CONNECTION_STRING:
+    elif db_connecton_string:
         try:
             logger.info(f"Creating a connection pool with size {DB_POOL_SIZE}")
             engine = creator_method(
-                asynchronize_connection_string(DB_CONNECTION_STRING),
+                db_connecton_string,
                 pool_size=DB_POOL_SIZE,
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
@@ -181,7 +189,7 @@ def create_db_engine(_async=False):
         # SQLite does not support pool_size
         except TypeError:
             engine = creator_method(
-                asynchronize_connection_string(DB_CONNECTION_STRING), json_serializer=dumps, echo=DB_ECHO
+                db_connecton_string, json_serializer=dumps, echo=DB_ECHO
             )
     else:
         engine = creator_method(

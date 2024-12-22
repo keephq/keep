@@ -90,6 +90,7 @@ prometheus-client = "^0.21.1"
 psycopg2-binary = "^2.9.10"
 
 aiosqlite = "^0.20.0"
+asyncmy = "^0.2.10"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
