@@ -2,7 +2,6 @@
 Clickhouse is a class that provides a way to read data from Clickhouse.
 """
 
-import os
 import asyncio
 import pydantic
 import dataclasses
@@ -96,8 +95,8 @@ class ClickhouseHttpProvider(BaseProvider):
         """
         Generates a Clickhouse client.
         """
-        if self.context_manager.tenant_id + self.provider_id in ClickhouseProvider.SHARED_CLIENT:
-            return ClickhouseProvider.SHARED_CLIENT[self.context_manager.tenant_id + self.provider_id]
+        if self.context_manager.tenant_id + self.provider_id in ClickhouseHttpProvider.SHARED_CLIENT:
+            return ClickhouseHttpProvider.SHARED_CLIENT[self.context_manager.tenant_id + self.provider_id]
 
         user = self.authentication_config.username
         password = self.authentication_config.password
@@ -112,7 +111,7 @@ class ClickhouseHttpProvider(BaseProvider):
             password=password,
             database=database,
         )
-        ClickhouseProvider.SHARED_CLIENT[self.context_manager.tenant_id + self.provider_id] = client
+        ClickhouseHttpProvider.SHARED_CLIENT[self.context_manager.tenant_id + self.provider_id] = client
 
         return client
 
@@ -120,7 +119,7 @@ class ClickhouseHttpProvider(BaseProvider):
         """
         Validates required configuration for Clickhouse's provider.
         """
-        self.authentication_config = ClickhouseProviderAuthConfig(
+        self.authentication_config = ClickhouseHttpProviderAuthConfig(
             **self.config.authentication
         )
         return True

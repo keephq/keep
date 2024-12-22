@@ -20,7 +20,6 @@ from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import (
-    get_alert_by_event_id,
     get_installed_providers,
     get_last_workflow_workflow_to_alert_executions,
     get_session,
@@ -36,7 +35,6 @@ from keep.api.models.workflow import (
     WorkflowExecutionLogsDTO,
     WorkflowToAlertExecutionDTO,
 )
-from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
