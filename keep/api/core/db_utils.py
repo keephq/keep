@@ -125,6 +125,27 @@ def dumps(_json) -> str:
     return json.dumps(_json, default=str)
 
 
+def asynchronize_connection_string(connection_string):
+    """
+    We want to make sure keep is able to work after an update to async.
+    We also may assume some customers hardcoded async drivers to the connection strings
+    so we substitute sync drivers to async on the fly.
+    """
+    if connection_string.startswith('sqlite:'):
+        connection_string = connection_string.replace('sqlite:', 'sqlite+aiosqlite:', 1)
+        logging.warning(f"DB connection string updated to: {connection_string}")
+        
+    if connection_string.startswith('postgresql:'):
+        connection_string = connection_string.replace('postgresql+psycopg2:', 'postgresql+psycopg:', 1)
+        logging.warning(f"DB connection string updated to: {connection_string}")
+        
+    if connection_string.startswith('mysql:'):
+        connection_string = connection_string.replace('postgresql+psycopg2:', 'postgresql+psycopg:', 1)
+        return connection_string.replace('mysql:', 'mysql+asyncmy:', 1)
+        
+    return connection_string
+
+
 def create_db_engine(_async=False):
     """
     Creates a database engine based on the environment variables.
@@ -150,7 +171,7 @@ def create_db_engine(_async=False):
         try:
             logger.info(f"Creating a connection pool with size {DB_POOL_SIZE}")
             engine = creator_method(
-                DB_CONNECTION_STRING,
+                asynchronize_connection_string(DB_CONNECTION_STRING),
                 pool_size=DB_POOL_SIZE,
                 max_overflow=DB_MAX_OVERFLOW,
                 json_serializer=dumps,
@@ -160,11 +181,11 @@ def create_db_engine(_async=False):
         # SQLite does not support pool_size
         except TypeError:
             engine = creator_method(
-                DB_CONNECTION_STRING, json_serializer=dumps, echo=DB_ECHO
+                asynchronize_connection_string(DB_CONNECTION_STRING), json_serializer=dumps, echo=DB_ECHO
             )
     else:
         engine = creator_method(
-            "sqlite:///./keep.db",
+            "sqlite+aiosqlite:///./keep.db",
             connect_args={"check_same_thread": False},
             echo=DB_ECHO,
             json_serializer=dumps,
