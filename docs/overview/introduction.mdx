@@ -3,61 +3,44 @@ title: "Introduction"
 description: "Keep is an open-source alert management and AIOps platform that is a swiss-knife for alerting, automation, and noise reduction."
 ---
 
-<Note>
-  {" "}
-  You can start exploring Keep by simply logging in to the [platform](https://platform.keephq.dev).
-  Make sure to also join our [Slack community](https://slack.keephq.dev) to get help
-  and share your feedback.
-</Note>
-
-## What's an alert?
-
-An alert is an event that is triggered when something undesirable occurs or is about to occur.
-It is usually triggered by monitoring tools. Example could include: Prometheus, Grafana, Datadog or CloudWatch, and your own proprietary tools.
-
-Alerts are usually categorized into three different groups:
-
-- Infrastructure-related alerts - e.g., a virtual machine consumes more than 99% CPU.
-- Application-related alerts - e.g., an endpoint starts returning 5XX status codes.
-- Business-related alerts - e.g., a drop in the number of sign-ins or purchases.
-
-## What problem does Keep solve?
-
-Keep helps with every step of the alert lifecycle:
-
-1. Maintenance - Keep integrates with all of your monitoring tools, allowing you to manage all of your alerts within a single pane of glass.
-2. Noise reduction - By integrating with monitoring tools, Keep can deduplicate and correlate alerts to reduce noise in your organization. There are 2 types of deduplication: Rule-based (semi-manual) and AI-based (fully automated).
-3. Automation - [Keep Workflows](/workflows) is a GitHub Actions-like experience for automating anything that is triggered by things in Keep: alerts, events, incidents, manually and based on time intervals. It can help with: alert enrichment, ticket creation, self-healing, root cause analysis, and more.
-4. Incident Correlation - Correlate alerts to incidents, performs triage, and conducts root cause analysis.
-
-## How does Keep get my alerts?
-
-There are primarily two ways to get alerts into Keep:
-
-### Push
-
-When you connect a [Provider](/providers), Keep automatically instruments the tools to send alerts to Keep via webhook.
-As an example, when you connect Grafana, Keep will automatically create a new Webhook contact point in Grafana, and a new Notification Policy to send all alerts to Keep.
-
-You can configure which providers you want to push from by checking the `Install Webhook` checkbox in the provider settings.
-
-<Frame>
-  <img src="/images/pushing-enabled.png" />
-</Frame>
-
-### Pull
-
-When you connect a [Provider](/providers), Keep will start pulling alerts from the tool automatically.
-Pulling interval is defined by the `KEEP_PULL_INTERVAL` environment variable and defaults to 7 days and can be completely turned off by using the `KEEP_PULL_DATA_ENABLED` environment variable.
-
-You can also configure which providers you want to pull from by checking the `Pulling Enabled` checkbox in the provider settings.
-
-<Frame>
-  <img src="/images/pulling-enabled.png" />
-</Frame>
-
 <Tip>
-  We strongly recommend using the push method for alerting, as pulling does not
-  include a lot of the features, like workflow automation. It is mainly used for
-  a quick way to get alerts into Keep and start exploring the value.
+  Keep has a new playground! Visit the [Playground](https://playground.keephq.dev) to explore its powerful features, experiment with configurations, and test AIOps techniques in a sandbox environment.
+
+
+  Once you're ready to start using Keep in your environment, head over to the [Platform](https://platform.keephq.dev) to set up your tenant and get started. Don't forget to join our [Slack community](https://slack.keephq.dev) for help and to share your feedback.
 </Tip>
+
+## What's AIOps?
+
+In simple words, AI for IT Operations (aka AIOps) is about automating repetitive tasks, reducing noise from monitoring tools, and helping teams overcome alert fatigue by turning overwhelming data into actionable insights.
+
+With AIOps, teams can eliminate noise, prioritize critical issues, and focus on solving real problems rather than constantly firefighting alerts.
+
+## Why do we build Keep?
+
+Working with current tools such as BigPanda, Splunk ITSI, or ServiceNow ITOM, we identified a gap:
+
+- **No Open Source Solution:** We have Grafana for visualization and Prometheus for metrics, but nothing for AIOps. Keep fills this gap as the first open-source solution for AIOps.
+- **Not DevOps/SRE Friendly:** Current tools are enterprise-focused but not in a good way. If you're an SRE team lead or head of IT operations in a company with ~100 employees, the existing tools won't work for you. They're too expensive, and their UX requires a dedicated team just for setup and maintenance. Keep is enterprise-ready (scaling, SSO, etc.) but also designed for small teams that want to adopt AIOps practices.
+- **A "Post LLM Era" AIOps:** Existing tools were built in a different technical era. Keep is designed to leverage the advancements of the large language model (LLM) era, integrating AI more seamlessly into IT operations.
+
+## Our Philosophy
+
+- **Easy to start** – Whether locally or on Kubernetes, we provide one-click solutions like `helm install` and `docker-compose` so you can quickly spin up Keep and start exploring its capabilities.
+- **Easy to extend** – Keep is designed with extensibility in mind, making it straightforward to add new integrations or functionality to meet your specific needs.
+- **Easy to deploy** – Every aspect of Keep can be provisioned as code, enabling seamless automation of deployments and integration into your CI/CD pipelines.
+- **Easy to collaborate** – As an open-source project, we truly believe in the power of community and collaboration. We actively listen to user feedback and strive to continuously improve Keep based on the needs and insights of our users.
+
+## Our Vision
+
+Keep is built so every team can benefit from AIOps.
+
+Whether you're a small team looking for a Kubernetes-local single pane of glass for your Prometheus alerts, or an enterprise with dozens of tools generating alerts and needing to sync with your ServiceNow tickets, Keep is for you.
+
+Our vision is to democratize AIOps, making it accessible and practical for teams of all sizes.
+
+## What you should read next
+
+- [Key Concepts](#key-concepts): Understand the foundational ideas behind Keep.
+- [Use Cases](#use-cases): Learn how Keep can solve specific IT operations challenges.
+- [Getting Started](#getting-started): Dive in and start using Keep today.

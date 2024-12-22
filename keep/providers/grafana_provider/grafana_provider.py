@@ -509,6 +509,8 @@ class GrafanaProvider(BaseProvider):
         if not alert_type:
             alert_type = random.choice(list(ALERTS.keys()))
 
+        to_wrap_with_provider_type = kwargs.get("to_wrap_with_provider_type")
+
         if "payload" in ALERTS[alert_type]:
             alert_payload = ALERTS[alert_type]["payload"]
         else:
@@ -552,11 +554,15 @@ class GrafanaProvider(BaseProvider):
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
         alert_payload["fingerprint"] = fingerprint
 
-        return {
-            "alerts": [alert_payload],
-            "severity": alert_payload.get("labels", {}).get("severity"),
-            "title": alert_type,
-        }
+
+        final_payload = {
+                    "alerts": [alert_payload],
+                    "severity": alert_payload.get("labels", {}).get("severity"),
+                    "title": alert_type,
+                }
+        if to_wrap_with_provider_type:
+            return {"keep_source_type": "grafana", "event": final_payload}
+        return final_payload
 
 
 if __name__ == "__main__":

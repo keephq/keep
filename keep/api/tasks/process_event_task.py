@@ -467,11 +467,13 @@ def __handle_formatted_events(
 
     with tracer.start_as_current_span("process_event_notify_client"):
         pusher_client = get_pusher_client() if notify_client else None
+        if not pusher_client:
+            return
         # Get the notification cache
         pusher_cache = get_notification_cache()
 
         # Tell the client to poll alerts
-        if pusher_client and pusher_cache.should_notify(tenant_id, "poll-alerts"):
+        if pusher_cache.should_notify(tenant_id, "poll-alerts"):
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
@@ -485,7 +487,6 @@ def __handle_formatted_events(
 
         if (
             incidents
-            and pusher_client
             and pusher_cache.should_notify(tenant_id, "incident-change")
         ):
             try:
@@ -499,8 +500,6 @@ def __handle_formatted_events(
 
         # Now we need to update the presets
         # send with pusher
-        if not pusher_client:
-            return
 
         try:
             presets = get_all_presets_dtos(tenant_id)
@@ -515,32 +514,12 @@ def __handle_formatted_events(
                 if not filtered_alerts:
                     continue
                 presets_do_update.append(preset_dto)
-                preset_dto.alerts_count = len(filtered_alerts)
-                # update noisy
-                if preset_dto.is_noisy:
-                    firing_filtered_alerts = list(
-                        filter(
-                            lambda alert: alert.status == AlertStatus.FIRING.value,
-                            filtered_alerts,
-                        )
-                    )
-                    # if there are firing alerts, then do noise
-                    if firing_filtered_alerts:
-                        logger.info("Noisy preset is noisy")
-                        preset_dto.should_do_noise_now = True
-                # else if at least one of the alerts has isNoisy and should fire:
-                elif any(
-                    alert.isNoisy and alert.status == AlertStatus.FIRING.value
-                    for alert in filtered_alerts
-                    if hasattr(alert, "isNoisy")
-                ):
-                    logger.info("Noisy preset is noisy")
-                    preset_dto.should_do_noise_now = True
+            if pusher_cache.should_notify(tenant_id, "poll-presets"):
                 try:
                     pusher_client.trigger(
                         f"private-{tenant_id}",
-                        "async-presets",
-                        json.dumps([p.dict() for p in presets_do_update], default=str),
+                        "poll-presets",
+                        json.dumps([p.name.lower() for p in presets_do_update], default=str),
                     )
                 except Exception:
                     logger.exception("Failed to send presets via pusher")
