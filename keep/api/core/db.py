@@ -1923,7 +1923,7 @@ def update_deduplication_rule(
     fingerprint_fields: list[str] = [],
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
-    priority: int = 0
+    priority: int = 0,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:

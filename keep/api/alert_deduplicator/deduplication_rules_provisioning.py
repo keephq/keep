@@ -175,7 +175,7 @@ def read_deduplication_rules_from_env_var() -> dict[str, DeduplicationRuleReques
 
     if not deduplication_rules_from_env_var:
         return None
-    # check if env var is absolute or relative path to a deduplication json file
+    # check if env var is absolute or relative path to a deduplication rules json file
     elif re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
         deduplication_rules_from_env_var
     ):
