@@ -1,0 +1,141 @@
+---
+title: "Context"
+---
+
+The **Context** in Keep workflows allows you to reference and utilize data dynamically across different parts of your workflow. Context variables give you access to runtime data such as alert details, results from previous steps or actions, and constants defined in your workflow.
+
+This capability makes workflows flexible, reusable, and able to handle complex scenarios dynamically.
+
+---
+
+## Accessing Context
+
+Context variables can be accessed using curly braces (`{{ }}`). You can use these variables directly in triggers, steps, and actions. The context includes:
+
+1. **Alert Data**: Access data from the alert triggering the workflow.
+2. **Incident Data**: If the workflow is incident-based, you can access the incident's attributes.
+3. **Steps and Actions Results**: Retrieve data produced by previous steps or actions using their unique IDs.
+
+### Alert Data
+You can access attributes of the alert anywhere in the workflow:
+
+```yaml
+message: "Alert triggered: {{ alert.name }} - Severity: {{ alert.severity }}"
+```
+
+### Incident Data
+For incident workflows, access incident-related context:
+
+```yaml
+if: "{{ incident.current_tier == 1 }}"
+```
+
+### Steps Results
+
+Access results from previous steps:
+
+```yaml
+message: "Query results: {{ steps.get-max-datetime.results }}"
+```
+
+### Action Results
+Retrieve data from completed actions:
+
+```yaml
+if: "{{ actions.trigger-email.results.success }}"
+
+```
+
+### Constants
+
+Define reusable values in the workflow and access them:
+
+```
+consts:
+  alert_message: "Critical system alert!"
+  escalation_policy: "tier-1"
+
+...
+
+message: "{{ consts.alert_message }}"
+```
+
+
+## Using Context in Loops
+
+When iterating over data in a `foreach` loop, the context provides `foreach.value` for the current iteration.
+
+For example:
+```yaml
+
+steps:
+  - name: get-alerts
+    provider:
+      type: keep
+      with:
+        query: "status == 'firing'"
+
+actions:
+  - name: notify-on-alerts
+    foreach: "{{ steps.get-alerts.results }}"
+    provider:
+      type: slack
+      with:
+        message: "Alert: {{ foreach.value.name }} is firing!"
+
+```
+
+---
+
+## Examples of Context Usage
+
+
+### Dynamic Action Execution
+
+Using context to trigger actions conditionally:
+
+```yaml
+actions:
+  - name: escalate-alert
+    if: "{{ alert.severity == 'critical' }}"
+    provider:
+      type: slack
+      with:
+        message: "Critical alert: {{ alert.name }}"
+
+```
+
+### Enriching Alerts
+You can use results from a step to enrich an alert
+
+```yaml
+steps:
+  - name: fetch-customer-details
+    provider:
+      type: mysql
+      with:
+        query: "SELECT * FROM customers WHERE id = '{{ alert.customer_id }}'"
+        single_row: true
+
+actions:
+  - name: enrich-alert
+    provider:
+      type: mock
+      with:
+        enrich_alert:
+          - key: customer_name
+            value: "{{ steps.fetch-customer-details.results.name }}"
+```
+
+### Conditional Logic Based on Step Results
+
+```yaml
+actions:
+  - name: trigger-slack
+    if: "{{ steps.get-pods.results[0].status.phase == 'Running' }}"
+    provider:
+      type: slack
+      with:
+        message: "Pod is running: {{ steps.get-pods.results[0].metadata.name }}"
+
+```

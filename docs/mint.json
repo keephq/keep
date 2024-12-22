@@ -32,88 +32,81 @@
       "group": "Overview",
       "pages": [
         "overview/introduction",
+        "overview/playground",
         "overview/usecases",
-        "overview/comparisons",
-        "overview/keyconcepts",
-        "overview/ruleengine",
-        "overview/presets",
         {
-          "group": "Enrichments",
+          "group": "Key Concepts",
           "pages": [
-            "overview/enrichment/extraction",
-            "overview/enrichment/mapping"
+            "overview/glossary",
+            "overview/cel",
+            "overview/fingerprints",
+            "overview/alertseverityandstatus",
+            "overview/howdoeskeepgetmyalerts",
+            "overview/comparisons"
           ]
-        },
-        "overview/maintenance-windows",
+        }
+      ]
+    },
+    {
+      "group": "Alerts",
+      "pages": [
+        "alerts/overview",
+        "alerts/table",
+        "alerts/actionmenu",
+        "alerts/sidebar",
+        "alerts/presets"
+      ]
+    },
+    {
+      "group": "Incidents",
+      "pages": ["incidents/overview"]
+    },
+    {
+      "group": "AIOps",
+      "pages": [
+        "overview/correlation",
         "overview/deduplication",
-        "overview/examples"
+        "overview/enrichment/extraction",
+        "overview/enrichment/mapping",
+        "overview/servicetopology",
+        "overview/maintenance-windows",
+        "overview/workflow-automation"
       ]
     },
     {
-      "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
-    },
-    {
-      "group": "Deployment",
+      "group": "Workflow Automation",
       "pages": [
-        "deployment/configuration",
-        "deployment/monitoring",
+        "workflows/overview",
         {
-          "group": "Authentication",
+          "group": "Syntax",
           "pages": [
-            "deployment/authentication/overview",
-            "deployment/authentication/no-auth",
-            "deployment/authentication/db-auth",
-            "deployment/authentication/auth0-auth",
-            "deployment/authentication/azuread-auth",
-            "deployment/authentication/keycloak-auth",
-            "deployment/authentication/oauth2proxy-auth"
+            "workflows/syntax/triggers",
+            "workflows/syntax/steps-and-actions",
+            "workflows/syntax/conditions",
+            "workflows/syntax/functions",
+            "workflows/syntax/context",
+            "workflows/syntax/providers",
+            "workflows/syntax/foreach",
+            "workflows/syntax/enrichment"
           ]
         },
         {
-          "group": "Provision",
+          "group": "Examples",
           "pages": [
-            "deployment/provision/overview",
-            "deployment/provision/provider",
-            "deployment/provision/workflow",
-            "deployment/provision/dashboard",
-            "deployment/provision/deduplication-rule"
+            "workflows/examples/autosupress",
+            "workflows/examples/buisnesshours",
+            "workflows/examples/create-servicenow-tickets",
+            "workflows/examples/highsev",
+            "workflows/examples/update-servicenow-tickets"
           ]
-        },
-        "deployment/secret-manager",
-        "deployment/docker",
-        {
-          "group": "Kubernetes",
-          "pages": [
-            "deployment/kubernetes/overview",
-            "deployment/kubernetes/installation",
-            "deployment/kubernetes/architecture",
-            "deployment/kubernetes/openshift"
-          ]
-        },
-        "deployment/openshift",
-        "deployment/ecs",
-        "deployment/stress-testing"
-      ]
-    },
-    {
-      "group": "Platform",
-      "pages": [
-        "platform/overview",
-        "platform/alerts",
-        "platform/alertseverityandstatus",
-        "platform/settings",
-        "platform/support"
+        }
       ]
     },
     {
       "group": "Providers",
       "pages": [
         "providers/overview",
-        "providers/fingerprints",
         "providers/adding-a-new-provider",
-        "providers/getting-started",
-        "providers/what-is-a-provider",
         {
           "group": "Supported Providers",
           "pages": [
@@ -215,66 +208,60 @@
       ]
     },
     {
-      "group": "Workflows",
+      "group": "Deployment",
       "pages": [
-        "workflows/overview",
+        "deployment/configuration",
+        "deployment/monitoring",
         {
-          "group": "Syntax",
+          "group": "Authentication",
           "pages": [
-            "workflows/syntax/basic-syntax",
-            "workflows/syntax/foreach-syntax",
-            "workflows/syntax/context-syntax"
+            "deployment/authentication/overview",
+            "deployment/authentication/no-auth",
+            "deployment/authentication/db-auth",
+            "deployment/authentication/auth0-auth",
+            "deployment/authentication/azuread-auth",
+            "deployment/authentication/keycloak-auth",
+            "deployment/authentication/oauth2proxy-auth"
           ]
         },
         {
-          "group": "Conditions",
+          "group": "Provision",
           "pages": [
-            "workflows/conditions/what-is-a-condition",
-            "workflows/conditions/threshold",
-            "workflows/conditions/assert",
-            "workflows/conditions/stddev"
+            "deployment/provision/overview",
+            "deployment/provision/provider",
+            "deployment/provision/workflow",
+            "deployment/provision/dashboard",
+            "deployment/provision/deduplication-rule"
           ]
         },
+        "deployment/secret-store",
         {
-          "group": "Functions",
+          "group": "Deploy On",
           "pages": [
-            "workflows/functions/what-is-a-function",
-            "workflows/functions/all",
-            "workflows/functions/add-time-to-date",
-            "workflows/functions/diff",
-            "workflows/functions/len",
-            "workflows/functions/split",
-            "workflows/functions/first",
-            "workflows/functions/utcnow",
-            "workflows/functions/to-utc",
-            "workflows/functions/datetime-compare",
-            "workflows/functions/encode",
-            "workflows/functions/last",
-            "workflows/functions/lowercase",
-            "workflows/functions/uppercase"
+            "deployment/docker",
+            {
+              "group": "Kubernetes",
+              "pages": [
+                "deployment/kubernetes/overview",
+                "deployment/kubernetes/installation",
+                "deployment/kubernetes/architecture",
+                "deployment/kubernetes/openshift"
+              ]
+            },
+            "deployment/openshift",
+            "deployment/ecs"
           ]
         },
-        {
-          "group": "Throttles",
-          "pages": [
-            "workflows/throttles/what-is-a-throttle",
-            "workflows/throttles/one-until-resolved"
-          ]
-        },
-        {
-          "group": "Examples",
-          "pages": [
-            "workflows/examples/multi-step-alert",
-            "workflows/examples/reusable-action-alert"
-          ]
-        },
-        "workflows/state"
+        "deployment/stress-testing"
       ]
+    },
+    {
+      "group": "Development",
+      "pages": ["development/getting-started", "development/external-url"]
     },
     {
       "group": "Keep API",
       "pages": [
-        "api-ref/root",
         {
           "group": "providers",
           "pages": [

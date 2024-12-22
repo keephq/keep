@@ -10,9 +10,9 @@ import {
 } from "@tremor/react";
 import { Trashcan } from "components/icons";
 import { GenericsMetrics, Threshold, WidgetData, WidgetType } from "./types";
-import { Preset } from "@/app/(keep)/alerts/models";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
+import { Preset } from "@/entities/presets/model/types";
 
 interface WidgetForm {
   widgetName: string;

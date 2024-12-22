@@ -1,0 +1,93 @@
+---
+title: "Triggers"
+---
+
+## Overview
+
+Triggers in Keep Workflow Engine define **when a workflow is executed**. Triggers are the starting point for workflows and can be configured to respond to a variety of events, conditions, or schedules.
+
+
+A workflow can have one or multiple triggers, and these triggers determine the specific circumstances under which the workflow is initiated. Examples include manual invocation, time-based schedules, or event-driven actions like alerts or incident updates.
+
+Triggers are defined under the `triggers` section of a workflow YAML file. Each trigger has a `type` and optional additional configurations or filters.
+
+## Supported Trigger Types
+
+### Manual Trigger
+
+Used to execute workflows on demand.
+
+```yaml
+triggers:
+  - type: manual
+```
+
+### Interval Trigger
+
+Runs workflows at a regular time interval or using a CRON expression.
+
+```yaml
+triggers:
+  - type: interval
+    # Run every 5 minutes
+    value: 5m
+```
+
+```yaml
+triggers:
+  - type: interval
+    # Run daily at 11:00 AM and 2:00 PM
+    cron: "0 11,14 * * *"
+```
+
+### Alert Trigger
+
+Executes a workflow when an alert is received, with optional filters for alert properties.
+
+```yaml
+triggers:
+  - type: alert
+```
+
+### Filtering Alert
+
+You can filter alerts by specific properties like `severity`, `source`, or `service`.
+
+```yaml
+triggers:
+  - type: alert
+    filters:
+      - key: severity
+        value: critical
+      - key: source
+        value: datadog
+```
+
+### Incident Trigger
+
+Runs workflows when an incident is created, updated, or resolved.
+
+```yaml
+
+triggers:
+  - type: incident
+    on:
+      - create
+      - update
+```
+
+### Field Change Trigger
+
+Executes a workflow when specific fields in an alert change, such as status or severity.
+
+```yaml
+triggers:
+  - type: alert
+    only_on_change:
+      - status
+
+```
+
+## Summary
+
+Triggers are a powerful way to control the execution of workflows, ensuring that they respond appropriately to manual actions, schedules, or events. By leveraging filters and configurations, workflows can be fine-tuned to execute only under specific conditions.

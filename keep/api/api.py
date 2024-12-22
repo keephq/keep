@@ -95,13 +95,12 @@ requests.Session.request = no_redirect_request
 async def check_pending_tasks(background_tasks: set):
     while True:
         events_in_queue = len(background_tasks)
-        if events_in_queue > 0:
-            logger.info(
-                f"{events_in_queue} background tasks pending",
-                extra={
-                    "pending_tasks": events_in_queue,
-                },
-            )
+        logger.info(
+            f"{events_in_queue} background tasks pending",
+            extra={
+                "pending_tasks": events_in_queue,
+            },
+        )
         await asyncio.sleep(1)
 
 
@@ -195,6 +194,7 @@ async def lifespan(app: FastAPI):
     background_tasks = set()
     # if debug tasks are enabled, create a task to check for pending tasks
     if KEEP_DEBUG_TASKS:
+        logger.info("Starting background task to check for pending tasks")
         asyncio.create_task(check_pending_tasks(background_tasks))
 
     # Startup
@@ -233,7 +233,7 @@ def get_app(
         lifespan=lifespan,
     )
 
-    @app.get("/")
+    @app.get("/", include_in_schema=False)
     async def root():
         """
         App description and version.

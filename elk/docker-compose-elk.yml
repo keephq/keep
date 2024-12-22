@@ -1,0 +1,91 @@
+services:
+  keep-backend-elk:
+    extends:
+      file: ../docker-compose.common.yml
+      service: keep-backend-common
+    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    environment:
+      - AUTH_TYPE=NO_AUTH
+    volumes:
+      - ./state:/state
+
+  keep-websocket-server:
+    extends:
+      file: ../docker-compose.common.yml
+      service: keep-websocket-server-common
+
+  elastic:
+   image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+   labels:
+     co.elastic.logs/module: elasticsearch
+   volumes:
+     - elastic_data:/usr/share/elasticsearch/data
+   ports:
+     - "9200:9200"
+   environment:
+     - node.name=elastic
+     - cluster.name=keep-elk
+     - discovery.type=single-node
+     - ELASTIC_PASSWORD=elastic
+     - bootstrap.memory_lock=true
+     - xpack.security.enabled=false
+     - xpack.security.enrollment.enabled=false
+     - xpack.security.transport.ssl.enabled=false
+     - xpack.license.self_generated.type=basic
+
+  kibana:
+     depends_on:
+       - elastic
+     image: docker.elastic.co/kibana/kibana:8.17.0
+     labels:
+       co.elastic.logs/module: kibana
+     volumes:
+       - kibana_data:/usr/share/kibana/data
+     ports:
+       - 5601:5601
+     environment:
+       - SERVERNAME=kibana
+       - ELASTICSEARCH_HOSTS=http://elastic:9200
+       - ELASTICSEARCH_USERNAME=kibana_system
+       - ELASTICSEARCH_PASSWORD=kibana
+       - XPACK_APM_SERVICEMAPENABLED="true"
+       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.17.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    environment:
+      - LOGSTASH_HOST=logstash01
+    command: [ "--strict.perms=false" ]  # Disable strict permissions to avoid permission errors
+
+  logstash:
+    depends_on:
+      - elastic
+      - kibana
+    image: docker.elastic.co/logstash/logstash:8.17.0
+    labels:
+      co.elastic.logs/module: logstash
+    user: root
+    ports:
+      - "5001:5000"
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      - logstash_data:/usr/share/logstash/data
+      - "./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"
+    environment:
+      - xpack.monitoring.enabled=false
+      - ELASTIC_USER=elastic
+      - ELASTIC_PASSWORD=elastic
+      - ELASTIC_HOSTS=http://elastic:9200
+
+
+volumes:
+  elastic_data:
+  kibana_data:
+  logstash_data:
