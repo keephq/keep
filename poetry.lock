@@ -148,6 +148,24 @@ files = [
 frozenlist = ">=1.1.0"
 
 [[package]]
+name = "aiosqlite"
+version = "0.20.0"
+description = "asyncio bridge to the standard sqlite3 module"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "aiosqlite-0.20.0-py3-none-any.whl", hash = "sha256:36a1deaca0cac40ebe32aac9977a6e2bbc7f5189f23f4a54d5908986729e5bd6"},
+    {file = "aiosqlite-0.20.0.tar.gz", hash = "sha256:6d35c8c256637f4672f843c31021464090805bf925385ac39473fb16eaaca3d7"},
+]
+
+[package.dependencies]
+typing_extensions = ">=4.0"
+
+[package.extras]
+dev = ["attribution (==1.7.0)", "black (==24.2.0)", "coverage[toml] (==7.4.1)", "flake8 (==7.0.0)", "flake8-bugbear (==24.2.6)", "flit (==3.9.0)", "mypy (==1.8.0)", "ufmt (==2.3.0)", "usort (==1.0.8.post1)"]
+docs = ["sphinx (==7.2.6)", "sphinx-mdinclude (==0.5.3)"]
+
+[[package]]
 name = "alembic"
 version = "1.14.0"
 description = "A database migration tool for SQLAlchemy."
@@ -546,17 +564,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.35.84"
+version = "1.35.86"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.35.84-py3-none-any.whl", hash = "sha256:c94fc8023caf952f8740a48fc400521bba167f883cfa547d985c05fda7223f7a"},
-    {file = "boto3-1.35.84.tar.gz", hash = "sha256:9f9bf72d92f7fdd546b974ffa45fa6715b9af7f5c00463e9d0f6ef9c95efe0c2"},
+    {file = "boto3-1.35.86-py3-none-any.whl", hash = "sha256:ed59fb4883da167464a5dfbc96e76d571db75e1a7a27d8e7b790c3008b02fcc7"},
+    {file = "boto3-1.35.86.tar.gz", hash = "sha256:d61476fdd5a5388503b72c897083310d2329ce088593c4332b571a860be5d155"},
 ]
 
 [package.dependencies]
-botocore = ">=1.35.84,<1.36.0"
+botocore = ">=1.35.86,<1.36.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -565,13 +583,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.35.84"
+version = "1.35.86"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.35.84-py3-none-any.whl", hash = "sha256:b4dc2ac7f54ba959429e1debbd6c7c2fb2349baa1cd63803f0682f0773dbd077"},
-    {file = "botocore-1.35.84.tar.gz", hash = "sha256:f86754882e04683e2e99a6a23377d0dd7f1fc2b2242844b2381dbe4dcd639301"},
+    {file = "botocore-1.35.86-py3-none-any.whl", hash = "sha256:77cb4b445e4f424f956c68c688bd3ad527f4d214d51d67ffc8e245f4476d7de0"},
+    {file = "botocore-1.35.86.tar.gz", hash = "sha256:951e944eb30284b4593d4da98f70f7b5292ea237e4de0c5a2852946a549b8347"},
 ]
 
 [package.dependencies]
@@ -864,13 +882,13 @@ files = [
 
 [[package]]
 name = "click"
-version = "8.1.7"
+version = "8.1.8"
 description = "Composable command line interface toolkit"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "click-8.1.7-py3-none-any.whl", hash = "sha256:ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28"},
-    {file = "click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de"},
+    {file = "click-8.1.8-py3-none-any.whl", hash = "sha256:63c132bbbed01578a06712a2d1f497bb62d9c1c0d329b7903a866228027263b2"},
+    {file = "click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a"},
 ]
 
 [package.dependencies]
@@ -5074,13 +5092,13 @@ python-socketio = {version = ">=5.0.0", extras = ["client"]}
 
 [[package]]
 name = "urllib3"
-version = "2.2.3"
+version = "2.3.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "urllib3-2.2.3-py3-none-any.whl", hash = "sha256:ca899ca043dcb1bafa3e262d73aa25c465bfb49e0bd9dd5d59f1d0acba2f8fac"},
-    {file = "urllib3-2.2.3.tar.gz", hash = "sha256:e7d814a81dad81e6caf2ec9fdedb284ecc9c73076b62654547cc64ccdcae26e9"},
+    {file = "urllib3-2.3.0-py3-none-any.whl", hash = "sha256:1cee9ad369867bfdbbb48b7dd50374c0967a0bb7710050facf0dd6911440e3df"},
+    {file = "urllib3-2.3.0.tar.gz", hash = "sha256:f8c5449b3cf0861679ce7e0503c7b44b5ec981bec0d1d3795a07f1ba96f0204d"},
 ]
 
 [package.extras]
@@ -5408,4 +5426,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "8e764f85116828d2a0f772cc96ae127707ac1ca6ee061b42823f99d79975dc73"
+content-hash = "937a70cf9d203a461ea13b7c7cd974e7ad16a13ed3929af26f7ff16cdf44d03c"
