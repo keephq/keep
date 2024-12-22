@@ -10,10 +10,6 @@ from keep.api.core.db import (
     update_deduplication_rule,
     delete_deduplication_rule,
 )
-from keep.api.models.alert import (
-    DeduplicationRuleDto,
-    DeduplicationRuleRequestDto,
-)
 from keep.providers.providers_factory import ProvidersFactory
 
 logger = logging.getLogger(__name__)
@@ -66,30 +62,30 @@ def provision_deduplication_rules_from_env(tenant_id: str):
     for deduplication_rule_to_provision in deduplication_rules_from_env_dict.values():
         # check if the rule already exists and needs to be overwritten
         if (
-            deduplication_rule_to_provision.name
+            deduplication_rule_to_provision.get("name")
             in provisioned_deduplication_rules_from_db_dict
         ):
 
             logger.info(
                 "Deduplication rule with name '%s' already exists, updating in DB",
-                deduplication_rule_to_provision.name,
+                deduplication_rule_to_provision.get("name"),
             )
             update_deduplication_rule(
                 tenant_id=tenant_id,
                 rule_id=str(
                     provisioned_deduplication_rules_from_db_dict.get(
-                        deduplication_rule_to_provision.name
+                        deduplication_rule_to_provision.get("name")
                     ).id
                 ),
-                name=deduplication_rule_to_provision.name,
-                description=deduplication_rule_to_provision.description,
-                provider_id=deduplication_rule_to_provision.provider_id,
-                provider_type=deduplication_rule_to_provision.provider_type,
+                name=deduplication_rule_to_provision.get("name"),
+                description=deduplication_rule_to_provision.get("description"),
+                provider_id=deduplication_rule_to_provision.get("provider_id"),
+                provider_type=deduplication_rule_to_provision.get("provider_type"),
                 last_updated_by=actor,
                 enabled=True,
-                fingerprint_fields=deduplication_rule_to_provision.fingerprint_fields,
-                full_deduplication=deduplication_rule_to_provision.full_deduplication,
-                ignore_fields=deduplication_rule_to_provision.ignore_fields or [],
+                fingerprint_fields=deduplication_rule_to_provision.get("fingerprint_fields"),
+                full_deduplication=deduplication_rule_to_provision.get("full_deduplication"),
+                ignore_fields=deduplication_rule_to_provision.get("ignore_fields") or [],
                 priority=0,
             )
             continue
@@ -97,43 +93,52 @@ def provision_deduplication_rules_from_env(tenant_id: str):
         # create the rule
         logger.info(
             "Deduplication rule with name '%s' does not exist, creating in DB",
-            deduplication_rule_to_provision.name,
+            deduplication_rule_to_provision.get("name"),
         )
         create_deduplication_rule(
             tenant_id=tenant_id,
-            name=deduplication_rule_to_provision.name,
-            description=deduplication_rule_to_provision.description,
-            provider_id=deduplication_rule_to_provision.provider_id,
-            provider_type=deduplication_rule_to_provision.provider_type,
+            name=deduplication_rule_to_provision.get("name"),
+            description=deduplication_rule_to_provision.get("description"),
+            provider_id=deduplication_rule_to_provision.get("provider_id"),
+            provider_type=deduplication_rule_to_provision.get("provider_type"),
             created_by=actor,
             enabled=True,
-            fingerprint_fields=deduplication_rule_to_provision.fingerprint_fields,
-            full_deduplication=deduplication_rule_to_provision.full_deduplication,
-            ignore_fields=deduplication_rule_to_provision.ignore_fields or [],
+            fingerprint_fields=deduplication_rule_to_provision.get("fingerprint_fields"),
+            full_deduplication=deduplication_rule_to_provision.get("full_deduplication"),
+            ignore_fields=deduplication_rule_to_provision.get("ignore_fields") or [],
             priority=0,
             is_provisioned=True,
         )
 
 
 def validate_deduplication_rules(
-    tenant_id: str, deduplication_rules: list[DeduplicationRuleRequestDto]
+    tenant_id: str, deduplication_rules: list[dict]
 ):
     """
-    Validates the provided deduplication rules for a given tenant.
-    This function checks if the deduplication rules point to existing providers.
-    If any rule points to a non-existing provider, an exception is raised with the
-    corresponding error messages.
+    Validates deduplication rules for a given tenant.
+    This function performs the following validations:
+    1. Ensures that all deduplication rule names are unique.
+    2. Checks that each rule points to an existing provider.
     Args:
         tenant_id (str): The ID of the tenant.
-        deduplication_rules (list[DeduplicationRuleRequestDto]): A list of deduplication rule request DTOs.
+        deduplication_rules (list[dict]): A list of deduplication rules, where each rule is represented as a dictionary.
     Raises:
-        Exception: If any deduplication rule points to a non-existing provider, an exception is raised
-                   with the error messages.
+        Exception: If there are duplicate rule names.
+        Exception: If any rule points to a non-existing provider.
     Returns:
         None
     """
 
     logger.info("Validating deduplication rules")
+
+    # Check for unique rule names
+    rule_names = [rule.get("name") for rule in deduplication_rules]
+    duplicate_names = set([name for name in rule_names if rule_names.count(name) > 1])
+
+    if duplicate_names:
+        raise Exception(f"Duplicate deduplication rule names found: {', '.join(duplicate_names)}")
+
+
     installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
     linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
     errors: dict[str, list[str]] = {}
@@ -143,11 +148,16 @@ def validate_deduplication_rules(
     }
 
     for rule in deduplication_rules:
-        provider_key = f"{rule.provider_type}_{rule.provider_id}"
+        rule_id = rule.get("id")
+        rule_provider_type = rule.get("provider_type")
+        rule_provider_id = rule.get("provider_id")
+        rule_name = rule.get("name")
+        provider_key = f"{rule_provider_type}_{rule_provider_id}"
+        
         if provider_key not in installed_providers_dict:
-            errors[rule.id] = [] if rule.id not in errors else errors[rule.id]
-            errors[rule.id].append(
-                f"Rule with name '{rule.name}' points to not existing provider of type '{rule.provider_type}' with id '{rule.provider_id}'"
+            errors[rule_id] = [] if rule_id not in errors else errors[rule_id]
+            errors[rule_id].append(
+                f"Rule with name '{rule_name}' points to not existing provider of type '{rule_provider_type}' with id '{rule_provider_id}'"
             )
 
     if len(errors) > 0:
@@ -157,7 +167,7 @@ def validate_deduplication_rules(
     logger.info("Deduplication rules are valid")
 
 
-def read_deduplication_rules_from_env_var() -> dict[str, DeduplicationRuleRequestDto]:
+def read_deduplication_rules_from_env_var() -> dict[str, dict]:
     """
     Reads deduplication rules from an environment variable and returns them as a dictionary.
     The function checks if the environment variable `KEEP_DEDUPLICATION_RULES` contains a path to a JSON file
@@ -202,6 +212,6 @@ def read_deduplication_rules_from_env_var() -> dict[str, DeduplicationRuleReques
         rule["is_provisioned"] = True
 
     return {
-        rule["name"]: DeduplicationRuleDto(**rule)
+        rule["name"]: rule
         for rule in deduplication_rules_from_env_json
     }
