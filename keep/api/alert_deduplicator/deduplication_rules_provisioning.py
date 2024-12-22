@@ -175,15 +175,15 @@ def read_deduplication_rules_from_env_var() -> dict[str, DeduplicationRuleReques
 
     if not deduplication_rules_from_env_var:
         return None
+
     # check if env var is absolute or relative path to a deduplication rules json file
-    elif re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
+    if re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
         deduplication_rules_from_env_var
     ):
         with open(
             file=deduplication_rules_from_env_var, mode="r", encoding="utf8"
         ) as file:
             try:
-
                 deduplication_rules_from_env_json = json.loads(file.read())
             except json.JSONDecodeError as e:
                 raise Exception(
