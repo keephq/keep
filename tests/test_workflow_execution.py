@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -74,7 +75,6 @@ actions:
         Alert details: {{ alert }}"
 """
 
-
 @pytest.fixture(scope="module")
 def workflow_manager():
     """
@@ -82,10 +82,7 @@ def workflow_manager():
     It starts the manager asynchronously and stops it after all tests are completed.
     """
     manager = WorkflowManager.get_instance()
-    asyncio.run(manager.start())
-    while not manager.started:
-        time.sleep(0.1)
-    yield manager
+    yield manager   
     manager.stop()
 
 
@@ -258,9 +255,9 @@ def test_workflow_execution(
     count = 0
     status = None
     while workflow_execution is None and count < 30 and status != "success":
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
+        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-time-check"
-        )
+        ))
         if workflow_execution is not None:
             status = workflow_execution.status
         time.sleep(1)
@@ -440,10 +437,10 @@ def test_workflow_execution_2(
     count = 0
     status = None
     while workflow_execution is None and count < 30 and status != "success":
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
+        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID,
             workflow_id,
-        )
+        ))
         if workflow_execution is not None:
             status = workflow_execution.status
         time.sleep(1)
@@ -511,7 +508,8 @@ actions:
     ],
     indirect=["test_app", "db_session"],
 )
-def test_workflow_execution3(
+@pytest.mark.asyncio
+async def test_workflow_execution3(
     db_session,
     test_app,
     create_alert,
@@ -554,19 +552,20 @@ def test_workflow_execution3(
     time.sleep(1)
 
     # Insert the current alert into the workflow manager
-    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
+    await workflow_manager.start()
+    await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for the workflow execution to complete
     workflow_execution = None
     count = 0
     status = None
     while workflow_execution is None and count < 30 and status != "success":
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
+        workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-first-time"
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        time.sleep(1)
+        await asyncio.sleep(1)
         count += 1
 
     # Check if the workflow execution was successful
@@ -679,12 +678,12 @@ def test_workflow_execution_with_disabled_workflow(
     while (
         enabled_workflow_execution is None and disabled_workflow_execution is None
     ) and count < 30:
-        enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
+        enabled_workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
-        )
-        disabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
+        ))
+        disabled_workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, disabled_id
-        )
+        ))
 
         time.sleep(1)
         count += 1
@@ -782,9 +781,9 @@ def test_workflow_incident_triggers(
         count = 0
         status = None
         while workflow_execution is None and count < 30 and status != "success":
-            workflow_execution = get_last_workflow_execution_by_workflow_id(
+            workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
                 SINGLE_TENANT_UUID, workflow_id
-            )
+            ))
             if workflow_execution is not None:
                 status = workflow_execution.status
             time.sleep(1)
@@ -932,9 +931,9 @@ def test_workflow_execution_logs(
         count = 0
         status = None
         while workflow_execution is None and count < 30 and status != "success":
-            workflow_execution = get_last_workflow_execution_by_workflow_id(
+            workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
                 SINGLE_TENANT_UUID, "susu-and-sons"
-            )
+            ))
             if workflow_execution is not None:
                 status = workflow_execution.status
             time.sleep(1)
@@ -1012,9 +1011,9 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
             status = None
             time.sleep(1)
             while workflow_execution is None and count < 30 and status != "success":
-                workflow_execution = get_last_workflow_execution_by_workflow_id(
+                workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
                     SINGLE_TENANT_UUID, "susu-and-sons"
-                )
+                ))
                 if workflow_execution is not None:
                     status = workflow_execution.status
                 time.sleep(1)
