@@ -1887,6 +1887,7 @@ def create_deduplication_rule(
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
     priority: int = 0,
+    is_provisioned: bool = False
 ):
     with Session(engine) as session:
         new_rule = AlertDeduplicationRule(
@@ -1902,6 +1903,7 @@ def create_deduplication_rule(
             full_deduplication=full_deduplication,
             ignore_fields=ignore_fields,
             priority=priority,
+            is_provisioned=is_provisioned,
         )
         session.add(new_rule)
         session.commit()
@@ -1921,7 +1923,7 @@ def update_deduplication_rule(
     fingerprint_fields: list[str] = [],
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
-    priority: int = 0,
+    priority: int = 0
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
