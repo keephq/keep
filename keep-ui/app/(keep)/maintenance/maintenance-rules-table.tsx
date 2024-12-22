@@ -23,7 +23,7 @@ import { IoCheckmark } from "react-icons/io5";
 import { HiMiniXMark } from "react-icons/hi2";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 const columnHelper = createColumnHelper<MaintenanceRule>();
 

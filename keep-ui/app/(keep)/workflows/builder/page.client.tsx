@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { BuilderCard } from "./builder-card";
 import { loadWorkflowYAML } from "./utils";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 
 export default function PageClient({

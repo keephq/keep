@@ -1,6 +1,10 @@
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
-import { AlertDto, AlertKnownKeys, getTabsFromPreset } from "./models";
+import {
+  AlertDto,
+  AlertKnownKeys,
+  getTabsFromPreset,
+} from "@/entities/alerts/model";
 import { Preset } from "@/entities/presets/model/types";
 
 interface Props {

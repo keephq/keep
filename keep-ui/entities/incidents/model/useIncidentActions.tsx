@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import { useSWRConfig } from "swr";
 import { IncidentDto, Status } from "./models";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 type UseIncidentActionsValue = {
   addIncident: (incident: IncidentCreateDto) => Promise<IncidentDto>;

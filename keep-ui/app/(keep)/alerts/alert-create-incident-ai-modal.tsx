@@ -3,7 +3,7 @@ import Modal from "@/components/ui/Modal";
 import { Callout, Button, Title, Card } from "@tremor/react";
 import { toast } from "react-toastify";
 import Loading from "@/app/(keep)/loading";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { IncidentCandidateDto } from "@/entities/incidents/model";
 import { DragDropContext } from "react-beautiful-dnd";
 import IncidentCard from "./alert-create-incident-ai-card";

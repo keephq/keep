@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -27,7 +27,7 @@ import AlertActions from "./alert-actions";
 import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
-import { severityMapping } from "./models";
+import { severityMapping } from "@/entities/alerts/model";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
@@ -322,8 +322,8 @@ export function AlertTable({
 
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0">
-            <Card className="h-full flex flex-col p-0">
-              <div className="flex-grow flex flex-col overflow-hidden">
+            <Card className="h-full flex flex-col p-0 overflow-x-auto">
+              <div className="flex-grow flex flex-col">
                 {!presetStatic && (
                   <div className="flex-none">
                     <AlertTabs
@@ -339,7 +339,7 @@ export function AlertTable({
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div className="flex-grow overflow-auto">
+                <div className="flex-grow">
                   <Table className="[&>table]:table-fixed [&>table]:w-full">
                     <AlertsTableHeaders
                       columns={columns}

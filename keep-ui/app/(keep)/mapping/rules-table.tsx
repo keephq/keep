@@ -22,7 +22,7 @@ import { useMappings } from "utils/hooks/useMappingRules";
 import { toast } from "react-toastify";
 import { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 const columnHelper = createColumnHelper<MappingRule>();
 

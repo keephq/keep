@@ -1,4 +1,4 @@
-import { AlertToWorkflowExecution } from "@/app/(keep)/alerts/models";
+import { AlertToWorkflowExecution } from "@/entities/alerts/model";
 import {
   PaginatedWorkflowExecutionDto,
   WorkflowExecution,
