@@ -131,7 +131,7 @@ def asynchronize_connection_string(connection_string):
     We also may assume some customers hardcoded async drivers to the connection strings
     so we substitute sync drivers to async on the fly.
     """
-    if type(connection_string) != str:
+    if type(connection_string) is not str:
         return connection_string
     
     if connection_string.startswith('sqlite:'):
