@@ -107,7 +107,7 @@ class Workflow:
                 },
             )
             raise
-        actions_firing, actions_errors = self.run_actions()
+        actions_firing, actions_errors = await self.run_actions()
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 
