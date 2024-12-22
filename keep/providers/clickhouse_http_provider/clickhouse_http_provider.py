@@ -78,7 +78,7 @@ class ClickhouseHttpProvider(BaseProvider):
         try:
             client = asyncio.run(self.__generate_client())
 
-            tables = result = asyncio.run(client.query("SHOW TABLES"))
+            tables = asyncio.run(client.query("SHOW TABLES"))
             self.logger.info(f"Tables: {tables}")
 
             scopes = {
