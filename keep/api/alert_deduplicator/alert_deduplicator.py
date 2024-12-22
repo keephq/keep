@@ -15,6 +15,7 @@ from keep.api.core.db import (
     get_all_deduplication_rules,
     get_all_deduplication_stats,
     get_custom_deduplication_rule,
+    get_deduplication_rule_by_id,
     get_last_alert_hash_by_fingerprint,
     update_deduplication_rule,
 )
@@ -263,6 +264,7 @@ class AlertDeduplicator:
             ingested=0,
             dedup_ratio=0.0,
             enabled=True,
+            is_provisioned=False
         )
 
     def get_deduplications(self) -> list[DeduplicationRuleDto]:
@@ -310,6 +312,7 @@ class AlertDeduplicator:
                 ingested=0,
                 dedup_ratio=0.0,
                 enabled=rule.enabled,
+                is_provisioned=rule.is_provisioned,
             )
             for rule in custom_deduplications
         ]
@@ -507,6 +510,22 @@ class AlertDeduplicator:
 
     def delete_deduplication_rule(self, rule_id: str) -> bool:
         # Use the db function to delete a deduplication rule
+        deduplication_rule_to_be_deleted = get_deduplication_rule_by_id(
+            self.tenant_id, rule_id
+        )
+
+        if not deduplication_rule_to_be_deleted:
+            raise HTTPException(
+                status_code=404,
+                detail="Deduplication rule not found",
+            )
+        
+        if deduplication_rule_to_be_deleted.is_provisioned:
+            raise HTTPException(
+                status_code=409,
+                detail="Provisioned deduplication rule cannot be deleted",
+            )
+
         success = delete_deduplication_rule(rule_id=rule_id, tenant_id=self.tenant_id)
 
         return success

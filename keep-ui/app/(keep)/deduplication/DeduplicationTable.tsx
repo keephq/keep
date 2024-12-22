@@ -121,6 +121,18 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
       "Represents the percentage of alerts successfully deduplicated. Higher values indicate better deduplication efficiency, meaning fewer redundant alerts.",
   };
 
+  function resolveDeleteButtonTooltip(deduplicationRule: DeduplicationRule): string {
+    if (deduplicationRule.default) {
+      return "Cannot delete default rule";
+    }
+
+    if (deduplicationRule.is_provisioned) {
+      return "Cannot delete provisioned rule.";
+    }
+
+    return "Delete Rule"
+  }
+
   const DEDUPLICATION_TABLE_COLS = useMemo(
     () => [
       columnHelper.accessor("provider_type", {
@@ -266,11 +278,9 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               variant="secondary"
               icon={TrashIcon}
               tooltip={
-                info.row.original.default
-                  ? "Cannot delete default rule"
-                  : "Delete Rule"
+                resolveDeleteButtonTooltip(info.row.original)
               }
-              disabled={info.row.original.default}
+              disabled={info.row.original.default || info.row.original.is_provisioned}
               onClick={(e) => handleDeleteRule(info.row.original, e)}
             />
           </div>

@@ -196,6 +196,10 @@ def read_deduplication_rules_from_env_var() -> dict[str, DeduplicationRuleReques
             raise Exception(
                 f"Error parsing deduplication rules from env var {env_var_key}: {e}"
             ) from e
+        
+    # enrich the rules with the properties that are not present in the JSON
+    for rule in deduplication_rules_from_env_json:
+        rule["is_provisioned"] = True
 
     return {
         rule["name"]: DeduplicationRuleDto(**rule)
