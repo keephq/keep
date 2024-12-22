@@ -1,4 +1,5 @@
 # TODO - refactor context manager to support multitenancy in a more robust way
+import asyncio
 import logging
 
 import click
@@ -53,11 +54,9 @@ class ContextManager:
                     "last_workflow_results" in workflow_str
                 )
                 if last_workflow_results_in_workflow:
-                    last_workflow_execution = (
-                        get_last_workflow_execution_by_workflow_id(
-                            tenant_id, workflow_id
-                        )
-                    )
+                    last_workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+                        tenant_id, workflow_id
+                    ))
                     if last_workflow_execution is not None:
                         self.last_workflow_execution_results = (
                             last_workflow_execution.results
@@ -251,7 +250,7 @@ class ContextManager:
         self.current_step_vars = _vars
         self.steps_context[step_id]["vars"] = _vars
 
-    def get_last_workflow_run(self, workflow_id):
+    async def get_last_workflow_run(self, workflow_id):
         return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)
 
     def dump(self):

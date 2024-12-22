@@ -53,12 +53,12 @@ class Workflow:
         self.io_nandler = IOHandler(context_manager)
         self.logger = self.context_manager.get_logger()
 
-    def run_steps(self):
+    async def run_steps(self):
         self.logger.debug(f"Running steps for workflow {self.workflow_id}")
         for step in self.workflow_steps:
             try:
                 self.logger.info("Running step %s", step.step_id)
-                step_ran = step.run()
+                step_ran = await step.run()
                 if step_ran:
                     self.logger.info("Step %s ran successfully", step.step_id)
             except StepError as e:
@@ -66,10 +66,10 @@ class Workflow:
                 raise
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
-    def run_action(self, action: Step):
+    async def run_action(self, action: Step):
         self.logger.info("Running action %s", action.name)
         try:
-            action_ran = action.run()
+            action_ran = await action.run()
             action_error = None
             if action_ran:
                 self.logger.info("Action %s ran successfully", action.name)
@@ -79,26 +79,26 @@ class Workflow:
             action_error = f"Failed to run action {action.name}: {str(e)}"
         return action_ran, action_error
 
-    def run_actions(self):
+    async def run_actions(self):
         self.logger.debug("Running actions")
         actions_firing = []
         actions_errors = []
         for action in self.workflow_actions:
-            action_status, action_error = self.run_action(action)
+            action_status, action_error = await self.run_action(action)
             if action_error:
                 actions_firing.append(action_status)
                 actions_errors.append(action_error)
         self.logger.debug("Actions run")
         return actions_firing, actions_errors
 
-    def run(self, workflow_execution_id):
+    async def run(self, workflow_execution_id):
         if self.workflow_disabled:
             self.logger.info(f"Skipping disabled workflow {self.workflow_id}")
             return
         self.logger.info(f"Running workflow {self.workflow_id}")
         self.context_manager.set_execution_context(workflow_execution_id)
         try:
-            self.run_steps()
+            await self.run_steps()
         except StepError as e:
             self.logger.error(
                 f"Workflow {self.workflow_id} failed: {e}",
@@ -111,8 +111,8 @@ class Workflow:
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 
-    def _handle_actions(self):
+    async def _handle_actions(self):
         self.logger.debug(f"Handling actions for workflow {self.workflow_id}")
         for action in self.workflow_actions:
-            action.run()
+            await action.run()
         self.logger.debug(f"Actions handled for workflow {self.workflow_id}")

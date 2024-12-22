@@ -15,6 +15,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.ddl import CreateColumn
 from sqlalchemy.sql.functions import GenericFunction
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import Session, create_engine
 
 # This import is required to create the tables
@@ -124,12 +125,13 @@ def dumps(_json) -> str:
     return json.dumps(_json, default=str)
 
 
-def create_db_engine():
+def create_db_engine(_async=False):
     """
     Creates a database engine based on the environment variables.
     """
+    creator_method = create_engine if not _async else create_async_engine
     if RUNNING_IN_CLOUD_RUN and not KEEP_FORCE_CONNECTION_STRING:
-        engine = create_engine(
+        engine = creator_method(
             "mysql+pymysql://",
             creator=__get_conn,
             echo=DB_ECHO,
@@ -138,7 +140,7 @@ def create_db_engine():
             max_overflow=DB_MAX_OVERFLOW,
         )
     elif DB_CONNECTION_STRING == "impersonate":
-        engine = create_engine(
+        engine = creator_method(
             "mysql+pymysql://",
             creator=__get_conn_impersonate,
             echo=DB_ECHO,
@@ -147,7 +149,7 @@ def create_db_engine():
     elif DB_CONNECTION_STRING:
         try:
             logger.info(f"Creating a connection pool with size {DB_POOL_SIZE}")
-            engine = create_engine(
+            engine = creator_method(
                 DB_CONNECTION_STRING,
                 pool_size=DB_POOL_SIZE,
                 max_overflow=DB_MAX_OVERFLOW,
@@ -157,11 +159,11 @@ def create_db_engine():
             )
         # SQLite does not support pool_size
         except TypeError:
-            engine = create_engine(
+            engine = creator_method(
                 DB_CONNECTION_STRING, json_serializer=dumps, echo=DB_ECHO
             )
     else:
-        engine = create_engine(
+        engine = creator_method(
             "sqlite:///./keep.db",
             connect_args={"check_same_thread": False},
             echo=DB_ECHO,

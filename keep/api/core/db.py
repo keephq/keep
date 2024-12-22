@@ -39,6 +39,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from sqlalchemy.sql import exists, expression
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
@@ -82,6 +83,8 @@ load_dotenv(find_dotenv())
 
 
 engine = create_db_engine()
+engine_async = create_db_engine(_async=True)
+
 SQLAlchemyInstrumentor().instrument(enable_commenter=True, engine=engine)
 
 
@@ -145,7 +148,7 @@ def __convert_to_uuid(value: str) -> UUID | None:
         return None
 
 
-def create_workflow_execution(
+async def create_workflow_execution(
     workflow_id: str,
     tenant_id: str,
     triggered_by: str,
@@ -155,7 +158,7 @@ def create_workflow_execution(
     execution_id: str = None,
     event_type: str = "alert",
 ) -> str:
-    with Session(engine) as session:
+    async with AsyncSession(engine_async) as session:
         try:
             if len(triggered_by) > 255:
                 triggered_by = triggered_by[:255]
@@ -170,7 +173,7 @@ def create_workflow_execution(
             )
             session.add(workflow_execution)
             # Ensure the object has an id
-            session.flush()
+            await session.flush()
             execution_id = workflow_execution.id
             if KEEP_AUDIT_EVENTS_ENABLED:
                 if fingerprint and event_type == "alert":
@@ -188,10 +191,10 @@ def create_workflow_execution(
                     )
                     session.add(workflow_to_incident_execution)
 
-            session.commit()
+            await session.commit()
             return execution_id
         except IntegrityError:
-            session.rollback()
+            await session.rollback()
             logger.debug(
                 f"Failed to create a new execution for workflow {workflow_id}. Constraint is met."
             )
@@ -226,12 +229,12 @@ def get_last_completed_execution(
     ).first()
 
 
-def get_workflows_that_should_run():
-    with Session(engine) as session:
+async def get_workflows_that_should_run():
+    async with AsyncSession(engine_async) as session:
         logger.debug("Checking for workflows that should run")
         workflows_with_interval = []
         try:
-            result = session.exec(
+            result = await session.exec(
                 select(Workflow)
                 .filter(Workflow.is_deleted == False)
                 .filter(Workflow.is_disabled == False)
@@ -252,7 +255,7 @@ def get_workflows_that_should_run():
             if not last_execution:
                 try:
                     # try to get the lock
-                    workflow_execution_id = create_workflow_execution(
+                    workflow_execution_id = await create_workflow_execution(
                         workflow.id, workflow.tenant_id, "scheduler"
                     )
                     # we succeed to get the lock on this execution number :)
@@ -274,7 +277,7 @@ def get_workflows_that_should_run():
             ):
                 try:
                     # try to get the lock with execution_number + 1
-                    workflow_execution_id = create_workflow_execution(
+                    workflow_execution_id = await create_workflow_execution(
                         workflow.id,
                         workflow.tenant_id,
                         "scheduler",
@@ -294,10 +297,10 @@ def get_workflows_that_should_run():
                 # some other thread/instance has already started to work on it
                 except IntegrityError:
                     # we need to verify the locking is still valid and not timeouted
-                    session.rollback()
+                    await session.rollback()
                     pass
                 # get the ongoing execution
-                ongoing_execution = session.exec(
+                ongoing_execution = await session.exec(
                     select(WorkflowExecution)
                     .where(WorkflowExecution.workflow_id == workflow.id)
                     .where(
@@ -319,10 +322,10 @@ def get_workflows_that_should_run():
                 # if the ongoing execution runs more than 60 minutes, than its timeout
                 elif ongoing_execution.started + timedelta(minutes=60) <= current_time:
                     ongoing_execution.status = "timeout"
-                    session.commit()
+                    await session.commit()
                     # re-create the execution and try to get the lock
                     try:
-                        workflow_execution_id = create_workflow_execution(
+                        workflow_execution_id = await create_workflow_execution(
                             workflow.id,
                             workflow.tenant_id,
                             "scheduler",
@@ -479,20 +482,22 @@ def get_last_workflow_workflow_to_alert_executions(
     return latest_workflow_to_alert_executions
 
 
-def get_last_workflow_execution_by_workflow_id(
+async def get_last_workflow_execution_by_workflow_id(
     tenant_id: str, workflow_id: str
 ) -> Optional[WorkflowExecution]:
-    with Session(engine) as session:
+    async with AsyncSession(engine_async) as session:
+        q = select(WorkflowExecution).filter(
+            WorkflowExecution.workflow_id == workflow_id
+        ).filter(WorkflowExecution.tenant_id == tenant_id).filter(
+            WorkflowExecution.started >= datetime.now() - timedelta(days=7)
+        ).filter(WorkflowExecution.status == "success").order_by(
+            WorkflowExecution.started.desc()
+        )
         workflow_execution = (
-            session.query(WorkflowExecution)
-            .filter(WorkflowExecution.workflow_id == workflow_id)
-            .filter(WorkflowExecution.tenant_id == tenant_id)
-            .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
-            .filter(WorkflowExecution.status == "success")
-            .order_by(WorkflowExecution.started.desc())
-            .first()
+            (await session.exec(q)).first()
         )
     return workflow_execution
+
 
 
 def get_workflows_with_last_execution(tenant_id: str) -> List[dict]:
@@ -579,30 +584,32 @@ def get_all_workflows_yamls(tenant_id: str) -> List[str]:
     return workflows
 
 
-def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
-    with Session(engine) as session:
+async def get_workflow(tenant_id: str, workflow_id: str) -> Workflow:
+    async with AsyncSession(engine_async) as session:
         # if the workflow id is uuid:
         if validators.uuid(workflow_id):
-            workflow = session.exec(
+            workflow = await session.exec(
                 select(Workflow)
                 .where(Workflow.tenant_id == tenant_id)
                 .where(Workflow.id == workflow_id)
                 .where(Workflow.is_deleted == False)
-            ).first()
+            )
+            workflow = workflow.first()
         else:
-            workflow = session.exec(
+            workflow = await session.exec(
                 select(Workflow)
                 .where(Workflow.tenant_id == tenant_id)
                 .where(Workflow.name == workflow_id)
                 .where(Workflow.is_deleted == False)
-            ).first()
+            )
+            workflow = workflow.first()
     if not workflow:
         return None
     return workflow
 
 
-def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
-    workflow = get_workflow(tenant_id, workflow_id)
+async def get_raw_workflow(tenant_id: str, workflow_id: str) -> str:
+    workflow = await get_workflow(tenant_id, workflow_id)
     if not workflow:
         return None
     return workflow.workflow_raw
@@ -650,33 +657,31 @@ def get_consumer_providers() -> List[Provider]:
     return providers
 
 
-def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
-    with Session(engine) as session:
-        workflow_execution = session.exec(
-            select(WorkflowExecution).where(WorkflowExecution.id == execution_id)
-        ).first()
+async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
+    async with AsyncSession(engine_async) as session:
+        workflow_execution = (await session.exec(
+            select(WorkflowExecution)
+            .where(WorkflowExecution.tenant_id == tenant_id)
+            .where(WorkflowExecution.workflow_id == workflow_id)
+            .where(WorkflowExecution.id == execution_id)
+        )).first()
         # some random number to avoid collisions
         if not workflow_execution:
             logger.warning(
-                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found.",
-                extra={
-                    "tenant_id": tenant_id,
-                    "workflow_id": workflow_id,
-                    "execution_id": execution_id,
-                },
+                f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found."
             )
             raise ValueError("Execution not found")
         workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
         workflow_execution.status = status
         # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
         #   we need to fix it in the future, create a migration that increases the size of the error field
-        #   and then we can remove the [:511] from here
-        workflow_execution.error = error[:511] if error else None
+        #   and then we can remove the [:255] from here
+        workflow_execution.error = error[:255] if error else None
         workflow_execution.execution_time = (
             datetime.utcnow() - workflow_execution.started
         ).total_seconds()
         # TODO: logs
-        session.commit()
+        await session.commit()
 
 
 def get_workflow_executions(
@@ -784,14 +789,14 @@ def delete_workflow_by_provisioned_file(tenant_id, provisioned_file):
             session.commit()
 
 
-def get_workflow_id(tenant_id, workflow_name):
-    with Session(engine) as session:
-        workflow = session.exec(
+async def get_workflow_id(tenant_id, workflow_name):
+    async with AsyncSession(engine_async) as session:
+        workflow = (await session.exec(
             select(Workflow)
             .where(Workflow.tenant_id == tenant_id)
             .where(Workflow.name == workflow_name)
             .where(Workflow.is_deleted == False)
-        ).first()
+        )).first()
 
         if workflow:
             return workflow.id
@@ -1602,16 +1607,16 @@ def update_user_role(tenant_id, username, role):
     return user
 
 
-def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
-    with Session(engine) as session:
-        workflow_execution = session.exec(
+async def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
+    async with AsyncSession(engine_async) as session:
+        workflow_execution = (await session.exec(
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.id == workflow_execution_id)
-        ).one()
+        )).one()
 
         workflow_execution.results = workflow_results
-        session.commit()
+        await session.commit()
 
 
 def get_workflow_by_name(tenant_id, workflow_name):
@@ -1625,10 +1630,10 @@ def get_workflow_by_name(tenant_id, workflow_name):
 
         return workflow
 
-
-def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
-    with Session(engine) as session:
-        previous_execution = session.exec(
+        
+async def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
+    async with AsyncSession(engine_async) as session:
+        previous_execution = (await session.exec(
             select(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.workflow_id == workflow_id)
@@ -1638,11 +1643,12 @@ def get_previous_execution_id(tenant_id, workflow_id, workflow_execution_id):
             )  # no need to check more than 1 day ago
             .order_by(WorkflowExecution.started.desc())
             .limit(1)
-        ).first()
+        )).first()
         if previous_execution:
             return previous_execution
         else:
             return None
+
 
 
 def create_rule(
