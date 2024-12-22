@@ -28,7 +28,7 @@ def provision_deduplication_rules_from_env(tenant_id: str):
         ValueError: If the deduplication rules from the environment variables are invalid.
     """
 
-    deduplication_rules_from_env_dict = read_deduplication_rules_from_env_var()
+    deduplication_rules_from_env_dict = get_deduplication_rules_to_provision()
 
     if not deduplication_rules_from_env_dict:
         logger.info("No deduplication rules found in env. Nothing to provision.")
@@ -167,7 +167,7 @@ def validate_deduplication_rules(
     logger.info("Deduplication rules are valid")
 
 
-def read_deduplication_rules_from_env_var() -> dict[str, dict]:
+def get_deduplication_rules_to_provision() -> dict[str, dict]:
     """
     Reads deduplication rules from an environment variable and returns them as a dictionary.
     The function checks if the environment variable `KEEP_DEDUPLICATION_RULES` contains a path to a JSON file
