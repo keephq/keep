@@ -251,7 +251,7 @@ def test_workflow_execution(
     )
 
     # Insert the current alert into the workflow manager
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
 
     # Wait for the workflow execution to complete
     workflow_execution = None
@@ -432,7 +432,7 @@ def test_workflow_execution_2(
     )
 
     # Insert the current alert into the workflow manager
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # Wait for the workflow execution to complete
@@ -554,7 +554,7 @@ def test_workflow_execution3(
     time.sleep(1)
 
     # Insert the current alert into the workflow manager
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
 
     # Wait for the workflow execution to complete
     workflow_execution = None
@@ -670,7 +670,7 @@ def test_workflow_execution_with_disabled_workflow(
     # Sleep one second to avoid the case where tier0 alerts are not triggered
     time.sleep(1)
 
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
 
     enabled_workflow_execution = None
     disabled_workflow_execution = None
@@ -925,7 +925,7 @@ def test_workflow_execution_logs(
         )
 
         # Insert the current alert into the workflow manager
-        workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+        asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
 
         # Wait for the workflow execution to complete
         workflow_execution = None
@@ -1004,7 +1004,7 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
             )
 
             # Insert the current alert into the workflow manager
-            workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+            asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
 
             # Wait for the workflow execution to complete
             workflow_execution = None

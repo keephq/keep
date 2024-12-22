@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from unittest.mock import Mock, patch
 from fastapi import HTTPException
@@ -25,9 +26,9 @@ def test_get_workflow_from_dict():
     tenant_id = "test_tenant"
     workflow_path = str(path_to_test_resources / "db_disk_space_for_testing.yml")
     workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path)
-    result = workflow_store.get_workflow_from_dict(
+    result = asyncio.run(workflow_store.get_workflow_from_dict(
         tenant_id=tenant_id, workflow=workflow_dict
-    )
+    ))
     mock_parser.parse.assert_called_once_with(tenant_id, workflow_dict)
     assert result.id == "workflow1"
 
@@ -44,9 +45,9 @@ def test_get_workflow_from_dict_raises_exception():
     workflow_dict = workflow_store._parse_workflow_to_dict(workflow_path=workflow_path)
 
     with pytest.raises(HTTPException) as exc_info:
-        workflow_store.get_workflow_from_dict(
+        asyncio.run(workflow_store.get_workflow_from_dict(
             tenant_id=tenant_id, workflow=workflow_dict
-        )
+        ))
 
     assert exc_info.value.status_code == 500
     assert exc_info.value.detail == "Unable to parse workflow from dict"
@@ -111,11 +112,11 @@ def test_handle_workflow_test():
 
     with patch.object(threading, "Thread", wraps=threading.Thread) as mock_thread:
         with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
-            result = workflow_scheduler.handle_workflow_test(
+            result = asyncio.run(workflow_scheduler.handle_workflow_test(
                 workflow=mock_workflow,
                 tenant_id=tenant_id,
                 triggered_by_user=triggered_by_user,
-            )
+            ))
 
             mock_workflow_manager._run_workflow.assert_called_once_with(
                 mock_workflow, 123, True
@@ -154,11 +155,11 @@ def test_handle_workflow_test_with_error():
 
     with patch.object(threading, "Thread", wraps=threading.Thread) as mock_thread:
         with patch.object(queue, "Queue", wraps=queue.Queue) as mock_queue:
-            result = workflow_scheduler.handle_workflow_test(
+            result = asyncio.run(workflow_scheduler.handle_workflow_test(
                 workflow=mock_workflow,
                 tenant_id=tenant_id,
                 triggered_by_user=triggered_by_user,
-            )
+            ))
 
             mock_workflow_manager._run_workflow.assert_called_once_with(
                 mock_workflow, 123, True
