@@ -1,4 +1,5 @@
 // copied from https://github.com/TanStack/table/blob/main/examples/react/row-selection/src/main.tsx#L338
+"use client";
 
 import clsx from "clsx";
 import type { HTMLProps } from "react";
