@@ -1,8 +1,8 @@
-"""Add provider logs table
+"""Add provider logs
 
-Revision ID: baf8af5776a4
-Revises: c6e5594c99f8
-Create Date: 2024-12-10 16:07:24.678250
+Revision ID: 0c5e002094a9
+Revises: 3d20d954e058
+Create Date: 2024-12-23 17:22:04.119440
 
 """
 
@@ -11,8 +11,8 @@ import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "baf8af5776a4"
-down_revision = "c6e5594c99f8"
+revision = "0c5e002094a9"
+down_revision = "3d20d954e058"
 branch_labels = None
 depends_on = None
 
