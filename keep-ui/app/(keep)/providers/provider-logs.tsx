@@ -3,7 +3,7 @@ import { Card, Title, Badge, Text, Button } from "@tremor/react";
 import { useProviderLogs, ProviderLog } from "@/utils/hooks/useProviderLogs";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
-
+import { KeepApiError } from "@/shared/api";
 interface ProviderLogsProps {
   providerId: string;
 }
@@ -24,13 +24,25 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
   }
 
   if (error) {
+    if (error instanceof KeepApiError && error.statusCode === 404) {
+      return (
+        <div className="flex items-center">
+          <EmptyStateCard
+            title="Provider Logs Not Enabled"
+            description="Provider logs need to be enabled on the backend. Please check the documentation for instructions on how to enable provider logs."
+            buttonText="View Documentation"
+            onClick={() => window.open("https://docs.keephq.dev", "_blank")}
+          />
+        </div>
+      );
+    }
     return (
       <div className="flex items-center">
         <EmptyStateCard
-          title="Provider Logs Not Enabled"
-          description="Provider logs need to be enabled on the backend. Please check the documentation for instructions on how to enable provider logs."
-          buttonText="View Documentation"
-          onClick={() => window.open("https://docs.keephq.dev", "_blank")}
+          title="Error Loading Provider Logs"
+          description="An error occurred while loading the provider logs. Please try again later."
+          buttonText="Retry"
+          onClick={() => refresh()}
         />
       </div>
     );
