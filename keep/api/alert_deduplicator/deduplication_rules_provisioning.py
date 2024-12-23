@@ -4,12 +4,7 @@ import re
 
 
 from keep.api.core.config import config
-from keep.api.core.db import (
-    create_deduplication_rule,
-    get_all_deduplication_rules,
-    update_deduplication_rule,
-    delete_deduplication_rule,
-)
+import keep.api.core.db as db
 from keep.providers.providers_factory import ProvidersFactory
 
 logger = logging.getLogger(__name__)
@@ -38,17 +33,17 @@ def provision_deduplication_rules_from_env(tenant_id: str):
         tenant_id, list(deduplication_rules_from_env_dict.values())
     )
 
-    provisioned_deduplication_rules_from_db = get_all_deduplication_rules(tenant_id)
-    provisioned_deduplication_rules_from_db = [
-        rule for rule in provisioned_deduplication_rules_from_db if rule.is_provisioned
+    all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
+    provisioned_deduplication_rules = [
+        rule for rule in all_deduplication_rules_from_db if rule.is_provisioned
     ]
     provisioned_deduplication_rules_from_db_dict = {
-        rule.name: rule for rule in provisioned_deduplication_rules_from_db
+        rule.name: rule for rule in provisioned_deduplication_rules
     }
     actor = "system"
 
     # delete rules that are not in the env
-    for provisioned_deduplication_rule in provisioned_deduplication_rules_from_db:
+    for provisioned_deduplication_rule in provisioned_deduplication_rules:
         if (
             str(provisioned_deduplication_rule.name)
             not in deduplication_rules_from_env_dict
@@ -57,7 +52,7 @@ def provision_deduplication_rules_from_env(tenant_id: str):
                 "Deduplication rule with name '%s' is not in the env, deleting from DB",
                 provisioned_deduplication_rule.name,
             )
-            delete_deduplication_rule(str(provisioned_deduplication_rule.id), tenant_id)
+            db.delete_deduplication_rule(rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id)
 
     for deduplication_rule_to_provision in deduplication_rules_from_env_dict.values():
         # check if the rule already exists and needs to be overwritten
@@ -70,7 +65,7 @@ def provision_deduplication_rules_from_env(tenant_id: str):
                 "Deduplication rule with name '%s' already exists, updating in DB",
                 deduplication_rule_to_provision.get("name"),
             )
-            update_deduplication_rule(
+            db.update_deduplication_rule(
                 tenant_id=tenant_id,
                 rule_id=str(
                     provisioned_deduplication_rules_from_db_dict.get(
@@ -95,7 +90,7 @@ def provision_deduplication_rules_from_env(tenant_id: str):
             "Deduplication rule with name '%s' does not exist, creating in DB",
             deduplication_rule_to_provision.get("name"),
         )
-        create_deduplication_rule(
+        db.create_deduplication_rule(
             tenant_id=tenant_id,
             name=deduplication_rule_to_provision.get("name"),
             description=deduplication_rule_to_provision.get("description"),
@@ -123,21 +118,12 @@ def validate_deduplication_rules(
         tenant_id (str): The ID of the tenant.
         deduplication_rules (list[dict]): A list of deduplication rules, where each rule is represented as a dictionary.
     Raises:
-        Exception: If there are duplicate rule names.
-        Exception: If any rule points to a non-existing provider.
+        ValueError: If any rule points to a non-existing provider.
     Returns:
         None
     """
 
     logger.info("Validating deduplication rules")
-
-    # Check for unique rule names
-    rule_names = [rule.get("name") for rule in deduplication_rules]
-    duplicate_names = set([name for name in rule_names if rule_names.count(name) > 1])
-
-    if duplicate_names:
-        raise Exception(f"Duplicate deduplication rule names found: {', '.join(duplicate_names)}")
-
 
     installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
     linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
@@ -157,12 +143,12 @@ def validate_deduplication_rules(
         if provider_key not in installed_providers_dict:
             errors[rule_id] = [] if rule_id not in errors else errors[rule_id]
             errors[rule_id].append(
-                f"Rule with name '{rule_name}' points to not existing provider of type '{rule_provider_type}' with id '{rule_provider_id}'"
+                f"Deduplication rule with name '{rule_name}' points to not existing provider of type '{rule_provider_type}' with id '{rule_provider_id}'"
             )
 
     if len(errors) > 0:
         flattened_errors = [error for sublist in errors.values() for error in sublist]
-        raise Exception(". ".join(flattened_errors))
+        raise ValueError(" ".join(flattened_errors))
 
     logger.info("Deduplication rules are valid")
 
@@ -201,12 +187,12 @@ def get_deduplication_rules_to_provision() -> dict[str, dict]:
                 ) from e
     else:
         try:
-            deduplication_rules_from_env_json = deduplication_rules_from_env_var
+            deduplication_rules_from_env_json = json.loads(deduplication_rules_from_env_var)
         except json.JSONDecodeError as e:
             raise Exception(
                 f"Error parsing deduplication rules from env var {env_var_key}: {e}"
             ) from e
-        
+
     # enrich the rules with the properties that are not present in the JSON
     for rule in deduplication_rules_from_env_json:
         rule["is_provisioned"] = True
