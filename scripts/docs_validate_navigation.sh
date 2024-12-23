@@ -8,7 +8,8 @@ MINT_JSON="mint.json"
 # Define the exclusion lists
 EXCLUDE_LIST=("node_modules")
 EXCLUDE_FILE_LIST=(
-    "./applications/github.mdx"
+    "./applications/github.mdx",
+    "api-ref/root"
 )
 
 # Check if mint.json exists
