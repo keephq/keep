@@ -55,7 +55,6 @@ def provision_deduplication_rules_from_env(tenant_id: str):
             db.delete_deduplication_rule(rule_id=str(provisioned_deduplication_rule.id), tenant_id=tenant_id)
 
     for deduplication_rule_to_provision in deduplication_rules_from_env_dict.values():
-        # check if the rule already exists and needs to be overwritten
         if (
             deduplication_rule_to_provision.get("name")
             in provisioned_deduplication_rules_from_db_dict
@@ -85,7 +84,6 @@ def provision_deduplication_rules_from_env(tenant_id: str):
             )
             continue
 
-        # create the rule
         logger.info(
             "Deduplication rule with name '%s' does not exist, creating in DB",
             deduplication_rule_to_provision.get("name"),
