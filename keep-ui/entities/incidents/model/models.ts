@@ -1,5 +1,5 @@
 // TODO: refactor, move to entities
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 
 export enum Status {
   Firing = "firing",

@@ -1,0 +1,81 @@
+---
+title: "Customized Presets"
+---
+
+
+<Tip>
+
+You can think of a preset like a "Slack Channel" for your alerts - a logical container to follow only alerts that matter for you.
+
+</Tip>
+
+With Keep's introduction of CEL (Common Expression Language) for alert filtering, users gain the flexibility to define more complex and precise alert filtering logic.
+
+This feature allows the creation of customizable filters using CEL expressions to refine alert visibility based on specific criteria.
+
+## How It Works
+
+1. **CEL Expression Creation**: Users craft CEL expressions that define the filtering criteria for alerts.
+2. **Preset Definition**: These expressions can be saved as presets for easy application to different alert streams.
+3. **Alert Filtering**: When applied, the CEL expressions evaluate each alert against the defined criteria, filtering the alert stream in real-time.
+
+
+## Creating a CEL Expression
+
+There are two ways of creating a CEL expression in Keep
+### Manually creating CEL query
+
+Use the [CEL Language Definition](https://github.com/google/cel-spec/blob/master/doc/langdef.md) documentation to better understand the capabilities of the Common Expression Language
+This is an example of how to query all the alerts that came from `Sentry`
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/valid-sentry-cel.png" />
+</Frame>
+If the CEL syntax you typed in is invalid, an error message will show up (in this case, we used invalid `''` instead of `""`):
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/invalid-sentry-cel.png" />
+</Frame>
+
+### Importing from an SQL query
+
+1. Click on the "Import from SQL" button
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/import-from-sql.png" />
+</Frame>
+2. Write/Paste your SQL query and hit the "Convert to CEL" button
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/convert-to-cel.png" />
+</Frame>
+Which in turn will generate and apply a valid CEL query:
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/converted-sql-to-cel.png" />
+</Frame>
+
+## Save Presets
+
+You can save your CEL queries into a `Preset` using the "Save current filter as a view" button
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/save-preset.png" />
+</Frame>
+You can name your `Preset` and configure whether it is "Private" (only the creating user will see this Preset) or account-wide available.
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/save-preset-modal.png" />
+</Frame>
+The `Preset` will then be created and available for you to quickly navigate and used
+<Frame width="100" height="200">
+  <img height="10" src="/images/presets/preset-created.png" />
+</Frame>
+
+## Practical Example
+
+For instance, a user could create a CEL expression to filter alerts by severity and source, such as `severity == 'critical' && service.contains('database')`, ensuring only critical alerts from database services are displayed.
+
+
+## Best Practices
+
+- **Specificity in Expressions**: Craft expressions that precisely target the desired alerts to avoid filtering out relevant alerts.
+- **Presets Management**: Regularly review and update your presets to align with evolving alerting needs.
+- **Testing Expressions**: Before applying, test CEL expressions to ensure they correctly filter the desired alerts.
+
+## Useful Links
+- [Common Expression Language](https://github.com/google/cel-spec?tab=readme-ov-file)
+- [CEL Language Definition](https://github.com/google/cel-spec/blob/master/doc/langdef.md)

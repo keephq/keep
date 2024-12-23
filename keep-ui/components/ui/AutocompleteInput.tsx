@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { TextInput } from "./TextInput";
 import { cn } from "utils/helpers";

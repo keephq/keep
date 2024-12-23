@@ -1,0 +1,90 @@
+---
+title: "Foreach"
+---
+
+The `foreach` directive in Keep workflows allows you to iterate over a list of items and perform actions for each item. This is particularly useful for processing multiple results returned by a step or performing actions on a collection of entities.
+
+## Key Features
+
+- **Dynamic Iteration:** Iterate over any list or array returned by a step or defined in the workflow.
+- **Scoped Variables:** Each iteration exposes the current item under the `foreach` variable, allowing you to access its properties directly.
+- **Action Chaining:** Multiple actions can use `foreach` to work sequentially on the same list of items.
+
+---
+
+## Defining a `foreach`
+
+To use `foreach`, include it as part of an action. The value of `foreach` should be a reference to the list you want to iterate over.
+
+### Example Workflow with `foreach`
+
+```yaml
+workflow:
+  id: foreach-example
+  description: Demonstrates the use of foreach
+  triggers:
+    - type: manual
+  steps:
+    - name: get-pods
+      provider:
+        type: gke
+        config: "{{ providers.gke }}"
+        with:
+          command_type: get_pods
+  actions:
+    - name: echo-pod-status
+      foreach: "{{ steps.get-pods.results }}"
+      provider:
+        type: console
+        with:
+          message: "Pod name: {{ foreach.value.metadata.name }} || Namespace: {{ foreach.value.metadata.namespace }} || Status: {{ foreach.value.status.phase }}"
+```
+
+In this example:
+
+- The `get-pods` step retrieves a list of Kubernetes pods.
+- The `foreach` iterates over the `results` returned by the `get-pods` step.
+- For each pod, it prints its `name`, `namespace`, and `status.`
+
+---
+
+
+## Using `foreach` Variables
+
+The `foreach` variable provides scoped access to the current item in the iteration.
+
+### Example of Scoped Variables
+
+```yaml
+actions:
+  - name: notify-pod-status
+    foreach: "{{ steps.get-pods.results }}"
+    provider:
+      type: slack
+      with:
+        message: |
+          Pod Name: {{ foreach.value.metadata.name }}
+          Namespace: {{ foreach.value.metadata.namespace }}
+          Status: {{ foreach.value.status.phase }}
+
+```
+
+In this case:
+- `{{ foreach.value }}` refers to the current item in the list.
+- Access properties like `metadata.name`, `metadata.namespace`, and `s`tatus.phase` dynamically.
+
+
+### Using Conditions with `foreach`
+
+You can combine `foreach` with `if` conditions to filter or act selectively.
+
+```yaml
+actions:
+  - name: alert-critical-pods
+    foreach: "{{ steps.get-pods.results }}"
+    if: "{{ foreach.value.status.phase == 'Failed' }}"
+    provider:
+      type: slack
+      with:
+        message: "Critical pod failure detected: {{ foreach.value.metadata.name }}"
+```

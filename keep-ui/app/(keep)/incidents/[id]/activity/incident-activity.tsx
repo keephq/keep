@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useUsers } from "@/entities/users/model/useUsers";
 import Image from "next/image";

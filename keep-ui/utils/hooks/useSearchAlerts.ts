@@ -1,5 +1,5 @@
 import useSWR, { SWRConfiguration } from "swr";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { RuleGroupType, formatQuery } from "react-querybuilder";
 import { useApi } from "@/shared/lib/hooks/useApi";

@@ -189,6 +189,7 @@ keep-ui/node_modules/*
 
 cov.xml
 keep.db
+keepdd.db
 RANDOM_USER_ID
 storage
 

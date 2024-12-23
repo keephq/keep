@@ -12,7 +12,11 @@ import QueryBuilder, {
 } from "react-querybuilder";
 import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
-import { AlertDto, severityMapping, reverseSeverityMapping } from "./models";
+import {
+  AlertDto,
+  severityMapping,
+  reverseSeverityMapping,
+} from "@/entities/alerts/model";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import Select, { components, MenuListProps } from "react-select";

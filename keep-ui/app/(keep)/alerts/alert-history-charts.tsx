@@ -1,6 +1,6 @@
 import { AreaChart } from "@tremor/react";
 import Loading from "@/app/(keep)/loading";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { calculateFatigue } from "utils/fatigue";
 
 interface Props {

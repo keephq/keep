@@ -1,6 +1,6 @@
 import { Table } from "@tanstack/react-table";
-import { DateRangePicker, DateRangePickerValue, Title } from "@tremor/react";
-import { AlertDto } from "./models";
+import { Title } from "@tremor/react";
+import { AlertDto } from "@/entities/alerts/model";
 import ColumnSelection from "./ColumnSelection";
 import { ThemeSelection } from "./ThemeSelection";
 import EnhancedDateRangePicker from "@/components/ui/DateRangePicker";

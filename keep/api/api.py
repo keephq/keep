@@ -233,7 +233,7 @@ def get_app(
         lifespan=lifespan,
     )
 
-    @app.get("/")
+    @app.get("/", include_in_schema=False)
     async def root():
         """
         App description and version.

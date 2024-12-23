@@ -8,7 +8,7 @@ import { AlertHistory } from "./alert-history";
 import AlertAssignTicketModal from "./alert-assign-ticket-modal";
 import AlertNoteModal from "./alert-note-modal";
 import { useProviders } from "utils/hooks/useProviders";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { AlertMethodModal } from "./alert-method-modal";
 import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
 import AlertDismissModal from "./alert-dismiss-modal";
