@@ -1,10 +1,10 @@
 import { Badge } from "@tremor/react";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import { toast } from "react-toastify";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { LiaUnlinkSolid } from "react-icons/lia";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface Props {
   incidentId: string;

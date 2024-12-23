@@ -1,6 +1,5 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
-import { showSuccessToast } from "@/shared/ui/utils/showSuccessToast";
+import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { useCallback } from "react";
 import { formatQuery, parseCEL } from "react-querybuilder";
 import { Preset, PresetCreateUpdateDto } from "./types";

@@ -7,7 +7,7 @@ import { FloatingArrow, arrow, offset, useFloating } from "@floating-ui/react";
 import { Popover } from "@headlessui/react";
 import { FiSettings, FiSearch } from "react-icons/fi";
 import { DEFAULT_COLS, DEFAULT_COLS_VISIBILITY } from "./alert-table-utils";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;

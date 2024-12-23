@@ -1,10 +1,9 @@
-import { AlertDto } from "./models";
-import { Dialog, Transition } from "@headlessui/react";
-import React, { Fragment, useEffect, useState } from "react";
+import { AlertDto } from "@/entities/alerts/model";
+import React, { useEffect, useState } from "react";
 import { Button, TextInput } from "@tremor/react";
 import { toast } from "react-toastify";
 import SidePanel from "@/components/SidePanel";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
 
 interface EnrichAlertModalProps {

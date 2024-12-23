@@ -17,7 +17,7 @@ export type GetIncidentsParams = {
   filters: Filters | {};
 };
 
-export function buildIncidentsUrl(params: GetIncidentsParams) {
+function buildIncidentsUrl(params: GetIncidentsParams) {
   const filtersParams = new URLSearchParams();
 
   Object.entries(params.filters).forEach(([key, value]) => {

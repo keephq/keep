@@ -12,7 +12,7 @@ import React, { ReactNode } from "react";
 import { IncidentDto } from "@/entities/incidents/model";
 import { FaArrowDown, FaArrowRight, FaArrowUp } from "react-icons/fa";
 import clsx from "clsx";
-import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
+import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 
 interface Props {
   table: ReactTable<IncidentDto>;
@@ -51,8 +51,8 @@ const SortableHeaderCell = ({ header, children }: SortableHeaderCellProps) => {
                 column.getNextSortingOrder() === "asc"
                   ? "Sort ascending"
                   : column.getNextSortingOrder() === "desc"
-                  ? "Sort descending"
-                  : "Clear sort"
+                    ? "Sort descending"
+                    : "Clear sort"
               }
               icon={
                 column.getIsSorted()

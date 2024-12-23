@@ -5,11 +5,9 @@ import {
   TrashIcon,
   PencilSquareIcon,
   Cog8ToothIcon,
-  // Cog8ToothIcon,
 } from "@heroicons/react/24/outline";
 import { Icon } from "@tremor/react";
-import { AlertDto, AlertToWorkflowExecution } from "./models";
-// import { useWorkflowExecutions } from "utils/hooks/useWorkflowExecutions";
+import { AlertDto, AlertToWorkflowExecution } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 import { useWorkflowExecutions } from "@/utils/hooks/useWorkflowExecutions";
 
@@ -18,7 +16,7 @@ interface Props {
   setNoteModalAlert?: (alert: AlertDto) => void;
   setTicketModalAlert?: (alert: AlertDto) => void;
 }
-export default function AlertName({
+export function AlertName({
   alert,
   setNoteModalAlert,
   setTicketModalAlert,
@@ -140,15 +138,15 @@ export default function AlertName({
               relevantWorkflowExecution.workflow_status === "success"
                 ? "green"
                 : relevantWorkflowExecution.workflow_status === "error"
-                ? "red"
-                : "gray"
+                  ? "red"
+                  : "gray"
             }`}
             tooltip={`${
               relevantWorkflowExecution.workflow_status === "success"
                 ? "Last workflow executed successfully"
                 : relevantWorkflowExecution.workflow_status === "error"
-                ? "Last workflow execution failed"
-                : undefined
+                  ? "Last workflow execution failed"
+                  : undefined
             }`}
             onClick={() => handleWorkflowClick(relevantWorkflowExecution)}
             className="ml-1 cursor-pointer"

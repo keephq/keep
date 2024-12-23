@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";

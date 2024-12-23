@@ -14,7 +14,7 @@ import {
   GroupBase,
 } from "react-select";
 import Select from "react-select";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/react-table";
 import { useAlerts } from "utils/hooks/useAlerts";
 
