@@ -23,4 +23,6 @@ export interface InternalConfig {
 
   // NOISY ALERTS ENABLED
   NOISY_ALERTS_ENABLED: boolean;
+
+  FRIGADE_DISABLED: string | undefined;
 }

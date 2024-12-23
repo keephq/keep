@@ -1,0 +1,53 @@
+workflow:
+  id: alert-routing-policy
+  description: Route alerts based on team and environment conditions
+  triggers:
+    - type: alert
+  actions:
+    - name: business-hours-check
+      if: "keep.is_business_hours(timezone='America/New_York')"
+      # stop the workflow if it's business hours
+      continue: false
+      provider:
+        type: mock
+        with:
+          message: "Alert during business hours, exiting"
+
+    - name: infra-prod-slack
+      if: "'{{ alert.team }}' == 'infra' and '{{ alert.env }}' == 'prod'"
+      provider:
+        type: console
+        with:
+          channel: prod-infra-alerts
+          message: |
+            "Infrastructure Production Alert
+            Team: {{ alert.team }}
+            Environment: {{ alert.env }}
+            Description: {{ alert.description }}"
+
+    - name: http-api-errors-slack
+      if: "'{{ alert.monitor_name }}' == 'Http API Errors'"
+      provider:
+        type: console
+        with:
+          channel: backend-team-alerts
+          message: |
+            "HTTP API Error Alert
+            Monitor: {{ alert.monitor_name }}
+            Description: {{ alert.description }}"
+      # exit after sending http api error alert
+      continue: false
+
+    - name: backend-staging-pagerduty
+      if: "'{{ alert.team }}'== 'backend' and  '{{ alert.env }}' == 'staging'"
+      provider:
+        type: console
+        with:
+          severity: low
+          message: |
+            "Backend Staging Alert
+            Team: {{ alert.team }}
+            Environment: {{ alert.env }}
+            Description: {{ alert.description }}"
+      # Exit after sending staging alert
+      continue: false
