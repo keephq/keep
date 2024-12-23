@@ -14,10 +14,9 @@ import "react-querybuilder/dist/query-builder.scss";
 import { Table } from "@tanstack/react-table";
 import {
   AlertDto,
-  Preset,
   severityMapping,
   reverseSeverityMapping,
-} from "./models";
+} from "@/entities/alerts/model";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
 import Select, { components, MenuListProps } from "react-select";
@@ -29,6 +28,9 @@ import { toast } from "react-toastify";
 import { CornerDownLeft } from "lucide-react";
 import { Link } from "@/components/ui";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
+import { Preset } from "@/entities/presets/model/types";
+import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -279,7 +281,6 @@ type AlertsRulesBuilderProps = {
   selectedPreset?: Preset;
   defaultQuery: string | undefined;
   setIsModalOpen?: React.Dispatch<React.SetStateAction<boolean>>;
-  deletePreset?: (presetId: string) => Promise<void>;
   setPresetCEL?: React.Dispatch<React.SetStateAction<string>>;
   updateOutputCEL?: React.Dispatch<React.SetStateAction<string>>;
   showSqlImport?: boolean;
@@ -299,7 +300,6 @@ export const AlertsRulesBuilder = ({
   selectedPreset,
   defaultQuery = "",
   setIsModalOpen,
-  deletePreset,
   setPresetCEL,
   updateOutputCEL,
   customFields,
@@ -313,6 +313,8 @@ export const AlertsRulesBuilder = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const { deletePreset } = usePresetActions();
+
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
   const [sqlQuery, setSQLQuery] = useState("");
@@ -320,6 +322,11 @@ export const AlertsRulesBuilder = ({
     searchParams?.get("cel") || defaultQuery
   );
   const parsedCELRulesToQuery = parseCEL(celRules);
+
+  const isDynamic =
+    selectedPreset && !STATIC_PRESETS_NAMES.includes(selectedPreset.name);
+
+  const action = isDynamic ? "update" : "create";
 
   const setQueryParam = (key: string, value: string) => {
     const current = new URLSearchParams(
@@ -505,8 +512,8 @@ export const AlertsRulesBuilder = ({
           operators: getOperators(id),
         }))
     : customFields
-    ? customFields
-    : [];
+      ? customFields
+      : [];
 
   const onImportSQL = () => {
     setImportSQLOpen(true);
@@ -648,24 +655,30 @@ export const AlertsRulesBuilder = ({
               size="sm"
               disabled={!celRules.length}
               onClick={() => validateAndOpenSaveModal(celRules)}
-              tooltip="Save current filter as a preset"
+              tooltip={
+                action === "update"
+                  ? "Edit preset"
+                  : "Save current filter as a preset"
+              }
             >
-              Save
+              {action === "update" ? "Edit" : "Save"}
             </Button>
           )}
-          {selectedPreset &&
-            selectedPreset.name &&
-            selectedPreset?.name !== "deleted" &&
-            selectedPreset?.name !== "feed" &&
-            selectedPreset?.name !== "dismissed" &&
-            deletePreset && (
-              <Button
-                icon={TrashIcon}
-                color="orange"
-                title="Delete preset"
-                onClick={async () => await deletePreset(selectedPreset!.id!)}
-              ></Button>
-            )}
+          {isDynamic && (
+            <Button
+              icon={TrashIcon}
+              variant="secondary"
+              color="red"
+              title="Delete preset"
+              onClick={() =>
+                deletePreset(selectedPreset!.id!, selectedPreset!.name).then(
+                  () => {
+                    router.push("/alerts/feed");
+                  }
+                )
+              }
+            ></Button>
+          )}
         </div>
       </div>
       {/* Import SQL */}

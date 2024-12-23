@@ -2,56 +2,106 @@
 title: "Overview"
 ---
 
-<Note>Need any help with creating a Workflow? Feel free to submit an issue or join our Slack and we will help with that.</Note>
-A Workflow in Keep is a YAML-based configuration file designed to manage, automate, and enrich alerts. Once uploaded to Keep, the workflow can run based on three different types of triggers: manual, alert, or interval. In this document, we'll look into each of these components in detail.
+<Tip>
 
-In this section we will review the Workflow components.
+You can see plenty of fully working examples at our [GitHub repo](https://github.com/keephq/keep/blob/main/examples/workflows/).
 
-## Triggers
-<Tip>When you run alert with the CLI using `keep run`, the CLI run the alert regardless of the triggers.</Tip>
-A trigger is an event that starts the workflow. It could be a manual trigger, an alert, or an interval depending on your use case.
-Keep support four types of triggers:
-### Manual trigger
-```
-# run manually
-triggers:
-  - type: manual
+</Tip>
+
+Keep Workflow Engine designed to streamline and automate operational tasks by integrating triggers, steps, actions, and conditions. This documentation provides an overview of the core concepts used to define and execute workflows effectively.
+
+
+### General Structure
+
+
+Each workflow compose of:
+1. **metadata** - id, description
+2. **triggers** - when this workflow runs?
+3. **steps/actions** - what this workflow should do?
+
+The general structure of a workflow is:
+
+```yaml
+workflow:
+  id: aks-example
+  description: aks-example
+  triggers:
+    # list of triggers
+    - type: manual
+  steps:
+    # list of steps
+    - name: some-step
+      provider:
+        type: some-provider-type
+        config: "{{ providers.provider_id }}"
+        with:
+          # provider configuration
+    - ...
+  actions:
+    - name: some-action
+      provider:
+        type: some-provider-type
+        with:
+          # provider configuration
+    - ...
 ```
 
-### Alert trigger
-```
-# run every time alert from cloudwatch triggered
-triggers:
-  - type: alert
-    filters:
-      - key: source
-        value: cloudwatch
-```
+Let's dive into building workflows:
+- [Triggers](#triggers)
+- [Steps And Actions](#steps-and-actions)
+- [Conditions](#conditions)
+- [Functions](#functions)
+- [Context](#context)
+- [Providers](#providers)
+- [Variables](#variables)
+- [Foreach Loops](#foreach-loops)
+- [Alert Enrichment](#alert-enrichment)
 
-### Incident trigger
-```
-# run when incident get created, update or deleted
-# You can use multiple events, but at least one is required
-triggers:
-  - type: incident
-    events:
-      - created
-      - deleted
-```
 
-### Interval trigger
-```
-# run every 10 seconds
-triggers:
-  - type: interval
-    value: 10
-```
+### Triggers
 
-## Steps
-Steps are optional and define a sequence of actions that fetch or compute data. They are used to add data to the workflow, which can be used in other steps or actions.
+Define how a workflow starts, such as manually, on a schedule, or in response to alerts with optional filters for specific conditions.
 
-## Actions
-An action defines what to do when a workflow is triggered. Actions usually rely on providers for executing specific tasks, like sending a Slack message.
+[See syntax](/workflows/syntax/triggers)
 
-## Conditions
-A condition sets the rules under which an action should be performed. For example, you can set a condition to only trigger an action if certain criteria are met.
+### Steps And Actions
+
+Represent sequential operations, like querying data or running scripts, using configurable providers.
+
+[See syntax](/workflows/syntax/steps-and-actions)
+
+### Conditions
+
+Allow decision-making in actions based on thresholds, assertions, or previous step results.
+
+[See syntax](/workflows/syntax/conditions)
+
+### Functions
+
+Built-in helpers like datetime_compare or is_business_hours simplify complex operations.
+
+[See syntax](/workflows/syntax/functions)
+
+### Context
+
+Enables access to and reuse of outputs from earlier steps within actions or conditions.
+
+[See syntax](/workflows/syntax/context)
+
+### Providers
+
+External systems or services (e.g., Slack, Datadog, ServiceNow) integrated into workflows through a standard configuration interface.
+
+[See syntax](/workflows/syntax/providers)
+
+### Foreach Loops
+
+Iterate over a list of results from a step to perform repeated actions for each item.
+
+[See syntax](/workflows/syntax/foreach)
+
+### Alert Enrichment
+
+Add context to alerts, like customer details or ticket metadata, using enrichment mechanisms in steps or actions.
+
+[See syntax](/workflows/syntax/enrichment)

@@ -1,4 +1,4 @@
-import { AlertDto } from "./models"; // Adjust the import path as needed
+import { AlertDto } from "@/entities/alerts/model"; // Adjust the import path as needed
 import Modal from "@/components/ui/Modal"; // Ensure this path matches your project structure
 import { Button, Icon, Switch, Text } from "@tremor/react";
 import { toast } from "react-toastify";
@@ -6,7 +6,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import "./ViewAlertModal.css";
 import React, { useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface ViewAlertModalProps {
   alert: AlertDto | null | undefined;

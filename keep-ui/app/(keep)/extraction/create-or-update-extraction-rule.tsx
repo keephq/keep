@@ -20,7 +20,7 @@ import { extractNamedGroups } from "./extractions-table";
 import { useExtractions } from "utils/hooks/useExtractionRules";
 import { AlertsRulesBuilder } from "@/app/(keep)/alerts/alerts-rules-builder";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface Props {
   extractionToEdit: ExtractionRule | null;

@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { AlertTable } from "./alert-table";
 import { useAlertTableCols } from "./alert-table-utils";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";

@@ -14,7 +14,7 @@ import { Provider, ProvidersResponse } from "@/app/(keep)/providers/providers";
 import { TabGroup, TabList, Tab, Callout } from "@tremor/react";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useSearchParams } from "next/navigation";
-import { AlertKnownKeys } from "./models";
+import { AlertKnownKeys } from "@/entities/alerts/model";
 import { createColumnHelper, DisplayColumnDef } from "@tanstack/react-table";
 import { ExclamationCircleIcon } from "@heroicons/react/20/solid";
 

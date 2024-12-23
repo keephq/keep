@@ -1,6 +1,5 @@
-import { TableBody, TableRow, TableCell, Card, Button } from "@tremor/react";
-import { AlertDto } from "./models";
-import "./alerts-table-body.css";
+import { TableBody, TableRow, TableCell } from "@tremor/react";
+import { AlertDto } from "@/entities/alerts/model";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { Table, flexRender } from "@tanstack/react-table";
@@ -8,7 +7,7 @@ import React, { useState } from "react";
 import PushAlertToServerModal from "./alert-push-alert-to-server-modal";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import clsx from "clsx";
-import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
+import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 
 interface Props {
   table: Table<AlertDto>;
@@ -82,10 +81,8 @@ export function AlertsTableBody({
             <TableRow key={`row-${index}-${rowIndex}`}>
               {table.getAllColumns().map((c, cellIndex) => (
                 <TableCell
-                  key={clsx(
-                    `cell-${c.id}-${cellIndex}`,
-                    c.columnDef.meta?.tdClassName
-                  )}
+                  key={`cell-${c.id}-${cellIndex}`}
+                  className={c.columnDef.meta?.tdClassName}
                 >
                   <Skeleton containerClassName="w-full" />
                 </TableCell>
@@ -113,17 +110,19 @@ export function AlertsTableBody({
             onClick={(e) => handleRowClick(e, row.original)}
           >
             {row.getVisibleCells().map((cell) => {
-              // TODO: fix multiple pinned columns
-              // const { style, className } = getCommonPinningStylesAndClassNames(
-              //   cell.column
-              // );
+              const { style, className } = getCommonPinningStylesAndClassNames(
+                cell.column,
+                table.getState().columnPinning.left?.length,
+                table.getState().columnPinning.right?.length
+              );
               return (
                 <TableCell
                   key={cell.id}
                   className={clsx(
-                    cell.column.columnDef.meta?.tdClassName || "",
-                    "relative z-[1]" // Ensure cell content is above the border
+                    cell.column.columnDef.meta?.tdClassName,
+                    className
                   )}
+                  style={style}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>

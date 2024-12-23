@@ -14,11 +14,12 @@ from keep.api.core.db import (
     add_alerts_to_incident_by_incident_id,
     create_incident_from_dto,
     delete_incident_by_id,
-    get_incident_alerts_by_incident_id,
     get_incident_by_id,
     get_incident_unique_fingerprint_count,
     remove_alerts_to_incident_by_incident_id,
     update_incident_from_dto_by_id,
+    enrich_alerts_with_incidents,
+    get_all_alerts_by_fingerprints,
 )
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import IncidentDto, IncidentDtoIn
@@ -108,43 +109,30 @@ class IncidentBl:
             "Alerts added to incident",
             extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
-        self.__update_elastic(incident_id, alert_fingerprints)
-        self.logger.info(
-            "Alerts pushed to elastic",
-            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
-        )
-        self.update_client_on_incident_change(incident_id)
-        self.logger.info(
-            "Client updated on incident change",
-            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
-        )
-        incident_dto = IncidentDto.from_db_incident(incident)
-        self.send_workflow_event(incident_dto, "updated")
-        self.logger.info(
-            "Workflows run on incident",
-            extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
-        )
+        self.__postprocess_alerts_change(incident, alert_fingerprints)
         await self.__generate_summary(incident_id, incident)
         self.logger.info(
             "Summary generated",
             extra={"incident_id": incident_id, "alert_fingerprints": alert_fingerprints},
         )
 
-    def __update_elastic(self, incident_id: UUID, alert_fingerprints: List[str]):
+    def __update_elastic(self, alert_fingerprints: List[str]):
         try:
             elastic_client = ElasticClient(self.tenant_id)
             if elastic_client.enabled:
-                db_alerts, _ = get_incident_alerts_by_incident_id(
+                db_alerts = get_all_alerts_by_fingerprints(
                     tenant_id=self.tenant_id,
-                    incident_id=incident_id,
-                    limit=len(alert_fingerprints),
+                    fingerprints=alert_fingerprints,
+                    session=self.session,
                 )
+                db_alerts = enrich_alerts_with_incidents(self.tenant_id, db_alerts, session=self.session)
                 enriched_alerts_dto = convert_db_alerts_to_dto_alerts(
                     db_alerts, with_incidents=True
                 )
                 elastic_client.index_alerts(alerts=enriched_alerts_dto)
         except Exception:
             self.logger.exception("Failed to push alert to elasticsearch")
+            raise
 
     def update_client_on_incident_change(self, incident_id: Optional[UUID] = None):
         if self.pusher_client is not None:
@@ -217,6 +205,7 @@ class IncidentBl:
             raise HTTPException(status_code=404, detail="Incident not found")
 
         remove_alerts_to_incident_by_incident_id(self.tenant_id, incident_id, alert_fingerprints)
+        self.__postprocess_alerts_change(incident, alert_fingerprints)
 
     def delete_incident(self, incident_id: UUID) -> None:
         self.logger.info(
@@ -238,6 +227,7 @@ class IncidentBl:
         )
         if not deleted:
             raise HTTPException(status_code=404, detail="Incident not found")
+
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto, "deleted")
 
@@ -246,7 +236,7 @@ class IncidentBl:
         incident_id: UUID,
         updated_incident_dto: IncidentDtoIn,
         generated_by_ai: bool,
-    ) -> None:
+    ) -> IncidentDto:
         self.logger.info(
             "Fetching incident",
             extra={
@@ -260,6 +250,35 @@ class IncidentBl:
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
 
+        new_incident_dto = IncidentDto.from_db_incident(incident)
+
+        self.update_client_on_incident_change(incident.id)
+        self.logger.info(
+            "Client updated on incident change",
+            extra={"incident_id": incident.id},
+        )
+        self.send_workflow_event(new_incident_dto, "updated")
+        self.logger.info(
+            "Workflows run on incident",
+            extra={"incident_id": incident.id},
+        )
+        return new_incident_dto
+
+    def __postprocess_alerts_change(self, incident, alert_fingerprints):
+
+        self.__update_elastic(alert_fingerprints)
+        self.logger.info(
+            "Alerts pushed to elastic",
+            extra={"incident_id": incident.id, "alert_fingerprints": alert_fingerprints},
+        )
+        self.update_client_on_incident_change(incident.id)
+        self.logger.info(
+            "Client updated on incident change",
+            extra={"incident_id": incident.id, "alert_fingerprints": alert_fingerprints},
+        )
         incident_dto = IncidentDto.from_db_incident(incident)
         self.send_workflow_event(incident_dto, "updated")
-        return incident_dto
+        self.logger.info(
+            "Workflows run on incident",
+            extra={"incident_id": incident.id, "alert_fingerprints": alert_fingerprints},
+        )
