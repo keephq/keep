@@ -1,5 +1,5 @@
 import { FacetFilters } from "./alert-table-facet-types";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { isQuickPresetRange } from "@/components/ui/DateRangePicker";
 
 export const getFilteredAlertsForFacet = (

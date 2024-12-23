@@ -419,7 +419,7 @@ async def update_provider(
 
     for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_info[key] = await value.file.read().decode()
+            provider_info[key] = value.file.read().decode()
 
     try:
         result = ProvidersService.update_provider(

@@ -13,7 +13,7 @@ import {
 } from "@/app/(keep)/topology/model";
 import { TopologySearchContext } from "../../TopologySearchContext";
 import { ApplicationModal } from "@/app/(keep)/topology/ui/applications/application-modal";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 export function ManageSelection({ className }: { className?: string }) {
   const { setSelectedObjectId } = useContext(TopologySearchContext);

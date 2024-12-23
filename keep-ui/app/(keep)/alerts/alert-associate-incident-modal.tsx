@@ -9,10 +9,10 @@ import {
   usePollIncidents,
 } from "../../../utils/hooks/useIncidents";
 import Loading from "@/app/(keep)/loading";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;

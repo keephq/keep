@@ -16,7 +16,7 @@ import { useState } from "react";
 import Onboarding from "./Onboarding";
 import { useSignOut } from "@/shared/lib/hooks/useSignOut";
 import { FaSlack } from "react-icons/fa";
-import { ThemeControl } from "@/shared/ui/theme/ThemeControl";
+import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
 import { useMounted } from "@/shared/lib/hooks/useMounted";
 

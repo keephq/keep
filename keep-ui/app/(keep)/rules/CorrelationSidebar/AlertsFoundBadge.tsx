@@ -1,6 +1,6 @@
 import { Badge } from "@tremor/react";
 import Image from "next/image";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 
 type AlertsFoundBadgeProps = {
   alertsFound: AlertDto[];

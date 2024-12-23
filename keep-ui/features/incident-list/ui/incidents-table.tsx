@@ -25,7 +25,6 @@ import Markdown from "react-markdown";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import ManualRunWorkflowModal from "@/app/(keep)/workflows/manual-run-workflow-modal";
-import AlertTableCheckbox from "@/app/(keep)/alerts/alert-table-checkbox";
 import { Button, Link } from "@/components/ui";
 import { MergeIncidentsModal } from "@/features/merge-incidents";
 import { IncidentDropdownMenu } from "./incident-dropdown-menu";
@@ -34,7 +33,11 @@ import { IncidentChangeStatusSelect } from "@/features/change-incident-status/";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { IncidentSeverityBadge } from "@/entities/incidents/ui";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
-import { DateTimeField, TablePagination } from "@/shared/ui";
+import {
+  DateTimeField,
+  TableIndeterminateCheckbox,
+  TablePagination,
+} from "@/shared/ui";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 
 function SelectedRowActions({
@@ -120,8 +123,10 @@ export default function IncidentsTable({
   const columns = [
     columnHelper.display({
       id: "selected",
+      minSize: 32,
+      maxSize: 32,
       header: (context) => (
-        <AlertTableCheckbox
+        <TableIndeterminateCheckbox
           checked={context.table.getIsAllRowsSelected()}
           indeterminate={context.table.getIsSomeRowsSelected()}
           onChange={context.table.getToggleAllRowsSelectedHandler()}
@@ -129,7 +134,7 @@ export default function IncidentsTable({
         />
       ),
       cell: (context) => (
-        <AlertTableCheckbox
+        <TableIndeterminateCheckbox
           checked={context.row.getIsSelected()}
           indeterminate={context.row.getIsSomeSelected()}
           onChange={context.row.getToggleSelectedHandler()}

@@ -7,7 +7,7 @@ import Select, {
   GroupBase,
 } from "react-select";
 import { useState } from "react";
-import { AlertDto, Status } from "./models";
+import { AlertDto, Status } from "@/entities/alerts/model";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,
@@ -18,7 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 

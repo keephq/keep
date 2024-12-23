@@ -1,7 +1,7 @@
 import { CategoryBar } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { calculateFatigue } from "utils/fatigue";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 const oneHourAgo = new Date().getTime() - 60 * 60 * 1000; // Current time - 1 hour
 

@@ -6,24 +6,26 @@ import {
   VisibilityState,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
-import AlertTableCheckbox from "./alert-table-checkbox";
-import AlertName from "./alert-name";
+import { AlertName } from "@/entities/alerts/ui";
 import Image from "next/image";
 import AlertAssignee from "./alert-assignee";
 import AlertExtraPayload from "./alert-extra-payload";
 import AlertMenu from "./alert-menu";
-import { isSameDay, isValid, isWithinInterval, startOfDay } from "date-fns";
-import { severityMapping } from "./models";
+import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import {
   MdOutlineNotificationsActive,
   MdOutlineNotificationsOff,
 } from "react-icons/md";
-import { AlertSeverityBorder } from "./alert-severity-border";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import TimeAgo from "react-timeago";
 import { useConfig } from "utils/hooks/useConfig";
+import {
+  TableIndeterminateCheckbox,
+  TableSeverityCell,
+  UISeverity,
+} from "@/shared/ui";
 
 export const DEFAULT_COLS = [
   "severity",
@@ -86,13 +88,6 @@ export const isDateWithinRange: FilterFn<AlertDto> = (row, columnId, value) => {
 
 const columnHelper = createColumnHelper<AlertDto>();
 
-const invertedSeverityMapping = Object.entries(severityMapping).reduce<{
-  [key: string]: number;
-}>((acc, [key, value]) => {
-  acc[value as keyof typeof acc] = Number(key);
-  return acc;
-}, {});
-
 interface GenerateAlertTableColsArg {
   additionalColsToGenerate?: string[];
   isCheckboxDisplayed?: boolean;
@@ -121,7 +116,6 @@ export const useAlertTableCols = (
   }: GenerateAlertTableColsArg = { presetName: "feed" }
 ) => {
   const [expandedToggles, setExpandedToggles] = useState<RowSelectionState>({});
-  const [currentOpenMenu, setCurrentOpenMenu] = useState("");
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
@@ -175,7 +169,9 @@ export const useAlertTableCols = (
       maxSize: 2,
       header: () => <></>,
       cell: (context) => (
-        <AlertSeverityBorder severity={context.row.original.severity} />
+        <TableSeverityCell
+          severity={context.row.original.severity as unknown as UISeverity}
+        />
       ),
       meta: {
         tdClassName: "w-1 !p-0",
@@ -193,14 +189,14 @@ export const useAlertTableCols = (
               thClassName: "w-6 !py-2 !pl-2 !pr-1 ",
             },
             header: (context) => (
-              <AlertTableCheckbox
+              <TableIndeterminateCheckbox
                 checked={context.table.getIsAllRowsSelected()}
                 indeterminate={context.table.getIsSomeRowsSelected()}
                 onChange={context.table.getToggleAllRowsSelectedHandler()}
               />
             ),
             cell: (context) => (
-              <AlertTableCheckbox
+              <TableIndeterminateCheckbox
                 checked={context.row.getIsSelected()}
                 indeterminate={context.row.getIsSomeSelected()}
                 onChange={context.row.getToggleSelectedHandler()}
@@ -257,6 +253,8 @@ export const useAlertTableCols = (
     columnHelper.accessor("source", {
       id: "source",
       header: () => <></>,
+      minSize: 40,
+      maxSize: 40,
       enableSorting: false,
       enableResizing: false,
       cell: (context) => (
@@ -381,23 +379,23 @@ export const useAlertTableCols = (
       ? [
           columnHelper.display({
             id: "alertMenu",
-            meta: {
-              tdClassName: "sticky right-0",
-            },
-            size: 50,
+            minSize: 40,
+            maxSize: 48,
             cell: (context) => (
-              <AlertMenu
-                presetName={presetName.toLowerCase()}
-                alert={context.row.original}
-                isMenuOpen={
-                  context.row.original.fingerprint === currentOpenMenu
-                }
-                setIsMenuOpen={setCurrentOpenMenu}
-                setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                setDismissModalAlert={setDismissModalAlert}
-                setChangeStatusAlert={setChangeStatusAlert}
-              />
+              <div className="flex justify-end">
+                <AlertMenu
+                  presetName={presetName.toLowerCase()}
+                  alert={context.row.original}
+                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
+                  setDismissModalAlert={setDismissModalAlert}
+                  setChangeStatusAlert={setChangeStatusAlert}
+                />
+              </div>
             ),
+            meta: {
+              tdClassName: "p-1 md:p-2",
+              thClassName: "p-1 md:p-2",
+            },
           }),
         ]
       : []) as ColumnDef<AlertDto>[]),
