@@ -45,13 +45,16 @@ class KeycloakIdentityManager(BaseIdentityManager):
     def __init__(self, tenant_id, context_manager: ContextManager, **kwargs):
         super().__init__(tenant_id, context_manager, **kwargs)
         self.server_url = os.environ.get("KEYCLOAK_URL")
+        self.keycloak_verify_cert = (
+            os.environ.get("KEYCLOAK_VERIFY_CERT", "true").lower() == "true"
+        )
         try:
             self.keycloak_admin = KeycloakAdmin(
                 server_url=os.environ["KEYCLOAK_URL"] + "/admin",
                 username=os.environ.get("KEYCLOAK_ADMIN_USER"),
                 password=os.environ.get("KEYCLOAK_ADMIN_PASSWORD"),
                 realm_name=os.environ["KEYCLOAK_REALM"],
-                verify=True,
+                verify=self.keycloak_verify_cert,
             )
             self.client_id = self.keycloak_admin.get_client_id(
                 os.environ["KEYCLOAK_CLIENT_ID"]
@@ -61,6 +64,7 @@ class KeycloakIdentityManager(BaseIdentityManager):
                 client_id=os.environ["KEYCLOAK_CLIENT_ID"],
                 realm_name=os.environ["KEYCLOAK_REALM"],
                 client_secret_key=os.environ["KEYCLOAK_CLIENT_SECRET"],
+                verify=self.keycloak_verify_cert,
             )
 
             self.admin_url = f'{os.environ["KEYCLOAK_URL"]}/admin/realms/{os.environ["KEYCLOAK_REALM"]}/clients/{self.client_id}'
