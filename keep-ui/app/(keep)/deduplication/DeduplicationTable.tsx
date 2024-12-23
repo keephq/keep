@@ -13,7 +13,7 @@ import {
   Badge,
   SparkAreaChart,
 } from "@tremor/react";
-import { Tooltip } from "@/shared/ui/Tooltip";
+import { Tooltip } from "@/shared/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createColumnHelper,
@@ -25,7 +25,6 @@ import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import DeduplicationSidebar from "@/app/(keep)/deduplication/DeduplicationSidebar";
 import {
   TrashIcon,
-  PauseIcon,
   PlusIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";

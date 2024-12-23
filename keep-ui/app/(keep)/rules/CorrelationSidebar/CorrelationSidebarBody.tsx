@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 

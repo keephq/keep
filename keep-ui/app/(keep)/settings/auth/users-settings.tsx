@@ -12,7 +12,7 @@ import UsersSidebar from "./users-sidebar";
 import { User } from "@/app/(keep)/settings/models";
 import { UsersTable } from "./users-table";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface Props {
   currentUser?: AuthUser;

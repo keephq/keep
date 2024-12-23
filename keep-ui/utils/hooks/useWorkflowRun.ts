@@ -4,7 +4,7 @@ import { useProviders } from "./useProviders";
 import { Filter, Workflow } from "@/app/(keep)/workflows/models";
 import { Provider } from "@/app/(keep)/providers/providers";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface ProvidersData {
   providers: { [key: string]: { providers: Provider[] } };

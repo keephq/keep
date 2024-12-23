@@ -31,7 +31,7 @@ import {
   useCopilotReadable,
 } from "@copilotkit/react-core";
 import { IncidentOverviewSkeleton } from "../incident-overview-skeleton";
-import { AlertDto } from "../../alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import { useRouter } from "next/navigation";
 
 interface Props {
