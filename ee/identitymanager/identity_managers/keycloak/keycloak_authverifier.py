@@ -21,6 +21,9 @@ class KeycloakAuthVerifier(AuthVerifierBase):
         self.keycloak_realm = os.environ.get("KEYCLOAK_REALM")
         self.keycloak_client_id = os.environ.get("KEYCLOAK_CLIENT_ID")
         self.keycloak_audience = os.environ.get("KEYCLOAK_AUDIENCE")
+        self.keycloak_verify_cert = (
+            os.environ.get("KEYCLOAK_VERIFY_CERT", "true").lower() == "true"
+        )
         if (
             not self.keycloak_url
             or not self.keycloak_realm
@@ -35,12 +38,14 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             realm_name=self.keycloak_realm,
             client_id=self.keycloak_client_id,
             client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET"),
+            verify=self.keycloak_verify_cert,
         )
         self.keycloak_openid_connection = KeycloakOpenIDConnection(
             server_url=self.keycloak_url,
             realm_name=self.keycloak_realm,
             client_id=self.keycloak_client_id,
             client_secret_key=os.environ.get("KEYCLOAK_CLIENT_SECRET"),
+            verify=self.keycloak_verify_cert,
         )
         self.keycloak_uma = KeycloakUMA(connection=self.keycloak_openid_connection)
         # will be populated in on_start of the identity manager
