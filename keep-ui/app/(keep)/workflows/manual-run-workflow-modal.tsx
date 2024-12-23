@@ -6,9 +6,9 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { IncidentDto } from "@/entities/incidents/model";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface Props {
   alert?: AlertDto | null | undefined;

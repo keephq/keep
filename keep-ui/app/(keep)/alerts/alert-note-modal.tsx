@@ -6,10 +6,10 @@ const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 interface AlertNoteModalProps {
   handleClose: () => void;

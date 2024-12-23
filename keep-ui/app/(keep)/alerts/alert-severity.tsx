@@ -1,5 +1,5 @@
 import { Icon } from "@tremor/react";
-import { Severity } from "./models";
+import { Severity } from "@/entities/alerts/model";
 import {
   ExclamationCircleIcon,
   ExclamationTriangleIcon,

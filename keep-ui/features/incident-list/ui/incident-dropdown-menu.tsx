@@ -1,10 +1,6 @@
-import {
-  EllipsisHorizontalIcon,
-  PencilIcon,
-  PlayIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { PencilIcon, PlayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
+import { DropdownMenu } from "@/shared/ui";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
 

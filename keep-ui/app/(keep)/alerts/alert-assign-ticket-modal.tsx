@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import Select, { components } from "react-select";
-import { Button, TextInput, Text } from "@tremor/react";
+import { Button, TextInput, Text, Icon } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "../providers/providers";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 interface AlertAssignTicketModalProps {
   handleClose: () => void;
@@ -41,11 +42,17 @@ const AlertAssignTicketModal = ({
   const {
     handleSubmit,
     control,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
   // if this modal should not be open, do nothing
   if (!alert) return null;
+
+  const handleModalClose = () => {
+    reset();
+    handleClose();
+  };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
@@ -60,7 +67,7 @@ const AlertAssignTicketModal = ({
       };
       const response = await api.post(`/alerts/enrich`, requestData);
       alert.ticket_url = data.ticket_url;
-      handleClose();
+      handleModalClose();
     } catch (error) {
       // Handle unexpected error
       console.error("An unexpected error occurred");
@@ -147,7 +154,7 @@ const AlertAssignTicketModal = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={handleModalClose}
       title="Assign Ticket"
       className="w-[400px]"
     >
@@ -155,9 +162,16 @@ const AlertAssignTicketModal = ({
         {ticketingProviders.length > 0 ? (
           <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Ticket Provider
-              </label>
+              <div className="flex flex-row items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Ticket Provider
+                </label>
+                <Icon
+                  icon={QuestionMarkCircleIcon}
+                  tooltip="Select a Ticketing provider from the list below, Keep will use the select provider and Ticket URL to enrich your alert."
+                  className="w-2 h-2 ml-2 z-[60]"
+                />
+              </div>
               <Controller
                 name="provider"
                 control={control}
@@ -210,7 +224,7 @@ const AlertAssignTicketModal = ({
                 <Text>Assign Ticket</Text>
               </Button>
               <Button
-                onClick={handleClose}
+                onClick={handleModalClose}
                 variant="secondary"
                 className="border border-orange-500 text-orange-500"
               >
@@ -234,7 +248,7 @@ const AlertAssignTicketModal = ({
               <Text>Connect Ticketing Provider</Text>
             </Button>
             <Button
-              onClick={handleClose}
+              onClick={handleModalClose}
               color="orange"
               variant="secondary"
               className="mt-4 border border-orange-500 text-orange-500"

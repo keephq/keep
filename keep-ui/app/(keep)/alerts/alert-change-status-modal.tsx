@@ -7,7 +7,7 @@ import Select, {
   GroupBase,
 } from "react-select";
 import { useState } from "react";
-import { AlertDto, Status } from "./models";
+import { AlertDto, Status } from "@/entities/alerts/model";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,
@@ -16,10 +16,11 @@ import {
   XCircleIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
-import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 const statusIcons = {
   [Status.Firing]: <ExclamationCircleIcon className="w-4 h-4 mr-2" />,
@@ -76,8 +77,8 @@ export default function AlertChangeStatusModal({
 }: Props) {
   const api = useApi();
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets();
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { useAllAlerts } = useAlerts();
   const { mutate: alertsMutator } = useAllAlerts(presetName, {
     revalidateOnMount: false,

@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 import os
@@ -11,7 +12,6 @@ import aiohttp
 import requests
 from dateutil import parser
 from requests.models import PreparedRequest
-from sqlalchemy.util import asyncio
 
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -318,7 +318,7 @@ def perform_demo_ai(keep_api_key, keep_api_url):
     incidents_existing = requests.get(
         f"{keep_api_url}/incidents",
         headers={"x-api-key": keep_api_key},
-    ) 
+    )
     incidents_existing.raise_for_status()
     incidents_existing = incidents_existing.json()["items"]
 
@@ -326,7 +326,7 @@ def perform_demo_ai(keep_api_key, keep_api_url):
 
     incident_exists = None
 
-    # Create incident if it doesn't exist 
+    # Create incident if it doesn't exist
 
     for incident in incidents_existing:
         if incident["user_generated_name"] == MANUAL_INCIDENT_NAME:
@@ -393,8 +393,7 @@ def perform_demo_ai(keep_api_key, keep_api_url):
     alerts_in_incident.raise_for_status()
     alerts_in_incident = alerts_in_incident.json()
 
-
-    if len(alerts_in_incident['items']) < 20:
+    if len(alerts_in_incident["items"]) < 20:
         alerts_existing = requests.get(
             f"{keep_api_url}/alerts",
             headers={"x-api-key": keep_api_key},
@@ -408,7 +407,7 @@ def perform_demo_ai(keep_api_key, keep_api_url):
 
         if len(fingerprints_to_add) > 0:
             fingerprints_to_add = fingerprints_to_add[:10]
-            
+
             response = requests.post(
                 f"{keep_api_url}/incidents/{incident_exists['id']}/alerts",
                 headers={"x-api-key": keep_api_key},
@@ -418,8 +417,11 @@ def perform_demo_ai(keep_api_key, keep_api_url):
 
 
 def simulate_alerts(*args, **kwargs):
-    asyncio.create_task(simulate_alerts_worker(0, keep_api_key, 0))
-    asyncio.run(simulate_alerts_async(*args, **kwargs))
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(simulate_alerts_worker(0, kwargs.get("keep_api_key"), 0))
+    loop.create_task(simulate_alerts_async(*args, **kwargs))
+    loop.run_forever()
 
 
 async def simulate_alerts_async(
@@ -430,7 +432,7 @@ async def simulate_alerts_async(
     demo_topology=False,
     clean_old_incidents=False,
     demo_ai=False,
-    target_rps=0
+    target_rps=0,
 ):
     logger.info("Simulating alerts...")
 
@@ -505,13 +507,17 @@ async def simulate_alerts_async(
                 send_alert_url_params = {}
 
                 # choose provider based on weights
-                provider_type = random.choices(providers, weights=normalized_weights, k=1)[0]
-                send_alert_url = "{}/alerts/event/{}".format(keep_api_url, provider_type)
+                provider_type = random.choices(
+                    providers, weights=normalized_weights, k=1
+                )[0]
+                send_alert_url = "{}/alerts/event/{}".format(
+                    keep_api_url, provider_type
+                )
 
                 if provider_type in existing_providers_to_their_ids:
-                    send_alert_url_params["provider_id"] = existing_providers_to_their_ids[
-                        provider_type
-                    ]
+                    send_alert_url_params["provider_id"] = (
+                        existing_providers_to_their_ids[provider_type]
+                    )
                 logger.info(
                     f"Provider type: {provider_type}, send_alert_url_params now are: {send_alert_url_params}"
                 )
@@ -618,11 +624,15 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
                     logger.info("Alert sent successfully")
 
             if rps:
-                delay = 1/rps - (time.time() - start)
+                delay = 1 / rps - (time.time() - start)
                 if delay > 0:
-                    logger.debug('worker %d sleeps, %f', worker_id, delay)
+                    logger.debug("worker %d sleeps, %f", worker_id, delay)
                     await asyncio.sleep(delay)
-            logger.info('Worker %d RPS: %.2f', worker_id, total_requests / (time.time() - total_start))
+            logger.info(
+                "Worker %d RPS: %.2f",
+                worker_id,
+                total_requests / (time.time() - total_start),
+            )
 
 
 if __name__ == "__main__":

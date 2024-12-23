@@ -1,5 +1,5 @@
-import { Preset } from "@/app/(keep)/alerts/models";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
+import { Preset } from "@/entities/presets/model/types";
 
 export interface LayoutItem {
   i: string;

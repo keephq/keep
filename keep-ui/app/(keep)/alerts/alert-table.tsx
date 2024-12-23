@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Table, Card } from "@tremor/react";
 import { AlertsTableBody } from "./alerts-table-body";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import {
   getCoreRowModel,
   useReactTable,
@@ -14,7 +14,6 @@ import {
   SortingState,
   getSortedRowModel,
 } from "@tanstack/react-table";
-import { CopilotKit } from "@copilotkit/react-core";
 import AlertPagination from "./alert-pagination";
 import AlertsTableHeaders from "./alert-table-headers";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
@@ -25,14 +24,15 @@ import {
   DEFAULT_COLS,
 } from "./alert-table-utils";
 import AlertActions from "./alert-actions";
-import AlertPresets from "./alert-presets";
+import { AlertPresetManager } from "./alert-preset-manager";
 import { evalWithContext } from "./alerts-rules-builder";
 import { TitleAndFilters } from "./TitleAndFilters";
-import { severityMapping } from "./models";
+import { severityMapping } from "@/entities/alerts/model";
 import AlertTabs from "./alert-tabs";
 import AlertSidebar from "./alert-sidebar";
 import { AlertFacets } from "./alert-table-alert-facets";
 import { DynamicFacet, FacetFilters } from "./alert-table-facet-types";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface PresetTab {
   name: string;
@@ -44,8 +44,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   presetName: string;
-  presetPrivate?: boolean;
-  presetNoisy?: boolean;
   presetStatic?: boolean;
   presetId?: string;
   presetTabs?: PresetTab[];
@@ -63,8 +61,6 @@ export function AlertTable({
   columns,
   isAsyncLoading = false,
   presetName,
-  presetPrivate = false,
-  presetNoisy = false,
   presetStatic = false,
   presetId = "",
   presetTabs = [],
@@ -76,6 +72,8 @@ export function AlertTable({
   setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const { data: configData } = useConfig();
+  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
 
   const [theme, setTheme] = useLocalStorage(
     "alert-table-theme",
@@ -137,9 +135,9 @@ export function AlertTable({
     setTheme(newTheme);
   };
 
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "noise", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>(
+    noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
+  );
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -218,6 +216,10 @@ export function AlertTable({
     });
   });
 
+  const leftPinnedColumns = noisyAlertsEnabled
+    ? ["severity", "checkbox", "noise"]
+    : ["severity", "checkbox"];
+
   const table = useReactTable({
     data: filteredAlerts,
     columns: columns,
@@ -226,7 +228,7 @@ export function AlertTable({
       columnOrder: columnOrder,
       columnSizing: columnSizing,
       columnPinning: {
-        left: ["severity", "checkbox", "noise"],
+        left: leftPinnedColumns,
         right: ["alertMenu"],
       },
       sorting: sorting,
@@ -296,15 +298,7 @@ export function AlertTable({
             isIncidentSelectorOpen={isIncidentSelectorOpen}
           />
         ) : (
-          <CopilotKit runtimeUrl="/api/copilotkit">
-            <AlertPresets
-              table={table}
-              presetNameFromApi={presetName}
-              isLoading={isAsyncLoading}
-              presetPrivate={presetPrivate}
-              presetNoisy={presetNoisy}
-            />
-          </CopilotKit>
+          <AlertPresetManager table={table} presetName={presetName} />
         )}
       </div>
 
@@ -328,8 +322,8 @@ export function AlertTable({
 
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0">
-            <Card className="h-full flex flex-col p-0">
-              <div className="flex-grow flex flex-col overflow-hidden">
+            <Card className="h-full flex flex-col p-0 overflow-x-auto">
+              <div className="flex-grow flex flex-col">
                 {!presetStatic && (
                   <div className="flex-none">
                     <AlertTabs
@@ -345,7 +339,7 @@ export function AlertTable({
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
-                <div className="flex-grow overflow-auto">
+                <div className="flex-grow">
                   <Table className="[&>table]:table-fixed [&>table]:w-full">
                     <AlertsTableHeaders
                       columns={columns}

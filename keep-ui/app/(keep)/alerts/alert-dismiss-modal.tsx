@@ -14,16 +14,17 @@ import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "react-quill/dist/quill.snow.css";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { set, isSameDay, isAfter } from "date-fns";
-import { usePresets } from "utils/hooks/usePresets";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { toast } from "react-toastify";
 const ReactQuill =
   typeof window === "object" ? require("react-quill") : () => false;
 import "./alert-dismiss-modal.css";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 interface Props {
   preset: string;
@@ -41,8 +42,8 @@ export default function AlertDismissModal({
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
 
-  const { useAllPresets } = usePresets();
-  const { mutate: presetsMutator } = useAllPresets();
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { usePresetAlerts } = useAlerts();
   const { mutate: alertsMutator } = usePresetAlerts(presetName, {
     revalidateOnMount: false,

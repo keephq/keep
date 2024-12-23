@@ -50,7 +50,7 @@ import { getZodSchema } from "./form-validation";
 import TimeAgo from "react-timeago";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import {
   base64urlencode,
   generateRandomString,

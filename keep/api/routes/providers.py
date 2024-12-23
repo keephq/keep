@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 READ_ONLY = config("KEEP_READ_ONLY", default="false") == "true"
 PROVIDER_DISTRIBUTION_ENABLED = config(
-    "PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
+    "KEEP_PROVIDER_DISTRIBUTION_ENABLED", cast=bool, default=True
 )
 
 
@@ -69,9 +69,8 @@ def get_providers(
     logger.info("Getting installed providers", extra={"tenant_id": tenant_id})
     providers = ProvidersService.get_all_providers()
     installed_providers = ProvidersService.get_installed_providers(tenant_id)
+    linked_providers = ProvidersService.get_linked_providers(tenant_id)
     if PROVIDER_DISTRIBUTION_ENABLED:
-        linked_providers = ProvidersService.get_linked_providers(tenant_id)
-
         # generate distribution only if not in read only mode
         if READ_ONLY:
             for provider in linked_providers + installed_providers:
@@ -444,7 +443,7 @@ async def update_provider(
 
     for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_info[key] = await value.file.read().decode()
+            provider_info[key] = value.file.read().decode()
 
     try:
         result = ProvidersService.update_provider(

@@ -330,7 +330,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
     @staticmethod
     def _format_alert(
-        event: dict, provider_instance: "BaseProvider" = None
+        event: dict | list[dict], provider_instance: "BaseProvider" = None
     ) -> AlertDto | list[AlertDto]:
         """
         Format an incoming alert.
@@ -349,7 +349,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
     @classmethod
     def format_alert(
         cls,
-        event: dict,
+        event: dict | list[dict],
         tenant_id: str | None,
         provider_type: str | None,
         provider_id: str | None,
@@ -696,7 +696,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
             id=alert_data.get("id", str(uuid.uuid4())),
             name=alert_data.get("name", "alert-from-event-queue"),
             status=alert_data.get("status", AlertStatus.FIRING),
-            lastReceived=alert_data.get("lastReceived", datetime.datetime.now()),
+            lastReceived=alert_data.get(
+                "lastReceived",
+                datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+            ),
             environment=alert_data.get("environment", "alert-from-event-queue"),
             isDuplicate=alert_data.get("isDuplicate", False),
             duplicateReason=alert_data.get("duplicateReason", None),

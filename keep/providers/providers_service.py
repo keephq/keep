@@ -197,6 +197,10 @@ class ProvidersService:
 
         pulling_enabled = provider_info.pop("pulling_enabled", True)
 
+        # if pulling_enabled is "true" or "false" cast it to boolean
+        if isinstance(pulling_enabled, str):
+            pulling_enabled = pulling_enabled.lower() == "true"
+
         provider_config = {
             "authentication": provider_info,
             "name": provider.name,

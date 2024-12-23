@@ -23,7 +23,7 @@ import { useRoles } from "utils/hooks/useRoles";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import { ApiKey } from "@/app/(keep)/settings/auth/types";
 
 interface Props {

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Subtitle, Switch } from "@tremor/react";
+import { Callout, Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   ExclamationCircleIcon,
@@ -20,11 +20,11 @@ import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
+import { showErrorToast, Input } from "@/shared/ui";
 
 export default function WorkflowsPage() {
   const api = useApi();
   const router = useRouter();
-  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -78,14 +78,17 @@ export default function WorkflowsPage() {
   }
 
   const onDrop = async (files: any) => {
-    const fileUpload = async (formData: FormData, reload: boolean) => {
+    const fileUpload = async (
+      formData: FormData,
+      fName: string,
+      reload: boolean
+    ) => {
       try {
         const response = await api.request(`/workflows`, {
           method: "POST",
           body: formData,
         });
 
-        setFileError(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -94,9 +97,9 @@ export default function WorkflowsPage() {
         }
       } catch (error) {
         if (error instanceof KeepApiError) {
-          setFileError(error.message);
+          showErrorToast(error, `Failed to upload ${fName}: ${error.message}`);
         } else {
-          setFileError("An error occurred during file upload");
+          showErrorToast(error, "Failed to upload file");
         }
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -109,11 +112,12 @@ export default function WorkflowsPage() {
 
     for (let i = 0; i < files.target.files.length; i++) {
       const file = files.target.files[i];
+      const fName = file.name;
       formData.set("file", file);
       if (files.target.files.length === i + 1) {
         reload = true;
       }
-      await fileUpload(formData, reload);
+      await fileUpload(formData, fName, reload);
     }
   };
 
@@ -208,25 +212,32 @@ export default function WorkflowsPage() {
           onClose={() => setIsModalOpen(false)}
           title="Upload Workflow files"
         >
-          <div className="bg-white p-4 rounded max-w-lg max-h-fit	 mx-auto z-20">
-            <input
-              type="file"
-              id="workflowFile"
-              accept=".yml, .yaml" // accept only yamls
-              multiple
-              onChange={(e) => {
-                onDrop(e);
-                setIsModalOpen(false); // Add this line to close the modal
-              }}
-            />
-
-            <div className="mt-4">
+          <div className="bg-white rounded max-w-lg max-h-fit	 mx-auto z-20">
+            <div className="space-y-2">
+              <Input
+                ref={fileInputRef}
+                id="workflowFile"
+                name="file"
+                type="file"
+                className="mt-2"
+                accept=".yml, .yaml"
+                multiple
+                onChange={(e) => {
+                  onDrop(e);
+                  setIsModalOpen(false); // Add this line to close the modal
+                }}
+              />
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                Only .yml and .yaml files are supported.
+              </p>
+            </div>
+            <div className="mt-4 text-sm">
               <h3>Or just try some from Keep examples:</h3>
-
               <Button
                 className="mt-2"
                 color="orange"
                 size="md"
+                variant="secondary"
                 icon={ArrowRightIcon}
                 onClick={() => handleStaticExampleSelect("slack")}
               >
@@ -237,13 +248,14 @@ export default function WorkflowsPage() {
                 className="mt-2"
                 color="orange"
                 size="md"
+                variant="secondary"
                 icon={ArrowRightIcon}
                 onClick={() => handleStaticExampleSelect("sql")}
               >
                 Run SQL query and send the results as a Slack message
               </Button>
 
-              <p className="mt-4">
+              <p className="mt-2">
                 More examples at{" "}
                 <a
                   href="https://github.com/keephq/keep/tree/main/examples/workflows"
@@ -255,7 +267,14 @@ export default function WorkflowsPage() {
             </div>
 
             <div className="mt-4">
-              <button onClick={() => setIsModalOpen(false)}>Cancel</button>
+              <Button
+                className="mt-2"
+                color="orange"
+                variant="secondary"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </Modal>
