@@ -42,5 +42,7 @@ USER keep
 
 ENTRYPOINT ["/venv/lib/python3.11/site-packages/keep/entrypoint.sh"]
 
-CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py", "--preload"]
+ENV GUNICORN_WORKERS=1
+
+CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080" , "--workers", "1" ,"--timeout", "300", "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py", "--preload"]
 # CMD ["gunicorn", "keep.api.api:get_app", "--bind" , "0.0.0.0:8080", "--max-requests", "100",  "--workers", "4" , "-k" , "uvicorn.workers.UvicornWorker", "-c", "/venv/lib/python3.11/site-packages/keep/api/config.py", "--preload"]

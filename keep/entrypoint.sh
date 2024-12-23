@@ -18,5 +18,24 @@ python "$SCRIPT_DIR/server_jobs_bg.py" &
     echo "Failed to build providers cache, skipping"
 }
 
-# Execute the CMD provided in the Dockerfile or as arguments
-exec "$@"
+# Create the new command with the environment-specified number of workers
+new_cmd=""
+found_workers=0
+while [ $# -gt 0 ]; do
+    if [ "$1" = "--workers" ]; then
+        new_cmd="$new_cmd --workers ${GUNICORN_WORKERS:-1}"
+        shift 2
+        found_workers=1
+    else
+        new_cmd="$new_cmd $1"
+        shift
+    fi
+done
+
+# If no workers argument was found, add it
+if [ $found_workers -eq 0 ]; then
+    new_cmd="$new_cmd --workers ${GUNICORN_WORKERS:-1}"
+fi
+
+# Execute the modified command
+eval exec $new_cmd

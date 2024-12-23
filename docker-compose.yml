@@ -19,15 +19,33 @@ services:
     image: keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
-      - KEEP_MEMORY_PROFILING=false
+      - KEEP_MEMORY_PROFILING=true
       - SCHEDULER=true
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
       - POSTHOG_DISABLED=true
+      - GUNICORN_WORKERS=4
     cap_add:
       - SYS_PTRACE
     volumes:
       - ./state:/state
 
+  keep-database:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: keepuser
+      POSTGRES_PASSWORD: keeppassword
+      POSTGRES_DB: keepdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./tests/e2e_tests/postgres-custom.conf:/etc/postgresql/conf.d/custom.conf
+      - ./tests/e2e_tests/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
   keep-websocket-server:
     extends:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
+
+volumes:
+  postgres-data:

@@ -154,15 +154,13 @@ async def startup():
             raise ValueError(f"Invalid task pool: {KEEP_ARQ_TASK_POOL}")
 
     # Enable memory if needed
-    """
     if KEEP_MEMORY_PROFILING:
         logger.info("Memory profiling enabled")
-        import –oc
+        import tracemalloc
 
         tracemalloc.start()
-        logger.info("Memory profiler started")
-        memory_tracker.start()
-    """
+        # logger.info("Memory profiler started")
+        # memory_tracker.start()
 
     logger.info("Services started successfully")
 
@@ -317,14 +315,15 @@ def get_app(
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
-        logging.error(
-            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}. Tenant ID: {request.state.tenant_id}"
-        )
+
+        # logging.error(
+        #     f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}. Tenant ID: {request.state.tenant_id}"
+        # )
         return JSONResponse(
             status_code=500,
             content={
                 "message": "An internal server error occurred.",
-                "trace_id": request.state.trace_id,
+                #       "trace_id": request.state.trace_id,
                 "error_msg": str(exc),
             },
         )

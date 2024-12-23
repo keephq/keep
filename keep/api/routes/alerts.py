@@ -444,8 +444,24 @@ async def receive_event(
     ),
     pusher_client: Pusher = Depends(get_pusher_client),
 ) -> dict[str, str]:
-    trace_id = request.state.trace_id
+    # trace_id = request.state.trace_id
+    trace_id = "123"
     running_tasks: set = request.state.background_tasks
+    logger.info(
+        f"Current running tasks: {len(running_tasks)}",
+        extra={
+            "num_tasks": len(running_tasks),
+            "provider_type": provider_type,
+            "tenant_id": authenticated_entity.tenant_id,
+        },
+    )
+    logger.info(
+        "Tasks in set:",
+        extra={
+            "task_objects": [str(task) for task in running_tasks],
+            "num_tasks": len(running_tasks),
+        },
+    )
     provider_class = None
     try:
         t = time.time()
