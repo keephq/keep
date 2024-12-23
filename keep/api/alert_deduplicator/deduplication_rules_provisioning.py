@@ -181,7 +181,7 @@ def get_deduplication_rules_to_provision() -> dict[str, dict]:
     """
 
     env_var_key = "KEEP_DEDUPLICATION_RULES"
-    deduplication_rules_from_env_var = config(env_var_key)
+    deduplication_rules_from_env_var = config(key=env_var_key, default=None)
 
     if not deduplication_rules_from_env_var:
         return None
