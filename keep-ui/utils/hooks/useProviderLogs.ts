@@ -38,7 +38,7 @@ export function useProviderLogs({
 
   const { data, error, isLoading, mutate } = useSWR<ProviderLog[], Error>(
     // Only make the request if providerId exists and api is ready
-    providerId && api?.isReady()
+    providerId && api.isReady()
       ? `/providers/${providerId}/logs?${queryParams.toString()}`
       : null,
     (url) => api.get(url),
