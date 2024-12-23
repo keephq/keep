@@ -4943,3 +4943,20 @@ def set_last_alert(
             )
             # break the retry loop
             break
+
+
+def get_provider_logs(
+    tenant_id: str, provider_id: str, limit: int = 100
+) -> List[ProviderExecutionLog]:
+    with Session(engine) as session:
+        logs = (
+            session.query(ProviderExecutionLog)
+            .filter(
+                ProviderExecutionLog.tenant_id == tenant_id,
+                ProviderExecutionLog.provider_id == provider_id,
+            )
+            .order_by(desc(ProviderExecutionLog.timestamp))
+            .limit(limit)
+            .all()
+        )
+    return logs
