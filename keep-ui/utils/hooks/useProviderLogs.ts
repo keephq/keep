@@ -41,9 +41,7 @@ export function useProviderLogs({
     providerId && api?.isReady()
       ? `/providers/${providerId}/logs?${queryParams.toString()}`
       : null,
-    async (url: string) => {
-      return await api.get(url);
-    },
+    (url) => api.get(url),
     {
       ...options,
       shouldRetryOnError: false, // Prevent infinite retry on authentication errors
