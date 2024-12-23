@@ -42,12 +42,7 @@ export function useProviderLogs({
       ? `/providers/${providerId}/logs?${queryParams.toString()}`
       : null,
     async (url: string) => {
-      try {
-        return await api.get(url);
-      } catch (err) {
-        console.error(err);
-        throw err;
-      }
+      return await api.get(url);
     },
     {
       ...options,
@@ -58,7 +53,7 @@ export function useProviderLogs({
   return {
     logs: data || [],
     isLoading,
-    isError: error instanceof Error ? error : null,
+    error,
     refresh: mutate,
   };
 }

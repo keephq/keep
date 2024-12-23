@@ -17,13 +17,13 @@ const LOG_LEVEL_COLORS = {
 } as const;
 
 const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
-  const { logs, isLoading, isError, refresh } = useProviderLogs({ providerId });
+  const { logs, isLoading, error, refresh } = useProviderLogs({ providerId });
 
   if (isLoading) {
     return <Text>Loading logs...</Text>;
   }
 
-  if (isError) {
+  if (error) {
     return (
       <div className="flex items-center">
         <EmptyStateCard

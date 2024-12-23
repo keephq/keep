@@ -64,7 +64,6 @@ import {
   GroupFields,
 } from "./form-fields";
 import ProviderLogs from "./provider-logs";
-import { useProviderLogs } from "@/utils/hooks/useProviderLogs";
 
 type ProviderFormProps = {
   provider: Provider;

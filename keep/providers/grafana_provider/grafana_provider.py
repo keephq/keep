@@ -426,10 +426,13 @@ class GrafanaProvider(BaseProvider):
 
         # After setting up unified alerting, check and setup legacy alerting if enabled
         try:
+            self.logger.info("Checking legacy alerting")
             if self._is_legacy_alerting_enabled():
+                self.logger.info("Legacy alerting is enabled")
                 self._setup_legacy_alerting_webhook(
                     webhook_name, keep_api_url, api_key, setup_alerts
                 )
+                self.logger.info("Legacy alerting setup successful")
 
         except Exception:
             self.logger.warning(
@@ -569,6 +572,8 @@ class GrafanaProvider(BaseProvider):
             notification_api = (
                 f"{self.authentication_config.host}/api/alert-notifications"
             )
+            self.logger.debug(f"Using notification API endpoint: {notification_api}")
+
             notification = {
                 "name": webhook_name,
                 "type": "webhook",
@@ -581,11 +586,15 @@ class GrafanaProvider(BaseProvider):
                     "password": api_key,
                 },
             }
+            self.logger.debug(f"Prepared notification config: {notification}")
 
             # Check if notification channel exists
+            self.logger.info("Checking for existing notification channels")
             existing_channels = requests.get(
                 notification_api, verify=False, headers=headers
             ).json()
+            self.logger.debug(f"Found {len(existing_channels)} existing channels")
+
             channel_exists = any(
                 channel
                 for channel in existing_channels
@@ -593,27 +602,42 @@ class GrafanaProvider(BaseProvider):
             )
 
             if not channel_exists:
+                self.logger.info(f"Creating new notification channel '{webhook_name}'")
                 response = requests.post(
                     notification_api, verify=False, json=notification, headers=headers
                 )
                 if not response.ok:
-                    raise Exception(response.json())
+                    error_msg = response.json()
+                    self.logger.error(
+                        f"Failed to create notification channel: {error_msg}"
+                    )
+                    raise Exception(error_msg)
 
                 notification_uid = response.json().get("uid")
-                self.logger.info("Created legacy notification channel")
+                self.logger.info(
+                    f"Created legacy notification channel with UID: {notification_uid}"
+                )
             else:
-                self.logger.info("Legacy notification channel already exists")
+                self.logger.info(
+                    f"Legacy notification channel '{webhook_name}' already exists"
+                )
                 notification_uid = next(
                     channel["uid"]
                     for channel in existing_channels
                     if channel.get("name") == webhook_name
                 )
+                self.logger.debug(
+                    f"Using existing notification channel UID: {notification_uid}"
+                )
 
             if setup_alerts:
                 alerts_api = f"{self.authentication_config.host}/api/alerts"
+                self.logger.info("Starting alert setup process")
 
                 # Get all alerts using the helper function
+                self.logger.info("Fetching all alerts")
                 all_alerts = self._get_all_alerts(alerts_api, headers)
+                self.logger.info(f"Found {len(all_alerts)} alerts to process")
 
                 updated_count = 0
                 for alert in all_alerts:
@@ -621,19 +645,25 @@ class GrafanaProvider(BaseProvider):
                     panel_id = alert.get("panelId")
 
                     if dashboard_uid and panel_id:
+                        self.logger.debug(
+                            f"Processing alert - Dashboard: {dashboard_uid}, Panel: {panel_id}"
+                        )
                         if self._update_dashboard_alert(
                             dashboard_uid, panel_id, notification_uid, headers
                         ):
                             updated_count += 1
+                            self.logger.debug(
+                                f"Successfully updated alert {updated_count}"
+                            )
                         # Add delay to avoid rate limiting
                         time.sleep(0.1)
 
                 self.logger.info(
-                    f"Updated {updated_count} alerts with notification channel"
+                    f"Completed alert updates - Updated {updated_count} alerts with notification channel"
                 )
 
-        except Exception:
-            self.logger.exception("Failed to setup legacy alerting")
+        except Exception as e:
+            self.logger.exception(f"Failed to setup legacy alerting: {str(e)}")
             raise
 
     def __extract_rules(self, alerts: dict, source: list) -> list[AlertDto]:
