@@ -1,0 +1,68 @@
+# grafana/provisioning/alerting/alerts.yml
+apiVersion: 1
+rules:
+  - uid: high_cpu_alert
+    title: High CPU Usage
+    ruleGroup: System Alerts
+    evaluateEvery: 1m
+    condition: A
+    data:
+      - refId: A
+        queryType: ""
+        relativeTimeRange:
+          from: 300
+          to: 0
+        datasourceUid: PBFA97CFB590B2093
+        model:
+          editorMode: code
+          expr: 'avg(rate(node_cpu_seconds_total{mode="user"}[5m])) by (instance) * 100'
+          hide: false
+          intervalMs: 1000
+          maxDataPoints: 43200
+          range: true
+          refId: A
+    dashboardUid: main
+    panelId: 1
+    noDataState: NoData
+    execErrState: Alerting
+    for: 5m
+    annotations:
+      description: "CPU usage is above 80%"
+    labels:
+      severity: warning
+    isPaused: false
+    settings:
+      alertmanagerUid: alertmanager
+
+  - uid: high_memory_alert
+    title: High Memory Usage
+    ruleGroup: System Alerts
+    evaluateEvery: 1m
+    condition: A
+    data:
+      - refId: A
+        queryType: ""
+        relativeTimeRange:
+          from: 300
+          to: 0
+        datasourceUid: PBFA97CFB590B2093
+        model:
+          editorMode: code
+          expr: "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100"
+          hide: false
+          intervalMs: 1000
+          maxDataPoints: 43200
+          range: true
+          refId: A
+    dashboardUid: main
+    panelId: 2
+    noDataState: NoData
+    execErrState: Alerting
+    for: 5m
+    annotations:
+      description: "Memory usage is above 90%"
+    labels:
+      severity: warning
+    isPaused: false
+    settings:
+      alertmanagerUid: alertmanager

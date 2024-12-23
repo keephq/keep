@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "node"
+    static_configs:
+      - targets:
+          - "node-exporter-1:9100"
+          - "node-exporter-2:9100"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
