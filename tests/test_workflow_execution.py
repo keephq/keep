@@ -561,7 +561,11 @@ def test_workflow_execution3(
     workflow_execution = None
     count = 0
     status = None
-    while workflow_execution is None and count < 30 and status != "success":
+    while (
+        workflow_execution is None
+        or workflow_execution.status == "in_progress"
+        and count < 30
+    ):
         workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-first-time"
         )
