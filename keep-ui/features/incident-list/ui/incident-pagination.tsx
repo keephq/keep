@@ -6,18 +6,12 @@ import {
   TableCellsIcon,
 } from "@heroicons/react/16/solid";
 import { Button, Text } from "@tremor/react";
-import {
-  StylesConfig,
-  SingleValueProps,
-  components,
-  GroupBase,
-} from "react-select";
-import Select from "react-select";
+import { SingleValueProps, components, GroupBase } from "react-select";
 import { Table } from "@tanstack/react-table";
 import { IncidentDto } from "@/entities/incidents/model";
 import { WorkflowExecution } from "@/app/(keep)/workflows/builder/types";
 import { AlertDto } from "@/entities/alerts/model";
-
+import { Select } from "@/shared/ui";
 interface Props {
   table: Table<IncidentDto> | Table<AlertDto> | Table<WorkflowExecution>;
   isRefreshAllowed: boolean;
@@ -27,31 +21,6 @@ interface OptionType {
   value: string;
   label: string;
 }
-
-const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
-  control: (provided, state) => ({
-    ...provided,
-    borderColor: state.isFocused ? "orange" : "rgb(229 231 235)",
-    borderRadius: "0.5rem",
-    "&:hover": { borderColor: "orange" },
-    boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
-  }),
-  singleValue: (provided) => ({
-    ...provided,
-    display: "flex",
-    alignItems: "center",
-  }),
-  menu: (provided) => ({
-    ...provided,
-    color: "orange",
-  }),
-  option: (provided, state) => ({
-    ...provided,
-    backgroundColor: state.isSelected ? "orange" : provided.backgroundColor,
-    "&:hover": { backgroundColor: state.isSelected ? "orange" : "#f5f5f5" },
-    color: state.isSelected ? "white" : provided.color,
-  }),
-};
 
 const SingleValue = ({
   children,
@@ -74,7 +43,6 @@ export default function IncidentPagination({ table, isRefreshAllowed }: Props) {
       </Text>
       <div className="flex gap-1">
         <Select
-          styles={customStyles}
           components={{ SingleValue }}
           value={{
             value: table.getState().pagination.pageSize.toString(),
