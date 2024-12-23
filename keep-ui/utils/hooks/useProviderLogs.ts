@@ -38,12 +38,10 @@ export function useProviderLogs({
 
   const { data, error, isLoading, mutate } = useSWR<ProviderLog[], Error>(
     // Only make the request if providerId exists and api is ready
-    providerId && api?.isReady()
+    providerId && api.isReady()
       ? `/providers/${providerId}/logs?${queryParams.toString()}`
       : null,
-    async (url: string) => {
-      return await api.get(url);
-    },
+    (url) => api.get(url),
     {
       ...options,
       shouldRetryOnError: false, // Prevent infinite retry on authentication errors
