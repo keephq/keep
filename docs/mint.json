@@ -210,6 +210,7 @@
     {
       "group": "Deployment",
       "pages": [
+        "deployment/getting-start",
         "deployment/configuration",
         "deployment/monitoring",
         {
