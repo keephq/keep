@@ -65,7 +65,6 @@
       "group": "AIOps",
       "pages": [
         "overview/correlation",
-        "overview/deduplication",
         "overview/enrichment/extraction",
         "overview/enrichment/mapping",
         "overview/servicetopology",
