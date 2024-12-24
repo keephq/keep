@@ -236,6 +236,22 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         </div>
       )}
 
+      {selectedDeduplicationRule?.is_provisioned && (
+        <div className="flex flex-col">
+          <Callout
+            className="mb-4 py-8"
+            title="Editing a Provisioned Rule"
+            icon={ExclamationTriangleIcon}
+            color="orange"
+          >
+            <Text>
+              Editing a provisioned deduplication rule is not allowed.
+              Please contact your system administrator for more information.
+            </Text>
+          </Callout>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit(onFormSubmit)}
         className="mt-4 flex flex-col h-full"
@@ -251,6 +267,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   name="name"
                   control={control}
                   rules={{ required: "Rule name is required" }}
+                  disabled={!!selectedDeduplicationRule?.is_provisioned}
                   render={({ field }) => (
                     <TextInput
                       {...field}
@@ -268,6 +285,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   name="description"
                   control={control}
                   rules={{ required: "Description is required" }}
+                  disabled={!!selectedDeduplicationRule?.is_provisioned}
                   render={({ field }) => (
                     <TextInput
                       {...field}
@@ -301,7 +319,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   render={({ field }) => (
                     <Select
                       {...field}
-                      isDisabled={!!selectedDeduplicationRule?.default}
+                      isDisabled={!!selectedDeduplicationRule?.default || selectedDeduplicationRule?.is_provisioned}
                       options={alertProviders.map((provider) => ({
                         value: `${provider.type}_${provider.id}`,
                         label: provider.details?.name || provider.id || "main",
@@ -375,6 +393,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   render={({ field }) => (
                     <Select
                       {...field}
+                      isDisabled={!!selectedDeduplicationRule?.is_provisioned}
                       isMulti
                       options={availableFields.map((fieldName) => ({
                         value: fieldName,
@@ -412,7 +431,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     name="full_deduplication"
                     control={control}
                     render={({ field }) => (
-                      <Switch checked={field.value} onChange={field.onChange} />
+                      <Switch 
+                        disabled={!!selectedDeduplicationRule?.is_provisioned} 
+                        checked={field.value}
+                        onChange={field.onChange} 
+                      />
                     )}
                   />
                   <span className="text-sm font-medium text-gray-700 flex items-center">
@@ -450,6 +473,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     render={({ field }) => (
                       <Select
                         {...field}
+                        isDisabled={!!selectedDeduplicationRule?.is_provisioned}
                         isMulti
                         options={availableFields.map((fieldName) => ({
                           value: fieldName,
@@ -499,7 +523,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           >
             Cancel
           </Button>
-          <Button color="orange" type="submit" disabled={isSubmitting}>
+          <Button
+            color="orange"
+            type="submit"
+            disabled={isSubmitting || selectedDeduplicationRule?.is_provisioned}
+          >
             {isSubmitting ? "Saving..." : "Save Rule"}
           </Button>
         </div>

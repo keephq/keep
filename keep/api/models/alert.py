@@ -599,6 +599,7 @@ class DeduplicationRuleDto(BaseModel):
     fingerprint_fields: list[str]
     full_deduplication: bool
     ignore_fields: list[str]
+    is_provisioned: bool
 
 
 class DeduplicationRuleRequestDto(BaseModel):
