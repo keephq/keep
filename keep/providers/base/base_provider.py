@@ -570,6 +570,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("setup_webhook() method not implemented")
 
+    def clean_up(self):
+        """
+        Clean up the provider.
+
+        Raises:s
+            NotImplementedError: for providers who does not implement this method.
+        """
+        raise NotImplementedError("clean_up() method not implemented")
+
     @staticmethod
     def get_alert_schema() -> dict:
         """
