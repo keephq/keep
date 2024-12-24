@@ -77,6 +77,7 @@ actions:
 """
 
 @pytest.fixture(scope="module")
+@pytest.mark.asyncio
 def workflow_manager():
     """
     Fixture to create and manage a WorkflowManager instance for the duration of the module.
@@ -84,7 +85,7 @@ def workflow_manager():
     """
     manager = WorkflowManager.get_instance()
     yield manager   
-    manager.stop()
+    asyncio.run(manager.stop())
 
 
 @pytest.fixture
@@ -230,6 +231,8 @@ async def test_workflow_execution(
     """
     base_time = datetime.now(tz=pytz.utc)
 
+    await workflow_manager.start()
+
     # Create alerts with specified statuses and timestamps
     alert_statuses.reverse()
     for time_diff, status in alert_statuses:
@@ -250,28 +253,28 @@ async def test_workflow_execution(
         fingerprint="fp1",
     )
 
-    time.sleep(1)
-
     # Insert the current alert into the workflow manager
-    await workflow_manager.start()
     await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for the workflow execution to complete
     workflow_execution = None
     count = 0
     status = None
+    found = False
     while (
-        workflow_execution is None
-        or workflow_execution.status == "in_progress"
-        and count < 30
+        not found and count < 30
     ):
         workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-time-check"
         )
         if workflow_execution is not None:
-            status = workflow_execution.status
+            if ("send-slack-message-tier-1" in workflow_execution.results and
+                "send-slack-message-tier-2" in workflow_execution.results):
+                found = True
         await asyncio.sleep(1)
         count += 1
+
+    await workflow_manager.stop()
 
     # Check if the workflow execution was successful
     assert workflow_execution is not None
@@ -288,8 +291,6 @@ async def test_workflow_execution(
         assert workflow_execution.results["send-slack-message-tier-1"] == []
         assert "Tier 2" in workflow_execution.results["send-slack-message-tier-2"][0]
 
-    workflow_manager.stop()
-    await asyncio.sleep(3)
 
 
 workflow_definition2 = """workflow:
@@ -466,7 +467,7 @@ async def test_workflow_execution_2(
         await asyncio.sleep(1)
         count += 1
 
-    workflow_manager.stop()
+    await workflow_manager.stop()
 
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
     # Check if the workflow execution was successful
@@ -594,7 +595,7 @@ async def test_workflow_execution_3(
         await asyncio.sleep(1)
         count += 1
 
-    workflow_manager.stop()
+    await workflow_manager.stop()
 
     # Check if the workflow execution was successful
 
@@ -721,7 +722,7 @@ async def test_workflow_execution_with_disabled_workflow(
         await asyncio.sleep(1)
         count += 1
 
-    workflow_manager.stop()
+    await workflow_manager.stop()
 
     assert enabled_workflow_execution is not None
     assert enabled_workflow_execution.status == "success"
@@ -881,7 +882,7 @@ async def test_workflow_incident_triggers(
     assert workflow_execution_deleted.results["mock-action"] == [
         '"deleted incident: incident"\n'
     ]
-    workflow_manager.stop()
+    await workflow_manager.stop()
 
 
 logs_counter = {}
@@ -980,7 +981,7 @@ async def test_workflow_execution_logs(
             await asyncio.sleep(1)
             count += 1
 
-        workflow_manager.stop()
+        await workflow_manager.stop()
 
         # Check if the workflow execution was successful
         assert workflow_execution is not None
@@ -1065,7 +1066,7 @@ async def test_workflow_execution_logs_log_level_debug_console_provider(
                 await asyncio.sleep(1)
                 count += 1
 
-            workflow_manager.stop()
+            await workflow_manager.stop()
 
             # Check if the workflow execution was successful
             assert workflow_execution is not None
@@ -1315,7 +1316,7 @@ async def test_alert_routing_policy(
         await asyncio.sleep(1)
         count += 1
 
-    workflow_manager.stop()
+    await workflow_manager.stop()
     # Verify workflow execution
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
@@ -1502,7 +1503,7 @@ async def test_nested_conditional_flow(
         await asyncio.sleep(1)
         count += 1
 
-    workflow_manager.stop()
+    await workflow_manager.stop()
 
     # Verify workflow execution
     assert workflow_execution is not None

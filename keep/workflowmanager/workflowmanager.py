@@ -37,19 +37,22 @@ class WorkflowManager:
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
+        self._running_task = None
 
     async def start(self):
         """Runs the workflow manager in server mode"""
         if self.started:
             self.logger.info("Workflow manager already started")
             return
-        asyncio.create_task(self.scheduler.start())
+        self._running_task = asyncio.create_task(self.scheduler.start())
         self.started = True
 
-    def stop(self):
+    async def stop(self):
         """Stops the workflow manager"""
         self.scheduler.stop()
         self.started = False
+        if self._running_task is not None:
+            await self._running_task
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it

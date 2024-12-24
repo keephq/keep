@@ -299,6 +299,7 @@ class WorkflowScheduler:
         # TODO - event workflows should be in DB too, to avoid any state problems.
 
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
+        tasks = []
         with self.lock:
             workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
         for workflow_to_run in workflows_to_run:
@@ -493,7 +494,9 @@ class WorkflowScheduler:
                         error=f"Error getting alert by id: {e}",
                     )
                     continue
-            asyncio.create_task(self._run_workflow(tenant_id, workflow_id, workflow, workflow_execution_id, event))
+            tasks.append(asyncio.create_task(self._run_workflow(tenant_id, workflow_id, workflow, workflow_execution_id, event)))
+            await asyncio.gather(*tasks)
+
 
     async def _start(self):
         self.logger.info("Starting workflows scheduler")

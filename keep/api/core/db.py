@@ -486,6 +486,7 @@ async def get_last_workflow_execution_by_workflow_id(
     tenant_id: str, workflow_id: str, status: str = None
 ) -> Optional[WorkflowExecution]:
     async with AsyncSession(engine_async) as session:
+        await session.flush()
         q = select(WorkflowExecution).filter(
             WorkflowExecution.workflow_id == workflow_id
         ).filter(WorkflowExecution.tenant_id == tenant_id).filter(
@@ -1611,13 +1612,12 @@ def update_user_role(tenant_id, username, role):
 
 async def save_workflow_results(tenant_id, workflow_execution_id, workflow_results):
     async with AsyncSession(engine_async) as session:
-        workflow_execution = (await session.exec(
-            select(WorkflowExecution)
+        await session.exec(
+            update(WorkflowExecution)
             .where(WorkflowExecution.tenant_id == tenant_id)
             .where(WorkflowExecution.id == workflow_execution_id)
-        )).one()
-
-        workflow_execution.results = workflow_results
+            .values(results=workflow_results)
+        )
         await session.commit()
 
 

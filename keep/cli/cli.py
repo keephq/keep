@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import logging.config
@@ -436,7 +437,7 @@ def run(
                 "keep_version": KEEP_VERSION,
             },
         )
-        workflow_manager.stop()
+        asyncio.run(workflow_manager.stop())
         logger.info("Scheduler stopped")
     except Exception as e:
         posthog_client.capture(
