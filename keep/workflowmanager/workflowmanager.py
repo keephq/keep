@@ -94,7 +94,7 @@ class WorkflowManager:
                 },
             )
 
-    def insert_incident(self, tenant_id: str, incident: IncidentDto, trigger: str):
+    async def insert_incident(self, tenant_id: str, incident: IncidentDto, trigger: str):
         all_workflow_models = self.workflow_store.get_all_workflows(tenant_id)
         self.logger.info(
             "Got all workflows",
@@ -110,7 +110,9 @@ class WorkflowManager:
                     f"tenant_id={workflow_model.tenant_id} - Workflow is disabled."
                 )
                 continue
-            workflow = asyncio.run(self._get_workflow_from_store(tenant_id, workflow_model))
+
+            workflow = await self._get_workflow_from_store(tenant_id, workflow_model)
+            
             if workflow is None:
                 continue
 

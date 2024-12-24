@@ -645,7 +645,8 @@ actions:
     ],
     indirect=["test_app"],
 )
-def test_workflow_execution_with_disabled_workflow(
+@pytest.mark.asyncio
+async def test_workflow_execution_with_disabled_workflow(
     db_session,
     test_app,
     create_alert,
@@ -694,24 +695,30 @@ def test_workflow_execution_with_disabled_workflow(
     # Sleep one second to avoid the case where tier0 alerts are not triggered
     time.sleep(1)
 
-    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
+    await workflow_manager.start()
+    await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     enabled_workflow_execution = None
     disabled_workflow_execution = None
     count = 0
 
-    while (
-        enabled_workflow_execution is None and disabled_workflow_execution is None
-    ) and count < 30:
-        enabled_workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+    found = False
+    while not found and count < 30:
+        enabled_workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
-        ))
-        disabled_workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+        )
+        disabled_workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, disabled_id
-        ))
+        )
 
-        time.sleep(1)
+        if enabled_workflow_execution is not None and disabled_workflow_execution is None:
+            if enabled_workflow_execution.status == "success":
+                found = True
+
+        await asyncio.sleep(1)
         count += 1
+
+    workflow_manager.stop()
 
     assert enabled_workflow_execution is not None
     assert enabled_workflow_execution.status == "success"
@@ -769,7 +776,8 @@ actions:
     ],
     indirect=["test_app"],
 )
-def test_workflow_incident_triggers(
+@pytest.mark.asyncio
+async def test_workflow_incident_triggers(
     db_session,
     test_app,
     workflow_manager,
@@ -914,7 +922,8 @@ def fake_workflow_adapter(
     ],
     indirect=["test_app", "db_session"],
 )
-def test_workflow_execution_logs(
+@pytest.mark.asyncio
+async def test_workflow_execution_logs(
     db_session,
     test_app,
     create_alert,
@@ -949,8 +958,9 @@ def test_workflow_execution_logs(
             fingerprint="fp1",
         )
 
+        await workflow_manager.start()
         # Insert the current alert into the workflow manager
-        asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
+        await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
         # Wait for the workflow execution to complete
         workflow_execution = None
@@ -960,11 +970,13 @@ def test_workflow_execution_logs(
             or workflow_execution.status == "in_progress"
             and count < 30
         ):
-            workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+            workflow_execution = await get_last_workflow_execution_by_workflow_id(
                 SINGLE_TENANT_UUID, "susu-and-sons"
-            ))
-            time.sleep(1)
+            )
+            await asyncio.sleep(1)
             count += 1
+
+        workflow_manager.stop()
 
         # Check if the workflow execution was successful
         assert workflow_execution is not None
@@ -986,7 +998,8 @@ def test_workflow_execution_logs(
     ],
     indirect=["test_app", "db_session"],
 )
-def test_workflow_execution_logs_log_level_debug_console_provider(
+@pytest.mark.asyncio
+async def test_workflow_execution_logs_log_level_debug_console_provider(
     db_session,
     test_app,
     create_alert,
@@ -1030,7 +1043,8 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
             )
 
             # Insert the current alert into the workflow manager
-            asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
+            await workflow_manager.start()
+            await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
             # Wait for the workflow execution to complete
             workflow_execution = None
@@ -1041,11 +1055,13 @@ def test_workflow_execution_logs_log_level_debug_console_provider(
                 or workflow_execution.status == "in_progress"
                 and count < 30
             ):
-                workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+                workflow_execution = await get_last_workflow_execution_by_workflow_id(
                     SINGLE_TENANT_UUID, "susu-and-sons"
-                ))
-                time.sleep(1)
+                )
+                await asyncio.sleep(1)
                 count += 1
+
+            workflow_manager.stop()
 
             # Check if the workflow execution was successful
             assert workflow_execution is not None
@@ -1234,7 +1250,8 @@ workflow_definition_routing = """workflow:
     ],
     indirect=["test_app", "db_session"],
 )
-def test_alert_routing_policy(
+@pytest.mark.asyncio
+async def test_alert_routing_policy(
     db_session,
     test_app,
     workflow_manager,
@@ -1274,8 +1291,9 @@ def test_alert_routing_policy(
         monitor_name=alert_data["monitor_name"],
     )
 
+    await workflow_manager.start()
     # Insert the alert into workflow manager
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for workflow execution
     workflow_execution = None
@@ -1285,14 +1303,15 @@ def test_alert_routing_policy(
         or workflow_execution.status == "in_progress"
         and count < 30
     ):
-        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+        workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-routing-policy"
-        ))
+        )
         if workflow_execution is not None and workflow_execution.status == "success":
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
         count += 1
 
+    workflow_manager.stop()
     # Verify workflow execution
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
@@ -1420,7 +1439,8 @@ workflow_definition_nested = """workflow:
     ],
     indirect=["test_app", "db_session"],
 )
-def test_nested_conditional_flow(
+@pytest.mark.asyncio
+async def test_nested_conditional_flow(
     db_session,
     test_app,
     workflow_manager,
@@ -1455,7 +1475,8 @@ def test_nested_conditional_flow(
     )
 
     # Insert the alert into workflow manager
-    workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
+    await workflow_manager.start()
+    await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for workflow execution
     workflow_execution = None
@@ -1465,17 +1486,19 @@ def test_nested_conditional_flow(
         or workflow_execution.status == "in_progress"
         and count < 30
     ):
-        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+        workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "nested-conditional-flow"
-        ))
+        )
         if workflow_execution is not None and workflow_execution.status == "success":
             break
 
         elif workflow_execution is not None and workflow_execution.status == "error":
             raise Exception("Workflow execution failed")
 
-        time.sleep(1)
+        await asyncio.sleep(1)
         count += 1
+
+    workflow_manager.stop()
 
     # Verify workflow execution
     assert workflow_execution is not None

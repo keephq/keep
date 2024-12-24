@@ -490,11 +490,11 @@ async def get_last_workflow_execution_by_workflow_id(
             WorkflowExecution.workflow_id == workflow_id
         ).filter(WorkflowExecution.tenant_id == tenant_id).filter(
             WorkflowExecution.started >= datetime.now() - timedelta(days=1)
-        ).filter(WorkflowExecution.status == "success").order_by(
+        ).order_by(
             WorkflowExecution.started.desc()
         )
 
-        if status:
+        if status is not None:
             q = q.filter(WorkflowExecution.status == status)
 
         workflow_execution = (
@@ -664,10 +664,7 @@ def get_consumer_providers() -> List[Provider]:
 async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     async with AsyncSession(engine_async) as session:
         workflow_execution = (await session.exec(
-            select(WorkflowExecution)
-            .where(WorkflowExecution.tenant_id == tenant_id)
-            .where(WorkflowExecution.workflow_id == workflow_id)
-            .where(WorkflowExecution.id == execution_id)
+            select(WorkflowExecution).where(WorkflowExecution.id == execution_id)
         )).first()
         # some random number to avoid collisions
         if not workflow_execution:
