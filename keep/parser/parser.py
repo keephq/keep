@@ -255,7 +255,7 @@ class Parser:
         providers_json = os.environ.get("KEEP_PROVIDERS")
 
         # check if env var is absolute or relative path to a providers json file
-        if re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
+        if providers_json and re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
             providers_json
         ):
             with open(
