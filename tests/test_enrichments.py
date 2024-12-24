@@ -52,6 +52,7 @@ def mock_alert_dto():
     )
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_no_rules_applies(mock_session, mock_alert_dto):
     # Assuming there are no extraction rules
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = (
@@ -65,6 +66,7 @@ def test_run_extraction_rules_no_rules_applies(mock_session, mock_alert_dto):
     assert result_event == mock_alert_dto  # Assuming no change if no rules
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_regex_named_groups(mock_session, mock_alert_dto):
     # Setup an extraction rule that should apply based on the alert content
     rule = ExtractionRule(
@@ -92,6 +94,7 @@ def test_run_extraction_rules_regex_named_groups(mock_session, mock_alert_dto):
     assert enriched_event.alert_type == "Alert"
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_event_is_dict(mock_session):
     event = {"name": "Test Alert", "source": ["source_test"]}
     rule = ExtractionRule(
@@ -118,6 +121,7 @@ def test_run_extraction_rules_event_is_dict(mock_session):
     )  # Ensuring the attribute is correctly processed
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_no_rules(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = (
         []
@@ -131,6 +135,7 @@ def test_run_extraction_rules_no_rules(mock_session, mock_alert_dto):
     )  # Should return the original event if no rules apply
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_attribute_no_template(mock_session, mock_alert_dto):
     rule = ExtractionRule(
         id=1,
@@ -155,6 +160,7 @@ def test_run_extraction_rules_attribute_no_template(mock_session, mock_alert_dto
     )  # Assuming the code does not modify the event if attribute is not in template format
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto):
     rule = ExtractionRule(
         id=1,
@@ -177,6 +183,7 @@ def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto
     assert enriched_event == mock_alert_dto  # Check if event is unchanged
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_handle_source_special_case(mock_session):
     event = {"name": "Test Alert", "source": "incorrect_format"}
     rule = ExtractionRule(
@@ -212,6 +219,7 @@ def test_run_extraction_rules_handle_source_special_case(mock_session):
 #### 2. Testing `run_extraction_rules` with CEL Conditions
 
 
+@pytest.mark.asyncio
 def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
     rule = ExtractionRule(
         id=2,
@@ -244,6 +252,7 @@ def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
     assert enriched_event.source_name == "test_source"
 
 
+@pytest.mark.asyncio
 def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
     # Setup a mapping rule
     rule = MappingRule(
@@ -267,6 +276,7 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
     assert mock_alert_dto.service == "new_service"
 
 
+@pytest.mark.asyncio
 def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
     rule = MappingRule(
         id=1,
@@ -311,6 +321,7 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
     ), "Service should not match any entry"
 
 
+@pytest.mark.asyncio
 def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
     rule = MappingRule(
         id=1,
@@ -339,6 +350,7 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
     ), "Service should not match any entry"
 
 
+@pytest.mark.asyncio
 def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     # Setup a mapping rule with && condition in matchers
     rule = MappingRule(
@@ -376,6 +388,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     assert result is False
 
 
+@pytest.mark.asyncio
 def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     # Setup a mapping rule with || condition in matchers
     rule = MappingRule(
@@ -428,6 +441,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     ],
     indirect=True,
 )
+@pytest.mark.asyncio
 def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
     import os
 
@@ -459,6 +473,7 @@ def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+@pytest.mark.asyncio
 def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client):
     # add some rule
     rule = MappingRule(
@@ -497,6 +512,7 @@ def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+@pytest.mark.asyncio
 def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
     # SHAHAR: there is a voodoo so that you must do something with the db_session to kick it off
     rule = MappingRule(
@@ -585,6 +601,7 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
     assert alert["status"] == "firing"
 
 
+@pytest.mark.asyncio
 def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
     # Mock a TopologyService with dependencies to simulate the DB structure
     mock_topology_service = TopologyService(
@@ -644,6 +661,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
             )
 
 
+@pytest.mark.asyncio
 def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
     # Setup a mapping rule with complex matchers
     rule = MappingRule(
@@ -702,6 +720,7 @@ def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
     assert not hasattr(mock_alert_dto, "service")
 
 
+@pytest.mark.asyncio
 def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
     # Setup a mapping rule with complex matchers and multiple enrichment fields
     rule = MappingRule(
