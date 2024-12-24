@@ -6,7 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import type { Table as ReactTable } from "@tanstack/react-table";
+import type { RowSelectionState } from "@tanstack/react-table";
 import {
   Card,
   Icon,
@@ -19,8 +19,6 @@ import {
 } from "@tremor/react";
 import Image from "next/image";
 import { AlertDto } from "@/entities/alerts/model";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import {
   useIncidentAlerts,
   usePollIncidentAlerts,
@@ -40,41 +38,8 @@ import {
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import TimeAgo from "react-timeago";
 import clsx from "clsx";
-
-function AlertsTableBodySkeleton({
-  table,
-  pageSize,
-}: {
-  table: ReactTable<AlertDto>;
-  pageSize: number;
-}) {
-  return (
-    <TableBody>
-      {Array(pageSize)
-        .fill("")
-        .map((_, index) => (
-          <TableRow key={`row-${index}`}>
-            {table.getVisibleFlatColumns().map((column) => {
-              const { style, className } = getCommonPinningStylesAndClassNames(
-                column,
-                table.getState().columnPinning.left?.length,
-                table.getState().columnPinning.right?.length
-              );
-              return (
-                <TableCell
-                  key={`cell-${column.id}-${index}`}
-                  className={className}
-                  style={style}
-                >
-                  <Skeleton />
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        ))}
-    </TableBody>
-  );
-}
+import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
+import { IncidentAlertsActions } from "./incident-alert-actions";
 
 interface Props {
   incident: IncidentDto;
@@ -156,7 +121,6 @@ export default function IncidentAlerts({ incident }: Props) {
             checked={context.table.getIsAllRowsSelected()}
             indeterminate={context.table.getIsSomeRowsSelected()}
             onChange={context.table.getToggleAllRowsSelectedHandler()}
-            onClick={(e) => e.stopPropagation()}
           />
         ),
         cell: (context) => (
@@ -164,7 +128,6 @@ export default function IncidentAlerts({ incident }: Props) {
             checked={context.row.getIsSelected()}
             indeterminate={context.row.getIsSomeSelected()}
             onChange={context.row.getToggleSelectedHandler()}
-            onClick={(e) => e.stopPropagation()}
           />
         ),
       }),
@@ -258,11 +221,16 @@ export default function IncidentAlerts({ incident }: Props) {
     [incident.id, incident.is_confirmed]
   );
 
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
   const table = useReactTable({
     data: alerts?.items ?? [],
     columns: columns,
     rowCount: alerts?.count ?? 0,
+    getRowId: (row) => row.fingerprint,
+    onRowSelectionChange: setRowSelection,
     state: {
+      rowSelection,
       pagination,
       columnPinning: {
         left: ["severity", "selected", "name"],
@@ -289,8 +257,15 @@ export default function IncidentAlerts({ incident }: Props) {
     );
   }
 
+  const selectedFingerprints = Object.keys(rowSelection);
+
   return (
     <>
+      <IncidentAlertsActions
+        incidentId={incident.id}
+        selectedFingerprints={selectedFingerprints}
+        resetAlertsSelection={() => table.resetRowSelection()}
+      />
       <Card className="p-0 overflow-x-auto">
         <Table className="[&>table]:table-fixed">
           <TableHead>
@@ -357,7 +332,7 @@ export default function IncidentAlerts({ incident }: Props) {
             </TableBody>
           )}
           {isLoading && (
-            <AlertsTableBodySkeleton
+            <IncidentAlertsTableBodySkeleton
               table={table}
               pageSize={pagination.pageSize}
             />
