@@ -6,14 +6,9 @@ import {
   TableCellsIcon,
 } from "@heroicons/react/24/outline";
 import { Button, Text } from "@tremor/react";
-import {
-  StylesConfig,
-  SingleValueProps,
-  components,
-  GroupBase,
-} from "react-select";
-import Select from "react-select";
+import { SingleValueProps, components, GroupBase } from "react-select";
 import { Table } from "@tanstack/react-table";
+import { Select } from "@/shared/ui";
 
 interface Props<T> {
   table: Table<T>;
