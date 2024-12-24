@@ -1273,9 +1273,9 @@ def test_alert_routing_policy(
         or workflow_execution.status == "in_progress"
         and count < 30
     ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
+        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-routing-policy"
-        )
+        ))
         if workflow_execution is not None and workflow_execution.status == "success":
             break
         time.sleep(1)
@@ -1453,9 +1453,9 @@ def test_nested_conditional_flow(
         or workflow_execution.status == "in_progress"
         and count < 30
     ):
-        workflow_execution = get_last_workflow_execution_by_workflow_id(
+        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "nested-conditional-flow"
-        )
+        ))
         if workflow_execution is not None and workflow_execution.status == "success":
             break
 
