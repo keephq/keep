@@ -480,18 +480,21 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 def get_last_workflow_execution_by_workflow_id(
-    tenant_id: str, workflow_id: str
+    tenant_id: str, workflow_id: str, status: str = None
 ) -> Optional[WorkflowExecution]:
     with Session(engine) as session:
-        workflow_execution = (
+        query = (
             session.query(WorkflowExecution)
             .filter(WorkflowExecution.workflow_id == workflow_id)
             .filter(WorkflowExecution.tenant_id == tenant_id)
             .filter(WorkflowExecution.started >= datetime.now() - timedelta(days=1))
-            .filter(WorkflowExecution.status == "success")
             .order_by(WorkflowExecution.started.desc())
-            .first()
         )
+
+        if status:
+            query = query.filter(WorkflowExecution.status == status)
+
+        workflow_execution = query.first()
     return workflow_execution
 
 
@@ -1427,6 +1430,7 @@ def get_alerts_by_fingerprint(
         alerts = query.all()
 
     return alerts
+
 
 def get_all_alerts_by_fingerprints(
     tenant_id: str, fingerprints: List[str], session: Optional[Session] = None
@@ -3313,6 +3317,7 @@ def get_last_incidents(
 
     return incidents, total_count
 
+
 def get_incident_by_id(
     tenant_id: str,
     incident_id: str | UUID,
@@ -3572,6 +3577,7 @@ def get_future_incidents_by_incident_id(
     total_count = query.count()
 
     return query.all(), total_count
+
 
 def get_int_severity(input_severity: int | str) -> int:
     if isinstance(input_severity, int):
@@ -3931,7 +3937,9 @@ def remove_alerts_to_incident_by_incident_id(
             )
         )
         updated_severities_result = session.exec(updated_severities_query)
-        updated_severities = [get_int_severity(severity) for severity in updated_severities_result]
+        updated_severities = [
+            get_int_severity(severity) for severity in updated_severities_result
+        ]
 
         # Making lists of services and sources to remove from the incident
         services_to_remove = [
@@ -3973,7 +3981,11 @@ def remove_alerts_to_incident_by_incident_id(
         ]
 
         incident.alerts_count -= alerts_data_for_incident["count"]
-        incident.severity = max(updated_severities) if updated_severities else IncidentSeverity.LOW.order
+        incident.severity = (
+            max(updated_severities)
+            if updated_severities
+            else IncidentSeverity.LOW.order
+        )
         incident.start_time = started_at
         incident.last_seen_time = last_seen_at
 
@@ -4057,6 +4069,7 @@ def merge_incidents_to_id(
         session.commit()
         session.refresh(destination_incident)
         return merged_incident_ids, skipped_incident_ids, failed_incident_ids
+
 
 def get_alerts_count(
     tenant_id: str,
@@ -4898,3 +4911,20 @@ def set_last_alert(
             )
             # break the retry loop
             break
+
+
+def get_provider_logs(
+    tenant_id: str, provider_id: str, limit: int = 100
+) -> List[ProviderExecutionLog]:
+    with Session(engine) as session:
+        logs = (
+            session.query(ProviderExecutionLog)
+            .filter(
+                ProviderExecutionLog.tenant_id == tenant_id,
+                ProviderExecutionLog.provider_id == provider_id,
+            )
+            .order_by(desc(ProviderExecutionLog.timestamp))
+            .limit(limit)
+            .all()
+        )
+    return logs

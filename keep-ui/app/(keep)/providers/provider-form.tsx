@@ -20,6 +20,11 @@ import {
   AccordionHeader,
   AccordionBody,
   Badge,
+  Tab,
+  TabList,
+  TabGroup,
+  TabPanel,
+  TabPanels,
 } from "@tremor/react";
 import {
   ExclamationCircleIcon,
@@ -58,6 +63,7 @@ import {
   getRequiredConfigs,
   GroupFields,
 } from "./form-fields";
+import ProviderLogs from "./provider-logs";
 
 type ProviderFormProps = {
   provider: Provider;
@@ -417,18 +423,227 @@ const ProviderForm = ({
     ?.filter((scope) => scope.mandatory_for_webhook)
     .every((scope) => providerValidatedScopes[scope.name] === true);
 
+  const [activeTab, setActiveTab] = useState(0);
+
+  const renderFormContent = () => (
+    <>
+      <div className="form-group">
+        {provider.oauth2_url && !provider.installed ? (
+          <>
+            <Button
+              type="button"
+              color="orange"
+              variant="secondary"
+              icon={ArrowTopRightOnSquareIcon}
+              onClick={handleOauth}
+            >
+              Install with OAuth2
+            </Button>
+            <Divider />
+          </>
+        ) : null}
+        {Object.keys(provider.config).length > 0 && (
+          <>
+            <FormField
+              id="provider_name"
+              config={providerNameFieldConfig}
+              value={(formValues["provider_name"] ?? "").toString()}
+              error={inputErrors["provider_name"]}
+              disabled={isProviderNameDisabled ?? false}
+              title={
+                isProviderNameDisabled
+                  ? "This field is disabled because it is pre-filled from the workflow."
+                  : ""
+              }
+              onChange={handleFormChange}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Render required fields */}
+      {Object.entries(requiredConfigs).map(([field, config]) => (
+        <div className="mt-2.5" key={field}>
+          <FormField
+            id={field}
+            config={config}
+            value={formValues[field]}
+            error={inputErrors[field]}
+            disabled={provider.provisioned ?? false}
+            onChange={handleFormChange}
+          />
+        </div>
+      ))}
+
+      {/* Render grouped fields */}
+      {Object.entries(groupedConfigs).map(([name, fields]) => (
+        <React.Fragment key={name}>
+          <GroupFields
+            groupName={name}
+            fields={fields}
+            data={formValues}
+            errors={inputErrors}
+            disabled={provider.provisioned ?? false}
+            onChange={handleFormChange}
+          />
+        </React.Fragment>
+      ))}
+
+      {/* Render optional fields in a card */}
+      {Object.keys(optionalConfigs).length > 0 && (
+        <Accordion className="mt-4" defaultOpen={true}>
+          <AccordionHeader>Provider Optional Settings</AccordionHeader>
+          <AccordionBody>
+            <Card>
+              {Object.entries(optionalConfigs).map(([field, config]) => (
+                <div className="mt-2.5" key={field}>
+                  <FormField
+                    id={field}
+                    config={config}
+                    value={formValues[field]}
+                    error={inputErrors[field]}
+                    disabled={provider.provisioned ?? false}
+                    onChange={handleFormChange}
+                  />
+                </div>
+              ))}
+            </Card>
+          </AccordionBody>
+        </Accordion>
+      )}
+
+      <div className="w-full mt-2" key="install_webhook">
+        {provider.can_setup_webhook && !installedProvidersMode && (
+          <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="install_webhook"
+                name="install_webhook"
+                className="mr-2.5"
+                onChange={handleWebhookChange}
+                checked={
+                  "install_webhook" in formValues &&
+                  typeof formValues["install_webhook"] === "boolean" &&
+                  formValues["install_webhook"] &&
+                  !isLocalhost
+                }
+                disabled={isLocalhost || provider.webhook_required}
+              />
+              <label htmlFor="install_webhook" className="flex items-center">
+                <Text className="capitalize">Install Webhook</Text>
+                <Icon
+                  icon={QuestionMarkCircleIcon}
+                  variant="simple"
+                  color="gray"
+                  size="sm"
+                  tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
+                />
+              </label>
+              <input
+                type="checkbox"
+                id="pulling_enabled"
+                name="pulling_enabled"
+                className="mr-2.5"
+                onChange={handlePullingEnabledChange}
+                checked={Boolean(formValues["pulling_enabled"])}
+              />
+              <label htmlFor="pulling_enabled" className="flex items-center">
+                <Text className="capitalize">Pulling Enabled</Text>
+                <Icon
+                  icon={QuestionMarkCircleIcon}
+                  variant="simple"
+                  color="gray"
+                  size="sm"
+                  tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+                />
+              </label>
+            </div>
+            {isLocalhost && (
+              <span className="text-sm">
+                <Callout
+                  title=""
+                  className="mt-4"
+                  icon={ExclamationTriangleIcon}
+                  color="gray"
+                >
+                  <a
+                    href="https://docs.keephq.dev/development/external-url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Webhook installation is disabled because Keep is running
+                    without an external URL.
+                    <br />
+                    <br />
+                    Click to learn more
+                  </a>
+                </Callout>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {provider.can_setup_webhook && installedProvidersMode && (
+        <>
+          <div className="flex">
+            <input
+              type="checkbox"
+              id="pulling_enabled"
+              name="pulling_enabled"
+              className="mr-2.5"
+              onChange={handlePullingEnabledChange}
+              checked={Boolean(formValues["pulling_enabled"])}
+            />
+            <label htmlFor="pulling_enabled" className="flex items-center">
+              <Text className="capitalize">Pulling Enabled</Text>
+              <Icon
+                icon={QuestionMarkCircleIcon}
+                variant="simple"
+                color="gray"
+                size="sm"
+                tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
+              />
+            </label>
+          </div>
+          <Button
+            type="button"
+            icon={GlobeAltIcon}
+            onClick={callInstallWebhook}
+            variant="secondary"
+            color="orange"
+            className="mt-2.5"
+            disabled={!installOrUpdateWebhookEnabled || provider.provisioned}
+            tooltip={
+              !installOrUpdateWebhookEnabled
+                ? "Fix required webhook scopes and refresh scopes to enable"
+                : "This uses server saved credentials. If needed, please use the `Update` button first"
+            }
+          >
+            Install/Update Webhook
+          </Button>
+        </>
+      )}
+
+      {provider.supports_webhook && (
+        <ProviderSemiAutomated provider={provider} />
+      )}
+
+      <input type="hidden" name="providerId" value={provider.id} />
+    </>
+  );
+
   return (
-    <div className="flex flex-col justify-between p-5">
-      <div>
+    <div className="flex flex-col h-full">
+      <div className="flex-grow overflow-auto p-5">
         <div className="flex flex-row">
           <Title>Connect to {provider.display_name}</Title>
-          {/* Display the Provisioned Badge if the provider is provisioned */}
           {provider.provisioned && (
             <Badge color="orange" className="ml-2">
               Provisioned
             </Badge>
           )}
-
           <Link
             href={`http://docs.keephq.dev/providers/documentation/${provider.type}-provider`}
             target="_blank"
@@ -442,12 +657,14 @@ const ProviderForm = ({
             />
           </Link>
         </div>
+
         {installedProvidersMode && provider.last_pull_time && (
           <Subtitle>
             Provider last pull time:{" "}
             <TimeAgo date={provider.last_pull_time + "Z"} />
           </Subtitle>
         )}
+
         {provider.provisioned && (
           <div className="w-full mt-4">
             <Callout
@@ -466,6 +683,7 @@ const ProviderForm = ({
         {provider.provider_description && (
           <Subtitle>{provider.provider_description}</Subtitle>
         )}
+
         {Object.keys(provider.config).length > 0 && (
           <div className="flex items-center">
             <Image
@@ -498,6 +716,7 @@ const ProviderForm = ({
             />
           </div>
         )}
+
         {provider.scopes && provider.scopes.length > 0 && (
           <ProviderFormScopes
             provider={provider}
@@ -506,233 +725,41 @@ const ProviderForm = ({
             onRevalidate={revalidateScopes}
           />
         )}
-        <form>
-          <div className="form-group">
-            {provider.oauth2_url && !provider.installed ? (
-              <>
-                <Button
-                  type="button"
-                  color="orange"
-                  variant="secondary"
-                  icon={ArrowTopRightOnSquareIcon}
-                  onClick={handleOauth}
-                >
-                  Install with OAuth2
-                </Button>
-                <Divider />
-              </>
-            ) : null}
-            {Object.keys(provider.config).length > 0 && (
-              <>
-                <FormField
-                  id="provider_name"
-                  config={providerNameFieldConfig}
-                  value={(formValues["provider_name"] ?? "").toString()}
-                  error={inputErrors["provider_name"]}
-                  disabled={isProviderNameDisabled ?? false}
-                  title={
-                    isProviderNameDisabled
-                      ? "This field is disabled because it is pre-filled from the workflow."
-                      : ""
-                  }
-                  onChange={handleFormChange}
-                />
-              </>
-            )}
-          </div>
-          {/* Render required fields */}
-          {Object.entries(requiredConfigs).map(([field, config]) => (
-            <div className="mt-2.5" key={field}>
-              <FormField
-                id={field}
-                config={config}
-                value={formValues[field]}
-                error={inputErrors[field]}
-                disabled={provider.provisioned ?? false}
-                onChange={handleFormChange}
-              />
-            </div>
-          ))}
 
-          {/* Render grouped fields */}
-          {Object.entries(groupedConfigs).map(([name, fields]) => (
-            <React.Fragment key={name}>
-              <GroupFields
-                groupName={name}
-                fields={fields}
-                data={formValues}
-                errors={inputErrors}
-                disabled={provider.provisioned ?? false}
-                onChange={handleFormChange}
-              />
-            </React.Fragment>
-          ))}
+        {formErrors && (
+          <Callout
+            title="Connection Problem"
+            icon={ExclamationCircleIcon}
+            className="my-5"
+            color="rose"
+          >
+            {formErrors}
+          </Callout>
+        )}
 
-          {/* Render optional fields in a card */}
-          {Object.keys(optionalConfigs).length > 0 && (
-            <Accordion className="mt-4" defaultOpen={true}>
-              <AccordionHeader>Provider Optional Settings</AccordionHeader>
-              <AccordionBody>
-                <Card>
-                  {Object.entries(optionalConfigs).map(([field, config]) => (
-                    <div className="mt-2.5" key={field}>
-                      <FormField
-                        id={field}
-                        config={config}
-                        value={formValues[field]}
-                        error={inputErrors[field]}
-                        disabled={provider.provisioned ?? false}
-                        onChange={handleFormChange}
-                      />
-                    </div>
-                  ))}
-                </Card>
-              </AccordionBody>
-            </Accordion>
-          )}
-          <div className="w-full mt-2" key="install_webhook">
-            {provider.can_setup_webhook && !installedProvidersMode && (
-              <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="install_webhook"
-                    name="install_webhook"
-                    className="mr-2.5"
-                    onChange={handleWebhookChange}
-                    checked={
-                      "install_webhook" in formValues &&
-                      typeof formValues["install_webhook"] === "boolean" &&
-                      formValues["install_webhook"] &&
-                      !isLocalhost
-                    }
-                    disabled={isLocalhost || provider.webhook_required}
-                  />
-                  <label
-                    htmlFor="install_webhook"
-                    className="flex items-center"
-                  >
-                    <Text className="capitalize">Install Webhook</Text>
-                    <Icon
-                      icon={QuestionMarkCircleIcon}
-                      variant="simple"
-                      color="gray"
-                      size="sm"
-                      tooltip={`Whether to install Keep as a webhook integration in ${provider.type}. This allows Keep to asynchronously receive alerts from ${provider.type}. Please note that this will install a new integration in ${provider.type} and slightly modify your monitors/notification policy to include Keep.`}
-                    />
-                  </label>
-                  {
-                    // This is here because pulling is only enabled for providers we can get alerts from (e.g., support webhook)
-                  }
-                  <input
-                    type="checkbox"
-                    id="pulling_enabled"
-                    name="pulling_enabled"
-                    className="mr-2.5"
-                    onChange={handlePullingEnabledChange}
-                    checked={Boolean(formValues["pulling_enabled"])}
-                  />
-                  <label
-                    htmlFor="pulling_enabled"
-                    className="flex items-center"
-                  >
-                    <Text className="capitalize">Pulling Enabled</Text>
-                    <Icon
-                      icon={QuestionMarkCircleIcon}
-                      variant="simple"
-                      color="gray"
-                      size="sm"
-                      tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
-                    />
-                  </label>
+        {installedProvidersMode ? (
+          <TabGroup className="mt-4">
+            <TabList>
+              <Tab>Configuration</Tab>
+              <Tab>Logs</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel>
+                <form className="mt-4">{renderFormContent()}</form>
+              </TabPanel>
+              <TabPanel className="h-full">
+                <div className="h-[600px]">
+                  <ProviderLogs providerId={provider.id} />
                 </div>
-                {isLocalhost && (
-                  <span className="text-sm">
-                    <Callout
-                      title=""
-                      className="mt-4"
-                      icon={ExclamationTriangleIcon}
-                      color="gray"
-                    >
-                      <a
-                        href="https://docs.keephq.dev/development/external-url"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Webhook installation is disabled because Keep is running
-                        without an external URL.
-                        <br />
-                        <br />
-                        Click to learn more
-                      </a>
-                    </Callout>
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {provider.can_setup_webhook && installedProvidersMode && (
-            <>
-              <div className="flex">
-                <input
-                  type="checkbox"
-                  id="pulling_enabled"
-                  name="pulling_enabled"
-                  className="mr-2.5"
-                  onChange={handlePullingEnabledChange}
-                  checked={Boolean(formValues["pulling_enabled"])}
-                />
-                <label htmlFor="pulling_enabled" className="flex items-center">
-                  <Text className="capitalize">Pulling Enabled</Text>
-                  <Icon
-                    icon={QuestionMarkCircleIcon}
-                    variant="simple"
-                    color="gray"
-                    size="sm"
-                    tooltip={`Whether Keep should try to pull alerts automatically from the provider once in a while`}
-                  />
-                </label>
-              </div>
-              <Button
-                type="button"
-                icon={GlobeAltIcon}
-                onClick={callInstallWebhook}
-                variant="secondary"
-                color="orange"
-                className="mt-2.5"
-                disabled={
-                  !installOrUpdateWebhookEnabled || provider.provisioned
-                }
-                tooltip={
-                  !installOrUpdateWebhookEnabled
-                    ? "Fix required webhook scopes and refresh scopes to enable"
-                    : "This uses server saved credentials. If needed, please use the `Update` button first"
-                }
-              >
-                Install/Update Webhook
-              </Button>
-            </>
-          )}
-          {provider.supports_webhook && (
-            <ProviderSemiAutomated provider={provider} />
-          )}
-          {formErrors && (
-            <Callout
-              title="Connection Problem"
-              icon={ExclamationCircleIcon}
-              className="my-5"
-              color="rose"
-            >
-              {formErrors}
-            </Callout>
-          )}
-          {/* Hidden input for provider ID */}
-          <input type="hidden" name="providerId" value={provider.id} />
-        </form>
+              </TabPanel>
+            </TabPanels>
+          </TabGroup>
+        ) : (
+          <form className="mt-4">{renderFormContent()}</form>
+        )}
       </div>
 
-      <div className="flex justify-end mt-5">
+      <div className="flex justify-end p-5 border-t">
         <Button
           variant="secondary"
           color="orange"

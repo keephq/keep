@@ -23,6 +23,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import * as Frigade from "@frigade/react";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { useConfig } from "@/utils/hooks/useConfig";
 
 interface Webhook {
   webhookApi: string;
@@ -38,6 +39,7 @@ export default function WebhookSettings({ selectedTab }: Props) {
   const [codeTabIndex, setCodeTabIndex] = useState<number>(0);
 
   const api = useApi();
+  const { data: config } = useConfig();
 
   const { data, error, isLoading } = useSWR<Webhook>(
     api.isReady() && selectedTab === "webhook" ? `/settings/webhook` : null,
@@ -188,7 +190,9 @@ req.end();
               >
                 Click to create an example Alert
               </Button>
-              <Frigade.Tour flowId="flow_4iLdns11" />
+              {config?.FRIGADE_DISABLED ? null : (
+                <Frigade.Tour flowId="flow_4iLdns11" />
+              )}
             </div>
           </div>
           <TabGroup

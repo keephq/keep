@@ -55,7 +55,7 @@ class ContextManager:
                 if last_workflow_results_in_workflow:
                     last_workflow_execution = (
                         get_last_workflow_execution_by_workflow_id(
-                            tenant_id, workflow_id
+                            tenant_id, workflow_id, status="success"
                         )
                     )
                     if last_workflow_execution is not None:
