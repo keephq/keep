@@ -88,11 +88,15 @@ class HttpProvider(BaseProvider):
         if headers is None:
             headers = {}
         if isinstance(headers, str):
-            headers = json.loads(headers)
+            headers =  json.loads(headers) if len(headers) > 0 else  {}
         if body is None:
             body = {}
+        if isinstance(body, str):
+           body =  json.loads(body) if len(body) > 0 else  {}
         if params is None:
             params = {}
+        if isinstance(params, str):
+           params =  json.loads(params) if len(params) > 0 else  {}     
 
         # todo: this might be problematic if params/body/headers contain sensitive data
         # think about changing those debug messages or adding a flag to enable/disable them

@@ -176,11 +176,15 @@ class WebhookProvider(BaseProvider):
         if headers is None:
             headers = {}
         if isinstance(headers, str):
-            headers = json.loads(headers)
+            headers =  json.loads(headers) if len(headers) > 0 else  {}
         if body is None:
             body = {}
+        if isinstance(body, str):
+           body =  json.loads(body) if len(body) > 0 else  {}    
         if params is None:
             params = {}
+        if isinstance(params, str):
+           params =  json.loads(params) if len(params) > 0 else  {}  
 
         if http_basic_authentication_username and http_basic_authentication_password:
             credentials = f"{http_basic_authentication_username}:{http_basic_authentication_password}"

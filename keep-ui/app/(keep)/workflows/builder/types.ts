@@ -76,6 +76,7 @@ export type V2Step = {
   edgeSource?: string;
   edgeTarget?: string;
   notClickable?: boolean;
+  installed? :boolean;
 };
 export type NodeData = Node["data"] & Record<string, any>;
 export type NodeStepMeta = { id: string; label?: string };
@@ -157,6 +158,10 @@ export type FlowState = {
   setSynced: (synced: boolean) => void;
   canDeploy: boolean;
   setCanDeploy: (deploy: boolean) => void;
+  stepErrors: Record<string,string> | null;
+  setStepErrors: (errors:Record<string,string>|null)=>void;
+  globalErrors: Record<string,string> | null;
+  setGlobalErros: (errors:Record<string,string>|null)=>void;
 };
 export type StoreGet = () => FlowState;
 export type StoreSet = (
