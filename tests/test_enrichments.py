@@ -53,11 +53,12 @@ def mock_alert_dto():
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_no_rules_applies(mock_session, mock_alert_dto):
+async def test_run_extraction_rules_no_rules_applies(mock_session, mock_alert_dto, db_session):
     # Assuming there are no extraction rules
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = (
         []
     )
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
     result_event = enrichment_bl.run_extraction_rules(mock_alert_dto)
@@ -67,7 +68,7 @@ def test_run_extraction_rules_no_rules_applies(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_regex_named_groups(mock_session, mock_alert_dto):
+def test_run_extraction_rules_regex_named_groups(mock_session, mock_alert_dto, db_session):
     # Setup an extraction rule that should apply based on the alert content
     rule = ExtractionRule(
         id=1,
@@ -82,6 +83,7 @@ def test_run_extraction_rules_regex_named_groups(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -95,7 +97,7 @@ def test_run_extraction_rules_regex_named_groups(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_event_is_dict(mock_session):
+def test_run_extraction_rules_event_is_dict(mock_session, db_session):
     event = {"name": "Test Alert", "source": ["source_test"]}
     rule = ExtractionRule(
         id=1,
@@ -109,6 +111,7 @@ def test_run_extraction_rules_event_is_dict(mock_session):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -122,10 +125,11 @@ def test_run_extraction_rules_event_is_dict(mock_session):
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_no_rules(mock_session, mock_alert_dto):
+def test_run_extraction_rules_no_rules(mock_session, mock_alert_dto, db_session):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = (
         []
     )
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
     result_event = enrichment_bl.run_extraction_rules(mock_alert_dto)
@@ -136,7 +140,7 @@ def test_run_extraction_rules_no_rules(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_attribute_no_template(mock_session, mock_alert_dto):
+def test_run_extraction_rules_attribute_no_template(mock_session, mock_alert_dto, db_session):
     rule = ExtractionRule(
         id=1,
         tenant_id="test_tenant",
@@ -149,6 +153,7 @@ def test_run_extraction_rules_attribute_no_template(mock_session, mock_alert_dto
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -161,7 +166,7 @@ def test_run_extraction_rules_attribute_no_template(mock_session, mock_alert_dto
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto):
+def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto, db_session):
     rule = ExtractionRule(
         id=1,
         tenant_id="test_tenant",
@@ -174,6 +179,7 @@ def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -184,7 +190,7 @@ def test_run_extraction_rules_empty_attribute_value(mock_session, mock_alert_dto
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_handle_source_special_case(mock_session):
+def test_run_extraction_rules_handle_source_special_case(mock_session, db_session):
     event = {"name": "Test Alert", "source": "incorrect_format"}
     rule = ExtractionRule(
         id=1,
@@ -198,6 +204,7 @@ def test_run_extraction_rules_handle_source_special_case(mock_session):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -220,7 +227,7 @@ def test_run_extraction_rules_handle_source_special_case(mock_session):
 
 
 @pytest.mark.asyncio
-def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
+def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto, db_session):
     rule = ExtractionRule(
         id=2,
         tenant_id="test_tenant",
@@ -234,6 +241,7 @@ def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     # Mocking the CEL environment to return True for the condition
     with patch("chevron.render", return_value="test_source"), patch(
@@ -253,7 +261,7 @@ def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
+def test_run_mapping_rules_applies(mock_session, mock_alert_dto, db_session):
     # Setup a mapping rule
     rule = MappingRule(
         id=1,
@@ -267,6 +275,7 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -277,7 +286,7 @@ def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
+def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto, db_session):
     rule = MappingRule(
         id=1,
         tenant_id="test_tenant",
@@ -293,6 +302,7 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -322,7 +332,7 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
+def test_run_mapping_rules_no_match(mock_session, mock_alert_dto, db_session):
     rule = MappingRule(
         id=1,
         tenant_id="test_tenant",
@@ -338,6 +348,7 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
     del mock_alert_dto.service
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
@@ -351,7 +362,7 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
+def test_check_matcher_with_and_condition(mock_session, mock_alert_dto, db_session):
     # Setup a mapping rule with && condition in matchers
     rule = MappingRule(
         id=1,
@@ -365,6 +376,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -389,7 +401,7 @@ def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
+def test_check_matcher_with_or_condition(mock_session, mock_alert_dto, db_session):
     # Setup a mapping rule with || condition in matchers
     rule = MappingRule(
         id=1,
@@ -406,6 +418,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -442,7 +455,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     indirect=True,
 )
 @pytest.mark.asyncio
-def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
+def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts, db_session):
     import os
 
     # first, use elastic
@@ -463,6 +476,7 @@ def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=mock_session)
 
@@ -602,7 +616,7 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
+def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto, db_session):
     # Mock a TopologyService with dependencies to simulate the DB structure
     mock_topology_service = TopologyService(
         id=1, tenant_id="keep", service="test-service", display_name="Test Service"
@@ -621,6 +635,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
 
     # Mock the session to return this topology mapping rule
     mock_session.query.return_value.filter.return_value.all.return_value = [rule]
+    mock_session.db_session = db_session
 
     # Initialize the EnrichmentsBl class with the mock session
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
@@ -662,7 +677,7 @@ def test_topology_mapping_rule_enrichment(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
+def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto, db_session):
     # Setup a mapping rule with complex matchers
     rule = MappingRule(
         id=1,
@@ -688,6 +703,7 @@ def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
@@ -721,7 +737,7 @@ def test_run_mapping_rules_with_complex_matchers(mock_session, mock_alert_dto):
 
 
 @pytest.mark.asyncio
-def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
+def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto, db_session):
     # Setup a mapping rule with complex matchers and multiple enrichment fields
     rule = MappingRule(
         id=1,
@@ -743,6 +759,7 @@ def test_run_mapping_rules_enrichments_filtering(mock_session, mock_alert_dto):
     mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = [
         rule
     ]
+    mock_session.db_session = db_session
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
 
