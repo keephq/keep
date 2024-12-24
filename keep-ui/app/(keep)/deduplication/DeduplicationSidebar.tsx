@@ -15,9 +15,7 @@ import {
 import { IoMdClose } from "react-icons/io";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import { useDeduplicationFields } from "utils/hooks/useDeduplicationRules";
-import { GroupBase } from "react-select";
-import Select from "@/components/ui/Select";
-import MultiSelect from "@/components/ui/MultiSelect";
+import { Select } from "@/shared/ui";
 import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
@@ -194,11 +192,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         <div>
           <Dialog.Title className="text-3xl font-bold" as={Title}>
             {selectedDeduplicationRule
-              ? "Edit Deduplication Rule"
-              : "Add Deduplication Rule"}
-            <Badge className="ml-4" color="orange">
-              Beta
-            </Badge>
+              ? `Edit ${selectedDeduplicationRule.name}`
+              : "Add deduplication rule"}
             {selectedDeduplicationRule?.default && (
               <Badge className="ml-2" color="orange">
                 Default Rule
@@ -304,7 +299,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   control={control}
                   rules={{ required: "Provider is required" }}
                   render={({ field }) => (
-                    <Select<ProviderOption, false, GroupBase<ProviderOption>>
+                    <Select
                       {...field}
                       isDisabled={!!selectedDeduplicationRule?.default}
                       options={alertProviders.map((provider) => ({
@@ -378,8 +373,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     required: "At least one fingerprint field is required",
                   }}
                   render={({ field }) => (
-                    <MultiSelect
+                    <Select
                       {...field}
+                      isMulti
                       options={availableFields.map((fieldName) => ({
                         value: fieldName,
                         label: fieldName,
@@ -452,8 +448,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     name="ignore_fields"
                     control={control}
                     render={({ field }) => (
-                      <MultiSelect
+                      <Select
                         {...field}
+                        isMulti
                         options={availableFields.map((fieldName) => ({
                           value: fieldName,
                           label: fieldName,

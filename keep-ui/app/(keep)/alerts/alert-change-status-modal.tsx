@@ -1,13 +1,7 @@
 import { Button, Title, Subtitle } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
-import Select, {
-  CSSObjectWithLabel,
-  ControlProps,
-  OptionProps,
-  GroupBase,
-} from "react-select";
 import { useState } from "react";
-import { AlertDto, Status } from "./models";
+import { AlertDto, Status } from "@/entities/alerts/model";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,
@@ -18,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAlerts } from "utils/hooks/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { Select, showErrorToast } from "@/shared/ui";
 
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
@@ -28,40 +22,6 @@ const statusIcons = {
   [Status.Acknowledged]: <PauseIcon className="w-4 h-4 mr-2" />,
   [Status.Suppressed]: <XCircleIcon className="w-4 h-4 mr-2" />,
   [Status.Pending]: <QuestionMarkCircleIcon className="w-4 h-4 mr-2" />,
-};
-
-const customSelectStyles = {
-  control: (
-    base: CSSObjectWithLabel,
-    state: ControlProps<
-      { value: Status; label: JSX.Element },
-      false,
-      GroupBase<{ value: Status; label: JSX.Element }>
-    >
-  ) => ({
-    ...base,
-    borderColor: state.isFocused ? "orange" : base.borderColor,
-    boxShadow: state.isFocused ? "0 0 0 1px orange" : base.boxShadow,
-    "&:hover": {
-      borderColor: "orange",
-    },
-  }),
-  option: (
-    base: CSSObjectWithLabel,
-    {
-      isFocused,
-    }: OptionProps<
-      { value: Status; label: JSX.Element },
-      false,
-      GroupBase<{ value: Status; label: JSX.Element }>
-    >
-  ) => ({
-    ...base,
-    backgroundColor: isFocused ? "rgba(255,165,0,0.1)" : base.backgroundColor,
-    "&:hover": {
-      backgroundColor: "rgba(255,165,0,0.2)",
-    },
-  }),
 };
 
 interface Props {
@@ -147,7 +107,6 @@ export default function AlertChangeStatusModal({
             onChange={(option) => setSelectedStatus(option?.value || null)}
             placeholder="Select new status"
             className="ml-2"
-            styles={customSelectStyles}
           />
         </div>
       </Subtitle>

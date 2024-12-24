@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { TextInput } from "@tremor/react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { FacetProps } from "./alert-table-facet-types";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { Facet } from "./alert-table-facet";
 import Modal from "@/components/ui/Modal";
 import { Table } from "@tanstack/table-core";

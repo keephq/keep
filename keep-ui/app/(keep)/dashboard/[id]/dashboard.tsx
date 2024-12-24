@@ -21,7 +21,7 @@ import {
   useDashboardMetricWidgets,
 } from "@/utils/hooks/useDashboardMetricWidgets";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import "../styles.css";
 import { Preset } from "@/entities/presets/model/types";
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import useSWR, { SWRConfiguration } from "swr";
 import { toDateObjectWithFallback } from "utils/helpers";
 import { useApi } from "@/shared/lib/hooks/useApi";

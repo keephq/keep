@@ -1,5 +1,5 @@
 import AlertSeverity from "@/app/(keep)/alerts/alert-severity";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import TimeAgo from "react-timeago";
 
 export function IncidentActivityItem({ activity }: { activity: any }) {

@@ -3,7 +3,7 @@ import { Subtitle, Button, Card, Title } from "@tremor/react";
 import { Chrono } from "react-chrono";
 import Image from "next/image";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { AuditEvent } from "utils/hooks/useAlerts";
 import { getInitials } from "@/components/navbar/UserAvatar";
 

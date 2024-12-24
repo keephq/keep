@@ -1,6 +1,5 @@
 import Modal from "@/components/ui/Modal";
 import { Button, Divider, Title } from "@tremor/react";
-import Select from "@/components/ui/Select";
 import { CreateOrUpdateIncidentForm } from "@/features/create-or-update-incident";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -9,10 +8,10 @@ import {
   usePollIncidents,
 } from "../../../utils/hooks/useIncidents";
 import Loading from "@/app/(keep)/loading";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { Select, showErrorToast } from "@/shared/ui";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;

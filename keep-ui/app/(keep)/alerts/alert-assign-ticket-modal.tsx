@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import Select, { components } from "react-select";
 import { Button, TextInput, Text, Icon } from "@tremor/react";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { Providers } from "../providers/providers";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";

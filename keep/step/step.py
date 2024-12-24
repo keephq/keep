@@ -42,6 +42,7 @@ class Step:
         self.__retry = self.on_failure.get("retry", {})
         self.__retry_count = self.__retry.get("count", 0)
         self.__retry_interval = self.__retry.get("interval", 0)
+        self.__continue_to_next_step = self.config.get("continue", True)
 
     @property
     def foreach(self):
@@ -50,6 +51,10 @@ class Step:
     @property
     def name(self):
         return self.step_id
+
+    @property
+    def continue_to_next_step(self):
+        return self.__continue_to_next_step
 
     async def run(self):
         try:

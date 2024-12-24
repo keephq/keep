@@ -7,16 +7,11 @@ import {
   TableCellsIcon,
 } from "@heroicons/react/16/solid";
 import { Button, Text } from "@tremor/react";
-import {
-  StylesConfig,
-  SingleValueProps,
-  components,
-  GroupBase,
-} from "react-select";
-import Select from "react-select";
-import { AlertDto } from "./models";
+import { SingleValueProps, components, GroupBase } from "react-select";
+import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/react-table";
 import { useAlerts } from "utils/hooks/useAlerts";
+import { Select } from "@/shared/ui";
 
 interface Props {
   presetName: string;
@@ -28,31 +23,6 @@ interface OptionType {
   value: string;
   label: string;
 }
-
-const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
-  control: (provided, state) => ({
-    ...provided,
-    borderColor: state.isFocused ? "orange" : "rgb(229 231 235)",
-    borderRadius: "0.5rem",
-    "&:hover": { borderColor: "orange" },
-    boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
-  }),
-  singleValue: (provided) => ({
-    ...provided,
-    display: "flex",
-    alignItems: "center",
-  }),
-  menu: (provided) => ({
-    ...provided,
-    color: "orange",
-  }),
-  option: (provided, state) => ({
-    ...provided,
-    backgroundColor: state.isSelected ? "orange" : provided.backgroundColor,
-    "&:hover": { backgroundColor: state.isSelected ? "orange" : "#f5f5f5" },
-    color: state.isSelected ? "white" : provided.color,
-  }),
-};
 
 const SingleValue = ({
   children,
@@ -82,7 +52,6 @@ export default function AlertPagination({
       </Text>
       <div className="flex gap-1">
         <Select
-          styles={customStyles}
           components={{ SingleValue }}
           value={{
             value: table.getState().pagination.pageSize.toString(),

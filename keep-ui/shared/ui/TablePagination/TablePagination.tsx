@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
@@ -7,8 +9,9 @@ import {
 } from "@heroicons/react/16/solid";
 import { Button, Text } from "@tremor/react";
 import type { Table } from "@tanstack/react-table";
-import type { GroupBase, StylesConfig, SingleValueProps } from "react-select";
-import Select, { components } from "react-select";
+import type { GroupBase, SingleValueProps } from "react-select";
+import { components } from "react-select";
+import { Select } from "@/shared/ui";
 
 type Props = {
   table: Table<any>;
@@ -20,31 +23,6 @@ interface OptionType {
   value: string;
   label: string;
 }
-
-const customStyles: StylesConfig<OptionType, false, GroupBase<OptionType>> = {
-  control: (provided, state) => ({
-    ...provided,
-    borderColor: state.isFocused ? "orange" : "rgb(229 231 235)",
-    borderRadius: "0.5rem",
-    "&:hover": { borderColor: "orange" },
-    boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
-  }),
-  singleValue: (provided) => ({
-    ...provided,
-    display: "flex",
-    alignItems: "center",
-  }),
-  menu: (provided) => ({
-    ...provided,
-    color: "orange",
-  }),
-  option: (provided, state) => ({
-    ...provided,
-    backgroundColor: state.isSelected ? "orange" : provided.backgroundColor,
-    "&:hover": { backgroundColor: state.isSelected ? "orange" : "#f5f5f5" },
-    color: state.isSelected ? "white" : provided.color,
-  }),
-};
 
 const SingleValue = ({
   children,
@@ -67,7 +45,6 @@ export function TablePagination({ table }: Props) {
       </Text>
       <div className="flex gap-1">
         <Select
-          styles={customStyles}
           components={{ SingleValue }}
           value={{
             value: table.getState().pagination.pageSize.toString(),

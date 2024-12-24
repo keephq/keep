@@ -6,7 +6,7 @@ import {
   getSeverityOrder,
 } from "./alert-table-facet-utils";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import {
   DynamicFacetWrapper,
   AddFacetModal,

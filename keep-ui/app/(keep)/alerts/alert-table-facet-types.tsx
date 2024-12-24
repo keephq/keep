@@ -1,4 +1,4 @@
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { Table } from "@tanstack/table-core";
 
 export interface DynamicFacet {
