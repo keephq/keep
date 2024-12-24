@@ -14,6 +14,12 @@ class ResolveOn(Enum):
     ALL = "all_resolved"
     NEVER = "never"
 
+
+class CreateIncidentOn(Enum):
+    # the alert was triggered
+    ANY = "any"
+    ALL = "all"
+
 # TODOs/Pitfalls down the road which we hopefully need to address in the future:
 # 1. nested attibtues (event.foo.bar = 1)
 # 2. scale - when event arrives, we need to check if the rule is applicable to the event
@@ -41,3 +47,4 @@ class Rule(SQLModel, table=True):
     item_description: str = None
     require_approve: bool = False
     resolve_on: str = ResolveOn.NEVER.value
+    create_on: str = CreateIncidentOn.ANY.value
