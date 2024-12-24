@@ -3,6 +3,7 @@ BigQuery provider.
 """
 
 import dataclasses
+import json
 import os
 from typing import Optional
 
@@ -83,9 +84,20 @@ class BigqueryProvider(BaseProvider):
 
     def init_client(self):
         if self.authentication_config.service_account_json:
-            self.client = bigquery.Client.from_service_account_json(
-                self.authentication_config.service_account_json
-            )
+            # this is the content of the service account json
+            if isinstance(self.authentication_config.service_account_json, dict):
+                self.client = bigquery.Client.from_service_account_info(
+                    self.authentication_config.service_account_json
+                )
+            elif isinstance(self.authentication_config.service_account_json, str):
+                self.client = bigquery.Client.from_service_account_info(
+                    json.loads(self.authentication_config.service_account_json)
+                )
+            # file? should never happen?
+            else:
+                self.client = bigquery.Client.from_service_account_json(
+                    self.authentication_config.service_account_json
+                )
         else:
             self.client = bigquery.Client()
         # check if the project id was set in the environment and use it if exists
