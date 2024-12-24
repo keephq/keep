@@ -250,6 +250,8 @@ async def test_workflow_execution(
         fingerprint="fp1",
     )
 
+    time.sleep(1)
+
     # Insert the current alert into the workflow manager
     await workflow_manager.start()
     await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
