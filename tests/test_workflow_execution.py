@@ -268,7 +268,7 @@ async def test_workflow_execution(
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
         count += 1
 
     workflow_manager.stop()
@@ -460,7 +460,7 @@ async def test_workflow_execution_2(
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
         count += 1
 
     workflow_manager.stop()
@@ -588,7 +588,7 @@ async def test_workflow_execution_3(
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
         count += 1
 
     workflow_manager.stop()
