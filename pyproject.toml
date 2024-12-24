@@ -6,7 +6,7 @@ authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
 
 [tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "function"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
