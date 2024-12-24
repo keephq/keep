@@ -28,10 +28,8 @@ def provision_deduplication_rules_from_env(tenant_id: str):
     if not deduplication_rules_from_env_dict:
         logger.info("No deduplication rules found in env. Nothing to provision.")
         return
-
-    validate_deduplication_rules(
-        tenant_id, list(deduplication_rules_from_env_dict.values())
-    )
+    
+    enrich_with_providers_info(deduplication_rules_from_env_dict, tenant_id)
 
     all_deduplication_rules_from_db = db.get_all_deduplication_rules(tenant_id)
     provisioned_deduplication_rules = [
@@ -104,51 +102,25 @@ def provision_deduplication_rules_from_env(tenant_id: str):
         )
 
 
-def validate_deduplication_rules(
-    tenant_id: str, deduplication_rules: list[dict]
-):
+def enrich_with_providers_info(deduplication_rules: list[dict[str,any]], tenant_id: str):
     """
-    Validates deduplication rules for a given tenant.
-    This function performs the following validations:
-    1. Ensures that all deduplication rule names are unique.
-    2. Checks that each rule points to an existing provider.
+    Enriches passed deduplication rules with provider ID and type information.
     Args:
-        tenant_id (str): The ID of the tenant.
-        deduplication_rules (list[dict]): A list of deduplication rules, where each rule is represented as a dictionary.
-    Raises:
-        ValueError: If any rule points to a non-existing provider.
-    Returns:
-        None
+        deduplication_rules (list[dict]): A list of deduplication rules to be enriched.
+        tenant_id (str): The ID of the tenant for which deduplication rules are being provisioned.
     """
-
-    logger.info("Validating deduplication rules")
 
     installed_providers = ProvidersFactory.get_installed_providers(tenant_id)
     linked_providers = ProvidersFactory.get_linked_providers(tenant_id)
-    errors: dict[str, list[str]] = {}
+    all_providers = installed_providers + linked_providers
+    all_providers_dict = {f"{provider.type}_{provider.display_name}": provider for provider in all_providers}
 
-    installed_providers_dict = {
-        f"{p.type}_{p.id}": p for p in installed_providers + linked_providers
-    }
-
-    for rule in deduplication_rules:
-        rule_id = rule.get("id")
-        rule_provider_type = rule.get("provider_type")
-        rule_provider_id = rule.get("provider_id")
-        rule_name = rule.get("name")
-        provider_key = f"{rule_provider_type}_{rule_provider_id}"
-        
-        if provider_key not in installed_providers_dict:
-            errors[rule_id] = [] if rule_id not in errors else errors[rule_id]
-            errors[rule_id].append(
-                f"Deduplication rule with name '{rule_name}' points to not existing provider of type '{rule_provider_type}' with id '{rule_provider_id}'"
-            )
-
-    if len(errors) > 0:
-        flattened_errors = [error for sublist in errors.values() for error in sublist]
-        raise ValueError(" ".join(flattened_errors))
-
-    logger.info("Deduplication rules are valid")
+    for rule_name, rule in deduplication_rules.items():
+        print('f')
+        provider_dict_key = f"{rule.get('provider_type')}_{rule.get('provider_name')}"
+        provider = all_providers_dict.get(provider_dict_key)
+        rule["provider_id"] = provider.id
+        rule["provider_type"] = provider.type
 
 
 def get_deduplication_rules_to_provision() -> dict[str, dict]:
@@ -164,7 +136,7 @@ def get_deduplication_rules_to_provision() -> dict[str, dict]:
         Exception: If there is an error parsing the JSON content from the file or the environment variable.
     """
 
-    env_var_key = "KEEP_DEDUPLICATION_RULES"
+    env_var_key = "KEEP_PROVIDERS"
     deduplication_rules_from_env_var = config(key=env_var_key, default=None)
 
     if not deduplication_rules_from_env_var:
@@ -178,7 +150,7 @@ def get_deduplication_rules_to_provision() -> dict[str, dict]:
             file=deduplication_rules_from_env_var, mode="r", encoding="utf8"
         ) as file:
             try:
-                deduplication_rules_from_env_json = json.loads(file.read())
+                deduplication_rules_from_env_json: dict = json.loads(file.read())
             except json.JSONDecodeError as e:
                 raise Exception(
                     f"Error parsing deduplication rules from file {deduplication_rules_from_env_var}: {e}"
@@ -190,12 +162,17 @@ def get_deduplication_rules_to_provision() -> dict[str, dict]:
             raise Exception(
                 f"Error parsing deduplication rules from env var {env_var_key}: {e}"
             ) from e
+        
+    deduplication_rules_dict: dict[str, dict] = {}
 
-    # enrich the rules with the properties that are not present in the JSON
-    for rule in deduplication_rules_from_env_json:
-        rule["is_provisioned"] = True
+    for provider_name, provider_config in deduplication_rules_from_env_json.items():
+        for rule_name, rule_config in provider_config.get("deduplication_rules", {}).items():
+            rule_config["name"] = rule_name
+            rule_config["provider_name"] = provider_name
+            rule_config["provider_type"] = provider_config.get("type")
+            deduplication_rules_dict[rule_name] = rule_config
 
-    return {
-        rule["name"]: rule
-        for rule in deduplication_rules_from_env_json
-    }
+    if not deduplication_rules_dict:
+        return None
+
+    return deduplication_rules_dict
