@@ -193,7 +193,8 @@ def setup_workflow_with_two_providers(db_session):
     ],
     indirect=["test_app", "db_session"],
 )
-def test_workflow_execution(
+@pytest.mark.asyncio
+async def test_workflow_execution(
     db_session,
     test_app,
     create_alert,
@@ -237,7 +238,8 @@ def test_workflow_execution(
         )
         create_alert("fp1", alert_status, base_time - timedelta(minutes=time_diff))
 
-    time.sleep(1)
+    await asyncio.sleep(1)
+
     # Create the current alert
     current_alert = AlertDto(
         id="grafana-1",
@@ -249,7 +251,8 @@ def test_workflow_execution(
     )
 
     # Insert the current alert into the workflow manager
-    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
+    await workflow_manager.start()
+    await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
 
     # Wait for the workflow execution to complete
     workflow_execution = None
@@ -260,13 +263,15 @@ def test_workflow_execution(
         or workflow_execution.status == "in_progress"
         and count < 30
     ):
-        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+        workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, "alert-time-check"
-        ))
+        )
         if workflow_execution is not None:
             status = workflow_execution.status
-        time.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
+
+    workflow_manager.stop()
 
     # Check if the workflow execution was successful
     assert workflow_execution is not None
