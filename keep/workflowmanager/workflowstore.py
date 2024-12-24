@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import os
@@ -63,7 +64,7 @@ class WorkflowStore:
 
     def delete_workflow(self, tenant_id, workflow_id):
         self.logger.info(f"Deleting workflow {workflow_id}")
-        workflow = get_workflow(tenant_id, workflow_id)
+        workflow = asyncio.run(get_workflow(tenant_id, workflow_id))
         if not workflow:
             raise HTTPException(
                 status_code=404, detail=f"Workflow {workflow_id} not found"

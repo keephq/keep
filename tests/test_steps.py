@@ -42,21 +42,21 @@ def sample_step():
 
     return step
 
-
-def test_run_single(sample_step):
+@pytest.mark.asyncio
+async def test_run_single(sample_step):
     # Simulate the result
     sample_step.provider.query = Mock(return_value="result")
 
     # Run the method
-    result = sample_step._run_single()
+    result = await sample_step._run_single()
 
     # Assertions
     assert result is True  # Action should run successfully
     sample_step.provider.query.assert_called_with(param1="value1", param2="value2")
     assert sample_step.provider.query.call_count == 1
 
-
-def test_run_single_exception(sample_step):
+@pytest.mark.asyncio
+async def test_run_single_exception(sample_step):
     # Simulate an exception
     sample_step.provider.query = Mock(side_effect=Exception("Test exception"))
 
@@ -64,7 +64,7 @@ def test_run_single_exception(sample_step):
 
     # Run the method and expect an exception to be raised
     with pytest.raises(StepError):
-        sample_step._run_single()
+        await sample_step._run_single()
 
     end_time = time.time()
     execution_time = end_time - start_time

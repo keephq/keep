@@ -483,7 +483,7 @@ def get_last_workflow_workflow_to_alert_executions(
 
 
 async def get_last_workflow_execution_by_workflow_id(
-    tenant_id: str, workflow_id: str
+    tenant_id: str, workflow_id: str, status: str = None
 ) -> Optional[WorkflowExecution]:
     async with AsyncSession(engine_async) as session:
         q = select(WorkflowExecution).filter(
@@ -493,14 +493,13 @@ async def get_last_workflow_execution_by_workflow_id(
         ).filter(WorkflowExecution.status == "success").order_by(
             WorkflowExecution.started.desc()
         )
+
+        if status:
+            q = q.filter(WorkflowExecution.status == status)
+
         workflow_execution = (
             (await session.exec(q)).first()
         )
-
-        if status:
-            query = query.filter(WorkflowExecution.status == status)
-
-        workflow_execution = query.first()
     return workflow_execution
 
 

@@ -259,7 +259,7 @@ class ContextManager:
         self.steps_context[step_id]["vars"] = _vars
 
     async def get_last_workflow_run(self, workflow_id):
-        return get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)
+        return await get_last_workflow_execution_by_workflow_id(self.tenant_id, workflow_id)
 
     def dump(self):
         self.logger.info("Dumping logs to db")

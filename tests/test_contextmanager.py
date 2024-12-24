@@ -180,15 +180,15 @@ def test_context_manager_set_step_context(context_manager: ContextManager):
     assert context_manager.steps_context["this"]["results"] == results
     assert context_manager.steps_context[step_id]["results"] == results
 
-
-def test_context_manager_get_last_alert_run(
+@pytest.mark.asyncio
+async def test_context_manager_get_last_alert_run(
     context_manager_with_state: ContextManager, db_session
 ):
     workflow_id = "test-id-1"
     alert_context = {"mock": "mock"}
     alert_status = "firing"
     context_manager_with_state.tenant_id = SINGLE_TENANT_UUID
-    last_run = context_manager_with_state.get_last_workflow_run(workflow_id)
+    last_run = await context_manager_with_state.get_last_workflow_run(workflow_id)
     if last_run is None:
         pytest.fail("No workflow run found with the given workflow_id")
     assert last_run == WorkflowExecution(

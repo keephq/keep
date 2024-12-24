@@ -479,7 +479,7 @@ async def update_workflow_by_id(
     """
     tenant_id = authenticated_entity.tenant_id
     logger.info(f"Updating workflow {workflow_id}", extra={"tenant_id": tenant_id})
-    workflow_from_db = get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
+    workflow_from_db = await get_workflow(tenant_id=tenant_id, workflow_id=workflow_id)
     if not workflow_from_db:
         logger.warning(
             f"Tenant tried to update workflow {workflow_id} that does not exist",

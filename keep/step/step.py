@@ -286,8 +286,10 @@ class Step:
             self.context_manager.set_step_provider_paremeters(
                 self.step_id, rendered_providers_parameters
             )
-        except Exception as e:
-            raise StepError(e)
+        except KeyError:
+            pass
+        # except Exception as e:
+        #     raise StepError(e)
 
         return True
 
