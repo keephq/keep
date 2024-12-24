@@ -372,7 +372,8 @@ actions:
     ],
     indirect=["test_app"],
 )
-def test_workflow_execution_2(
+@pytest.mark.asyncio
+async def test_workflow_execution_2(
     db_session,
     test_app,
     create_alert,
@@ -434,8 +435,10 @@ def test_workflow_execution_2(
     )
 
     # Insert the current alert into the workflow manager
-    asyncio.run(workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert]))
+    await workflow_manager.insert_events(SINGLE_TENANT_UUID, [current_alert])
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
+
+    await workflow_manager.start()
 
     # Wait for the workflow execution to complete
     workflow_execution = None
@@ -446,14 +449,16 @@ def test_workflow_execution_2(
         or workflow_execution.status == "in_progress"
         and count < 30
     ):
-        workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+        workflow_execution = await get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID,
             workflow_id,
-        ))
+        )
         if workflow_execution is not None:
             status = workflow_execution.status
-        time.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
+
+    workflow_manager.stop()
 
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
     # Check if the workflow execution was successful
@@ -518,7 +523,7 @@ actions:
     indirect=["test_app", "db_session"],
 )
 @pytest.mark.asyncio
-async def test_workflow_execution3(
+async def test_workflow_execution_3(
     db_session,
     test_app,
     create_alert,
@@ -558,7 +563,7 @@ async def test_workflow_execution3(
     )
 
     # sleep one second to avoid the case where tier0 alerts are not triggered
-    time.sleep(1)
+    await asyncio.sleep(1)
 
     # Insert the current alert into the workflow manager
     await workflow_manager.start()
@@ -578,8 +583,10 @@ async def test_workflow_execution3(
         )
         if workflow_execution is not None:
             status = workflow_execution.status
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         count += 1
+
+    workflow_manager.stop()
 
     # Check if the workflow execution was successful
 

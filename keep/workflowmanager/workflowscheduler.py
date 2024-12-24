@@ -36,7 +36,6 @@ class WorkflowScheduler:
 
     def __init__(self, workflow_manager):
         self.logger = logging.getLogger(__name__)
-        self.threads = []
         self.workflow_manager = workflow_manager
         self.workflow_store = WorkflowStore()
         # all workflows that needs to be run due to alert event
@@ -523,9 +522,6 @@ class WorkflowScheduler:
     def stop(self):
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
-        # Now wait for the threads to finish
-        for thread in self.threads:
-            thread.join()
         self.logger.info("Scheduled workflows stopped")
 
     async def _run_workflows_with_interval(
