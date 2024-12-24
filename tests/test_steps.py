@@ -45,7 +45,11 @@ def sample_step():
 @pytest.mark.asyncio
 async def test_run_single(sample_step):
     # Simulate the result
-    sample_step.provider.query = Mock(return_value="result")
+
+    async def result(*args, **kwargs):
+        return "result"
+    
+    sample_step.provider.query = Mock(side_effect=result)
 
     # Run the method
     result = await sample_step._run_single()
@@ -57,8 +61,12 @@ async def test_run_single(sample_step):
 
 @pytest.mark.asyncio
 async def test_run_single_exception(sample_step):
+
+    async def result(*args, **kwargs):
+        raise Exception("Test exception")
+    
     # Simulate an exception
-    sample_step.provider.query = Mock(side_effect=Exception("Test exception"))
+    sample_step.provider.query = Mock(side_effect=result)
 
     start_time = time.time()
 
