@@ -29,7 +29,7 @@ PagerDuty supports two authentication methods:
 
 To connect Keep to PagerDuty:
 
-- **Routing Key**: Use for event posting via the PagerDuty Events API.
+- **Routing Key**: Use for event posting via the PagerDuty Events API. In the PagerDuty UI, this is displayed as the integration key.
 - **API Key**: Use for incident creation and management through the PagerDuty Incidents API.
 - **Service Id** (Optional): If provided, keep operates within the service's scope.
 - **OAuth2**: Token management handled automatically by Keep.
@@ -39,7 +39,7 @@ To connect Keep to PagerDuty:
 </Frame>
 
 <Note>
-You can find your integration key or routing key in the PagerDuty web app under **Configuration** > **Integrations**, and select the integration you want to use.
+You can find your routing key in the PagerDuty (integration key in PagerDuty UI) web app under **Services** > **Service Directory** > **Your service** > **Integrations** > **Expand Events API**, and select the integration you want to use.
 You can find your API key in the PagerDuty web app under **Configuration** > **API Access**.
 
 The routing_key is used to post events to PagerDuty using the events API.
