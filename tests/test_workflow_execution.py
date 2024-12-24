@@ -808,7 +808,7 @@ async def test_workflow_incident_triggers(
 
     # Insert the current alert into the workflow manager
 
-    def wait_workflow_execution(workflow_id):
+    async def wait_workflow_execution(workflow_id):
         # Wait for the workflow execution to complete
         workflow_execution = None
         count = 0
@@ -817,17 +817,17 @@ async def test_workflow_incident_triggers(
             or workflow_execution.status == "in_progress"
             and count < 30
         ):
-            workflow_execution = asyncio.run(get_last_workflow_execution_by_workflow_id(
+            workflow_execution = await get_last_workflow_execution_by_workflow_id(
                 SINGLE_TENANT_UUID, workflow_id
-            ))
-            time.sleep(1)
+            )
+            await asyncio.sleep(1)
             count += 1
         return workflow_execution
-
-    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "created")
+    await workflow_manager.start()
+    await workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "created")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
-    workflow_execution_created = wait_workflow_execution(
+    workflow_execution_created = await wait_workflow_execution(
         "incident-triggers-test-created-updated"
     )
     assert workflow_execution_created is not None
@@ -837,9 +837,9 @@ async def test_workflow_incident_triggers(
     ]
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
 
-    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "updated")
+    await workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "updated")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
-    workflow_execution_updated = wait_workflow_execution(
+    workflow_execution_updated = await wait_workflow_execution(
         "incident-triggers-test-created-updated"
     )
     assert workflow_execution_updated is not None
@@ -849,7 +849,7 @@ async def test_workflow_incident_triggers(
     ]
 
     # incident-triggers-test-created-updated should not be triggered
-    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
+    await workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
 
     workflow_deleted = Workflow(
@@ -864,11 +864,11 @@ async def test_workflow_incident_triggers(
     db_session.add(workflow_deleted)
     db_session.commit()
 
-    workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
+    await workflow_manager.insert_incident(SINGLE_TENANT_UUID, incident, "deleted")
     assert len(workflow_manager.scheduler.workflows_to_run) == 1
 
     # incident-triggers-test-deleted should be triggered now
-    workflow_execution_deleted = wait_workflow_execution(
+    workflow_execution_deleted = await wait_workflow_execution(
         "incident-triggers-test-deleted"
     )
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
@@ -878,6 +878,7 @@ async def test_workflow_incident_triggers(
     assert workflow_execution_deleted.results["mock-action"] == [
         '"deleted incident: incident"\n'
     ]
+    workflow_manager.stop()
 
 
 logs_counter = {}
