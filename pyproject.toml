@@ -5,6 +5,9 @@ description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
 
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 click = "^8.1.3"
