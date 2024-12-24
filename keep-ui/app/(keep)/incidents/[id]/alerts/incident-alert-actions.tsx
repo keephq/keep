@@ -29,9 +29,10 @@ export function IncidentAlertsActions({
         <Button
           variant="destructive"
           icon={LiaUnlinkSolid}
-          onClick={() =>
-            unlinkAlertsFromIncident(incidentId, selectedFingerprints)
-          }
+          onClick={async () => {
+            await unlinkAlertsFromIncident(incidentId, selectedFingerprints);
+            resetAlertsSelection();
+          }}
           disabled={selectedFingerprints.length === 0}
         >
           Unlink
