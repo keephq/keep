@@ -230,8 +230,7 @@
             "deployment/provision/overview",
             "deployment/provision/provider",
             "deployment/provision/workflow",
-            "deployment/provision/dashboard",
-            "deployment/provision/deduplication-rule"
+            "deployment/provision/dashboard"
           ]
         },
         "deployment/secret-store",
