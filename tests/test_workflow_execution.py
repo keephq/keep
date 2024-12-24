@@ -273,8 +273,6 @@ async def test_workflow_execution(
         await asyncio.sleep(1)
         count += 1
 
-    workflow_manager.stop()
-
     # Check if the workflow execution was successful
     assert workflow_execution is not None
     assert workflow_execution.status == "success"
@@ -289,6 +287,9 @@ async def test_workflow_execution(
     elif expected_tier == 2:
         assert workflow_execution.results["send-slack-message-tier-1"] == []
         assert "Tier 2" in workflow_execution.results["send-slack-message-tier-2"][0]
+
+    workflow_manager.stop()
+    await asyncio.sleep(3)
 
 
 workflow_definition2 = """workflow:
