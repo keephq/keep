@@ -136,14 +136,15 @@ def asynchronize_connection_string(connection_string):
     
     if connection_string.startswith('sqlite:'):
         connection_string = connection_string.replace('sqlite:', 'sqlite+aiosqlite:', 1)
-        logging.warning(f"DB connection string updated to: {connection_string}")
+        logging.error(f"DB connection string updated to: {connection_string} to support async.")
         
     if connection_string.startswith('postgresql+psycopg2:'):
         connection_string = connection_string.replace('postgresql+psycopg2:', 'postgresql+psycopg:', 1)
-        logging.warning(f"DB connection string updated to: {connection_string}")
+        logging.error(f"DB connection string updated to: {connection_string} to support async.")
         
     if connection_string.startswith('mysql+pymysql:'):
         connection_string = connection_string.replace('mysql+pymysql:', 'mysql+asyncmy:', 1)
+        logging.error(f"DB connection string updated to: {connection_string} to support async.")
         
     return connection_string
 

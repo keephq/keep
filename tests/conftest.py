@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import os
 import random
@@ -15,9 +16,11 @@ from sqlalchemy import event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from starlette_context import context, request_cycle_context
 
 # This import is required to create the tables
+from keep.api.core.db_utils import asynchronize_connection_string
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.db.alert import *
@@ -221,14 +224,16 @@ def db_session(request, monkeypatch):
         )
         t.append_constraint(status_index)
         mock_engine = create_engine(db_connection_string)
+        mock_engine_async = create_async_engine(asynchronize_connection_string(db_connection_string))
     # sqlite
     else:
-        db_connection_string = "sqlite:///:memory:"
+        db_connection_string = "sqlite:///file:shared_memory?mode=memory&cache=shared&uri=true"
         mock_engine = create_engine(
             db_connection_string,
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
         )
+        mock_engine_async = create_async_engine(asynchronize_connection_string(db_connection_string))
 
         # @tb: leaving this here if anybody else gets to problem with nested transactions
         # https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
@@ -314,9 +319,15 @@ actions:
     session.add_all(workflow_data)
     session.commit()
 
+    def mock_create_engine(_async=False):
+        if _async:
+            return mock_engine_async
+        return mock_engine
+
     with patch("keep.api.core.db.engine", mock_engine):
-        with patch("keep.api.core.db_utils.create_db_engine", return_value=mock_engine):
-            yield session
+        with patch("keep.api.core.db.engine_async", mock_engine_async):
+            with patch("keep.api.core.db_utils.create_db_engine", side_effect=mock_create_engine):
+                yield session
 
     import logging
 
