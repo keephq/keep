@@ -15,6 +15,7 @@ from keep.api.core.db import (
     get_all_deduplication_rules,
     get_all_deduplication_stats,
     get_custom_deduplication_rule,
+    get_deduplication_rule_by_id,
     get_last_alert_hash_by_fingerprint,
     update_deduplication_rule,
 )
@@ -263,6 +264,7 @@ class AlertDeduplicator:
             ingested=0,
             dedup_ratio=0.0,
             enabled=True,
+            is_provisioned=False
         )
 
     def get_deduplications(self) -> list[DeduplicationRuleDto]:
@@ -310,6 +312,7 @@ class AlertDeduplicator:
                 ingested=0,
                 dedup_ratio=0.0,
                 enabled=rule.enabled,
+                is_provisioned=rule.is_provisioned,
             )
             for rule in custom_deduplications
         ]
@@ -478,6 +481,19 @@ class AlertDeduplicator:
     def update_deduplication_rule(
         self, rule_id: str, rule: DeduplicationRuleRequestDto, updated_by: str
     ) -> DeduplicationRuleDto:
+        """
+        Updates an existing deduplication rule or creates a new one if the rule is a default rule.
+        Args:
+            rule_id (str): The ID of the deduplication rule to update.
+            rule (DeduplicationRuleRequestDto): The new deduplication rule data.
+            updated_by (str): The identifier of the user who is updating the rule.
+        Returns:
+            DeduplicationRuleDto: The updated deduplication rule.
+        Raises:
+            HTTPException 404: If the deduplication rule is not found (404)
+            HTTPException 409: if a provisioned rule is attempted to be updated (409).
+        """
+
         # check if this is a default rule
         default_rule_id = self._generate_uuid(rule.provider_id, rule.provider_type)
         # if its a default, we need to override and create a new rule
@@ -486,6 +502,20 @@ class AlertDeduplicator:
             rule_dto = self.create_deduplication_rule(rule, updated_by)
             self.logger.info("Default rule updated")
             return rule_dto
+        
+        rule_before_update = get_deduplication_rule_by_id(self.tenant_id, rule_id)
+        
+        if not rule_before_update:
+            raise HTTPException(
+                status_code=404,
+                detail="Deduplication rule not found",
+            )
+        
+        if rule_before_update.is_provisioned:
+            raise HTTPException(
+                status_code=409,
+                detail="Provisioned deduplication rule cannot be updated",
+            )
 
         # else, use the db function to update an existing deduplication rule
         updated_rule = update_deduplication_rule(
@@ -506,7 +536,34 @@ class AlertDeduplicator:
         return updated_rule
 
     def delete_deduplication_rule(self, rule_id: str) -> bool:
+        """
+        Deletes a deduplication rule by its ID.
+        Args:
+            rule_id (str): The ID of the deduplication rule to be deleted.
+        Returns:
+            bool: True if the deduplication rule was successfully deleted, False otherwise.
+        Raises:
+            HTTPException 404: If the deduplication rule is not found.
+            HTTPException 409: If the deduplication rule is provisioned and cannot be deleted.
+        """
+
         # Use the db function to delete a deduplication rule
+        deduplication_rule_to_be_deleted = get_deduplication_rule_by_id(
+            self.tenant_id, rule_id
+        )
+
+        if not deduplication_rule_to_be_deleted:
+            raise HTTPException(
+                status_code=404,
+                detail="Deduplication rule not found",
+            )
+        
+        if deduplication_rule_to_be_deleted.is_provisioned:
+            raise HTTPException(
+                status_code=409,
+                detail="Provisioned deduplication rule cannot be deleted",
+            )
+
         success = delete_deduplication_rule(rule_id=rule_id, tenant_id=self.tenant_id)
 
         return success

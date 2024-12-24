@@ -625,6 +625,7 @@ class ProvidersFactory:
                     full_deduplication=False,
                     # not relevant for default deduplication rules
                     ignore_fields=[],
+                    is_provisioned=False,
                 )
                 default_deduplications.append(deduplication_dto)
 

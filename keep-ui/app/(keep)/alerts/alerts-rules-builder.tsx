@@ -19,7 +19,8 @@ import {
 } from "@/entities/alerts/model";
 import { XMarkIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { TbDatabaseImport } from "react-icons/tb";
-import Select, { components, MenuListProps } from "react-select";
+import { components, MenuListProps } from "react-select";
+import { Select } from "@/shared/ui";
 
 import { IoSearchOutline } from "react-icons/io5";
 import { FiExternalLink } from "react-icons/fi";
@@ -112,24 +113,6 @@ const customComponents = {
   IndicatorSeparator: null,
   Option: CustomOption,
   MenuList: CustomMenuList,
-};
-
-// Define the styles for react-select
-const customStyles = {
-  option: (provided: any, state: any) => ({
-    ...provided,
-    color: state.isFocused ? "black" : "black",
-    backgroundColor: state.isFocused ? "rgba(255, 165, 0, 0.4)" : "white", // Orange with opacity
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center", // Align items in the center vertically
-  }),
-  menu: (provided: any) => ({
-    ...provided,
-    margin: 0, // Remove the margin around the dropdown menu
-    borderRadius: "0", // Optional: Align with the border-radius of the Textarea if necessary
-  }),
-  // You can add more style customizations for other parts of the Select here if needed
 };
 
 // Culled from: https://stackoverflow.com/a/54372020/12627235
@@ -608,7 +591,6 @@ export const AlertsRulesBuilder = ({
                     menuIsOpen={true}
                     components={minimal ? undefined : customComponents}
                     onBlur={() => setShowSuggestions(false)}
-                    styles={customStyles}
                   />
                 </div>
               )}

@@ -21,7 +21,6 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { Menu, Transition } from "@headlessui/react";
 import { Button, Icon } from "@tremor/react";
 import { PiDiamondsFourFill } from "react-icons/pi";
-import { FaHandPointer } from "react-icons/fa";
 import { HiBellAlert } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline";

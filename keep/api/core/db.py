@@ -1915,6 +1915,19 @@ def get_all_deduplication_rules(tenant_id):
         ).all()
     return rules
 
+def get_deduplication_rule_by_id(tenant_id, rule_id: str):
+    rule_uuid = __convert_to_uuid(rule_id)
+    if not rule_uuid:
+        return None
+
+    with Session(engine) as session:
+        rules = session.exec(
+            select(AlertDeduplicationRule)
+            .where(AlertDeduplicationRule.tenant_id == tenant_id)
+            .where(AlertDeduplicationRule.id == rule_uuid)
+        ).first()
+    return rules
+
 
 def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
     with Session(engine) as session:
@@ -1939,6 +1952,7 @@ def create_deduplication_rule(
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
     priority: int = 0,
+    is_provisioned: bool = False
 ):
     with Session(engine) as session:
         new_rule = AlertDeduplicationRule(
@@ -1954,6 +1968,7 @@ def create_deduplication_rule(
             full_deduplication=full_deduplication,
             ignore_fields=ignore_fields,
             priority=priority,
+            is_provisioned=is_provisioned,
         )
         session.add(new_rule)
         session.commit()

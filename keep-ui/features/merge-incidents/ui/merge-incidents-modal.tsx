@@ -2,76 +2,14 @@ import { Button, Title, Subtitle } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentActions, Status } from "@/entities/incidents/model";
-import { STATUS_ICONS } from "@/entities/incidents/ui";
 import { useMemo, useState } from "react";
-import Select, { GroupBase, StylesConfig } from "react-select";
-import { clsx } from "clsx";
-import { getIncidentName } from "@/entities/incidents/lib/utils";
-import "./vertical-rounded-list.css";
-
-function IncidentRow({
-  incident,
-  inline = false,
-}: {
-  incident: IncidentDto;
-  inline?: boolean;
-}) {
-  return (
-    <div
-      className={clsx(
-        "flex items-center",
-        !inline &&
-          "px-3 py-2 border rounded-tremor-default border-tremor-border"
-      )}
-    >
-      <div className="w-4 h-4 mr-2">{STATUS_ICONS[incident.status]}</div>
-      <div className="flex-1">
-        <div className="text-pretty">{getIncidentName(incident)}</div>
-      </div>
-    </div>
-  );
-}
-
+import { Select, VerticalRoundedList } from "@/shared/ui";
+import { IncidentIconName } from "@/entities/incidents/ui";
 interface Props {
   incidents: IncidentDto[];
   handleClose: () => void;
   onSuccess?: () => void;
 }
-
-interface OptionType {
-  value: string;
-  label: JSX.Element;
-}
-
-// TODO: unify all selects into components/ui/Select.tsx
-const customSelectStyles: StylesConfig<
-  OptionType,
-  false,
-  GroupBase<OptionType>
-> = {
-  control: (provided, state) => ({
-    ...provided,
-    borderColor: state.isFocused ? "orange" : "rgb(229 231 235)",
-    borderRadius: "0.5rem",
-    "&:hover": { borderColor: "orange" },
-    boxShadow: state.isFocused ? "0 0 0 1px orange" : provided.boxShadow,
-  }),
-  singleValue: (provided) => ({
-    ...provided,
-    display: "flex",
-    alignItems: "center",
-  }),
-  menu: (provided) => ({
-    ...provided,
-    color: "orange",
-  }),
-  option: (provided, state) => ({
-    ...provided,
-    backgroundColor: state.isSelected ? "orange" : provided.backgroundColor,
-    "&:hover": { backgroundColor: state.isSelected ? "orange" : "#f5f5f5" },
-    color: state.isSelected ? "white" : "black",
-  }),
-};
 
 export function MergeIncidentsModal({
   incidents,
@@ -91,14 +29,14 @@ export function MergeIncidentsModal({
   const incidentOptions = useMemo(() => {
     return incidents.map((incident) => ({
       value: incident.id,
-      label: <IncidentRow inline incident={incident} />,
+      label: <IncidentIconName inline incident={incident} />,
     }));
   }, [incidents]);
 
   const selectValue = useMemo(() => {
     return {
       value: destinationIncidentId,
-      label: <IncidentRow inline incident={destinationIncident!} />,
+      label: <IncidentIconName inline incident={destinationIncident!} />,
     };
   }, [destinationIncidentId, destinationIncident]);
 
@@ -137,11 +75,11 @@ export function MergeIncidentsModal({
               </p>
             )}
           </div>
-          <div className="flex flex-col vertical-rounded-list">
+          <VerticalRoundedList>
             {sourceIncidents.map((incident) => (
-              <IncidentRow key={incident.id} incident={incident} />
+              <IncidentIconName key={incident.id} incident={incident} />
             ))}
-          </div>
+          </VerticalRoundedList>
         </div>
         <div>
           <div className="mb-1">
@@ -152,7 +90,6 @@ export function MergeIncidentsModal({
             value={selectValue}
             onChange={(option) => setDestinationIncidentId(option!.value)}
             placeholder="Select destination incident"
-            styles={customSelectStyles}
           />
         </div>
       </div>
