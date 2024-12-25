@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta
 
@@ -20,7 +21,7 @@ class TenantConfiguration:
 
         def _load_tenant_configurations(self):
             self.logger.debug("Loading tenants configurations")
-            tenants_configuration = get_tenants_configurations()
+            tenants_configuration = asyncio.run(get_tenants_configurations())
             self.logger.debug(
                 "Tenants configurations loaded",
                 extra={

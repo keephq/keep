@@ -2862,10 +2862,10 @@ def update_action(
     return found_action
 
 
-def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
-    with Session(engine) as session:
+async def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
+    async with AsyncSession(engine_async) as session:
         try:
-            tenants = session.exec(select(Tenant)).all()
+            tenants = (await session.exec(select(Tenant))).all()
         # except column configuration does not exist (new column added)
         except OperationalError as e:
             if "Unknown column" in str(e):

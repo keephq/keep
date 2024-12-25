@@ -420,12 +420,12 @@ def is_elastic_responsive(host, port, user, password):
         return True if info else False
     except Exception:
         print("Elastic still not up")
-        pass
 
     return False
 
 
 @pytest.fixture(scope="session")
+@pytest.mark.asyncio
 def elastic_container(docker_ip, docker_services):
     try:
         if os.getenv("SKIP_DOCKER") or os.getenv("GITHUB_ACTIONS") == "true":
