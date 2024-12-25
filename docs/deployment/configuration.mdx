@@ -220,6 +220,16 @@ ARQ (Asynchronous Task Queue) configuration controls Keep's background task proc
 | **ARQ_EXPIRES** | Default job expiration time (in seconds) | No | 3600 | Positive integer |
 | **ARQ_EXPIRES_AI** | AI job expiration time (in seconds) | No | 3600000 | Positive integer |
 
+### Rate Limiting
+<Info>
+Rate limiting configuration controls how many requests can be made to Keep's API endpoints within a specified time period. This helps prevent abuse and ensures system stability.
+</Info>
+
+| Env var | Purpose | Required | Default Value | Valid options |
+|:-------------------:|:-------:|:----------:|:-------------:|:-------------:|
+| **KEEP_USE_LIMITER** | Enables or disables rate limiting | No | "false" | "true" or "false" |
+| **KEEP_LIMIT_CONCURRENCY** | Sets the rate limit for API endpoints | No | "100/minute" | Format: "{number}/{interval}" where interval can be "second", "minute", "hour", "day" |
+
 ## Frontend Environment Variables
 <Info>
 Frontend configuration variables control the behavior and features of Keep's user interface. These settings are crucial for customizing the frontend's appearance, functionality, and integration with the backend services.
