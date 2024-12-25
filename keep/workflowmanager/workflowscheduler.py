@@ -527,7 +527,10 @@ class WorkflowScheduler:
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
         if self.task is not None:
-            await self.task
+            try:
+                await self.task
+            except RuntimeError:
+                logging.error("Trying to await self.task, but looks like it's aleady awaited")
         self.logger.info("Scheduled workflows stopped")
 
     async def _run_workflows_with_interval(
