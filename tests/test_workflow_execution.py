@@ -269,7 +269,8 @@ async def test_workflow_execution(
         )
         if workflow_execution is not None:
             if ("send-slack-message-tier-1" in workflow_execution.results and
-                "send-slack-message-tier-2" in workflow_execution.results):
+                "send-slack-message-tier-2" in workflow_execution.results and
+                workflow_execution.status == "success"):
                 found = True
         await asyncio.sleep(1)
         count += 1

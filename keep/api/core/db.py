@@ -664,25 +664,28 @@ def get_consumer_providers() -> List[Provider]:
 
 async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status, error):
     async with AsyncSession(engine_async) as session:
-        workflow_execution = (await session.exec(
-            select(WorkflowExecution).where(WorkflowExecution.id == execution_id)
-        )).first()
-        # some random number to avoid collisions
-        if not workflow_execution:
+        random_number = random.randint(1, 2147483647 - 1)  # max int
+
+        # Perform the update query
+        result = await session.execute(
+            update(WorkflowExecution)
+            .where(WorkflowExecution.id == execution_id)
+            .values(
+                is_running=random_number,
+                status=status,
+                error=error[:255] if error else None,
+                execution_time=(datetime.utcnow() - WorkflowExecution.started).total_seconds()
+            )
+        )
+
+        # Check if the update affected any rows
+        if result.rowcount == 0:
             logger.warning(
                 f"Failed to finish workflow execution {execution_id} for workflow {workflow_id}. Execution not found."
             )
             raise ValueError("Execution not found")
-        workflow_execution.is_running = random.randint(1, 2147483647 - 1)  # max int
-        workflow_execution.status = status
-        # TODO: we had a bug with the error field, it was too short so some customers may fail over it.
-        #   we need to fix it in the future, create a migration that increases the size of the error field
-        #   and then we can remove the [:255] from here
-        workflow_execution.error = error[:255] if error else None
-        workflow_execution.execution_time = (
-            datetime.utcnow() - workflow_execution.started
-        ).total_seconds()
-        # TODO: logs
+
+        # Commit the transaction
         await session.commit()
 
 
