@@ -18,6 +18,7 @@ export type Rule = {
   update_time: string | null;
   require_approve: boolean;
   resolve_on: "all" | "first" | "last" | "never";
+  create_on: "any" | "all";
   distribution: { [group: string]: { [timestamp: string]: number } };
   incidents: number;
 };

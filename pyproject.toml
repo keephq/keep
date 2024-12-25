@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.32.8"
+version = "0.33.0"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -97,6 +97,8 @@ psycopg2-binary = "^2.9.10"
 aiosqlite = "^0.20.0"
 asyncmy = "^0.2.10"
 pytest-asyncio = "^0.25.0"
+prometheus-fastapi-instrumentator = "^7.0.0"
+slowapi = "^0.1.9"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"

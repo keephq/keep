@@ -432,6 +432,7 @@ async def simulate_alerts_async(
     demo_topology=False,
     clean_old_incidents=False,
     demo_ai=False,
+    count=None,
     target_rps=0,
 ):
     logger.info("Simulating alerts...")
@@ -487,6 +488,11 @@ async def simulate_alerts_async(
 
     shoot = 1
     while True:
+        if count is not None:
+            count -= 1
+            if count < 0:
+                break
+
         try:
             logger.info("Looping to send alerts...")
 
