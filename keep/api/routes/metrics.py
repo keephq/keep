@@ -2,14 +2,21 @@ from typing import List
 
 import chevron
 from fastapi import APIRouter, Depends, Query, Request, Response
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from fastapi.responses import JSONResponse
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    generate_latest,
+    multiprocess,
+)
 
+from keep.api.core.config import config
 from keep.api.core.db import (
     get_last_alerts_for_incidents,
     get_last_incidents,
     get_workflow_executions_count,
 )
-from keep.api.core.metrics import registry
+from keep.api.core.limiter import limiter
 from keep.api.models.alert import AlertDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -20,8 +27,14 @@ CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
 
 
 @router.get("/processing", include_in_schema=False)
-async def get_processing_metrics(request: Request):
-    # Generate all metrics from the single registry
+async def get_processing_metrics(
+    request: Request,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:metrics"])
+    ),
+):
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
     metrics = generate_latest(registry)
     return Response(content=metrics, media_type=CONTENT_TYPE_LATEST)
 
@@ -122,3 +135,19 @@ def get_metrics(
     export += f"workflows_executions_total {{status=\"other\"}} {workflow_execution_counts['other']}\n"
 
     return Response(content=export, media_type=CONTENT_TYPE_LATEST)
+
+
+@router.get("/dumb", include_in_schema=False)
+@limiter.limit(config("KEEP_LIMIT_CONCURRENCY", default="10/minute", cast=str))
+async def get_dumb(request: Request) -> JSONResponse:
+    """
+    This endpoint is used to test the rate limiting.
+
+    Args:
+        request (Request): The request object.
+
+    Returns:
+        JSONResponse: A JSON response with the message "hello world" ({"hello": "world"}).
+    """
+    # await asyncio.sleep(5)
+    return JSONResponse(content={"hello": "world"})

@@ -89,6 +89,8 @@ psycopg = "^3.2.3"
 prometheus-client = "^0.21.1"
 psycopg2-binary = "^2.9.10"
 
+prometheus-fastapi-instrumentator = "^7.0.0"
+slowapi = "^0.1.9"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"
