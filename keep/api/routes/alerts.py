@@ -28,6 +28,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
+from keep.api.core.limiter import limiter
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
 from keep.api.models.alert import (
     AlertDto,
@@ -357,6 +358,7 @@ def create_process_event_task(
     response_model=AlertDto | list[AlertDto],
     status_code=202,
 )
+@limiter.limit(config("KEEP_LIMIT_CONCURRENCY", default="100/minute", cast=str))
 async def receive_generic_event(
     event: AlertDto | list[AlertDto] | dict,
     bg_tasks: BackgroundTasks,
@@ -445,6 +447,7 @@ async def webhook_challenge():
     description="Receive an alert event from a provider",
     status_code=202,
 )
+@limiter.limit(config("KEEP_LIMIT_CONCURRENCY", default="100/minute", cast=str))
 async def receive_event(
     provider_type: str,
     bg_tasks: BackgroundTasks,

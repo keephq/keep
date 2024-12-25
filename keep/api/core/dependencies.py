@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
 
+
 async def extract_generic_body(request: Request) -> dict | bytes | FormData:
     """
     Extracts the body of the request based on the content type.
