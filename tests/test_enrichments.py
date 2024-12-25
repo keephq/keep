@@ -455,7 +455,7 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto, db_sessio
     indirect=True,
 )
 @pytest.mark.asyncio
-def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts, db_session):
+async def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_alerts, db_session):
     import os
 
     # first, use elastic
