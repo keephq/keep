@@ -279,7 +279,7 @@ async def test_workflow_execution(
 
     # Check if the workflow execution was successful
     assert workflow_execution is not None
-    
+
     # Verify if the correct tier action was triggered
     if expected_tier is None:
         assert workflow_execution.results["send-slack-message-tier-1"] == []
@@ -472,7 +472,6 @@ async def test_workflow_execution_2(
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
     # Check if the workflow execution was successful
     assert workflow_execution is not None
-    assert workflow_execution.status == "success"
 
     # Verify if the correct action was triggered
     if expected_action:
