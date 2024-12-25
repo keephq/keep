@@ -2,4 +2,4 @@ from uvicorn.workers import UvicornWorker
 
 
 class CustomUvicornWorker(UvicornWorker):
-    CONFIG_KWARGS = {"lifespan": "on", "limit_concurrency": 5}
+    CONFIG_KWARGS = {"lifespan": "on"}
