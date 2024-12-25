@@ -49,7 +49,7 @@ class ClickhouseHttpProviderAuthConfig:
 class ClickhouseHttpProvider(BaseProvider):
     """Enrich alerts with data from Clickhouse."""
 
-    PROVIDER_DISPLAY_NAME = "Clickhouse Http"
+    PROVIDER_DISPLAY_NAME = "Clickhouse HTTP"
     PROVIDER_CATEGORY = ["Database"]
 
     PROVIDER_SCOPES = [
