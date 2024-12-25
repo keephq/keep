@@ -2893,7 +2893,7 @@ def get_tenants_configurations(only_with_config=False) -> List[Tenant]:
             continue
         tenants_configurations[tenant.id] = tenant.configuration or {}
 
-        return tenants_configurations
+    return tenants_configurations
 
 
 def update_preset_options(tenant_id: str, preset_id: str, options: dict) -> Preset:
