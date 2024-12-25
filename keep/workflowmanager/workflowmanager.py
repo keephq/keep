@@ -49,7 +49,7 @@ class WorkflowManager:
 
     async def stop(self):
         """Stops the workflow manager"""
-        self.scheduler.stop()
+        await self.scheduler.stop()
         self.started = False
         if self._running_task is not None:
             await self._running_task

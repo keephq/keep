@@ -45,6 +45,7 @@ class WorkflowScheduler:
         self.interval_enabled = (
             config("WORKFLOWS_INTERVAL_ENABLED", default="true") == "true"
         )
+        self.task = None
 
     async def start(self, loop=None):
         self.logger.info("Starting workflows scheduler")
@@ -52,7 +53,7 @@ class WorkflowScheduler:
         self._stop = False
         if loop is None:
             loop = asyncio.get_running_loop()
-        loop.create_task(self._start())
+        self.task = loop.create_task(self._start())
         self.logger.info("Workflows scheduler started")
 
     async def _handle_interval_workflows(self):
@@ -522,9 +523,11 @@ class WorkflowScheduler:
         while not self._stop:
             await asyncio.sleep(1)
 
-    def stop(self):
+    async def stop(self):
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
+        if self.task is not None:
+            await self.task
         self.logger.info("Scheduled workflows stopped")
 
     async def _run_workflows_with_interval(
