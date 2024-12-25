@@ -418,8 +418,8 @@ def is_elastic_responsive(host, port, user, password):
         info = elastic_client._client.info()
         print("Elastic still up now")
         return True if info else False
-    except Exception:
-        print("Elastic still not up")
+    except Exception as e:
+        print(f"Elastic still not up: {e}")
 
     return False
 
