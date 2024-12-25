@@ -7,8 +7,6 @@ packages = [{include = "keep"}]
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
-
-[tool.pytest.ini_options]
 timeout = 30
 
 [tool.poetry.dependencies]
