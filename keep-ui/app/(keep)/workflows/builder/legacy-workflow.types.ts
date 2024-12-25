@@ -1,5 +1,3 @@
-import { V2Step } from "@/app/(keep)/workflows/builder/types";
-
 interface Provider {
   type: string;
   config: string;
