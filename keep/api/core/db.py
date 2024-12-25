@@ -666,15 +666,19 @@ async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status
     async with AsyncSession(engine_async) as session:
         random_number = random.randint(1, 2147483647 - 1)  # max int
 
+        workflow_execution_old = (await session.exec(
+            select(WorkflowExecution).where(WorkflowExecution.id == execution_id)
+        )).first()
+
         # Perform the update query
-        result = await session.execute(
+        result = await session.exec(
             update(WorkflowExecution)
             .where(WorkflowExecution.id == execution_id)
             .values(
                 is_running=random_number,
                 status=status,
                 error=error[:255] if error else None,
-                execution_time=(datetime.utcnow() - WorkflowExecution.started).total_seconds()
+                execution_time=(datetime.utcnow() - workflow_execution_old.started).total_seconds()
             )
         )
 
@@ -687,6 +691,7 @@ async def finish_workflow_execution(tenant_id, workflow_id, execution_id, status
 
         # Commit the transaction
         await session.commit()
+        await session.flush()
 
 
 def get_workflow_executions(
@@ -1622,6 +1627,7 @@ async def save_workflow_results(tenant_id, workflow_execution_id, workflow_resul
             .values(results=workflow_results)
         )
         await session.commit()
+        await session.flush()
 
 
 def get_workflow_by_name(tenant_id, workflow_name):
