@@ -21,8 +21,13 @@ class TenantConfiguration:
 
         def _load_tenant_configurations(self):
             self.logger.debug("Loading tenants configurations")
-            loop = asyncio.get_event_loop()
-            tenants_configuration = loop.run_until_complete(get_tenants_configurations())
+
+            # Patching because this method could be called from a sync context which is inside the loop.
+            # Todo: asynchroiize the whole method.
+            import nest_asyncio
+            nest_asyncio.apply()
+            
+            tenants_configuration = asyncio.run(get_tenants_configurations())
             self.logger.debug(
                 "Tenants configurations loaded",
                 extra={
