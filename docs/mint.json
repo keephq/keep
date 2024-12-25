@@ -121,6 +121,7 @@
             "providers/documentation/checkmk-provider",
             "providers/documentation/cilium-provider",
             "providers/documentation/clickhouse-provider",
+            "providers/documentation/clickhouse-http-provider",
             "providers/documentation/cloudwatch-provider",
             "providers/documentation/console-provider",
             "providers/documentation/coralogix-provider",
