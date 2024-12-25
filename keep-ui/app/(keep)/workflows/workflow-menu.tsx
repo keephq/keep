@@ -4,16 +4,11 @@ import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { Icon } from "@tremor/react";
 import {
   EyeIcon,
-  PencilIcon,
   PlayIcon,
   TrashIcon,
   WrenchIcon,
 } from "@heroicons/react/24/outline";
-import {
-  DownloadIcon,
-  LockClosedIcon,
-  LockOpen1Icon,
-} from "@radix-ui/react-icons";
+import { DownloadIcon } from "@radix-ui/react-icons";
 import React from "react";
 
 interface WorkflowMenuProps {

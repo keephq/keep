@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import Loader from "./loader";
 import { Provider } from "../../providers/providers";
 import { useProviders } from "utils/hooks/useProviders";
-import clsx from "clsx";
 
 const Builder = dynamic(() => import("./builder"), {
   ssr: false, // Prevents server-side rendering
@@ -53,20 +52,14 @@ export function BuilderCard({
 
   if (!providers || isLoading)
     return (
-      <Card className="mt-10 p-4 md:p-10 mx-auto">
+      <Card className="mt-2 p-4 mx-auto">
         <Loader />
       </Card>
     );
 
-  return (
-    <Card
-      className={clsx(
-        "mt-2 p-0 mx-auto",
-        error ? null : "h-[95%]",
-        workflow ? "h-full" : "h-[95%]"
-      )}
-    >
-      {error ? (
+  if (error) {
+    return (
+      <Card className="mt-2 p-4 mx-auto">
         <Callout
           className="mt-4"
           title="Error"
@@ -75,23 +68,31 @@ export function BuilderCard({
         >
           Failed to load providers
         </Callout>
-      ) : fileContents == "" && !workflow ? (
+      </Card>
+    );
+  }
+
+  if (fileContents == "" && !workflow) {
+    return (
+      <Card className="mt-2 p-4 mx-auto h-[95%]">
         <Loader />
-      ) : (
-        <Builder
-          providers={providers}
-          installedProviders={installedProviders}
-          loadedAlertFile={fileContents}
-          fileName={fileName}
-          enableGenerate={enableGenerate}
-          triggerGenerate={triggerGenerate}
-          triggerSave={triggerSave}
-          triggerRun={triggerRun}
-          workflow={workflow}
-          workflowId={workflowId}
-          isPreview={isPreview}
-        />
-      )}
-    </Card>
+      </Card>
+    );
+  }
+
+  return (
+    <Builder
+      providers={providers}
+      installedProviders={installedProviders}
+      loadedAlertFile={fileContents}
+      fileName={fileName}
+      enableGenerate={enableGenerate}
+      triggerGenerate={triggerGenerate}
+      triggerSave={triggerSave}
+      triggerRun={triggerRun}
+      workflow={workflow}
+      workflowId={workflowId}
+      isPreview={isPreview}
+    />
   );
 }

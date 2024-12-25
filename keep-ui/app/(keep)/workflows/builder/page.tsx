@@ -16,6 +16,6 @@ export default function Page({ params, searchParams }: PageProps) {
 }
 
 export const metadata = {
-  title: "Keep - Builder",
-  description: "Build alerts with a visual workflow designer.",
+  title: "Keep - Workflow Builder",
+  description: "Build workflows with a UI builder.",
 };
