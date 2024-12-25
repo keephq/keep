@@ -49,10 +49,16 @@ class WorkflowManager:
 
     async def stop(self):
         """Stops the workflow manager"""
-        await self.scheduler.stop()
+        try:
+            await self.scheduler.stop()
+        except RuntimeError:
+            logging.error("Can't stop workflowmanager. Probably already stopped.")
         self.started = False
         if self._running_task is not None:
-            await self._running_task
+            try:
+                await self._running_task
+            except RuntimeError:
+                logging.error("Can't await self._running_task. Probably already awaited.")
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it
