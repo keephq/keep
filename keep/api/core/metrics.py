@@ -25,7 +25,6 @@ processing_time_summary = Summary(
     "Average time spent processing events",
 )
 
-# Only Gauges support multiprocess_mode
 running_tasks_gauge = Gauge(
     f"{METRIC_PREFIX}running_tasks_current",
     "Current number of running tasks",
