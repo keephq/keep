@@ -488,7 +488,7 @@ async def test_mapping_rule_with_elsatic(mock_session, mock_alert_dto, setup_ale
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 @pytest.mark.asyncio
-def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client):
+async def test_enrichment(db_session, client, test_app, mock_alert_dto, elastic_client):
     # add some rule
     rule = MappingRule(
         id=1,
