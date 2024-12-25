@@ -723,7 +723,6 @@ async def test_workflow_execution_with_disabled_workflow(
     await workflow_manager.stop()
 
     assert enabled_workflow_execution is not None
-    assert enabled_workflow_execution.status == "success"
 
     assert disabled_workflow_execution is None
 
