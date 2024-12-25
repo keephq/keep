@@ -21,7 +21,8 @@ class TenantConfiguration:
 
         def _load_tenant_configurations(self):
             self.logger.debug("Loading tenants configurations")
-            tenants_configuration = asyncio.run(get_tenants_configurations())
+            loop = asyncio.get_event_loop()
+            tenants_configuration = loop.run_until_complete(get_tenants_configurations())
             self.logger.debug(
                 "Tenants configurations loaded",
                 extra={
