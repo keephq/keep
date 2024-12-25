@@ -262,6 +262,7 @@
     {
       "group": "Keep API",
       "pages": [
+        "api-ref/root",
         {
           "group": "providers",
           "pages": [
