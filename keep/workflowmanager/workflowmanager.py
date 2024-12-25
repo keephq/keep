@@ -333,37 +333,6 @@ class WorkflowManager:
         else:
             return getattr(event, filter_key, None)
 
-    # TODO should be fixed to support the usual CLI
-    def run(self, workflows: list[Workflow]):
-        """
-        Run list of workflows.
-
-        Args:
-            workflow (str): Either an workflow yaml or a directory containing workflow yamls or a list of URLs to get the workflows from.
-            providers_file (str, optional): The path to the providers yaml. Defaults to None.
-        """
-        self.logger.info("Running workflow(s)")
-        workflows_errors = []
-        # If at least one workflow has an interval, run workflows using the scheduler,
-        #   otherwise, just run it
-        if any([Workflow.workflow_interval for Workflow in workflows]):
-            # running workflows in scheduler mode
-            self.logger.info(
-                "Found at least one workflow with an interval, running in scheduler mode"
-            )
-            self.scheduler_mode = True
-            # if the workflows doesn't have an interval, set the default interval
-            for workflow in workflows:
-                workflow.workflow_interval = workflow.workflow_interval
-            # This will halt until KeyboardInterrupt
-            self.scheduler.run_workflows(workflows)
-            self.logger.info("Workflow(s) scheduled")
-        else:
-            # running workflows in the regular mode
-            workflows_errors = self._run_workflows_from_cli(workflows)
-
-        return workflows_errors
-
     def _check_premium_providers(self, workflow: Workflow):
         """
         Check if the workflow uses premium providers in multi tenant mode.

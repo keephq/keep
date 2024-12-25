@@ -1,4 +1,17 @@
 services:
+  keep-database:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: keepuser
+      POSTGRES_PASSWORD: keeppassword
+      POSTGRES_DB: keepdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-custom.conf:/etc/postgresql/conf.d/custom.conf
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
   keep-frontend:
     extends:
       file: docker-compose.common.yml
@@ -7,22 +20,25 @@ services:
     environment:
       - AUTH_TYPE=NO_AUTH
       - API_URL=http://keep-backend:8080
-    volumes:
-      - ./state:/state
-    depends_on:
-      - keep-backend
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SENTRY_DISABLED=true
 
   keep-backend:
     extends:
       file: docker-compose.common.yml
       service: keep-backend-common
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-api
+    image: keep-api
+    # image: us-central1-docker.pkg.dev/keephq/keep/keep-api
     environment:
       - AUTH_TYPE=NO_AUTH
-    volumes:
-      - ./state:/state
+      - DATABASE_CONNECTION_STRING=postgresql+psycopg2://keepuser:keeppassword@keep-database:5432/keepdb
+      - POSTHOG_DISABLED=true
+      - FRIGADE_DISABLED=true
+      - SECRET_MANAGER_DIRECTORY=/app
+      - SQLALCHEMY_WARN_20=1
+    depends_on:
+      - keep-database
 
-  keep-websocket-server:
-    extends:
-      file: docker-compose.common.yml
-      service: keep-websocket-server-common
+volumes:
+  postgres-data:

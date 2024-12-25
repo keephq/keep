@@ -1,17 +1,17 @@
-import asyncio
 import base64
+import concurrent.futures
 import hashlib
 import hmac
 import json
 import logging
 import os
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
-from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 
@@ -52,6 +52,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 REDIS = os.environ.get("REDIS", "false") == "true"
+
+# Create dedicated threadpool
+process_event_executor = ThreadPoolExecutor(
+    max_workers=50, thread_name_prefix="process_event_worker"
+)
 
 
 @router.get(
@@ -256,43 +261,52 @@ def assign_alert(
     return {"status": "ok"}
 
 
-def discard_task(
+def discard_future(
     trace_id: str,
-    task: asyncio.Task,
+    future: Future,
     running_tasks: set,
     started_time: float,
 ):
     try:
-        running_tasks.discard(task)
-        running_tasks_gauge.dec()  # Decrease total counter
-        running_tasks_by_process_gauge.labels(
-            pid=os.getpid()
-        ).dec()  # Decrease process counter
+        running_tasks.discard(future)
+        running_tasks_gauge.dec()
+        running_tasks_by_process_gauge.labels(pid=os.getpid()).dec()
 
-        # Log any exception that occurred in the task
-        if task.exception():
-            logger.error(
-                "Task failed with exception",
-                extra={
-                    "trace_id": trace_id,
-                    "error": str(task.exception()),
-                    "processing_time": time.time() - started_time,
-                },
-            )
-        else:
+        # Log any exception that occurred in the future
+        try:
+            exception = future.exception()
+            if exception:
+                logger.error(
+                    "Task failed with exception",
+                    extra={
+                        "trace_id": trace_id,
+                        "error": str(exception),
+                        "processing_time": time.time() - started_time,
+                    },
+                )
+            else:
+                logger.info(
+                    "Task completed",
+                    extra={
+                        "processing_time": time.time() - started_time,
+                        "trace_id": trace_id,
+                    },
+                )
+        except concurrent.futures.CancelledError:
             logger.info(
-                "Task completed",
+                "Task was cancelled",
                 extra={
-                    "processing_time": time.time() - started_time,
                     "trace_id": trace_id,
+                    "processing_time": time.time() - started_time,
                 },
             )
+
     except Exception:
         # Make sure we always decrement both counters even if something goes wrong
         running_tasks_gauge.dec()
         running_tasks_by_process_gauge.labels(pid=os.getpid()).dec()
         logger.exception(
-            "Error in discard_task callback",
+            "Error in discard_future callback",
             extra={
                 "trace_id": trace_id,
             },
@@ -316,26 +330,25 @@ def create_process_event_task(
     running_tasks_by_process_gauge.labels(
         pid=os.getpid()
     ).inc()  # Increase process counter
-    task = asyncio.create_task(
-        run_in_threadpool(
-            process_event,
-            {},
-            tenant_id,
-            provider_type,
-            provider_id,
-            fingerprint,
-            api_key_name,
-            trace_id,
-            event,
-        )
+    future = process_event_executor.submit(
+        process_event,
+        {},  # ctx
+        tenant_id,
+        provider_type,
+        provider_id,
+        fingerprint,
+        api_key_name,
+        trace_id,
+        event,
     )
-    task.add_done_callback(
-        lambda task: discard_task(trace_id, task, running_tasks, started_time)
+    running_tasks.add(future)
+    future.add_done_callback(
+        lambda task: discard_future(trace_id, task, running_tasks, started_time)
     )
-    bg_tasks.add_task(task)
-    running_tasks.add(task)
+    # bg_tasks.add_task(task)
+
     logger.info("Task added", extra={"trace_id": trace_id})
-    return task.get_name()
+    return str(id(future))
 
 
 @router.post(

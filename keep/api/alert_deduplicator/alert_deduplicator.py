@@ -25,7 +25,6 @@ from keep.api.models.alert import (
     DeduplicationRuleRequestDto,
 )
 from keep.providers.providers_factory import ProvidersFactory
-from keep.searchengine.searchengine import SearchEngine
 
 DEFAULT_RULE_UUID = "00000000-0000-0000-0000-000000000000"
 
@@ -42,7 +41,6 @@ class AlertDeduplicator:
     def __init__(self, tenant_id):
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
-        self.search_engine = SearchEngine(self.tenant_id)
 
     def _apply_deduplication_rule(
         self, alert: AlertDto, rule: DeduplicationRuleDto
@@ -264,7 +262,7 @@ class AlertDeduplicator:
             ingested=0,
             dedup_ratio=0.0,
             enabled=True,
-            is_provisioned=False
+            is_provisioned=False,
         )
 
     def get_deduplications(self) -> list[DeduplicationRuleDto]:
@@ -502,15 +500,15 @@ class AlertDeduplicator:
             rule_dto = self.create_deduplication_rule(rule, updated_by)
             self.logger.info("Default rule updated")
             return rule_dto
-        
+
         rule_before_update = get_deduplication_rule_by_id(self.tenant_id, rule_id)
-        
+
         if not rule_before_update:
             raise HTTPException(
                 status_code=404,
                 detail="Deduplication rule not found",
             )
-        
+
         if rule_before_update.is_provisioned:
             raise HTTPException(
                 status_code=409,
@@ -557,7 +555,7 @@ class AlertDeduplicator:
                 status_code=404,
                 detail="Deduplication rule not found",
             )
-        
+
         if deduplication_rule_to_be_deleted.is_provisioned:
             raise HTTPException(
                 status_code=409,
