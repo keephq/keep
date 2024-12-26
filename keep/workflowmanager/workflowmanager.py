@@ -48,8 +48,12 @@ class WorkflowManager:
 
     def stop(self):
         """Stops the workflow manager"""
+        if not self.started:
+            return
         self.scheduler.stop()
         self.started = False
+        # Clear the scheduler reference
+        self.scheduler = None
 
     def _apply_filter(self, filter_val, value):
         # if it's a regex, apply it

@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -77,16 +76,15 @@ actions:
 
 
 @pytest.fixture(scope="module")
-def workflow_manager():
+async def workflow_manager():
     """
     Fixture to create and manage a WorkflowManager instance for the duration of the module.
     It starts the manager asynchronously and stops it after all tests are completed.
     """
     manager = WorkflowManager.get_instance()
-    asyncio.run(manager.start())
-    while not manager.started:
-        time.sleep(0.1)
+    await manager.start()
     yield manager
+    # Cleanup
     manager.stop()
 
 
