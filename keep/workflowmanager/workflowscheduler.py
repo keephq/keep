@@ -296,6 +296,18 @@ class WorkflowScheduler:
             error = "\n".join(str(e) for e in errors)
             status = "error"
 
+        self.logger.info(
+            "Workflow test complete",
+            extra={
+                "workflow_id": workflow.workflow_id,
+                "workflow_execution_id": workflow_execution_id,
+                "tenant_id": tenant_id,
+                "status": status,
+                "error": error,
+                "results": results,
+            },
+        )
+
         return {
             "workflow_execution_id": workflow_execution_id,
             "status": status,
