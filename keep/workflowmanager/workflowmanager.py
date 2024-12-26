@@ -10,11 +10,12 @@ from keep.api.core.db import (
     get_previous_alert_by_fingerprint,
     save_workflow_results,
 )
+from keep.api.core.metrics import workflow_execution_duration
 from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
-from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
 
 
@@ -397,6 +398,7 @@ class WorkflowManager:
                 },
             )
 
+    @timing_histogram(workflow_execution_duration)
     def _run_workflow(
         self, workflow: Workflow, workflow_execution_id: str, test_run=False
     ):

@@ -5,6 +5,7 @@ import queue
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 from threading import Lock
 
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +16,13 @@ from keep.api.core.db import finish_workflow_execution as finish_workflow_execut
 from keep.api.core.db import get_enrichment, get_previous_execution_id
 from keep.api.core.db import get_workflow as get_workflow_db
 from keep.api.core.db import get_workflows_that_should_run
+from keep.api.core.metrics import (
+    workflow_execution_errors_total,
+    workflow_execution_status,
+    workflow_executions_total,
+    workflow_queue_size,
+    workflows_running,
+)
 from keep.api.models.alert import AlertDto, IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
@@ -29,6 +37,34 @@ class WorkflowStatus(enum.Enum):
     SUCCESS = "success"
     ERROR = "error"
     PROVIDERS_NOT_CONFIGURED = "providers_not_configured"
+
+
+def timing_histogram(histogram):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                return result
+            finally:
+                duration = time.time() - start_time
+                # Try to get tenant_id and workflow_id from self
+                try:
+                    tenant_id = args[1].context_manager.tenant_id
+                except Exception:
+                    tenant_id = "unknown"
+                try:
+                    workflow_id = args[1].workflow_id
+                except Exception:
+                    workflow_id = "unknown"
+                histogram.labels(tenant_id=tenant_id, workflow_id=workflow_id).observe(
+                    duration
+                )
+
+        return wrapper
+
+    return decorator
 
 
 class WorkflowScheduler:
@@ -49,6 +85,17 @@ class WorkflowScheduler:
         self.executor = ThreadPoolExecutor(max_workers=self.MAX_WORKERS)
         self.scheduler_future = None
         self.futures = set()
+        # Initialize metrics for queue size
+        self._update_queue_metrics()
+
+    def _update_queue_metrics(self):
+        """Update queue size metrics"""
+        with self.lock:
+            for workflow in self.workflows_to_run:
+                tenant_id = workflow.get("tenant_id", "unknown")
+                workflow_queue_size.labels(tenant_id=tenant_id).set(
+                    len(self.workflows_to_run)
+                )
 
     async def start(self):
         self.logger.info("Starting workflows scheduler")
@@ -130,6 +177,17 @@ class WorkflowScheduler:
         self.logger.info(f"Running workflow {workflow.workflow_id}...")
 
         try:
+            # Increment running workflows counter
+            workflows_running.labels(tenant_id=tenant_id).inc()
+
+            # Track execution
+            workflow_executions_total.labels(
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                trigger_type=event_context.trigger if event_context else "interval",
+            ).inc()
+
+            # Run the workflow
             if isinstance(event_context, AlertDto):
                 workflow.context_manager.set_event_context(event_context)
             else:
@@ -139,6 +197,17 @@ class WorkflowScheduler:
                 workflow, workflow_execution_id
             )
         except Exception as e:
+            # Track error metrics
+            workflow_execution_errors_total.labels(
+                tenant_id=tenant_id,
+                workflow_id=workflow_id,
+                error_type=type(e).__name__,
+            ).inc()
+
+            workflow_execution_status.labels(
+                tenant_id=tenant_id, workflow_id=workflow_id, status="error"
+            ).inc()
+
             self.logger.exception(f"Failed to run workflow {workflow.workflow_id}...")
             self._finish_workflow_execution(
                 tenant_id=tenant_id,
@@ -148,6 +217,10 @@ class WorkflowScheduler:
                 error=str(e),
             )
             return
+        finally:
+            # Decrement running workflows counter
+            workflows_running.labels(tenant_id=tenant_id).dec()
+            self._update_queue_metrics()
 
         if any(errors):
             self.logger.info(msg=f"Workflow {workflow.workflow_id} ran with errors")
@@ -314,6 +387,10 @@ class WorkflowScheduler:
             workflow = workflow_to_run.get("workflow")
             workflow_id = workflow_to_run.get("workflow_id")
             tenant_id = workflow_to_run.get("tenant_id")
+            # Update queue size metrics
+            workflow_queue_size.labels(tenant_id=tenant_id).set(
+                len(self.workflows_to_run)
+            )
             workflow_execution_id = workflow_to_run.get("workflow_execution_id")
             if not workflow:
                 self.logger.info("Loading workflow")
@@ -503,6 +580,11 @@ class WorkflowScheduler:
             )
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
+
+        self.logger.info(
+            "Event workflows handled",
+            extra={"current_number_of_workflows": len(self.futures)},
+        )
 
     def _start(self):
         self.logger.info("Starting workflows scheduler")
