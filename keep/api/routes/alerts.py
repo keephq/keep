@@ -294,7 +294,7 @@ def discard_future(
                     },
                 )
         except concurrent.futures.CancelledError:
-            logger.info(
+            logger.error(
                 "Task was cancelled",
                 extra={
                     "trace_id": trace_id,
