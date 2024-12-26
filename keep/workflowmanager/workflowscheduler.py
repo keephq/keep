@@ -610,21 +610,36 @@ class WorkflowScheduler:
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
 
+        # Wait for scheduler to stop first
         if self.scheduler_future:
             try:
-                self.scheduler_future.result()  # Wait for scheduler to stop
+                self.scheduler_future.result(
+                    timeout=5
+                )  # Add timeout to prevent hanging
             except Exception:
                 self.logger.exception("Error waiting for scheduler to stop")
 
-        # Cancel all running workflows
-        for future in self.futures:
-            future.cancel()
+        # Cancel all running workflows with timeout
+        for future in list(self.futures):  # Create a copy of futures set
+            try:
+                self.logger.info("Cancelling future")
+                future.cancel()
+                future.result(timeout=1)  # Add timeout
+                self.logger.info("Future cancelled")
+            except Exception:
+                self.logger.exception("Error cancelling future")
 
-        # Shutdown the executor if it exists
+        # Shutdown the executor with timeout
         if self.executor:
-            self.executor.shutdown(wait=True)
-            self.executor = None  # Clear the executor reference
+            try:
+                self.logger.info("Shutting down executor")
+                self.executor.shutdown(wait=True, cancel_futures=True)
+                self.executor = None
+                self.logger.info("Executor shut down")
+            except Exception:
+                self.logger.exception("Error shutting down executor")
 
+        self.futures.clear()
         self.logger.info("Scheduled workflows stopped")
 
     def _finish_workflow_execution(

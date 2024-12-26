@@ -79,15 +79,21 @@ actions:
 @pytest.fixture(scope="module")
 def workflow_manager():
     """
-    Fixture to create and manage a WorkflowManager instance for the duration of the module.
+    Fixture to create and manage a WorkflowManager instance.
     """
-    manager = WorkflowManager.get_instance()
-    asyncio.run(manager.start())  # Start synchronously
-
-    yield manager
-
-    # Cleanup
-    manager.stop()
+    manager = None
+    try:
+        manager = WorkflowManager.get_instance()
+        asyncio.run(manager.start())
+        yield manager
+    finally:
+        if manager:
+            try:
+                manager.stop()
+                # Give some time for threads to clean up
+                time.sleep(1)
+            except Exception as e:
+                print(f"Error stopping workflow manager: {e}")
 
 
 @pytest.fixture
