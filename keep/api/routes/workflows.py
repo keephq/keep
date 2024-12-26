@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import logging
 import os
@@ -275,9 +274,9 @@ async def run_workflow_from_definition(
     workflowstore = WorkflowStore()
     workflowmanager = WorkflowManager.get_instance()
     try:
-        workflow = asyncio.run(workflowstore.get_workflow_from_dict(
+        workflow = await workflowstore.get_workflow_from_dict(
             tenant_id=tenant_id, workflow=workflow
-        ))
+        )
     except Exception as e:
         logger.exception(
             "Failed to parse workflow",
@@ -289,9 +288,9 @@ async def run_workflow_from_definition(
         )
 
     try:
-        workflow_execution = asyncio.run(workflowmanager.scheduler.handle_workflow_test(
+        workflow_execution = await workflowmanager.scheduler.handle_workflow_test(
             workflow, tenant_id, created_by
-        ))
+        )
     except Exception as e:
         logger.exception(
             "Failed to run test workflow",

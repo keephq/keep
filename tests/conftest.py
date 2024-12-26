@@ -224,7 +224,6 @@ def db_session(request, monkeypatch):
         )
         t.append_constraint(status_index)
         mock_engine = create_engine(db_connection_string)
-        mock_engine_async = create_async_engine(asynchronize_connection_string(db_connection_string))
     # sqlite
     else:
         db_connection_string = "sqlite:///file:shared_memory?mode=memory&cache=shared&uri=true"
@@ -233,7 +232,6 @@ def db_session(request, monkeypatch):
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
         )
-        mock_engine_async = create_async_engine(asynchronize_connection_string(db_connection_string))
 
         # @tb: leaving this here if anybody else gets to problem with nested transactions
         # https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
@@ -250,6 +248,8 @@ def db_session(request, monkeypatch):
                 conn.exec_driver_sql(text("BEGIN EXCLUSIVE"))
             except Exception:
                 pass
+
+    mock_engine_async = create_async_engine(asynchronize_connection_string(db_connection_string))
 
     SQLModel.metadata.create_all(mock_engine)
 
