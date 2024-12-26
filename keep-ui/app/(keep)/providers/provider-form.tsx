@@ -514,7 +514,7 @@ const ProviderForm = ({
 
       <div className="w-full mt-2" key="install_webhook">
         {provider.can_setup_webhook && !installedProvidersMode && (
-          <div className={`${isLocalhost ? "bg-gray-100 p-2" : ""}`}>
+          <div className={`${isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""}`}>
             <div className="flex items-center">
               <input
                 type="checkbox"
