@@ -279,6 +279,7 @@ async def test_workflow_execution(
 
     # Check if the workflow execution was successful
     assert workflow_execution is not None
+    assert workflow_execution.status == "success"
 
     # Verify if the correct tier action was triggered
     if expected_tier is None:
@@ -472,6 +473,7 @@ async def test_workflow_execution_2(
     assert len(workflow_manager.scheduler.workflows_to_run) == 0
     # Check if the workflow execution was successful
     assert workflow_execution is not None
+    assert workflow_execution.status == "success"
 
     # Verify if the correct action was triggered
     if expected_action:
@@ -599,6 +601,7 @@ async def test_workflow_execution_3(
     # Check if the workflow execution was successful
 
     assert workflow_execution is not None
+    assert workflow_execution.status == "success"
 
     # Verify if the correct tier action was triggered
     if expected_tier is None:
@@ -982,6 +985,7 @@ async def test_workflow_execution_logs(
 
         # Check if the workflow execution was successful
         assert workflow_execution is not None
+        assert workflow_execution.status == "success"
 
         logs = (
             db_session.query(WorkflowExecutionLog)
@@ -1066,6 +1070,7 @@ async def test_workflow_execution_logs_log_level_debug_console_provider(
 
             # Check if the workflow execution was successful
             assert workflow_execution is not None
+            assert workflow_execution.status == "success"
 
             logs_counts[workflow_execution.id] = logs_counter[workflow_execution.id][
                 "all"
@@ -1314,6 +1319,7 @@ async def test_alert_routing_policy(
     await workflow_manager.stop()
     # Verify workflow execution
     assert workflow_execution is not None
+    assert workflow_execution.status == "success"
 
     # Check if the actions were triggered as expected
     for action_name, expected_messages in expected_results.items():
@@ -1501,6 +1507,7 @@ async def test_nested_conditional_flow(
 
     # Verify workflow execution
     assert workflow_execution is not None
+    assert workflow_execution.status == "success"
 
     # Check if the actions were triggered as expected
     for action_name, expected_messages in expected_results.items():
