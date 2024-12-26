@@ -3,7 +3,6 @@ import os
 import re
 import typing
 import uuid
-from threading import Lock
 
 from keep.api.core.config import config
 from keep.api.core.db import (
@@ -24,35 +23,28 @@ class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
     PREMIUM_PROVIDERS = ["bash", "python"]
 
-    _instance = None
-    _instance_lock = Lock()
-
-    @classmethod
-    def get_instance(cls) -> "WorkflowManager":
-        with cls._instance_lock:
-            if not cls._instance:
-                cls._instance = WorkflowManager()
-            return cls._instance
+    @staticmethod
+    def get_instance() -> "WorkflowManager":
+        if not hasattr(WorkflowManager, "_instance"):
+            WorkflowManager._instance = WorkflowManager()
+        return WorkflowManager._instance
 
     def __init__(self):
-        # thread safety
-        if hasattr(WorkflowManager, "_initialized"):
-            return
         self.logger = logging.getLogger(__name__)
         self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
+
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
-        # Mark as initialized
-        WorkflowManager._initialized = True
 
     async def start(self):
         """Runs the workflow manager in server mode"""
         if self.started:
             self.logger.info("Workflow manager already started")
             return
+
         await self.scheduler.start()
         self.started = True
 

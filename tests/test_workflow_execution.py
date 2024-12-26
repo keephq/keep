@@ -83,7 +83,12 @@ def workflow_manager():
     """
     manager = None
     try:
+        from keep.workflowmanager.workflowscheduler import WorkflowScheduler
+
+        scheduler = WorkflowScheduler(None)
         manager = WorkflowManager.get_instance()
+        scheduler.workflow_manager = manager
+        manager.scheduler = scheduler
         asyncio.run(manager.start())
         yield manager
     finally:

@@ -181,11 +181,20 @@ class WorkflowScheduler:
             workflows_running.labels(tenant_id=tenant_id).inc()
 
             # Track execution
-            workflow_executions_total.labels(
-                tenant_id=tenant_id,
-                workflow_id=workflow_id,
-                trigger_type=event_context.trigger if event_context else "interval",
-            ).inc()
+            # Shahar: currently incident doesn't have trigger so we will workaround it
+            if isinstance(event_context, AlertDto):
+                workflow_executions_total.labels(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    trigger_type=event_context.trigger if event_context else "interval",
+                ).inc()
+            else:
+                # TODO: add trigger to incident
+                workflow_executions_total.labels(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    trigger_type="incident",
+                ).inc()
 
             # Run the workflow
             if isinstance(event_context, AlertDto):
