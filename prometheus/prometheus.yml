@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "keep"
+    static_configs:
+      - targets: ["keep-backend:8080"]
+    metrics_path: "/metrics/processing"
+    http_headers:
+      x-api-key:
+        values:
+          - "keep-api-key"
