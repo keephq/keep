@@ -69,7 +69,7 @@ def timing_histogram(histogram):
 
 class WorkflowScheduler:
     MAX_SIZE_SIGNED_INT = 2147483647
-    MAX_WORKERS = 20
+    MAX_WORKERS = config("KEEP_MAX_WORKFLOW_WORKERS", default="20", cast=int)
 
     def __init__(self, workflow_manager):
         self.logger = logging.getLogger(__name__)
@@ -181,11 +181,20 @@ class WorkflowScheduler:
             workflows_running.labels(tenant_id=tenant_id).inc()
 
             # Track execution
-            workflow_executions_total.labels(
-                tenant_id=tenant_id,
-                workflow_id=workflow_id,
-                trigger_type=event_context.trigger if event_context else "interval",
-            ).inc()
+            # Shahar: currently incident doesn't have trigger so we will workaround it
+            if isinstance(event_context, AlertDto):
+                workflow_executions_total.labels(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    trigger_type=event_context.trigger if event_context else "interval",
+                ).inc()
+            else:
+                # TODO: add trigger to incident
+                workflow_executions_total.labels(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    trigger_type="incident",
+                ).inc()
 
             # Run the workflow
             if isinstance(event_context, AlertDto):
@@ -286,6 +295,18 @@ class WorkflowScheduler:
         if any(errors):
             error = "\n".join(str(e) for e in errors)
             status = "error"
+
+        self.logger.info(
+            "Workflow test complete",
+            extra={
+                "workflow_id": workflow.workflow_id,
+                "workflow_execution_id": workflow_execution_id,
+                "tenant_id": tenant_id,
+                "status": status,
+                "error": error,
+                "results": results,
+            },
+        )
 
         return {
             "workflow_execution_id": workflow_execution_id,
@@ -610,21 +631,36 @@ class WorkflowScheduler:
         self.logger.info("Stopping scheduled workflows")
         self._stop = True
 
+        # Wait for scheduler to stop first
         if self.scheduler_future:
             try:
-                self.scheduler_future.result()  # Wait for scheduler to stop
+                self.scheduler_future.result(
+                    timeout=5
+                )  # Add timeout to prevent hanging
             except Exception:
                 self.logger.exception("Error waiting for scheduler to stop")
 
-        # Cancel all running workflows
-        for future in self.futures:
-            future.cancel()
+        # Cancel all running workflows with timeout
+        for future in list(self.futures):  # Create a copy of futures set
+            try:
+                self.logger.info("Cancelling future")
+                future.cancel()
+                future.result(timeout=1)  # Add timeout
+                self.logger.info("Future cancelled")
+            except Exception:
+                self.logger.exception("Error cancelling future")
 
-        # Shutdown the executor if it exists
+        # Shutdown the executor with timeout
         if self.executor:
-            self.executor.shutdown(wait=True)
-            self.executor = None  # Clear the executor reference
+            try:
+                self.logger.info("Shutting down executor")
+                self.executor.shutdown(wait=True, cancel_futures=True)
+                self.executor = None
+                self.logger.info("Executor shut down")
+            except Exception:
+                self.logger.exception("Error shutting down executor")
 
+        self.futures.clear()
         self.logger.info("Scheduled workflows stopped")
 
     def _finish_workflow_execution(

@@ -34,6 +34,7 @@ class WorkflowManager:
         self.debug = config("WORKFLOW_MANAGER_DEBUG", default=False, cast=bool)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
+
         self.scheduler = WorkflowScheduler(self)
         self.workflow_store = WorkflowStore()
         self.started = False
@@ -43,6 +44,7 @@ class WorkflowManager:
         if self.started:
             self.logger.info("Workflow manager already started")
             return
+
         await self.scheduler.start()
         self.started = True
 
