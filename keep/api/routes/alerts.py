@@ -346,7 +346,6 @@ def create_process_event_task(
     future.add_done_callback(
         lambda task: discard_future(trace_id, task, running_tasks, started_time)
     )
-    # bg_tasks.add_task(task)
 
     logger.info("Task added", extra={"trace_id": trace_id})
     return str(id(future))
