@@ -194,6 +194,7 @@ class ProviderLoggerAdapter(logging.LoggerAdapter):
 
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+KEEP_LOG_FILE = os.environ.get("KEEP_LOG_FILE")
 
 LOG_FORMAT_OPEN_TELEMETRY = "open_telemetry"
 LOG_FORMAT_DEVELOPMENT_TERMINAL = "dev_terminal"
@@ -234,7 +235,7 @@ CONFIG = {
         },
         "dev_terminal": {
             "()": DevTerminalFormatter,
-            "format": "%(asctime)s - %(levelname)s - %(message)s",
+            "format": "%(asctime)s - %(thread)s %(threadName)s %(levelname)s - %(message)s",
         },
     },
     "handlers": {
@@ -369,6 +370,18 @@ class CustomizedUvicornLogger(logging.Logger):
 
 
 def setup_logging():
+    # Add file handler if KEEP_LOG_FILE is set
+    if KEEP_LOG_FILE:
+        CONFIG["handlers"]["file"] = {
+            "level": "DEBUG",
+            "formatter": ("json"),
+            "class": "logging.FileHandler",
+            "filename": KEEP_LOG_FILE,
+            "mode": "a",
+        }
+        # Add file handler to root logger
+        CONFIG["loggers"][""]["handlers"].append("file")
+
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger

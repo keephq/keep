@@ -568,7 +568,6 @@ async def simulate_alerts_async(
         logger.info(
             "Sleeping for {} seconds before next iteration".format(sleep_interval)
         )
-        await asyncio.sleep(sleep_interval)
 
 
 def launch_demo_mode_thread(
@@ -623,11 +622,14 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
             url, alert = await REQUESTS_QUEUE.get()
 
             async with session.post(url, json=alert, headers=headers) as response:
+                response_time = time.time() - start
                 total_requests += 1
                 if not response.ok:
                     logger.error("Failed to send alert: {}".format(response.text))
                 else:
-                    logger.info("Alert sent successfully")
+                    logger.info(
+                        f"Alert sent successfully in {response_time:.3f} seconds"
+                    )
 
             if rps:
                 delay = 1 / rps - (time.time() - start)
@@ -639,6 +641,7 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
                 worker_id,
                 total_requests / (time.time() - total_start),
             )
+            logger.info("Total requests: %d", total_requests)
 
 
 if __name__ == "__main__":
