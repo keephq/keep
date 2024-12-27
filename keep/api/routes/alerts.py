@@ -53,10 +53,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 REDIS = os.environ.get("REDIS", "false") == "true"
+EVENT_WORKERS = int(config("KEEP_EVENT_WORKERS", default=50, cast=int))
 
 # Create dedicated threadpool
 process_event_executor = ThreadPoolExecutor(
-    max_workers=50, thread_name_prefix="process_event_worker"
+    max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
 )
 
 

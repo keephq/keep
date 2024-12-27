@@ -82,7 +82,10 @@ class WorkflowScheduler:
         self.interval_enabled = (
             config("WORKFLOWS_INTERVAL_ENABLED", default="true") == "true"
         )
-        self.executor = ThreadPoolExecutor(max_workers=self.MAX_WORKERS)
+        self.executor = ThreadPoolExecutor(
+            max_workers=self.MAX_WORKERS,
+            thread_name_prefix="WorkflowScheduler",
+        )
         self.scheduler_future = None
         self.futures = set()
         # Initialize metrics for queue size
