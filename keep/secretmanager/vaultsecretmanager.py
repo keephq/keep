@@ -46,7 +46,7 @@ class VaultSecretManager(BaseSecretManager):
     def write_secret(self, secret_name: str, secret_value: str) -> None:
         self.logger.info("Writing secret", extra={"secret_name": secret_name})
         self.client.secrets.kv.v2.create_or_update_secret(
-            path=secret_name, secret=json.loads(secret_value)
+            path=secret_name, secret={"value": secret_value}
         )
         self.logger.info(
             "Secret created/updated successfully", extra={"secret_name": secret_name}
@@ -58,7 +58,14 @@ class VaultSecretManager(BaseSecretManager):
         self.logger.info(
             "Secret retrieved successfully", extra={"secret_name": secret_name}
         )
-        return secret["data"]["data"]
+        secret_value = secret["data"]["data"].get("value")
+        if is_json: 
+            try:
+                secret_value = json.loads(secret_value)
+            except json.JSONDecodeError as e:
+                self.logger.error("Failed to parse secret as JSON", extra={"secret_name": secret_name, "error": str(e)})
+                raise
+        return secret_value
 
     def delete_secret(self, secret_name: str) -> None:
         self.logger.info("Deleting secret", extra={"secret_name": secret_name})
