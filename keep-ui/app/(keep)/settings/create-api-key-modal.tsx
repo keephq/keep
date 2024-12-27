@@ -9,11 +9,10 @@ import { TextInput, Button, Subtitle, Icon } from "@tremor/react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { Role } from "@/app/(keep)/settings/models";
 import Modal from "@/components/ui/Modal";
-import Select from "@/components/ui/Select";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { ApiKey } from "@/app/(keep)/settings/auth/types";
-
+import { Select } from "@/shared/ui";
 interface CreateApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;

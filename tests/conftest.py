@@ -33,6 +33,40 @@ from keep.contextmanager.contextmanager import ContextManager
 original_request = requests.Session.request  # noqa
 load_dotenv(find_dotenv())
 
+class PusherMock:
+
+    def __init__(self):
+        self.triggers = []
+
+    def trigger(self, channel, event_name, data):
+        self.triggers.append((channel, event_name, data))
+
+class WorkflowManagerMock:
+
+    def __init__(self):
+        self.events = []
+
+    def get_instance(self):
+        return self
+
+    def insert_incident(self, tenant_id, incident_dto, action):
+        self.events.append((tenant_id, incident_dto, action))
+
+
+class ElasticClientMock:
+
+    def __init__(self):
+        self.alerts = []
+        self.tenant_id = None
+        self.enabled = True
+
+    def __call__(self, tenant_id):
+        self.tenant_id = tenant_id
+        return self
+
+    def index_alerts(self, alerts):
+        self.alerts.append((self.tenant_id, alerts))
+
 
 @pytest.fixture
 def ctx_store() -> dict:
@@ -157,7 +191,7 @@ def mysql_container(docker_ip, docker_services):
 
 
 @pytest.fixture
-def db_session(request):
+def db_session(request, monkeypatch):
     # Create a database connection
     os.environ["DB_ECHO"] = "true"
     if (
@@ -168,6 +202,24 @@ def db_session(request):
     ):
         db_type = request.param.get("db")
         db_connection_string = request.getfixturevalue(f"{db_type}_container")
+        monkeypatch.setenv("DATABASE_CONNECTION_STRING", db_connection_string)
+        t = SQLModel.metadata.tables["workflowexecution"]
+        curr_index = next(
+            (
+                index
+                for index in t.indexes
+                if index.name == "idx_workflowexecution_workflow_tenant_started_status"
+            )
+        )
+        t.indexes.remove(curr_index)
+        status_index = Index(
+            "idx_workflowexecution_workflow_tenant_started_status",
+            "workflow_id",
+            "tenant_id",
+            "started",
+            sqlalchemy.text("status(255)"),
+        )
+        t.append_constraint(status_index)
         mock_engine = create_engine(db_connection_string)
     # sqlite
     else:

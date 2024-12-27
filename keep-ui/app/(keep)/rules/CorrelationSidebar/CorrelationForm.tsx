@@ -10,7 +10,7 @@ import {
   TextInput,
 } from "@tremor/react";
 import { Controller, get, useFormContext } from "react-hook-form";
-import { AlertDto } from "@/app/(keep)/alerts/models";
+import { AlertDto } from "@/entities/alerts/model";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
@@ -87,7 +87,7 @@ export const CorrelationForm = ({
           />
         </span>
       </fieldset>
-      <fieldset className="grid grid-cols-2">
+      <fieldset className="grid grid-cols-3">
         <div className="mr-10">
           <label
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
@@ -109,7 +109,7 @@ export const CorrelationForm = ({
           <Controller
             control={control}
             name="groupedAttributes"
-            render={({ field: { value, onChange } }) => (
+            render={({field: {value, onChange}}) => (
               <MultiSelect
                 className="mt-2"
                 value={value}
@@ -126,7 +126,7 @@ export const CorrelationForm = ({
           />
         </div>
 
-        <div>
+        <div className="mr-10">
           <label
             className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
             htmlFor="resolveOn"
@@ -137,12 +137,32 @@ export const CorrelationForm = ({
           <Controller
             control={control}
             name="resolveOn"
-            render={({ field: { value, onChange } }) => (
+            render={({field: {value, onChange}}) => (
               <Select value={value} onValueChange={onChange} className="mt-2">
                 <SelectItem value="never">No auto-resolution</SelectItem>
                 <SelectItem value="all">All alerts resolved</SelectItem>
                 <SelectItem value="first">First alert resolved</SelectItem>
                 <SelectItem value="last">Last alert resolved</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
+
+        <div>
+          <label
+            className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
+            htmlFor="resolveOn"
+          >
+            Start incident on{" "}
+          </label>
+
+          <Controller
+            control={control}
+            name="createOn"
+            render={({field: {value, onChange}}) => (
+              <Select value={value} onValueChange={onChange} className="mt-2">
+                <SelectItem value="any">Any condition met</SelectItem>
+                <SelectItem value="all">All conditions met</SelectItem>
               </Select>
             )}
           />
@@ -153,7 +173,7 @@ export const CorrelationForm = ({
         <Controller
           control={control}
           name="requireApprove"
-          render={({ field: { value, onChange } }) => (
+          render={({field: {value, onChange}}) => (
             <Switch
               color="orange"
               id="requireManualApprove"

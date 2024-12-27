@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Button } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
-import { usePresets } from "utils/hooks/usePresets";
 import { useRouter } from "next/navigation";
 import { SilencedDoorbellNotification } from "@/components/icons";
 import AlertAssociateIncidentModal from "./alert-associate-incident-modal";
 import CreateIncidentWithAIModal from "./alert-create-incident-ai-modal";
 import { useApi } from "@/shared/lib/hooks/useApi";
+
+import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 
 interface Props {
   selectedRowIds: string[];
@@ -30,11 +31,9 @@ export default function AlertActions({
   isIncidentSelectorOpen,
 }: Props) {
   const router = useRouter();
-  const { useAllPresets } = usePresets();
   const api = useApi();
-  const { mutate: presetsMutator } = useAllPresets({
-    revalidateOnFocus: false,
-  });
+  const revalidateMultiple = useRevalidateMultiple();
+  const presetsMutator = () => revalidateMultiple(["/preset"]);
 
   const [isCreateIncidentWithAIOpen, setIsCreateIncidentWithAIOpen] =
     useState<boolean>(false);

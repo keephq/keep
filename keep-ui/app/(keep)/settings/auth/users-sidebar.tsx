@@ -21,10 +21,9 @@ import { useGroups } from "utils/hooks/useGroups";
 import { User, Group } from "@/app/(keep)/settings/models";
 import { AuthType } from "utils/authenticationType";
 import { useConfig } from "utils/hooks/useConfig";
-import Select from "@/components/ui/Select";
 import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
-
+import { Select } from "@/shared/ui";
 interface UserSidebarProps {
   isOpen: boolean;
   toggle: VoidFunction;

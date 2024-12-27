@@ -2,6 +2,7 @@ import copy
 import json
 import logging
 import os
+import re
 import typing
 import uuid
 
@@ -134,8 +135,7 @@ class Parser:
         self.logger.debug("Parsing workflow")
         workflow_id = self._get_workflow_id(tenant_id, workflow)
         context_manager = ContextManager(
-            tenant_id=tenant_id,
-            workflow_id=workflow_id,
+            tenant_id=tenant_id, workflow_id=workflow_id, workflow=workflow
         )
         # Parse the providers (from the workflow yaml or from the providers directory)
         self._load_providers_config(
@@ -250,6 +250,16 @@ class Parser:
             (e.g. {"slack-prod": {"authentication": {"webhook_url": "https://hooks.slack.com/services/..."}}})
         """
         providers_json = os.environ.get("KEEP_PROVIDERS")
+
+        # check if env var is absolute or relative path to a providers json file
+        if providers_json and re.compile(r"^(\/|\.\/|\.\.\/).*\.json$").match(
+            providers_json
+        ):
+            with open(
+                file=providers_json, mode="r", encoding="utf8"
+            ) as file:
+                providers_json = file.read()
+
         if providers_json:
             try:
                 self.logger.debug(

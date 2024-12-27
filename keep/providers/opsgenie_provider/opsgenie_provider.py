@@ -1,4 +1,5 @@
 import dataclasses
+import time
 import typing
 
 import opsgenie_sdk
@@ -31,6 +32,9 @@ class OpsGenieRecipient(pydantic.BaseModel):
 
 class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
+
+    MAX_RETIRES = 3
+    RETRY_DELAY = 1  # seconds
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
     PROVIDER_CATEGORY = ["Incident Management"]
@@ -77,7 +81,11 @@ class OpsgenieProvider(BaseProvider):
                 note="Simple alert",
                 message="Simple alert showing context with name: John Doe",
             )
-            self._delete_alert(alert["id"])
+            deleted = self._delete_alert(alert["id"])
+            if not deleted:
+                self.logger.warning(
+                    "Failed to delete OpsGenie alert in scope validation"
+                )
             scopes["opsgenie:create"] = True
         except ApiException as e:
             self.logger.exception("Failed to create OpsGenie alert")
@@ -92,9 +100,23 @@ class OpsgenieProvider(BaseProvider):
             **self.config.authentication
         )
 
-    def _delete_alert(self, alert_id: str):
+    def _delete_alert(self, alert_id: str) -> bool:
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
-        return api_instance.delete_alert(alert_id)
+        for attempt in range(OpsgenieProvider.MAX_RETIRES):
+            try:
+                api_instance.delete_alert(alert_id)
+                return True
+            except Exception as e:
+                if attempt < OpsgenieProvider.OpsgenieProvider - 1:
+                    time.sleep(OpsgenieProvider.RETRY_DELAY)
+                    continue
+                # Log the error but don't raise it
+                self.logger.warning(
+                    f"Failed to delete alert {alert_id} after {attempt + 1} attempts: {str(e)}",
+                    extra={"alert_id": alert_id, "error_message": str(e)},
+                )
+        # If we reach here, the alert was not deleted
+        return False
 
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CreateAlertPayload.md
     def _create_alert(

@@ -11,7 +11,6 @@ import {
   WidgetData,
   WidgetType,
 } from "../types";
-import { Preset } from "@/app/(keep)/alerts/models";
 import { FiEdit2, FiSave } from "react-icons/fi";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { toast } from "react-toastify";
@@ -22,8 +21,9 @@ import {
   useDashboardMetricWidgets,
 } from "@/utils/hooks/useDashboardMetricWidgets";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import "../styles.css";
+import { Preset } from "@/entities/presets/model/types";
 
 const DASHBOARD_FILTERS = [
   {

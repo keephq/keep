@@ -24,21 +24,25 @@ import {
   Table,
 } from "@tanstack/react-table";
 import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { getColumnsIds } from "./alert-table-utils";
 import { FaArrowUp, FaArrowDown, FaArrowRight } from "react-icons/fa";
 import clsx from "clsx";
-import { getCommonPinningStylesAndClassNames } from "@/components/ui/table/utils";
+import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 
 interface DraggableHeaderCellProps {
   header: Header<AlertDto, unknown>;
   children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
 }
 
 const DraggableHeaderCell = ({
   header,
   children,
+  className,
+  style,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
 
@@ -59,8 +63,8 @@ const DraggableHeaderCell = ({
       column.id === "checkbox"
         ? "32px !important"
         : column.id === "source"
-        ? "40px !important"
-        : column.getSize(),
+          ? "40px !important"
+          : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),
     transition,
@@ -68,21 +72,19 @@ const DraggableHeaderCell = ({
       column.getIsPinned() !== false
         ? "default"
         : isDragging
-        ? "grabbing"
-        : "grab",
+          ? "grabbing"
+          : "grab",
   };
-
-  // TODO: fix multiple pinned columns
-  // const { style, className } = getCommonPinningStylesAndClassNames(column);
 
   return (
     <TableHeaderCell
       className={clsx(
         "relative",
         column.columnDef.meta?.thClassName,
-        column.getIsPinned() === false && "hover:bg-slate-100"
+        column.getIsPinned() === false && "hover:bg-slate-100",
+        className
       )}
-      style={dragStyle}
+      style={{ ...dragStyle, ...style }}
       ref={setNodeRef}
     >
       <div
@@ -109,8 +111,8 @@ const DraggableHeaderCell = ({
                 column.getNextSortingOrder() === "asc"
                   ? "Sort ascending"
                   : column.getNextSortingOrder() === "desc"
-                  ? "Sort descending"
-                  : "Clear sort"
+                    ? "Sort descending"
+                    : "Clear sort"
               }
             >
               {/* Icon logic */}
@@ -214,10 +216,18 @@ export default function AlertsTableHeaders({
               strategy={horizontalListSortingStrategy}
             >
               {headerGroup.headers.map((header) => {
+                const { style, className } =
+                  getCommonPinningStylesAndClassNames(
+                    header.column,
+                    table.getState().columnPinning.left?.length,
+                    table.getState().columnPinning.right?.length
+                  );
                 return (
                   <DraggableHeaderCell
                     key={header.column.columnDef.id}
                     header={header}
+                    className={className}
+                    style={style}
                   >
                     {header.isPlaceholder ? null : (
                       <div>

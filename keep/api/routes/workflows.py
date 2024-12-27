@@ -20,6 +20,7 @@ from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.core.db import (
+    get_alert_by_event_id,
     get_installed_providers,
     get_last_workflow_workflow_to_alert_executions,
     get_session,
@@ -35,6 +36,7 @@ from keep.api.models.workflow import (
     WorkflowExecutionLogsDTO,
     WorkflowToAlertExecutionDTO,
 )
+from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.api.utils.pagination import WorkflowExecutionsPaginatedResultsDto
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -168,6 +170,8 @@ def export_workflows(
 )
 def run_workflow(
     workflow_id: str,
+    event_type: Optional[str] = Query(None),
+    event_id: Optional[str] = Query(None),
     body: Optional[Dict[Any, Any]] = Body(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
@@ -176,40 +180,57 @@ def run_workflow(
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
     logger.info("Running workflow", extra={"workflow_id": workflow_id})
+
     # if the workflow id is the name of the workflow (e.g. the CLI has only the name)
     if not validators.uuid(workflow_id):
         logger.info("Workflow ID is not a UUID, trying to get the ID by name")
         workflow_id = getattr(get_workflow_by_name(tenant_id, workflow_id), "id", None)
+
     workflowmanager = WorkflowManager.get_instance()
 
-    # Finally, run it
     try:
-
-        if body.get("type", "alert") == "alert":
-            event_class = AlertDto
+        # Handle replay from query parameters
+        if event_type and event_id:
+            if event_type == "alert":
+                # Fetch alert from your alert store
+                alert_db = get_alert_by_event_id(tenant_id, event_id)
+                event = convert_db_alerts_to_dto_alerts([alert_db])[0]
+            elif event_type == "incident":
+                # SHAHAR: TODO
+                raise NotImplementedError("Incident replay is not supported yet")
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid event type: {event_type}",
+                )
         else:
-            event_class = IncidentDto
-
-        event_body = body.get("body", {}) or body
-
-        # if its event that was triggered by the UI with the Modal
-        fingerprint = event_body.get("fingerprint", "")
-        if (fingerprint and "test-workflow" in fingerprint) or not body:
-            # some random
-            event_body["id"] = event_body.get("fingerprint", "manual-run")
-            event_body["name"] = event_body.get("fingerprint", "manual-run")
-            event_body["lastReceived"] = datetime.datetime.now(
-                tz=datetime.timezone.utc
-            ).isoformat()
-            if "source" in event_body and not isinstance(event_body["source"], list):
-                event_body["source"] = [event_body["source"]]
-        try:
-            event = event_class(**event_body)
-        except TypeError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid event format",
+            # Handle regular run from body
+            event_body = body.get("body", {}) or body
+            event_class = (
+                AlertDto if body.get("type", "alert") == "alert" else IncidentDto
             )
+
+            # Handle UI triggered events
+            fingerprint = event_body.get("fingerprint", "")
+            if (fingerprint and "test-workflow" in fingerprint) or not body:
+                event_body["id"] = event_body.get("fingerprint", "manual-run")
+                event_body["name"] = event_body.get("fingerprint", "manual-run")
+                event_body["lastReceived"] = datetime.datetime.now(
+                    tz=datetime.timezone.utc
+                ).isoformat()
+                if "source" in event_body and not isinstance(
+                    event_body["source"], list
+                ):
+                    event_body["source"] = [event_body["source"]]
+
+            try:
+                event = event_class(**event_body)
+            except TypeError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid event format",
+                )
+
         workflow_execution_id = workflowmanager.scheduler.handle_manual_event_workflow(
             workflow_id, tenant_id, created_by, event
         )
@@ -222,6 +243,7 @@ def run_workflow(
             status_code=500,
             detail=f"Failed to run workflow {workflow_id}: {e}",
         )
+
     logger.info(
         "Workflow ran successfully",
         extra={
@@ -342,6 +364,33 @@ async def create_workflow(
         return WorkflowCreateOrUpdateDTO(
             workflow_id=workflow.id, status="updated", revision=workflow.revision
         )
+
+
+@router.get("/executions", description="Get workflow executions by alert fingerprint")
+def get_workflow_executions_by_alert_fingerprint(
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
+    ),
+    session: Session = Depends(get_session),
+) -> list[WorkflowToAlertExecutionDTO]:
+    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
+        latest_workflow_to_alert_executions = (
+            get_last_workflow_workflow_to_alert_executions(
+                session=session, tenant_id=authenticated_entity.tenant_id
+            )
+        )
+
+    return [
+        WorkflowToAlertExecutionDTO(
+            workflow_id=workflow_execution.workflow_execution.workflow_id,
+            workflow_execution_id=workflow_execution.workflow_execution_id,
+            alert_fingerprint=workflow_execution.alert_fingerprint,
+            workflow_status=workflow_execution.workflow_execution.status,
+            workflow_started=workflow_execution.workflow_execution.started,
+            event_id=workflow_execution.event_id,
+        )
+        for workflow_execution in latest_workflow_to_alert_executions
+    ]
 
 
 @router.post(
@@ -544,32 +593,6 @@ def get_workflow_by_id(
         raise HTTPException(status_code=500, detail="Error fetching workflow meta data")
 
 
-@router.get("/executions", description="Get workflow executions by alert fingerprint")
-def get_workflow_executions_by_alert_fingerprint(
-    authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:workflows"])
-    ),
-    session: Session = Depends(get_session),
-) -> list[WorkflowToAlertExecutionDTO]:
-    with tracer.start_as_current_span("get_workflow_executions_by_alert_fingerprint"):
-        latest_workflow_to_alert_executions = (
-            get_last_workflow_workflow_to_alert_executions(
-                session=session, tenant_id=authenticated_entity.tenant_id
-            )
-        )
-
-    return [
-        WorkflowToAlertExecutionDTO(
-            workflow_id=workflow_execution.workflow_execution.workflow_id,
-            workflow_execution_id=workflow_execution.workflow_execution_id,
-            alert_fingerprint=workflow_execution.alert_fingerprint,
-            workflow_status=workflow_execution.workflow_execution.status,
-            workflow_started=workflow_execution.workflow_execution.started,
-        )
-        for workflow_execution in latest_workflow_to_alert_executions
-    ]
-
-
 @router.get("/{workflow_id}/runs", description="Get workflow executions by ID")
 def get_workflow_runs_by_id(
     workflow_id: str,
@@ -696,6 +719,17 @@ def get_workflow_execution_status(
             detail=f"Workflow execution {workflow_execution_id} not found",
         )
 
+    event_id = None
+    event_type = None
+
+    if workflow_execution.workflow_to_alert_execution:
+        event_id = workflow_execution.workflow_to_alert_execution.event_id
+        event_type = "alert"
+    # TODO: sub triggers? on create? on update?
+    elif workflow_execution.workflow_to_incident_execution:
+        event_id = workflow_execution.workflow_to_incident_execution.incident_id
+        event_type = "incident"
+
     workflow_execution_dto = WorkflowExecutionDTO(
         id=workflow_execution.id,
         workflow_id=workflow_execution.workflow_id,
@@ -714,5 +748,7 @@ def get_workflow_execution_status(
             for log in workflow_execution.logs
         ],
         results=workflow_execution.results,
+        event_id=event_id,
+        event_type=event_type,
     )
     return workflow_execution_dto

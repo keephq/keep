@@ -10,6 +10,9 @@ from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
@@ -28,6 +31,7 @@ from keep.api.consts import (
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.core.limiter import limiter
 from keep.api.logging import CONFIG as logging_config
 from keep.api.middlewares import LoggingMiddleware
 from keep.api.routes import (
@@ -95,13 +99,12 @@ requests.Session.request = no_redirect_request
 async def check_pending_tasks(background_tasks: set):
     while True:
         events_in_queue = len(background_tasks)
-        if events_in_queue > 0:
-            logger.info(
-                f"{events_in_queue} background tasks pending",
-                extra={
-                    "pending_tasks": events_in_queue,
-                },
-            )
+        logger.info(
+            f"{events_in_queue} background tasks pending",
+            extra={
+                "pending_tasks": events_in_queue,
+            },
+        )
         await asyncio.sleep(1)
 
 
@@ -191,10 +194,12 @@ async def lifespan(app: FastAPI):
     This runs for every worker on startup and shutdown.
     Read more about lifespan here: https://fastapi.tiangolo.com/advanced/events/#lifespan
     """
+    app.state.limiter = limiter
     # create a set of background tasks
     background_tasks = set()
     # if debug tasks are enabled, create a task to check for pending tasks
     if KEEP_DEBUG_TASKS:
+        logger.info("Starting background task to check for pending tasks")
         asyncio.create_task(check_pending_tasks(background_tasks))
 
     # Startup
@@ -233,7 +238,7 @@ def get_app(
         lifespan=lifespan,
     )
 
-    @app.get("/")
+    @app.get("/", include_in_schema=False)
     async def root():
         """
         App description and version.
@@ -241,6 +246,7 @@ def get_app(
         return {"message": app.description, "version": KEEP_VERSION}
 
     app.add_middleware(RawContextMiddleware, plugins=(plugins.RequestIdPlugin(),))
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(
         GZipMiddleware, minimum_size=30 * 1024 * 1024
     )  # Approximately 30 MiB, https://cloud.google.com/run/quotas
@@ -313,6 +319,8 @@ def get_app(
 
     app.add_middleware(LoggingMiddleware)
 
+    if config("KEEP_METRICS", default="true", cast=bool):
+        Instrumentator().instrument(app=app, metric_namespace="keep")
     keep.api.observability.setup(app)
 
     return app
@@ -325,16 +333,12 @@ def run(app: FastAPI):
 
     keep.api.config.on_starting()
 
-    # run the server
-    workers = config("KEEP_WORKERS", default=None, cast=int)
-    if workers:
-        uvicorn.run(
-            "keep.api.api:get_app",
-            host=HOST,
-            port=PORT,
-            log_config=logging_config,
-            lifespan="on",
-            workers=workers,
-        )
-    else:
-        uvicorn.run(app, host=HOST, port=PORT, log_config=logging_config, lifespan="on")
+    uvicorn.run(
+        "keep.api.api:get_app",
+        host=HOST,
+        port=PORT,
+        log_config=logging_config,
+        lifespan="on",
+        workers=config("KEEP_WORKERS", default=None, cast=int),
+        limit_concurrency=config("KEEP_LIMIT_CONCURRENCY", default=None, cast=int),
+    )

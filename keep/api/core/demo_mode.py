@@ -417,8 +417,11 @@ def perform_demo_ai(keep_api_key, keep_api_url):
 
 
 def simulate_alerts(*args, **kwargs):
-    asyncio.create_task(simulate_alerts_worker(0, keep_api_key, 0))
-    asyncio.run(simulate_alerts_async(*args, **kwargs))
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(simulate_alerts_worker(0, kwargs.get("keep_api_key"), 0))
+    loop.create_task(simulate_alerts_async(*args, **kwargs))
+    loop.run_forever()
 
 
 async def simulate_alerts_async(
@@ -429,6 +432,7 @@ async def simulate_alerts_async(
     demo_topology=False,
     clean_old_incidents=False,
     demo_ai=False,
+    count=None,
     target_rps=0,
 ):
     logger.info("Simulating alerts...")
@@ -484,6 +488,11 @@ async def simulate_alerts_async(
 
     shoot = 1
     while True:
+        if count is not None:
+            count -= 1
+            if count < 0:
+                break
+
         try:
             logger.info("Looping to send alerts...")
 
@@ -559,7 +568,6 @@ async def simulate_alerts_async(
         logger.info(
             "Sleeping for {} seconds before next iteration".format(sleep_interval)
         )
-        await asyncio.sleep(sleep_interval)
 
 
 def launch_demo_mode_thread(
@@ -614,11 +622,14 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
             url, alert = await REQUESTS_QUEUE.get()
 
             async with session.post(url, json=alert, headers=headers) as response:
+                response_time = time.time() - start
                 total_requests += 1
                 if not response.ok:
                     logger.error("Failed to send alert: {}".format(response.text))
                 else:
-                    logger.info("Alert sent successfully")
+                    logger.info(
+                        f"Alert sent successfully in {response_time:.3f} seconds"
+                    )
 
             if rps:
                 delay = 1 / rps - (time.time() - start)
@@ -630,6 +641,7 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
                 worker_id,
                 total_requests / (time.time() - total_start),
             )
+            logger.info("Total requests: %d", total_requests)
 
 
 if __name__ == "__main__":

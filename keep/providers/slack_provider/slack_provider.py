@@ -194,7 +194,7 @@ class SlackProvider(BaseProvider):
                     method = "chat.postMessage"
                     payload["thread_ts"] = thread_timestamp
 
-            if payload["attachments"]:
+            if payload.get("attachments", None):
                 payload["attachments"] = attachments
                 response = requests.post(
                     f"{SlackProvider.SLACK_API}/{method}",

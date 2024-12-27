@@ -104,6 +104,30 @@ def get_providers(
     }
 
 
+@router.get("/{provider_id}/logs")
+def get_provider_logs(
+    provider_id: str,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:providers"])
+    ),
+):
+    tenant_id = authenticated_entity.tenant_id
+    logger.info(
+        "Getting provider logs",
+        extra={"tenant_id": tenant_id, "provider_id": provider_id},
+    )
+
+    try:
+        logs = ProvidersService.get_provider_logs(tenant_id, provider_id)
+        return JSONResponse(content=jsonable_encoder(logs), status_code=200)
+    except Exception as e:
+        logger.error(
+            f"Error getting provider logs: {str(e)}",
+            extra={"tenant_id": tenant_id, "provider_id": provider_id},
+        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get(
     "/export",
     description="export all installed providers",
@@ -419,7 +443,7 @@ async def update_provider(
 
     for key, value in provider_info.items():
         if isinstance(value, UploadFile):
-            provider_info[key] = await value.file.read().decode()
+            provider_info[key] = value.file.read().decode()
 
     try:
         result = ProvidersService.update_provider(

@@ -189,6 +189,7 @@ keep-ui/node_modules/*
 
 cov.xml
 keep.db
+keepdd.db
 RANDOM_USER_ID
 storage
 
@@ -213,3 +214,5 @@ oauth2.cfg
 scripts/keep_slack_bot.py
 keepnew.db
 providers_cache.json
+
+tests/provision/*

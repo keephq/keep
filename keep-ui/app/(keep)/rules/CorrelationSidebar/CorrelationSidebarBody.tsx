@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSearchAlerts } from "utils/hooks/useSearchAlerts";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 
@@ -65,6 +65,7 @@ export const CorrelationSidebarBody = ({
       groupedAttributes,
       requireApprove,
       resolveOn,
+      createOn,
     } = correlationFormData;
 
     const body = {
@@ -77,6 +78,7 @@ export const CorrelationSidebarBody = ({
       groupingCriteria: alertsFound.length ? groupedAttributes : [],
       requireApprove: requireApprove,
       resolveOn: resolveOn,
+      createOn: createOn,
     };
 
     try {
@@ -121,10 +123,7 @@ export const CorrelationSidebarBody = ({
         </Callout>
       )}
       <FormProvider {...methods}>
-        <form
-          // className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 flex-2"
-          onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}
-        >
+        <form onSubmit={methods.handleSubmit(onCorrelationFormSubmit)}>
           <div className="mb-10">
             <CorrelationForm alertsFound={alertsFound} isLoading={isLoading} />
           </div>

@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 # Just a fake random tenant id
 SINGLE_TENANT_UUID = "keep"
 SINGLE_TENANT_EMAIL = "admin@keephq"
-PUSHER_DISABLED = os.environ.get("PUSHER_DISABLED", "false") == "true"
 
 
 async def extract_generic_body(request: Request) -> dict | bytes | FormData:
@@ -39,12 +38,13 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
 
 
 def get_pusher_client() -> Pusher | None:
+    pusher_disabled = os.environ.get("PUSHER_DISABLED", "false") == "true"
     pusher_host = os.environ.get("PUSHER_HOST")
     pusher_app_id = os.environ.get("PUSHER_APP_ID")
     pusher_app_key = os.environ.get("PUSHER_APP_KEY")
     pusher_app_secret = os.environ.get("PUSHER_APP_SECRET")
     if (
-        PUSHER_DISABLED
+        pusher_disabled
         or pusher_app_id is None
         or pusher_app_key is None
         or pusher_app_secret is None

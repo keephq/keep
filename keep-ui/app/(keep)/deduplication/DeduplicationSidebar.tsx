@@ -15,9 +15,7 @@ import {
 import { IoMdClose } from "react-icons/io";
 import { DeduplicationRule } from "@/app/(keep)/deduplication/models";
 import { useDeduplicationFields } from "utils/hooks/useDeduplicationRules";
-import { GroupBase } from "react-select";
-import Select from "@/components/ui/Select";
-import MultiSelect from "@/components/ui/MultiSelect";
+import { Select } from "@/shared/ui";
 import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
@@ -194,11 +192,8 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         <div>
           <Dialog.Title className="text-3xl font-bold" as={Title}>
             {selectedDeduplicationRule
-              ? "Edit Deduplication Rule"
-              : "Add Deduplication Rule"}
-            <Badge className="ml-4" color="orange">
-              Beta
-            </Badge>
+              ? `Edit ${selectedDeduplicationRule.name}`
+              : "Add deduplication rule"}
             {selectedDeduplicationRule?.default && (
               <Badge className="ml-2" color="orange">
                 Default Rule
@@ -241,6 +236,22 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         </div>
       )}
 
+      {selectedDeduplicationRule?.is_provisioned && (
+        <div className="flex flex-col">
+          <Callout
+            className="mb-4 py-8"
+            title="Editing a Provisioned Rule"
+            icon={ExclamationTriangleIcon}
+            color="orange"
+          >
+            <Text>
+              Editing a provisioned deduplication rule is not allowed.
+              Please contact your system administrator for more information.
+            </Text>
+          </Callout>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit(onFormSubmit)}
         className="mt-4 flex flex-col h-full"
@@ -256,6 +267,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   name="name"
                   control={control}
                   rules={{ required: "Rule name is required" }}
+                  disabled={!!selectedDeduplicationRule?.is_provisioned}
                   render={({ field }) => (
                     <TextInput
                       {...field}
@@ -273,6 +285,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   name="description"
                   control={control}
                   rules={{ required: "Description is required" }}
+                  disabled={!!selectedDeduplicationRule?.is_provisioned}
                   render={({ field }) => (
                     <TextInput
                       {...field}
@@ -304,9 +317,9 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                   control={control}
                   rules={{ required: "Provider is required" }}
                   render={({ field }) => (
-                    <Select<ProviderOption, false, GroupBase<ProviderOption>>
+                    <Select
                       {...field}
-                      isDisabled={!!selectedDeduplicationRule?.default}
+                      isDisabled={!!selectedDeduplicationRule?.default || selectedDeduplicationRule?.is_provisioned}
                       options={alertProviders.map((provider) => ({
                         value: `${provider.type}_${provider.id}`,
                         label: provider.details?.name || provider.id || "main",
@@ -378,8 +391,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     required: "At least one fingerprint field is required",
                   }}
                   render={({ field }) => (
-                    <MultiSelect
+                    <Select
                       {...field}
+                      isDisabled={!!selectedDeduplicationRule?.is_provisioned}
+                      isMulti
                       options={availableFields.map((fieldName) => ({
                         value: fieldName,
                         label: fieldName,
@@ -416,7 +431,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     name="full_deduplication"
                     control={control}
                     render={({ field }) => (
-                      <Switch checked={field.value} onChange={field.onChange} />
+                      <Switch 
+                        disabled={!!selectedDeduplicationRule?.is_provisioned} 
+                        checked={field.value}
+                        onChange={field.onChange} 
+                      />
                     )}
                   />
                   <span className="text-sm font-medium text-gray-700 flex items-center">
@@ -452,8 +471,10 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                     name="ignore_fields"
                     control={control}
                     render={({ field }) => (
-                      <MultiSelect
+                      <Select
                         {...field}
+                        isDisabled={!!selectedDeduplicationRule?.is_provisioned}
+                        isMulti
                         options={availableFields.map((fieldName) => ({
                           value: fieldName,
                           label: fieldName,
@@ -502,7 +523,11 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
           >
             Cancel
           </Button>
-          <Button color="orange" type="submit" disabled={isSubmitting}>
+          <Button
+            color="orange"
+            type="submit"
+            disabled={isSubmitting || selectedDeduplicationRule?.is_provisioned}
+          >
             {isSubmitting ? "Saving..." : "Save Rule"}
           </Button>
         </div>

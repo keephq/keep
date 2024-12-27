@@ -6,7 +6,7 @@ import Loading from "@/app/(keep)/loading";
 import { useFilterContext } from "./filter-context";
 import { toast } from "react-toastify";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 export const useFetchProviders = () => {
   const [providers, setProviders] = useState<Provider[]>([]);

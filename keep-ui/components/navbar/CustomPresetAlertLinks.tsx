@@ -1,7 +1,5 @@
-import { CSSProperties, useEffect, useState } from "react";
-import { Session } from "next-auth";
-import { toast } from "react-toastify";
-import { usePresets } from "utils/hooks/usePresets";
+import { CSSProperties } from "react";
+import { usePresets } from "@/entities/presets/model/usePresets";
 import { AiOutlineSwap } from "react-icons/ai";
 import { usePathname, useRouter } from "next/navigation";
 import { Subtitle } from "@tremor/react";
@@ -17,7 +15,6 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Preset } from "@/app/(keep)/alerts/models";
 import { AiOutlineSound } from "react-icons/ai";
 // Using dynamic import to avoid hydration issues with react-player
 import dynamic from "next/dynamic";
@@ -25,15 +22,21 @@ const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 // import css
 import "./CustomPresetAlertLink.css";
 import clsx from "clsx";
-import { useApi } from "@/shared/lib/hooks/useApi";
+import { Preset } from "@/entities/presets/model/types";
+import { usePresetActions } from "@/entities/presets/model/usePresetActions";
+import { usePresetPolling } from "@/entities/presets/model/usePresetPolling";
 
-type PresetAlertProps = {
+type AlertPresetLinkProps = {
   preset: Preset;
   pathname: string | null;
   deletePreset: (id: string, name: string) => void;
 };
 
-const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
+const AlertPresetLink = ({
+  preset,
+  pathname,
+  deletePreset,
+}: AlertPresetLinkProps) => {
   const href = `/alerts/${preset.name.toLowerCase()}`;
   const isActive = decodeURIComponent(pathname?.toLowerCase() || "") === href;
 
@@ -90,72 +93,35 @@ const PresetAlert = ({ preset, pathname, deletePreset }: PresetAlertProps) => {
   );
 };
 type CustomPresetAlertLinksProps = {
-  session: Session;
   selectedTags: string[];
 };
 
 export const CustomPresetAlertLinks = ({
-  session,
   selectedTags,
 }: CustomPresetAlertLinksProps) => {
-  const api = useApi();
+  const { deletePreset } = usePresetActions();
 
-  const { useAllPresets, presetsOrderFromLS, setPresetsOrderFromLS } =
-    usePresets();
-  const { data: presets = [], mutate: presetsMutator } = useAllPresets({
+  const { dynamicPresets: presets, setLocalDynamicPresets } = usePresets({
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
 
+  usePresetPolling();
+
   const pathname = usePathname();
   const router = useRouter();
-  const [presetsOrder, setPresetsOrder] = useState<Preset[]>([]);
 
   // Check for noisy presets and control sound playback
-  const anyNoisyNow = presets.some((preset) => preset.should_do_noise_now);
+  const anyNoisyNow = presets?.some((preset) => preset.should_do_noise_now);
 
-  const checkValidPreset = (preset: Preset) => {
-    if (!preset.is_private) {
-      return true;
-    }
-    return preset && preset.created_by == session?.user?.email;
-  };
-
-  useEffect(() => {
-    const filteredLS = presetsOrderFromLS.filter(
-      (preset) =>
-        ![
-          "feed",
-          "deleted",
-          "dismissed",
-          "without-incident",
-          "groups",
-        ].includes(preset.name)
-    );
-
-    // Combine live presets and local storage order
-    const combinedOrder = presets.reduce<Preset[]>(
-      (acc, preset: Preset) => {
-        if (!acc.find((p) => p.id === preset.id)) {
-          acc.push(preset);
-        }
-        return acc.filter((preset) => checkValidPreset(preset));
-      },
-      [...filteredLS]
-    );
-
-    // Only update state if there's an actual change to prevent infinite loops
-    if (JSON.stringify(presetsOrder) !== JSON.stringify(combinedOrder)) {
-      setPresetsOrder(combinedOrder);
-    }
-  }, [presets, presetsOrderFromLS]);
   // Filter presets based on tags, or return all if no tags are selected
   const filteredOrderedPresets =
     selectedTags.length === 0
-      ? presetsOrder
-      : presetsOrder.filter((preset) =>
+      ? presets
+      : presets.filter((preset) =>
           preset.tags.some((tag) => selectedTags.includes(tag.name))
         );
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -171,35 +137,10 @@ export const CustomPresetAlertLinks = ({
     })
   );
 
-  const deletePreset = async (presetId: string, presetName: string) => {
-    const isDeleteConfirmed = confirm(
-      `You are about to delete preset ${presetName}. Are you sure?`
-    );
-
-    if (isDeleteConfirmed) {
-      try {
-        await api.delete(`/preset/${presetId}`);
-
-        toast(`Preset ${presetName} deleted!`, {
-          position: "top-left",
-          type: "success",
-        });
-
-        await presetsMutator();
-
-        // remove preset from saved order
-        setPresetsOrderFromLS((oldOrder) =>
-          oldOrder.filter((p) => p.id !== presetId)
-        );
-
-        router.push("/alerts/feed"); // Redirect to feed
-      } catch (error) {
-        toast(`Error deleting preset ${presetName}: ${error}`, {
-          position: "top-left",
-          type: "error",
-        });
-      }
-    }
+  const deletePresetAndRedirect = (presetId: string, presetName: string) => {
+    deletePreset(presetId, presetName).then(() => {
+      router.push("/alerts/feed");
+    });
   };
 
   const onDragEnd = (event: DragEndEvent) => {
@@ -209,22 +150,20 @@ export const CustomPresetAlertLinks = ({
       return;
     }
 
-    const fromIndex = presetsOrder.findIndex(
+    const fromIndex = presets.findIndex(
       ({ id }) => id === active.id.toString()
     );
-    const toIndex = presetsOrder.findIndex(
-      ({ id }) => id === over.id.toString()
-    );
+    const toIndex = presets.findIndex(({ id }) => id === over.id.toString());
 
     if (toIndex === -1) {
       return;
     }
 
-    const reorderedCols = [...presetsOrder];
+    const reorderedCols = [...presets];
     const reorderedItem = reorderedCols.splice(fromIndex, 1);
     reorderedCols.splice(toIndex, 0, reorderedItem[0]);
 
-    setPresetsOrderFromLS(reorderedCols);
+    setLocalDynamicPresets(reorderedCols);
   };
 
   return (
@@ -234,13 +173,13 @@ export const CustomPresetAlertLinks = ({
       collisionDetection={rectIntersection}
       onDragEnd={onDragEnd}
     >
-      <SortableContext key="preset-alerts" items={presetsOrder}>
+      <SortableContext key="preset-alerts" items={presets}>
         {filteredOrderedPresets.map((preset) => (
-          <PresetAlert
+          <AlertPresetLink
             key={preset.id}
             preset={preset}
             pathname={pathname}
-            deletePreset={deletePreset}
+            deletePreset={deletePresetAndRedirect}
           />
         ))}
       </SortableContext>

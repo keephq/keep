@@ -5,7 +5,7 @@ import {
   SunIcon,
 } from "@heroicons/react/20/solid";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
-import { DropdownMenu } from "@/components/ui/DropdownMenu/DropdownMenu";
+import { DropdownMenu } from "@/shared/ui";
 import clsx from "clsx";
 
 const THEMES = {

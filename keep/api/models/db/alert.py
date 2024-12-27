@@ -208,6 +208,10 @@ class Incident(SQLModel, table=True):
     class Config:
         arbitrary_types_allowed = True
 
+    @property
+    def alerts(self):
+        return self._alerts
+
 
 class Alert(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -292,6 +296,7 @@ class AlertDeduplicationRule(SQLModel, table=True):
     full_deduplication: bool = Field(default=False)
     ignore_fields: list[str] = Field(sa_column=Column(JSON), default=[])
     priority: int = Field(default=0)  # for future use
+    is_provisioned: bool = Field(default=False)
 
     class Config:
         arbitrary_types_allowed = True

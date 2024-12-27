@@ -233,6 +233,8 @@ receivers:
         if not alert_type:
             alert_type = random.choice(list(ALERTS.keys()))
 
+        to_wrap_with_provider_type = kwargs.get("to_wrap_with_provider_type")
+
         alert_payload = ALERTS[alert_type]["payload"]
         alert_parameters = ALERTS[alert_type].get("parameters", [])
         # now generate some random data
@@ -267,6 +269,9 @@ receivers:
         fingerprint_src = json.dumps(alert_payload["labels"], sort_keys=True)
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()
         alert_payload["fingerprint"] = fingerprint
+        if to_wrap_with_provider_type:
+            return {"keep_source_type": "prometheus", "event": alert_payload}
+
         return alert_payload
 
 
