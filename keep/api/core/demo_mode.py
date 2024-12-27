@@ -568,7 +568,6 @@ async def simulate_alerts_async(
         logger.info(
             "Sleeping for {} seconds before next iteration".format(sleep_interval)
         )
-    # await asyncio.sleep(sleep_interval)
 
 
 def launch_demo_mode_thread(

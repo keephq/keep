@@ -701,7 +701,11 @@ def test_workflow_execution_with_disabled_workflow(
     count = 0
 
     while (
-        enabled_workflow_execution is None and disabled_workflow_execution is None
+        (
+            enabled_workflow_execution is None
+            or enabled_workflow_execution.status == "in_progress"
+        )
+        and disabled_workflow_execution is None
     ) and count < 30:
         enabled_workflow_execution = get_last_workflow_execution_by_workflow_id(
             SINGLE_TENANT_UUID, enabled_id
