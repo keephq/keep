@@ -69,7 +69,7 @@ def timing_histogram(histogram):
 
 class WorkflowScheduler:
     MAX_SIZE_SIGNED_INT = 2147483647
-    MAX_WORKERS = 20
+    MAX_WORKERS = config("KEEP_MAX_WORKFLOW_WORKERS", default="20", cast=int)
 
     def __init__(self, workflow_manager):
         self.logger = logging.getLogger(__name__)
