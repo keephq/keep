@@ -60,11 +60,6 @@ process_event_executor = ThreadPoolExecutor(
     max_workers=EVENT_WORKERS, thread_name_prefix="process_event_worker"
 )
 
-# Create dedicated threadpool
-process_event_executor = ThreadPoolExecutor(
-    max_workers=50, thread_name_prefix="process_event_worker"
-)
-
 
 @router.get(
     "",
