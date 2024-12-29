@@ -168,7 +168,7 @@ class ArgocdProvider(BaseTopologyProvider):
 
         except Exception as e:
             self.logger.error(
-                f"Error while getting applications from ArgoCD",
+                "Error while getting applications from ArgoCD",
                 extra={"exception": str(e)},
             )
             raise e
@@ -189,7 +189,7 @@ class ArgocdProvider(BaseTopologyProvider):
             return response.json()["nodes"]
         except Exception as e:
             self.logger.error(
-                f"Error while getting applications from ArgoCD",
+                "Error while getting resource-tree from ArgoCD",
                 extra={"exception": str(e)},
             )
 
