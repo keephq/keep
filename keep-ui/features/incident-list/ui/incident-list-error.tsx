@@ -19,7 +19,11 @@ export const IncidentListError = ({
         <div className="text-center space-y-3">
           <Title className="text-2xl">Failed to load incidents</Title>
           <Subtitle className="text-gray-400">
-            Please try again. If the issue persists, contact us
+            Error: {incidentError.message}
+          </Subtitle>
+          <Subtitle className="text-gray-400">
+            {incidentError.proposedResolution ||
+              "Please try again. If the issue persists, contact us"}
           </Subtitle>
           <Button
             color="orange"
