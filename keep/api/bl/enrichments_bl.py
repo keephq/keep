@@ -46,8 +46,8 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
             attr = attr.replace("@@", ".")
         obj = getattr(
             obj,
-            attr.strip(),
-            obj.get(attr.strip(), None) if isinstance(obj, dict) else None,
+            attr,
+            obj.get(attr, None) if isinstance(obj, dict) else None,
         )
         if obj is None:
             return None
@@ -381,10 +381,12 @@ class EnrichmentsBl:
                 conditions = matcher.split("&&")
                 return all(
                     self._is_match(
-                        get_nested_attribute(alert, attribute), row.get(attribute)
+                        get_nested_attribute(alert, attribute.strip()),
+                        row.get(attribute.strip()),
                     )
-                    or get_nested_attribute(alert, attribute) == row.get(attribute)
-                    or row.get(attribute) == "*"  # Wildcard match
+                    or get_nested_attribute(alert, attribute.strip())
+                    == row.get(attribute.strip())
+                    or row.get(attribute.strip()) == "*"  # Wildcard match
                     for attribute in conditions
                 )
             else:
