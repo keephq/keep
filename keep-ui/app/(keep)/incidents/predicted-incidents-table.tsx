@@ -23,7 +23,7 @@ interface Props {
   editCallback: (rule: IncidentDto) => void;
 }
 
-// Depricated?
+// Deprecated
 export default function PredictedIncidentsTable({
   incidents: incidents,
 }: Props) {

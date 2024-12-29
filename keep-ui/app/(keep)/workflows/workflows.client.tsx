@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR from "swr";
-import { Callout, Subtitle, Switch } from "@tremor/react";
+import { Callout, Subtitle } from "@tremor/react";
 import {
   ArrowUpOnSquareStackIcon,
   ExclamationCircleIcon,
@@ -20,8 +20,7 @@ import Modal from "@/components/ui/Modal";
 import MockWorkflowCardSection from "./mockworkflows";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
-import { Input } from "@/shared/ui/Input";
+import { showErrorToast, Input } from "@/shared/ui";
 
 export default function WorkflowsPage() {
   const api = useApi();

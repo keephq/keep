@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";

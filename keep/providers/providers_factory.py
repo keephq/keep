@@ -414,9 +414,9 @@ class ProvidersFactory:
                 )
                 continue
             # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
-            except TypeError:
+            except TypeError as e:
                 logger.warning(
-                    f"Cannot import provider {provider_directory}, unexpected error."
+                    f"Cannot import provider {provider_directory}, unexpected error. ({str(e)})"
                 )
                 continue
 
@@ -625,6 +625,7 @@ class ProvidersFactory:
                     full_deduplication=False,
                     # not relevant for default deduplication rules
                     ignore_fields=[],
+                    is_provisioned=False,
                 )
                 default_deduplications.append(deduplication_dto)
 

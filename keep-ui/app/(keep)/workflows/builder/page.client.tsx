@@ -1,17 +1,16 @@
 "use client";
 
-import { Title, Button, Subtitle, Badge } from "@tremor/react";
+import { Title, Button } from "@tremor/react";
 import { useEffect, useRef, useState } from "react";
 import {
   PlusIcon,
-  ArrowDownOnSquareIcon,
   BoltIcon,
   ArrowUpOnSquareIcon,
   PlayIcon,
 } from "@heroicons/react/20/solid";
 import { BuilderCard } from "./builder-card";
 import { loadWorkflowYAML } from "./utils";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
 
 export default function PageClient({
@@ -37,13 +36,17 @@ export default function PageClient({
     setFileName("");
   }, []);
 
-  function loadAlert() {
-    document.getElementById("alertFile")?.click();
+  function loadWorkflow() {
+    document.getElementById("workflowFile")?.click();
   }
 
-  function newAlert() {
-    const confirmed = confirm("Are you sure you want to create a new alert?");
-    if (confirmed) window.location.reload();
+  function createNewWorkflow() {
+    const confirmed = confirm(
+      "Are you sure you want to create a new workflow?"
+    );
+    if (confirmed) {
+      window.location.reload();
+    }
   }
 
   const enableButtons = () => setButtonsEnabled(true);
@@ -87,7 +90,7 @@ export default function PageClient({
               <Button
                 color="orange"
                 size="md"
-                onClick={newAlert}
+                onClick={createNewWorkflow}
                 icon={PlusIcon}
                 className="min-w-28"
                 variant="secondary"
@@ -98,17 +101,17 @@ export default function PageClient({
               <Button
                 color="orange"
                 size="md"
-                onClick={loadAlert}
+                onClick={loadWorkflow}
                 className="min-w-28"
                 variant="secondary"
-                icon={ArrowDownOnSquareIcon}
+                icon={ArrowUpOnSquareIcon}
                 disabled={!buttonsEnabled}
               >
                 Load
               </Button>
               <input
                 type="file"
-                id="alertFile"
+                id="workflowFile"
                 style={{ display: "none" }}
                 ref={fileInputRef}
                 onChange={handleFileChange}
@@ -144,7 +147,7 @@ export default function PageClient({
               icon={BoltIcon}
               onClick={() => setTriggerGenerate(incrementState)}
             >
-              Generate
+              Get YAML
             </Button>
           )}
         </div>

@@ -2,7 +2,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button, Card, Subtitle, Title } from "@tremor/react";
 import { CopyBlock, a11yLight } from "react-code-blocks";
 import { stringify } from "yaml";
-import { Alert } from "./alert";
+import { Alert } from "./legacy-workflow.types";
 import { useState } from "react";
 import ReactLoading from "react-loading";
 import { ArrowDownTrayIcon } from "@heroicons/react/20/solid";
@@ -56,8 +56,8 @@ export default function BuilderModalContent({
     <>
       <div className="flex justify-between items-center">
         <div>
-          <Title>Generated Alert</Title>
-          <Subtitle>Keep alert specification ready to use</Subtitle>
+          <Title>Generated Workflow YAML</Title>
+          <Subtitle>Keep workflow specification ready to use</Subtitle>
         </div>
         <div>
           {!hideCloseButton && (

@@ -1,4 +1,4 @@
-import { getIncident } from "@/entities/incidents/api/incidents";
+import { getIncident } from "@/entities/incidents/api";
 import { createServerApiClient } from "@/shared/api/server";
 import { notFound } from "next/navigation";
 import { KeepApiError } from "@/shared/api";

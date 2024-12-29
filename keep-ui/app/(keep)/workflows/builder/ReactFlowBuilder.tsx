@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   EdgeTypes as EdgeTypesType,
-  Edge,
-  useReactFlow,
 } from "@xyflow/react";
 import CustomNode from "./CustomNode";
 import CustomEdge from "./CustomEdge";
@@ -60,8 +58,8 @@ const ReactFlowBuilder = ({
   } = useWorkflowInitialization(definition, toolboxConfiguration);
 
   return (
-    <div className="sqd-designer-react">
-      <div className="sqd-designer sqd-theme-light sqd-layout-desktop">
+    <div className="h-[inherit] rounded-lg">
+      <div className="h-full sqd-theme-light sqd-layout-desktop">
         <DragAndDropSidebar isDraggable={false} />
         {!isLoading && (
           <ReactFlow

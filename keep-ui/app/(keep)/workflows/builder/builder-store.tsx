@@ -67,32 +67,6 @@ export type FlowNode = Node & {
   isNested: boolean;
 };
 
-const initialNodes: Partial<FlowNode>[] = [
-  {
-    id: "a",
-    position: { x: 0, y: 0 },
-    data: { label: "Node A", type: "custom" },
-    type: "custom",
-  },
-  {
-    id: "b",
-    position: { x: 0, y: 100 },
-    data: { label: "Node B", type: "custom" },
-    type: "custom",
-  },
-  {
-    id: "c",
-    position: { x: 0, y: 200 },
-    data: { label: "Node C", type: "custom" },
-    type: "custom",
-  },
-];
-
-const initialEdges: Edge[] = [
-  { id: "a->b", type: "custom-edge", source: "a", target: "b" },
-  { id: "b->c", type: "custom-edge", source: "b", target: "c" },
-];
-
 export type FlowState = {
   nodes: FlowNode[];
   edges: Edge[];

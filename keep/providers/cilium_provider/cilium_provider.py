@@ -7,9 +7,6 @@ import pydantic
 from keep.api.models.db.topology import TopologyServiceInDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseTopologyProvider
-from keep.providers.cilium_provider.grpc.observer_pb2 import (FlowFilter,
-                                                              GetFlowsRequest)
-from keep.providers.cilium_provider.grpc.observer_pb2_grpc import ObserverStub
 from keep.providers.models.provider_config import ProviderConfig
 from keep.validation.fields import NoSchemeUrl
 
@@ -24,7 +21,7 @@ class CiliumProviderAuthConfig:
             "description": "The base endpoint of the cilium hubble relay",
             "sensitive": False,
             "hint": "localhost:4245",
-            "validation": "no_scheme_url"
+            "validation": "no_scheme_url",
         }
     )
 
@@ -82,6 +79,15 @@ class CiliumProvider(BaseTopologyProvider):
         return service
 
     def pull_topology(self) -> list[TopologyServiceInDto]:
+        # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
+        from keep.providers.cilium_provider.grpc.observer_pb2 import (  # noqa
+            FlowFilter,
+            GetFlowsRequest,
+        )
+        from keep.providers.cilium_provider.grpc.observer_pb2_grpc import (  # noqa
+            ObserverStub,
+        )
+
         channel = grpc.insecure_channel(self.authentication_config.cilium_base_endpoint)
         stub = ObserverStub(channel)
 

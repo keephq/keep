@@ -25,6 +25,7 @@ from keep.api.core.db import (
     get_provider_by_name,
     is_linked_provider,
 )
+from keep.api.logging import ProviderLoggerAdapter
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus, IncidentDto
 from keep.api.models.db.alert import AlertActionType
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -92,13 +93,24 @@ class BaseProvider(metaclass=abc.ABCMeta):
         self.webhook_markdown = webhook_markdown
         self.provider_description = provider_description
         self.context_manager = context_manager
-        self.logger = context_manager.get_logger(self.provider_id)
+
+        # Initialize the logger with our custom adapter
+        base_logger = logging.getLogger(self.provider_id)
+        # If logs should be stored on the DB, use the custom adapter
+        if os.environ.get("KEEP_STORE_PROVIDER_LOGS", "false").lower() == "true":
+            self.logger = ProviderLoggerAdapter(
+                base_logger, self, context_manager.tenant_id, provider_id
+            )
+        else:
+            self.logger = base_logger
+
         self.logger.setLevel(
             os.environ.get(
                 "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
                 os.environ.get("LOG_LEVEL", "INFO"),
             )
         )
+
         self.validate_config()
         self.logger.debug(
             "Base provider initialized", extra={"provider": self.__class__.__name__}
@@ -557,6 +569,15 @@ class BaseProvider(metaclass=abc.ABCMeta):
             NotImplementedError: _description_
         """
         raise NotImplementedError("setup_webhook() method not implemented")
+
+    def clean_up(self):
+        """
+        Clean up the provider.
+
+        Raises:s
+            NotImplementedError: for providers who does not implement this method.
+        """
+        raise NotImplementedError("clean_up() method not implemented")
 
     @staticmethod
     def get_alert_schema() -> dict:

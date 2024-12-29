@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@tremor/react";
-import { AlertDto } from "./models";
+import { AlertDto } from "@/entities/alerts/model";
 import AlertTabModal from "./alert-tab-modal";
 import { evalWithContext } from "./alerts-rules-builder";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 interface Tab {
   id?: string;
   name: string;

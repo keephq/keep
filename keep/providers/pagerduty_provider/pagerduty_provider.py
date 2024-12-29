@@ -475,6 +475,41 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             )
             # This will give us a better error message in Keep workflows
             raise Exception(r.text) from e
+        
+    def clean_up(self):
+        """
+        Clean up the provider.
+        It will remove the webhook from PagerDuty if it exists.
+        """
+        self.logger.info("Cleaning up %s provider with id %s", self.PROVIDER_DISPLAY_NAME, self.provider_id)
+        keep_webhook_incidents_api_url = (
+                f"{self.context_manager.api_url}/incidents/event/{self.provider_type}?provider_id={self.provider_id}"
+            )
+        headers = self.__get_headers()
+        request = requests.get(self.SUBSCRIPTION_API_URL, headers=headers)
+        if not request.ok:
+            raise Exception("Could not get existing webhooks")
+        existing_webhooks = request.json().get("webhook_subscriptions", [])
+        webhook_exists = next(
+            iter(
+                [
+                    webhook
+                    for webhook in existing_webhooks
+                    if keep_webhook_incidents_api_url == webhook.get("delivery_method", {}).get("url", "")
+                ]
+            ),
+            False,
+        )
+        if webhook_exists:
+            self.logger.info("Webhook exists, removing it")
+            webhook_id = webhook_exists.get("id")
+            request = requests.delete(
+                f"{self.SUBSCRIPTION_API_URL}/{webhook_id}", headers=headers
+            )
+            if not request.ok:
+                raise Exception("Could not remove existing webhook")
+            self.logger.info("Webhook removed", extra={"webhook_id": webhook_id})
+
 
     def dispose(self):
         """

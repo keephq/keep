@@ -5,13 +5,12 @@ import { Text } from "@tremor/react";
 import { FacetValueProps } from "./alert-table-facet-types";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { BellIcon, BellSlashIcon, FireIcon } from "@heroicons/react/24/outline";
-import { Severity } from "./models";
-import { AlertSeverityBorderIcon } from "./alert-severity-border";
 import clsx from "clsx";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { useUser } from "@/entities/users/model/useUser";
+import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -90,7 +89,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         );
       }
       if (facetKey === "severity") {
-        return <AlertSeverityBorderIcon severity={label as Severity} />;
+        return <SeverityBorderIcon severity={label as UISeverity} />;
       }
       if (facetKey === "assignee") {
         return <UserStatefulAvatar email={label} size="xs" />;

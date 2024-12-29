@@ -1,5 +1,7 @@
-alert:
+workflow:
   id: bq-sql-query
+  triggers:
+    - type: manual
   description: Monitor that time difference is no more than 1 hour
   steps:
     - name: get-max-datetime
@@ -12,63 +14,7 @@ alert:
     - name: runbook-step1-bigquery-sql
       provider:
         type: bigquery
-        config: "{{ providers.bigquery-prod }}"
+        config: "{{ providers.bigquery }}"
         with:
           # Get max(datetime) from the random table
           query: "SELECT * FROM `bigquery-public-data.austin_bikeshare.bikeshare_stations` LIMIT 10"
-  actions:
-    - name: opsgenie-alert
-      condition:
-      - name: threshold-condition
-        type: threshold
-        # datetime_compare(t1, t2) compares t1-t2 and returns the diff in hours
-        #   utcnow() returns the local machine datetime in UTC
-        #   to_utc() converts a datetime to UTC
-        value: keep.datetime_compare(keep.utcnow(), keep.to_utc("{{ steps.get-max-datetime.results[0][date] }}"))
-        compare_to: 1 # hours
-        compare_type: gt # greater than
-        # Give it an alias so we can use it in the slack action
-        alias: A
-      provider:
-        type: opsgenie
-        config: " {{ providers.opsgenie-prod }} "
-        with:
-          message: "DB datetime value ({{ actions.opsgenie-alert.conditions.threshold-condition.0.compare_value }}) is greater than 1! 🚨"
-    - name: trigger-slack
-      if: "{{ A }}"
-      provider:
-        type: slack
-        config: " {{ providers.slack-prod }} "
-        with:
-          message: "DB datetime value ({{ actions.opsgenie-alert.conditions.threshold-condition.0.compare_value }}) is greater than 1! 🚨"
-    - name: trigger-slack-2
-      if: "{{ A }}"
-      provider:
-        type: slack
-        config: " {{ providers.slack-prod }} "
-        with:
-          blocks:
-          - type: header
-            text:
-              type: plain_text
-              text: "Adding some context to the alert:"
-              emoji: true
-          - type: section
-            text:
-              type: mrkdwn
-              text: |-
-                  {{#steps.runbook-step1-bigquery-sql.results}}
-                  - Station id: {{station_id}} | Status: {{status}}
-                  {{/steps.runbook-step1-bigquery-sql.results}}
-
-
-providers:
-  bigquery-prod:
-    description: BigQuery Prod
-    authentication:
-  opsgenie-prod:
-    authentication:
-      api_key: "{{ env.OPSGENIE_API_KEY }}"
-  slack-prod:
-    authentication:
-      webhook_url: "{{ env.SLACKDEMO_WEBHOOK }}"

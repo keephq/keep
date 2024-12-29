@@ -3,7 +3,7 @@ import { Button } from "@tremor/react";
 import { MouseEvent } from "react";
 import { useRules } from "utils/hooks/useRules";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
+import { showErrorToast } from "@/shared/ui";
 
 type DeleteRuleCellProps = {
   ruleId: string;

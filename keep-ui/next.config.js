@@ -24,6 +24,19 @@ const nextConfig = {
       );
     }
 
+    // Ignore warnings about critical dependencies, since they are not critical
+    // https://github.com/getsentry/sentry-javascript/issues/12077#issuecomment-2407569917
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /@opentelemetry\/instrumentation/,
+        message: /Critical dependency/,
+      },
+      {
+        module: /@prisma\/instrumentation/,
+        message: /Critical dependency/,
+      },
+    ];
     return config;
   },
   transpilePackages: ["next-auth"],

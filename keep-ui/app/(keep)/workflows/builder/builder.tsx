@@ -14,7 +14,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { globalValidatorV2, stepValidatorV2 } from "./builder-validators";
 import Modal from "react-modal";
-import { Alert } from "./alert";
+import { Alert } from "./legacy-workflow.types";
 import BuilderModalContent from "./builder-modal";
 import Loader from "./loader";
 import { stringify } from "yaml";
@@ -34,9 +34,9 @@ import useStore from "./builder-store";
 import { toast } from "react-toastify";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
-import { showErrorToast } from "@/shared/ui/utils/showErrorToast";
-import "./page.css";
+import { showErrorToast } from "@/shared/ui";
 import { YAMLException } from "js-yaml";
+import WorkflowDefinitionYAML from "../workflow-definition-yaml";
 
 interface Props {
   loadedAlertFile: string | null;
@@ -57,6 +57,15 @@ const INITIAL_DEFINITION = wrapDefinitionV2({
   properties: {},
   isValid: false,
 });
+
+const YAMLSidebar = ({ yaml }: { yaml?: string }) => {
+  return (
+    <div className="bg-gray-700 h-full w-[600px] text-white">
+      <h2 className="text-2xl font-bold">YAML</h2>
+      {yaml && <WorkflowDefinitionYAML workflowRaw={yaml} />}
+    </div>
+  );
+};
 
 function Builder({
   loadedAlertFile,
@@ -366,29 +375,31 @@ function Builder({
       {generateModalIsOpen || testRunModalOpen ? null : (
         <>
           {getworkflowStatus()}
-          <div className="h-[94%]">
-            <ReactFlowProvider>
-              <ReactFlowBuilder
-                providers={providers}
-                installedProviders={installedProviders}
-                definition={definition}
-                validatorConfiguration={ValidatorConfigurationV2}
-                onDefinitionChange={(def: any) => {
-                  setDefinition({
-                    value: {
-                      sequence: def?.sequence || [],
-                      properties: def?.properties || {},
-                    },
-                    isValid: def?.isValid || false,
-                  });
-                }}
-                toolboxConfiguration={getToolboxConfiguration(
-                  providers,
-                  installedProviders || []
-                )}
-              />
-            </ReactFlowProvider>
-          </div>
+          <Card className="mt-2 p-0 h-[93%]">
+            <div className="flex h-full">
+              <div className="flex-1 h-full">
+                <ReactFlowProvider>
+                  <ReactFlowBuilder
+                    providers={providers}
+                    installedProviders={installedProviders}
+                    definition={definition}
+                    validatorConfiguration={ValidatorConfigurationV2}
+                    onDefinitionChange={(def: any) => {
+                      setDefinition({
+                        value: {
+                          sequence: def?.sequence || [],
+                          properties: def?.properties || {},
+                        },
+                        isValid: def?.isValid || false,
+                      });
+                    }}
+                    toolboxConfiguration={getToolboxConfiguration(providers)}
+                  />
+                </ReactFlowProvider>
+              </div>
+              {/* TODO: Add AI chat sidebar */}
+            </div>
+          </Card>
         </>
       )}
     </div>
