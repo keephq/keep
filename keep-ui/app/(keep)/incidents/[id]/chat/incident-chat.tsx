@@ -143,18 +143,20 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
 
   return (
     <Card className="h-[calc(100vh-20rem)]">
-      <div className="chat-messages">
-        <CopilotChat
-          className="-mx-2"
-          instructions={`You now act as an expert incident responder...`}
-          labels={{
-            title: "Incident Assistant",
-            initial:
-              "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
-            placeholder:
-              "For example: What do you think the root cause of this incident might be?",
-          }}
-        />
+      <div className="chat-container">
+        <div className="chat-messages">
+          <CopilotChat
+            className="-mx-2"
+            instructions={`You now act as an expert incident responder...`}
+            labels={{
+              title: "Incident Assistant",
+              initial:
+                "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
+              placeholder:
+                "For example: What do you think the root cause of this incident might be?",
+            }}
+          />
+        </div>
       </div>
     </Card>
   );

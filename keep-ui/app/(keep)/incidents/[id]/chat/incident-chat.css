@@ -24,6 +24,10 @@
   @apply bg-white text-black scale-100 border-tremor-border border-2 hover:border-tremor-brand hover:text-tremor-brand hover:bg-tremor-brand-muted dark:border-dark-tremor-brand dark:hover:bg-dark-tremor-brand-muted transition !important;
 }
 
+.chat-container {
+  @apply h-full flex flex-col;
+}
+
 .chat-messages {
-  @apply flex-1 overflow-y-auto;
+  @apply flex-1 overflow-y-auto overflow-x-hidden;
 }
