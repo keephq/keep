@@ -7,7 +7,10 @@ from keep.api.models.db.topology import (
     TopologyService,
     TopologyServiceDependency,
     TopologyServiceInDto,
+    TopologyApplicationDtoIn,
+    TopologyServiceDtoIn,
 )
+from keep.topologies.topologies_service import TopologiesService
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +71,26 @@ def process_topology(
         session.flush()
         service_to_keep_service_id_map[service.service] = db_service.id
 
+    application_to_services = {}
+    application_to_name = {}
+
     # Then create the dependencies
     for service in topology_data:
+
+        # Group all services by application (this is for processing application related data in the next step)
+        if service.application_relations is not None:
+            service_id = service_to_keep_service_id_map.get(service.service)
+            for application_id in service.application_relations:
+
+                application_to_name[application_id] = service.application_relations[
+                    application_id
+                ]
+
+                if application_id not in application_to_services:
+                    application_to_services[application_id] = [service_id]
+                else:
+                    application_to_services[application_id].append(service_id)
+
         for dependency in service.dependencies:
             service_id = service_to_keep_service_id_map.get(service.service)
             depends_on_service_id = service_to_keep_service_id_map.get(dependency)
@@ -88,6 +109,21 @@ def process_topology(
             )
 
     session.commit()
+
+    # Now create or update the application
+    for application_id in application_to_services:
+        TopologiesService.create_or_update_application(
+            tenant_id=tenant_id,
+            application=TopologyApplicationDtoIn(
+                id=application_id,
+                name=application_to_name[application_id],
+                services=[
+                    TopologyServiceDtoIn(id=service_id)
+                    for service_id in application_to_services[application_id]
+                ],
+            ),
+            session=session,
+        )
 
     try:
         session.close()
