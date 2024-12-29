@@ -123,6 +123,7 @@ def get_all_incidents(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
+    cel: str = Query(None),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
 
@@ -167,6 +168,7 @@ def get_all_incidents(
         sorting=sorting,
         filters=filters,
         allowed_incident_ids=allowed_incident_ids,
+        cel=cel
     )
 
     incidents_dto = []

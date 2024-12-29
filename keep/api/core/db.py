@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 from uuid import UUID, uuid4
+import celpy
 
 import validators
 from dateutil.tz import tz
@@ -47,6 +48,7 @@ from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
+from keep.api.core.incident_cel_db_query import enrich_with_filter_from_cel
 from keep.api.models.ai_external import (
     ExternalAIConfigAndMetadata,
     ExternalAIConfigAndMetadataDto,
@@ -3280,6 +3282,7 @@ def get_last_incidents(
     is_predicted: bool = None,
     filters: Optional[dict] = None,
     allowed_incident_ids: Optional[List[str]] = None,
+    cel: str = None,
 ) -> Tuple[list[Incident], int]:
     """
     Get the last incidents and total amount of incidents.
@@ -3328,6 +3331,9 @@ def get_last_incidents(
 
         if filters:
             query = apply_incident_filters(session, filters, query)
+
+        if cel:
+            query = enrich_with_filter_from_cel(query, cel)
 
         if sorting:
             query = query.order_by(sorting.get_order_by(Incident))
