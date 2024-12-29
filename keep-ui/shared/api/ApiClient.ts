@@ -4,6 +4,7 @@ import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
 import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
 import * as Sentry from "@sentry/nextjs";
+import { signOut } from "next-auth/react";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
 const READ_ONLY_ALWAYS_ALLOWED_URLS = ["/alerts/audit"];
@@ -50,6 +51,7 @@ export class ApiClient {
       if (response.headers.get("content-type")?.includes("application/json")) {
         const data = await response.json();
         if (response.status === 401) {
+          await signOut();
           throw new KeepApiError(
             `${data.message || data.detail}`,
             url,

@@ -1,7 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
-// TODO: is it safe to remove these imports?
-import { getToken } from "next-auth/jwt";
-import type { JWT } from "next-auth/jwt";
+import { NextResponse } from "next/server";
 import { getApiURL } from "@/utils/apiUrl";
 import { config as authConfig } from "@/auth.config";
 import NextAuth from "next-auth";
@@ -15,10 +12,10 @@ function isMobileDevice(userAgent: string): boolean {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export const middleware = auth(async (request) => {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Check if request is from mobile device
+  // go to temporary placeholder for mobile devices
   const userAgent = request.headers.get("user-agent") || "";
   if (
     isMobileDevice(userAgent) &&
@@ -30,11 +27,12 @@ export async function middleware(request: NextRequest) {
 
   const session = await auth();
   const role = session?.userRole;
-  const isAuthenticated = !!session;
+  console.log("session", session);
+  const isAuthenticated = !!request.auth;
   // Keep it on header so it can be used in server components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
-  // Handle legacy /backend/ redirects
+  // Handle legacy /backend/ redirects (when API_URL is not set and frontend act as a proxy)
   if (pathname.startsWith("/backend/")) {
     const apiUrl = getApiURL();
     const newURL = pathname.replace("/backend/", apiUrl + "/");
@@ -45,12 +43,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(urlWithQuery);
   }
 
-  // Allow API routes to pass through
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-
-  // Allow Mobile routes to pass through
+  // Allow mobile route to pass through
   if (pathname.startsWith("/mobile")) {
     return NextResponse.next();
   }
@@ -63,10 +56,12 @@ export async function middleware(request: NextRequest) {
 
   // If authenticated and on signin page, redirect to incidents
   if (isAuthenticated && pathname.startsWith("/signin")) {
+    const redirectTo =
+      request.nextUrl.searchParams.get("callbackUrl") || "/incidents";
     console.log(
-      "Redirecting to incidents because user try to get /signin but already authenticated"
+      `Redirecting to ${redirectTo} because user try to get /signin but already authenticated`
     );
-    return NextResponse.redirect(new URL("/incidents", request.url));
+    return NextResponse.redirect(new URL(redirectTo, request.url));
   }
 
   // Role-based routing (NOC users)
@@ -84,11 +79,11 @@ export async function middleware(request: NextRequest) {
       headers: requestHeaders,
     },
   });
-}
+});
 
 // Update the matcher to handle static files and public routes
 export const config = {
   matcher: [
-    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|monitoring|_next/static|_next/image|favicon\\.ico).*)",
+    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico).*)",
   ],
 };
