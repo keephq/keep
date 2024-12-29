@@ -43,16 +43,17 @@ class ArgocdProviderAuthConfig:
 class ArgocdProvider(BaseTopologyProvider):
     """Install Webhooks and receive alerts from Argocd."""
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
 
     PROVIDER_DISPLAY_NAME = "ArgoCD"
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
             mandatory=True,
             mandatory_for_webhook=True,
-            alias="Rules Reader",
+            alias="Authenticated",
         ),
     ]
 
