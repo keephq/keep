@@ -3481,7 +3481,6 @@ def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[In
 def delete_incident_by_id(
     tenant_id: str,
     incident_id: UUID,
-    deleted_by: str | None = None,
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)

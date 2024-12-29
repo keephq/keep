@@ -113,7 +113,7 @@ class IncidentStatus(Enum):
     ACKNOWLEDGED = "acknowledged"
     # Incident was merged with another incident
     MERGED = "merged"
-    # Incident was merged with another incident
+    # Incident was removed
     DELETED = "deleted"
 
 
