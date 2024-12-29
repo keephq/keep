@@ -216,3 +216,6 @@ keepnew.db
 providers_cache.json
 
 tests/provision/*
+grafana/*
+!grafana/provisioning/
+!grafana/dashboards/

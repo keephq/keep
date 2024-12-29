@@ -103,7 +103,7 @@ def test_insert_new_alert(browser):  # browser is actually a page object
         browser.goto(
             "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
         )
-        browser.wait_for_url("http://localhost:3000/incidents")
+        browser.wait_for_url("http://localhost:3000/providers")
 
         feed_badge = browser.get_by_test_id("menu-alerts-feed-badge")
         feed_count_before = int(feed_badge.text_content())
@@ -138,7 +138,7 @@ def test_providers_page_is_accessible(browser):
         browser.goto(
             "http://localhost:3000/signin?callbackUrl=http%3A%2F%2Flocalhost%3A3000%2Fproviders"
         )
-        browser.goto("http://localhost:3000/providers")
+        browser.wait_for_url("http://localhost:3000/providers")
         # get the GCP Monitoring provider
         browser.locator("button:has-text('GCP Monitoring'):has-text('alert')").click()
         browser.get_by_role("button", name="Cancel").click()
