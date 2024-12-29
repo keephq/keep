@@ -70,7 +70,7 @@ export const middleware = auth(async (request) => {
   }
 
   // Allow all other authenticated requests
-  console.log("Allowing request to pass through");
+  console.log("Allowing request to pass through", request.url);
   console.log("Request URL: ", request.url);
 
   return NextResponse.next({
@@ -84,6 +84,18 @@ export const middleware = auth(async (request) => {
 // Update the matcher to handle static files and public routes
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - keep_big.svg (logo)
+     * - gnip.webp (logo)
+     * - api/aws-marketplace (aws marketplace)
+     * - api/auth (auth)
+     * - monitoring (monitoring)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
     "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico).*)",
   ],
 };
