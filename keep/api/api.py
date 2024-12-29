@@ -323,7 +323,9 @@ def get_app(
         Instrumentator(
             excluded_handlers=["/metrics", "/metrics/processing"]
         ).instrument(app=app, metric_namespace="keep")
-    keep.api.observability.setup(app)
+
+    if config("KEEP_OTEL_ENABLED", default="true", cast=bool):
+        keep.api.observability.setup(app)
 
     return app
 

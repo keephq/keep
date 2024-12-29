@@ -23,6 +23,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from keep.api.core.tracer import KeepSampler
+
 
 def get_protocol_from_endpoint(endpoint):
     parsed_url = urlparse(endpoint)
@@ -50,7 +52,7 @@ def setup(app: FastAPI):
     metrics_enabled = os.environ.get("METRIC_OTEL_ENABLED", "")
 
     resource = Resource.create({"service.name": service_name})
-    provider = TracerProvider(resource=resource)
+    provider = TracerProvider(resource=resource, sampler=KeepSampler())
 
     if otlp_collector_endpoint:
 
