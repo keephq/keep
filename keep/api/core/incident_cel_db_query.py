@@ -7,15 +7,42 @@ from sqlalchemy.orm import Query
 import celpy
 from typing import List, cast
 
-class ConstantNode:
+class Node:
+    def __str__(self):
+        node = self
+        if isinstance(node, LogicalNode):
+            return f"{expression_to_str(node.left)} {node.operator} {expression_to_str(node.right)}"
+        elif isinstance(node, ComparisonNode):
+            return f"{expression_to_str(node.firstOperand)} {node.operator} {expression_to_str(node.secondOperand)}"
+        elif isinstance(node, UnaryNode):
+            return f"{node.operator}{expression_to_str(node.operand)}"
+        elif isinstance(node, PropertyAccessNode):
+            if node.value:
+                return f"{node.member_name}.{expression_to_str(node.value)}"
+            
+            return node.member_name
+        elif isinstance(node, MethodAccessNode):
+            args = []
+            for argNode in node.args:
+                args.append(expression_to_str(argNode))
+
+            return f"{node.member_name}({', '.join(args)})"
+        elif isinstance(node, ParenthesisNode):
+            return f"({expression_to_str(node.expression)})"
+        elif isinstance(node, ConstantNode):
+            return node.value
+        else:
+            return str(node)
+
+class ConstantNode(Node):
     def __init__(self, value: Any):
         self.value = value
 
-class ParenthesisNode:
+class ParenthesisNode(Node):
     def __init__(self, expression: Any):
         self.expression = expression
 
-class LogicalNode:
+class LogicalNode(Node):
     AND = '&&'
     OR = '||'
 
@@ -24,7 +51,7 @@ class LogicalNode:
         self.operator = operator
         self.right = right
 
-class ComparisonNode:
+class ComparisonNode(Node):
     LT = '<'
     LE = '<='
     GT = '>'
@@ -38,7 +65,7 @@ class ComparisonNode:
         self.firstOperand = firstOperand
         self.secondOperand = secondOperand
 
-class UnaryNode:
+class UnaryNode(Node):
     NOT = '!'
     NEG = '-'
 
@@ -46,7 +73,7 @@ class UnaryNode:
         self.operator = operator
         self.operand = operand
     
-class MemberAccessNode:
+class MemberAccessNode(Node):
     def __init__(self, member_name: str):
         self.member_name = member_name
 
@@ -59,33 +86,7 @@ class PropertyAccessNode(MemberAccessNode):
 class MethodAccessNode(MemberAccessNode):
     def __init__(self, member_name, args: List[str] = None):
         self.args = args
-        super().__init__(member_name)
-        
-def expression_to_str(node: Any) -> str:
-    if isinstance(node, LogicalNode):
-        return f"{expression_to_str(node.left)} {node.operator} {expression_to_str(node.right)}"
-    elif isinstance(node, ComparisonNode):
-        return f"{expression_to_str(node.firstOperand)} {node.operator} {expression_to_str(node.secondOperand)}"
-    elif isinstance(node, UnaryNode):
-        return f"{node.operator}{expression_to_str(node.operand)}"
-    elif isinstance(node, PropertyAccessNode):
-        if node.value:
-            return f"{node.member_name}.{expression_to_str(node.value)}"
-        
-        return node.member_name
-    elif isinstance(node, MethodAccessNode):
-        args = []
-        for argNode in node.args:
-            args.append(expression_to_str(argNode))
-
-        return f"{node.member_name}({', '.join(args)})"
-    elif isinstance(node, ParenthesisNode):
-        return f"({expression_to_str(node.expression)})"
-    elif isinstance(node, ConstantNode):
-        return node.value
-    else:
-        return str(node)
-    
+        super().__init__(member_name)    
 
 class SimpleNodesAST(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
@@ -408,11 +409,11 @@ def enrich_with_filter_from_cel(input_query: Query[Any], cel: str) -> Query[Any]
     dumast.visit(ast)
     result = dumast.stack[0]
 
-    strExp = expression_to_str(result)
+    strs = str(result)
 
     return None
 
-enrich_with_filter_from_cel(None, '((((((pudel.bad == "fusk")))))) && alert.first.second.third.contains("gnida", "blyadina")')
+enrich_with_filter_from_cel(None, '((((((pudel.bad == "fusk")))))) && alert.first.second.third.contains("token-one", "token-two")')
 
 def visit_tree(tree):
     res = ''
