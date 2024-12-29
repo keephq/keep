@@ -27,7 +27,6 @@ export const middleware = auth(async (request) => {
 
   const session = await auth();
   const role = session?.userRole;
-  console.log("session", session);
   const isAuthenticated = !!request.auth;
   // Keep it on header so it can be used in server components
   const requestHeaders = new Headers(request.headers);
