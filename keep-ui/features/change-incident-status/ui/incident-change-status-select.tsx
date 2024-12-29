@@ -48,7 +48,7 @@ export function IncidentChangeStatusSelect({
   const { changeStatus } = useIncidentActions();
   const statusOptions = useMemo(
     () =>
-      Object.values(Status).map((status) => ({
+      Object.values(Status).filter((status) => status != Status.Deleted || value == Status.Deleted).map((status) => ({
         value: status,
         label: (
           <div className="flex items-center">
@@ -57,7 +57,7 @@ export function IncidentChangeStatusSelect({
           </div>
         ),
       })),
-    []
+    [value]
   );
 
   const handleChange = useCallback(

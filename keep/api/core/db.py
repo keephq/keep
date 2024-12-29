@@ -1786,6 +1786,7 @@ def get_incident_for_grouping_rule(
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
             .where(Incident.status != IncidentStatus.RESOLVED.value)
+            .where(Incident.status != IncidentStatus.DELETED.value)
             .order_by(Incident.creation_time.desc())
         ).first()
 
@@ -2921,23 +2922,14 @@ def is_alert_assigned_to_incident(
     with Session(engine) as session:
         assigned = session.exec(
             select(LastAlertToIncident)
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
             .where(LastAlertToIncident.fingerprint == fingerprint)
             .where(LastAlertToIncident.incident_id == incident_id)
             .where(LastAlertToIncident.tenant_id == tenant_id)
             .where(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+            .where(Incident.status != IncidentStatus.DELETED.value)
         ).first()
     return assigned is not None
-
-
-def get_incidents(tenant_id) -> List[Incident]:
-    with Session(engine) as session:
-        incidents = session.exec(
-            select(Incident)
-            .options(selectinload(Incident.alerts))
-            .where(Incident.tenant_id == tenant_id)
-            .order_by(desc(Incident.creation_time))
-        ).all()
-    return incidents
 
 
 def get_alert_audit(
@@ -3489,31 +3481,30 @@ def get_incident_by_fingerprint(tenant_id: str, fingerprint: str) -> Optional[In
 def delete_incident_by_id(
     tenant_id: str,
     incident_id: UUID,
+    deleted_by: str | None = None,
 ) -> bool:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
-        incident = (
-            session.query(Incident)
+        incident = session.exec(
+            select(Incident)
             .filter(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
-            .first()
-        )
+        ).first()
 
-        # Delete all associations with alerts:
-
-        (
-            session.query(LastAlertToIncident)
+        session.execute(
+            update(Incident)
             .where(
-                LastAlertToIncident.tenant_id == tenant_id,
-                LastAlertToIncident.incident_id == incident.id,
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident.id,
             )
-            .delete()
+            .values({
+                "status": IncidentStatus.DELETED.value
+            })
         )
 
-        session.delete(incident)
         session.commit()
         return True
 
