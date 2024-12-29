@@ -44,7 +44,11 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
         # We can access it by using "results.some@@attribute" so we won't think its a nested attribute
         if attr is not None and "@@" in attr:
             attr = attr.replace("@@", ".")
-        obj = getattr(obj, attr, obj.get(attr, None) if isinstance(obj, dict) else None)
+        obj = getattr(
+            obj,
+            attr.strip(),
+            obj.get(attr.strip(), None) if isinstance(obj, dict) else None,
+        )
         if obj is None:
             return None
     return obj
@@ -315,6 +319,8 @@ class EnrichmentsBl:
                                     is_matcher = True
                                     break
                             if not is_matcher:
+                                # If the key has . (dot) in it, it'll be added as is while it needs to be nested.
+                                # @tb: fix when somebody will be complaining about this.
                                 enrichments[key] = value
                     break
 
@@ -370,9 +376,9 @@ class EnrichmentsBl:
         - bool: True if alert matches the matcher, False otherwise.
         """
         try:
-            if " && " in matcher:
-                # Split by " && " for AND condition
-                conditions = matcher.split(" && ")
+            if "&&" in matcher:
+                # Split by "&&" for AND condition
+                conditions = matcher.split("&&")
                 return all(
                     self._is_match(
                         get_nested_attribute(alert, attribute), row.get(attribute)
