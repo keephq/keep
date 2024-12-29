@@ -9,15 +9,29 @@ import { Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
-import { TraceViewer } from "@/shared/ui/TraceViewer";
+import { TraceData, TraceViewer } from "@/shared/ui/TraceViewer";
+import { useProviders } from "@/utils/hooks/useProviders";
+import { useMemo } from "react";
 
 export function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id
   );
+  const { data: providers } = useProviders();
 
-  const { updateIncident } = useIncidentActions();
+  const providersWithGetTrace = useMemo(
+    () =>
+      providers?.installed_providers
+        .filter(
+          (provider) =>
+            provider.methods?.some((method) => method.func_name === "get_trace")
+        )
+        .map((provider) => provider.id),
+    [providers]
+  );
+
+  const { updateIncident, invokeProviderMethod } = useIncidentActions();
 
   useCopilotReadable({
     description: "incidentDetails",
@@ -27,6 +41,10 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     description: "alerts",
     value: alerts?.items,
   });
+  useCopilotReadable({
+    description: "providersWithGetTrace",
+    value: providersWithGetTrace,
+  });
 
   useCopilotChatSuggestions({
     instructions: `The following incident is on going: ${JSON.stringify(
@@ -34,6 +52,38 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     )}. Provide good question suggestions for the incident responder team.`,
   });
 
+  useCopilotAction({
+    name: "invokeGetTrace",
+    description:
+      "According to the provided context (provider id and trace id), invoke the get_trace method from the provider",
+    parameters: [
+      {
+        name: "providerId",
+        type: "string",
+        description: "The ID of the provider to invoke the method on",
+      },
+      {
+        name: "traceId",
+        type: "string",
+        description: "The trace ID to get the trace for",
+      },
+    ],
+    handler: async ({ providerId, traceId }) => {
+      const result = await invokeProviderMethod(providerId, "get_trace", {
+        trace_id: traceId,
+      });
+      return result as any as TraceData;
+    },
+    render: ({ status, result }) => {
+      if (status === "executing" || status === "inProgress") {
+        return <Loading />;
+      } else if (status === "complete") {
+        return <TraceViewer trace={result} />;
+      } else {
+        return "Trace not found";
+      }
+    },
+  });
   useCopilotAction({
     name: "gotoAlert",
     description: "Select an alert and filter the feed by the alert fingerprint",
@@ -80,19 +130,6 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     },
   });
 
-  useCopilotAction({
-    name: "viewTrace",
-    description: "View the trace of some alert from the incident",
-    parameters: [
-      {
-        name: "traceId",
-        type: "string",
-        description: "The trace ID to get the trace for",
-      },
-    ],
-    render: ({ status, args }) => <TraceViewer traceId={args.traceId!} />,
-  });
-
   if (alertsLoading) return <Loading />;
   if (!alerts?.items || alerts.items.length === 0)
     return (
@@ -105,21 +142,19 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     );
 
   return (
-    <Card className="h-[calc(100vh-18rem)]">
-      <div className="chat-container">
-        <div className="chat-messages">
-          <CopilotChat
-            className="-mx-2"
-            instructions={`You now act as an expert incident responder...`}
-            labels={{
-              title: "Incident Assistant",
-              initial:
-                "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
-              placeholder:
-                "For example: What do you think the root cause of this incident might be?",
-            }}
-          />
-        </div>
+    <Card className="h-[calc(100vh-20rem)]">
+      <div className="chat-messages">
+        <CopilotChat
+          className="-mx-2"
+          instructions={`You now act as an expert incident responder...`}
+          labels={{
+            title: "Incident Assistant",
+            initial:
+              "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
+            placeholder:
+              "For example: What do you think the root cause of this incident might be?",
+          }}
+        />
       </div>
     </Card>
   );

@@ -25,6 +25,11 @@ type UseIncidentActionsValue = {
     sourceIncidents: IncidentDto[],
     destinationIncident: IncidentDto
   ) => Promise<void>;
+  invokeProviderMethod: (
+    providerId: string,
+    methodName: string,
+    methodParams: { [key: string]: string }
+  ) => Promise<void>;
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
   unlinkAlertsFromIncident: (
     incidentId: string,
@@ -67,6 +72,21 @@ export function useIncidentActions(): UseIncidentActionsValue {
           typeof key === "string" && key.startsWith(`/incidents/${incidentId}`)
       ),
     [mutate]
+  );
+
+  const invokeProviderMethod = useCallback(
+    async (
+      providerId: string,
+      methodName: string,
+      methodParams: { [key: string]: string }
+    ) => {
+      const result = await api.post(
+        `/providers/${providerId}/invoke/${methodName}`,
+        methodParams
+      );
+      return result;
+    },
+    [api]
   );
 
   const addIncident = useCallback(
@@ -273,5 +293,6 @@ export function useIncidentActions(): UseIncidentActionsValue {
     mutateIncident,
     unlinkAlertsFromIncident,
     splitIncidentAlerts,
+    invokeProviderMethod,
   };
 }

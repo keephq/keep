@@ -187,10 +187,10 @@ class DatadogProvider(BaseTopologyProvider):
             type="view",
         ),
         ProviderMethod(
-            name="Get Traces",
+            name="Get a Trace",
             func_name="get_trace",
-            scopes=["traces_read"],
-            description="Get all traces",
+            scopes=["apm_read"],
+            description="Get trace by id",
             type="view",
         ),
     ]
