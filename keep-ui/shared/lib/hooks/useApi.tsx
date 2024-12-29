@@ -8,7 +8,7 @@ export function useApi() {
   const { data: session } = useSession();
 
   const api = useMemo(() => {
-    return new ApiClient(session, config, false);
+    return new ApiClient(session, config);
   }, [session?.accessToken, config]);
 
   return api;
