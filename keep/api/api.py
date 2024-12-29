@@ -320,7 +320,9 @@ def get_app(
     app.add_middleware(LoggingMiddleware)
 
     if config("KEEP_METRICS", default="true", cast=bool):
-        Instrumentator().instrument(app=app, metric_namespace="keep")
+        Instrumentator(
+            excluded_handlers=["/metrics", "/metrics/processing"]
+        ).instrument(app=app, metric_namespace="keep")
     keep.api.observability.setup(app)
 
     return app
