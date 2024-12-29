@@ -4,9 +4,9 @@ import { signIn, getProviders } from "next-auth/react";
 import { Text, TextInput, Button } from "@tremor/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import "../../globals.css";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
 import { useRouter } from "next/navigation";
+import "../../globals.css";
 
 export interface Provider {
   id: string;
@@ -108,7 +108,7 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
   // Show loading state during redirect
   if (isRedirecting) {
     return (
-      <Text className="text-tremor-title font-bold text-tremor-content-strong">
+      <Text className="text-tremor-title h-full flex items-center justify-center font-bold text-tremor-content-strong">
         Authentication successful, redirecting...
       </Text>
     );
@@ -118,10 +118,17 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
     return (
       <>
         <Text className="text-tremor-title font-bold text-tremor-content-strong">
-          Sign in to Keep
+          Log in to your account
         </Text>
 
         <form className="w-full space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {errors.root && (
+            <div className="w-full rounded-md bg-red-50 p-4">
+              <Text className="text-sm text-red-500 text-center">
+                {errors.root.message}
+              </Text>
+            </div>
+          )}
           <div className="space-y-2">
             <Text className="text-tremor-default font-medium text-tremor-content-strong">
               Username
@@ -167,7 +174,9 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
           <Button
             type="submit"
             size="lg"
-            className="w-full bg-tremor-brand hover:bg-tremor-brand-emphasis text-tremor-brand-inverted"
+            color="orange"
+            variant="primary"
+            className="w-full"
             disabled={isSubmitting || isRedirecting}
             loading={isSubmitting || isRedirecting}
           >
@@ -177,21 +186,13 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
                 ? "Redirecting..."
                 : "Sign in"}
           </Button>
-
-          {errors.root && (
-            <div className="w-full rounded-md bg-red-50 p-4">
-              <Text className="text-sm text-red-500 text-center">
-                {errors.root.message}
-              </Text>
-            </div>
-          )}
         </form>
       </>
     );
   }
 
   return (
-    <Text className="text-tremor-title font-bold text-tremor-content-strong">
+    <Text className="h-full flex items-center justify-center text-tremor-title font-bold text-tremor-content-strong">
       Redirecting to authentication...
     </Text>
   );
