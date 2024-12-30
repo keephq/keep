@@ -617,8 +617,7 @@ class WorkflowScheduler:
         )
 
 
-    async def _start(self):
-        self.logger.info("Starting workflows scheduler")
+    async def _start_async(self):
         while not self._stop:
             # get all workflows that should run now
             self.logger.debug(
@@ -637,6 +636,17 @@ class WorkflowScheduler:
             await asyncio.sleep(1)
         self.logger.info("Workflows scheduler stopped")
 
+    def _start(self):
+        """
+        Generating new event loop and running the scheduler.
+        This method should be executed in a separate thread.
+        """
+        self.logger.info("Starting workflows scheduler")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(self._start_async())
+        loop.close()
+        return result
 
     def stop(self):
         self.logger.info("Stopping scheduled workflows")
