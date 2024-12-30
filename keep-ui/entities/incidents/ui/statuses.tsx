@@ -5,7 +5,7 @@ import {
   ExclamationCircleIcon,
   PauseIcon,
 } from "@heroicons/react/24/outline";
-import { IoIosGitPullRequest } from "react-icons/io";
+import {IoIosGitPullRequest, IoIosTrash} from "react-icons/io";
 import React from "react";
 import { capitalize } from "@/utils/helpers";
 
@@ -46,6 +46,14 @@ export const STATUS_ICONS = {
       icon={IoIosGitPullRequest}
       tooltip={capitalize(Status.Merged)}
       color="purple"
+      className="w-4 h-4 mr-2"
+    />
+  ),
+  [Status.Deleted]: (
+    <Icon
+      icon={IoIosTrash}
+      tooltip={capitalize(Status.Deleted)}
+      color="gray"
       className="w-4 h-4 mr-2"
     />
   ),

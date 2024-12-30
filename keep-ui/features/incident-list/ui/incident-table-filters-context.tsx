@@ -10,6 +10,7 @@ import { createContext, useState, FC, PropsWithChildren } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useIncidentsMeta } from "../../../utils/hooks/useIncidents";
 import type { IncidentsMetaDto } from "@/entities/incidents/model";
+import { DefaultIncidentFilteredStatuses } from "@/entities/incidents/model/models";
 
 interface IIncidentFilterContext {
   meta: IncidentsMetaDto | undefined;
@@ -43,16 +44,19 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
   const { data: incidentsMeta, isLoading } = useIncidentsMeta();
 
   const setFilterValue = useCallback(
-    (filterName: string) => {
+    (filterName: string, defaultValues: string[] | undefined = undefined) => {
       return () => {
         if (incidentsMeta === undefined) return [];
 
         const values = searchParams?.get(filterName);
-        const valuesArray = values
-          ?.split(",")
-          .filter((value) =>
-            incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
-          );
+        let valuesArray = values?.split(",")
+        if (!valuesArray) {
+          valuesArray = defaultValues;
+        }
+
+        valuesArray = valuesArray?.filter((value) =>
+          incidentsMeta[filterName as keyof IncidentsMetaDto]?.includes(value)
+        );
 
         return (valuesArray || []) as string[];
       };
@@ -61,7 +65,7 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
   );
 
   const [statuses, setStatuses] = useState<string[]>(
-    setFilterValue("statuses")
+    setFilterValue("statuses", incidentsMeta?.statuses.filter((status) => DefaultIncidentFilteredStatuses.includes(status)))
   );
   const [severities, setSeverities] = useState<string[]>(
     setFilterValue("severities")
@@ -76,7 +80,7 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
 
   useEffect(() => {
     if (!isLoading) {
-      setStatuses(setFilterValue("statuses"));
+      setStatuses(setFilterValue("statuses", incidentsMeta?.statuses.filter((status) => DefaultIncidentFilteredStatuses.includes(status))));
       setSeverities(setFilterValue("severities"));
       setAssignees(setFilterValue("assignees"));
       setServices(setFilterValue("services"));

@@ -5,7 +5,7 @@ from keep.secretmanager.vaultsecretmanager import VaultSecretManager
 
 class MockVault:
     def __init__(self, *args, **kwargs):
-        self.data = {"data": {"data": {"a": "b"}}}
+        self.data = {"data": {"data": {"value": {"a": "b"}}}}
 
     @property
     def secrets(self):

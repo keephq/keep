@@ -44,9 +44,11 @@ else:
 
 class IncidentBl:
     def __init__(
-        self, tenant_id: str, session: Session, pusher_client: Optional[Pusher] = None
+        self, tenant_id: str, session: Session, pusher_client: Optional[Pusher] = None,
+        user: str = None
     ):
         self.tenant_id = tenant_id
+        self.user = user
         self.session = session
         self.pusher_client = pusher_client
         self.logger = logging.getLogger(__name__)

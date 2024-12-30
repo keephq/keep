@@ -1,13 +1,12 @@
 "use client";
 
 import { signIn, getProviders } from "next-auth/react";
-import { Text, TextInput, Button, Card } from "@tremor/react";
-import Image from "next/image";
+import { Text, TextInput, Button } from "@tremor/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import "../../globals.css";
 import { authenticate, revalidateAfterAuth } from "@/app/actions/authactions";
 import { useRouter } from "next/navigation";
+import "../../globals.css";
 
 export interface Provider {
   id: string;
@@ -109,129 +108,92 @@ export default function SignInForm({ params }: { params?: { amt: string } }) {
   // Show loading state during redirect
   if (isRedirecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4">
-        <Card
-          className="w-full max-w-md p-8"
-          decoration="top"
-          decorationColor="orange"
-        >
-          <div className="flex flex-col items-center gap-6">
-            <div className="relative w-32 h-32">
-              <Image
-                src="/keep_big.svg"
-                alt="Keep Logo"
-                width={128}
-                height={128}
-                priority
-                className="object-contain"
-              />
-            </div>
-            <Text className="text-tremor-title font-bold text-tremor-content-strong">
-              Authentication successful, redirecting...
-            </Text>
-          </div>
-        </Card>
-      </div>
+      <Text className="text-tremor-title h-full flex items-center justify-center font-bold text-tremor-content-strong">
+        Authentication successful, redirecting...
+      </Text>
     );
   }
 
   if (providers?.credentials) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-tremor-background-subtle p-4">
-        <Card
-          className="w-full max-w-md p-8"
-          decoration="top"
-          decorationColor="orange"
-        >
-          <div className="flex flex-col items-center gap-6">
-            <div className="relative w-32 h-32">
-              <Image
-                src="/keep_big.svg"
-                alt="Keep Logo"
-                width={128}
-                height={128}
-                priority
-                className="object-contain"
-              />
+      <>
+        <Text className="text-tremor-title font-bold text-tremor-content-strong">
+          Log in to your account
+        </Text>
+
+        <form className="w-full space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {errors.root && (
+            <div className="w-full rounded-md bg-red-50 p-4">
+              <Text className="text-sm text-red-500 text-center">
+                {errors.root.message}
+              </Text>
             </div>
-
-            <Text className="text-tremor-title font-bold text-tremor-content-strong">
-              Sign in to Keep
+          )}
+          <div className="space-y-2">
+            <Text className="text-tremor-default font-medium text-tremor-content-strong">
+              Username
             </Text>
-
-            <form
-              className="w-full space-y-6"
-              onSubmit={handleSubmit(onSubmit)}
-            >
-              <div className="space-y-2">
-                <Text className="text-tremor-default font-medium text-tremor-content-strong">
-                  Username
-                </Text>
-                <TextInput
-                  {...register("username", {
-                    required: "Username is required",
-                  })}
-                  type="text"
-                  placeholder="Enter your username"
-                  className="w-full"
-                  error={!!errors.username}
-                  disabled={isSubmitting || isRedirecting}
-                />
-                {errors.username && (
-                  <Text className="text-sm text-red-500 mt-1">
-                    {errors.username.message}
-                  </Text>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Text className="text-tremor-default font-medium text-tremor-content-strong">
-                  Password
-                </Text>
-                <TextInput
-                  {...register("password", {
-                    required: "Password is required",
-                  })}
-                  type="password"
-                  placeholder="Enter your password"
-                  className="w-full"
-                  error={!!errors.password}
-                  disabled={isSubmitting || isRedirecting}
-                />
-                {errors.password && (
-                  <Text className="text-sm text-red-500 mt-1">
-                    {errors.password.message}
-                  </Text>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full bg-tremor-brand hover:bg-tremor-brand-emphasis text-tremor-brand-inverted"
-                disabled={isSubmitting || isRedirecting}
-                loading={isSubmitting || isRedirecting}
-              >
-                {isSubmitting
-                  ? "Signing in..."
-                  : isRedirecting
-                  ? "Redirecting..."
-                  : "Sign in"}
-              </Button>
-
-              {errors.root && (
-                <div className="w-full rounded-md bg-red-50 p-4">
-                  <Text className="text-sm text-red-500 text-center">
-                    {errors.root.message}
-                  </Text>
-                </div>
-              )}
-            </form>
+            <TextInput
+              {...register("username", {
+                required: "Username is required",
+              })}
+              type="text"
+              placeholder="Enter your username"
+              className="w-full"
+              error={!!errors.username}
+              disabled={isSubmitting || isRedirecting}
+            />
+            {errors.username && (
+              <Text className="text-sm text-red-500 mt-1">
+                {errors.username.message}
+              </Text>
+            )}
           </div>
-        </Card>
-      </div>
+
+          <div className="space-y-2">
+            <Text className="text-tremor-default font-medium text-tremor-content-strong">
+              Password
+            </Text>
+            <TextInput
+              {...register("password", {
+                required: "Password is required",
+              })}
+              type="password"
+              placeholder="Enter your password"
+              className="w-full"
+              error={!!errors.password}
+              disabled={isSubmitting || isRedirecting}
+            />
+            {errors.password && (
+              <Text className="text-sm text-red-500 mt-1">
+                {errors.password.message}
+              </Text>
+            )}
+          </div>
+
+          <Button
+            type="submit"
+            size="lg"
+            color="orange"
+            variant="primary"
+            className="w-full"
+            disabled={isSubmitting || isRedirecting}
+            loading={isSubmitting || isRedirecting}
+          >
+            {isSubmitting
+              ? "Signing in..."
+              : isRedirecting
+                ? "Redirecting..."
+                : "Sign in"}
+          </Button>
+        </form>
+      </>
     );
   }
 
-  return <>Redirecting to authentication...</>;
+  return (
+    <Text className="h-full flex items-center justify-center text-tremor-title font-bold text-tremor-content-strong">
+      Redirecting to authentication...
+    </Text>
+  );
 }

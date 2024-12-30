@@ -227,7 +227,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
 def test_get_last_incidents(db_session, create_alert):
 
     severity_cycle = cycle([s.order for s in IncidentSeverity])
-    status_cycle = cycle([s.value for s in IncidentStatus])
+    status_cycle = cycle([s.value for s in IncidentStatus if s not in [IncidentStatus.MERGED, IncidentStatus.DELETED]])
     services_cycle = cycle(["keep", None])
 
     for i in range(60):
@@ -244,33 +244,31 @@ def test_get_last_incidents(db_session, create_alert):
                 "status": status,
             },
         )
-        # Merged incidents don't have alerts
-        if status != IncidentStatus.MERGED.value:
-            create_alert(
-                f"alert-test-{i}",
-                AlertStatus(status),
-                datetime.utcnow(),
-                {
-                    "severity": AlertSeverity.from_number(severity),
-                    "service": service,
-                },
-            )
-            alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+        create_alert(
+            f"alert-test-{i}",
+            AlertStatus(status),
+            datetime.utcnow(),
+            {
+                "severity": AlertSeverity.from_number(severity),
+                "service": service,
+            },
+        )
+        alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
-            create_alert(
-                f"alert-test-2-{i}",
-                AlertStatus(status),
-                datetime.utcnow(),
-                {
-                    "severity": AlertSeverity.from_number(severity),
-                    "service": service,
-                },
-            )
-            alert2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
+        create_alert(
+            f"alert-test-2-{i}",
+            AlertStatus(status),
+            datetime.utcnow(),
+            {
+                "severity": AlertSeverity.from_number(severity),
+                "service": service,
+            },
+        )
+        alert2 = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
 
-            add_alerts_to_incident_by_incident_id(
-                SINGLE_TENANT_UUID, incident.id, [alert.fingerprint, alert2.fingerprint]
-            )
+        add_alerts_to_incident_by_incident_id(
+            SINGLE_TENANT_UUID, incident.id, [alert.fingerprint, alert2.fingerprint]
+        )
 
     incidents_default, incidents_default_count = get_last_incidents(SINGLE_TENANT_UUID)
     assert len(incidents_default) == 0
@@ -333,8 +331,8 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_2, limit=100
     )
     assert (
-        len(incidents_with_filters_2) == 15 + 15
-    )  # 15 confirmed, 15 acknowledged because 60 incidents with cycled status
+        len(incidents_with_filters_2) == 20 + 20
+    )  # 20 confirmed, 20 acknowledged because 60 incidents with cycled status
     assert all(
         [i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2]
     )
@@ -343,7 +341,7 @@ def test_get_last_incidents(db_session, create_alert):
     incidents_with_filters_3, _ = get_last_incidents(
         SINGLE_TENANT_UUID, is_confirmed=True, filters=filters_3, limit=100
     )
-    assert len(incidents_with_filters_3) == 45  # 60 minus 15 merged with no alerts
+    assert len(incidents_with_filters_3) == 60
     assert all(["keep" in i.sources for i in incidents_with_filters_3])
 
     filters_4 = {"sources": ["grafana"]}
@@ -458,7 +456,7 @@ def test_incident_metadata(
     db_session, client, test_app, setup_stress_alerts_no_elastic
 ):
     severity_cycle = cycle([s.order for s in IncidentSeverity])
-    status_cycle = cycle([s.value for s in IncidentStatus])
+    status_cycle = cycle([s.value for s in IncidentStatus if s != IncidentStatus.DELETED.value])
     sources_cycle = cycle(["keep", "keep-test", "keep-test-2"])
     services_cycle = cycle(["keep", "keep-test", "keep-test-2"])
 
@@ -1177,12 +1175,12 @@ def test_incident_bl_delete_incident(db_session):
 
         incident_dto = incident_bl.create_incident(incident_dto_in)
 
-        incidents_count = db_session.query(Incident).count()
+        incidents_count = db_session.query(Incident).filter(Incident.status != IncidentStatus.DELETED.value).count()
         assert incidents_count == 1
 
         incident_bl.delete_incident(incident_dto.id)
 
-        incidents_count = db_session.query(Incident).count()
+        incidents_count = db_session.query(Incident).filter(Incident.status != IncidentStatus.DELETED.value).count()
         assert incidents_count == 0
 
         # Check pusher
