@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.32.8"
+version = "0.33.5"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -24,7 +24,7 @@ python-json-logger = "^2.0.6"
 boto3 = "^1.26.72"
 validators = "^0.20.0"
 python-telegram-bot = "^20.1"
-fastapi = "^0.109.1"
+fastapi = "^0.115.6"
 uvicorn = "0.32.1"
 opsgenie-sdk = "^2.1.5"
 starlette-context = "^0.3.6"
@@ -89,6 +89,8 @@ psycopg = "^3.2.3"
 prometheus-client = "^0.21.1"
 psycopg2-binary = "^2.9.10"
 
+prometheus-fastapi-instrumentator = "^7.0.0"
+slowapi = "^0.1.9"
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.0.4"
 pre-commit-hooks = "^4.4.0"

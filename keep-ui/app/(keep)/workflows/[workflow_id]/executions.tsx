@@ -18,7 +18,6 @@ export default function WorkflowDetailPage({
 }: {
   params: { workflow_id: string };
 }) {
-  const router = useRouter();
   const api = useApi();
   const [navlink, setNavLink] = useState("overview");
 

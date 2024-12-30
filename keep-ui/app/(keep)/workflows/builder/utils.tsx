@@ -1,7 +1,6 @@
 import { load, JSON_SCHEMA } from "js-yaml";
 import { Provider } from "../../providers/providers";
-import { Action, Alert } from "./alert";
-import { stringify } from "yaml";
+import { Action, Alert } from "./legacy-workflow.types";
 import { v4 as uuidv4 } from "uuid";
 import {
   Definition,

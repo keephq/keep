@@ -17,6 +17,10 @@ from keep.api.models.db.provider import ProviderExecutionLog
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+KEEP_STORE_WORKFLOW_LOGS = (
+    os.environ.get("KEEP_STORE_WORKFLOW_LOGS", "true").lower() == "true"
+)
+
 
 class WorkflowDBHandler(logging.Handler):
     def __init__(self):
@@ -25,6 +29,8 @@ class WorkflowDBHandler(logging.Handler):
 
     def emit(self, record):
         # we want to push only workflow logs to the DB
+        if not KEEP_STORE_WORKFLOW_LOGS:
+            return
         if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
             self.records.append(record)
 
@@ -155,6 +161,7 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
             None,
         )
         if workflow_db_handler:
+            self.logger.info("Pushing logs to DB")
             workflow_db_handler.push_logs_to_db()
         else:
             self.logger.warning("No WorkflowDBHandler found")
@@ -194,6 +201,7 @@ class ProviderLoggerAdapter(logging.LoggerAdapter):
 
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+KEEP_LOG_FILE = os.environ.get("KEEP_LOG_FILE")
 
 LOG_FORMAT_OPEN_TELEMETRY = "open_telemetry"
 LOG_FORMAT_DEVELOPMENT_TERMINAL = "dev_terminal"
@@ -234,7 +242,7 @@ CONFIG = {
         },
         "dev_terminal": {
             "()": DevTerminalFormatter,
-            "format": "%(asctime)s - %(levelname)s - %(message)s",
+            "format": "%(asctime)s - %(thread)s %(threadName)s %(levelname)s - %(message)s",
         },
     },
     "handlers": {
@@ -369,6 +377,18 @@ class CustomizedUvicornLogger(logging.Logger):
 
 
 def setup_logging():
+    # Add file handler if KEEP_LOG_FILE is set
+    if KEEP_LOG_FILE:
+        CONFIG["handlers"]["file"] = {
+            "level": "DEBUG",
+            "formatter": ("json"),
+            "class": "logging.FileHandler",
+            "filename": KEEP_LOG_FILE,
+            "mode": "a",
+        }
+        # Add file handler to root logger
+        CONFIG["loggers"][""]["handlers"].append("file")
+
     logging.config.dictConfig(CONFIG)
     uvicorn_error_logger = logging.getLogger("uvicorn.error")
     uvicorn_error_logger.__class__ = CustomizedUvicornLogger

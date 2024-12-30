@@ -1,5 +1,5 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { Button, Card, Subtitle, Title } from "@tremor/react";
+import { Button, Card, Title } from "@tremor/react";
 import ReactLoading from "react-loading";
 import { ExecutionResults } from "./workflow-execution-results";
 import { WorkflowExecution, WorkflowExecutionFailure } from "./types";

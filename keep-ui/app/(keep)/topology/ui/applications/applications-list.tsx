@@ -133,7 +133,7 @@ export function ApplicationsList({
                 variant="primary"
                 color="orange"
                 onClick={() => {
-                  setModalState(initialModalState);
+                  setModalState({ ...initialModalState, isOpen: true });
                 }}
               >
                 Add Application

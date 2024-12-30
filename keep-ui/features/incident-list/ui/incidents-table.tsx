@@ -285,7 +285,6 @@ export default function IncidentsTable({
     enableSorting: true,
     enableMultiSort: false,
     manualSorting: true,
-    debugTable: true,
   });
 
   const selectedRowIds = Object.entries(
@@ -315,11 +314,11 @@ export default function IncidentsTable({
       return;
     }
 
-    if (
-      !confirm(
-        `Are you sure you want to delete ${selectedRowIds.length} incidents? This action cannot be undone.`
-      )
-    ) {
+    const isConfirmed = confirm(
+      `Are you sure you want to delete ${selectedRowIds.length} incidents? This action cannot be undone.`
+    );
+
+    if (!isConfirmed) {
       return;
     }
 
