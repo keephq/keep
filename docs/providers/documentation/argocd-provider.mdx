@@ -1,0 +1,38 @@
+---
+title: "ArgoCD Provider"
+sidebarTitle: "ArgoCD Provider"
+description: "The ArgoCD provider enables you to pull topology and Application data."
+---
+
+## Overview
+
+The **ArgoCD Provider** facilitates pulling Topology and Application data from ArgoCD.
+ArgoCD Applications are mapped to Keep Services
+ArgoCD ApplicationSets are mapped to Keep Applcations
+
+## Authentication Parameters
+
+- **ArgoCD Access Token** (required): Access token for authenticating with ArgoCD's API.
+- **Deployment Url** (required): Deployment URL for connecting to the ArgoCD instance (e.g., `https://localhost:8080`).
+
+## Scopes
+
+- **authenticated**: Mandatory for all operations, ensures the user is authenticated.
+
+## Connecting with the Provider
+
+1. Obtain the **access token** from your ArgoCD instance by following `Generate auth token` from [ArgoCD's User management docs](https://argo-cd.readthedocs.io/en/latest/operator-manual/user-management/#manage-users).
+2. Set the **deployment URL** to your ArgoCD instance's base URL (e.g., `https://localhost:8080`).
+
+## Features
+
+The **ArgoCD Provider** supports the following key features:
+
+- **Topology**: Configures the Topology usin the applications from ArgoCD.
+- **Applications**: Creates Applications using the ApplicationSets from ArgoCD.
+
+
+## Useful Links
+
+- [ArgoCD API Documentation](https://argo-cd.readthedocs.io/en/latest/developer-guide/api-docs)
+- [ArgoCD User Management](https://argo-cd.readthedocs.io/en/latest/operator-manual/user-management/#local-usersaccounts)
