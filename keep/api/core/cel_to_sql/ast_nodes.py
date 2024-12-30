@@ -66,18 +66,6 @@ class MemberAccessNode(Node):
     def __str__(self):
         return self.member_name
 
-
-class PropertyAccessNode(MemberAccessNode):
-    def __init__(self, member_name, value: Any):
-        self.value = value
-        super().__init__(member_name)
-    
-    def __str__(self):
-        if self.value:
-            return f"{self.member_name}.{self.value}"
-        
-        return self.member_name
-
 class MethodAccessNode(MemberAccessNode):
     def __init__(self, member_name, args: List[str] = None):
         self.args = args
@@ -90,3 +78,34 @@ class MethodAccessNode(MemberAccessNode):
             args.append(str(argNode))
 
         return f"{self.member_name}({', '.join(args)})"
+
+class PropertyAccessNode(MemberAccessNode):
+    def __init__(self, member_name, value: Any):
+        self.value = value
+        super().__init__(member_name)
+
+    def is_function_call(self) -> bool:
+        member_access_node = self.get_method_access_node()
+
+        return member_access_node is not None
+    
+    def get_property_path(self) -> str:
+        if isinstance(self.value, PropertyAccessNode):
+            return f"{self.member_name}.{self.value.get_property_path()}"
+        
+        return self.member_name
+    
+    def get_method_access_node(self) -> MethodAccessNode:
+        if isinstance(self.value, MethodAccessNode):
+            return self.value
+
+        if isinstance(self.value, PropertyAccessNode):
+            return self.value.get_method_access_node()
+        
+        return None
+    
+    def __str__(self):
+        if self.value:
+            return f"{self.member_name}.{self.value}"
+        
+        return self.member_name

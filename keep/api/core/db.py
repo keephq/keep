@@ -43,6 +43,9 @@ from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
 from keep.api.consts import STATIC_PRESETS
+from keep.api.core.cel_to_sql.sql_providers.base import SqlField
+from keep.api.core.cel_to_sql.sql_providers.postgresql import CelToPostgreSqlProvider
+from keep.api.core.cel_to_sql.sql_providers.sqlite import CelToSqliteProvider
 from keep.api.core.config import config
 from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -4981,3 +4984,48 @@ def get_provider_logs(
             .all()
         )
     return logs
+
+
+
+
+
+
+
+
+
+sqlFields = [
+    SqlField("provider_type", "string"),
+]
+
+
+def query_alerts_by_cel(tenant_id: str, cel: str) -> List[Alert]:
+    aggregated_cel = f"tenant_id == \"{tenant_id}\""
+
+    if cel:
+        aggregated_cel += f" && ({cel})"
+
+    instance = CelToSqliteProvider()
+    sql = instance.convert_to_sql_str(aggregated_cel, 'SELECT * FROM alert')
+
+    postgresql = CelToPostgreSqlProvider().convert_to_sql_str(aggregated_cel, 'SELECT * FROM alert')
+
+    try:
+        with Session(engine) as session:
+            result = []
+            for item in session.exec(text(sql)).all():
+                item_dict = item._asdict()
+                result.append(Alert(
+                    tenant_id=item_dict['tenant_id'],
+                    id=item_dict['id'],
+                    fingerprint=item_dict['fingerprint'],
+                    timestamp=item_dict['timestamp'],
+                    event=json.loads(item_dict['event']),
+                    provider_type=item_dict['provider_type'],
+                    provider_id=item_dict['provider_id'],
+                ))
+
+            return result
+    except Exception as e:
+        print(e)
+        print('Error')
+        raise e

@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import time
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import celpy
 from arq import ArqRedis
@@ -19,7 +19,7 @@ from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
 from keep.api.core.config import config
-from keep.api.core.db import get_alert_audit as get_alert_audit_db
+from keep.api.core.db import get_alert_audit as get_alert_audit_db, query_alerts_by_cel
 from keep.api.core.db import (
     get_alerts_by_fingerprint,
     get_alerts_metrics_by_provider,
@@ -63,8 +63,9 @@ def get_all_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
+    cel: str = None,
     limit: int = 1000,
-) -> list[AlertDto]:
+) -> list[Any]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alerts from DB",
@@ -72,7 +73,11 @@ def get_all_alerts(
             "tenant_id": tenant_id,
         },
     )
-    db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
+    # db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
+    db_alerts = query_alerts_by_cel(tenant_id=tenant_id, cel=cel)
+
+    return [alert.model_dump() for alert in db_alerts]
+
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
         "Fetched alerts from DB",
