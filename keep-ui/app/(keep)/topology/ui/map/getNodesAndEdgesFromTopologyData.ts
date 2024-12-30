@@ -23,8 +23,10 @@ export function getNodesAndEdgesFromTopologyData(
   const allServices = topologyData.map((data) => data.display_name);
   // Create nodes from service definitions
   for (const service of topologyData) {
-    const numIncidentsToService = allIncidents.filter((incident) =>
-      incident.services.includes(service.display_name)
+    const numIncidentsToService = allIncidents.filter(
+      (incident) =>
+        incident.services.includes(service.display_name) ||
+        incident.services.includes(service.service)
     );
     const node: ServiceNodeType = {
       id: service.service.toString(),
