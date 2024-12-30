@@ -48,7 +48,7 @@ from keep.api.core.db_utils import create_db_engine, get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 
 # This import is required to create the tables
-from keep.api.core.incident_cel_db_query import enrich_with_filter_from_cel
+import keep.api.core.cel_to_sql.incident_cel_db_query
 from keep.api.models.ai_external import (
     ExternalAIConfigAndMetadata,
     ExternalAIConfigAndMetadataDto,
@@ -3332,8 +3332,8 @@ def get_last_incidents(
         if filters:
             query = apply_incident_filters(session, filters, query)
 
-        if cel:
-            query = enrich_with_filter_from_cel(query, cel)
+        # if cel:
+        #     query = enrich_with_filter_from_cel(query, cel)
 
         if sorting:
             query = query.order_by(sorting.get_order_by(Incident))

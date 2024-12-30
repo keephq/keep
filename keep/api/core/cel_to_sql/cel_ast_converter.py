@@ -1,103 +1,23 @@
-import enum
 from typing import Any
 import celpy.celparser
-from lark import Token, Tree, Visitor
 import lark
-from sqlalchemy.orm import Query
 import celpy
 from typing import List, cast
 
-class Node:
-    def __str__(self):
-        node = self
-        if isinstance(node, LogicalNode):
-            return f"{expression_to_str(node.left)} {node.operator} {expression_to_str(node.right)}"
-        elif isinstance(node, ComparisonNode):
-            return f"{expression_to_str(node.firstOperand)} {node.operator} {expression_to_str(node.secondOperand)}"
-        elif isinstance(node, UnaryNode):
-            return f"{node.operator}{expression_to_str(node.operand)}"
-        elif isinstance(node, PropertyAccessNode):
-            if node.value:
-                return f"{node.member_name}.{expression_to_str(node.value)}"
-            
-            return node.member_name
-        elif isinstance(node, MethodAccessNode):
-            args = []
-            for argNode in node.args:
-                args.append(expression_to_str(argNode))
+from keep.api.core.cel_to_sql.ast_nodes import ComparisonNode, ConstantNode, LogicalNode, MethodAccessNode, Node, ParenthesisNode, PropertyAccessNode, UnaryNode
 
-            return f"{node.member_name}({', '.join(args)})"
-        elif isinstance(node, ParenthesisNode):
-            return f"({expression_to_str(node.expression)})"
-        elif isinstance(node, ConstantNode):
-            return node.value
-        else:
-            return str(node)
-
-class ConstantNode(Node):
-    def __init__(self, value: Any):
-        self.value = value
-
-class ParenthesisNode(Node):
-    def __init__(self, expression: Any):
-        self.expression = expression
-
-class LogicalNode(Node):
-    AND = '&&'
-    OR = '||'
-
-    def __init__(self, left: Any, operator: str, right: Any):
-        self.left = left
-        self.operator = operator
-        self.right = right
-
-class ComparisonNode(Node):
-    LT = '<'
-    LE = '<='
-    GT = '>'
-    GE = '>='
-    EQ = '=='
-    NE = '!=='
-    IN = 'in'
-
-    def __init__(self, firstOperand: str, operator: str, secondOperand: str):
-        self.operator = operator
-        self.firstOperand = firstOperand
-        self.secondOperand = secondOperand
-
-class UnaryNode(Node):
-    NOT = '!'
-    NEG = '-'
-
-    def __init__(self, operator: str, operand: Any):
-        self.operator = operator
-        self.operand = operand
-    
-class MemberAccessNode(Node):
-    def __init__(self, member_name: str):
-        self.member_name = member_name
-
-
-class PropertyAccessNode(MemberAccessNode):
-    def __init__(self, member_name, value: Any):
-        self.value = value
-        super().__init__(member_name)
-
-class MethodAccessNode(MemberAccessNode):
-    def __init__(self, member_name, args: List[str] = None):
-        self.args = args
-        super().__init__(member_name)    
-
-class SimpleNodesAST(lark.visitors.Visitor_Recursive):
+class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
 
     @classmethod
-    def display(cls_, ast: lark.Tree) -> str:
+    def convert_to_ast(cls_, cel: str) -> Node:
         d = cls_()
-        d.visit(ast)
+        celpy_ast = d.celpy_env.compile(cel)
+        d.visit(celpy_ast)
         return d.stack[0]
 
     def __init__(self) -> None:
+        self.celpy_env = celpy.Environment()
         self.stack: List[Any] = []
         self.member_access_stack: List[str] = []
 
@@ -400,43 +320,3 @@ class SimpleNodesAST(lark.visitors.Visitor_Recursive):
 
             self.stack.append(ConstantNode(value=value))
 
-
-def enrich_with_filter_from_cel(input_query: Query[Any], cel: str) -> Query[Any]:
-    # demo()
-    celpy_env = celpy.Environment()
-    ast = celpy_env.compile(cel)
-    dumast = SimpleNodesAST()
-    dumast.visit(ast)
-    result = dumast.stack[0]
-
-    strs = str(result)
-
-    return None
-
-enrich_with_filter_from_cel(None, '((((((pudel.bad == "fusk")))))) && alert.first.second.third.contains("token-one", "token-two")')
-
-def visit_tree(tree):
-    res = ''
-    if isinstance(tree, Tree):
-        for child in tree.children:
-           res += str(visit_tree(child)) + '  '
-    elif isinstance(tree, Token):
-        return str(tree)
-
-def visint_expression(node: celpy.Expression, query: Query[Any]) -> Query[Any]:
-    indent = 3
-    if not node:
-        return
-    prefix = "  " * indent
-    # Print basic node information (e.g., type, value, operator)
-    print(f"{prefix}Node Type: {node.WhichOneof('expr_kind')}")
-    if node.HasField("constant_expr"):
-        print(f"{prefix}  Constant: {node.constant_expr}")
-    elif node.HasField("ident_expr"):
-        print(f"{prefix}  Identifier: {node.ident_expr.name}")
-    elif node.HasField("call_expr"):
-        print(f"{prefix}  Function: {node.call_expr.function}")
-        print(f"{prefix}  Arguments:")
-        for arg in node.call_expr.args:
-            visint_expression(arg, query)
-    return query
