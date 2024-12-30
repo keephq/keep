@@ -39,6 +39,7 @@ class TopologyService(SQLModel, table=True):
     mac_address: Optional[str] = None
     category: Optional[str] = None
     manufacturer: Optional[str] = None
+    namespace: Optional[str] = None
 
     updated_at: Optional[datetime] = Field(
         sa_column=Column(
@@ -53,7 +54,7 @@ class TopologyService(SQLModel, table=True):
         back_populates="service",
         sa_relationship_kwargs={
             "foreign_keys": "[TopologyServiceDependency.service_id]",
-            "cascade": "all, delete-orphan"
+            "cascade": "all, delete-orphan",
         },
     )
 
@@ -112,6 +113,7 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
     mac_address: Optional[str] = None
     category: Optional[str] = None
     manufacturer: Optional[str] = None
+    namespace: Optional[str] = None
 
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
@@ -212,4 +214,5 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
             ],
             application_ids=application_ids,
             updated_at=service.updated_at,
+            namespace=service.namespace,
         )

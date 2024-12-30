@@ -1816,12 +1816,42 @@ def create_incident_for_grouping_rule(
             rule_id=rule.id,
             rule_fingerprint=rule_fingerprint,
             is_predicted=False,
-            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value and not rule.require_approve,
+            is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
+            and not rule.require_approve,
+            incident_type=IncidentType.RULE.value,
         )
         session.add(incident)
         session.commit()
         session.refresh(incident)
     return incident
+
+
+def create_incident_for_topology(
+    tenant_id: str, alert_group: list[Alert], session: Session
+) -> Incident:
+    """Create a new incident from topology-connected alerts"""
+    # Get highest severity from alerts
+    severity = max(alert.severity for alert in alert_group)
+
+    # Get all services
+    services = set()
+    service_names = set()
+    for alert in alert_group:
+        services.update(alert.service_ids)
+        service_names.update(alert.service_names)
+
+    incident = Incident(
+        tenant_id=tenant_id,
+        user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
+        severity=severity.value,
+        status=IncidentStatus.FIRING.value,
+        is_confirmed=True,
+        incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
+        data={"services": list(services), "alert_count": len(alert_group)},
+    )
+
+    return incident
+
 
 def get_rule(tenant_id, rule_id):
     with Session(engine) as session:
@@ -1915,6 +1945,7 @@ def get_all_deduplication_rules(tenant_id):
         ).all()
     return rules
 
+
 def get_deduplication_rule_by_id(tenant_id, rule_id: str):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -1952,7 +1983,7 @@ def create_deduplication_rule(
     full_deduplication: bool = False,
     ignore_fields: list[str] = [],
     priority: int = 0,
-    is_provisioned: bool = False
+    is_provisioned: bool = False,
 ):
     with Session(engine) as session:
         new_rule = AlertDeduplicationRule(
@@ -3403,15 +3434,20 @@ def create_incident_from_dto(
             "assignee": incident_dto.assignee,
             "is_predicted": False,  # its not a prediction, but an AI generation
             "is_confirmed": True,  # confirmed by the user :)
+            "incident_type": IncidentType.AI.value,
         }
 
     elif issubclass(type(incident_dto), IncidentDto):
         # we will reach this block when incident is pulled from a provider
         incident_dict = incident_dto.to_db_incident().dict()
-
+        if "incident_type" not in incident_dict:
+            incident_dict["incident_type"] = IncidentType.MANUAL.value
     else:
         # We'll reach this block when a user creates an incident
         incident_dict = incident_dto.dict()
+        # Keep existing incident_type if present, default to MANUAL if not
+        if "incident_type" not in incident_dict:
+            incident_dict["incident_type"] = IncidentType.MANUAL.value
 
     return create_incident_from_dict(tenant_id, incident_dict)
 
@@ -3815,7 +3851,9 @@ def add_alerts_to_incident(
             return incident
 
 
-def get_incident_unique_fingerprint_count(tenant_id: str, incident_id: str | UUID) -> int:
+def get_incident_unique_fingerprint_count(
+    tenant_id: str, incident_id: str | UUID
+) -> int:
     with Session(engine) as session:
         return session.execute(
             select(func.count(1))
@@ -4488,19 +4526,22 @@ def get_workflow_executions_for_incident_or_alert(
         results = session.execute(final_query).all()
         return results, total_count
 
+
 def is_all_alerts_resolved(
     fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ):
-    return is_all_alerts_in_status(fingerprints, incident, AlertStatus.RESOLVED, session)
+    return is_all_alerts_in_status(
+        fingerprints, incident, AlertStatus.RESOLVED, session
+    )
 
 
 def is_all_alerts_in_status(
     fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
     status: AlertStatus = AlertStatus.RESOLVED,
-    session: Optional[Session] = None
+    session: Optional[Session] = None,
 ):
 
     if incident and incident.alerts_count == 0:
@@ -4533,19 +4574,15 @@ def is_all_alerts_in_status(
             subquery = subquery.where(LastAlert.fingerprint.in_(fingerprints))
 
         if incident:
-            subquery = (
-                subquery
-                .join(
+            subquery = subquery.join(
                 LastAlertToIncident,
                 and_(
                     LastAlertToIncident.tenant_id == LastAlert.tenant_id,
                     LastAlertToIncident.fingerprint == LastAlert.fingerprint,
                 ),
-            )
-                .where(
-                    LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
-                    LastAlertToIncident.incident_id == incident.id,
-                )
+            ).where(
+                LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT,
+                LastAlertToIncident.incident_id == incident.id,
             )
 
         subquery = subquery.subquery()
@@ -4920,8 +4957,8 @@ def set_last_alert(
                         timestamp=alert.timestamp,
                         first_timestamp=alert.timestamp,
                         alert_id=alert.id,
-                    alert_hash=alert.alert_hash,
-                )
+                        alert_hash=alert.alert_hash,
+                    )
 
                 session.add(last_alert)
                 session.commit()
