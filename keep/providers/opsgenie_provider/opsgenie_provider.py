@@ -70,6 +70,7 @@ class OpsgenieProvider(BaseProvider):
     ):
         super().__init__(context_manager, provider_id, config)
         self.configuration = opsgenie_sdk.Configuration()
+        self.configuration.retry_http_response = ["429", "500", "502-599", "404"]
         self.configuration.api_key["Authorization"] = self.authentication_config.api_key
 
     def validate_scopes(self):
