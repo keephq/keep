@@ -1,5 +1,4 @@
 import dataclasses
-import time
 import typing
 
 import opsgenie_sdk
@@ -32,9 +31,6 @@ class OpsGenieRecipient(pydantic.BaseModel):
 
 class OpsgenieProvider(BaseProvider):
     """Create incidents in OpsGenie."""
-
-    MAX_RETIRES = 3
-    RETRY_DELAY = 1  # seconds
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
     PROVIDER_CATEGORY = ["Incident Management"]
@@ -71,6 +67,7 @@ class OpsgenieProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
         self.configuration = opsgenie_sdk.Configuration()
         self.configuration.retry_http_response = ["429", "500", "502-599", "404"]
+        self.configuration.short_polling_max_retries = 3
         self.configuration.api_key["Authorization"] = self.authentication_config.api_key
 
     def validate_scopes(self):
@@ -82,7 +79,7 @@ class OpsgenieProvider(BaseProvider):
                 note="Simple alert",
                 message="Simple alert showing context with name: John Doe",
             )
-            deleted = self._delete_alert(alert["id"])
+            deleted = self._delete_alert(alert.get("alert_id"))
             if not deleted:
                 self.logger.warning(
                     "Failed to delete OpsGenie alert in scope validation"
@@ -103,21 +100,14 @@ class OpsgenieProvider(BaseProvider):
 
     def _delete_alert(self, alert_id: str) -> bool:
         api_instance = opsgenie_sdk.AlertApi(opsgenie_sdk.ApiClient(self.configuration))
-        for attempt in range(OpsgenieProvider.MAX_RETIRES):
-            try:
-                api_instance.delete_alert(alert_id)
-                return True
-            except Exception as e:
-                if attempt < OpsgenieProvider.OpsgenieProvider - 1:
-                    time.sleep(OpsgenieProvider.RETRY_DELAY)
-                    continue
-                # Log the error but don't raise it
-                self.logger.warning(
-                    f"Failed to delete alert {alert_id} after {attempt + 1} attempts: {str(e)}",
-                    extra={"alert_id": alert_id, "error_message": str(e)},
-                )
-        # If we reach here, the alert was not deleted
-        return False
+        request = api_instance.delete_alert(alert_id)
+        response = request.retrieve_result()
+        if not response.data.is_success:
+            self.logger.error(
+                "Failed to delete OpsGenie alert",
+                extra={"alert_id": alert_id, "response": response.data.to_dict()},
+            )
+        return response.data.is_success
 
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/CreateAlertPayload.md
     def _create_alert(
@@ -158,9 +148,12 @@ class OpsgenieProvider(BaseProvider):
         )
         try:
             alert = api_instance.create_alert(create_alert_payload)
-            alert_dict = alert.to_dict()
-            alert_dict["id"] = alert.id
-            return alert_dict
+            response = alert.retrieve_result()
+            if not response.data.is_success:
+                raise Exception(
+                    f"Failed to create OpsGenie alert: {response.data.status}"
+                )
+            return response.data.to_dict()
         except ApiException:
             self.logger.exception("Failed to create OpsGenie alert")
             raise
