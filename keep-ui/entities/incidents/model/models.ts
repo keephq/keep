@@ -6,6 +6,12 @@ export enum Status {
   Resolved = "resolved",
   Acknowledged = "acknowledged",
   Merged = "merged",
+  Deleted = "deleted",
+}
+
+export const DefaultIncidentFilteredStatuses: string[] = [Status.Firing, Status.Acknowledged, Status.Merged];
+export const DefaultIncidentFilters: object = {
+  "status": DefaultIncidentFilteredStatuses,
 }
 
 export interface IncidentDto {
