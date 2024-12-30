@@ -3,8 +3,6 @@ import enum
 import hashlib
 import logging
 import queue
-import threading
-import typing
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -403,7 +401,6 @@ class WorkflowScheduler:
         # TODO - event workflows should be in DB too, to avoid any state problems.
 
         # take out all items from the workflows to run and run them, also, clean the self.workflows_to_run list
-        tasks = []
         with self.lock:
             workflows_to_run, self.workflows_to_run = self.workflows_to_run, []
         for workflow_to_run in workflows_to_run:
