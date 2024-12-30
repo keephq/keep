@@ -101,7 +101,7 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
 
   const handleClick = () => {
     router.push(
-      `/incidents?services={encodeURIComponent("${data.display_name}")}`
+      `/incidents?services=${encodeURIComponent(data.display_name)}`
     );
   };
 

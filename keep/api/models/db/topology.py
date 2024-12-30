@@ -53,7 +53,7 @@ class TopologyService(SQLModel, table=True):
         back_populates="service",
         sa_relationship_kwargs={
             "foreign_keys": "[TopologyServiceDependency.service_id]",
-            "cascade": "all, delete-orphan"
+            "cascade": "all, delete-orphan",
         },
     )
 
@@ -116,6 +116,9 @@ class TopologyServiceDtoBase(BaseModel, extra="ignore"):
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
     dependencies: dict[str, str] = {}  # dict of service it depends on : protocol
+    application_relations: Optional[dict[UUID, str]] = (
+        None  # An option field, pass it in the form of {application_id_1: application_name_1, application_id_2: application_name_2, ...} tha t the service belongs to, the process_topology function handles the creation/updation of the application
+    )
 
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
