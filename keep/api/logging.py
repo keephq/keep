@@ -17,6 +17,10 @@ from keep.api.models.db.provider import ProviderExecutionLog
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+KEEP_STORE_WORKFLOW_LOGS = (
+    os.environ.get("KEEP_STORE_WORKFLOW_LOGS", "true").lower() == "true"
+)
+
 
 class WorkflowDBHandler(logging.Handler):
     def __init__(self):
@@ -25,6 +29,8 @@ class WorkflowDBHandler(logging.Handler):
 
     def emit(self, record):
         # we want to push only workflow logs to the DB
+        if not KEEP_STORE_WORKFLOW_LOGS:
+            return
         if hasattr(record, "workflow_execution_id") and record.workflow_execution_id:
             self.records.append(record)
 
@@ -155,6 +161,7 @@ class WorkflowLoggerAdapter(logging.LoggerAdapter):
             None,
         )
         if workflow_db_handler:
+            self.logger.info("Pushing logs to DB")
             workflow_db_handler.push_logs_to_db()
         else:
             self.logger.warning("No WorkflowDBHandler found")
