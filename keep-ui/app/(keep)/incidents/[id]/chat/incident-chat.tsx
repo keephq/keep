@@ -7,11 +7,11 @@ import Loading from "@/app/(keep)/loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
-import "@copilotkit/react-ui/styles.css";
-import "./incident-chat.css";
 import { TraceData, TraceViewer } from "@/shared/ui/TraceViewer";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { useMemo } from "react";
+import "@copilotkit/react-ui/styles.css";
+import "./incident-chat.css";
 
 export function IncidentChat({ incident }: { incident: IncidentDto }) {
   const router = useRouter();
@@ -31,6 +31,14 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
 
   const { updateIncident, invokeProviderMethod } = useIncidentActions();
 
+  // Suggestions
+  useCopilotChatSuggestions({
+    instructions: `The following incident is on going: ${JSON.stringify(
+      incident
+    )}. Provide good question suggestions for the incident responder team.`,
+  });
+
+  // Chat context
   useCopilotReadable({
     description: "incidentDetails",
     value: incident,
@@ -44,16 +52,11 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     value: providersWithGetTrace,
   });
 
-  useCopilotChatSuggestions({
-    instructions: `The following incident is on going: ${JSON.stringify(
-      incident
-    )}. Provide good question suggestions for the incident responder team.`,
-  });
-
+  // Actions
   useCopilotAction({
     name: "invokeGetTrace",
     description:
-      "According to the provided context (provider id and trace id), invoke the get_trace method from the provider",
+      "According to the provided context (provider id and trace id), invoke the get_trace method from the provider. If the alerts already contain trace_id or traceId and the type of the provider is available, automatically get that trace.",
     parameters: [
       {
         name: "providerId",
@@ -86,26 +89,11 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       }
     },
   });
-  useCopilotAction({
-    name: "gotoAlert",
-    description: "Select an alert and filter the feed by the alert fingerprint",
-    parameters: [
-      {
-        name: "fingerprint",
-        type: "string",
-        description:
-          "The fingerprint of the alert. You can extract it using the alert name as well.",
-        required: true,
-      },
-    ],
-    handler: async ({ fingerprint }) => {
-      window.open(`/alerts/feed?fingerprint=${fingerprint}`, "_blank");
-    },
-  });
 
   useCopilotAction({
     name: "updateIncidentNameAndSummary",
-    description: "Update incident name and summary",
+    description:
+      "Update incident name and summary, if the user asked you to update just one of them, update only that one",
     parameters: [
       {
         name: "name",

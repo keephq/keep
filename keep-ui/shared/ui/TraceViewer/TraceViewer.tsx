@@ -77,7 +77,7 @@ const TraceViewer = ({ trace }: { trace: TraceData }) => {
         const level = calculateLevel(spanId);
         const displayName = span.inferred_entity?.entity || span.service;
 
-        const isErrorStatus = span.status;
+        const isErrorStatus = span.status === "error";
 
         const processedSpan: ProcessedSpan = {
           id: spanId,
