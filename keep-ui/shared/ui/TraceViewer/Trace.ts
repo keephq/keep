@@ -8,6 +8,7 @@ interface TraceSpan {
   service: string;
   start: number;
   type: string;
+  status: string;
   inferred_entity?: {
     entity: string;
     entity_key: string;
