@@ -103,7 +103,7 @@ export function AlertsTableBody({
           <TableRow
             id={`alert-row-${row.original.fingerprint}`}
             key={row.id}
-            className={clsx("cursor-pointer relative", "group")}
+            className="cursor-pointer relative group"
             onClick={(e) => handleRowClick(e, row.original)}
           >
             {row.getVisibleCells().map((cell) => {
