@@ -230,6 +230,7 @@ export const config = {
           // TODO: remove this once we have a proper way to get the tenant id
           tenantId = (profile as any).keep_tenant_id || "keep";
           role = (profile as any).keep_role;
+          accessToken = account.access_token;
         } else {
           accessToken =
             user.accessToken || account.access_token || account.id_token;
