@@ -4998,31 +4998,57 @@ sqlFields = [
 ]
 
 
-def query_alerts_by_cel(tenant_id: str, cel: str) -> List[Alert]:
+def query_alerts_by_cel(tenant_id: str, cel: str) -> List[dict]:
     aggregated_cel = f"tenant_id == \"{tenant_id}\""
 
     if cel:
         aggregated_cel += f" && ({cel})"
 
-    instance = CelToSqliteProvider()
-    sql = instance.convert_to_sql_str(aggregated_cel, 'SELECT * FROM alert')
+    known_fields = {
+        
+        "tenant_id": { # redirects tenant_id from cel to alert.tenant_id in SQL
+            "type": "string",
+            "field": "alert.tenant_id",
+            "mapping_type": "one_to_one"
+        },
+        "provider_type": { # redirects provider_type from cel to alert.provider_type in SQL
+            "type": "string",
+            "field": "provider_type",
+            "mapping_type": "one_to_one"
+        },
+        "*": { # redirects all other fields from cel to merged_json(event + enrichments) in SQL
+            "type": "json",
+            "field": "merged_json",
+        }
+    }
 
-    postgresql = CelToPostgreSqlProvider().convert_to_sql_str(aggregated_cel, 'SELECT * FROM alert')
+    instance = CelToSqliteProvider(known_fields_mapping=known_fields)
+
+
+    
+
+    sql = instance.convert_to_sql_str(
+        aggregated_cel, 
+        'SELECT alert.*, json_patch(alert.event, alertenrichment.enrichments) AS merged_json FROM alert JOIN alertenrichment ON alert.fingerprint = alertenrichment.alert_fingerprint')
+
+    # postgresql = CelToPostgreSqlProvider().convert_to_sql_str(aggregated_cel, 'SELECT provider_type, event, enrichments FROM alert JOIN alertenrichment ON alert.fingerprint = alertenrichment.alert_fingerprint')
 
     try:
         with Session(engine) as session:
             result = []
             for item in session.exec(text(sql)).all():
                 item_dict = item._asdict()
-                result.append(Alert(
-                    tenant_id=item_dict['tenant_id'],
-                    id=item_dict['id'],
-                    fingerprint=item_dict['fingerprint'],
-                    timestamp=item_dict['timestamp'],
-                    event=json.loads(item_dict['event']),
-                    provider_type=item_dict['provider_type'],
-                    provider_id=item_dict['provider_id'],
-                ))
+                result.append({
+                    'tenant_id': item_dict['tenant_id'],
+                    'id': item_dict['id'],
+                    'fingerprint': item_dict['fingerprint'],
+                    'timestamp': item_dict['timestamp'],
+                    'event': json.loads(item_dict['event']),
+                    'provider_type': item_dict['provider_type'],
+                    'provider_id': item_dict['provider_id'],
+                    'enrichments': json.loads(item_dict.get('enrichments', '{}')),
+                    'merged_json': json.loads(item_dict['merged_json'])
+                })
 
             return result
     except Exception as e:

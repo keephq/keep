@@ -14,6 +14,10 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             prop = property_path.replace('event.', '')
             return f"event ->> '{prop}' LIKE '%{method_args[0]}%'"
         
+        if property_path and property_path.startswith('enrichments'):
+            prop = property_path.replace('enrichments.', '')
+            return f"enrichments ->> '{prop}' LIKE '%{method_args[0]}%'"
+        
         return f"{property_path} LIKE '%{method_args[0]}%'"
     
     def _visit_starts_with_method_calling(self, property_path: str, method_args: List[str]) -> str:
@@ -21,11 +25,19 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
             prop = property_path.replace('event.', '')
             return f"event ->> '{prop}' LIKE '{method_args[0]}%'"
         
+        if property_path and property_path.startswith('enrichments'):
+            prop = property_path.replace('enrichments.', '')
+            return f"enrichments ->> '{prop}' LIKE '{method_args[0]}%'"
+        
         return f"{property_path} LIKE '{method_args[0]}%'"
     
     def _visit_ends_with_method_calling(self, property_path: str, method_args: List[str]) -> str:
         if property_path and property_path.startswith('event'):
             prop = property_path.replace('event.', '')
             return f"event ->> '{prop}' LIKE '%{method_args[0]}'"
+        
+        if property_path and property_path.startswith('enrichments'):
+            prop = property_path.replace('enrichments.', '')
+            return f"enrichments ->> '{prop}' LIKE '%{method_args[0]}'"
         
         return f"{property_path} LIKE '%{method_args[0]}'"

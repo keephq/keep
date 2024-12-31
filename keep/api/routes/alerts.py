@@ -65,7 +65,7 @@ def get_all_alerts(
     ),
     cel: str = None,
     limit: int = 1000,
-) -> list[Any]:
+) -> list[dict]:
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Fetching alerts from DB",
@@ -76,7 +76,7 @@ def get_all_alerts(
     # db_alerts = get_last_alerts(tenant_id=tenant_id, limit=limit)
     db_alerts = query_alerts_by_cel(tenant_id=tenant_id, cel=cel)
 
-    return [alert.model_dump() for alert in db_alerts]
+    return [alert for alert in db_alerts]
 
     enriched_alerts_dto = convert_db_alerts_to_dto_alerts(db_alerts)
     logger.info(
