@@ -2744,7 +2744,8 @@ def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
     # for postgres, the jsonb column is returned as a string
     # so we need to parse it
     for dashboard in dashboards:
-        dashboard.dashboard_config = json.loads(dashboard.dashboard_config)
+        if isinstance(dashboard.dashboard_config, str):
+            dashboard.dashboard_config = json.loads(dashboard.dashboard_config)
     return dashboards
 
 
