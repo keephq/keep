@@ -114,6 +114,7 @@ export const IncidentTableComponent = (props: Props) => {
                   style={style}
                   className={clsx(
                     className,
+                    "bg-white",
                     cell.column.id === "actions" ? "p-1" : ""
                   )}
                 >
