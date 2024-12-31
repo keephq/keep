@@ -1,5 +1,5 @@
 .copilotKitInput {
-  @apply sticky bottom-0 bg-white w-full !important;
+  @apply sticky bottom-0 bg-white w-[98%] !important;
   @apply flex items-center outline-none rounded-tremor-default px-3 py-2 mx-2 text-tremor-default focus:ring-2 transition duration-100 border shadow-tremor-input focus:border-tremor-brand-subtle focus:ring-tremor-brand-muted dark:shadow-dark-tremor-input focus:dark:border-dark-tremor-brand-subtle focus:dark:ring-dark-tremor-brand-muted bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis border-tremor-border dark:border-dark-tremor-border placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content !important;
 }
 
@@ -25,9 +25,9 @@
 }
 
 .chat-container {
-  @apply h-full flex flex-col;
+  @apply max-h-[calc(100vh-31rem)] flex flex-col;
 }
 
 .chat-messages {
-  @apply flex-1 overflow-y-auto overflow-x-hidden;
+  @apply flex-1 overflow-y-scroll overflow-x-hidden;
 }

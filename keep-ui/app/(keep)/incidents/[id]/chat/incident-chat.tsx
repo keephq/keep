@@ -5,7 +5,7 @@ import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import Loading from "@/app/(keep)/loading";
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
-import { Card } from "@tremor/react";
+import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
@@ -22,12 +22,10 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
 
   const providersWithGetTrace = useMemo(
     () =>
-      providers?.installed_providers
-        .filter(
-          (provider) =>
-            provider.methods?.some((method) => method.func_name === "get_trace")
-        )
-        .map((provider) => provider.id),
+      providers?.installed_providers.filter(
+        (provider) =>
+          provider.methods?.some((method) => method.func_name === "get_trace")
+      ),
     [providers]
   );
 
@@ -42,7 +40,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     value: alerts?.items,
   });
   useCopilotReadable({
-    description: "providersWithGetTrace",
+    description: "The providers you can get traces from",
     value: providersWithGetTrace,
   });
 
@@ -76,11 +74,15 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     },
     render: ({ status, result }) => {
       if (status === "executing" || status === "inProgress") {
-        return <Loading />;
-      } else if (status === "complete") {
+        return (
+          <Button color="slate" size="lg" disabled loading>
+            Loading...
+          </Button>
+        );
+      } else if (status === "complete" && typeof result !== "string") {
         return <TraceViewer trace={result} />;
       } else {
-        return "Trace not found";
+        return <Card>Trace not found: {result}</Card>;
       }
     },
   });
@@ -130,7 +132,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     },
   });
 
-  if (alertsLoading) return <Loading />;
+  if (alertsLoading || !incident) return <Loading />;
   if (!alerts?.items || alerts.items.length === 0)
     return (
       <EmptyStateCard
@@ -142,7 +144,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     );
 
   return (
-    <Card className="h-[calc(100vh-20rem)]">
+    <Card className="max-h-[calc(100vh-28rem)]">
       <div className="chat-container">
         <div className="chat-messages">
           <CopilotChat
