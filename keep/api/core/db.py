@@ -1369,10 +1369,11 @@ def get_last_alerts(
         stmt = stmt.order_by(desc(Alert.timestamp)).limit(limit)
 
         # Execute the query
-
         if not optimized:
+            # ORM
             alerts_with_start = session.execute(stmt).all()
         else:
+            # Raw SQL
             compiled = stmt.compile(
                 dialect=engine.dialect, compile_kwargs={"literal_binds": True}
             )
