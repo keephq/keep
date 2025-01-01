@@ -59,12 +59,12 @@ class GithubProvider(BaseProvider):
     def get_last_commits(self, repository: str, n: int = 10):
         repo = self.client.get_repo(repository)
         commits = repo.get_commits()
-        return commits[:n]
+        return [commit.raw_data for commit in commits[:n]]
 
     def get_last_releases(self, repository: str, n: int = 10):
         repo = self.client.get_repo(repository)
         releases = repo.get_releases()
-        return releases[:n]
+        return [release.raw_data for release in releases[:n]]
 
     def __generate_client(self):
         # Should get an access token once we have a real use case for GitHub provider
@@ -175,5 +175,5 @@ if __name__ == "__main__":
         ProviderConfig(authentication={"access_token": os.environ.get("GITHUB_PAT")}),
     )
 
-    result = github_provider.get_
+    result = github_provider.get_last_commits("keephq/keep", 10)
     print(result)

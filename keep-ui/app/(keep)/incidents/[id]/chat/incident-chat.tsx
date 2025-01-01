@@ -4,7 +4,6 @@ import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import Loading from "@/app/(keep)/loading";
-
 import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
@@ -59,6 +58,37 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   });
 
   // Actions
+  useCopilotAction({
+    name: "invokeProviderMethod",
+    description:
+      "Invoke a method from a provider. The method is invoked on the provider with the given id and the parameters are the ones provided in the parameters object.",
+    parameters: [
+      {
+        name: "providerId",
+        type: "string",
+        description: "The ID of the provider to invoke the method on",
+      },
+      {
+        name: "methodName",
+        type: "string",
+        description: "The name of the method to invoke",
+      },
+      {
+        name: "methodParams",
+        type: "object",
+        description:
+          "The parameters the method expects as described in func_params",
+      },
+    ],
+    handler: async ({ providerId, methodName, methodParams }) => {
+      const result = await invokeProviderMethod(
+        providerId,
+        methodName,
+        methodParams as { [key: string]: string }
+      );
+      return result;
+    },
+  });
   useCopilotAction({
     name: "invokeGetTrace",
     description:
