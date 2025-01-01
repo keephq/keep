@@ -1270,6 +1270,8 @@ def get_last_alerts(
             select(Alert, LastAlert.first_timestamp.label("startedAt"))
             .select_from(LastAlert)
             .join(Alert, LastAlert.alert_id == Alert.id)
+            .where(LastAlert.tenant_id == tenant_id)
+            .where(Alert.tenant_id == tenant_id)
         )
 
         if timeframe:
@@ -1296,9 +1298,7 @@ def get_last_alerts(
             stmt = stmt.where(*filter_conditions)
 
         # Main query for alerts
-        stmt = stmt.where(Alert.tenant_id == tenant_id).options(
-            subqueryload(Alert.alert_enrichment)
-        )
+        stmt = stmt.options(subqueryload(Alert.alert_enrichment))
 
         if with_incidents:
             if dialect_name == "sqlite":
