@@ -19,9 +19,9 @@ class TenantConfiguration:
             )
 
         def _load_tenant_configurations(self):
-            self.logger.debug("Loading tenants configurations")
+            self.logger.info("Loading tenants configurations")
             tenants_configuration = get_tenants_configurations()
-            self.logger.debug(
+            self.logger.info(
                 "Tenants configurations loaded",
                 extra={
                     "number_of_tenants": len(tenants_configuration),

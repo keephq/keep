@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 import celpy
 import celpy.c7nlib
@@ -12,16 +12,25 @@ from sqlmodel import Session
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.core.db import (
     assign_alert_to_incident,
-    get_incident_for_grouping_rule,
     create_incident_for_grouping_rule,
+    enrich_incidents_with_alerts,
+    get_incident_for_grouping_rule,
+)
+from keep.api.core.db import get_rules as get_rules_db
+from keep.api.core.db import (
+    is_all_alerts_in_status,
     is_all_alerts_resolved,
     is_first_incident_alert_resolved,
     is_last_incident_alert_resolved,
-    is_all_alerts_in_status, enrich_incidents_with_alerts,
 )
-from keep.api.core.db import get_rules as get_rules_db
 from keep.api.core.dependencies import get_pusher_client
-from keep.api.models.alert import AlertDto, AlertSeverity, IncidentDto, IncidentStatus, AlertStatus
+from keep.api.models.alert import (
+    AlertDto,
+    AlertSeverity,
+    AlertStatus,
+    IncidentDto,
+    IncidentStatus,
+)
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import ResolveOn, Rule
 from keep.api.utils.cel_utils import preprocess_cel_expression
@@ -49,7 +58,13 @@ class RulesEngine:
     def __init__(self, tenant_id=None):
         self.tenant_id = tenant_id
         self.logger = logging.getLogger(__name__)
-        self.env = celpy.Environment()
+        self._env = None
+
+    @property
+    def env(self):
+        if not self._env:
+            self._env = celpy.Environment()
+        return self._env
 
     def run_rules(
         self, events: list[AlertDto], session: Optional[Session] = None
@@ -101,8 +116,13 @@ class RulesEngine:
 
                         rule_groups = self._extract_subrules(rule.definition_cel)
 
-                        if rule.create_on == "any" or (rule.create_on == "all" and len(rule_groups) == len(matched_rules)):
-                            self.logger.info("Single event is enough, so creating incident")
+                        if rule.create_on == "any" or (
+                            rule.create_on == "all"
+                            and len(rule_groups) == len(matched_rules)
+                        ):
+                            self.logger.info(
+                                "Single event is enough, so creating incident"
+                            )
                             incident.is_confirmed = True
                         elif rule.create_on == "all":
                             incident = self._process_event_for_history_based_rule(
@@ -111,7 +131,9 @@ class RulesEngine:
 
                         send_created_event = incident.is_confirmed
 
-                    incident = self._resolve_incident_if_require(rule, incident, session)
+                    incident = self._resolve_incident_if_require(
+                        rule, incident, session
+                    )
                     session.add(incident)
                     session.commit()
 
@@ -137,7 +159,6 @@ class RulesEngine:
 
         return list(incidents_dto.values())
 
-
     def _get_or_create_incident(self, rule, rule_fingerprint, session):
         incident = get_incident_for_grouping_rule(
             self.tenant_id,
@@ -155,14 +176,9 @@ class RulesEngine:
         return incident
 
     def _process_event_for_history_based_rule(
-        self,
-        incident: Incident,
-        rule: Rule,
-        session: Session
+        self, incident: Incident, rule: Rule, session: Session
     ) -> Incident:
-        self.logger.info(
-            "Multiple events required for the incident to start"
-        )
+        self.logger.info("Multiple events required for the incident to start")
 
         enrich_incidents_with_alerts(
             tenant_id=self.tenant_id,
@@ -178,7 +194,9 @@ class RulesEngine:
         matched_sub_rules = set()
 
         for alert in incident.alerts:
-            matched_sub_rules = matched_sub_rules.union(self._check_if_rule_apply(rule, AlertDto(**alert.event)))
+            matched_sub_rules = matched_sub_rules.union(
+                self._check_if_rule_apply(rule, AlertDto(**alert.event))
+            )
             if all_sub_rules == matched_sub_rules:
                 is_all_conditions_met = True
                 break
@@ -193,13 +211,14 @@ class RulesEngine:
         return incident
 
     @staticmethod
-    def _resolve_incident_if_require(rule: Rule, incident: Incident, session: Session) -> Incident:
+    def _resolve_incident_if_require(
+        rule: Rule, incident: Incident, session: Session
+    ) -> Incident:
 
         should_resolve = False
 
-        if (
-            rule.resolve_on == ResolveOn.ALL.value
-            and is_all_alerts_resolved(incident=incident, session=session)
+        if rule.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+            incident=incident, session=session
         ):
             should_resolve = True
 
@@ -336,18 +355,20 @@ class RulesEngine:
         Returns:
             list[AlertDto]: list of alerts that are related to the cel
         """
-        logger = logging.getLogger(__name__)
+        self.logger.info(f"Filtering alerts with CEL expression {cel}")
         # if the cel is empty, return all the alerts
         if cel == "":
             return alerts
         # if the cel is empty, return all the alerts
         if not cel:
-            logger.debug("No CEL expression provided")
+            self.logger.info("No CEL expression provided")
             return alerts
         # preprocess the cel expression
+        self.logger.info(f"Preprocessing the CEL expression {cel}")
         cel = preprocess_cel_expression(cel)
         ast = self.env.compile(cel)
         prgm = self.env.program(ast)
+        self.logger.info(f"CEL expression {cel} compiled successfully")
         filtered_alerts = []
 
         for i, alert in enumerate(alerts):
@@ -363,33 +384,35 @@ class RulesEngine:
                     continue
                 # unknown
                 elif "no such overload" in str(e):
-                    logger.debug(
+                    self.logger.debug(
                         f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
                     )
                     continue
                 elif "found no matching overload" in str(e):
-                    logger.debug(
+                    self.logger.debug(
                         f"Type mismtach between operator and operand in the CEL expression {cel} for alert {alert.id}"
                     )
                     continue
-                logger.warning(
+                self.logger.warning(
                     f"Failed to evaluate the CEL expression {cel} for alert {alert.id} - {e}"
                 )
                 continue
             except Exception:
-                logger.exception(
+                self.logger.exception(
                     f"Failed to evaluate the CEL expression {cel} for alert {alert.id}"
                 )
                 continue
             if r:
                 filtered_alerts.append(alert)
 
+        self.logger.info(f"Filtered {len(filtered_alerts)} alerts")
         return filtered_alerts
 
-    def _send_workflow_event(self, session: Session, incident_dto: IncidentDto, action: str):
+    def _send_workflow_event(
+        self, session: Session, incident_dto: IncidentDto, action: str
+    ):
         pusher_client = get_pusher_client()
         incident_bl = IncidentBl(self.tenant_id, session, pusher_client)
 
         incident_bl.send_workflow_event(incident_dto, action)
         incident_bl.update_client_on_incident_change(incident_dto.id)
-

@@ -1260,6 +1260,7 @@ def get_last_alerts(
     lower_timestamp=None,
     with_incidents=False,
     fingerprints=None,
+    optimized=False,
 ) -> list[Alert]:
 
     with Session(engine) as session:
@@ -1368,8 +1369,17 @@ def get_last_alerts(
         stmt = stmt.order_by(desc(Alert.timestamp)).limit(limit)
 
         # Execute the query
-        alerts_with_start = session.execute(stmt).all()
 
+        if not optimized:
+            alerts_with_start = session.execute(stmt).all()
+        else:
+            compiled = stmt.compile(
+                dialect=engine.dialect, compile_kwargs={"literal_binds": True}
+            )
+            compiled_results = session.execute(text(str(compiled))).all()
+            alerts_with_start = [
+                rebuild_alert_from_raw(row) for row in compiled_results
+            ]
         # Process results based on dialect
         alerts = []
         for alert_data in alerts_with_start:
@@ -1392,6 +1402,27 @@ def get_last_alerts(
             alerts.append(alert)
 
         return alerts
+
+
+def rebuild_alert_from_raw(row):
+    # Create Alert object from the raw tuple
+    alert = Alert(
+        id=UUID(row[0]),
+        tenant_id=row[1],
+        timestamp=row[2],
+        provider_type=row[3],
+        provider_id=row[4],
+        event=json.loads(row[5]) if isinstance(row[5], str) else row[5],
+        fingerprint=row[6],
+        alert_hash=row[7],
+    )
+
+    # Get startedAt (first_timestamp)
+    startedAt = row[8]
+    incident_id = row[9]
+
+    # Return tuple of (Alert, startedAt, incident_id) to match ORM structure
+    return (alert, startedAt, incident_id)
 
 
 def get_alerts_by_fingerprint(

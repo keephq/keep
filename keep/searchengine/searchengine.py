@@ -71,7 +71,9 @@ class SearchEngine:
             lower_timestamp=lower_timestamp,
             upper_timestamp=upper_timestamp,
             with_incidents=True,
+            optimized=True,
         )
+        self.logger.info("Finished querying last alerts, converting to DTO")
         # convert the alerts to DTO
         alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
         self.logger.info(
