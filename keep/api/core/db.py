@@ -37,7 +37,7 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import joinedload, selectinload, subqueryload
+from sqlalchemy.orm import joinedload, subqueryload
 from sqlalchemy.sql import exists, expression
 from sqlmodel import Session, SQLModel, col, or_, select, text
 
@@ -1270,6 +1270,8 @@ def get_last_alerts(
             select(Alert, LastAlert.first_timestamp.label("startedAt"))
             .select_from(LastAlert)
             .join(Alert, LastAlert.alert_id == Alert.id)
+            .where(LastAlert.tenant_id == tenant_id)
+            .where(Alert.tenant_id == tenant_id)
         )
 
         if timeframe:
@@ -1296,9 +1298,7 @@ def get_last_alerts(
             stmt = stmt.where(*filter_conditions)
 
         # Main query for alerts
-        stmt = stmt.where(Alert.tenant_id == tenant_id).options(
-            subqueryload(Alert.alert_enrichment)
-        )
+        stmt = stmt.options(subqueryload(Alert.alert_enrichment))
 
         if with_incidents:
             if dialect_name == "sqlite":
@@ -1786,6 +1786,7 @@ def get_incident_for_grouping_rule(
             .where(Incident.rule_id == rule.id)
             .where(Incident.rule_fingerprint == rule_fingerprint)
             .where(Incident.status != IncidentStatus.RESOLVED.value)
+            .where(Incident.status != IncidentStatus.DELETED.value)
             .order_by(Incident.creation_time.desc())
         ).first()
 
@@ -2767,6 +2768,12 @@ def get_dashboards(tenant_id: str, email=None) -> List[Dict[str, Any]]:
             )
         )
         dashboards = session.exec(statement).all()
+
+    # for postgres, the jsonb column is returned as a string
+    # so we need to parse it
+    for dashboard in dashboards:
+        if isinstance(dashboard.dashboard_config, str):
+            dashboard.dashboard_config = json.loads(dashboard.dashboard_config)
     return dashboards
 
 
@@ -2952,23 +2959,14 @@ def is_alert_assigned_to_incident(
     with Session(engine) as session:
         assigned = session.exec(
             select(LastAlertToIncident)
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
             .where(LastAlertToIncident.fingerprint == fingerprint)
             .where(LastAlertToIncident.incident_id == incident_id)
             .where(LastAlertToIncident.tenant_id == tenant_id)
             .where(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
+            .where(Incident.status != IncidentStatus.DELETED.value)
         ).first()
     return assigned is not None
-
-
-def get_incidents(tenant_id) -> List[Incident]:
-    with Session(engine) as session:
-        incidents = session.exec(
-            select(Incident)
-            .options(selectinload(Incident.alerts))
-            .where(Incident.tenant_id == tenant_id)
-            .order_by(desc(Incident.creation_time))
-        ).all()
-    return incidents
 
 
 def get_alert_audit(
@@ -3529,27 +3527,22 @@ def delete_incident_by_id(
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
     with Session(engine) as session:
-        incident = (
-            session.query(Incident)
-            .filter(
+        incident = session.exec(
+            select(Incident).filter(
                 Incident.tenant_id == tenant_id,
                 Incident.id == incident_id,
             )
-            .first()
-        )
+        ).first()
 
-        # Delete all associations with alerts:
-
-        (
-            session.query(LastAlertToIncident)
+        session.execute(
+            update(Incident)
             .where(
-                LastAlertToIncident.tenant_id == tenant_id,
-                LastAlertToIncident.incident_id == incident.id,
+                Incident.tenant_id == tenant_id,
+                Incident.id == incident.id,
             )
-            .delete()
+            .values({"status": IncidentStatus.DELETED.value})
         )
 
-        session.delete(incident)
         session.commit()
         return True
 

@@ -67,6 +67,8 @@ def get_default_conf_file_path():
 
 
 def make_keep_request(method, url, **kwargs):
+    if os.environ.get("KEEP_CLI_IGNORE_SSL", "false").lower() == "true":
+        kwargs['verify'] = False
     try:
         response = requests.request(method, url, **kwargs)
         if response.status_code == 401:

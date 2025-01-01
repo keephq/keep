@@ -113,6 +113,8 @@ class IncidentStatus(Enum):
     ACKNOWLEDGED = "acknowledged"
     # Incident was merged with another incident
     MERGED = "merged"
+    # Incident was removed
+    DELETED = "deleted"
 
 
 class IncidentSeverity(SeverityBaseInterface):

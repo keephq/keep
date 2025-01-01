@@ -88,6 +88,20 @@ class LastAlert(SQLModel, table=True):
     first_timestamp: datetime = Field(nullable=False, index=True)
     alert_hash: str | None = Field(nullable=True, index=True)
 
+    __table_args__ = (
+        # Original indexes from MySQL
+        Index("idx_lastalert_tenant_timestamp", "tenant_id", "first_timestamp"),
+        Index("idx_lastalert_tenant_timestamp_new", "tenant_id", "timestamp"),
+        Index(
+            "idx_lastalert_tenant_ordering",
+            "tenant_id",
+            "first_timestamp",
+            "alert_id",
+            "fingerprint",
+        ),
+        {},
+    )
+
 
 class LastAlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
@@ -115,6 +129,15 @@ class LastAlertToIncident(SQLModel, table=True):
         ForeignKeyConstraint(
             ["tenant_id", "fingerprint"],
             ["lastalert.tenant_id", "lastalert.fingerprint"],
+        ),
+        Index(
+            "idx_lastalerttoincident_tenant_fingerprint",
+            "tenant_id",
+            "fingerprint",
+            "deleted_at",
+        ),
+        Index(
+            "idx_tenant_deleted_fingerprint", "tenant_id", "deleted_at", "fingerprint"
         ),
         {},
     )
@@ -264,6 +287,13 @@ class Alert(SQLModel, table=True):
             "tenant_id",
             "fingerprint",
             "timestamp",
+        ),
+        Index("idx_fingerprint_timestamp", "fingerprint", "timestamp"),
+        Index(
+            "idx_alert_tenant_timestamp_fingerprint",
+            "tenant_id",
+            "timestamp",
+            "fingerprint",
         ),
     )
 

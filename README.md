@@ -552,6 +552,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/argocd-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/argocd-icon.png" alt="ArgoCD"/><br/>
+            ArgoCD
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/gke-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/gke-icon.png" alt="GKE"/><br/>
             GKE

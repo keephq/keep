@@ -605,7 +605,7 @@ class WorkflowScheduler:
             self.futures.add(future)
             future.add_done_callback(lambda f: self.futures.remove(f))
 
-        self.logger.info(
+        self.logger.debug(
             "Event workflows handled",
             extra={"current_number_of_workflows": len(self.futures)},
         )
@@ -614,7 +614,7 @@ class WorkflowScheduler:
         self.logger.info("Starting workflows scheduler")
         while not self._stop:
             # get all workflows that should run now
-            self.logger.info(
+            self.logger.debug(
                 "Starting workflow scheduler iteration",
                 extra={"current_number_of_workflows": len(self.futures)},
             )

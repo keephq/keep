@@ -11,8 +11,7 @@ export async function createServerApiClient(): Promise<ApiClient> {
   try {
     const session = await auth();
     const config = getConfig();
-    // true indicates server-side mode
-    return new ApiClient(session, config, true);
+    return new ApiClient(session, config);
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw new Error(`Failed to create server API client: ${error.message}`);
