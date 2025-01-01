@@ -189,7 +189,7 @@ class Incident(SQLModel, table=True):
 
     incident_type: str = Field(default=IncidentType.MANUAL.value)
     # for topology incidents
-    incident_application: str | None = Field(default=None)
+    incident_application: UUID | None = Field(default=None)
 
     same_incident_in_the_past_id: UUID | None = Field(
         sa_column=Column(

@@ -154,9 +154,13 @@ class RulesEngine:
 
                     incident_dto = IncidentDto.from_db_incident(incident)
                     if send_created_event:
-                        self._send_workflow_event(session, incident_dto, "created")
+                        RulesEngine.send_workflow_event(
+                            self.tenant_id, session, incident_dto, "created"
+                        )
                     elif incident.is_confirmed:
-                        self._send_workflow_event(session, incident_dto, "updated")
+                        RulesEngine.send_workflow_event(
+                            self.tenant_id, session, incident_dto, "updated"
+                        )
 
                     incidents_dto[incident.id] = incident_dto
 
@@ -420,11 +424,15 @@ class RulesEngine:
 
         return filtered_alerts
 
-    def _send_workflow_event(
-        self, session: Session, incident_dto: IncidentDto, action: str
+    @staticmethod
+    def send_workflow_event(
+        tenant_id: str, session: Session, incident_dto: IncidentDto, action: str
     ):
+        logger = logging.getLogger(__name__)
+        logger.info(f"Sending workflow event {action} for incident {incident_dto.id}")
         pusher_client = get_pusher_client()
-        incident_bl = IncidentBl(self.tenant_id, session, pusher_client)
+        incident_bl = IncidentBl(tenant_id, session, pusher_client)
 
         incident_bl.send_workflow_event(incident_dto, action)
         incident_bl.update_client_on_incident_change(incident_dto.id)
+        logger.info(f"Workflow event {action} for incident {incident_dto.id} sent")

@@ -6,13 +6,18 @@ from typing import Dict, Optional, Set
 
 from sqlmodel import select
 
-from keep.api.core.db import existed_or_new_session, get_last_alerts
+from keep.api.core.db import (
+    assign_alert_to_incident,
+    existed_or_new_session,
+    get_last_alerts,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.tenant_configuration import TenantConfiguration
-from keep.api.models.alert import AlertDto
+from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto, IncidentStatus
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.topology import TopologyServiceApplication
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.rulesengine.rulesengine import RulesEngine
 from keep.topologies.topologies_service import TopologiesService
 
 
@@ -118,27 +123,27 @@ class TopologyProcessor:
 
     def _process_tenant(self, tenant_id: str):
         """Process topology for a single tenant"""
-        self.logger.debug(f"Processing topology for tenant {tenant_id}")
+        self.logger.info(f"Processing topology for tenant {tenant_id}")
 
         # 1. Get last alerts for the tenant
         topology_data = self._get_topology_data(tenant_id)
         applications = self._get_applications_data(tenant_id)
         services = [t.service for t in topology_data]
         if not topology_data:
-            self.logger.debug(f"No topology data found for tenant {tenant_id}")
+            self.logger.info(f"No topology data found for tenant {tenant_id}")
             return
 
         # Currently topology-based incidents are created for applications only
         # SHAHAR: this is harder to implement service-related incidents without applications
         # TODO: add support for service-related incidents
         if not applications:
-            self.logger.debug(f"No applications found for tenant {tenant_id}")
+            self.logger.info(f"No applications found for tenant {tenant_id}")
             return
 
         db_last_alerts = get_last_alerts(tenant_id, with_incidents=True)
         last_alerts = convert_db_alerts_to_dto_alerts(db_last_alerts)
 
-        services_with_alerts = defaultdict(list)
+        services_to_alerts = defaultdict(list)
         # group by service
         for alert in last_alerts:
             if alert.service:
@@ -148,22 +153,45 @@ class TopologyProcessor:
                         f"Alert service {alert.service} not in topology data"
                     )
                     continue
-                services_with_alerts[alert.service].append(alert)
+                services_to_alerts[alert.service].append(alert)
 
         for application in applications:
             # check if there is an incident for the application
             incident = self._get_application_based_incident(tenant_id, application)
-            print(incident)
             application_services = [t.service for t in application.services]
-            # if more than one service in the application has alerts, create an incident
             services_with_alerts = [
                 service
                 for service in application_services
-                if service in services_with_alerts
+                if service in services_to_alerts
             ]
-            if len(services_with_alerts) > 1:
-                self._create_or_update_application_based_incident(
-                    application, services_with_alerts, services_with_alerts[0]
+            # if none of the services in the application have alerts, we don't need to create an incident
+            if not services_with_alerts:
+                self.logger.info(
+                    f"No alerts found for application {application.name}, skipping"
+                )
+                continue
+
+            # if we are here - we have alerts for the application, we need to create/update an incident
+            self.logger.info(
+                f"Found alerts for application {application.name}, creating/updating incident"
+            )
+            # if an incident exists, we will update it
+            # NOTE: we support only one incident per application for now
+            if incident:
+                self.logger.info(
+                    f"Found existing incident for application {application.name}"
+                )
+                # update the incident with new alerts / status / severity
+                self._update_application_based_incident(
+                    tenant_id, application, incident, services_to_alerts
+                )
+            else:
+                self.logger.info(
+                    f"No existing incident found for application {application.name}"
+                )
+                # create a new incident with the alerts
+                self._create_application_based_incident(
+                    tenant_id, application, services_to_alerts
                 )
 
     def _get_topology_based_incidents(self, tenant_id: str) -> Dict[str, Incident]:
@@ -215,54 +243,97 @@ class TopologyProcessor:
             )
             return applications
 
-    def _get_nested_dependencies(self, topology_data):
+    def _update_application_based_incident(
+        self,
+        tenant_id: str,
+        application: TopologyServiceApplication,
+        incident: Incident,
+        services_with_alerts: Dict[str, list[AlertDto]],
+    ) -> None:
         """
-        Get nested dependencies for each service including all sub-dependencies.
-        Returns a dict mapping service name to list of all dependencies (direct and indirect).
+        Update an existing application-based incident with new alerts and status
+
+        Args:
+            application: The application associated with the incident
+            incident: The existing incident to update
+            services_with_alerts: List of services that have active alerts
         """
-        # First, build a map of service_id to service and its dependencies
-        service_deps = {}
-        for service in topology_data:
-            service_deps[service.service] = {
-                "deps": list(service.dependencies),  # Use list instead of set
-                "processed": False,
-            }
+        self.logger.info(f"Updating incident for application {application.name}")
 
-        def get_all_deps(service_name: str, visited: set):
-            """Recursively get all dependencies for a service"""
-            if service_name in visited:
-                # Avoid circular dependencies
-                return []
+        with existed_or_new_session() as session:
+            # Get all alerts for the services
+            alerts = []
 
-            visited.add(service_name)
+            for service in services_with_alerts:
+                service_alerts = services_with_alerts[service]
+                alerts.extend(service_alerts)
 
-            if service_name not in service_deps:
-                # Service not found in our data
-                return []
+            # Assign all alerts to the incident if they're not already assigned
+            for alert in alerts:
+                # Let assign_alert_to_incident do the check if the alert is already assigned
+                incident = assign_alert_to_incident(
+                    fingerprint=alert.fingerprint,
+                    incident=incident,
+                    tenant_id=tenant_id,
+                    session=session,
+                )
 
-            # Start with direct dependencies
-            all_deps = service_deps[service_name]["deps"].copy()
+            # Check if incident should be resolved
+            all_resolved = all(
+                [alert.status == AlertStatus.RESOLVED.value for alert in alerts]
+            )
+            # If all alerts are resolved, update incident status to resolved
+            if all_resolved and incident.status != IncidentStatus.RESOLVED.value:
+                incident.status = IncidentStatus.RESOLVED.value
+                session.add(incident)
+                session.commit()
 
-            # For each direct dependency, get its dependencies
-            for dep in service_deps[service_name]["deps"]:
-                # Find the service object for this dependency
-                for service in topology_data:
-                    if service.service == dep.serviceName:
-                        # Get nested dependencies recursively
-                        nested_deps = get_all_deps(dep.serviceName, visited.copy())
-                        # Add nested deps if they're not already in all_deps
-                        for nested_dep in nested_deps:
-                            if not any(
-                                d.serviceId == nested_dep.serviceId for d in all_deps
-                            ):
-                                all_deps.append(nested_dep)
-                        break
+            # Send notification about incident update
+            incident_dto = IncidentDto.from_db_incident(incident)
+            RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "updated")
+            self.logger.info(f"Updated incident for application {application.name}")
 
-            return all_deps
+    def _create_application_based_incident(
+        self,
+        tenant_id,
+        application: TopologyServiceApplication,
+        services_with_alerts: Dict[str, list[AlertDto]],
+    ) -> None:
+        """
+        Create a new application-based incident
 
-        # Build complete dependency map
-        nested_dependencies = {}
-        for service in topology_data:
-            nested_dependencies[service.service] = get_all_deps(service.service, set())
+        Args:
+            application: The application to create an incident for
+            services_with_alerts: List of services that have active alerts
+        """
+        self.logger.info(f"Creating new incident for application {application.name}")
 
-        return nested_dependencies
+        with existed_or_new_session() as session:
+            # Create new incident
+            incident = Incident(
+                tenant_id=tenant_id,
+                user_generated_name=f"Application incident: {application.name}",
+                user_summary=f"Multiple services in application {application.name} are experiencing issues",
+                incident_type="topology",
+                incident_application=application.id,
+                is_confirmed=True,  # Topology-based incidents are always confirmed
+            )
+
+            # Get all alerts for the services and find max severity
+            for service in services_with_alerts:
+                service_alerts = services_with_alerts[service]
+
+                # Assign alerts to incident
+                for alert in service_alerts:
+                    incident = assign_alert_to_incident(
+                        fingerprint=alert.fingerprint,
+                        incident=incident,
+                        tenant_id=tenant_id,
+                        session=session,
+                    )
+
+            # Send notification about new incident
+            incident_dto = IncidentDto.from_db_incident(incident)
+            # Trigger the workflow event
+            RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "created")
+            self.logger.info(f"Created new incident for application {application.name}")
