@@ -52,6 +52,11 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     description: "The providers you can get traces from",
     value: providersWithGetTrace,
   });
+  useCopilotReadable({
+    description:
+      "The installed providers and the methods you can invoke using invokeProviderMethod",
+    value: providers?.installed_providers,
+  });
 
   // Actions
   useCopilotAction({

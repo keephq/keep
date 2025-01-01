@@ -10,6 +10,7 @@ from github import Github
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.models.provider_method import ProviderMethod
 
 
 @pydantic.dataclasses.dataclass
@@ -34,12 +35,36 @@ class GithubProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "GitHub"
     PROVIDER_CATEGORY = ["Developer Tools"]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="get_last_commits",
+            func_name="get_last_commits",
+            description="Get the N last commits from a GitHub repository",
+            type="view",
+        ),
+        ProviderMethod(
+            name="get_last_releases",
+            func_name="get_last_releases",
+            description="Get the N last releases and their changelog from a GitHub repository",
+            type="view",
+        ),
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self.client = self.__generate_client()
+
+    def get_last_commits(self, repository: str, n: int = 10):
+        repo = self.client.get_repo(repository)
+        commits = repo.get_commits()
+        return commits[:n]
+
+    def get_last_releases(self, repository: str, n: int = 10):
+        repo = self.client.get_repo(repository)
+        releases = repo.get_releases()
+        return releases[:n]
 
     def __generate_client(self):
         # Should get an access token once we have a real use case for GitHub provider
@@ -144,13 +169,11 @@ if __name__ == "__main__":
         tenant_id="singletenant",
         workflow_id="test",
     )
-    github_stars_provider = GithubStarsProvider(
+    github_provider = GithubProvider(
         context_manager,
         "test",
         ProviderConfig(authentication={"access_token": os.environ.get("GITHUB_PAT")}),
     )
 
-    result = github_stars_provider.query(
-        repository="keephq/keep", previous_stars_count=910
-    )
+    result = github_provider.get_
     print(result)
