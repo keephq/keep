@@ -55,7 +55,7 @@ from keep.api.models.alert import (
     SplitIncidentRequestDto,
     SplitIncidentResponseDto,
 )
-from keep.api.models.db.alert import ActionType, AlertActionType, AlertAudit
+from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.routes.alerts import _enrich_alert
 from keep.api.tasks.process_incident_task import process_incident
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
@@ -690,7 +690,7 @@ def add_comment(
         authenticated_entity.tenant_id,
         str(incident_id),
         authenticated_entity.email,
-        AlertActionType.INCIDENT_COMMENT,
+        ActionType.INCIDENT_COMMENT,
         change.comment,
     )
 
@@ -811,7 +811,7 @@ def confirm_incident(
 @router.post(
     "/{incident_id}/enrich",
     description="Enrich incident with additional data",
-    response_model=IncidentDto,
+    status_code=202,
 )
 async def enrich_incident(
     incident_id: UUID,
@@ -840,9 +840,6 @@ async def enrich_incident(
         force=enrichment.force,
     )
 
-    # Refresh incident with new enrichments
-    incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
-
     # Notify clients if pusher is available
     if pusher_client:
         try:
@@ -857,4 +854,4 @@ async def enrich_incident(
                 extra={"error": str(e)},
             )
 
-    return IncidentDto.from_db_incident(incident)
+    return Response(status_code=202)

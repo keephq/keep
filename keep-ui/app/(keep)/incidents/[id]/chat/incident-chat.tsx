@@ -4,7 +4,12 @@ import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import Loading from "@/app/(keep)/loading";
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
+import {
+  CopilotTask,
+  useCopilotAction,
+  useCopilotContext,
+  useCopilotReadable,
+} from "@copilotkit/react-core";
 import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { TraceData, TraceViewer } from "@/shared/ui/TraceViewer";
@@ -19,6 +24,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     incident.id
   );
   const { data: providers } = useProviders();
+  const context = useCopilotContext();
 
   const providersWithGetTrace = useMemo(
     () =>
@@ -29,7 +35,8 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     [providers]
   );
 
-  const { updateIncident, invokeProviderMethod } = useIncidentActions();
+  const { updateIncident, invokeProviderMethod, enrichIncident } =
+    useIncidentActions();
 
   // Suggestions
   useCopilotChatSuggestions({
@@ -56,7 +63,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   useCopilotAction({
     name: "invokeGetTrace",
     description:
-      "According to the provided context (provider id and trace id), invoke the get_trace method from the provider. If the alerts already contain trace_id or traceId and the type of the provider is available, automatically get that trace.",
+      "According to the provided context (provider id and trace id), invoke the get_trace method from the provider. If the alerts already contain trace_id or traceId and the type of the provider is available, automatically get that trace. If the trace is available in the incident enrichments, use it and mention that it was previously fetched.",
     parameters: [
       {
         name: "providerId",
@@ -70,10 +77,21 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       },
     ],
     handler: async ({ providerId, traceId }) => {
+      if (incident.enrichments && incident.enrichments[traceId]) {
+        return incident.enrichments[traceId] as TraceData;
+      }
+
       const result = await invokeProviderMethod(providerId, "get_trace", {
         trace_id: traceId,
       });
-      return result as any as TraceData;
+
+      if (typeof result !== "string") {
+        await enrichIncident(incident.id, {
+          [traceId]: result,
+        });
+      }
+
+      return result as TraceData;
     },
     render: ({ status, result }) => {
       if (status === "executing" || status === "inProgress") {

@@ -29,7 +29,7 @@ type UseIncidentActionsValue = {
     providerId: string,
     methodName: string,
     methodParams: { [key: string]: string }
-  ) => Promise<void>;
+  ) => Promise<any>;
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
   unlinkAlertsFromIncident: (
     incidentId: string,
@@ -39,6 +39,10 @@ type UseIncidentActionsValue = {
     incidentId: string,
     alertFingerprints: string[],
     destinationIncidentId: string
+  ) => Promise<void>;
+  enrichIncident: (
+    incidentId: string,
+    enrichments: { [key: string]: any }
   ) => Promise<void>;
   mutateIncidentsList: () => void;
   mutateIncident: (incidentId: string) => void;
@@ -84,6 +88,16 @@ export function useIncidentActions(): UseIncidentActionsValue {
         `/providers/${providerId}/invoke/${methodName}`,
         methodParams
       );
+      return result;
+    },
+    [api]
+  );
+
+  const enrichIncident = useCallback(
+    async (incidentId: string, enrichments: { [key: string]: any }) => {
+      const result = await api.post(`/incidents/${incidentId}/enrich`, {
+        enrichments: enrichments,
+      });
       return result;
     },
     [api]
@@ -294,5 +308,6 @@ export function useIncidentActions(): UseIncidentActionsValue {
     unlinkAlertsFromIncident,
     splitIncidentAlerts,
     invokeProviderMethod,
+    enrichIncident,
   };
 }

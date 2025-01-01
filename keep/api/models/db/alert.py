@@ -227,6 +227,7 @@ class Incident(SQLModel, table=True):
     )
 
     _alerts: List["Alert"] = PrivateAttr(default_factory=list)
+    _enrichments: dict = PrivateAttr(default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True
@@ -234,6 +235,10 @@ class Incident(SQLModel, table=True):
     @property
     def alerts(self):
         return self._alerts
+
+    @property
+    def enrichments(self):
+        return self._enrichments
 
 
 class Alert(SQLModel, table=True):

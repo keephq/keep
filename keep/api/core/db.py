@@ -3344,6 +3344,7 @@ def get_last_incidents(
 
         if with_alerts:
             enrich_incidents_with_alerts(tenant_id, incidents, session)
+        enrich_incidents_with_enrichments(tenant_id, incidents, session)
 
     return incidents, total_count
 
@@ -3364,12 +3365,14 @@ def get_incident_by_id(
             Incident.id == incident_id,
         )
         incident = query.first()
-        if with_alerts:
-            enrich_incidents_with_alerts(
-                tenant_id,
-                [incident],
-                session,
-            )
+        if incident:
+            if with_alerts:
+                enrich_incidents_with_alerts(
+                    tenant_id,
+                    [incident],
+                    session,
+                )
+            enrich_incidents_with_enrichments(tenant_id, [incident], session)
 
     return incident
 
@@ -4972,3 +4975,36 @@ def get_provider_logs(
             .all()
         )
     return logs
+
+
+def enrich_incidents_with_enrichments(
+    tenant_id: str,
+    incidents: List[Incident],
+    session: Optional[Session] = None,
+) -> List[Incident]:
+    """Enrich incidents with their enrichment data."""
+    if not incidents:
+        return incidents
+
+    with existed_or_new_session(session) as session:
+        # Get all enrichments for these incidents in one query
+        enrichments = session.exec(
+            select(AlertEnrichment).where(
+                AlertEnrichment.tenant_id == tenant_id,
+                AlertEnrichment.alert_fingerprint.in_(
+                    [str(incident.id) for incident in incidents]
+                ),
+            )
+        ).all()
+
+        # Create a mapping of incident_id to enrichment
+        enrichments_map = {
+            enrichment.alert_fingerprint: enrichment.enrichments
+            for enrichment in enrichments
+        }
+
+        # Add enrichments to each incident
+        for incident in incidents:
+            incident._enrichments = enrichments_map.get(str(incident.id), {})
+
+        return incidents

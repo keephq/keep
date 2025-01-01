@@ -437,6 +437,8 @@ class IncidentDto(IncidentDtoIn):
     merged_by: str | None
     merged_at: datetime.datetime | None
 
+    enrichments: dict | None = {}
+
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
 
@@ -524,6 +526,7 @@ class IncidentDto(IncidentDtoIn):
             merged_into_incident_id=db_incident.merged_into_incident_id,
             merged_by=db_incident.merged_by,
             merged_at=db_incident.merged_at,
+            enrichments=db_incident.enrichments,
         )
 
         # This field is required for getting alerts when required
