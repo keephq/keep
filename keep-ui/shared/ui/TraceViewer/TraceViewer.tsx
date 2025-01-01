@@ -45,7 +45,7 @@ const SpanTooltipContent = ({ span }: { span: ProcessedSpan }) => {
   );
 };
 
-const TraceViewer = ({ trace }: { trace: TraceData }) => {
+const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
   const processedData = useMemo(() => {
     const calculateLevel = (
       spanId: string,
@@ -206,4 +206,4 @@ const TraceViewer = ({ trace }: { trace: TraceData }) => {
   );
 };
 
-export { TraceViewer };
+export { SimpleTraceViewer };

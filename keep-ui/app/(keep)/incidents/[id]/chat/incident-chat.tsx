@@ -4,15 +4,11 @@ import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
 import Loading from "@/app/(keep)/loading";
-import {
-  CopilotTask,
-  useCopilotAction,
-  useCopilotContext,
-  useCopilotReadable,
-} from "@copilotkit/react-core";
+
+import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
 import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
-import { TraceData, TraceViewer } from "@/shared/ui/TraceViewer";
+import { TraceData, SimpleTraceViewer } from "@/shared/ui/TraceViewer";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { useMemo } from "react";
 import "@copilotkit/react-ui/styles.css";
@@ -24,8 +20,8 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     incident.id
   );
   const { data: providers } = useProviders();
-  const context = useCopilotContext();
-
+  const { updateIncident, invokeProviderMethod, enrichIncident } =
+    useIncidentActions();
   const providersWithGetTrace = useMemo(
     () =>
       providers?.installed_providers.filter(
@@ -35,15 +31,13 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     [providers]
   );
 
-  const { updateIncident, invokeProviderMethod, enrichIncident } =
-    useIncidentActions();
-
   // Suggestions
-  useCopilotChatSuggestions({
-    instructions: `The following incident is on going: ${JSON.stringify(
-      incident
-    )}. Provide good question suggestions for the incident responder team.`,
-  });
+  useCopilotChatSuggestions(
+    {
+      instructions: "Suggest the most relevant next actions.",
+    },
+    [incident, alerts, providersWithGetTrace]
+  );
 
   // Chat context
   useCopilotReadable({
@@ -77,8 +71,12 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       },
     ],
     handler: async ({ providerId, traceId }) => {
-      if (incident.enrichments && incident.enrichments[traceId]) {
-        return incident.enrichments[traceId] as TraceData;
+      if (
+        incident.enrichments &&
+        incident.enrichments["traces"] &&
+        incident.enrichments["traces"][traceId]
+      ) {
+        return incident.enrichments["traces"][traceId] as TraceData;
       }
 
       const result = await invokeProviderMethod(providerId, "get_trace", {
@@ -86,8 +84,12 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       });
 
       if (typeof result !== "string") {
+        const existingTraces = incident.enrichments["traces"] || {};
         await enrichIncident(incident.id, {
-          [traceId]: result,
+          traces: {
+            ...existingTraces,
+            [traceId]: result,
+          },
         });
       }
 
@@ -101,7 +103,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
           </Button>
         );
       } else if (status === "complete" && typeof result !== "string") {
-        return <TraceViewer trace={result} />;
+        return <SimpleTraceViewer trace={result} />;
       } else {
         return <Card>Trace not found: {result}</Card>;
       }
@@ -155,13 +157,12 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
         <div className="chat-messages">
           <CopilotChat
             className="-mx-2"
-            instructions={`You now act as an expert incident responder...`}
+            instructions="You now act as an expert incident responder..."
             labels={{
               title: "Incident Assistant",
               initial:
                 "Hi! 👋 Lets work together to resolve this incident! Ask me anything",
-              placeholder:
-                "For example: What do you think the root cause of this incident might be?",
+              placeholder: "For example: Find the root cause of this incident",
             }}
           />
         </div>

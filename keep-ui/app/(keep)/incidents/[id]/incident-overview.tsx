@@ -270,6 +270,26 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
             ) : (
               "No environments involved"
             )}
+            <FieldHeader>Ticket</FieldHeader>
+            {incident.enrichments?.ticket_url &&
+            incident.enrichments?.ticket_id ? (
+              <div className="flex flex-wrap gap-1">
+                {
+                  // TODO: @tb: add alert tickets as well?
+                }
+                <Badge
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() =>
+                    window.open(incident.enrichments.ticket_url, "_blank")
+                  }
+                >
+                  {incident.enrichments.ticket_id}
+                </Badge>
+              </div>
+            ) : (
+              "No tickets assigned"
+            )}
             {incident.rule_fingerprint !== "none" &&
               !!incident.rule_fingerprint && (
                 <>
