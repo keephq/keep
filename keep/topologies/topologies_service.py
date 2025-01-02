@@ -235,6 +235,7 @@ class TopologiesService:
 
         application_db.name = application.name
         application_db.description = application.description
+        application_db.repository = application.repository
 
         new_service_ids = set(service.id for service in application.services)
 

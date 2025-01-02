@@ -276,5 +276,5 @@ if __name__ == "__main__":
         },
     )
     provider = CiliumProvider(context_manager, provider_id="cilium", config=config)
-    r = provider.pull_topology()
+    r, _ = provider.pull_topology()
     print(r)
