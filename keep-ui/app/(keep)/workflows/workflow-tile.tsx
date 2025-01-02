@@ -44,6 +44,7 @@ import {
 import { HiBellAlert } from "react-icons/hi2";
 import { useWorkflowRun } from "utils/hooks/useWorkflowRun";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { DynamicIcon } from "@/components/ui";
 
 function WorkflowMenuSection({
   onDelete,
@@ -410,10 +411,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       .replace("hour", "hr");
   };
 
-  const handleImageError = (event: any) => {
-    event.target.href.baseVal = "/icons/keep-icon.png";
-  };
-
   const isManualTriggerPresent = workflow?.triggers?.find(
     (t) => t.type === "manual"
   );
@@ -431,25 +428,6 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
       <>
         {triggerTypes.map((t, index) => {
           if (t === "alert") {
-            const DynamicIcon = (props: any) => (
-              <svg
-                width="24px"
-                height="24px"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                {...props}
-              >
-                {" "}
-                <image
-                  id="image0"
-                  width={"24"}
-                  height={"24"}
-                  href={`/icons/${alertSource}-icon.png`}
-                  onError={handleImageError}
-                />
-              </svg>
-            );
             return onlyIcons ? (
               <Badge
                 key={t}
@@ -459,12 +437,17 @@ function WorkflowTile({ workflow }: { workflow: Workflow }) {
                 {...props}
               >
                 <div className="flex justify-center items-center">
-                  <DynamicIcon width="16px" height="16px" color="orange" />
+                  <DynamicIcon
+                    providerType={alertSource!}
+                    width="16px"
+                    height="16px"
+                    color="orange"
+                  />
                 </div>
               </Badge>
             ) : (
               <Badge
-                icon={DynamicIcon}
+                icon={() => <DynamicIcon providerType={alertSource!} />}
                 key={t}
                 size="xs"
                 color="orange"
@@ -882,34 +865,14 @@ export function WorkflowTileOld({ workflow }: { workflow: Workflow }) {
             <span className="mr-1">Triggers:</span>
             {triggerTypes.map((t) => {
               if (t === "alert") {
-                const handleImageError = (event: any) => {
-                  event.target.href.baseVal = "/icons/keep-icon.png";
-                };
                 const alertSource = workflow.triggers
                   .find((w) => w.type === "alert")
                   ?.filters?.find((f) => f.key === "source")?.value;
-                const DynamicIcon = (props: any) => (
-                  <svg
-                    width="24px"
-                    height="24px"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    {...props}
-                  >
-                    {" "}
-                    <image
-                      id="image0"
-                      width={"24"}
-                      height={"24"}
-                      href={`/icons/${alertSource}-icon.png`}
-                      onError={handleImageError}
-                    />
-                  </svg>
-                );
                 return (
                   <Badge
-                    icon={DynamicIcon}
+                    icon={(props: any) => (
+                      <DynamicIcon providerType={alertSource} {...props} />
+                    )}
                     key={t}
                     size="xs"
                     color="orange"

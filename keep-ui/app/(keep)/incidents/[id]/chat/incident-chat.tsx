@@ -3,13 +3,21 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { useIncidentAlerts } from "utils/hooks/useIncidents";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useRouter } from "next/navigation";
-import Loading from "@/app/(keep)/loading";
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core";
+import {
+  useCopilotAction,
+  useCopilotReadable,
+  useCopilotMessagesContext,
+} from "@copilotkit/react-core";
+import {
+  ActionExecutionMessage,
+  ResultMessage,
+  TextMessage,
+} from "@copilotkit/runtime-client-gql";
 import { Button, Card } from "@tremor/react";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { TraceData, SimpleTraceViewer } from "@/shared/ui/TraceViewer";
 import { useProviders } from "@/utils/hooks/useProviders";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import "@copilotkit/react-ui/styles.css";
 import "./incident-chat.css";
 
@@ -18,6 +26,55 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   const { data: alerts, isLoading: alertsLoading } = useIncidentAlerts(
     incident.id
   );
+  const { messages, setMessages } = useCopilotMessagesContext();
+
+  //https://docs.copilotkit.ai/guides/messages-localstorage
+  // save to local storage when messages change
+  useEffect(() => {
+    if (messages.length !== 0) {
+      localStorage.setItem(
+        `copilotkit-messages-${incident.id}`,
+        JSON.stringify(messages)
+      );
+    }
+  }, [messages]);
+
+  // load from local storage when component mounts// initially load from local storage
+  useEffect(() => {
+    const messages = localStorage.getItem(`copilotkit-messages-${incident.id}`);
+    if (messages) {
+      const parsedMessages = JSON.parse(messages).map((message: any) => {
+        if (message.type === "TextMessage") {
+          return new TextMessage({
+            id: message.id,
+            role: message.role,
+            content: message.content,
+            createdAt: message.createdAt,
+          });
+        } else if (message.type === "ActionExecutionMessage") {
+          return new ActionExecutionMessage({
+            id: message.id,
+            name: message.name,
+            scope: message.scope,
+            arguments: message.arguments,
+            createdAt: message.createdAt,
+          });
+        } else if (message.type === "ResultMessage") {
+          return new ResultMessage({
+            id: message.id,
+            actionExecutionId: message.actionExecutionId,
+            actionName: message.actionName,
+            result: message.result,
+            createdAt: message.createdAt,
+          });
+        } else {
+          throw new Error(`Unknown message type: ${message.type}`);
+        }
+      });
+      setMessages(parsedMessages);
+    }
+  }, []);
+
   const { data: providers } = useProviders();
   const { updateIncident, invokeProviderMethod, enrichIncident } =
     useIncidentActions();
@@ -182,7 +239,6 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
     },
   });
 
-  if (alertsLoading || !incident) return <Loading />;
   if (!alerts?.items || alerts.items.length === 0)
     return (
       <EmptyStateCard
