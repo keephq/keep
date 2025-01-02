@@ -134,6 +134,7 @@ class TopologyApplicationDto(BaseModel, extra="ignore"):
     id: UUID
     name: str
     description: Optional[str] = None
+    repository: Optional[str] = None
     services: List[TopologyService] = Relationship(
         back_populates="applications", link_model="TopologyServiceApplication"
     )
@@ -176,6 +177,7 @@ class TopologyApplicationDtoOut(TopologyApplicationDto):
             id=application.id,
             name=application.name,
             description=application.description,
+            repository=application.repository,
             services=[
                 TopologyApplicationServiceDto.from_orm(service)
                 for service in application.services

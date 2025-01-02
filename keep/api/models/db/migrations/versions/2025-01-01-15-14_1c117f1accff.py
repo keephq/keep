@@ -39,4 +39,7 @@ def downgrade() -> None:
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.drop_column("incident_application")
         batch_op.drop_column("incident_type")
+
+    with op.batch_alter_table("topologyapplication", schema=None) as batch_op:
+        batch_op.drop_column("repository")
     # ### end Alembic commands ###

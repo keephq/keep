@@ -4267,7 +4267,10 @@ def get_topology_data_by_dynamic_matcher(
             query = query.where(
                 getattr(TopologyService, matcher) == matchers_value[matcher]
             )
-    return session.exec(query).first()
+        # Add joinedload for applications to avoid detached instance error
+        query = query.options(joinedload(TopologyService.applications))
+        service = session.exec(query).first()
+        return service
 
 
 def get_tags(tenant_id):
