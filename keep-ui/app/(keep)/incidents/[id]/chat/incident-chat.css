@@ -17,7 +17,7 @@
 }
 
 .copilotKitUserMessage {
-  @apply bg-orange-500 !important;
+  @apply bg-orange-300 !important;
 }
 
 .copilotKitMessages .suggestion {

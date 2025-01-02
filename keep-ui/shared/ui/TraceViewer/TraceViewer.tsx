@@ -7,6 +7,7 @@ import {
   TooltipTrigger,
   TooltipContent,
   Tooltip,
+  Portal,
 } from "@radix-ui/react-tooltip";
 
 interface ProcessedSpan {
@@ -22,25 +23,25 @@ interface ProcessedSpan {
   children: string[];
   httpStatus?: string;
   isErrorStatus: boolean | string;
-  attributes?: { [key: string]: string };
+  meta?: { [key: string]: string };
 }
 
 const SpanTooltipContent = ({ span }: { span: ProcessedSpan }) => {
   return (
-    <div className="max-w-md p-2 space-y-2">
-      <div className="font-medium text-sm">{span.displayName}</div>
-      <div className="text-xs space-y-1">
-        <div>
-          <span className="font-medium">Service:</span> {span.service}
-        </div>
-        <div>
-          <span className="font-medium">Resource:</span> {span.resource}
-        </div>
-        <div>
-          <span className="font-medium">Duration:</span>{" "}
-          {span.duration.toFixed(2)}ms
-        </div>
+    <div className="p-2 max-w-md">
+      <div className="font-medium">{span.displayName}</div>
+      <div className="text-sm text-gray-500">
+        Duration: {span.duration.toFixed(2)}%
       </div>
+      <div className="text-sm text-gray-500">Service: {span.service}</div>
+      {span.meta?.["db.statement"] && (
+        <div className="mt-2">
+          <div className="text-sm font-medium text-gray-700">SQL Query:</div>
+          <div className="text-xs bg-gray-100 p-2 rounded mt-1 font-mono whitespace-pre-wrap">
+            {span.meta["db.statement"]}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -54,7 +55,7 @@ const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
       if (memo.has(spanId)) return memo.get(spanId) as number;
 
       const span = trace.spans[spanId];
-      if (span.parent_id === "0") {
+      if (!span || !span.parent_id) {
         memo.set(spanId, 0);
         return 0;
       }
@@ -66,6 +67,11 @@ const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
     };
 
     const rootSpan = trace.spans[trace.root_id];
+    if (!rootSpan) {
+      console.error("Root span not found:", trace.root_id);
+      return [];
+    }
+
     const timelineStart = rootSpan.start;
     const timelineDuration = rootSpan.end - rootSpan.start;
 
@@ -91,6 +97,7 @@ const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
           durationMs: span.duration * 1000,
           children: span.children_ids,
           isErrorStatus,
+          meta: span.meta,
         };
 
         return processedSpan;
@@ -192,12 +199,17 @@ const SimpleTraceViewer = ({ trace }: { trace: TraceData }) => {
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="bg-white shadow-lg border"
-              >
-                <SpanTooltipContent span={span} />
-              </TooltipContent>
+              <Portal>
+                <TooltipContent
+                  side="right"
+                  className="bg-white shadow-lg border z-50"
+                  sideOffset={5}
+                  collisionPadding={10}
+                  sticky="partial"
+                >
+                  <SpanTooltipContent span={span} />
+                </TooltipContent>
+              </Portal>
             </Tooltip>
           </TooltipProvider>
         ))}

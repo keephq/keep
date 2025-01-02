@@ -1083,5 +1083,5 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.get_trace(trace_id="b434e0cfff9e8f483db252960ce6c820")
+    result = provider.get_trace(trace_id="9ea9cb720034119017ba71f699b00903")
     print(result)

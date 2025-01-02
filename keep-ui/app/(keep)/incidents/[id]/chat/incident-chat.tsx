@@ -61,7 +61,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   useCopilotAction({
     name: "invokeProviderMethod",
     description:
-      "Invoke a method from a provider. The method is invoked on the provider with the given id and the parameters are the ones provided in the parameters object.",
+      "Invoke a method from a provider. The method (func_name) is invoked on the provider with the given id and the parameters are the ones provided in the func_params object. If you don't know how to construct the parameters, ask the user for them.",
     parameters: [
       {
         name: "providerId",
@@ -69,23 +69,30 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
         description: "The ID of the provider to invoke the method on",
       },
       {
-        name: "methodName",
+        name: "func_name",
         type: "string",
         description: "The name of the method to invoke",
       },
       {
-        name: "methodParams",
-        type: "object",
+        name: "func_params",
+        type: "string",
         description:
-          "The parameters the method expects as described in func_params",
+          "The parameters the method expects as described in func_params, this should be a JSON object with the keys as described in func_params and values provided by you or the user. This cannot be empty (undefined!)",
       },
     ],
-    handler: async ({ providerId, methodName, methodParams }) => {
+    handler: async ({ providerId, func_name, func_params }) => {
       const result = await invokeProviderMethod(
         providerId,
-        methodName,
-        methodParams as { [key: string]: string }
+        func_name,
+        JSON.parse(func_params)
       );
+
+      if (typeof result !== "string") {
+        await enrichIncident(incident.id, {
+          [func_name]: result,
+        });
+      }
+
       return result;
     },
   });

@@ -13,6 +13,7 @@ interface TraceSpan {
     entity: string;
     entity_key: string;
   };
+  meta?: { [key: string]: string };
 }
 
 interface TraceData {
