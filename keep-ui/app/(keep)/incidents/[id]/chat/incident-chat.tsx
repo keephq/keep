@@ -162,7 +162,7 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
   useCopilotAction({
     name: "createIncident",
     description:
-      "Create an incident in a provider that supports incident creation. You can get all the necessary parameters from the incident itself. If you are missing some inforamtion, ask the user to provide it.",
+      "Create an incident in a provider that supports incident creation. You can get all the necessary parameters from the incident itself. If you are missing some inforamtion, ask the user to provide it. If the incident already got created and you have the incident id and the incident provider type in the incident enrichments, tell the user the incident is already created.",
     parameters: [
       {
         name: "providerId",
@@ -215,6 +215,10 @@ export function IncidentChat({ incident }: { incident: IncidentDto }) {
       customer_impacted,
       severity,
     }) => {
+      if (incident.enrichments && incident.enrichments["incident_id"]) {
+        return `The incident already exists: ${incident.enrichments["incident_url"]}`;
+      }
+
       const result = await invokeProviderMethod(providerId, "create_incident", {
         incident_name,
         incident_message,

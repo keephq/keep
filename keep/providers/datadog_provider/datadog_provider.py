@@ -203,6 +203,13 @@ class DatadogProvider(BaseTopologyProvider):
             description="Create an incident",
             type="action",
         ),
+        ProviderMethod(
+            name="Add Incident Timeline Note",
+            func_name="add_incident_timeline_note",
+            scopes=["incidents_write"],
+            description="Add a note to an incident timeline",
+            type="action",
+        ),
     ]
     FINGERPRINT_FIELDS = ["groups", "monitor_id"]
     WEBHOOK_PAYLOAD = json.dumps(
@@ -340,6 +347,36 @@ class DatadogProvider(BaseTopologyProvider):
             api = UsersApi(api_client)
             return api.list_users()
 
+    def add_incident_timeline_note(self, incident_id: str, note: str):
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+        endpoint = f"api/v2/incidents/{incident_id}/timeline"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.post(
+            url,
+            headers=headers,
+            json={
+                "data": {
+                    "attributes": {
+                        "cell_type": "markdown",
+                        "content": {"content": note},
+                    }
+                }
+            },
+        )
+        if response.ok:
+            return response.json()
+        else:
+            raise Exception(
+                f"Failed to add incident timeline note: {response.status_code} {response.text}"
+            )
+
     def create_incident(
         self,
         incident_name: str,
@@ -395,11 +432,12 @@ class DatadogProvider(BaseTopologyProvider):
         with ApiClient(self.configuration) as api_client:
             api = IncidentsApi(api_client)
             result = api.create_incident(body)
+            host_app = self.configuration.host.replace("api", "app")
             return {
                 "id": result.data.id,
-                "url": f"{self.configuration.host}/incidents/{result.data.attributes.public_id}",
+                "url": f"{host_app}/incidents/{result.data.attributes.public_id}",
                 "title": incident_name,
-                "incident": result.data.attributes,
+                "incident": result.data.attributes.to_dict(),
             }
 
     def mute_monitor(
