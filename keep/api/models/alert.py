@@ -445,7 +445,6 @@ class IncidentDto(IncidentDtoIn):
 
     incident_type: str | None
     incident_application: str | None
-    incident_repository: str | None
 
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
