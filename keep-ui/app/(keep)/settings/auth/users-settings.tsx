@@ -12,7 +12,7 @@ import UsersSidebar from "./users-sidebar";
 import { User } from "@/app/(keep)/settings/models";
 import { UsersTable } from "./users-table";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { showErrorToast } from "@/shared/ui";
+import { showErrorToast, ErrorComponent } from "@/shared/ui";
 
 interface Props {
   currentUser?: AuthUser;
@@ -30,7 +30,7 @@ export default function UsersSettings({
   userCreationAllowed,
 }: Props) {
   const api = useApi();
-  const { data: users, isLoading, mutate: mutateUsers } = useUsers();
+  const { data: users, isLoading, error, mutate: mutateUsers } = useUsers();
   const { data: roles = [] } = useRoles();
   const { data: groups } = useGroups();
   const { data: configData } = useConfig();
@@ -74,7 +74,13 @@ export default function UsersSettings({
     });
   }, [users, filter]);
 
-  if (!users || isLoading || !roles || !groups) return <Loading />;
+  if (error) {
+    return <ErrorComponent error={error} />;
+  }
+
+  if ((!users || !roles || !groups) && !isLoading) {
+    return <Loading />;
+  }
 
   const handleRowClick = (user: User) => {
     setSelectedUser(user);
