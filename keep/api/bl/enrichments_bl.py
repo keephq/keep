@@ -300,6 +300,11 @@ class EnrichmentsBl:
                 )
             else:
                 enrichments = topology_service.dict(exclude_none=True)
+                # repository could be taken from application too
+                if not topology_service.repository and topology_service.applications:
+                    for application in topology_service.applications:
+                        if application.repository:
+                            enrichments["repository"] = application.repository
                 # Remove redundant fields
                 enrichments.pop("tenant_id", None)
                 enrichments.pop("id", None)

@@ -151,7 +151,7 @@ def pull_data_from_providers(
             try:
                 if isinstance(provider_class, BaseTopologyProvider):
                     logger.info("Pulling topology data", extra=extra)
-                    topology_data = provider_class.pull_topology()
+                    topology_data, _ = provider_class.pull_topology()
                     logger.info(
                         "Pulling topology data finished, processing",
                         extra={**extra, "topology_length": len(topology_data)},

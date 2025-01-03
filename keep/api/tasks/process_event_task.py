@@ -444,16 +444,10 @@ def __handle_formatted_events(
         if KEEP_CORRELATION_ENABLED:
             try:
                 rules_engine = RulesEngine(tenant_id=tenant_id)
+                # handle incidents, also handle workflow execution as
                 incidents: List[IncidentDto] = rules_engine.run_rules(
                     enriched_formatted_events, session=session
                 )
-
-                # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
-                # if new grouped incidents were created, we need to push them to the client
-                # if incidents:
-                #     logger.info("Adding group alerts to the workflow manager queue")
-                #     workflow_manager.insert_events(tenant_id, grouped_alerts)
-                #     logger.info("Added group alerts to the workflow manager queue")
             except Exception:
                 logger.exception(
                     "Failed to run rules engine",

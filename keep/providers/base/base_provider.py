@@ -780,7 +780,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
 
 class BaseTopologyProvider(BaseProvider):
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         raise NotImplementedError("get_topology() method not implemented")
 
 

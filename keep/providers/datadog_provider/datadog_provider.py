@@ -1009,7 +1009,7 @@ class DatadogProvider(BaseTopologyProvider):
         ).hexdigest()
         return simulated_alert
 
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         services = {}
         with ApiClient(self.configuration) as api_client:
             api_instance = ServiceDefinitionApi(api_client)
@@ -1056,7 +1056,7 @@ class DatadogProvider(BaseTopologyProvider):
                 dependency: "unknown" for dependency in dependencies
             }
             services[service_dep] = service
-        return list(services.values())
+        return list(services.values()), {}
 
 
 if __name__ == "__main__":

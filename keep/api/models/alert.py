@@ -124,6 +124,12 @@ class IncidentSeverity(SeverityBaseInterface):
     INFO = ("info", 2)
     LOW = ("low", 1)
 
+    def from_number(n):
+        for severity in IncidentSeverity:
+            if severity.order == n:
+                return severity
+        raise ValueError(f"No IncidentSeverity with order {n}")
+
 
 class AlertDto(BaseModel):
     id: str | None
@@ -438,6 +444,8 @@ class IncidentDto(IncidentDtoIn):
     merged_at: datetime.datetime | None
 
     enrichments: dict | None = {}
+    incident_type: str | None
+    incident_application: str | None
 
     _tenant_id: str = PrivateAttr()
     _alerts: Optional[List[AlertDto]] = PrivateAttr(default=None)
@@ -527,6 +535,8 @@ class IncidentDto(IncidentDtoIn):
             merged_by=db_incident.merged_by,
             merged_at=db_incident.merged_at,
             enrichments=db_incident.enrichments,
+            incident_type=db_incident.incident_type,
+            incident_application=str(db_incident.incident_application),
         )
 
         # This field is required for getting alerts when required

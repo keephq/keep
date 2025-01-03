@@ -1821,10 +1821,38 @@ def create_incident_for_grouping_rule(
             is_predicted=False,
             is_confirmed=rule.create_on == CreateIncidentOn.ANY.value
             and not rule.require_approve,
+            incident_type=IncidentType.RULE.value,
         )
         session.add(incident)
         session.commit()
         session.refresh(incident)
+    return incident
+
+
+def create_incident_for_topology(
+    tenant_id: str, alert_group: list[Alert], session: Session
+) -> Incident:
+    """Create a new incident from topology-connected alerts"""
+    # Get highest severity from alerts
+    severity = max(alert.severity for alert in alert_group)
+
+    # Get all services
+    services = set()
+    service_names = set()
+    for alert in alert_group:
+        services.update(alert.service_ids)
+        service_names.update(alert.service_names)
+
+    incident = Incident(
+        tenant_id=tenant_id,
+        user_generated_name=f"Topology incident: Multiple alerts across {', '.join(service_names)}",
+        severity=severity.value,
+        status=IncidentStatus.FIRING.value,
+        is_confirmed=True,
+        incident_type=IncidentType.TOPOLOGY.value,  # Set incident type for topology
+        data={"services": list(services), "alert_count": len(alert_group)},
+    )
+
     return incident
 
 
@@ -3407,15 +3435,20 @@ def create_incident_from_dto(
             "assignee": incident_dto.assignee,
             "is_predicted": False,  # its not a prediction, but an AI generation
             "is_confirmed": True,  # confirmed by the user :)
+            "incident_type": IncidentType.AI.value,
         }
 
     elif issubclass(type(incident_dto), IncidentDto):
         # we will reach this block when incident is pulled from a provider
         incident_dict = incident_dto.to_db_incident().dict()
-
+        if "incident_type" not in incident_dict:
+            incident_dict["incident_type"] = IncidentType.MANUAL.value
     else:
         # We'll reach this block when a user creates an incident
         incident_dict = incident_dto.dict()
+        # Keep existing incident_type if present, default to MANUAL if not
+        if "incident_type" not in incident_dict:
+            incident_dict["incident_type"] = IncidentType.MANUAL.value
 
     return create_incident_from_dict(tenant_id, incident_dict)
 
@@ -4237,7 +4270,10 @@ def get_topology_data_by_dynamic_matcher(
             query = query.where(
                 getattr(TopologyService, matcher) == matchers_value[matcher]
             )
-    return session.exec(query).first()
+        # Add joinedload for applications to avoid detached instance error
+        query = query.options(joinedload(TopologyService.applications))
+        service = session.exec(query).first()
+        return service
 
 
 def get_tags(tenant_id):

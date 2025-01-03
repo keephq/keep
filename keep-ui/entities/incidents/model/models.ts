@@ -43,6 +43,8 @@ export interface IncidentDto {
   merged_at: Date;
   fingerprint: string;
   enrichments: { [key: string]: any };
+  incident_type?: string;
+  incident_application?: string;
 }
 
 export interface IncidentCandidateDto {
