@@ -10,7 +10,7 @@ import keep.functions as functions
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertStatus
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 
 
 @pytest.mark.parametrize(
@@ -493,11 +493,11 @@ def test_firing_time_with_manual_resolve(create_alert):
     create_alert(fingerprint, AlertStatus.FIRING, base_time - timedelta(minutes=60))
     # It was manually resolved
     enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
         enrichments={"status": "resolved"},
         dispose_on_new_alert=True,
-        action_type=AlertActionType.GENERIC_ENRICH,
+        action_type=ActionType.GENERIC_ENRICH,
         action_callee="tests",
         action_description="tests",
     )

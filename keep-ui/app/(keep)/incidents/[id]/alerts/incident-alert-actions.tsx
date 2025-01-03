@@ -18,7 +18,7 @@ export function IncidentAlertsActions({
 
   return (
     <>
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end mb-2.5">
         <Button
           variant="primary"
           onClick={() => setIsSplitModalOpen(true)}

@@ -11,6 +11,7 @@ import pydantic
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 from keep.validation.fields import NoSchemeUrl, UrlPort
 
 
@@ -60,6 +61,14 @@ class PostgresProvider(BaseProvider):
             alias="Connect to the server",
         )
     ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="query",
+            func_name="execute_query",
+            description="Query the Postgres database",
+            type="view",
+        )
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -83,6 +92,9 @@ class PostgresProvider(BaseProvider):
                 "connect_to_server": str(e),
             }
         return scopes
+
+    def execute_query(self, query: str):
+        return self._query(query)
 
     def __init_connection(self):
         """

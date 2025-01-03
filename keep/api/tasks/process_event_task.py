@@ -35,7 +35,7 @@ from keep.api.core.metrics import (
     processing_time_summary,
 )
 from keep.api.models.alert import AlertDto, AlertStatus, IncidentDto
-from keep.api.models.db.alert import Alert, AlertActionType, AlertAudit, AlertRaw
+from keep.api.models.db.alert import ActionType, Alert, AlertAudit, AlertRaw
 from keep.api.tasks.notification_cache import get_notification_cache
 from keep.api.utils.enrichment_helpers import (
     calculated_start_firing_time,
@@ -120,7 +120,7 @@ def __save_to_db(
                     tenant_id=tenant_id,
                     fingerprint=event.fingerprint,
                     status=event.status,
-                    action=AlertActionType.DEDUPLICATED.value,
+                    action=ActionType.DEDUPLICATED.value,
                     user_id="system",
                     description="Alert was deduplicated",
                 )
@@ -208,9 +208,9 @@ def __save_to_db(
                     tenant_id=tenant_id,
                     fingerprint=formatted_event.fingerprint,
                     action=(
-                        AlertActionType.AUTOMATIC_RESOLVE.value
+                        ActionType.AUTOMATIC_RESOLVE.value
                         if formatted_event.status == AlertStatus.RESOLVED.value
-                        else AlertActionType.TIGGERED.value
+                        else ActionType.TIGGERED.value
                     ),
                     user_id="system",
                     description=f"Alert recieved from provider with status {formatted_event.status}",
@@ -444,16 +444,10 @@ def __handle_formatted_events(
         if KEEP_CORRELATION_ENABLED:
             try:
                 rules_engine = RulesEngine(tenant_id=tenant_id)
+                # handle incidents, also handle workflow execution as
                 incidents: List[IncidentDto] = rules_engine.run_rules(
                     enriched_formatted_events, session=session
                 )
-
-                # TODO: Replace with incidents workflow triggers. Ticket: https://github.com/keephq/keep/issues/1527
-                # if new grouped incidents were created, we need to push them to the client
-                # if incidents:
-                #     logger.info("Adding group alerts to the workflow manager queue")
-                #     workflow_manager.insert_events(tenant_id, grouped_alerts)
-                #     logger.info("Added group alerts to the workflow manager queue")
             except Exception:
                 logger.exception(
                     "Failed to run rules engine",
@@ -485,10 +479,7 @@ def __handle_formatted_events(
                 logger.exception("Failed to tell client to poll alerts")
                 pass
 
-        if (
-            incidents
-            and pusher_cache.should_notify(tenant_id, "incident-change")
-        ):
+        if incidents and pusher_cache.should_notify(tenant_id, "incident-change"):
             try:
                 pusher_client.trigger(
                     f"private-{tenant_id}",
@@ -519,7 +510,9 @@ def __handle_formatted_events(
                     pusher_client.trigger(
                         f"private-{tenant_id}",
                         "poll-presets",
-                        json.dumps([p.name.lower() for p in presets_do_update], default=str),
+                        json.dumps(
+                            [p.name.lower() for p in presets_do_update], default=str
+                        ),
                     )
                 except Exception:
                     logger.exception("Failed to send presets via pusher")

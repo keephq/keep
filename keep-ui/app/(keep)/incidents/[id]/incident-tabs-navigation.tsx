@@ -4,11 +4,7 @@ import { IoIosGitNetwork } from "react-icons/io";
 import { Workflows } from "components/icons";
 import { useParams, usePathname } from "next/navigation";
 import { TabLinkNavigation, TabNavigationLink } from "@/shared/ui";
-import {
-  BellAlertIcon,
-  BoltIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
+import { BellAlertIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { CiViewTimeline } from "react-icons/ci";
 import { IncidentDto } from "@/entities/incidents/model";
 import { useIncident } from "@/utils/hooks/useIncidents";
@@ -23,7 +19,6 @@ export const tabs = [
     path: "topology",
   },
   { icon: Workflows, label: "Workflows", path: "workflows" },
-  { icon: SparklesIcon, label: "Chat with AI", path: "chat" },
 ];
 
 export function IncidentTabsNavigation({

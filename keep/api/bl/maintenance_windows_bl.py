@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session_sync
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.models.db.alert import AlertActionType, AlertAudit
+from keep.api.models.db.alert import ActionType, AlertAudit
 from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.utils.cel_utils import preprocess_cel_expression
 
@@ -87,7 +87,7 @@ class MaintenanceWindowsBl:
                         tenant_id=self.tenant_id,
                         fingerprint=alert.fingerprint,
                         user_id="Keep",
-                        action=AlertActionType.MAINTENANCE.value,
+                        action=ActionType.MAINTENANCE.value,
                         description=(
                             f"Alert in maintenance due to rule `{maintenance_rule.name}`"
                             if not maintenance_rule.suppress

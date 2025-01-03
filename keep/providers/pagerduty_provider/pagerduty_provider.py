@@ -475,16 +475,18 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             )
             # This will give us a better error message in Keep workflows
             raise Exception(r.text) from e
-        
+
     def clean_up(self):
         """
         Clean up the provider.
         It will remove the webhook from PagerDuty if it exists.
         """
-        self.logger.info("Cleaning up %s provider with id %s", self.PROVIDER_DISPLAY_NAME, self.provider_id)
-        keep_webhook_incidents_api_url = (
-                f"{self.context_manager.api_url}/incidents/event/{self.provider_type}?provider_id={self.provider_id}"
-            )
+        self.logger.info(
+            "Cleaning up %s provider with id %s",
+            self.PROVIDER_DISPLAY_NAME,
+            self.provider_id,
+        )
+        keep_webhook_incidents_api_url = f"{self.context_manager.api_url}/incidents/event/{self.provider_type}?provider_id={self.provider_id}"
         headers = self.__get_headers()
         request = requests.get(self.SUBSCRIPTION_API_URL, headers=headers)
         if not request.ok:
@@ -495,7 +497,8 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                 [
                     webhook
                     for webhook in existing_webhooks
-                    if keep_webhook_incidents_api_url == webhook.get("delivery_method", {}).get("url", "")
+                    if keep_webhook_incidents_api_url
+                    == webhook.get("delivery_method", {}).get("url", "")
                 ]
             ),
             False,
@@ -509,7 +512,6 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             if not request.ok:
                 raise Exception("Could not remove existing webhook")
             self.logger.info("Webhook removed", extra={"webhook_id": webhook_id})
-
 
     def dispose(self):
         """
@@ -824,10 +826,10 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
             all_services.extend(services_response.get(endpoint, []))
         return all_services
 
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         # Skipping topology pulling when we're installed with routing_key
         if self.authentication_config.routing_key:
-            return []
+            return [], {}
 
         all_services = self.__get_all_services()
         all_business_services = self.__get_all_services(business_services=True)
@@ -879,7 +881,7 @@ class PagerdutyProvider(BaseTopologyProvider, BaseIncidentProvider):
                     ),
                 )
             service_topology[dependent["id"]].dependencies[supporting["id"]] = "unknown"
-        return list(service_topology.values())
+        return list(service_topology.values()), {}
 
     def _get_incidents(self) -> list[IncidentDto]:
         # Skipping incidents pulling when we're installed with routing_key

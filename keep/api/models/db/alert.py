@@ -49,6 +49,13 @@ else:
 NULL_FOR_DELETED_AT = datetime(1000, 1, 1, 0, 0)
 
 
+class IncidentType(str, enum.Enum):
+    MANUAL = "manual"  # Created manually by users
+    AI = "ai"  # Created by AI
+    RULE = "rule"  # Created by rules engine
+    TOPOLOGY = "topology"  # Created by topology processor
+
+
 class AlertToIncident(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -180,6 +187,10 @@ class Incident(SQLModel, table=True):
     # It's not a unique identifier in the DB (constraint), but when we have the same incident from some tools, we can use it to detect duplicates
     fingerprint: str | None = Field(default=None, sa_column=Column(TEXT))
 
+    incident_type: str = Field(default=IncidentType.MANUAL.value)
+    # for topology incidents
+    incident_application: UUID | None = Field(default=None)
+
     same_incident_in_the_past_id: UUID | None = Field(
         sa_column=Column(
             UUIDType(binary=False),
@@ -227,6 +238,7 @@ class Incident(SQLModel, table=True):
     )
 
     _alerts: List["Alert"] = PrivateAttr(default_factory=list)
+    _enrichments: dict = PrivateAttr(default={})
 
     class Config:
         arbitrary_types_allowed = True
@@ -234,6 +246,10 @@ class Incident(SQLModel, table=True):
     @property
     def alerts(self):
         return self._alerts
+
+    @property
+    def enrichments(self):
+        return self._enrichments
 
 
 class Alert(SQLModel, table=True):
@@ -291,12 +307,18 @@ class Alert(SQLModel, table=True):
 
 
 class AlertEnrichment(SQLModel, table=True):
+    """
+    TODO: we need to rename this table to EntityEnrichment since it's not only for alerts anymore.
+    @tb: for example, we use it also for Incidents now.
+    """
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     alert_fingerprint: str = Field(unique=True)
     enrichments: dict = Field(sa_column=Column(JSON))
 
+    # @tb: we need to think what to do about this relationship.
     alerts: list[Alert] = Relationship(
         back_populates="alert_enrichment",
         sa_relationship_kwargs={
@@ -427,7 +449,7 @@ class AlertAudit(SQLModel, table=True):
     )
 
 
-class AlertActionType(enum.Enum):
+class ActionType(enum.Enum):
     # the alert was triggered
     TIGGERED = "alert was triggered"
     # someone acknowledged the alert
@@ -462,3 +484,4 @@ class AlertActionType(enum.Enum):
     UNCOMMENT = "a comment was removed from the alert"
     MAINTENANCE = "Alert is in maintenance window"
     INCIDENT_COMMENT = "A comment was added to the incident"
+    INCIDENT_ENRICH = "Incident enriched"

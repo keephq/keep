@@ -37,7 +37,7 @@ from keep.api.models.alert import (
     UnEnrichAlertRequestBody,
 )
 from keep.api.models.alert_audit import AlertAuditDto
-from keep.api.models.db.alert import AlertActionType
+from keep.api.models.db.alert import ActionType
 from keep.api.models.search_alert import SearchAlertsRequest
 from keep.api.models.time_stamp import TimeStampFilter
 from keep.api.tasks.process_event_task import process_event
@@ -167,13 +167,13 @@ def delete_alert(
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=delete_alert.fingerprint,
         enrichments={
             "deletedAt": deleted_last_received,
             "assignees": assignees_last_receievd,
         },
-        action_type=AlertActionType.DELETE_ALERT,
+        action_type=ActionType.DELETE_ALERT,
         action_description=f"Alert deleted by {user_email}",
         action_callee=user_email,
     )
@@ -221,10 +221,10 @@ def assign_alert(
         assignees_last_receievd[last_received] = user_email
 
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_alert(
+    enrichment_bl.enrich_entity(
         fingerprint=fingerprint,
         enrichments={"assignees": assignees_last_receievd},
-        action_type=AlertActionType.ACKNOWLEDGE,
+        action_type=ActionType.ACKNOWLEDGE,
         action_description=f"Alert assigned to {user_email}",
         action_callee=user_email,
     )
@@ -594,28 +594,28 @@ def _enrich_alert(
             and authenticated_entity.api_key_name is None
         ):
             action_type = (
-                AlertActionType.MANUAL_RESOLVE
+                ActionType.MANUAL_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
-                else AlertActionType.MANUAL_STATUS_CHANGE
+                else ActionType.MANUAL_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by {authenticated_entity.email}"
         elif "status" in enrich_data.enrichments and authenticated_entity.api_key_name:
             action_type = (
-                AlertActionType.API_AUTOMATIC_RESOLVE
+                ActionType.API_AUTOMATIC_RESOLVE
                 if enrich_data.enrichments["status"] == "resolved"
-                else AlertActionType.API_STATUS_CHANGE
+                else ActionType.API_STATUS_CHANGE
             )
             action_description = f"Alert status was changed to {enrich_data.enrichments['status']} by API `{authenticated_entity.api_key_name}`"
         elif "note" in enrich_data.enrichments and enrich_data.enrichments["note"]:
-            action_type = AlertActionType.COMMENT
+            action_type = ActionType.COMMENT
             action_description = f"Comment added by {authenticated_entity.email} - {enrich_data.enrichments['note']}"
         elif "ticket_url" in enrich_data.enrichments:
-            action_type = AlertActionType.TICKET_ASSIGNED
+            action_type = ActionType.TICKET_ASSIGNED
             action_description = f"Ticket assigned by {authenticated_entity.email} - {enrich_data.enrichments['ticket_url']}"
         else:
-            action_type = AlertActionType.GENERIC_ENRICH
+            action_type = ActionType.GENERIC_ENRICH
             action_description = f"Alert enriched by {authenticated_entity.email} - {enrich_data.enrichments}"
-        enrichement_bl.enrich_alert(
+        enrichement_bl.enrich_entity(
             fingerprint=enrich_data.fingerprint,
             enrichments=enrich_data.enrichments,
             action_type=action_type,
@@ -705,18 +705,18 @@ def unenrich_alert(
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         if "status" in enrich_data.enrichments:
-            action_type = AlertActionType.STATUS_UNENRICH
+            action_type = ActionType.STATUS_UNENRICH
             action_description = (
                 f"Alert status was un-enriched by {authenticated_entity.email}"
             )
         elif "note" in enrich_data.enrichments:
-            action_type = AlertActionType.UNCOMMENT
+            action_type = ActionType.UNCOMMENT
             action_description = f"Comment removed by {authenticated_entity.email}"
         elif "ticket_url" in enrich_data.enrichments:
-            action_type = AlertActionType.TICKET_UNASSIGNED
+            action_type = ActionType.TICKET_UNASSIGNED
             action_description = f"Ticket unassigned by {authenticated_entity.email}"
         else:
-            action_type = AlertActionType.GENERIC_UNENRICH
+            action_type = ActionType.GENERIC_UNENRICH
             action_description = f"Alert en-enriched by {authenticated_entity.email}"
 
         enrichments_object = get_enrichment(tenant_id, enrich_data.fingerprint)
@@ -728,7 +728,7 @@ def unenrich_alert(
             if key not in enrich_data.enrichments
         }
 
-        enrichement_bl.enrich_alert(
+        enrichement_bl.enrich_entity(
             fingerprint=enrich_data.fingerprint,
             enrichments=new_enrichments,
             action_type=action_type,

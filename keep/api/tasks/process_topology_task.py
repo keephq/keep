@@ -1,14 +1,16 @@
 import copy
 import logging
 
+from sqlalchemy import and_
+
 from keep.api.core.db import get_session_sync
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.db.topology import (
+    TopologyApplicationDtoIn,
     TopologyService,
     TopologyServiceDependency,
-    TopologyServiceInDto,
-    TopologyApplicationDtoIn,
     TopologyServiceDtoIn,
+    TopologyServiceInDto,
 )
 from keep.topologies.topologies_service import TopologiesService
 
@@ -40,6 +42,17 @@ def process_topology(
             extra=extra,
         )
 
+        # delete dependencies
+        session.query(TopologyServiceDependency).filter(
+            TopologyServiceDependency.service.has(
+                and_(
+                    TopologyService.source_provider_id == provider_id,
+                    TopologyService.tenant_id == tenant_id,
+                )
+            )
+        ).delete(synchronize_session=False)
+
+        # delete services
         session.query(TopologyService).filter(
             TopologyService.source_provider_id == provider_id,
             TopologyService.tenant_id == tenant_id,
@@ -93,7 +106,19 @@ def process_topology(
 
         for dependency in service.dependencies:
             service_id = service_to_keep_service_id_map.get(service.service)
+            if service_id > len(topology_data):
+                logger.debug(
+                    "Found a dangling service, skipping",
+                    extra={"service": service.service, "service_id": service_id},
+                )
+                continue
             depends_on_service_id = service_to_keep_service_id_map.get(dependency)
+            if depends_on_service_id > len(topology_data):
+                logger.debug(
+                    "Found a dangling service, skipping",
+                    extra={"service": service.service, "dependency": dependency},
+                )
+                continue
             if not service_id or not depends_on_service_id:
                 logger.debug(
                     "Found a dangling service, skipping",

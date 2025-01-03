@@ -21,6 +21,7 @@ import React from "react";
 import useStore from "./builder-store";
 import { useEffect, useRef, useState } from "react";
 import { V2Properties } from "@/app/(keep)/workflows/builder/types";
+import { DynamicIcon } from "@/components/ui";
 
 function EditorLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col m-2.5">{children}</div>;
@@ -106,25 +107,6 @@ function KeepStepEditor({
         p.type === providerType && p.config && Object.keys(p.config).length > 0
     ) ?? false;
 
-  const DynamicIcon = (props: any) => (
-    <svg
-      width="24px"
-      height="24px"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      {...props}
-    >
-      {" "}
-      <image
-        id="image0"
-        width={"24"}
-        height={"24"}
-        href={`/icons/${providerType}-icon.png`}
-      />
-    </svg>
-  );
-
   return (
     <>
       <Text>Provider Name</Text>
@@ -141,7 +123,7 @@ function KeepStepEditor({
             const providerName = provider.details?.name ?? provider.id;
             return (
               <SelectItem
-                icon={DynamicIcon}
+                icon={() => <DynamicIcon providerType={providerType!} />}
                 key={providerName}
                 value={providerName}
               >

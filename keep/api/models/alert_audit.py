@@ -2,14 +2,14 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from keep.api.models.db.alert import AlertActionType, AlertAudit
+from keep.api.models.db.alert import ActionType, AlertAudit
 
 
 class AlertAuditDto(BaseModel):
     id: str
     timestamp: datetime
     fingerprint: str
-    action: AlertActionType
+    action: ActionType
     user_id: str
     description: str
 

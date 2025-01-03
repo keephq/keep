@@ -47,3 +47,7 @@ export async function getTopology(
   const url = buildTopologyUrl({ providerIds, services, environment });
   return await api.get<TopologyService[]>(url);
 }
+
+export async function pullTopology(api: ApiClient) {
+  return await api.post("/topology/pull");
+}

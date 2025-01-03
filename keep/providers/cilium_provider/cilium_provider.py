@@ -78,7 +78,7 @@ class CiliumProvider(BaseTopologyProvider):
             return "unknown"
         return service
 
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
         from keep.providers.cilium_provider.grpc.observer_pb2 import (  # noqa
             FlowFilter,
@@ -102,6 +102,12 @@ class CiliumProvider(BaseTopologyProvider):
         # Process the responses
         service_map = defaultdict(lambda: {"dependencies": set(), "namespace": ""})
         # https://docs.cilium.io/en/stable/_api/v1/flow/README/#flow-FlowFilter
+
+        # get the responses as list
+        responses = list(responses)
+
+        application_to_create = {}
+
         for response in responses:
             flow = response.flow
             if not flow.source:
@@ -112,26 +118,122 @@ class CiliumProvider(BaseTopologyProvider):
                 destination = self._get_service_name(flow.destination)
 
                 source_namespace = flow.source.namespace
+                destination_namespace = flow.destination.namespace
+
+                node_labels = list(flow.node_labels)
+
+                destination_port = flow.l4.TCP.destination_port
+                # source_port = flow.l4.TCP.source_port
+
+                category = "http"
+
+                if destination_port == 5432:
+                    category = "postgres"
+
+                application = None
+
+                try:
+                    application_label = [
+                        label
+                        for label in flow.source.labels
+                        if label.startswith("k8s:keepapp=")
+                    ][0]
+                    application = application_label.split("=")[1]
+
+                    if application not in application_to_create:
+                        application_to_create[application] = {"services": set()}
+                    application_to_create[application]["services"].add(source)
+                except Exception:
+                    pass
 
                 service_map[source]["dependencies"].add(destination)
                 service_map[source]["namespace"] = source_namespace
-                service_map[source]["tags"] = flow.source.labels
+                service_map[source]["tags"] = list(flow.source.labels)
                 service_map[source]["tags"].append(flow.source.pod_name)
                 service_map[source]["tags"].append(flow.source.cluster_name)
-                # service_map[destination]["namespace"] = destination_namespace
+                service_map[source]["tags"] += node_labels
+
+                if destination not in service_map:
+                    service_map[destination] = {
+                        "dependencies": set(),
+                        "namespace": destination_namespace or "internet",
+                    }
+                    service_map[destination]["dependencies"].add(source)
+                    service_map[destination]["tags"] = list(flow.destination.labels)
+                    service_map[destination]["category"] = category
+                else:
+                    service_map[destination]["dependencies"].add(source)
+                    service_map[destination]["tags"] = list(flow.destination.labels)
+            # if its outside the cluster
+            elif (
+                flow.destination
+                and flow.destination.labels
+                and "reserved:world" in flow.destination.labels
+            ):
+                source = self._get_service_name(flow.source)
+                destination = flow.IP.destination
+                source_namespace = flow.source.namespace
+
+                node_labels = list(flow.node_labels)
+
+                destination_port = flow.l4.TCP.destination_port
+                # source_port = flow.l4.TCP.source_port
+
+                category = "http"
+
+                if destination_port == 5432:
+                    category = "postgres"
+
+                service_map[source]["dependencies"].add(destination)
+                service_map[source]["namespace"] = source_namespace
+                service_map[source]["tags"] = list(flow.source.labels)
+                service_map[source]["tags"].append(flow.source.pod_name)
+                service_map[source]["tags"].append(flow.source.cluster_name)
+                service_map[source]["tags"] += node_labels
+
+                # look for the application
+                for application in application_to_create:
+                    if source in application_to_create[application]["services"]:
+                        self.logger.debug(f"Adding {destination} to {application}")
+                        application_to_create[application]["services"].add(destination)
+                        break
+                if destination not in service_map:
+                    service_map[destination] = {
+                        "dependencies": set(),
+                        "namespace": "internet",
+                    }  # destination_namespace is external
+                    service_map[destination]["dependencies"].add(source)
+                    service_map[destination]["tags"] = list(flow.destination.labels)
+                    service_map[destination]["category"] = category
+                else:
+                    service_map[destination]["dependencies"].add(source)
+                    service_map[destination]["tags"] = list(flow.destination.labels)
 
         # Convert to TopologyServiceInDto
         topology = []
         for service, data in service_map.items():
-            topology_service = TopologyServiceInDto(
-                source_provider_id=self.provider_id,
-                service=service,
-                display_name=service,
-                environment=data["namespace"],
-                dependencies={dep: "network" for dep in data["dependencies"]},
-                tags=list(data["tags"]),
-            )
-            topology.append(topology_service)
+            try:
+                topology_service = TopologyServiceInDto(
+                    source_provider_id=self.provider_id,
+                    service=service,
+                    display_name=service,
+                    environment=data["namespace"],
+                    dependencies={dep: "network" for dep in data["dependencies"]},
+                    tags=list(data["tags"]),
+                    category=data.get("category", "http"),
+                    namespace=data["namespace"],
+                )
+                topology.append(topology_service)
+            except Exception as e:
+                self.logger.error(
+                    "Error processing service",
+                    extra={
+                        "service": service,
+                        "data": data,
+                        "error": str(e),
+                    },
+                )
+                pass
 
         self.logger.info(
             "Topology pulling completed",
@@ -140,7 +242,11 @@ class CiliumProvider(BaseTopologyProvider):
                 "len_of_topology": len(topology),
             },
         )
-        return topology
+        return topology, application_to_create
+
+    def get_existing_services(self, all_services):
+        """Helper function to create a set of all valid service names"""
+        return {service for service in all_services}
 
     def dispose(self):
         """
@@ -170,5 +276,5 @@ if __name__ == "__main__":
         },
     )
     provider = CiliumProvider(context_manager, provider_id="cilium", config=config)
-    r = provider.pull_topology()
+    r, _ = provider.pull_topology()
     print(r)

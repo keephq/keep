@@ -60,6 +60,7 @@ const defaultFitViewOptions: FitViewOptions = {
 type TopologyMapProps = {
   topologyServices?: TopologyService[];
   topologyApplications?: TopologyApplication[];
+  selectedApplicationIds?: string[];
   providerIds?: string[];
   services?: string[];
   environment?: string;
@@ -70,6 +71,7 @@ type TopologyMapProps = {
 export function TopologyMap({
   topologyServices: initialTopologyServices,
   topologyApplications: initialTopologyApplications,
+  selectedApplicationIds: initialSelectedApplicationIds,
   providerIds,
   services,
   environment,
@@ -95,6 +97,13 @@ export function TopologyMap({
     selectedApplicationIds,
     setSelectedApplicationIds,
   } = useTopologySearchContext();
+
+  // if initialSelectedApplicationIds is provided, set it as selectedApplicationIds
+  useEffect(() => {
+    if (initialSelectedApplicationIds) {
+      setSelectedApplicationIds(initialSelectedApplicationIds);
+    }
+  }, [initialSelectedApplicationIds, setSelectedApplicationIds]);
 
   const applicationMap = useMemo(() => {
     const map = new Map<string, TopologyApplication>();

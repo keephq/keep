@@ -1,10 +1,10 @@
+import json
 import logging
 from typing import List, Optional
+from uuid import UUID
+
 from pydantic import ValidationError
 from sqlalchemy.orm import joinedload, selectinload
-from uuid import UUID
-import json
-
 from sqlmodel import Session, select
 
 from keep.api.core.db_utils import get_aggreated_field
@@ -235,6 +235,7 @@ class TopologiesService:
 
         application_db.name = application.name
         application_db.description = application.description
+        application_db.repository = application.repository
 
         new_service_ids = set(service.id for service in application.services)
 
@@ -278,9 +279,9 @@ class TopologiesService:
 
     @staticmethod
     def create_or_update_application(
-            tenant_id: str,
-            application: TopologyApplicationDtoIn,
-            session: Session,
+        tenant_id: str,
+        application: TopologyApplicationDtoIn,
+        session: Session,
     ) -> TopologyApplicationDtoOut:
         # Check if an application with the same name already exists for the tenant
         existing_application = session.exec(

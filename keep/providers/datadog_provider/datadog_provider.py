@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import time
+from typing import Literal
 
 import pydantic
 import requests
@@ -27,7 +28,9 @@ from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
+from datadog_api_client.v2.api.incidents_api import IncidentsApi
 from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
+from datadog_api_client.v2.api.users_api import UsersApi, UsersResponse
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -186,6 +189,27 @@ class DatadogProvider(BaseTopologyProvider):
             description="Get all events related to this monitor",
             type="view",
         ),
+        ProviderMethod(
+            name="Get a Trace",
+            func_name="get_trace",
+            scopes=["apm_read"],
+            description="Get trace by id",
+            type="view",
+        ),
+        ProviderMethod(
+            name="Create Incident",
+            func_name="create_incident",
+            scopes=["incidents_write"],
+            description="Create an incident",
+            type="action",
+        ),
+        ProviderMethod(
+            name="Add Incident Timeline Note",
+            func_name="add_incident_timeline_note",
+            scopes=["incidents_write"],
+            description="Add a note to an incident timeline",
+            type="action",
+        ),
     ]
     FINGERPRINT_FIELDS = ["groups", "monitor_id"]
     WEBHOOK_PAYLOAD = json.dumps(
@@ -318,6 +342,105 @@ class DatadogProvider(BaseTopologyProvider):
             }
         }
 
+    def get_users(self) -> UsersResponse:
+        with ApiClient(self.configuration) as api_client:
+            api = UsersApi(api_client)
+            return api.list_users()
+
+    def add_incident_timeline_note(self, incident_id: str, note: str):
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+        endpoint = f"api/v2/incidents/{incident_id}/timeline"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.post(
+            url,
+            headers=headers,
+            json={
+                "data": {
+                    "attributes": {
+                        "cell_type": "markdown",
+                        "content": {"content": note},
+                    },
+                    "type": "incident_timeline_cells",
+                }
+            },
+        )
+        if response.ok:
+            return response.json()
+        else:
+            raise Exception(
+                f"Failed to add incident timeline note: {response.status_code} {response.text}"
+            )
+
+    def create_incident(
+        self,
+        incident_name: str,
+        incident_message: str,
+        commander_user: str,
+        customer_impacted: bool = False,
+        important: bool = True,
+        severity: Literal["SEV-1", "SEV-2", "SEV-3", "SEV-4", "UNKNOWN"] = "SEV-4",
+        fields: dict = {"state": {"value": "active"}},
+    ):
+        users = self.get_users()
+        commander_user_obj = next(
+            (
+                user
+                for user in users.data
+                if user.attributes.name == commander_user
+                or user.attributes.handle == commander_user
+            ),
+            None,
+        )
+        if not commander_user_obj:
+            raise Exception(f"User {commander_user} not found")
+
+        fields["severity"] = {"value": severity}
+        body = {
+            "data": {
+                "type": "incidents",
+                "attributes": {
+                    "title": incident_name,
+                    "fields": fields,
+                    "initial_cells": [
+                        {
+                            "cell_type": "markdown",
+                            "content": {
+                                "content": incident_message,
+                                "important": important,
+                            },
+                        }
+                    ],
+                    "customer_impacted": customer_impacted,
+                },
+                "relationships": {
+                    "commander_user": {
+                        "data": {
+                            "type": "users",
+                            "id": commander_user_obj.id,
+                        },
+                    },
+                },
+            }
+        }
+        self.configuration.unstable_operations["create_incident"] = True
+        with ApiClient(self.configuration) as api_client:
+            api = IncidentsApi(api_client)
+            result = api.create_incident(body)
+            host_app = self.configuration.host.replace("api", "app")
+            return {
+                "id": result.data.id,
+                "url": f"{host_app}/incidents/{result.data.attributes.public_id}",
+                "title": incident_name,
+                "incident": result.data.attributes.to_dict(),
+            }
+
     def mute_monitor(
         self,
         monitor_id: str,
@@ -416,6 +539,38 @@ class DatadogProvider(BaseTopologyProvider):
                 scope=groups,
             )
         self.logger.info("Monitor unmuted", extra={"monitor_id": monitor_id})
+
+    # @tb: we need to standardize the way we get traces
+    # e.g., create a trace model and use it across providers
+    def get_trace(self, trace_id: str):
+        self.logger.info("Getting trace", extra={"trace_id": trace_id})
+        headers = {}
+        if self.authentication_config.api_key and self.authentication_config.app_key:
+            headers["DD-API-KEY"] = self.authentication_config.api_key
+            headers["DD-APPLICATION-KEY"] = self.authentication_config.app_key
+        else:
+            headers["Authorization"] = (
+                f"Bearer {self.authentication_config.oauth_token.get('access_token')}"
+            )
+        endpoint = f"api/unstable/ui/trace/{trace_id}"
+        url = f"{self.configuration.host}/{endpoint}"
+        response = requests.get(url, headers=headers)
+        if response.ok:
+            self.logger.info("Trace retrieved", extra={"trace_id": trace_id})
+            trace_data = response.json()
+            return trace_data.get("data", {}).get("attributes", {}).get("trace", {})
+        else:
+            self.logger.error(
+                "Failed to get trace",
+                extra={
+                    "trace_id": trace_id,
+                    "status_code": response.status_code,
+                    "response": response.text,
+                },
+            )
+            raise Exception(
+                f"Failed to get traces: {response.status_code} {response.text}"
+            )
 
     def get_monitor_events(self, monitor_id: str):
         self.logger.info("Getting monitor events", extra={"monitor_id": monitor_id})
@@ -970,7 +1125,7 @@ class DatadogProvider(BaseTopologyProvider):
         ).hexdigest()
         return simulated_alert
 
-    def pull_topology(self) -> list[TopologyServiceInDto]:
+    def pull_topology(self) -> tuple[list[TopologyServiceInDto], dict]:
         services = {}
         with ApiClient(self.configuration) as api_client:
             api_instance = ServiceDefinitionApi(api_client)
@@ -1017,7 +1172,7 @@ class DatadogProvider(BaseTopologyProvider):
                 dependency: "unknown" for dependency in dependencies
             }
             services[service_dep] = service
-        return list(services.values())
+        return list(services.values()), {}
 
 
 if __name__ == "__main__":
@@ -1038,11 +1193,13 @@ if __name__ == "__main__":
     provider_config = {
         "authentication": {"api_key": api_key, "app_key": app_key},
     }
-    provider: BaseTopologyProvider = ProvidersFactory.get_provider(
+    provider: DatadogProvider = ProvidersFactory.get_provider(
         context_manager=context_manager,
         provider_id="datadog-keephq",
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.pull_topology()
+    result = provider.create_incident(
+        "tal test from provider", "what will I tell you?", "Tal Borenstein"
+    )
     print(result)

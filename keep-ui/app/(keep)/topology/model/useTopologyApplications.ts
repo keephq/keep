@@ -1,3 +1,4 @@
+useTopologyApplications;
 import { TopologyApplication } from "./models";
 import useSWR, { SWRConfiguration } from "swr";
 import { useCallback, useMemo } from "react";

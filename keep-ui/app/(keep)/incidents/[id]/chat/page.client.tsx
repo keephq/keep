@@ -13,18 +13,14 @@ export function IncidentChatClientPage({
   incident: IncidentDto;
 }) {
   const { data: config } = useConfig();
-  if (config && !config.OPEN_AI_API_KEY_SET) {
-    return (
-      <EmptyStateCard
-        icon={ExclamationTriangleIcon}
-        title="Chat is not available"
-        description="The OpenAI API key is not set. Ask your administrator to set it to enable chat."
-      />
-    );
+
+  // If AI is not enabled, return null to collapse the chat section
+  if (!config?.OPEN_AI_API_KEY_SET) {
+    return null;
   }
 
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
+    <CopilotKit showDevConsole={false} runtimeUrl="/api/copilotkit">
       <IncidentChat incident={incident} />
     </CopilotKit>
   );
