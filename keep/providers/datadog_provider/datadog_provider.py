@@ -366,7 +366,8 @@ class DatadogProvider(BaseTopologyProvider):
                     "attributes": {
                         "cell_type": "markdown",
                         "content": {"content": note},
-                    }
+                    },
+                    "type": "incident_timeline_cells",
                 }
             },
         )
