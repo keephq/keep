@@ -28,7 +28,7 @@ type UseIncidentActionsValue = {
   invokeProviderMethod: (
     providerId: string,
     methodName: string,
-    methodParams: { [key: string]: string }
+    methodParams: { [key: string]: string | boolean | object }
   ) => Promise<any>;
   confirmPredictedIncident: (incidentId: string) => Promise<void>;
   unlinkAlertsFromIncident: (

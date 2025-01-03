@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import time
+from typing import Literal
 
 import pydantic
 import requests
@@ -27,7 +28,9 @@ from datadog_api_client.v1.model.monitor import Monitor
 from datadog_api_client.v1.model.monitor_options import MonitorOptions
 from datadog_api_client.v1.model.monitor_thresholds import MonitorThresholds
 from datadog_api_client.v1.model.monitor_type import MonitorType
+from datadog_api_client.v2.api.incidents_api import IncidentsApi
 from datadog_api_client.v2.api.service_definition_api import ServiceDefinitionApi
+from datadog_api_client.v2.api.users_api import UsersApi, UsersResponse
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.topology import TopologyServiceInDto
@@ -193,6 +196,13 @@ class DatadogProvider(BaseTopologyProvider):
             description="Get trace by id",
             type="view",
         ),
+        ProviderMethod(
+            name="Create Incident",
+            func_name="create_incident",
+            scopes=["incidents_write"],
+            description="Create an incident",
+            type="action",
+        ),
     ]
     FINGERPRINT_FIELDS = ["groups", "monitor_id"]
     WEBHOOK_PAYLOAD = json.dumps(
@@ -324,6 +334,73 @@ class DatadogProvider(BaseTopologyProvider):
                 "domain": domain,
             }
         }
+
+    def get_users(self) -> UsersResponse:
+        with ApiClient(self.configuration) as api_client:
+            api = UsersApi(api_client)
+            return api.list_users()
+
+    def create_incident(
+        self,
+        incident_name: str,
+        incident_message: str,
+        commander_user: str,
+        customer_impacted: bool = False,
+        important: bool = True,
+        severity: Literal["SEV-1", "SEV-2", "SEV-3", "SEV-4", "UNKNOWN"] = "SEV-4",
+        fields: dict = {"state": {"value": "active"}},
+    ):
+        users = self.get_users()
+        commander_user_obj = next(
+            (
+                user
+                for user in users.data
+                if user.attributes.name == commander_user
+                or user.attributes.handle == commander_user
+            ),
+            None,
+        )
+        if not commander_user_obj:
+            raise Exception(f"User {commander_user} not found")
+
+        fields["severity"] = {"value": severity}
+        body = {
+            "data": {
+                "type": "incidents",
+                "attributes": {
+                    "title": incident_name,
+                    "fields": fields,
+                    "initial_cells": [
+                        {
+                            "cell_type": "markdown",
+                            "content": {
+                                "content": incident_message,
+                                "important": important,
+                            },
+                        }
+                    ],
+                    "customer_impacted": customer_impacted,
+                },
+                "relationships": {
+                    "commander_user": {
+                        "data": {
+                            "type": "users",
+                            "id": commander_user_obj.id,
+                        },
+                    },
+                },
+            }
+        }
+        self.configuration.unstable_operations["create_incident"] = True
+        with ApiClient(self.configuration) as api_client:
+            api = IncidentsApi(api_client)
+            result = api.create_incident(body)
+            return {
+                "id": result.data.id,
+                "url": f"{self.configuration.host}/incidents/{result.data.attributes.public_id}",
+                "title": incident_name,
+                "incident": result.data.attributes,
+            }
 
     def mute_monitor(
         self,
@@ -1083,5 +1160,7 @@ if __name__ == "__main__":
         provider_type="datadog",
         provider_config=provider_config,
     )
-    result = provider.get_trace(trace_id="9ea9cb720034119017ba71f699b00903")
+    result = provider.create_incident(
+        "tal test from provider", "what will I tell you?", "Tal Borenstein"
+    )
     print(result)

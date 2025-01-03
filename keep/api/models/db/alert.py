@@ -238,7 +238,7 @@ class Incident(SQLModel, table=True):
     )
 
     _alerts: List["Alert"] = PrivateAttr(default_factory=list)
-    _enrichments: dict = PrivateAttr(default_factory=dict)
+    _enrichments: dict = PrivateAttr(default={})
 
     class Config:
         arbitrary_types_allowed = True
