@@ -1,5 +1,4 @@
-// Custom Error Class
-
+// Custom Error
 export class KeepApiError extends Error {
   url: string;
   proposedResolution: string;
@@ -35,5 +34,19 @@ export class KeepApiReadOnlyError extends KeepApiError {
   ) {
     super(message, url, proposedResolution, responseJson, statusCode);
     this.name = "KeepReadOnlyError";
+  }
+}
+
+export class KeepApiHealthError extends KeepApiError {
+  constructor(message: string = "API server is not available") {
+    const proposedResolution =
+      "Check if the Keep backend is running and API_URL is correct.";
+    super(message, "", proposedResolution, {}, 503);
+    this.name = "KeepApiHealthError";
+    this.message = message;
+  }
+
+  toString() {
+    return `${this.name}: ${this.message} - ${this.proposedResolution}`;
   }
 }
